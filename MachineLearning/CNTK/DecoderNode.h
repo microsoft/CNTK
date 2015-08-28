@@ -24,27 +24,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     private:
+        // TODO: member variables go to the end
         Matrix<ElemType> mAlpha;
         Matrix<ElemType> mBacktrace;
 
-        int mStartLab; /// the starting output label
-        int mEndLab;   /// the ending output label, if avaliable
+        int mStartLab; // the starting output label
+        int mEndLab;   // the ending output label, if avaliable
         ElemType  m_default_activity;
-
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        SequenceDecoderNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             mAlpha = Matrix<ElemType>(deviceId); mBacktrace = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
             mStartLab = -1;
             mEndLab = -1;
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            this->Construct(deviceId, name);
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -219,7 +213,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         void Construct(const SequenceDecoderNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 

@@ -559,7 +559,8 @@ public:
             std::wstring opName, nodeName;
             fstream >> opName >> nodeName;
             ComputationNodePtr nodePtr = GetNodeFromName(nodeName);
-            nodePtr->LoadFromFile(fstream, modelVersion, m_deviceId);
+            // TODO: don't we have a load constructor? Then when to call which? Document the calling sequence
+            nodePtr->LoadFromFile(fstream, modelVersion);
         }
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
@@ -1116,79 +1117,79 @@ public:
     // create a new node of a type given as a string, with var args so that this can be used at multiple places
     // This function only creates nodes that accept (m_deviceId, nodeName).
     template<class... _Types>
-    ComputationNodePtr NewStandardNode(const std::wstring & nodeType, _Types&&... _Args)
+    ComputationNodePtr NewStandardNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
     {
         // please keep this table sorted
-        if (nodeType == CRFNode<ElemType>::TypeName())	return New<CRFNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName()) return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == ColumnElementTimesNode<ElemType>::TypeName())  return New<ColumnElementTimesNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == CosDistanceNode<ElemType>::TypeName())	    return New<CosDistanceNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName()) return New<CosDistanceWithNegativeSamplesNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == CosineNode<ElemType>::TypeName())	            return New<CosineNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == CrossEntropyNode<ElemType>::TypeName())	    return New<CrossEntropyNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == CrossEntropyWithSoftmaxNode<ElemType>::TypeName())	return New<CrossEntropyWithSoftmaxNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == DiagTimesNode<ElemType>::TypeName())	    return New<DiagTimesNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == DropoutNode<ElemType>::TypeName())	            return New<DropoutNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == DummyCriterionNode<ElemType>::TypeName())	    return New<DummyCriterionNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == ElementTimesNode<ElemType>::TypeName())	    return New<ElementTimesNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == ErrorPredictionNode<ElemType>::TypeName())	    return New<ErrorPredictionNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == ExpNode<ElemType>::TypeName())	            return New<ExpNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == FutureValueNode<ElemType>::TypeName())	    return New<FutureValueNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())    return New<GMMLogLikelihoodNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == InvStdDevNode<ElemType>::TypeName())	    return New<InvStdDevNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == KhatriRaoProductNode<ElemType>::TypeName())    return New<KhatriRaoProductNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == LSTMNode<ElemType>::TypeName())	            return New<LSTMNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == LogNode<ElemType>::TypeName())	            return New<LogNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == LogSoftmaxNode<ElemType>::TypeName())	    return New<LogSoftmaxNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == LookupTableNode<ElemType>::TypeName())	    return New<LookupTableNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())	    return New<MatrixL1RegNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())	    return New<MatrixL2RegNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == MeanNode<ElemType>::TypeName())	            return New<MeanNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == MinusNode<ElemType>::TypeName())	            return New<MinusNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == NegateNode<ElemType>::TypeName())	            return New<NegateNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == NoiseContrastiveEstimationNode<ElemType>::TypeName()) return New<NoiseContrastiveEstimationNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == PairNetworkNode<ElemType>::TypeName())	    return New<PairNetworkNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == ParallelNode<ElemType>::TypeName())	    return New<ParallelNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == PastValueNode<ElemType>::TypeName() || nodeType == L"Delay") return New<PastValueNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == PerDimMeanVarDeNormalizationNode<ElemType>::TypeName() || nodeType == L"PerDimMeanVarDeNormalizationNode")	return New<PerDimMeanVarDeNormalizationNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == PerDimMeanVarNormalizationNode<ElemType>::TypeName() || nodeType == L"PerDimMeanVarNormalizationNode")	return New<PerDimMeanVarNormalizationNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == PlusNode<ElemType>::TypeName())	            return New<PlusNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == RectifiedLinearNode<ElemType>::TypeName())	    return New<RectifiedLinearNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == ReshapeNode<ElemType>::TypeName())	            return New<ReshapeNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == RowElementTimesNode<ElemType>::TypeName())	    return New<RowElementTimesNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == RowRepeatNode<ElemType>::TypeName())	    return New<RowRepeatNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == RowSliceNode<ElemType>::TypeName())	    return New<RowSliceNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == RowStackNode<ElemType>::TypeName())	    return New<RowStackNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == ScaleNode<ElemType>::TypeName())	            return New<ScaleNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())	    return New<SequenceDecoderNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == SigmoidNode<ElemType>::TypeName())	            return New<SigmoidNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == SoftmaxNode<ElemType>::TypeName())	            return New<SoftmaxNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == SquareErrorNode<ElemType>::TypeName())	    return New<SquareErrorNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == StrideTimesNode<ElemType>::TypeName())	    return New<StrideTimesNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())   return New<SumColumnElementsNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == SumElementsNode<ElemType>::TypeName())	    return New<SumElementsNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == TanhNode<ElemType>::TypeName())	            return New<TanhNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == TimeReverseNode<ElemType>::TypeName())	    return New<TimeReverseNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == TimesNode<ElemType>::TypeName())	            return New<TimesNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == TransposeNode<ElemType>::TypeName())	    return New<TransposeNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == TransposeTimesNode<ElemType>::TypeName())	    return New<TransposeTimesNode<ElemType>>(std::forward<_Types>(_Args)...);
+        if (nodeType == CRFNode<ElemType>::TypeName())	return New<CRFNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName()) return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ColumnElementTimesNode<ElemType>::TypeName())  return New<ColumnElementTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == CosDistanceNode<ElemType>::TypeName())	    return New<CosDistanceNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName()) return New<CosDistanceWithNegativeSamplesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == CosineNode<ElemType>::TypeName())	            return New<CosineNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == CrossEntropyNode<ElemType>::TypeName())	    return New<CrossEntropyNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == CrossEntropyWithSoftmaxNode<ElemType>::TypeName())	return New<CrossEntropyWithSoftmaxNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == DiagTimesNode<ElemType>::TypeName())	    return New<DiagTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == DropoutNode<ElemType>::TypeName())	            return New<DropoutNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == DummyCriterionNode<ElemType>::TypeName())	    return New<DummyCriterionNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ElementTimesNode<ElemType>::TypeName())	    return New<ElementTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ErrorPredictionNode<ElemType>::TypeName())	    return New<ErrorPredictionNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ExpNode<ElemType>::TypeName())	            return New<ExpNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == FutureValueNode<ElemType>::TypeName())	    return New<FutureValueNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())    return New<GMMLogLikelihoodNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == InvStdDevNode<ElemType>::TypeName())	    return New<InvStdDevNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == KhatriRaoProductNode<ElemType>::TypeName())    return New<KhatriRaoProductNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == LSTMNode<ElemType>::TypeName())	            return New<LSTMNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == LogNode<ElemType>::TypeName())	            return New<LogNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == LogSoftmaxNode<ElemType>::TypeName())	    return New<LogSoftmaxNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == LookupTableNode<ElemType>::TypeName())	    return New<LookupTableNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())	    return New<MatrixL1RegNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())	    return New<MatrixL2RegNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == MeanNode<ElemType>::TypeName())	            return New<MeanNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == MinusNode<ElemType>::TypeName())	            return New<MinusNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == NegateNode<ElemType>::TypeName())	            return New<NegateNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == NoiseContrastiveEstimationNode<ElemType>::TypeName()) return New<NoiseContrastiveEstimationNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == PairNetworkNode<ElemType>::TypeName())	    return New<PairNetworkNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ParallelNode<ElemType>::TypeName())	    return New<ParallelNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == PastValueNode<ElemType>::TypeName() || nodeType == L"Delay") return New<PastValueNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == PerDimMeanVarDeNormalizationNode<ElemType>::TypeName() || nodeType == L"PerDimMeanVarDeNormalizationNode")	return New<PerDimMeanVarDeNormalizationNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == PerDimMeanVarNormalizationNode<ElemType>::TypeName() || nodeType == L"PerDimMeanVarNormalizationNode")	return New<PerDimMeanVarNormalizationNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == PlusNode<ElemType>::TypeName())	            return New<PlusNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == RectifiedLinearNode<ElemType>::TypeName())	    return New<RectifiedLinearNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ReshapeNode<ElemType>::TypeName())	            return New<ReshapeNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == RowElementTimesNode<ElemType>::TypeName())	    return New<RowElementTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == RowRepeatNode<ElemType>::TypeName())	    return New<RowRepeatNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == RowSliceNode<ElemType>::TypeName())	    return New<RowSliceNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == RowStackNode<ElemType>::TypeName())	    return New<RowStackNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ScaleNode<ElemType>::TypeName())	            return New<ScaleNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())	    return New<SequenceDecoderNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SigmoidNode<ElemType>::TypeName())	            return New<SigmoidNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SoftmaxNode<ElemType>::TypeName())	            return New<SoftmaxNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SquareErrorNode<ElemType>::TypeName())	    return New<SquareErrorNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == StrideTimesNode<ElemType>::TypeName())	    return New<StrideTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())   return New<SumColumnElementsNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SumElementsNode<ElemType>::TypeName())	    return New<SumElementsNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == TanhNode<ElemType>::TypeName())	            return New<TanhNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == TimeReverseNode<ElemType>::TypeName())	    return New<TimeReverseNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == TimesNode<ElemType>::TypeName())	            return New<TimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == TransposeNode<ElemType>::TypeName())	    return New<TransposeNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == TransposeTimesNode<ElemType>::TypeName())	    return New<TransposeTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
         else return nullptr;
     }
     // create a new node of a type given as a string, with var args so that this can be used at multiple places
     template<class... _Types>
-    ComputationNodePtr NewNode(const std::wstring & nodeType, _Types&&... _Args)
+    ComputationNodePtr NewNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
     {
         // try first those that accept the standard two constructor arguments
-        auto newNode = NewStandardNode(nodeType, std::forward<_Types>(_Args)...);
+        auto newNode = NewStandardNode(nodeType, deviceId, name, forward<_Types>(_Args)...);
         if (newNode) return newNode;
         // check more types
-        else if (nodeType == AveragePoolingNode<ElemType>::TypeName())	     return New<AveragePoolingNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == ConvolutionNode<ElemType>::TypeName())	     return New<ConvolutionNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == InputValue<ElemType>::SparseTypeName())	     return New<InputValue<ElemType>>(std::forward<_Types>(_Args)..., true);
-        else if (nodeType == InputValue<ElemType>::TypeName())	             return New<InputValue<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == LearnableParameter<ElemType>::TypeName())	     return New<LearnableParameter<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == MaxPoolingNode<ElemType>::TypeName())	     return New<MaxPoolingNode<ElemType>>(std::forward<_Types>(_Args)...);
-        else if (nodeType == SparseLearnableParameter<ElemType>::TypeName()) return New<SparseLearnableParameter<ElemType>>(std::forward<_Types>(_Args)...);
+        else if (nodeType == AveragePoolingNode<ElemType>::TypeName())	     return New<AveragePoolingNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ConvolutionNode<ElemType>::TypeName())	     return New<ConvolutionNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == InputValue<ElemType>::SparseTypeName())	     return New<InputValue<ElemType>>(deviceId, name, forward<_Types>(_Args)..., true);
+        else if (nodeType == InputValue<ElemType>::TypeName())	             return New<InputValue<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == LearnableParameter<ElemType>::TypeName())	     return New<LearnableParameter<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == MaxPoolingNode<ElemType>::TypeName())	     return New<MaxPoolingNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SparseLearnableParameter<ElemType>::TypeName()) return New<SparseLearnableParameter<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
         else return nullptr;
     }
 
@@ -1197,12 +1198,13 @@ public:
                                           File& fstream,
                                           size_t modelVersion)
     {
-        auto newNode = NewNode(nodeType, fstream, modelVersion, m_deviceId, nodeName);
+        auto newNode = NewNode(nodeType, m_deviceId, nodeName);
         if (!newNode)
         {
             fprintf(stderr, "Unknown ComputationNode type %ls (node name %ls)\n", nodeType.c_str(), nodeName.c_str());
             InvalidArgument("Invalid node type.");
         }
+        newNode->LoadFromFile(fstream, modelVersion);
         return AddNodeToNet(newNode);
     }
 
@@ -1210,23 +1212,23 @@ public:
 
     ComputationNodePtr CreateLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols)
     {
-        return AddNodeToNet(New<LearnableParameter<ElemType>>(rows, cols, m_deviceId, paramName));
+        return AddNodeToNet(New<LearnableParameter<ElemType>>(m_deviceId, paramName, rows, cols));
     }
 
     //sparse matrix size is optionally specified
     ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0)
     {
-        return AddNodeToNet(New<SparseLearnableParameter<ElemType>>(rows, cols, size, m_deviceId, paramName));
+        return AddNodeToNet(New<SparseLearnableParameter<ElemType>>(m_deviceId, paramName, rows, cols, size));
     }
 
     ComputationNodePtr CreateInputNode(const std::wstring & inputName, const size_t rows, const size_t cols)
     {
-        return AddNodeToNet(New<InputValue<ElemType>>(rows, cols, m_deviceId, inputName));
+        return AddNodeToNet(New<InputValue<ElemType>>(m_deviceId, inputName, rows, cols));
     }
 
     ComputationNodePtr CreateSparseInputNode(const std::wstring & inputName, const size_t rows, const size_t cols)
     {
-        return AddNodeToNet(New<InputValue<ElemType>>(rows, cols, m_deviceId, inputName, true));
+        return AddNodeToNet(New<InputValue<ElemType>>(m_deviceId, inputName, rows, cols, true));
     }
 
     ComputationNodePtr CreateInputNode(const std::wstring & inputName,
@@ -1235,7 +1237,7 @@ public:
                                        const size_t imageChannels,
                                        const size_t numImages)
     {
-        return AddNodeToNet(New<InputValue<ElemType>>(imageWidth, imageHeight, imageChannels, numImages, m_deviceId, inputName));
+        return AddNodeToNet(New<InputValue<ElemType>>(m_deviceId, inputName, imageWidth, imageHeight, imageChannels, numImages));
     }
 
     ComputationNodePtr CreateSparseInputNode(const std::wstring & inputName,
@@ -1244,12 +1246,12 @@ public:
                                              const size_t imageChannels,
                                              const size_t numImages)
     {
-        return AddNodeToNet(New<InputValue<ElemType>>(imageWidth, imageHeight, imageChannels, numImages, m_deviceId, inputName, true));
+        return AddNodeToNet(New<InputValue<ElemType>>(m_deviceId, inputName, imageWidth, imageHeight, imageChannels, numImages, true));
     }
 
     ComputationNodePtr CreatePairNetworkNode(const std::wstring & inputName, const size_t rows, const size_t cols)
     {
-        return AddNodeToNet(New<PairNetworkNode<ElemType>>(rows, cols, m_deviceId, inputName));
+        return AddNodeToNet(New<PairNetworkNode<ElemType>>(m_deviceId, inputName, rows, cols));
     }
 
     ComputationNodePtr CreateConvolutionNode(const std::wstring & nodeName,
@@ -1258,11 +1260,11 @@ public:
                                              const bool zeroPadding = false,
                                              const size_t maxTempMemSizeInSamples = 0)
     {
-        return AddNodeToNet(New<ConvolutionNode<ElemType>>(kernelWidth, kernelHeight,
+        return AddNodeToNet(New<ConvolutionNode<ElemType>>(m_deviceId, nodeName,
+                                                           kernelWidth, kernelHeight,
                                                            outputChannels,
                                                            horizontalSubsample,
                                                            verticalSubsample, zeroPadding,
-                                                           m_deviceId, nodeName,
                                                            maxTempMemSizeInSamples));
     }
 
@@ -1272,20 +1274,20 @@ public:
                                             const size_t horizontalSubsample,
                                             const size_t verticalSubsample)
     {
-        return AddNodeToNet(New<MaxPoolingNode<ElemType>>(windowWidth, windowHeight,
+        return AddNodeToNet(New<MaxPoolingNode<ElemType>>(m_deviceId, nodeName,
+                                                          windowWidth, windowHeight,
                                                           horizontalSubsample,
-                                                          verticalSubsample, m_deviceId,
-                                                          nodeName));
+                                                          verticalSubsample));
     }
 
     ComputationNodePtr CreateAveragePoolingNode(const std::wstring & nodeName, const size_t windowWidth,
                                                 const size_t windowHeight, const size_t horizontalSubsample,
                                                 const size_t verticalSubsample)
     {
-        return AddNodeToNet(New<AveragePoolingNode<ElemType>>(windowWidth, windowHeight,
+        return AddNodeToNet(New<AveragePoolingNode<ElemType>>(m_deviceId, nodeName,
+                                                              windowWidth, windowHeight,
                                                               horizontalSubsample,
-                                                              verticalSubsample, m_deviceId,
-                                                              nodeName));
+                                                              verticalSubsample));
     }
 
     // this is the catch-all for all cases not covered as special cases above
@@ -1334,11 +1336,11 @@ public:
                                    const std::wstring nodeName = L"",
                                    const size_t maxTempMemSizeInSamples = 0)
     {
-        return AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(kernelWidth, kernelHeight,
+        return AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(m_deviceId, nodeName,
+                                                                          kernelWidth, kernelHeight,
                                                                           outputChannels,
                                                                           horizontalSubsample,
                                                                           verticalSubsample, zeroPadding,
-                                                                          m_deviceId, nodeName,
                                                                           maxTempMemSizeInSamples),
                                            weight, inputValues);
     }
@@ -1350,10 +1352,10 @@ public:
                                   const size_t verticalSubsample,
                                   const std::wstring nodeName = L"")
     {
-        return AddNodeToNetAndAttachInputs(New<MaxPoolingNode<ElemType>>(windowWidth, windowHeight,
+        return AddNodeToNetAndAttachInputs(New<MaxPoolingNode<ElemType>>(m_deviceId, nodeName,
+                                                                         windowWidth, windowHeight,
                                                                          horizontalSubsample,
-                                                                         verticalSubsample, m_deviceId,
-                                                                         nodeName),
+                                                                         verticalSubsample),
                                            inputValues);
     }
 
@@ -1364,10 +1366,10 @@ public:
                                       const size_t verticalSubsample,
                                       const std::wstring nodeName = L"")
     {
-        return AddNodeToNetAndAttachInputs(New<AveragePoolingNode<ElemType>>(windowWidth, windowHeight,
+        return AddNodeToNetAndAttachInputs(New<AveragePoolingNode<ElemType>>(m_deviceId, nodeName,
+                                                                             windowWidth, windowHeight,
                                                                              horizontalSubsample,
-                                                                             verticalSubsample, m_deviceId,
-                                                                             nodeName),
+                                                                             verticalSubsample),
                                            inputValues);
     }
 
@@ -1598,22 +1600,22 @@ public:
                                const size_t img_channels,
                                const std::wstring nodeName = L"")
     {
-        return AddNodeToNetAndAttachInputs(New<ReshapeNode<ElemType>>(m_deviceId, num_rows, img_width, img_height, img_channels, nodeName), a);
+        return AddNodeToNetAndAttachInputs(New<ReshapeNode<ElemType>>(m_deviceId, nodeName, num_rows, img_width, img_height, img_channels), a);
     }
 
     ComputationNodePtr RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName = L"")
     {
-        return AddNodeToNetAndAttachInputs(New<RowRepeatNode<ElemType>>(m_deviceId, num_repeat, nodeName), a);
+        return AddNodeToNetAndAttachInputs(New<RowRepeatNode<ElemType>>(m_deviceId, nodeName, num_repeat), a);
     }
 
     ComputationNodePtr PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, const std::wstring nodeName = L"")
     {
-        return AddNodeToNetAndAttachInputs(New<PastValueNode<ElemType>>(m_deviceId, initHiddenActivity, row_size, col_size, nodeName), a);
+        return AddNodeToNetAndAttachInputs(New<PastValueNode<ElemType>>(m_deviceId, nodeName, initHiddenActivity, row_size, col_size), a);
     }
 
     ComputationNodePtr FutureValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, const std::wstring nodeName = L"")
     {
-        return AddNodeToNetAndAttachInputs(New<FutureValueNode<ElemType>>(m_deviceId, initHiddenActivity, row_size, col_size, nodeName), a);
+        return AddNodeToNetAndAttachInputs(New<FutureValueNode<ElemType>>(m_deviceId, nodeName, initHiddenActivity, row_size, col_size), a);
     }
 
     ComputationNodePtr Parallel(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
@@ -1623,7 +1625,7 @@ public:
 
     ComputationNodePtr RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName = L"")
     {
-        return AddNodeToNetAndAttachInputs(New<RowSliceNode<ElemType>>(m_deviceId, start_index, num_rows, nodeName), a);
+        return AddNodeToNetAndAttachInputs(New<RowSliceNode<ElemType>>(m_deviceId, nodeName, start_index, num_rows), a);
     }
 
     ComputationNodePtr RowStack(const std::vector<ComputationNodePtr> inputs, const std::wstring nodeName = L"")

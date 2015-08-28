@@ -43,42 +43,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
-                        const size_t horizontalSubsample, const size_t verticalSubsample, 
-                        const bool zeroPadding = false, 
-                        const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"",
-                        const size_t maxTempMemSizeInSamples = 0)
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
+            m_tempMatrix = Matrix<ElemType>(deviceId);
+            m_kernelWidth = SIZE_MAX, m_kernelHeight = SIZE_MAX;    // initialize to dummy values so we catch missing initialization
+            m_horizontalSubsample = SIZE_MAX, m_verticalSubsample = SIZE_MAX;
+            m_zeroPadding = false, m_maxTempMemSizeInSamples = SIZE_MAX;
+            m_outputChannels = 0;
+        }
+        ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0) : ComputationNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
             m_tempMatrix = Matrix<ElemType>(deviceId);
             m_kernelWidth = kernelWidth, m_kernelHeight = kernelHeight;
             m_horizontalSubsample = horizontalSubsample, m_verticalSubsample = verticalSubsample;
             m_zeroPadding = zeroPadding, m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
             m_outputChannels = outputChannels;
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
         }
 
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_tempMatrix = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-                
         virtual void SaveToFile(File& fstream) const
         {
             ComputationNode<ElemType>::SaveToFile(fstream);
-
             fstream <<  m_kernelWidth << m_kernelHeight << m_horizontalSubsample << m_verticalSubsample; 
             fstream << m_outputChannels << m_zeroPadding << m_maxTempMemSizeInSamples; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
-            fstream >>  m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample; 
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
+            fstream >> m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample; 
             fstream >> m_outputChannels >> m_zeroPadding >> m_maxTempMemSizeInSamples; 
         }
 
@@ -106,8 +101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         void Construct(const ConvolutionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
         {
-            m_tempMatrix = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             // further initializations
             node->CopyTo(shared_from_this(), newName, flags);
         }
@@ -470,33 +464,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const size_t windowWidth, const size_t windowHeight, 
-                       const size_t horizontalSubsample, const size_t verticalSubsample, 
-                       const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
+            m_windowWidth = SIZE_MAX, m_windowHeight = SIZE_MAX;
+            m_horizontalSubsample = SIZE_MAX, m_verticalSubsample = SIZE_MAX;
+        }
+        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) : ComputationNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
             m_windowWidth = windowWidth, m_windowHeight = windowHeight;
             m_horizontalSubsample = horizontalSubsample, m_verticalSubsample = verticalSubsample;
-            ComputationNode<ElemType>::Construct(deviceId, name);
         }
-                
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-                
+
         virtual void SaveToFile(File& fstream) const
         {
             ComputationNode<ElemType>::SaveToFile(fstream);
-
             fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
             fstream >> m_windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample; 
         }
 
@@ -528,7 +518,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         void Construct(const MaxPoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -705,33 +695,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const size_t windowWidth, const size_t windowHeight,
-                       const size_t horizontalSubsample, const size_t verticalSubsample, 
-                       const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
+            m_windowWidth = SIZE_MAX, m_windowHeight = SIZE_MAX;
+            m_horizontalSubsample = SIZE_MAX, m_verticalSubsample = SIZE_MAX;
+        }
+        AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) : ComputationNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
             m_windowWidth = windowWidth, m_windowHeight = windowHeight;
             m_horizontalSubsample = horizontalSubsample, m_verticalSubsample = verticalSubsample;
-            ComputationNode<ElemType>::Construct(deviceId, name);
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         virtual void SaveToFile(File& fstream) const
         {
             ComputationNode<ElemType>::SaveToFile(fstream);
-
             fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
             fstream >> m_windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample; 
         }
 
@@ -764,7 +750,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         void Construct(const AveragePoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 

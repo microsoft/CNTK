@@ -33,25 +33,17 @@ template<class ElemType>
 class ParallelNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
 {
     UsingComputationNodeMembers;
-
 public:
-    void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
     {
-        ComputationNode<ElemType>::Construct(deviceId, name);
-        // further initializations
-    }
-
-    void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-    {
-        ComputationNode<ElemType>::Construct(deviceId, name);
-        // further initializations
-        LoadFromFile(fstream, modelVersion, deviceId);
+        // TODO: change this back to proper initializers
     }
 
     // copy constructor
     void Construct(const ParallelNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
     {
-        ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+        //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
         node->CopyTo(shared_from_this(), newName, flags);
     }
 
@@ -222,12 +214,12 @@ template<class ElemType>
 class PreComputedNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
 {
     UsingComputationNodeMembers;
-
 public:
-    void Construct(DEVICEID_TYPE deviceId, const wstring& name)
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+    PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
     {
-        ComputationNode<ElemType>::Construct(deviceId, name);
         // further initializations
+        m_hasComputed = false;
     }
 
     virtual bool HasComputed() const = 0;
@@ -238,19 +230,16 @@ public:
     virtual void SaveToFile(File& fstream)  const
     {
         ComputationNode<ElemType>::SaveToFile(fstream);
-
         fstream << m_hasComputed;
         fstream << m_functionValues;
     }
 
-    virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
+    virtual void LoadFromFile(File& fstream, size_t modelVersion)
     {
-        ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+        ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
         fstream >> m_hasComputed;
         fstream >> m_functionValues;
     }
-
 
     virtual void DumpNodeInfo(const bool printValues, File& fstream) const
     {
@@ -280,23 +269,16 @@ class MeanNode : public PreComputedNode<ElemType>
     UsingPreComputedNodeMembers;
 
 public:
-    void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    MeanNode(DEVICEID_TYPE deviceId, const wstring & name) : PreComputedNode<ElemType>(deviceId, name)
     {
-        PreComputedNode<ElemType>::Construct(deviceId, name);
-        m_hasComputed = false;
+        // TODO: change this back to proper initializers
         m_numSamples = 0;
     }
 
-    void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+    virtual void LoadFromFile(File& fstream, size_t modelVersion)
     {
-        PreComputedNode<ElemType>::Construct(deviceId, name);
-        LoadFromFile(fstream, modelVersion, deviceId);
-    }
-
-    virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
-    {
-        PreComputedNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+        PreComputedNode<ElemType>::LoadFromFile(fstream, modelVersion);
         m_numSamples = 0;
     }
 
@@ -310,9 +292,7 @@ public:
         m_hasComputed = hasComputed;
 
         if (m_hasComputed)
-        {
             m_numSamples = 0;
-        }
     }
 
     virtual bool RequirePreCompute() const
@@ -396,7 +376,7 @@ public:
     // copy constructor
     void Construct(const MeanNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
     {
-        PreComputedNode<ElemType>::Construct(node->m_deviceId, newName);
+        //PreComputedNode<ElemType>::Construct(node->m_deviceId, newName);
         node->CopyTo(shared_from_this(), newName, flags);
     }
 
@@ -407,7 +387,7 @@ public:
     }
 
 private:
-    size_t m_numSamples;
+    size_t m_numSamples;    // TODO: move to base class?
 };
 
 template class MeanNode<float>;
@@ -418,28 +398,17 @@ class InvStdDevNode : public PreComputedNode<ElemType>
 {
     UsingPreComputedNodeMembers;
 public:
-    void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    InvStdDevNode(DEVICEID_TYPE deviceId, const wstring & name) : PreComputedNode<ElemType>(deviceId, name)
     {
+        // TODO: change this back to proper initializers
         m_mean = Matrix<ElemType>(deviceId), m_var = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
-        PreComputedNode<ElemType>::Construct(deviceId, name);
-        // further initializations
-        MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        m_hasComputed = false;
         m_numSamples = 0;
     }
 
-    void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+    virtual void LoadFromFile(File& fstream, size_t modelVersion)
     {
-        m_mean = Matrix<ElemType>(deviceId), m_var = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
-        PreComputedNode<ElemType>::Construct(deviceId, name);
-        // further initializations
-        LoadFromFile(fstream, modelVersion, deviceId);
-    }
-
-    virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
-    {
-        PreComputedNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+        PreComputedNode<ElemType>::LoadFromFile(fstream, modelVersion);
         m_numSamples = 0;
     }
 
@@ -586,7 +555,7 @@ public:
     void Construct(const InvStdDevNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
     {
         m_mean = Matrix<ElemType>(node->m_deviceId), m_var = Matrix<ElemType>(node->m_deviceId), m_temp = Matrix<ElemType>(node->m_deviceId);
-        PreComputedNode<ElemType>::Construct(node->m_deviceId, newName);
+        //PreComputedNode<ElemType>::Construct(node->m_deviceId, newName);
         node->CopyTo(shared_from_this(), newName, flags);
     }
 
@@ -611,22 +580,16 @@ class PerDimMeanVarNormalizationNode : public ComputationNode<ElemType>
 {
     UsingComputationNodeMembers;
 public:
-    void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
     {
-        ComputationNode<ElemType>::Construct(deviceId, name);
-    }
-
-    void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-    {
-        ComputationNode<ElemType>::Construct(deviceId, name);
-        // further initializations
-        LoadFromFile(fstream, modelVersion, deviceId);
+        // TODO: change this back to proper initializers
     }
 
     // copy constructor
     void Construct(const PerDimMeanVarNormalizationNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
     {
-        ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+        //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
         node->CopyTo(shared_from_this(), newName, flags);
     }
 
@@ -641,7 +604,7 @@ public:
 
     virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
     {
-        InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
+        InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");   // TODO: don't we have a base class for this?
     }
 
     virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &)
@@ -780,23 +743,16 @@ class PerDimMeanVarDeNormalizationNode : public ComputationNode<ElemType>
     UsingComputationNodeMembers;
 
 public:
-    void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    PerDimMeanVarDeNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
     {
-        ComputationNode<ElemType>::Construct(deviceId, name);
-        // further initializations
-    }
-
-    void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-    {
-        ComputationNode<ElemType>::Construct(deviceId, name);
-        // further initializations
-        LoadFromFile(fstream, modelVersion, deviceId);
+        // TODO: change this back to proper initializers
     }
 
     // copy constructor
     void Construct(const PerDimMeanVarDeNormalizationNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
     {
-        ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+        //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
         node->CopyTo(shared_from_this(), newName, flags);
     }
 
@@ -968,17 +924,12 @@ class BatchModeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemTy
 {
     // all nodes require precomputation should derive from it
     UsingComputationNodeMembers;
-
-protected:
-    /// the memory of input or output
-    Matrix<ElemType> mMemory;
-
 public:
-    void Construct(DEVICEID_TYPE deviceId, const wstring& name)
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+    BatchModeNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
     {
+        // TODO: change this back to proper initializers
         mMemory = Matrix<ElemType>(deviceId);
-        ComputationNode<ElemType>::Construct(deviceId, name);
-        // further initializations
     }
 
     virtual bool HasComputed() const = 0;
@@ -1000,15 +951,13 @@ public:
     virtual void SaveToFile(File& fstream)  const
     {
         ComputationNode<ElemType>::SaveToFile(fstream);
-
         fstream << m_hasComputed;
         fstream << m_functionValues;
     }
 
-    virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
+    virtual void LoadFromFile(File& fstream, size_t modelVersion)
     {
-        ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+        ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
         fstream >> m_hasComputed;
         fstream >> m_functionValues;
     }
@@ -1028,6 +977,7 @@ public:
     }
 
 protected:
+    Matrix<ElemType> mMemory;   // the memory of input or output
     bool m_hasComputed;
 };
 
@@ -1059,22 +1009,16 @@ class TimeReverseNode : public BatchModeNode<ElemType>
     UsingBatchModeNodeMembers;
 
 public:
-    void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    TimeReverseNode(DEVICEID_TYPE deviceId, const wstring & name) : BatchModeNode<ElemType>(deviceId, name)
     {
-        BatchModeNode<ElemType>::Construct(deviceId, name);
-        MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-    }
-
-    void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-    {
-        BatchModeNode<ElemType>::Construct(deviceId, name);
-        LoadFromFile(fstream, modelVersion, deviceId);
+        // TODO: change this back to proper initializers
     }
 
     // copy constructor
     void Construct(const TimeReverseNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
     {
-        BatchModeNode<ElemType>::Construct(node->m_deviceId, newName);
+        // BatchModeNode<ElemType>::Construct(node->m_deviceId, newName);
         node->CopyTo(shared_from_this(), newName, flags);
     }
 
@@ -1092,11 +1036,6 @@ public:
     virtual void SaveToFile(File& fstream)  const
     {
         ComputationNode<ElemType>::SaveToFile(fstream);
-    }
-
-    virtual void LoadFromFile(File& fstream, const size_t modelVersion, const short deviceId = AUTOPLACEMATRIX)
-    {
-        ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
     }
 
     virtual bool HasComputed() const

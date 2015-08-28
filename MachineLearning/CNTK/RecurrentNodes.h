@@ -29,6 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // The two differ in the step direction, some loop directions, and sequence-boundary flags.
     // =======================================================================
 
+    // TODO: make m_direction a template parameter
     template<class ElemType>
     class DelayedValueNode : public ComputationNode<ElemType>
     {
@@ -42,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_functionValues.Resize(row_size, col_size);
             m_delayedActivation.Resize(row_size, col_size);
 
-            m_direction = direction;
+            m_direction = direction;    // TODO: make this a template parameter
             if (m_direction < 0)    // set flags what kind of sequence boundary we should trigger on
             {
                 m_SEQUENCE_BOUNDARY = SEQUENCE_START;
@@ -56,30 +57,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_historyAlreadySet = false;    // PastValueNode only
         }
     protected:
-        // these are to be called by the two derived classes only
-        void Construct(const DEVICEID_TYPE deviceId, const std::wstring & name, int direction)
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             m_delayedActivation = Matrix<ElemType>(deviceId), m_boundaryInfo = CPUDEVICE;
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId);
+            Init(1000/*something bad--will go away once we make it a template parameter*/, 1, 1);
+        }
+        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name, int direction) : ComputationNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
+            m_delayedActivation = Matrix<ElemType>(deviceId), m_boundaryInfo = CPUDEVICE;
             Init(direction, 1, 1);
         }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId, const std::wstring & name, int direction)
+        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name, int direction, ElemType initialActivationValue, size_t row_size, size_t col_size) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             m_delayedActivation = Matrix<ElemType>(deviceId), m_boundaryInfo = CPUDEVICE;
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            Init(direction, 1, 1);
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-
-        void Construct(const DEVICEID_TYPE deviceId, ElemType initialActivationValue, size_t row_size, size_t col_size, const std::wstring & name, int direction)
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
             Init(direction, row_size, col_size, initialActivationValue);
 
             m_functionValues.SetValue(m_initialActivationValue);
@@ -88,7 +82,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradientValues.Resize(row_size, col_size);
             m_gradientValues.SetValue(0.0f);
         }
-
     public:
         void SaveToFile(File& fstream) const
         {
@@ -99,10 +92,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_initialActivationValue;
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
             // the node has already been initialized e.g. w.r.t. direction and sequence flags
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
 
             fstream >> m_timeStep;
 
@@ -355,9 +348,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // copy constructor
         void Construct(const DelayedValueNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_delayedActivation = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -393,20 +384,14 @@ public:  \
     {
         UsingDelayedValueNodeMembers;
     public:
-
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")  
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) : DelayedValueNode<ElemType>(deviceId, name, -1)
         {
-            DelayedValueNode<ElemType>::Construct(deviceId, name, -1);
+            // TODO: change this back to proper initializers
         }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) : DelayedValueNode<ElemType>(deviceId, name, -1, initialActivationValue, row_size, col_size)
         {
-            DelayedValueNode<ElemType>::Construct(fstream, modelVersion, deviceId, name, -1);
-        }
-
-        void Construct(const DEVICEID_TYPE deviceId, ElemType initialActivationValue, size_t row_size, size_t col_size, const std::wstring name = L"")
-        {
-            DelayedValueNode<ElemType>::Construct(deviceId, initialActivationValue, row_size, col_size, name, -1);
+            // TODO: change this back to proper initializers
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -479,19 +464,14 @@ public:  \
     {
         UsingDelayedValueNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) : DelayedValueNode<ElemType>(deviceId, name, +1)
         {
-            DelayedValueNode<ElemType>::Construct(deviceId, name, +1);
+            // TODO: change this back to proper initializers
         }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) : DelayedValueNode<ElemType>(deviceId, name, +1, initialActivationValue, row_size, col_size)
         {
-            DelayedValueNode<ElemType>::Construct(fstream, modelVersion, deviceId, name, +1);
-        }
-
-        void Construct(const DEVICEID_TYPE deviceId, ElemType initialActivationValue, size_t row_size, size_t col_size, const std::wstring name = L"")
-        {
-            DelayedValueNode<ElemType>::Construct(deviceId, initialActivationValue, row_size, col_size, name, +1);
+            // TODO: change this back to proper initializers
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -576,8 +556,8 @@ public:  \
             m_DefaultState = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
         }
     public:
-        // TODO: reduce more of this code dup unless this code goes away anyway
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        LSTMNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
         {
             m_State = Matrix<ElemType>(deviceId), m_PastState = Matrix<ElemType>(deviceId);
             m_PastOutput = Matrix<ElemType>(deviceId), m_Gi = Matrix<ElemType>(deviceId), m_Gf = Matrix<ElemType>(deviceId), m_Go = Matrix<ElemType>(deviceId); grdToObs = Matrix<ElemType>(deviceId); grdToInputGate = Matrix<ElemType>(deviceId);
@@ -588,39 +568,17 @@ public:  \
             grdBeforeForget = Matrix<ElemType>(deviceId); grdBeforeGo = Matrix<ElemType>(deviceId); grdToCell = Matrix<ElemType>(deviceId);
             grdBeforeTanhInputGate = Matrix<ElemType>(deviceId), m_obs_error_from_future_minibatch = Matrix<ElemType>(deviceId);
             m_state_error_from_future_minibatch = Matrix<ElemType>(deviceId); mLastState = Matrix<ElemType>(deviceId); mLastOutput = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            Init();
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_State = Matrix<ElemType>(deviceId), m_PastState = Matrix<ElemType>(deviceId), m_PastOutput = Matrix<ElemType>(deviceId), m_Gi = Matrix<ElemType>(deviceId), m_Gf = Matrix<ElemType>(deviceId), m_Go = Matrix<ElemType>(deviceId); grdToObs = Matrix<ElemType>(deviceId); grdToInputGate = Matrix<ElemType>(deviceId); grdToForgetGate = Matrix<ElemType>(deviceId); grdToOutputGate = Matrix<ElemType>(deviceId); grdToCellWgt = Matrix<ElemType>(deviceId); tanhObs = Matrix<ElemType>(deviceId); tanhState = Matrix<ElemType>(deviceId), m_tempMatrix = Matrix<ElemType>(deviceId); mSlicePrevState = Matrix<ElemType>(deviceId); mSlicePrevOutput = Matrix<ElemType>(deviceId);
-            grdBeforeInputGate = Matrix<ElemType>(deviceId);
-            grdBeforeForget = Matrix<ElemType>(deviceId); grdBeforeGo = Matrix<ElemType>(deviceId); grdToCell = Matrix<ElemType>(deviceId);
-            grdBeforeTanhInputGate = Matrix<ElemType>(deviceId), m_obs_error_from_future_minibatch = Matrix<ElemType>(deviceId);
-            m_state_error_from_future_minibatch = Matrix<ElemType>(deviceId); mLastState = Matrix<ElemType>(deviceId); mLastOutput = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            Init();
-            LoadFromFile(fstream, modelVersion, deviceId);
+            Init(); // TODO: remove Init() as a function if only used in one place
         }
 
         // copy constructor
         void Construct(const LSTMNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_State = Matrix<ElemType>(node->m_deviceId), m_PastState = Matrix<ElemType>(node->m_deviceId), m_PastOutput = Matrix<ElemType>(node->m_deviceId), m_Gi = Matrix<ElemType>(node->m_deviceId), m_Gf = Matrix<ElemType>(node->m_deviceId), m_Go = Matrix<ElemType>(node->m_deviceId), grdToObs = Matrix<ElemType>(node->m_deviceId), grdToInputGate = Matrix<ElemType>(node->m_deviceId), grdToForgetGate = Matrix<ElemType>(node->m_deviceId), grdToOutputGate = Matrix<ElemType>(node->m_deviceId), grdToCellWgt = Matrix<ElemType>(node->m_deviceId), tanhObs = Matrix<ElemType>(node->m_deviceId), tanhState = Matrix<ElemType>(node->m_deviceId), m_tempMatrix = Matrix<ElemType>(node->m_deviceId), mSlicePrevState = Matrix<ElemType>(node->m_deviceId), mSlicePrevOutput = Matrix<ElemType>(node->m_deviceId),
-            grdBeforeInputGate = Matrix<ElemType>(node->m_deviceId),
-            grdBeforeForget = Matrix<ElemType>(node->m_deviceId), grdBeforeGo = Matrix<ElemType>(node->m_deviceId), grdToCell = Matrix<ElemType>(node->m_deviceId),
-            grdBeforeTanhInputGate = Matrix<ElemType>(node->m_deviceId), m_obs_error_from_future_minibatch = Matrix<ElemType>(node->m_deviceId),
-            m_state_error_from_future_minibatch = Matrix<ElemType>(node->m_deviceId), mLastState = Matrix<ElemType>(node->m_deviceId), mLastOutput = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
-            m_use_errors_from_future_minibatch = false;
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
             m_DefaultState = (ElemType) DEFAULT_HIDDEN_ACTIVITY;
         }
+        // TODO: we need CopyTo() that sets m_DefaultState to Default
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -634,15 +592,13 @@ public:  \
         virtual void SaveToFile(File& fstream) const
         {
             ComputationNode<ElemType>::SaveToFile(fstream);
-
             fstream << m_inputDim << m_outputDim;
             fstream << m_DefaultState;
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
             if (modelVersion == 2)
                 fstream >> m_inputDim >> m_outputDim;
             fstream >> m_DefaultState;
