@@ -31,24 +31,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
+        LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
         {
-            // TODO: change this back to proper initializers
             m_needGradient = true;
-
             m_outputWidth = 1;
             m_outputHeight = SIZE_MAX;
             m_outputChannels = 1;
         }
-        LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) : ComputationNode<ElemType>(deviceId, name)
+        LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
+            ComputationNode<ElemType>(deviceId, name)
         {
-            // TODO: change this back to proper initializers
             m_needGradient = true;
-            m_functionValues.Resize(rows, cols);
-
             m_outputWidth = 1;
             m_outputHeight = rows;
             m_outputChannels = 1;
+            m_functionValues.Resize(rows, cols);
         }
 
         virtual void SaveToFile(File& fstream) const
@@ -82,7 +80,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual const std::wstring OperationName() const {return TypeName();}
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
-        virtual void EvaluateThisNode()  {}
+        virtual void EvaluateThisNode() {}
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) {}
         virtual void Validate() 
         {
@@ -93,7 +91,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+            Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
             sprintf(str, "[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
@@ -103,7 +101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             PrintNodeValuesToFile(printValues, fstream);
         }
-};
+    };
 
     //WARNING: Don't use SparseLearnableParameter yet since the current version assumes the parameter is dense instead of sparse
     //WARNING: After the right implementation is put here we need to turn it on in NetworkDescriptionLangauge.cpp
@@ -113,14 +111,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) : LearnableParameter<ElemType>(deviceId, name)
+        SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
+            LearnableParameter<ElemType>(deviceId, name)
         {
-            // TODO: change this back to proper initializers
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
         }
-        SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, size_t size) : LearnableParameter<ElemType>(deviceId, name, rows, cols)
+        SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, size_t size) :
+            LearnableParameter<ElemType>(deviceId, name, rows, cols)
         {
-            // TODO: change this back to proper initializers
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
             m_gradientValues.Resize(rows, cols, size);
         }
@@ -154,40 +152,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
         {
-            // TODO: change this back to proper initializers
             m_outputWidth = SIZE_MAX;
             m_outputHeight = SIZE_MAX;
             m_outputChannels = SIZE_MAX;
-
             Init(0, 0, false);
         }
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) : ComputationNode<ElemType>(deviceId, name)
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
+            ComputationNode<ElemType>(deviceId, name)
         {
-            // TODO: change this back to proper initializers
             m_outputWidth = SIZE_MAX;
             m_outputHeight = SIZE_MAX;
             m_outputChannels = SIZE_MAX;
-
             Init(0, 0, isSparse);
         }
         // ^^ TODO: merge the two above with optional arg
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse = false) : ComputationNode<ElemType>(deviceId, name)
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse = false) :
+            ComputationNode<ElemType>(deviceId, name)
         {
-            // TODO: change this back to proper initializers
-            m_outputWidth = 1;
             if (rows * cols == 0)
                 throw std::logic_error("This InputValue dimension is 0.");
 
+            m_outputWidth = 1;
             m_outputHeight = rows;
             m_outputChannels = 1;
 
             Init(rows, cols, isSparse);
         }
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, bool isSparse = false) : ComputationNode<ElemType>(deviceId, name)
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, bool isSparse = false) :
+            ComputationNode<ElemType>(deviceId, name)
         {
-            // TODO: change this back to proper initializers
             size_t rows = imageWidth * imageHeight * imageChannels;
             size_t cols = numImages;
 
@@ -245,7 +241,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+            Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
             sprintf(str, "[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
@@ -273,10 +269,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        LookupTableNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        LookupTableNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"LookupTable";} 
@@ -496,14 +491,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
+        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
         {
-            // TODO: change this back to proper initializers
             Init(1, 1); // TODO: do we not need to resize m_gradientValues?
         }
-        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size, size_t col_size) : ComputationNode<ElemType>(deviceId, name)
+        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size, size_t col_size) :
+            ComputationNode<ElemType>(deviceId, name)
         {
-            // TODO: change this back to proper initializers
             Init(row_size, col_size);
             m_gradientValues.Resize(row_size, col_size);
             m_gradientValues.SetValue(0.0f);

@@ -30,10 +30,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        NegateNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        NegateNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"Negate";} 
@@ -112,10 +111,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        SumElementsNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        SumElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"SumElements";} 
@@ -203,11 +201,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        SumColumnElementsNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_sumValue = Matrix<ElemType>(deviceId);
-        }
+        SumColumnElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_sumValue(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"SumColumnElements"; }
@@ -310,18 +307,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_startIndex = 0;
-            m_numRows = 0;
-        }
-        RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name, size_t start_index, size_t num_rows) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_startIndex = start_index;
-            m_numRows = num_rows;
-        }
+        RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_startIndex(0),
+            m_numRows(0)
+        { }
+        RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name, size_t start_index, size_t num_rows) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_startIndex(start_index),
+            m_numRows(num_rows)
+        { }
         // ^^ TODO: can merge these two
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -440,10 +435,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        RowStackNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        RowStackNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -576,10 +570,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        ScaleNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        ScaleNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"Scale";} 
@@ -694,10 +687,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        TimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        TimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"Times";} 
@@ -862,10 +854,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"TransposeTimes"; }
@@ -1026,10 +1017,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        ElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        ElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"ElementTimes";} 
@@ -1144,11 +1134,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        RowElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_tempMatrix = Matrix<ElemType>(deviceId);
-        }
+        RowElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_tempMatrix(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"RowElementTimes"; }
@@ -1292,11 +1281,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        ColumnElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_tempMatrix = Matrix<ElemType>(deviceId);
-        }
+        ColumnElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_tempMatrix(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"ColumnElementTimes"; }
@@ -1450,10 +1438,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        PlusNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        PlusNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"Plus";} 
@@ -1698,10 +1685,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        MinusNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        MinusNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"Minus";}
@@ -1982,11 +1968,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        DiagTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_innerproduct = Matrix<ElemType>(deviceId), m_rightGradient = Matrix<ElemType>(deviceId);
-        }
+        DiagTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_innerproduct(deviceId), m_rightGradient(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"DiagTimes";} 
@@ -1995,15 +1980,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (inputIndex > 1)
                 InvalidArgument("DiagTimes operation only takes two inputs.");
-
-            if (inputIndex == 0)  //left derivative
-            {
+            else if (inputIndex == 0)  //left derivative
                 ComputeInputPartialLeft(m_innerproduct, Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
-            }
             else  //right derivative
-            {
                 ComputeInputPartialRight(m_rightGradient, Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
-            }
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
@@ -2137,11 +2117,10 @@ private:
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        CosDistanceNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_invNorm0 = Matrix<ElemType>(deviceId), m_invNorm1 = Matrix<ElemType>(deviceId), m_leftTerm = Matrix<ElemType>(deviceId), m_rightTerm = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
-        }
+        CosDistanceNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"CosDistance";} 
@@ -2357,10 +2336,9 @@ private:
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        KhatriRaoProductNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        KhatriRaoProductNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"KhatriRaoProduct";} 
@@ -2498,12 +2476,11 @@ private:
 
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        CosDistanceWithNegativeSamplesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_invNorm0 = Matrix<ElemType>(deviceId), m_invNorm1 = Matrix<ElemType>(deviceId), m_invNormSquare = Matrix<ElemType>(deviceId); 
-            m_leftTerm = Matrix<ElemType>(deviceId), m_rightTerm = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
-        }
+        CosDistanceWithNegativeSamplesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
+            m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"CosDistanceWithNegativeSamples"; }
@@ -2774,11 +2751,10 @@ private:
         Matrix<ElemType> mOnes; 
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        TransposeNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            mOnes = Matrix<ElemType>(deviceId);
-        }
+        TransposeNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            mOnes(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"Transpose"; }
@@ -2893,27 +2869,18 @@ private:
         {
             m_Stride = input1.GetNumCols();
         }
-        void Init() // TODO: remove this function once copy constructor is gone
-        {
-            m_Stride = 1;
-        }
-
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        StrideTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            Init();
-        }
+        StrideTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_Stride(1)
+        { }
         // BUGBUG: This node needs to serialize and CopyTo m_Stride
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"StrideTimes"; }
 
-        virtual void ComputeInputPartial(const size_t )
-        {
-            NOT_IMPLEMENTED;
-        }
+        virtual void ComputeInputPartial(const size_t) { NOT_IMPLEMENTED; }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
