@@ -41,6 +41,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define UsingIDistGradAggregatorMembers \
     protected: \
-        using IDistGradAggregator<ElemType>::m_mpi;
+        using IDistGradAggregator<ElemType>::m_mpi; using IDistGradAggregator<ElemType>::NumProc; using IDistGradAggregator<ElemType>::MyRank
 
 }}}
