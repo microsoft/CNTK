@@ -217,6 +217,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     bool res = false; //Got something new?
     minibatchFlag.Resize(mBlgSize, m_mbSize);
 
+    int *temp_feature =  new int[wordNumber];
+
     for (int i = 0; i < mBlgSize; i++) {
         bool end = false;
         for (int j = 0; j < m_mbSize; j++) {
@@ -225,8 +227,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             if (!refreshCacheSeq(i))  //can we have new words in the cache for stream i?
                 end = true;
             if (end) {
-                feature_m->SetValue(0, idx, (ElemType)1); //The rubbish will be filtered out by ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing
-                label_m->SetValue(0, idx, (ElemType)0); //The rubbish will be filtered out by ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing
+                temp_feature[idx] = 0; //feature_m->SetValue(0, idx, (ElemType)1); //The rubbish will be filtered out by ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing
+                label_m->SetValue(0, idx, (ElemType)1); //The rubbish will be filtered out by ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing
                 minibatchFlag.SetValue(i, j, (ElemType)(MinibatchPackingFlag::NoInput)); //Rubbish here
                 continue;
             }
@@ -234,7 +236,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
                 LogicError("Error in BatchSequenceReader<ElemType>::GetMinibatch, sequence_cache[%d]->size() < 2, it should be always >= 2.", i);
             }
             //fprintf(stderr, "debughtx feature_m->SetValue seq i:%d mbCol j:%d row:%d col:%d matrixrow:%d matrixcol:%d\n", i, j, sequence_cache[i]->front(), idx, feature_m->GetNumRows(), feature_m->GetNumCols()); //added when meet a bug crash
-            feature_m->SetValue(sequence_cache[i]->front(), idx, (ElemType)1);
+            temp_feature[idx] = sequence_cache[i]->front(); //feature_m->SetValue(sequence_cache[i]->front(), idx, (ElemType)1);
             if (sequence_cache[i]->front() == sentenceEndId) //Beginning of a sentence
                 minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceStart);
             res = true; //Got some word new
@@ -247,6 +249,10 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             }
         }
     }
+
+    for (int i = 0; i < wordNumber; i++)
+        feature_m->SetValue(temp_feature[i], i, (ElemType)1); //The assigning to a sparse matrix need to follow a strict order!!!
+    delete temp_feature;
 
     feature_m->TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false); //Done, move it back to GPU if necessary
     label_m->TransferFromDeviceToDevice(CPUDEVICE, labelDeviceId, false, false, false); //Done, move it back to GPU if necessary
