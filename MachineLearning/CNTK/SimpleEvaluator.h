@@ -199,20 +199,15 @@ namespace Microsoft {
                 //returns error rate
                 ElemType EvaluateUnroll(IDataReader<ElemType>* dataReader, const size_t mbSize, ElemType &evalSetCrossEntropy, const wchar_t* output = nullptr, const size_t testSize = requestDataSize)
                 {
-
                     std::vector<ComputationNodePtr> & FeatureNodes = m_net.FeatureNodes();
                     std::vector<ComputationNodePtr> & labelNodes = m_net.LabelNodes();
                     std::vector<ComputationNodePtr> & criterionNodes = m_net.FinalCriterionNodes();
                     std::vector<ComputationNodePtr> & evaluationNodes = m_net.EvaluationNodes();
 
                     if (criterionNodes.size() == 0)
-                    {
-                        throw std::runtime_error("No CrossEntropyWithSoftmax node found\n");
-                    }
+                        RuntimeError("No CrossEntropyWithSoftmax node found\n");
                     if (evaluationNodes.size() == 0)
-                    {
-                        throw std::runtime_error("No Evaluation node found\n");
-                    }
+                        RuntimeError("No Evaluation node found\n");
 
                     std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
                     for (size_t i = 0; i < FeatureNodes.size(); i++)

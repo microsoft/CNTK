@@ -463,6 +463,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_loopId;
         }
 
+        // TODO: these two should disappear, the information should be in FrameRange record instead
         void SetNbrSlicesInEachRecurrentIteration(size_t bsz)
         {
             m_samplesInRecurrentStep = bsz;
@@ -906,7 +907,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UuidCreate(&uuid);
             WCHAR* szUuid = nullptr;
             if (UuidToStringW(&uuid, (RPC_WSTR*)&szUuid) != RPC_S_OK)
-                throw std::runtime_error("Failed to craete unique node name.");
+                RuntimeError("Failed to craete unique node name.");
             else
             {
               name = szUuid;
@@ -1031,7 +1032,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr node, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             if (OperationName() != node->OperationName())
-                throw std::runtime_error("Cannot copy from one node type to another node type");
+                RuntimeError("Cannot copy from one node type to another node type");
             if (flags & CopyNodeFlags::copyNodeChildren)
             {
                 node->m_children = m_children;
