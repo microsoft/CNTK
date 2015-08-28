@@ -40,19 +40,6 @@ public:
         // TODO: change this back to proper initializers
     }
 
-    // copy constructor
-    void Construct(const ParallelNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-    {
-        //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-        node->CopyTo(shared_from_this(), newName, flags);
-    }
-
-    virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-    {
-        const std::wstring& name = (newName == L"") ? NodeName() : newName;
-        return New<ParallelNode<ElemType>>(this, name, flags);
-    }
-
     virtual const std::wstring OperationName() const { return TypeName(); }
     static const std::wstring TypeName() { return L"Parallel"; }
 
@@ -364,28 +351,13 @@ public:
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
     {
         ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-        auto node = dynamic_pointer_cast<MeanNode<ElemType>>(nodeP);
-
         if (flags & CopyNodeFlags::copyNodeValue)
         {
+            auto node = dynamic_pointer_cast<MeanNode<ElemType>>(nodeP);
             node->m_hasComputed = m_hasComputed;
             node->m_numSamples = m_numSamples;
         }
     }
-
-    // copy constructor
-    void Construct(const MeanNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-    {
-        //PreComputedNode<ElemType>::Construct(node->m_deviceId, newName);
-        node->CopyTo(shared_from_this(), newName, flags);
-    }
-
-    virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-    {
-        const std::wstring& name = (newName == L"")?NodeName():newName;
-        return New<MeanNode<ElemType>>(this, name, flags);
-    }
-
 private:
     size_t m_numSamples;    // TODO: move to base class?
 };
@@ -538,10 +510,9 @@ public:
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
     {
         ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-        auto node = dynamic_pointer_cast<InvStdDevNode<ElemType>>(nodeP);
-
         if (flags & CopyNodeFlags::copyNodeValue)
         {
+            auto node = dynamic_pointer_cast<InvStdDevNode<ElemType>>(nodeP);
             node->m_hasComputed = m_hasComputed;
             node->m_numSamples = m_numSamples;
 
@@ -550,21 +521,6 @@ public:
             node-> m_temp =  m_temp;
         }
     }
-
-    // copy constructor
-    void Construct(const InvStdDevNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-    {
-        m_mean = Matrix<ElemType>(node->m_deviceId), m_var = Matrix<ElemType>(node->m_deviceId), m_temp = Matrix<ElemType>(node->m_deviceId);
-        //PreComputedNode<ElemType>::Construct(node->m_deviceId, newName);
-        node->CopyTo(shared_from_this(), newName, flags);
-    }
-
-    virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-    {
-        const std::wstring& name = (newName == L"")?NodeName():newName;
-        return New<InvStdDevNode<ElemType>>(this, name, flags);
-    }
-
 private:
     size_t m_numSamples;
     Matrix<ElemType> m_mean;
@@ -584,19 +540,6 @@ public:
     PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
     {
         // TODO: change this back to proper initializers
-    }
-
-    // copy constructor
-    void Construct(const PerDimMeanVarNormalizationNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-    {
-        //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-        node->CopyTo(shared_from_this(), newName, flags);
-    }
-
-    virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-    {
-        const std::wstring& name = (newName == L"")?NodeName():newName;
-        return New<PerDimMeanVarNormalizationNode<ElemType>>(this, name, flags);
     }
 
     virtual const std::wstring OperationName() const { return TypeName(); }
@@ -747,19 +690,6 @@ public:
     PerDimMeanVarDeNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
     {
         // TODO: change this back to proper initializers
-    }
-
-    // copy constructor
-    void Construct(const PerDimMeanVarDeNormalizationNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-    {
-        //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-        node->CopyTo(shared_from_this(), newName, flags);
-    }
-
-    virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-    {
-        const std::wstring& name = (newName == L"")?NodeName():newName;
-        return New<PerDimMeanVarDeNormalizationNode<ElemType>>(this, name, flags);
     }
 
     virtual const std::wstring OperationName() const
@@ -1015,20 +945,12 @@ public:
         // TODO: change this back to proper initializers
     }
 
-    // copy constructor
-    void Construct(const TimeReverseNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-    {
-        // BatchModeNode<ElemType>::Construct(node->m_deviceId, newName);
-        node->CopyTo(shared_from_this(), newName, flags);
-    }
-
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
     {
         ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-        auto node = dynamic_pointer_cast<TimeReverseNode<ElemType>>(nodeP);
-
         if (flags & CopyNodeFlags::copyNodeValue)
         {
+            auto node = dynamic_pointer_cast<TimeReverseNode<ElemType>>(nodeP);
             node->mMemory = mMemory;
         }
     }
@@ -1048,21 +970,8 @@ public:
         m_hasComputed = hasComputed;
     }
 
-    virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-    {
-        const std::wstring& name = (newName == L"") ? NodeName() : newName;
-        return New<TimeReverseNode<ElemType>>(this, name, flags);
-    }
-
-    virtual const std::wstring OperationName() const
-    {
-        return TypeName();
-    }
-
-    static const std::wstring TypeName()
-    {
-        return L"TimeReverse";
-    }
+    virtual const std::wstring OperationName() const { return TypeName(); }
+    static const std::wstring TypeName() { return L"TimeReverse"; }
 
     virtual void MoveMatricesToDevice(const short deviceId)
     {

@@ -331,10 +331,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<DelayedValueNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<DelayedValueNode<ElemType>>(nodeP);
                 node->m_timeStep = m_timeStep;
                 node->m_initialActivationValue = m_initialActivationValue;
                 node->m_delayedActivation = m_delayedActivation;
@@ -344,19 +343,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_historyAlreadySet = false;
             }
         }
-
-        // copy constructor
-        void Construct(const DelayedValueNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const = 0;
-
-    protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
-
     protected:
         ElemType m_initialActivationValue;      // starting value for hidden activation vector at boundary
         Matrix<ElemType> m_delayedActivation;   // saves the activation of the previous step that this node points to
@@ -371,7 +357,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define UsingDelayedValueNodeMembers UsingComputationNodeMembers; typedef DelayedValueNode<ElemType> BB; \
 public:  \
-    using BB::Construct; using BB::m_initialActivationValue; using BB::m_delayedActivation; using BB::m_timeStep; using BB::m_direction; \
+    using BB::m_initialActivationValue; using BB::m_delayedActivation; using BB::m_timeStep; using BB::m_direction; \
     using BB::m_SEQUENCE_BOUNDARY; using BB::m_SequenceBoundary; using BB::m_shiftedMinibatchPackingFlag; using BB::m_boundaryInfo; using BB::m_historyAlreadySet; \
     using BB::ComputeInputPartialSRP; using BB::EvaluateThisNodeSRP
 
@@ -441,12 +427,6 @@ public:  \
             
             Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(frameRange.t(), 1);
             EvaluateThisNodeSRP(frameRange.t(), m_timeStep, m_direction, m_SequenceBoundary, m_SEQUENCE_BOUNDARY, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<PastValueNode<ElemType>>(this, name, flags);
         }
     };
 
@@ -518,12 +498,6 @@ public:  \
             Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(frameRange.t(), 1);
             EvaluateThisNodeSRP(frameRange.t(), m_timeStep, m_direction, m_SequenceBoundary, m_SEQUENCE_BOUNDARY, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
         }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<FutureValueNode<ElemType>>(this, name, flags);
-        }
     };
 
     template class FutureValueNode<float>;
@@ -571,21 +545,6 @@ public:  \
             Init(); // TODO: remove Init() as a function if only used in one place
         }
 
-        // copy constructor
-        void Construct(const LSTMNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-            m_DefaultState = (ElemType) DEFAULT_HIDDEN_ACTIVITY;
-        }
-        // TODO: we need CopyTo() that sets m_DefaultState to Default
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<LSTMNode<ElemType>>(this, name, flags);
-        }
-
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"LSTM"; }
 
@@ -607,10 +566,9 @@ public:  \
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<LSTMNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<LSTMNode<ElemType>>(nodeP);
                 node->m_inputDim = m_inputDim;
                 node->m_outputDim = m_outputDim;
 
