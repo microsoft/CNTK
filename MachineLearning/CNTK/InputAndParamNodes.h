@@ -28,7 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class LearnableParameter : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -53,7 +53,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SaveToFile(File& fstream) const
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
+            Base::SaveToFile(fstream);
             fstream << NeedGradient();
             fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
             fstream << FunctionValues();
@@ -61,7 +61,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
+            Base::LoadFromFile(fstream, modelVersion);
 
             size_t rows, cols;
             fstream >> m_needGradient;
@@ -110,7 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SparseLearnableParameter : public LearnableParameter<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) : LearnableParameter<ElemType>(deviceId, name)
@@ -131,8 +131,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);       // TODO: needed? Constructor already sets this
             m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
         }
-virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"SparseLearnableParameter";} 
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
     };
 
     template class SparseLearnableParameter<float>; 
@@ -141,7 +142,7 @@ virtual const std::wstring OperationName() const {return TypeName();}
     template<class ElemType>
     class InputValue : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
         void Init(size_t rows, size_t cols, bool isSparse)
         {
             m_isSparse = isSparse;
@@ -199,17 +200,17 @@ virtual const std::wstring OperationName() const {return TypeName();}
 
             Init(rows, cols, isSparse);
         }
-virtual void SaveToFile(File& fstream) const
-        {
-            ComputationNode<ElemType>::SaveToFile(fstream);
 
+        virtual void SaveToFile(File& fstream) const
+        {
+            Base::SaveToFile(fstream);
             fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
             fstream << m_outputWidth << m_outputHeight << m_outputChannels; 
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
+            Base::LoadFromFile(fstream, modelVersion);
 
             size_t rows, cols;
             fstream >> rows >> cols;
@@ -226,6 +227,7 @@ virtual void SaveToFile(File& fstream) const
         }
 
         virtual const std::wstring OperationName() const {return m_isSparse ? SparseTypeName() : TypeName();}
+
         static const std::wstring TypeName() {return L"InputValue";} 
         static const std::wstring SparseTypeName() {return L"SparseInputValue";}
 
@@ -268,7 +270,7 @@ virtual void SaveToFile(File& fstream) const
     template<class ElemType>
     class LookupTableNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LookupTableNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -486,7 +488,7 @@ virtual void SaveToFile(File& fstream) const
     template<class ElemType>
     class PairNetworkNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
         void Init(size_t row_size, size_t col_size)
         {
             m_reqMultiSeqHandling = true;
@@ -509,8 +511,8 @@ virtual void SaveToFile(File& fstream) const
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            Init(1, 1);
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
+            Init(1, 1); // TODO: this looks wrong; should the dimension not come from the loaded model data?
+            Base::LoadFromFile(fstream, modelVersion);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }

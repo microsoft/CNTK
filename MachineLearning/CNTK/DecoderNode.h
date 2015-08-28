@@ -22,7 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SequenceDecoderNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     private:
         // TODO: member variables go to the end
         Matrix<ElemType> mAlpha;

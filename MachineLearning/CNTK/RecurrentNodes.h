@@ -32,7 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType, int direction/*-1 or +1*/, int SEQUENCE_START_or_END/*_START or _END*/, MinibatchPackingFlag SequenceStart_or_End/*-Start or -End*/>
     class DelayedValueNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     private:
         void Init(size_t row_size, size_t col_size, ElemType initialActivationValue = (ElemType)DEFAULT_HIDDEN_ACTIVITY)
         {
@@ -76,7 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
             // the node has already been initialized e.g. w.r.t. direction and sequence flags
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
+            Base::LoadFromFile(fstream, modelVersion);
 
             fstream >> m_timeStep;
 
@@ -303,14 +303,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_boundaryInfo.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             m_delayedActivation.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<DelayedValueNode<ElemType, direction, SEQUENCE_START_or_END, SequenceStart_or_End>>(nodeP);
@@ -330,7 +330,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
 #define UsingDelayedValueNodeMembers UsingComputationNodeMembers; \
-public:  \
     using Base::m_initialActivationValue; using Base::m_delayedActivation; using Base::m_timeStep; \
     using Base::m_shiftedMinibatchPackingFlag; using Base::m_boundaryInfo; using Base::m_historyAlreadySet; \
     using Base::ComputeInputPartialSRP; using Base::EvaluateThisNodeSRP
@@ -342,8 +341,7 @@ public:  \
     template<class ElemType>
     class PastValueNode : public DelayedValueNode<ElemType, -1, SEQUENCE_START, MinibatchPackingFlag::SequenceStart>
     {
-        typedef DelayedValueNode<ElemType, -1, SEQUENCE_START, MinibatchPackingFlag::SequenceStart> Base;
-        UsingDelayedValueNodeMembers;
+        typedef DelayedValueNode<ElemType, -1, SEQUENCE_START, MinibatchPackingFlag::SequenceStart> Base; UsingDelayedValueNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name)
@@ -416,8 +414,7 @@ public:  \
     template<class ElemType>
     class FutureValueNode : public DelayedValueNode<ElemType, +1, SEQUENCE_END, MinibatchPackingFlag::SequenceEnd>
     {
-        typedef DelayedValueNode<ElemType, +1, SEQUENCE_END, MinibatchPackingFlag::SequenceEnd> Base;
-        UsingDelayedValueNodeMembers;
+        typedef DelayedValueNode<ElemType, +1, SEQUENCE_END, MinibatchPackingFlag::SequenceEnd> Base; UsingDelayedValueNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name)
@@ -493,7 +490,7 @@ public:  \
     template<class ElemType>
     class LSTMNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 
         void Init()
         {
@@ -524,14 +521,14 @@ public:  \
 
         virtual void SaveToFile(File& fstream) const
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
+            Base::SaveToFile(fstream);
             fstream << m_inputDim << m_outputDim;
             fstream << m_DefaultState;
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
+            Base::LoadFromFile(fstream, modelVersion);
             if (modelVersion == 2)
                 fstream >> m_inputDim >> m_outputDim;
             fstream >> m_DefaultState;
@@ -539,7 +536,7 @@ public:  \
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<LSTMNode<ElemType>>(nodeP);
@@ -1448,7 +1445,7 @@ public:  \
 
         virtual void MoveMatricesToDevice(const short deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_functionValues.HasNoElements());
             m_gradientValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_gradientValues.HasNoElements());
             grdToObs.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
@@ -1477,7 +1474,6 @@ public:  \
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
             ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
-
             fstream << L"Input[Width:" << m_inputDim << L"]  \n" ; 
             fstream << L"Hidden[Width:" << m_outputDim << L"]    Output[Width:" << m_outputDim << L"]  \n";
         }

@@ -39,7 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class NonlinearityNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         NonlinearityNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -113,7 +113,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
@@ -121,9 +121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m_gradient;
     };
 
-#define UsingNonlinearityNodeMembers UsingComputationNodeMembers; typedef NonlinearityNode<ElemType> BB; \
-public:  \
-    using BB::m_gradient; using BB::EvaluateThisNode
+#define UsingNonlinearityNodeMembers UsingComputationNodeMembers; using Base::m_gradient
 
     // =======================================================================
     // RectifiedLinearNode -- ReLU non-linearity
@@ -132,7 +130,7 @@ public:  \
     template<class ElemType>
     class RectifiedLinearNode : public NonlinearityNode<ElemType>
     {
-        UsingNonlinearityNodeMembers;
+        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RectifiedLinearNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
@@ -168,7 +166,7 @@ public:  \
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             auto node = dynamic_pointer_cast<RectifiedLinearNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -186,7 +184,7 @@ public:  \
     template<class ElemType>
     class SigmoidNode : public NonlinearityNode<ElemType>
     {
-        UsingNonlinearityNodeMembers;
+        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
@@ -237,7 +235,7 @@ public:  \
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             auto node = dynamic_pointer_cast<SigmoidNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -255,7 +253,7 @@ public:  \
     template<class ElemType>
     class TanhNode : public NonlinearityNode<ElemType>
     {
-        UsingNonlinearityNodeMembers;
+        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TanhNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
@@ -308,7 +306,7 @@ public:  \
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             auto node = dynamic_pointer_cast<TanhNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -326,7 +324,7 @@ public:  \
     template<class ElemType>
     class LogNode : public NonlinearityNode<ElemType>
     {
-        UsingNonlinearityNodeMembers;
+        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LogNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
@@ -378,13 +376,13 @@ public:  \
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             auto node = dynamic_pointer_cast<LogNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -402,7 +400,7 @@ public:  \
     template<class ElemType>
     class ExpNode : public NonlinearityNode<ElemType>
     {
-        UsingNonlinearityNodeMembers;
+        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ExpNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
@@ -453,13 +451,13 @@ public:  \
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             auto node = dynamic_pointer_cast<ExpNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -477,7 +475,7 @@ public:  \
     template<class ElemType>
     class CosineNode : public NonlinearityNode<ElemType>
     {
-        UsingNonlinearityNodeMembers;
+        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosineNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
@@ -529,13 +527,13 @@ public:  \
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             auto node = dynamic_pointer_cast<CosineNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -555,7 +553,7 @@ public:  \
     template<class ElemType>
     class SoftmaxNode : public NonlinearityNode<ElemType>
     {
-        UsingNonlinearityNodeMembers;
+        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
@@ -644,7 +642,7 @@ public:  \
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             // BUGBUG: fix all base calls, also in MoveMatrices...
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<SoftmaxNode<ElemType>>(nodeP);
@@ -666,7 +664,7 @@ private:
     template<class ElemType>
     class LogSoftmaxNode : public NonlinearityNode<ElemType>
     {
-        UsingNonlinearityNodeMembers;
+        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LogSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
@@ -736,14 +734,14 @@ private:
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             m_softmax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<LogSoftmaxNode<ElemType>>(nodeP);
@@ -767,7 +765,7 @@ private:
     template<class ElemType>
     class GMMLogLikelihoodNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         GMMLogLikelihoodNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -1149,7 +1147,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_prior.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
             m_normedDeviation.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
             m_normedDeviationVectors.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
@@ -1159,7 +1157,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<GMMLogLikelihoodNode<ElemType>>(nodeP);
@@ -1191,7 +1189,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
     template<class ElemType>
     class DropoutNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
         void Init()
         {
             m_dropoutRate = 0;
@@ -1338,7 +1336,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_maskOfDropout.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
@@ -1346,7 +1344,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeP);
@@ -1372,7 +1370,7 @@ private:
     template<class ElemType>
     class ReshapeNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -1396,7 +1394,7 @@ private:
 
 virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
@@ -1409,13 +1407,13 @@ virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName,
 
         virtual void SaveToFile(File& fstream) const
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
+            Base::SaveToFile(fstream);
             fstream << m_numRows << m_imageWidth << m_imageHeight << m_imageChannels;
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
+            Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_numRows >> m_imageWidth >> m_imageHeight >> m_imageChannels;
         }
 
@@ -1652,7 +1650,7 @@ virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName,
     template<class ElemType>
     class RowRepeatNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowRepeatNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -1669,7 +1667,7 @@ virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName,
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<RowRepeatNode<ElemType>>(nodeP);
@@ -1679,13 +1677,13 @@ virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName,
 
         virtual void SaveToFile(File& fstream) const
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
+            Base::SaveToFile(fstream);
             fstream << m_numRepeat;
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
+            Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_numRepeat;
         }
 

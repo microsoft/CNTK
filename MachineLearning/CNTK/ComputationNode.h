@@ -81,7 +81,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
 
     template<class ElemType>
-    class ComputationNode : public std::enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
+    class ComputationNode : public enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
     {
         // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
     protected:
@@ -92,7 +92,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNode() { }
     public:
         typedef float OurElemType;
-
+    protected:
         // TODO: this should be protected and only accessible to the New method; maybe just move it in here?
         // TODO: Once we switch to VS 2015, we shall use inheriting constructors, i.e. we can delete all those redundant constructor forwards in each ComputationNode derivate
         ComputationNode(DEVICEID_TYPE deviceId, const wstring & name)
@@ -118,13 +118,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             InitRecurrentNode();
             // This constructor does not call MoveMatricesToDevice(), but that is needed for full initialization.
-            // Only call this constructor through the New() factory functions, which will ensure this.
+            // Only call this constructor through the New() factory below, which will ensure this.
+        }
+    public:
+        // public constructor
+        // You must construct ComputationNode derivates with this function. The real C++ constructor itself is hidden,
+        // as we need to call a virtual function after construction. This function does that.
+        template<class C, class... _Types> static inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
+        {
+            auto p = make_shared<C>(deviceId, name, forward<_Types>(_Args)...);     // creates objects, esp. assigns deviceId to matrices, but otherwise does nothing
+            p->MoveMatricesToDevice(deviceId);                                      // this is a virtual call, i.e. it will handle extra matrices an object might own
+            return p;
         }
 
         virtual ~ComputationNode()
         {
 #ifdef DISPLAY_DEBUG
-            fprintf (stderr, "Called Destructor NodeName: %s\n",(msra::strfun::utf8 (NodeName())).c_str());
+            fprintf (stderr, "Called Destructor NodeName: %s\n", (msra::strfun::utf8 (NodeName())).c_str()), fflush(stderr);
 #endif
         }
 
@@ -1112,35 +1122,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_hasloop; 
     };
 
-    // factory functions
-    // These are an important part of object construction. There is only one base constructo that has no access to virtual functions.
-    // These factory functions here call additional initializations that are using virtual functions.
-    // TODO: hide the actual constructor from end users
-    // Call these instead of new for any ComputationNode derivatives.  TODO: complete this
-    // TODO: for base constructor, must call MoveMatricesToDevice after construction; for load constructor, must call LoadFromFile
+    // convenience wrapper for ComputationNode::New()
     template<class C, class... _Types> inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
     {
-        auto p = make_shared<C>(deviceId, name, forward<_Types>(_Args)...);     // creates objects, esp. assigns deviceId to matrices, but otherwise does nothing
-        p->MoveMatricesToDevice(deviceId);                                      // this is a virtual call, i.e. it will handle extra matrices an object might own
-        return p;
+        return ComputationNode<C::OurElemType>::New<C>(deviceId, name, forward<_Types>(_Args)...);
     }
-#if 0
-    template<class C> inline shared_ptr<C> New(const C * node, const wstring & name, const CopyNodeFlags flags)    // called from DuplicateDELETEME() only
-    {
-#if 1
-        node; name; flags;
-        LogicError("this is gone, man!");
-#else
-        auto p = New<C>(node->GetDeviceId(), name);
---TODO: replace DuplicateDELETEME() by NewThis
-        p->ConstructDELETEME(node, name, flags);
-        // TODO: call CopyTo() here
-        return p;
-#endif
-    }
-    //template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { auto p = make_shared<C>(); p->ConstructDELETEME(std::forward<_Types>(_Args)...); return p; }
-    //template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { auto p = make_shared<C>(); p->ConstructDELETEME(std::forward<_Types>(_Args)...); return p; }
-#endif
 
     // =======================================================================
     // ComputationNodeNonLooping -- abstract base class for computation nodes that do not implement eval/partial for individual frames
@@ -1171,34 +1157,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNode() = 0;
     };
 
-    // add this at the start of each derived class, to get access to the members of ComputationNode
+    // add 'typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;' at the start of each derived class, to get access to the members of ComputationNode
     // BUGBUG: some should be protected, not public; TODO: comment here why this is needed and how to maintain it
-    // Whoever invented that insanity called two-phase name lookup shall rot in hell. [fseide]
+    // Whoever invented that insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain. [fseide]
 #define UsingComputationNodeMembers    \
-        typedef ComputationNode<ElemType> B; \
 protected:  \
-        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  \
+    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  \
 public: \
-        using B::AttachInputs; using B::ChildrenNeedGradient; using B::ChildrenSize; using B::ClearGradientForChildren; \
-        using B::ComputeGradientForChildren; using B::ComputeInputPartial; using B::ConstOnes; using B::InferImageDimsFromInput; \
-        using B::InferImageDimsFromInputs; using B::CopyTo; using B::CreateUniqNodeName; using B::DetachInputs; \
-        using B::DumpNodeInfo; using B::EnumerateNodes; using B::EnumerateNodesForEval; \
-        using B::EnumerateNodesForGradient; using B::EvaluateThisNode; using B::FindChildInASet; using B::FunctionValues; \
-        using B::GradientValues; using B::HasLoop; using B::InitRecurrentNode; using B::Inputs; \
-        using B::IsChildAnImage; using B::IsEqualTo; using B::IsFuncValueOlderThanInputs; using B::IsLeaf; using B::IsSmaller; \
-        using B::LoadFromFile; using B::MoveMatricesToDevice; using B::NeedGradient; using B::NodeName; \
-        using B::OperationName; using B::PrintNodeValuesToFile; using B::PrintSelf; using B::PrintSelfBeforeValidation; \
-        using B::RequirePreCompute; using B::ReshuffleNodes; using B::ReshuffleNodesForEvalWithRecurrentLoops; \
-        using B::SaveToFile; using B::SetFunctionAndGradientSize; using B::SetInput; using B::Validate; \
+    using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; \
+    using Base::ComputeGradientForChildren; using Base::ComputeInputPartial; using Base::ConstOnes; using Base::InferImageDimsFromInput; \
+    using Base::InferImageDimsFromInputs; using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
+    using Base::DumpNodeInfo; using Base::EnumerateNodes; using Base::EnumerateNodesForEval; \
+    using Base::EnumerateNodesForGradient; using Base::EvaluateThisNode; using Base::FindChildInASet; using Base::FunctionValues; \
+    using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
+    using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
+    using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
+    using Base::OperationName; using Base::PrintNodeValuesToFile; using Base::PrintSelf; using Base::PrintSelfBeforeValidation; \
+    using Base::RequirePreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
+    using Base::SaveToFile; using Base::SetFunctionAndGradientSize; using Base::SetInput; using Base::Validate; \
 protected:  \
-        using B::m_loopId; using B::m_samplesInRecurrentStep; \
-        using B::m_visitedOrder; using B::m_index; using B::m_lowlink; using B::m_visited; using B::m_inStack; \
-        using B::m_indexInLoop; \
-        using B::m_sentenceSeg; using B::m_minibatchPackingFlag; \
-        using B::m_reqMultiSeqHandling; using B::UseCustomizedMultiSeqHandling; \
-        using B::m_children; using B::m_deviceId; using B::m_evalTimeStamp; using B::m_functionValues; using B::m_gradientValues; \
-        using B::m_inputChannels; using B::m_inputHeight; using B::m_inputWidth; using B::m_needGradient; using B::m_nodeName; \
-        using B::m_outputChannels; using B::m_outputHeight; using B::m_outputWidth; using B::s_constOnes; using B::s_timeStampCounter; using B::shared_from_this \
+    using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
+    using Base::m_visitedOrder; using Base::m_index; using Base::m_lowlink; using Base::m_visited; using Base::m_inStack; \
+    using Base::m_indexInLoop; \
+    using Base::m_sentenceSeg; using Base::m_minibatchPackingFlag; \
+    using Base::m_reqMultiSeqHandling; using Base::UseCustomizedMultiSeqHandling; \
+    using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
+    using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
+    using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; using Base::s_timeStampCounter; \
+    using Base::shared_from_this; \
+public:
 
 #pragma endregion base computation class
 
