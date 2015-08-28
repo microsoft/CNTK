@@ -32,7 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int mEndLab;   // the ending output label, if avaliable
         ElemType  m_default_activity;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SequenceDecoderNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             mAlpha(deviceId), mBacktrace(deviceId),

@@ -1201,7 +1201,7 @@ void DoTopologyPlot(const ConfigParameters& config)
     {
         fprintf(stderr, "Executing a third-part tool for rendering dot:\n%S\n", rescmd.c_str());
 #ifdef __unix__
-        system(msra::strfun::utf8(rescmd).c_str());
+        const auto rc = system(msra::strfun::utf8(rescmd).c_str()); rc/*ignoring the result--this gets flagged by gcc if we don't save the return value*/;
 #else
         _wsystem(rescmd.c_str());
 #endif
