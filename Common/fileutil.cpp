@@ -1604,7 +1604,7 @@ void msra::files::make_intermediate_dirs (const wstring & filepath)
     wstring subpath;
     int skip = 0;
 #ifdef _WIN32
-    // On windows, if share (\\) then the first two levels (machine, share name) cannot be made
+    // On windows, if share (\\) then the first two levels (machine, share name) cannot be made.
     if ((buf[0] == '/' && buf[1] == '/') || (buf[0] == '\\' && buf[1] == '\\'))
     {
         subpath = L"/";

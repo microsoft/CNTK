@@ -238,7 +238,7 @@ void LUSequenceReader<ElemType>::WriteLabelFile()
             }
             else if (!m_cachingWriter)
             {
-                fprintf(stderr, "WARNING: file %ws NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
+                fprintf(stderr, "WARNING: file %ls NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
             }
         }
     }
@@ -431,7 +431,7 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
-        fprintf(stderr, "reading sequence file %ws\n", m_file.c_str());
+        fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];

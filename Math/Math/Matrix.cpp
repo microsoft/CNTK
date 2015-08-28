@@ -807,7 +807,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 SetDataLocation(CPU, DENSE);
             }
             else
-                throw std::runtime_error("Wrong new matrix type");
+                LogicError("SwitchToMatrixType: Unexpected/invalid new matrix type");
         }
         else //GPU
         {
@@ -857,7 +857,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 SetDataLocation(GPU, DENSE);
             }
             else
-                throw std::runtime_error("Wrong new matrix type");
+                LogicError("SwitchToMatrixType: Unexpected/invalid new matrix type");
         }
     }
 
@@ -881,7 +881,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-            }
+    }
 
     template<class ElemType>
     const ElemType Matrix<ElemType>::operator() (const size_t row, const size_t col) const
@@ -893,7 +893,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-        }
+    }
 
 
     //WARNING: This function is very slow for GPUs since it requires copying values between CPUs and GPUs. 
@@ -910,7 +910,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-        }
+    }
 
     template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::Transpose()
@@ -953,7 +953,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-        }
+    }
 
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const DeviceBoundNumber<ElemType>& db_number)
@@ -970,7 +970,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-            }
+    }
 
     template<class ElemType>
     void Matrix<ElemType>::SetColumn(const ElemType* colPointer, size_t colInd)
@@ -985,7 +985,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-        }
+    }
 
     template<class ElemType>
     void Matrix<ElemType>::SetColumn(const ElemType val, size_t colInd)
@@ -996,7 +996,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED);
-        }
+    }
 
     template<class ElemType>
     void Matrix<ElemType>::SetColumn(const Matrix<ElemType>& colMat, size_t colInd)
@@ -1009,7 +1009,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED);
-        }
+    }
 
 
     template<class ElemType>
@@ -1046,7 +1046,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-        }
+    }
 
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const size_t rIdx, const size_t cIdx, ElemType val)
@@ -1072,7 +1072,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_CPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols),
             m_GPUSparseMatrix->SetMatrixFromCSCFormat(h_CSCCol, h_Row, h_Val, nz, numRows, numCols)
             );
-
     }
 
     template<class ElemType>
@@ -1091,7 +1090,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-        }
+    }
 
     template<class ElemType>
     void Matrix<ElemType>::SetDiagonalValue(Matrix<ElemType>& vector)
@@ -1129,8 +1128,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 NOT_IMPLEMENTED, 
                 NOT_IMPLEMENTED
                 );
-            }
-            }
+        }
+    }
 
     template<class ElemType>
     void Matrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed)
@@ -1145,7 +1144,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );     
-        }
+    }
 
     template<class ElemType>
     void Matrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
@@ -3289,7 +3288,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //other wise GPU>CPU and if both are GPU move to a's preferred device
     template<class ElemType>
     void Matrix<ElemType>::DecideAndMoveToRightDevice(const Matrix<ElemType> &a, const Matrix<ElemType> &b, const Matrix<ElemType> &c)
-        {
+    {
         int deviceIdA = a.GetDeviceId(), deviceIdB = b.GetDeviceId(), deviceIdC = c.GetDeviceId();
         if (deviceIdA == deviceIdB && deviceIdA == deviceIdC)
             return;
@@ -3310,7 +3309,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             b._transferToDevice(deviceIdA);
             c._transferToDevice(deviceIdA);
-    }
+        }
         else if(deviceIdB != CPUDEVICE)
         {
             a._transferToDevice(deviceIdB);
@@ -3535,6 +3534,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         _transferFromDeviceToDevice(from_id,to_id,ismoved,emptyTransfer);
         if (updatePreferredDevice && m_preferredDeviceId != MANAGEDEXTERN)
             m_preferredDeviceId=GetDeviceId();
+    }
+    template<class ElemType>
+    void Matrix<ElemType>::TransferToDeviceIfNotThere(int id_to, bool ismoved, bool emptyTransfer, bool updatePreferredDevice) const
+    {
+        if (GetDeviceId() != id_to)
+            TransferFromDeviceToDevice(id_to, ismoved, emptyTransfer, updatePreferredDevice);
+    }
+    template<class ElemType>
+    void Matrix<ElemType>::TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool ismoved, bool emptyTransfer, bool updatePreferredDevice) const
+    {
+        if (id_to != AUTOPLACEMATRIX)
+            TransferToDeviceIfNotThere(id_to, ismoved, emptyTransfer, updatePreferredDevice);
     }
 
     template<class ElemType>
