@@ -914,7 +914,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     ComputeCEPartialToSoftmaxInputs(grd_t, GradientValues(), c_t);
                     break;
                 default:
-                    throw std::runtime_error("ClassCrossEntropyWithSoftmaxNode criterion only takes with respect to input, weight to the input and class log posterior probability.");
+                    RuntimeError("ClassCrossEntropyWithSoftmaxNode criterion only takes with respect to input, weight to the input and class log posterior probability.");
                 }
 
                 sz += nbr_wrd;

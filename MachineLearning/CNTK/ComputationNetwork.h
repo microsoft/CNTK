@@ -77,6 +77,13 @@ protected:
     } RecurrentInfo;
 
 public:
+
+    // TODO: sort methods into functional groups; some methods are at random places
+
+    // -----------------------------------------------------------------------
+    // construction
+    // -----------------------------------------------------------------------
+
     ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
                     : m_deviceId(deviceId), m_SentenceBoundary(CPUDEVICE)
     {
@@ -94,10 +101,18 @@ public:
         ClearNet();
     }
 
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
     static bool IsSmaller(const ComputationNodePtr lhs, const ComputationNodePtr rhs)
     {
         return lhs->GetVisitedOrder() < rhs->GetVisitedOrder();
     }
+
+    // -----------------------------------------------------------------------
+    // construction
+    // -----------------------------------------------------------------------
 
     void ClearNet()
     {
@@ -120,6 +135,10 @@ public:
         //}
         m_nameToNodeMap.clear();    // will also deref and likely deallocate all nodes we hold in here
     }
+
+    // -----------------------------------------------------------------------
+    // diagnostics
+    // -----------------------------------------------------------------------
 
     //if node name is not found, dump all nodes
     //otherwise dump just that node
@@ -181,7 +200,12 @@ public:
     }
 
 private:
-    // [erw] added for Toplological Plot only
+
+    // -----------------------------------------------------------------------
+    // topological plot [erw]
+    // TODO: Can this be a separate class? Can it be moved to a CPP?
+    // -----------------------------------------------------------------------
+
     class DotGraphConfigure
     {
     public:
@@ -416,6 +440,10 @@ public:
         DescribeNetworkUsingDot(arcs, outputFile);
     }
 
+    // -----------------------------------------------------------------------
+    // construction
+    // -----------------------------------------------------------------------
+
     void SetDeviceID(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
     {
         m_deviceId = deviceId;
@@ -427,6 +455,10 @@ public:
 
     unsigned long GetRandomSeedOffset() { return m_randomSeedOffset; }
     void SetRandomSeedOffset(unsigned long value) { m_randomSeedOffset = value; }
+
+    // -----------------------------------------------------------------------
+    // serialization
+    // -----------------------------------------------------------------------
 
     void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const
     {
@@ -574,6 +606,10 @@ public:
         }
     }
 
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
     size_t GetActualMBSize()
     {
         size_t actualMBSize = 0;
@@ -586,6 +622,10 @@ public:
 
         return actualMBSize;
     }
+
+    // -----------------------------------------------------------------------
+    // serialization
+    // -----------------------------------------------------------------------
 
     virtual void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
                               const bool bAllowNoCriterionNode = false, ComputationNetwork<ElemType>* anotherNetwork = nullptr)
@@ -798,6 +838,11 @@ public:
         }
     }
 
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
+    // TODO: describe what this function does
     //this is a temp solution since some nodes such as plus can be just aggregate of two scalar values 
     //in which case the packing info is not available (and not meaningful) for them
     size_t GetNumSamplesWithLabel(const size_t numAllSamples)
@@ -831,6 +876,10 @@ public:
             return numAllSamples;
     }
 
+    // -----------------------------------------------------------------------
+    // serialization
+    // -----------------------------------------------------------------------
+
     // Read a matrix stored in text format from 'filePath' (whitespace-separated columns, newline-separated rows),
     // and return a flat array containing the contents of this file in column-major format.
     // filePath: path to file containing matrix in text format.
@@ -856,9 +905,7 @@ public:
             {
                 // Break on empty line.  This allows there to be an empty line at the end of the file.
                 if (line == "")
-                {
                     break;
-                }
 
                 istringstream iss(line);
                 ElemType element;
@@ -871,23 +918,16 @@ public:
                 }
 
                 if (r == 0)
-                {
                     numColsInFirstRow = numElementsInRow;
-                }
                 else if (numElementsInRow != numColsInFirstRow)
-                {
-                    throw std::runtime_error(
-                        "The rows in the provided file do not all have the same number of columns: " + filePath);
-                }
+                    RuntimeError("The rows in the provided file do not all have the same number of columns: " + filePath);
 
                 r++;
             }
             myfile.close();
         }
         else
-        {
-            throw std::runtime_error("Unable to open file");
-        }
+            RuntimeError("Unable to open file");
 
         numRows = r;
         numCols = numColsInFirstRow;
@@ -899,9 +939,7 @@ public:
         for (int i = 0; i < numCols; i++)
         {
             for (int j = 0; j < numRows; j++)
-            {
                 pArray[i * numRows + j] = elements[j][i];
-            }
         }
 
         return pArray;
@@ -916,6 +954,10 @@ public:
         node->FunctionValues().SetValue(numRows, numCols, pArray, matrixFlagNormal, this->GetDeviceID());
         delete[] pArray;
     }
+
+    // -----------------------------------------------------------------------
+    // node construction
+    // -----------------------------------------------------------------------
 
     void InitLearnableParameters(const ComputationNodePtr node,
                                  const bool uniformInit,
@@ -936,6 +978,10 @@ public:
             node->FunctionValues().SetGaussianRandomValue(0, randInitstd, GetRandomSeedOffset() + randomSeed);
         }
     }
+
+    // -----------------------------------------------------------------------
+    // network editing
+    // -----------------------------------------------------------------------
 
     void DeleteNode(const std::wstring & nodeName)
     {
@@ -990,10 +1036,8 @@ public:
         ComputationNodePtr nodeToRename = GetNodeFromName(nodeNameOrig);
 
         auto iter = m_nameToNodeMap.find(nodeNameNew);
-        if (iter != m_nameToNodeMap.end()) {
-            //found
-            throw std::runtime_error("RenameNode: Target name already exists.");
-        }
+        if (iter != m_nameToNodeMap.end()) //found
+            RuntimeError("RenameNode: Target name already exists.");
 
         //rename the node and update the mapping table
         nodeToRename->NodeName() = nodeNameNew;
@@ -1002,18 +1046,21 @@ public:
 
     }
 
+    // -----------------------------------------------------------------------
+    // node construction
+    // -----------------------------------------------------------------------
+
+    // TODO: comment what this function does. Seems to either initialize LearnableParameters or precompute nodes.
     ComputationNodePtr SetNodeValue(const std::wstring & nodeName, const ElemType value)
     {
         ComputationNodePtr pNode = GetNodeFromName(nodeName);
 
         if (pNode->OperationName() == LearnableParameter<ElemType>::TypeName())
-        {
             pNode->FunctionValues().SetValue(value);
-        }
         else if (pNode->RequirePreCompute())
         {
             auto preComputedNode = static_pointer_cast<PreComputedNode<ElemType>>(pNode);
-            pNode->FunctionValues().SetValue(value);
+            pNode->FunctionValues().SetValue(value);    // TODO: comment: is this an expensive operation?
             preComputedNode->MarkComputed(true);
         }
         else
@@ -1021,6 +1068,10 @@ public:
 
         return pNode;
     }
+
+    // -----------------------------------------------------------------------
+    // network editing
+    // -----------------------------------------------------------------------
 
     ComputationNodePtr CopyNode(const ComputationNetwork<ElemType> & fromNet,
                                 const std::wstring fromName,
@@ -1100,8 +1151,23 @@ public:
 
 #pragma endregion Network Modification
 
+    // -----------------------------------------------------------------------
+    // node creation
+    // -----------------------------------------------------------------------
+
+    // TODO: There is quite a bit of redundancy here
+    //  - create/load by name
+    //  - create by calling constructor directly
+    //  - create node by type--one function per node; one could just use the constructor
+    //  - create node and add to network--users could just add the node by themselves
+    // We should
+    //  - move node creation to a separate class, e.g. NodeFactory
+    //    One goal would be that ComputationNetwork.h becomes agnostic of node types as much as possible, and does not have to pull in all node headers
+    //  - choose one of the methods above (probably we need the by-name method separately, but tucked away in a CPP please)
+
     // create a new node of a type given as a string, with var args so that this can be used at multiple places
     // This function only creates nodes that accept (m_deviceId, nodeName).
+    // TODO: Is this ever called with additional _Args? If not, simplify
     template<class... _Types>
     ComputationNodePtr NewStandardNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
     {
@@ -1162,9 +1228,11 @@ public:
         else return nullptr;
     }
     // create a new node of a type given as a string, with var args so that this can be used at multiple places
+    // This function is used for loading, while the above is used for creating standard-type networks.
     template<class... _Types>
     ComputationNodePtr NewNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
     {
+        // TODO: Is this ever called with additional _Args? If not, simplify
         // try first those that accept the standard two constructor arguments
         auto newNode = NewStandardNode(nodeType, deviceId, name, forward<_Types>(_Args)...);
         if (newNode) return newNode;
@@ -1178,6 +1246,10 @@ public:
         else if (nodeType == SparseLearnableParameter<ElemType>::TypeName()) return New<SparseLearnableParameter<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
         else return nullptr;
     }
+
+    // -----------------------------------------------------------------------
+    // serialization
+    // -----------------------------------------------------------------------
 
     ComputationNodePtr CreateNodeFromFile(const std::wstring& nodeType,
                                           const std::wstring & nodeName,
@@ -1194,7 +1266,14 @@ public:
         return AddNodeToNet(newNode);
     }
 
-    // the following functions create nodes and add them to the net, but don't attach inputs (some don't have inputs)
+    // -----------------------------------------------------------------------
+    // node creation
+    // -----------------------------------------------------------------------
+
+    // The following functions create nodes and add them to the net, but don't attach inputs (some don't have inputs).
+    // There are special versions for nodes with custom constructors, and a catch-all, CreateComputationNode(), for all others.
+    // TODO: Do we really need these? Folks who want to use C++ can instead say net->AddNodeToNet(New<>(...)), which is not that different.
+    // TODO: separate into nodes that have inputs and those that duplicate functions with input adding except just not adding inputs. Clear?
 
     ComputationNodePtr CreateLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols)
     {
@@ -1277,29 +1356,37 @@ public:
     }
 
     // this is the catch-all for all cases not covered as special cases above
+    // Unlike the specialized ones above, this one creates nodes by type given as a string.
     ComputationNodePtr CreateComputationNode(const std::wstring & nodeType, const std::wstring & nodeName)
     {
         return AddNodeToNet(NewStandardNode(nodeType, m_deviceId, nodeName));
     }
 
-    ComputationNodePtr Parameter(const size_t rows, size_t cols, const std::wstring nodeName = L"")
+    // TODO: These next three functions are wrappers around CreateXXXNode(). Remove these.
+
+    ComputationNodePtr Parameter(const size_t rows, size_t cols, const std::wstring nodeName = L"") // TODO: remove
     {
         return CreateLearnableParameter(nodeName, rows, cols);
     }
 
-    ComputationNodePtr Input(const size_t rows, const size_t cols, const std::wstring nodeName = L"")
+    ComputationNodePtr Input(const size_t rows, const size_t cols, const std::wstring nodeName = L"")   // TODO: remove
     {
         return CreateInputNode(nodeName, rows, cols);
     }
 
-    ComputationNodePtr Input(const size_t imageWidth, const size_t imageHeight,
+    ComputationNodePtr Input(const size_t imageWidth, const size_t imageHeight,     // TODO: remove
                              const size_t imageChannels, const size_t numImages,
                              const std::wstring nodeName = L"")
     {
         return CreateInputNode(nodeName, imageWidth, imageHeight, imageChannels, numImages);
     }
 
-    // the following functions create nodes and link them to the network and their inputs
+    // -----------------------------------------------------------------------
+    // node creation
+    // -----------------------------------------------------------------------
+
+    // The following functions create nodes and link them to the network and their inputs.
+    // TODO: Do we need both this set and the one above that does not add inputs? Can they share more code?
 
     ComputationNodePtr PairNetwork(const ComputationNodePtr & a, const std::wstring nodeName = L"")
     {
@@ -1638,6 +1725,10 @@ public:
         return AddNodeToNetAndAttachInputs(New<LookupTableNode<ElemType>>(m_deviceId, nodeName), dictionary, input);
     }
 
+    // -----------------------------------------------------------------------
+    // node access
+    // -----------------------------------------------------------------------
+
     bool NodeNameExist(const std::wstring& name) const
     {
         auto iter = m_nameToNodeMap.find(name);
@@ -1693,8 +1784,11 @@ public:
         return nodes;
     }
 
-    int FindInRecurrentLoop(const ComputationNodePtr startNode,
-        std::vector<ComputationNodePtr>& recurrentNodes)
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
+    int FindInRecurrentLoop(const ComputationNodePtr startNode, vector<ComputationNodePtr>& recurrentNodes)
     {
         int iFound = -1;
 
@@ -1908,7 +2002,7 @@ public:
                     {
                         for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                         {
-                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
+                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration); // TODO: move to FrameRange object
                             (*nodeIter)->ComputeGradientForChildren(timeIndex);
                         }
                     }
@@ -1937,7 +2031,7 @@ public:
                     )
     {
         if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
-            throw std::runtime_error("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
+            RuntimeError("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
 
         //run forward pass first
         Evaluate(rootNode);
@@ -2000,12 +2094,21 @@ public:
         }
     }
 
+    // -----------------------------------------------------------------------
+    // network editing
+    // -----------------------------------------------------------------------
+
     void RenameNode(const ComputationNodePtr node, const std::wstring newNodeName)
     {
+        // TODO: check if new name exists
         m_nameToNodeMap.erase(node->NodeName());
         node->NodeName() = newNodeName;
         AddNodeToNet(node);
     }
+
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
 
     void ClearCaches()
     {
@@ -2020,6 +2123,10 @@ public:
         ClearCaches();
         BuildAndValidateNetwork(rootNode);
     }
+
+    // -----------------------------------------------------------------------
+    // node-group access
+    // -----------------------------------------------------------------------
 
     std::list<ComputationNodePtr> & InputNodes(const ComputationNodePtr rootNode, bool bNoBuild = false)
     {
@@ -2067,13 +2174,25 @@ public:
 
     inline std::vector<RecurrentInfo> & RecurrentNodes() { return m_recurrentInfo; }
 
+    // -----------------------------------------------------------------------
+    // node access
+    // -----------------------------------------------------------------------
+
     size_t GetTotalNumberOfNodes() const { return m_nameToNodeMap.size(); }
+
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
 
     void ResetEvalTimeStamp()
     {
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
             nodeIter->second->ResetEvalTimeStamp();
     }
+
+    // -----------------------------------------------------------------------
+    // network editing
+    // -----------------------------------------------------------------------
 
     //change the node associated with nodeName to newNode; used in the KL-reg based adaptation to reduce feature copy
     //need to update all the mappings as well childrens
@@ -2141,13 +2260,13 @@ public:
             }
         }
         if (index == -1)
-            throw std::runtime_error("ReplaceFinalCriterionNode: the node to be replaced is not a criterion node.");
+            RuntimeError("ReplaceFinalCriterionNode: the node to be replaced is not a criterion node.");
 
         // Replaces children.
         for (int i = 0; i < newNode->ChildrenSize(); ++i)
         {
             if (m_nameToNodeMap.find(newNode->Inputs(i)->NodeName()) == m_nameToNodeMap.end())
-                throw std::runtime_error("Child node does not exist.");
+                RuntimeError("Child node does not exist.");
             newNode->SetInput(i, m_nameToNodeMap[newNode->Inputs(i)->NodeName()]);
         }
 
@@ -2160,7 +2279,7 @@ public:
     {
         wstring nodeName = featureNode->NodeName();
         if (NodeNameExist(nodeName))
-            throw std::runtime_error("AddFeatureNode: feature node already exists.");
+            RuntimeError("AddFeatureNode: feature node already exists.");
         m_nameToNodeMap[nodeName] = featureNode;
         m_features.push_back(featureNode);
     }
@@ -2170,7 +2289,7 @@ public:
     {
         wstring nodeName = featureNode->NodeName();
         if (!NodeNameExist(nodeName))
-            throw std::runtime_error("RemoveFeatureNode: feature node does not exist.");
+            RuntimeError("RemoveFeatureNode: feature node does not exist.");
 
         ClearCaches();
 
@@ -2196,6 +2315,10 @@ public:
 
         m_nameToNodeMap.erase(nodeName);
     }
+
+    // -----------------------------------------------------------------------
+    // node access
+    // -----------------------------------------------------------------------
 
     std::vector<ComputationNodePtr> GetAllNodes() const
     {
@@ -2238,6 +2361,7 @@ public:
     }
 
     //return list of nodes that require precomputation and not precomputed yet.
+    // TODO: name has a grammar error, fix
     std::list<ComputationNodePtr> GetNodesRequirePreComputation(const ComputationNodePtr rootNode = nullptr, bool checkComputed = true)
     {
         std::list<ComputationNodePtr> nodesRequirePreComputation;
@@ -2279,6 +2403,7 @@ public:
     }
 
     //return list of nodes that require precomputation and not precomputed yet.
+    // TODO: name has grammar error, fix
     std::list<ComputationNodePtr> GetNodesRequireBatchMode(const ComputationNodePtr rootNode = nullptr, bool checkComputed = true)
     {
         std::list<ComputationNodePtr> nodesRequirePreComputation;
@@ -2314,12 +2439,16 @@ public:
         return nodesRequirePreComputation;
     }
 
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
     // Validate - Validate the network
     void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false)
     {
         // currently only validates nodes, we should validate everything we can
         if (FeatureNodes().size() == 0 && !allowFragment)
-            throw std::runtime_error("No Feature nodes specified");
+            RuntimeError("No Feature nodes specified");
 
         // first give criteria nodes as root node
         if (FinalCriterionNodes().size() > 0)
@@ -2339,22 +2468,20 @@ public:
             // do nothing
         }
         else if (!allowFragment)
-            throw std::runtime_error("No Criterion nodes specified");
+            RuntimeError("No Criterion nodes specified");
 
         // now output nodes
         if (OutputNodes().size() > 0)
         {
             for (ComputationNodePtr node : OutputNodes())
             {
-                if (!allowFragment) {
+                if (!allowFragment)
                     FormRecurentLoops(node);
-                }
-
                 ValidateNetwork(node);
             }
         }
         else if (!allowFragment)
-            throw std::runtime_error("No Output nodes specified");
+            RuntimeError("No Output nodes specified");
 
         // now evaluation nodes
         if (EvaluationNodes().size() > 0)
@@ -2397,6 +2524,10 @@ public:
         }
     }
 
+    // -----------------------------------------------------------------------
+    // unit testing
+    // -----------------------------------------------------------------------
+
     /**
     call unit test of each node
     this adds a verification of the correctness of node operations.
@@ -2406,9 +2537,7 @@ public:
         vector<wstring> vErrors;
         // currently only validates nodes, we should validate everything we can
         if (FeatureNodes().size() == 0 && !allowFragment)
-        {
-            throw std::runtime_error("No Feature nodes specified");
-        }
+            RuntimeError("No Feature nodes specified");
         // first give criteria nodes as root node
         if (FinalCriterionNodes().size() > 0)
         {
@@ -2417,35 +2546,29 @@ public:
                 if (!allowFragment) FormRecurentLoops(node);
                 size_t actualMBSize = this->GetActualMBSize();
                 this->SetActualMiniBatchSize(actualMBSize);
-                if (UnitTest(node) == false)
+                if (!UnitTest(node))
                     vErrors.push_back(node->NodeName().c_str());
             }
         }
         else if (!allowFragment)
-        {
-            throw std::runtime_error("No Criterion nodes specified");
-        }
+            RuntimeError("No Criterion nodes specified");
         // now output nodes
         if (OutputNodes().size() > 0)
         {
             for (auto node : OutputNodes())
-            if (UnitTest(node) == false)
+            if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());
         }
         else if (!allowFragment)
-        {
-            throw std::runtime_error("No Output nodes specified");
-        }
+            RuntimeError("No Output nodes specified");
         // now evaluation nodes
         if (EvaluationNodes().size() > 0)
         {
             for (auto node : EvaluationNodes())
-            if (UnitTest(node) == false)
+            if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());
         }
-        if (vErrors.size() > 0)
-            return false;
-        return true;
+        return vErrors.empty();
     }
 
     bool UnitTest(const ComputationNodePtr rootNode)
@@ -2462,6 +2585,12 @@ public:
 
         return true;
     }
+
+    // -----------------------------------------------------------------------
+    // specialized operations
+    // -----------------------------------------------------------------------
+
+    // TODO: lift this into config language, move underlying code to math lib
 
     //========================================
     // This function performs SVD decomposition for different groups of learnable  parameters
@@ -2617,6 +2746,10 @@ public:
     }
 
 public:
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
     virtual void GetHistory(map<wstring, Matrix<ElemType>>& history, bool bLastTime = false)
     {
         //put all node info first
@@ -2642,22 +2775,21 @@ public:
         }
     };
 
-    Matrix<ElemType> & SentenceBoundary()
-    {
-        return m_SentenceBoundary;
-    }
+    Matrix<ElemType> & SentenceBoundary() { return m_SentenceBoundary; }
 
-    vector<MinibatchPackingFlag> & MinibatchPackingFlags()
-    {
-        return m_minibatchPackingFlag;
-    }
+    vector<MinibatchPackingFlag> & MinibatchPackingFlags() { return m_minibatchPackingFlag; }
 
 protected:
+    // -----------------------------------------------------------------------
+    // construction
+    // -----------------------------------------------------------------------
+
     // Copy constructor, should never be called.
 #pragma warning (push)
 #pragma warning (disable: 4702) // this function is flagged but unclear why
     ComputationNetwork(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)
     {
+        // TODO: can we just define it as private without implementation?
         LogicError("'ComputationNetwork(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
     }
 #pragma warning (pop)
@@ -2665,8 +2797,16 @@ protected:
     // Assignment operator, should never be called.
     ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)
     {
+        // TODO: can we just define it as private without implementation?
         LogicError("'ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
     }
+
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
+    // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
+    // TODO: Can this be moved to a separate class, or at least a separate CPP?
 
     void ClearCalcOrderCaches()
     {
@@ -2730,7 +2870,7 @@ protected:
     }
 
     // get the strong connected component from the graph
-                void getStrongSCC(const ComputationNodePtr rootNode)
+    void getStrongSCC(const ComputationNodePtr rootNode)    // TODO: method names start uppercase
     {
                     /// notice that this graph including graphs from a parent networks if two or more networks are connected via pairnetwork node
         std::unordered_set<ComputationNodePtr> visited;
@@ -2741,7 +2881,7 @@ protected:
             strongSCC(rootNode, sccStack, index, loopId);
     }
 
-    void strongSCC(ComputationNodePtr cur,
+    void strongSCC(ComputationNodePtr cur,      // TODO: method names start uppercase
                    std::list<ComputationNodePtr>& sccStack,
                    size_t& index, size_t& loopId)
     {
@@ -2787,7 +2927,7 @@ protected:
                     break;
             }
             rInfo.Reset();
-                        if (sccSize > 1)
+            if (sccSize > 1)
             {
                 loopId++;
                 m_recurrentInfo.push_back(rInfo);
@@ -2795,7 +2935,7 @@ protected:
         }
     }
 
-    void getLoopForwordOrder(std::unordered_set<ComputationNodePtr>& visited,
+    void getLoopForwordOrder(std::unordered_set<ComputationNodePtr>& visited,   // TODO: method name
                              std::unordered_set<ComputationNodePtr>& recStack,
                              std::list<ComputationNodePtr>& nodesStack,
                              ComputationNodePtr cur)
@@ -2823,7 +2963,7 @@ protected:
     }
             
     //must be called before ValidateNetwork
-                void FormRecurentLoops(const ComputationNodePtr rootNode)
+    void FormRecurentLoops(const ComputationNodePtr rootNode)
     {
         std::vector<ComputationNodePtr> sourceLoopNodes;
 
@@ -2842,9 +2982,7 @@ protected:
             {
                 fprintf(stderr, "%ls\t", (*itr)->NodeName().c_str());
                 if (max_visitedOrderInLoop < (*itr)->GetVisitedOrder())
-                {
                     max_visitedOrderInLoop = (*itr)->GetVisitedOrder();
-                }
             }
             for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
             {
@@ -2943,6 +3081,7 @@ protected:
         for (auto iter = nodes.begin(); iter != nodes.end(); iter++)
             (*iter)->clearCache();
     }
+
     void DetermineLoopTypes()
     {
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
@@ -3084,12 +3223,20 @@ protected:
         }
     }
 
+    // -----------------------------------------------------------------------
+    // node creation
+    // -----------------------------------------------------------------------
+
+    // TODO: move these close to where they are used
+
+    // add a node to m_nameToNodeMap[], which is our node holder
+    // Duplicate node names are rejected.
     ComputationNodePtr AddNodeToNet(const ComputationNodePtr nodePtr)
     {
         //found
         // TODO: use .insert() and test result.second == false means not inserted since already exists
         if (m_nameToNodeMap.find(nodePtr->NodeName()) != m_nameToNodeMap.end())
-            throw std::runtime_error("Duplicated computation node name.");
+            RuntimeError("Duplicated computation node name.");
 
         m_nameToNodeMap[nodePtr->NodeName()] = nodePtr;
         return nodePtr; // allows e.g. return AddNodeToNet(New...);
@@ -3104,6 +3251,11 @@ protected:
     }
 
 public:
+
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
     void ClearGradientForAllNodes(const ComputationNodePtr rootNode)
     {
         std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
@@ -3143,8 +3295,8 @@ public:
         return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false);
     }
 
-
 protected:
+
     std::list<ComputationNodePtr>& GetCalcOrder(const ComputationNodePtr rootNode,
                                                 std::map<const ComputationNodePtr, std::list<ComputationNodePtr>>& orderMap,
                                                 const bool forwardCompute)
@@ -3178,7 +3330,15 @@ protected:
         return orderMap[key];
     }
 
-    DEVICEID_TYPE m_deviceId;
+protected:
+
+    // -----------------------------------------------------------------------
+    // data members
+    // -----------------------------------------------------------------------
+
+    // TODO: move basic accessors in here?
+
+    DEVICEID_TYPE m_deviceId;           // TODO: is this shared by all nodes?
     unsigned long m_randomSeedOffset;
 
     // node groups
@@ -3219,7 +3379,7 @@ protected:
     std::map<const ComputationNodePtr, std::list<ComputationNodePtr>> m_learnableParameters;
 };
 
-template class ComputationNetwork<float> ;
-template class ComputationNetwork<double> ;
+template class ComputationNetwork<float>;
+template class ComputationNetwork<double>;
 
 }}}

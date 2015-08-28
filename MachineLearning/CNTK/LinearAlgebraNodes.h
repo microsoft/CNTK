@@ -1520,7 +1520,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
             else
-                throw std::runtime_error("Plus partial: unexpected condition.");
+                RuntimeError("Plus partial: unexpected condition.");
 #if DUMPOUTPUT
             inputGradientValues.Print("child Gradient-out");
 #endif
@@ -1825,7 +1825,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (rowsc == 1 && rowsp != 1)
                 Matrix<ElemType>::MultiplyAndWeightedAdd(weight, ones, false, gradientValues, false, 1, childGradientValues);
             else
-                throw std::runtime_error("Minus partial: unexpected condition.");
+                RuntimeError("Minus partial: unexpected condition.");
         }
 
 

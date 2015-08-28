@@ -788,17 +788,11 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             temp.AssignDifferenceOf(posterior, prior);
             temp.RowElementMultiplyWith(gradientValues);
             if (prior.GetNumCols() == posterior.GetNumCols())
-            {
                 unnormedPriorGradientValues += temp; 
-            }
             else if (prior.GetNumCols() == 1)
-            {
                 Matrix<ElemType>::MultiplyAndAdd(temp, false, ConstOnes(posterior.GetNumCols(), 1, unnormedPriorGradientValues.GetDeviceId()), false, unnormedPriorGradientValues);
-            }
             else
-            {
-                throw std::runtime_error("GMMLogLikelihoodNode: UnnormedPrior should either have same number of columns as the features or have only one column.");
-            }
+                RuntimeError("GMMLogLikelihoodNode: UnnormedPrior should either have same number of columns as the features or have only one column.");
         }
 
         static void WINAPI ComputeInputPartialMean(Matrix<ElemType>& meanGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
@@ -820,17 +814,11 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             temp.RowElementMultiplyWith(gradientValues);
 
             if (numSamples == meanGradientValues.GetNumCols())
-            {
                 meanGradientValues += temp;
-            }
             else if (meanGradientValues.GetNumCols() == 1)
-            {
                 Matrix<ElemType>::MultiplyAndAdd(temp, false, ConstOnes(numSamples, 1, meanGradientValues.GetDeviceId()), false, meanGradientValues);
-            }
             else
-            {
-                throw std::runtime_error("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
-            }
+                RuntimeError("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
         }
 
         static void WINAPI ComputeInputPartialLogStddev(Matrix<ElemType>& logStddevGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviation,
@@ -843,17 +831,11 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             temp.ElementMultiplyWith(posterior);
             temp.RowElementMultiplyWith(gradientValues);
             if (logStddevGradientValues.GetNumCols() == numSamples)
-            {
                 logStddevGradientValues += temp;
-            }
             else if (logStddevGradientValues.GetNumCols() == 1)
-            {
                 Matrix<ElemType>::MultiplyAndAdd(temp, false, ConstOnes(numSamples, 1, logStddevGradientValues.GetDeviceId()), false, logStddevGradientValues);
-            }
             else
-            {
-                throw std::runtime_error("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
-            }
+                RuntimeError("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
         }
 
         static void WINAPI ComputeInputPartialFeature(Matrix<ElemType>& featureGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
@@ -934,10 +916,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
                     slicePrior, sliceStddev, sliceNormedDeviationVectors, sliceNormedDeviation, slicePosterior, m_temp);
             }
             else  //should not reach the code since validation should fail already
-            {
-                throw std::runtime_error("GMMLogLikelihoodNode: UnnormedPrior should either have same number of columns as the features or have only one column.");
-            }
-
+                RuntimeError("GMMLogLikelihoodNode: UnnormedPrior should either have same number of columns as the features or have only one column.");
         }
 
         //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature

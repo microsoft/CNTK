@@ -566,7 +566,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (FunctionValues().GetNumCols() != GradientValues().GetNumCols() ||
                     FunctionValues().GetNumRows() != GradientValues().GetNumRows())
                 {
-                    throw std::runtime_error("LSTMNode::GradientValue size doesn't match to the function value size");
+                    RuntimeError("LSTMNode::GradientValue size doesn't match to the function value size");
                 }
 
                 // reset gradients
