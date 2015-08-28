@@ -78,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {   // n
 
     // initialize a ComputationNetwork<ElemType> from a ConfigRecord
     template<typename ElemType>
-    shared_ptr<ComputationNetwork<ElemType>> CreateComputationNetwork(const ConfigRecord & config)
+    shared_ptr<ComputationNetwork<ElemType>> CreateComputationNetwork(const ConfigRecordPtr config)
     {
         DEVICEID_TYPE deviceId = -1; // (DEVICEID_TYPE)(int)config[L"deviceId"];
         auto net = make_shared<ComputationNetwork<ElemType>>(deviceId);
@@ -161,7 +161,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {   // n
     }
 
     // create a ComputationNetwork<ElemType> from a config--this implements "new ExperimentalComputationNetwork [ ... ]" in the added config snippet above
-    shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecord & config)
+    shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecordPtr config)
     {
         wstring precision = config[L"precision"];   // TODO: we need to look those up while traversing upwards
         if (precision == L"float")
@@ -184,7 +184,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {   // n
     }
 
     // create a ComputationNetwork<ElemType> from a config--this implements "new ExperimentalComputationNetwork [ ... ]" in the added config snippet above
-    shared_ptr<Object> MakeExperimentalComputationNode(const ConfigRecord & config)
+    shared_ptr<Object> MakeExperimentalComputationNode(const ConfigRecordPtr config)
     {
         wstring precision = L"float"; // config[L"precision"];   // TODO: we need to look those up while traversing upwards
         if (precision == L"float")

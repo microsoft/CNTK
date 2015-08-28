@@ -295,26 +295,33 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         RowSliceNode(vector<ComputationNodePtr> && inputs, size_t firstRow, size_t numRows, const wstring & tag) : UnaryComputationNode(move(inputs), tag), firstRow(firstRow), numRows(numRows) { }
         /*ComputationNode::*/ const wchar_t * OperationName() const { return L"RowSlice"; }
     };
-    // DelayNode is special in that it may for cycles.
-    // Specifically, to break circular references, DelayNode does not resolve its input arg (a ComputationNode), but rather keeps the ConfigValuePtr for now.
-    // The ConfigValuePtr is meant to be unresolved, i.e. a lambda that will resolve its arg when accessing the value for the first time.
-    // I.e. after construction, DelayNode can be referenced, but it cannot perform any operation on its argument, since it does not know it yet.
-    // ComputationNetwork knows to call FinalizeInit() to resolve this, at a time when pointers for anythin this may reference
-    // from its or outer scope have been created (if those pointers are to Delay nodes in turn, those would again resolve in their
+    // Nodes deriving from RecurrentComputationNode are special in that it may involve cycles.
+    // Specifically, to break circular references, RecurrentComputationNode does not resolve its inputs arg (ComputationNodes),
+    // but rather keeps a lambda to do so later.
+    // By contract, the network builders will know to call FinalizeInit() on such nodes at the right time (before traversing its children to allow for more nodes to be created)/
+    // I.e. after construction, a RecurrentComputationNode can be referenced, but it cannot perform any operation on its inputs, since it does not know them yet.
+    // ComputationNetwork knows to call FinalizeInit() to resolve this, at a time when pointers for anything this may reference
+    // from its or outer scope have been created (if those pointers involve recurrent nodes in turn, those would again resolve in their
     // later FinalizeInit() call, which may yet again create new nodes etc.).
-    struct DelayNode : public ComputationNode, public MustFinalizeInit
+    struct RecurrentComputationNode : public ComputationNode, public MustFinalizeInit
     {
-        ConfigValuePtr argUnresolved;
-        ComputationNodePtr arg;
-        int deltaT;
+        function<vector<ComputationNodePtr>()> GetInputsLambda;
     public:
-        DelayNode(ConfigValuePtr argUnresolved, int deltaT, const wstring & tag) : argUnresolved(argUnresolved), deltaT(deltaT) { SetTag(tag); }
+        RecurrentComputationNode(function<vector<ComputationNodePtr>()> GetInputsLambda) : GetInputsLambda(GetInputsLambda) { }
+        // FinalizeInit() is called form NDLNetworkBuilder when collecting all nodes; this is where we can lazily evaluate the recurrent connections.
         /*MustFinalizeInit::*/ void FinalizeInit()
         {
-            AttachInputs(vector<ComputationNodePtr>(1,argUnresolved));             // the implied type cast resolves it
-            argUnresolved = ConfigValuePtr();       // and free any references it may hold
+            vector<ComputationNodePtr> inputs = GetInputsLambda();   // this evaluates the nodes, and possibly creates local downstream pieces of the graph
+            AttachInputs(move(inputs));
+            GetInputsLambda = []() -> vector<ComputationNodePtr> { LogicError("RecurrentComputationNode::FinalizeInit: called twice"); };   // avoid it being called twice
             // dim?
         }
+    };
+    struct DelayNode : public RecurrentComputationNode
+    {
+        int deltaT;
+    public:
+        DelayNode(function<vector<ComputationNodePtr>()> GetInputsLambda, int deltaT, const wstring & tag) : RecurrentComputationNode(GetInputsLambda), deltaT(deltaT) { SetTag(tag); }
         /*ComputationNode::*/ const wchar_t * OperationName() const { return L"Delay"; }
     };
     class InputValue : public ComputationNode
@@ -357,12 +364,14 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     }
     // factory function for ComputationNodes
     template<>
-    shared_ptr<ComputationNode> MakeRuntimeObject<ComputationNode>(const ConfigRecord & config)
+    shared_ptr<ComputationNode> MakeRuntimeObject<ComputationNode>(const ConfigRecordPtr configp)
     {
+        let & config = *configp;
         let classIdParam = config[L"class"];
         wstring classId = classIdParam;
         let tagp = config.Find(L"tag");
         wstring tag = tagp ? *tagp : wstring();
+        // TODO: factor these GetInputs() calls out
         if (classId == L"LearnableParameterNode")
             return make_shared<LearnableParameter>(config[L"outDim"], config[L"inDim"], tag);
         else if (classId == L"PlusNode")
@@ -373,7 +382,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             return make_shared<TimesNode>(GetInputs(config, 2, L"TimesNode"), tag);
         else if (classId == L"DiagTimesNode")
             return make_shared<DiagTimesNode>(GetInputs(config, 2, L"DiagTimesNode"), tag);
-        // BUGBUG: ScaleNode is given a BoxOf<Double>, not ComputationNode
+        // BUGBUG: ScaleNode is given a BoxOf<Double>, not ComputationNode; need to create a Const first
         else if (classId == L"ScaleNode")
             return make_shared<ScaleNode>(GetInputs(config, 2, L"ScaleNode"), tag);
         else if (classId == L"LogNode")
@@ -392,8 +401,23 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             return make_shared<CrossEntropyWithSoftmaxNode>(GetInputs(config, 2, L"CrossEntropyWithSoftmaxNode"), tag);
         else if (classId == L"ErrorPredictionNode")
             return make_shared<ErrorPredictionNode>(GetInputs(config, 2, L"ErrorPredictionNode"), tag);
-        else if (classId == L"DelayNode")
-            return make_shared<DelayNode>(config[L"input"], config[L"deltaT"], tag);
+        else
+            throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
+    }
+    // factory function for RecurrentComputationNodes
+    // The difference to the above is that the children are not resolved immediately but later during network connection.
+    // This takes the record as a shared_ptr so that we can keep it inside a lambda.
+    template<>
+    shared_ptr<RecurrentComputationNode> MakeRuntimeObject<RecurrentComputationNode>(const ConfigRecordPtr configp)
+    {
+        let & config = *configp;
+        let classIdParam = config[L"class"];
+        wstring classId = classIdParam;
+        let tagp = config.Find(L"tag");
+        wstring tag = tagp ? *tagp : wstring();
+        // instead of passing the array of input nodes, we pass a lambda that computes this array in the network-gathering path in NDLComputationNetwork
+        if (classId == L"DelayNode")
+            return make_shared<DelayNode>([configp](){ return GetInputs(configp, 1, L"DelayNode"); }, config[L"deltaT"], tag);
         else
             throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
     }
@@ -425,8 +449,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         set<ComputationNodePtr> outputs;    // all output nodes
         set<ComputationNodePtr> parameters; // all parameter nodes
     public:
-        NDLComputationNetwork(const ConfigRecord & config)
+        NDLComputationNetwork(const ConfigRecordPtr configp)
         {
+            let & config = *configp;
             deque<ComputationNodePtr> workList;
             // flatten the set of all nodes
             // we collect all ComputationNodes from the config; that's it
@@ -621,8 +646,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         }
     };
 
-    shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecord &);
-    shared_ptr<Object> MakeExperimentalComputationNode(const ConfigRecord &);
+    shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecordPtr);
+    shared_ptr<Object> MakeExperimentalComputationNode(const ConfigRecordPtr);
 
     // =======================================================================
     // Evaluator -- class for evaluating a syntactic parse tree
@@ -688,14 +713,14 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     struct ConfigurableRuntimeType
     {
         bool isConfigRecord;
-        function<ConfigValuePtr(const ConfigRecord &, TextLocation, const wstring &)> construct; // lambda to construct an object of this class
+        function<ConfigValuePtr(const ConfigRecordPtr, TextLocation, const wstring &)> construct; // lambda to construct an object of this class
     };
 
     template<class C>
     static ConfigurableRuntimeType MakeRuntimeTypeConstructor()
     {
         ConfigurableRuntimeType info;
-        info.construct = [](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
+        info.construct = [](const ConfigRecordPtr config, TextLocation location, const wstring & exprPath) // lambda to construct
         {
             return ConfigValuePtr(MakeRuntimeObject<C>(config), location, exprPath);
         };
@@ -706,7 +731,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     static ConfigurableRuntimeType MakeExperimentalComputationNetworkConstructor()
     {
         ConfigurableRuntimeType info;
-        info.construct = [](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
+        info.construct = [](const ConfigRecordPtr config, TextLocation location, const wstring & exprPath) // lambda to construct
         {
             return ConfigValuePtr(MakeExperimentalComputationNetwork(config), location, exprPath);
         };
@@ -716,7 +741,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     static ConfigurableRuntimeType MakeExperimentalComputationNodeConstructor()
     {
         ConfigurableRuntimeType info;
-        info.construct = [](const ConfigRecord & config, TextLocation location, const wstring & exprPath) // lambda to construct
+        info.construct = [](const ConfigRecordPtr config, TextLocation location, const wstring & exprPath) // lambda to construct
         {
             return ConfigValuePtr(MakeExperimentalComputationNode(config), location, exprPath);
         };
@@ -732,6 +757,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
 #define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
         // ComputationNodes
         DefineRuntimeType(ComputationNode),
+        DefineRuntimeType(RecurrentComputationNode),
         // other relevant classes
         DefineRuntimeType(NDLComputationNetwork),           // currently our fake
         // Functions
@@ -880,15 +906,15 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
         if (newIter == configurableRuntimeTypes.end())
             LogicError("unknown magic runtime-object class");
         // form the ConfigRecord
-        ConfigRecord config(nullptr);
+        auto config = make_shared<ConfigRecord>(nullptr);
         // Note on scope: This config holds the arguments of the XXXNode runtime-object instantiations.
         // When they fetch their parameters, they should only look in this record, not in any parent scope (if they don't find what they are looking for, it's a bug in this routine here).
         // The values themselves are already in ConfigValuePtr form, so we won't need any scope lookups there either.
-        config.Add(L"class", e->location, ConfigValuePtr(make_shared<String>(classId), e->location, exprPath));
+        config->Add(L"class", e->location, ConfigValuePtr(make_shared<String>(classId), e->location, exprPath));
         vector<ConfigValuePtr> inputs;
         inputs.push_back(leftVal);
         inputs.push_back(rightVal);
-        config.Add(L"inputs", leftVal.GetLocation(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftVal.GetLocation(), exprPath));
+        config->Add(L"inputs", leftVal.GetLocation(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftVal.GetLocation(), exprPath));
         // instantiate
         let value = newIter->second.construct(config, e->location, exprPath);
         let valueWithName = dynamic_cast<HasName*>(value.get());
@@ -926,7 +952,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     // -----------------------------------------------------------------------
 
     // create a lambda that calls Evaluate() on an expr to get or realize its value
-    static shared_ptr<Object> MakeEvaluateThunkPtr(ExpressionPtr expr, ConfigRecordPtr scope, const wstring & exprPath, const wstring & exprId)
+    // Unresolved ConfigValuePtrs (i.e. containing a Thunk) may only be moved, not copied.
+    static ConfigValuePtr MakeEvaluateThunkPtr(ExpressionPtr expr, ConfigRecordPtr scope, const wstring & exprPath, const wstring & exprId)
     {
         function<ConfigValuePtr()> f = [expr, scope, exprPath, exprId]()   // lambda that computes this value of 'expr'
         {
@@ -935,7 +962,6 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
             let value = Evaluate(expr, scope, exprPath, exprId);
             return value;   // this is a great place to set a breakpoint!
         };
-        //return make_shared<ConfigValuePtr::Thunk>(f, expr->location);
         return ConfigValuePtr::MakeThunk(f, expr->location, exprPath);
     }
 
@@ -979,7 +1005,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 // form the config record
                 let dictExpr = e->args[0];
                 let argsExprPath = newIter->second.isConfigRecord ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
-                let value = newIter->second.construct(*ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath), e->location, exprPath); // this constructs it
+                let value = newIter->second.construct(ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath), e->location, exprPath); // this constructs it
                 // if object has a name, we set it
                 let valueWithName = dynamic_cast<HasName*>(value.get());
                 if (valueWithName)
@@ -1001,7 +1027,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 let argListExpr = e->args[0];           // [0] = argument list ("()" expression of identifiers, possibly optional args)
                 if (argListExpr->op != L"()") LogicError("parameter list expected");
                 let fnExpr = e->args[1];                // [1] = expression of the function itself
-                let f = [argListExpr, fnExpr, scope, exprPath](const vector<ConfigValuePtr> & args, const ConfigLambda::NamedParams & namedArgs, const wstring & callerExprPath) -> ConfigValuePtr
+                let f = [argListExpr, fnExpr, scope, exprPath](vector<ConfigValuePtr> && args, ConfigLambda::NamedParams && namedArgs, const wstring & callerExprPath) -> ConfigValuePtr
                 {
                     // TODO: document namedArgs--does it have a parent scope? Or is it just a dictionary? Should we just use a shared_ptr<map,ConfigValuPtr>> instead for clarity?
                     // on exprName
@@ -1023,16 +1049,17 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                     {
                         let argName = argList[i];       // parameter name
                         if (argName->op != L"id") LogicError("function parameter list must consist of identifiers");
-                        let & argVal = args[i];         // value of the parameter
-                        argScope->Add(argName->id, argName->location, argVal);
+                        auto argVal = move(args[i]);         // value of the parameter
+                        argScope->Add(argName->id, argName->location, move(argVal));
                         // note: these are expressions for the parameter values; so they must be evaluated in the current scope
                     }
                     // also named arguments
-                    for (let namedArg : namedArgs)
+                    for (auto & namedArg : namedArgs)
                     {
                         let id = namedArg.first;
-                        let & argVal = namedArg.second;
-                        argScope->Add(id, argVal.GetLocation(), argVal);
+                        auto argVal = move(namedArg.second);
+                        let location = argVal.GetLocation();    // note: do before argVal gets destroyed in the upcoming move()
+                        argScope->Add(id, location, move(argVal));
                     }
                     // get the macro name for the exprPath
                     wstring macroId = exprPath;
@@ -1058,7 +1085,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                     let id = namedArg.first;
                     let location = namedArg.second.first;   // location of identifier
                     let expr = namedArg.second.second;      // expression to evaluate to get default value
-                    namedParams[id] = ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/);
+                    namedParams[id] = move(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath/*TODO??*/, id));
                     //namedParams->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
                     // the thunk is called if the default value is ever used
                 }
@@ -1080,14 +1107,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 {
                     let argValExpr = args[i];               // expression to evaluate arg [i]
                     let argName = lambda->GetParamNames()[i];
-#if 1
-                    argVals[i] = Evaluate(argValExpr, scope, exprPath, L"(" + argName + L")");  // evaluate right here
-                    // We evaluate all macros at time of macro invocation, not at time of first use inside the macro.
-                    // This is to make the ConfigValuePtr single-ownership-while-thunked problem easier.
-                    // Revisit this if this ever causes a problem.
-#else
-                    argVals[i] = ConfigValuePtr(MakeEvaluateThunkPtr(argValExpr, scope, exprPath, L"(" + argName + L")"), argValExpr->location, exprPath/*TODO??*/);  // make it a thunked value
-#endif
+                    argVals[i] = move(MakeEvaluateThunkPtr(argValExpr, scope, exprPath/*TODO??*/, L"(" + argName + L")"));
+                    // Make it a thunked value and pass by rvalue ref since unresolved ConfigValuePtrs may not be copied.
                     /*this wstrprintf should be gone, this is now the exprName*/
                     // Note on scope: macro arguments form a scope (ConfigRecord), the expression for an arg does not have access to that scope.
                     // E.g. F(A,B) is used as F(13,A) then that A must come from outside, it is not the function argument.
@@ -1105,19 +1126,15 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                     let id = namedArg.first;                // id of passed in named argument
                     let location = namedArg.second.first;   // location of expression
                     let expr = namedArg.second.second;      // expression of named argument
-#if 1
-                    namedArgVals[id] = Evaluate(expr, scope, exprPath, id);
-#else
-                    namedArgVals[id] = ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope, exprPath, id), expr->location, exprPath/*TODO??*/);
-                    //namedArgVals->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope, exprPath, id), expr->location, exprPath/*TODO??*/));
+                    namedArgVals[id] = move(MakeEvaluateThunkPtr(expr, scope, exprPath/*TODO??*/, id));
                     // the thunk is evaluated when/if the passed actual value is ever used the first time
-#endif
+                    // This array owns the Thunk, and passes it by styd::move() to Apply, since it is not allowed to copy unresolved ConfigValuePtrs.
                     // Note on scope: same as above.
                     // E.g. when a function declared as F(A=0,B=0) is called as F(A=13,B=A), then A in B=A is not A=13, but anything from above.
                     // For named args, it is far less clear whether users would expect this. We still do it for consistency with positional args, which are far more common.
                 }
                 // call the function!
-                return lambda->Apply(argVals, namedArgVals, exprPath);
+                return lambda->Apply(move(argVals), move(namedArgVals), exprPath);
             }
             // --- variable access
             else if (e->op == L"[]")                                                // === record (-> ConfigRecord)
@@ -1132,7 +1149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                 {
                     let id = entry.first;
                     let expr = entry.second.second;             // expression to compute the entry
-                    newScope->Add(id, entry.second.first/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, newScope/*scope*/, exprPath, id), expr->location, exprPath/*TODO??*/));
+                    newScope->Add(id, entry.second.first/*loc of id*/, MakeEvaluateThunkPtr(expr, newScope/*scope*/, exprPath/*TODO??*/, id));
                     // Note on scope: record assignments are like a "let rec" in F#/OCAML. That is, all record members are visible to all
                     // expressions that initialize the record members. E.g. [ A = 13 ; B = A ] assigns B as 13, not to a potentially outer A.
                     // (To explicitly access an outer A, use the slightly ugly syntax ...A)
@@ -1188,10 +1205,10 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
                             TextLocation::PrintIssue(vector<TextLocation>(1, initLambdaExpr->location), L"", wstrprintf(L"index %d", (int)indexValue).c_str(), L"executing array initializer thunk");
                         // apply initLambdaExpr to indexValue and return the resulting value
                         let initLambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, initExprPath, L""), initLambdaExpr, L"function");  // get the function itself (most of the time just a simple name)
-                        vector<ConfigValuePtr> argVals(1, indexValue);      // create an arg list with indexValue as the one arg
-                        //NamedArgs namedArgs = make_shared<ConfigRecord>(nullptr); // no named args in initializer lambdas TODO: change to shared_ptr<map<>>
+                        vector<ConfigValuePtr> argVals(1, indexValue);              // create an arg list with indexValue as the one arg
                         // TODO: where does the current scope come in? Aren't we looking up in namedArgs directly?
-                        let value = initLambda->Apply(argVals, ConfigLambda::NamedParams(), elemExprPath);
+                        let value = initLambda->Apply(move(argVals), ConfigLambda::NamedParams(), elemExprPath);
+                        // TODO: change this ^^ to the const & version of Apply() once it is there
                         return value;   // this is a great place to set a breakpoint!
                     };
                     elementThunks.push_back(ConfigValuePtr::MakeThunk(f, initLambdaExpr->location, elemExprPath/*TODO??*/));

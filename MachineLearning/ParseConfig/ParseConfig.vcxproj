@@ -152,12 +152,12 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="ConfigSpec.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="..\CNTK\ConfigObjects.h" />
     <ClInclude Include="..\CNTK\ConfigEvaluator.h" />
     <ClInclude Include="..\CNTK\ConfigParser.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\CNTK\ConfigSpec.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
