@@ -159,6 +159,7 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     DEBUG_HTX fprintf(stderr, "mbSize:%d epoch:%d requestedEpochSamples:%d\n", mbSize, epoch, requestedEpochSamples); //requestedEpochSamples will be -1 when epochSize=0
     m_mbSize = mbSize; //Size of minibatch requested
     fprintf(stderr, "debughtx StartMinibatchLoop MBSize is %d\n", m_mbSize);
+    fprintf(stderr, "debughtx StartMinibatchLoop sequenceSize is %d\n", mBlgSize);
     DEBUG_HTX fprintf(stderr, "fileName:%s\n", fileName.c_str());
     fin.open(fileName);
 
