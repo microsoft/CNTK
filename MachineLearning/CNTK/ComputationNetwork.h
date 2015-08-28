@@ -36,6 +36,8 @@
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
 
+#include "MatrixPool.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>
@@ -1509,18 +1511,18 @@ public:
         return newNode;
     }
 
-                ComputationNodePtr PairNetwork(const ComputationNodePtr & a, const std::wstring nodeName = L"")
-                {
-                    ComputationNodePtr newNode(new PairNetworkNode<ElemType>(m_deviceId, nodeName));
-                    if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
-                    {
-                        fprintf(stderr, "PairNetwork : asked to pair a node with name %ls in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
-                        throw std::runtime_error("PairNetwork : asked to pair a node with name in another network.However, this network has already a node with the same name.Should avoid this case.\n");
-                    }
-                    newNode->AttachInputs(a);
-                    AddNodeToNet(newNode);
-                    return newNode;
-                }
+    ComputationNodePtr PairNetwork(const ComputationNodePtr & a, const std::wstring nodeName = L"")
+    {
+        ComputationNodePtr newNode(new PairNetworkNode<ElemType>(m_deviceId, nodeName));
+        if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
+        {
+            fprintf(stderr, "PairNetwork : asked to pair a node with name %ls in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
+            throw std::runtime_error("PairNetwork : asked to pair a node with name in another network.However, this network has already a node with the same name.Should avoid this case.\n");
+        }
+        newNode->AttachInputs(a);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
 
     ComputationNodePtr CreateSparseInputNode(const std::wstring inputName, const size_t rows, const size_t cols)
     {
@@ -2693,10 +2695,11 @@ public:
         }
     }
 
-    virtual void ComputeGradient(const ComputationNodePtr rootNode, 
-                                 bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
-                    const Matrix<ElemType>* rootGradientInitValue = nullptr,
-                    bool bClearGradient = true
+    virtual void ComputeGradient(const ComputationNodePtr rootNode,
+        bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
+        const Matrix<ElemType>* rootGradientInitValue = nullptr,
+        bool bClearGradient = true,
+        bool resetTimeStampAfterComputation = false
                     )
     {
         if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
@@ -2708,8 +2711,10 @@ public:
         //run forward pass first
         Evaluate(rootNode);
 
-                    if (bClearGradient)
-        ClearGradientForAllNodes(rootNode);
+        if (bClearGradient)
+        {
+            ClearGradientForAllNodes(rootNode);
+        }
 
         //run backward pass
         std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
@@ -2735,6 +2740,14 @@ public:
             ComputeGradientLoop(allNodes, *nodeIter);
 
             (*nodeIter)->ComputeGradientForChildren();
+        }
+
+        //since we now allow sharing of the matrix for function value and gradient value. the function values are now destroyed
+        //after gradient computation and need to be recomputed. This is indicated by the timestamp updated using this function
+        //resetTimeStampAfterComputation is by default false because ComputeGradient in normal case is followed by new batch of input
+        if (resetTimeStampAfterComputation)
+        {
+            ResetEvalTimeStamp();
         }
     }
 
@@ -3193,7 +3206,7 @@ public:
             {
                 if (!allowFragment)
                 {
-                    FormRecurentLoops(node);
+                    FormRecurrentLoops(node);
                 }
                 PrintComputationTree(node, false);
                 size_t actualMBSize = this->GetActualMBSize();
@@ -3216,7 +3229,7 @@ public:
             for (ComputationNodePtr node : OutputNodes())
             {
                 if (!allowFragment) {
-                    FormRecurentLoops(node);
+                    FormRecurrentLoops(node);
                 }
 
                 ValidateNetwork(node);
@@ -3233,7 +3246,7 @@ public:
             for (ComputationNodePtr node : EvaluationNodes())
             {
                 if (!allowFragment) {
-                    FormRecurentLoops(node);
+                    FormRecurrentLoops(node);
                 }
                 ValidateNetwork(node);
             }
@@ -3262,80 +3275,173 @@ public:
         if (m_built.find(key) == m_built.end())
         {
             m_built[key] = true;
-            FormRecurentLoops(rootNode);
+            FormRecurrentLoops(rootNode);
             ValidateNetwork(rootNode);
             CollectInputAndLeanableParameters(rootNode);
             SetNodesReqMultiSeqHandling();
         }
     }
 
-                /**
-                call unit test of each node
-                this adds a verification of the correctness of node operations.
-                */
-                bool UnitTest(bool allowFragment = false)
+    //this function will need to be called before actual validation and execution to 
+    //predetermine how to share matrices to reduce memory usage.
+    //evalRootNodes do not need gradient computation
+    //trainRootNodes need gradient computation
+    void AllocateMatrices(std::vector<ComputationNodePtr>& evalRootNodes, std::vector<ComputationNodePtr>& trainRootNodes)
+    {
+        //allocate memory for forward computation
+        fprintf(stderr, "\n\nAllocate matrices for forward computing\n");
+        for (int i = 0; i < evalRootNodes.size(); i++)
+        {
+            AllocateEvalMatrices(evalRootNodes[i]);
+        }
+
+        for (int i = 0; i < trainRootNodes.size(); i++)
+        {
+            AllocateEvalMatrices(trainRootNodes[i]);
+        }
+
+        //allocate memory for backward computation
+        //we intentionally separate it from above loop to make sure forward computing gets the right matrices
+        for (int i = 0; i < trainRootNodes.size(); i++)
+        {
+            AllocateGradientMatrices(trainRootNodes[i]);
+        }
+    }
+
+    void AllocateEvalMatrices(ComputationNodePtr rootNode)
+    {
+        FormRecurrentLoops(rootNode);
+
+        std::list<ComputationNodePtr>& nodes = GetEvalOrder(rootNode);
+
+        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        {
+            (*nodeIter)->RequestEvalMatrices(m_matrixPool);
+            (*nodeIter)->ReleaseMatricesAfterEval(m_matrixPool);
+        }
+    }
+
+    void AllocateGradientMatrices(ComputationNodePtr rootNode)
+    {
+        //first, compute the number of parents for each node
+        std::map<ComputationNodePtr, int> numParents;
+
+        std::list<ComputationNodePtr>& nodes = GetEvalOrder(rootNode);
+
+        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        {
+            std::vector<ComputationNodePtr> children = (*nodeIter)->GetChildren();
+            for (int i = 0; i < children.size(); i++)
+            {
+                numParents[children[i]] ++;
+            }
+        }
+
+        //now, simulate the gradient computation order to determine how to allocate matrices
+        std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
+
+        for (int i = 0; i < m_recurrentInfo.size(); i++)
+        {
+            m_recurrentInfo[i].m_completedGradient = false;
+        }
+
+        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+        {
+            std::vector<ComputationNodePtr> recurrentNodes;
+            int iLoopId = FindInRecurrentLoop(*nodeIter, recurrentNodes);
+            if (iLoopId != -1 && m_recurrentInfo[iLoopId].m_completedGradient == false)
+            {
+                for (auto nodeIterInLoop = recurrentNodes.rbegin(); nodeIterInLoop != recurrentNodes.rend(); ++nodeIterInLoop)
                 {
-                    vector<wstring> vErrors;
-                    // currently only validates nodes, we should validate everything we can
-                    if (FeatureNodes().size() == 0 && !allowFragment)
-                    {
-                        throw std::runtime_error("No Feature nodes specified");
-                    }
-                    // first give criteria nodes as root node
-                    if (FinalCriterionNodes().size() > 0)
-                    {
-                        for (auto node : FinalCriterionNodes())
-                        {
-                            if (!allowFragment) FormRecurentLoops(node);
-                            size_t actualMBSize = this->GetActualMBSize();
-                            this->SetActualMiniBatchSize(actualMBSize);
-                            if (UnitTest(node) == false)
-                                vErrors.push_back(node->NodeName().c_str());
-                        }
-                    }
-                    else if (!allowFragment)
-                    {
-                        throw std::runtime_error("No Criterion nodes specified");
-                    }
-                    // now output nodes
-                    if (OutputNodes().size() > 0)
-                    {
-                        for (auto node : OutputNodes())
-                            if (UnitTest(node) == false)
-                                vErrors.push_back(node->NodeName().c_str());
-                    }
-                    else if (!allowFragment)
-                    {
-                        throw std::runtime_error("No Output nodes specified");
-                    }
-                    // now evaluation nodes
-                    if (EvaluationNodes().size() > 0)
-                    {
-                        for (auto node : EvaluationNodes())
-                            if (UnitTest(node) == false)
-                                vErrors.push_back(node->NodeName().c_str());
-                    }
-                    if (vErrors.size() > 0)
-                        return false;
-                    return true;
+                    AllocateGradientMatricesForChildren(*nodeIterInLoop, numParents);
                 }
+                m_recurrentInfo[iLoopId].m_completedGradient = true;
+            }
+            else
+            {
+                AllocateGradientMatricesForChildren(*nodeIter, numParents);
+            }
 
-                bool UnitTest(const ComputationNodePtr rootNode)
-                {
-                    fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
+            (*nodeIter)->ReleaseGradientMatrices(m_matrixPool);
+        }
+    }
 
-                    std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
+    void AllocateGradientMatricesForChildren(ComputationNodePtr parentNode, std::map<ComputationNodePtr, int>& numParents)
+    {
+        std::vector<ComputationNodePtr> children = parentNode->GetChildren();
+        for (int i = 0; i < children.size(); i++)
+        {
+            children[i]->RequestGradientMatrices(m_matrixPool, numParents[children[i]]);
+        }
+    }
 
-                    for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-                    {
-                        if ((*nodeIter)->UnitTest() == false)
-                            return false;
-                    }
+    /**
+    call unit test of each node
+    this adds a verification of the correctness of node operations.
+    */
+    bool UnitTest(bool allowFragment = false)
+    {
+        vector<wstring> vErrors;
+        // currently only validates nodes, we should validate everything we can
+        if (FeatureNodes().size() == 0 && !allowFragment)
+        {
+            throw std::runtime_error("No Feature nodes specified");
+        }
+        // first give criteria nodes as root node
+        if (FinalCriterionNodes().size() > 0)
+        {
+            for (auto node : FinalCriterionNodes())
+            {
+                if (!allowFragment) FormRecurrentLoops(node);
+                size_t actualMBSize = this->GetActualMBSize();
+                this->SetActualMiniBatchSize(actualMBSize);
+                if (UnitTest(node) == false)
+                    vErrors.push_back(node->NodeName().c_str());
+            }
+        }
+        else if (!allowFragment)
+        {
+            throw std::runtime_error("No Criterion nodes specified");
+        }
+        // now output nodes
+        if (OutputNodes().size() > 0)
+        {
+            for (auto node : OutputNodes())
+                if (UnitTest(node) == false)
+                    vErrors.push_back(node->NodeName().c_str());
+        }
+        else if (!allowFragment)
+        {
+            throw std::runtime_error("No Output nodes specified");
+        }
+        // now evaluation nodes
+        if (EvaluationNodes().size() > 0)
+        {
+            for (auto node : EvaluationNodes())
+                if (UnitTest(node) == false)
+                    vErrors.push_back(node->NodeName().c_str());
+        }
+        if (vErrors.size() > 0)
+            return false;
+        return true;
+    }
 
-                    fprintf(stderr, "\n\n");
+    bool UnitTest(const ComputationNodePtr rootNode)
+    {
+        fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
 
-                    return true;
-                }
+        std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
+
+        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        {
+            if ((*nodeIter)->UnitTest() == false)
+                return false;
+        }
+
+        fprintf(stderr, "\n\n");
+
+        return true;
+    }
 
     //========================================
     // This function performs SVD decomposition for different groups of learnable  parameters
@@ -3626,16 +3732,16 @@ protected:
     }
 
     // get the strong connected component from the graph
-                void getStrongSCC(const ComputationNodePtr rootNode)
+    void getStrongSCC(const ComputationNodePtr rootNode)
     {
-                    /// notice that this graph including graphs from a parent networks if two or more networks are connected via pairnetwork node
+        /// notice that this graph including graphs from a parent networks if two or more networks are connected via pairnetwork node
         std::unordered_set<ComputationNodePtr> visited;
         std::list<ComputationNodePtr> sccStack;
         size_t index = 0;
         size_t loopId = 0;
         if (rootNode->isVisisted() == false)
         {
-                        strongSCC(rootNode, sccStack, index, loopId);
+            strongSCC(rootNode, sccStack, index, loopId);
         }
     }
 
@@ -3730,7 +3836,7 @@ protected:
     }
             
     //must be called before ValidateNetwork
-                void FormRecurentLoops(const ComputationNodePtr rootNode)
+    void FormRecurrentLoops(const ComputationNodePtr rootNode)
     {
         std::vector<ComputationNodePtr> sourceLoopNodes;
 
@@ -4007,17 +4113,11 @@ protected:
 public:
     void ClearGradientForAllNodes(const ComputationNodePtr rootNode)
     {
-        std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(
-                rootNode);
+        std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
             (*nodeIter)->ClearGradientForChildren(m_actMiniBSize);
-        }
-
-        for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
-        {
-            (*nodeIter).m_completedGradient = false;
         }
 
         for (int i = 0; i < m_recurrentInfo.size(); i++)
@@ -4126,6 +4226,8 @@ protected:
 
     std::map<const ComputationNodePtr, std::list<ComputationNodePtr>> m_inputs;
     std::map<const ComputationNodePtr, std::list<ComputationNodePtr>> m_learnableParameters;
+
+    MatrixPool<ElemType> m_matrixPool;
 };
 
 template class ComputationNetwork<float> ;

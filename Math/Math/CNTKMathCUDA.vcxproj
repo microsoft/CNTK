@@ -121,7 +121,9 @@
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
+    <ClInclude Include="ColumnQuantizer.h" />
     <ClInclude Include="CommonMatrix.h" />
+    <ClInclude Include="ValueQuantizer.h" />
     <None Include="GPUWatcher.h">
       <FileType>CppHeader</FileType>
     </None>
@@ -129,6 +131,7 @@
       <FileType>CppHeader</FileType>
     </None>
     <ClInclude Include="Helpers.h" />
+    <ClInclude Include="MatrixQuantizerGPU.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
@@ -142,6 +145,17 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <CudaCompile Include="MatrixQuantizerGPU.cu">
+      <FileType>CppCode</FileType>
+    </CudaCompile>
+    <CudaCompile Include="MatrixQuantizer_kernel.cu">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+      <FileType>CppCode</FileType>
+    </CudaCompile>
+    <CudaCompile Include="ValueQuantizer.cu">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+      <FileType>CppCode</FileType>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="GPUMatrix.cu">
