@@ -117,6 +117,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            Base::CopyTo(nodeP, newName, flags);
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                auto node = dynamic_pointer_cast<NonlinearityNode<ElemType>>(nodeP);
+                node->m_gradient = m_gradient;
+            }
+        }
+
     protected:
         Matrix<ElemType> m_gradient;
     };
@@ -162,15 +172,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
             functionValues.Print("RectifiedLinearNode");
 #endif
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            Base::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<RectifiedLinearNode<ElemType>>(nodeP);
-
-            if (flags & CopyNodeFlags::copyNodeValue)
-                node->m_gradient = m_gradient;
         }
     };
 
@@ -231,15 +232,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
             functionValues.HasNan("Sigmoid");
 #endif
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            Base::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<SigmoidNode<ElemType>>(nodeP);
-
-            if (flags & CopyNodeFlags::copyNodeValue)
-                node->m_gradient = m_gradient;
         }
     };
 
@@ -303,15 +295,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             functionValues.HasNan("Tanh");
 #endif
         }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            Base::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<TanhNode<ElemType>>(nodeP);
-
-            if (flags & CopyNodeFlags::copyNodeValue)
-                node->m_gradient = m_gradient;
-        }
     };
 
     template class TanhNode<float>; 
@@ -373,21 +356,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             functionValues.HasNan("Log");
 #endif
         }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            Base::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<LogNode<ElemType>>(nodeP);
-
-            if (flags & CopyNodeFlags::copyNodeValue)
-                node->m_gradient = m_gradient;
-        }
     };
 
     template class LogNode<float>;
@@ -447,21 +415,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
             functionValues.HasNan("Exp");
 #endif
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            Base::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<ExpNode<ElemType>>(nodeP);
-
-            if (flags & CopyNodeFlags::copyNodeValue)
-                node->m_gradient = m_gradient;
         }
     };
 
@@ -523,21 +476,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
             functionValues.HasNan("Cosine");
 #endif
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            Base::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<CosineNode<ElemType>>(nodeP);
-
-            if (flags & CopyNodeFlags::copyNodeValue)
-                node->m_gradient = m_gradient;
         }
     };
 
@@ -641,12 +579,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            // BUGBUG: fix all base calls, also in MoveMatrices...
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<SoftmaxNode<ElemType>>(nodeP);
-                node->m_gradient = m_gradient;  // BUGBUG: m_gradient should be copied in base class
                 node->m_diff = m_diff;
             }
         }
@@ -735,7 +671,6 @@ private:
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_gradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             m_softmax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
@@ -745,7 +680,6 @@ private:
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<LogSoftmaxNode<ElemType>>(nodeP);
-                node->m_gradient = m_gradient;
                 node->m_softmax = m_softmax;
             }
         }
