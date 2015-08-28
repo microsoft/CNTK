@@ -36,6 +36,8 @@
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
 
+#include "MatrixPool.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>
@@ -232,6 +234,7 @@ private:
             m_futureValueNodeStyle = L"node [ shape = box3d  , color = red, style = \"filled\" , fillcolor = white ] ";
         }
     };
+
     wstring FormSpecialNodes(wstring style, std::vector<ComputationNodePtr>& specialNodes)
     {
         if (specialNodes.empty())
@@ -449,7 +452,7 @@ public:
         m_deviceId = deviceId;
         if (m_deviceId == AUTOPLACEMATRIX)
             m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
-    }
+        }
 
     DEVICEID_TYPE GetDeviceID() { return m_deviceId; }
 
@@ -504,8 +507,8 @@ private:
                     fprintf(stderr, "Warning: node %ls 's child is null, please check your ndl/mel file.\n", nodePtr->NodeName().c_str());
                 else
                     fstream << nodePtr->Inputs(i)->NodeName();
+                }
             }
-        }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERelation");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BRootNodes");
@@ -548,15 +551,15 @@ private:
         }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
 
-        if (m_pairNodes.size() > 0)
-        {
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes");
+                    if (m_pairNodes.size() > 0)
+                    {
+                        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes");
 
-            fstream << m_pairNodes.size();
-            for (size_t i = 0; i < m_pairNodes.size(); i++)
-                fstream << m_pairNodes[i]->NodeName();
-            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
-        }
+                        fstream << m_pairNodes.size();
+                        for (size_t i = 0; i < m_pairNodes.size(); i++)
+                            fstream << m_pairNodes[i]->NodeName();
+                        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
+                    }
 
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
@@ -787,16 +790,16 @@ public:
             }
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
 
-            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes"))
-            {
-                fstream >> num;
+                        if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes"))
+                        {
+                            fstream >> num;
                 for (size_t i = 0; i < num; i++)
-                {
-                    fstream >> nodeName;
-                    m_pairNodes.push_back(GetNodeFromName(nodeName));
-                }
-                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
-            }
+                            {
+                                fstream >> nodeName;
+                                m_pairNodes.push_back(GetNodeFromName(nodeName));
+                            }
+                            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
+                        }
         }
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
@@ -1043,7 +1046,6 @@ public:
         nodeToRename->NodeName() = nodeNameNew;
         m_nameToNodeMap.erase(nodeNameOrig);
         m_nameToNodeMap[nodeNameNew] = nodeToRename;
-
     }
 
     // -----------------------------------------------------------------------
@@ -1089,7 +1091,7 @@ public:
         if ((flags & CopyNodeFlags::copyNodeChildren) &&
             this != &fromNet && !(flags & CopyNodeFlags::copyNodeChildrenCrossNetwork))
         {
-            LogicError("CopyNode: Copy node children across network is invalid.");
+            LogicError("CopyNode: Copying node children across network is invalid.");
         }
 
         if (!NodeNameExist(toName))
@@ -1911,7 +1913,7 @@ public:
         for (auto node : m_evalNodes)
             if (IsTypicalCriterionNode(node))
                 node->SetReqMultiSeqHandlingTo(true);
-    }
+        }
 
     void Evaluate(const ComputationNodePtr rootNode)
     {
@@ -1931,8 +1933,8 @@ public:
         {
             (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
             if ((*nodeIter)->ReqMultiSeqHandling())
-                (*nodeIter)->ResetBound(&m_SentenceBoundary, &m_minibatchPackingFlag);
-        }
+                    (*nodeIter)->ResetBound(&m_SentenceBoundary, &m_minibatchPackingFlag);
+            }
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
@@ -2026,9 +2028,10 @@ public:
 
     virtual void ComputeGradient(const ComputationNodePtr rootNode, 
                                  bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
-                    const Matrix<ElemType>* rootGradientInitValue = nullptr,
-                    bool bClearGradient = true
-                    )
+                                 const Matrix<ElemType>* rootGradientInitValue = nullptr,
+                                 bool bClearGradient = true,
+                                 bool resetTimeStampAfterComputation = false
+                                )
     {
         if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
             RuntimeError("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
@@ -2062,6 +2065,12 @@ public:
 
             (*nodeIter)->ComputeGradientForChildren();
         }
+
+        //since we now allow sharing of the matrix for function value and gradient value. the function values are now destroyed
+        //after gradient computation and need to be recomputed. This is indicated by the timestamp updated using this function
+        //resetTimeStampAfterComputation is by default false because ComputeGradient in normal case is followed by new batch of input
+        if (resetTimeStampAfterComputation)
+            ResetEvalTimeStamp();
     }
 
     //for debugging purpose
@@ -2239,7 +2248,7 @@ public:
             for (int i = 0; i < node->ChildrenSize(); i++)
                 if (node->Inputs(i) == oldNode)
                     node->SetInput(i, newNode);
-        }
+                }
         m_nameToNodeMap[newNode->GetName()] = newNode;
 
         // now the old node becomes a orphan node , remove it
@@ -2517,21 +2526,94 @@ public:
         if (m_built.find(key) == m_built.end())
         {
             m_built[key] = true;
-            FormRecurentLoops(rootNode);
+            FormRecurrentLoops(rootNode);
             ValidateNetwork(rootNode);
             CollectInputAndLeanableParameters(rootNode);
             SetNodesReqMultiSeqHandling();
         }
     }
 
-    // -----------------------------------------------------------------------
-    // unit testing
-    // -----------------------------------------------------------------------
+    //this function will need to be called before actual validation and execution to 
+    //predetermine how to share matrices to reduce memory usage.
+    //evalRootNodes do not need gradient computation
+    //trainRootNodes need gradient computation
+    void AllocateMatrices(std::vector<ComputationNodePtr>& evalRootNodes, std::vector<ComputationNodePtr>& trainRootNodes)
+    {
+        //allocate memory for forward computation
+        fprintf(stderr, "\n\nAllocate matrices for forward computing\n");
+        for (int i = 0; i < evalRootNodes.size(); i++)
+            AllocateEvalMatrices(evalRootNodes[i]);
+
+        for (int i = 0; i < trainRootNodes.size(); i++)
+            AllocateEvalMatrices(trainRootNodes[i]);
+
+        //allocate memory for backward computation
+        //we intentionally separate it from above loop to make sure forward computing gets the right matrices
+        for (int i = 0; i < trainRootNodes.size(); i++)
+            AllocateGradientMatrices(trainRootNodes[i]);
+    }
+
+    void AllocateEvalMatrices(ComputationNodePtr rootNode)
+    {
+        FormRecurrentLoops(rootNode);
+
+        std::list<ComputationNodePtr>& nodes = GetEvalOrder(rootNode);
+
+        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        {
+            (*nodeIter)->RequestEvalMatrices(m_matrixPool);
+            (*nodeIter)->ReleaseMatricesAfterEval(m_matrixPool);
+        }
+    }
+
+    void AllocateGradientMatrices(ComputationNodePtr rootNode)
+    {
+        //first, compute the number of parents for each node
+        std::map<ComputationNodePtr, int> numParents;
+
+        std::list<ComputationNodePtr>& nodes = GetEvalOrder(rootNode);
+
+        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        {
+            std::vector<ComputationNodePtr> children = (*nodeIter)->GetChildren();
+            for (int i = 0; i < children.size(); i++)
+                numParents[children[i]] ++;
+        }
+
+        //now, simulate the gradient computation order to determine how to allocate matrices
+        std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
+
+        for (int i = 0; i < m_recurrentInfo.size(); i++)
+            m_recurrentInfo[i].m_completedGradient = false;
+
+        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+        {
+            std::vector<ComputationNodePtr> recurrentNodes;
+            int iLoopId = FindInRecurrentLoop(*nodeIter, recurrentNodes);
+            if (iLoopId != -1 && m_recurrentInfo[iLoopId].m_completedGradient == false)
+            {
+                for (auto nodeIterInLoop = recurrentNodes.rbegin(); nodeIterInLoop != recurrentNodes.rend(); ++nodeIterInLoop)
+                    AllocateGradientMatricesForChildren(*nodeIterInLoop, numParents);
+                m_recurrentInfo[iLoopId].m_completedGradient = true;
+            }
+            else
+                AllocateGradientMatricesForChildren(*nodeIter, numParents);
+
+            (*nodeIter)->ReleaseGradientMatrices(m_matrixPool);
+        }
+    }
+
+    void AllocateGradientMatricesForChildren(ComputationNodePtr parentNode, std::map<ComputationNodePtr, int>& numParents)
+    {
+        std::vector<ComputationNodePtr> children = parentNode->GetChildren();
+        for (int i = 0; i < children.size(); i++)
+            children[i]->RequestGradientMatrices(m_matrixPool, numParents[children[i]]);
+    }
 
     /**
-    call unit test of each node
-    this adds a verification of the correctness of node operations.
-    */
+                call unit test of each node
+                this adds a verification of the correctness of node operations.
+                */
     bool UnitTest(bool allowFragment = false)
     {
         vector<wstring> vErrors;
@@ -2543,7 +2625,8 @@ public:
         {
             for (auto node : FinalCriterionNodes())
             {
-                if (!allowFragment) FormRecurentLoops(node);
+                if (!allowFragment)
+                    FormRecurrentLoops(node);
                 size_t actualMBSize = this->GetActualMBSize();
                 this->SetActualMiniBatchSize(actualMBSize);
                 if (!UnitTest(node))
@@ -2578,8 +2661,8 @@ public:
         std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
 
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-            if (!(*nodeIter)->UnitTest())
-                return false;
+        if (!(*nodeIter)->UnitTest())
+            return false;
 
         fprintf(stderr, "\n\n");
 
@@ -2821,15 +2904,15 @@ protected:
     {
         /// merge loops if they have the same source node
         std::vector<RecurrentInfo> m_recurrentInfoTmp;
-        if (m_recurrentInfo.size() <= 1)
-            return;
+                    if (m_recurrentInfo.size() <= 1)
+                        return; 
 
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
         {
             if (m_recurrentInfoTmp.size() == 0)
             {
                 RecurrentInfo rInfo;
-                rInfo.Copy(*iter);
+                            rInfo.Copy(*iter); 
                 m_recurrentInfoTmp.push_back(rInfo);
             }
             else
@@ -2847,7 +2930,7 @@ protected:
                 if (bFound == false)
                 {
                     RecurrentInfo rInfo;
-                    rInfo.Copy(*iter);
+                                rInfo.Copy(*iter);
                     m_recurrentInfoTmp.push_back(rInfo);
                 }
                 else
@@ -2893,22 +2976,22 @@ protected:
         sccStack.push_back(cur);
         cur->SetInStack(true);
 
-        if (cur->OperationName() != L"PairNetwork")
-        {
+                    if (cur->OperationName() != L"PairNetwork")
+                    {
                         /// pairnetwork is the socket from other network, so ignore its children, which are in the other networks
-            for (int i = 0; i < cur->ChildrenSize(); i++)
+        for (int i = 0; i < cur->ChildrenSize(); i++)
+        {
+            if (cur->Inputs(i)->isVisisted() == false)
             {
-                if (cur->Inputs(i)->isVisisted() == false)
-                {
-                    strongSCC(cur->Inputs(i), sccStack, index, loopId);
-                    cur->Setlowlink(min(cur->Getlowlink(), cur->Inputs(i)->Getlowlink()));
-                }
-                else if (cur->Inputs(i)->isInStack())
-                {
-                    cur->Setlowlink(min(cur->Getlowlink(), cur->Inputs(i)->Getlowlink()));
-                }
+                                strongSCC(cur->Inputs(i), sccStack, index, loopId);
+                cur->Setlowlink(min(cur->Getlowlink(), cur->Inputs(i)->Getlowlink()));
+            }
+            else if (cur->Inputs(i)->isInStack())
+            {
+                cur->Setlowlink(min(cur->Getlowlink(), cur->Inputs(i)->Getlowlink()));
             }
         }
+                    }
 
         if (cur->Getlowlink() == cur->GetIndex())
         {
@@ -2963,15 +3046,15 @@ protected:
     }
             
     //must be called before ValidateNetwork
-    void FormRecurentLoops(const ComputationNodePtr rootNode)
+    void FormRecurrentLoops(const ComputationNodePtr rootNode)
     {
         std::vector<ComputationNodePtr> sourceLoopNodes;
 
-        getStrongSCC(rootNode);
+                    getStrongSCC(rootNode);
         std::list<ComputationNodePtr>& nodes = GetEvalOrder(rootNode, sourceLoopNodes);
         std::list<ComputationNodePtr> nodesForGrad;
 
-        MergeRecurrentLoops(rootNode);
+                    MergeRecurrentLoops(rootNode);
 
         /// debug purpose
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
@@ -2985,9 +3068,7 @@ protected:
                     max_visitedOrderInLoop = (*itr)->GetVisitedOrder();
             }
             for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
-            {
                 (*itr)->SetVisitedOrder(max_visitedOrderInLoop);
-            }
         }
 
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
@@ -3263,8 +3344,8 @@ public:
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
             (*nodeIter)->ClearGradientForChildren(m_actMiniBSize);
 
-        for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
-            (*nodeIter).m_completedGradient = false;
+        //for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
+        //    (*nodeIter).m_completedGradient = false;
 
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedGradient = false;
@@ -3377,6 +3458,8 @@ protected:
 
     std::map<const ComputationNodePtr, std::list<ComputationNodePtr>> m_inputs;
     std::map<const ComputationNodePtr, std::list<ComputationNodePtr>> m_learnableParameters;
+
+    MatrixPool<ElemType> m_matrixPool;
 };
 
 template class ComputationNetwork<float>;

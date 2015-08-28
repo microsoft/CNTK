@@ -117,6 +117,7 @@
     <ClCompile Include="MatrixBLASTests.cpp" />
     <ClCompile Include="MatrixDataSynchronizationTests.cpp" />
     <ClCompile Include="MatrixFileWriteAndRead.cpp" />
+    <ClCompile Include="MatrixQuantizerTests.cpp" />
     <ClCompile Include="MatrixSparseDenseInteractionsTests.cpp" />
     <ClCompile Include="MatrixUnitTests.cpp" />
     <ClCompile Include="stdafx.cpp">

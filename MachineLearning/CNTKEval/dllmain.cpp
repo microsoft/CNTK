@@ -9,10 +9,10 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #endif
+#include "MPIWrapper.h"
 
 // The SGD CLass is MPI-aware and expects these globals to exist.
-int mpiRank = 0;
-int mpiNumProcesses = 1;
+Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 BOOL APIENTRY DllMain(HMODULE /*hModule*/,
                        DWORD  ul_reason_for_call,
