@@ -170,7 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     val = q.valQ.Unquantize(qVal);
                 }
 
-                fprintf(stderr, "%10d (%.10f)          \t", qVal, val);
+                fprintf(stderr, "%10d (%.10f)          \t", (int) qVal, val);
             }
             fprintf(stderr, "\n");
         }

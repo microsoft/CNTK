@@ -2465,7 +2465,7 @@ public:
             for (ComputationNodePtr & node : FinalCriterionNodes())
             {
                 if (!allowFragment)
-                    FormRecurentLoops(node);
+                    FormRecurrentLoops(node);
                 PrintComputationTree(node, false);
                 size_t actualMBSize = this->GetActualMBSize();
                 this->SetActualMiniBatchSize(actualMBSize);
@@ -2485,7 +2485,7 @@ public:
             for (ComputationNodePtr node : OutputNodes())
             {
                 if (!allowFragment)
-                    FormRecurentLoops(node);
+                    FormRecurrentLoops(node);
                 ValidateNetwork(node);
             }
         }
@@ -2498,7 +2498,7 @@ public:
             for (ComputationNodePtr node : EvaluationNodes())
             {
                 if (!allowFragment)
-                    FormRecurentLoops(node);
+                    FormRecurrentLoops(node);
                 ValidateNetwork(node);
             }
         }
@@ -3050,11 +3050,11 @@ protected:
     {
         std::vector<ComputationNodePtr> sourceLoopNodes;
 
-                    getStrongSCC(rootNode);
+        getStrongSCC(rootNode);
         std::list<ComputationNodePtr>& nodes = GetEvalOrder(rootNode, sourceLoopNodes);
         std::list<ComputationNodePtr> nodesForGrad;
 
-                    MergeRecurrentLoops(rootNode);
+        MergeRecurrentLoops(rootNode);
 
         /// debug purpose
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
