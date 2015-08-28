@@ -19,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SquareErrorNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SquareErrorNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
@@ -74,7 +74,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintSelfBeforeValidation();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("SquareError operation requires two inputs.");
+                LogicError("SquareError operation requires two inputs.");
 
             size_t index = 0;
             if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
@@ -93,12 +93,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("SquareError operation: one of the operants has 0 element.");
+                LogicError("SquareError operation: one of the operants has 0 element.");
 
             if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match size
                 Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()) )
             {
-                throw std::logic_error("The Matrix dimension in the SquareError operation does not match.");
+                LogicError("The Matrix dimension in the SquareError operation does not match.");
             }       
 
             FunctionValues().Resize(1,1);
@@ -124,13 +124,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_leftMinusRight.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<SquareErrorNode<ElemType>>(nodeP);
@@ -150,7 +150,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class CrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
@@ -238,11 +238,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintSelfBeforeValidation();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("CrossEntropyWithSoftmaxNode criterion requires two inputs.");
+                LogicError("CrossEntropyWithSoftmaxNode criterion requires two inputs.");
 
             // This breaks re-shaping of the label matrix
             /*if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
-            throw std::logic_error("CrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");*/
+            LogicError("CrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");*/
 
             //we may release the constraint that the first operant is an inputValue later so the following code should be kept
             size_t index = 0;
@@ -262,12 +262,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("CrossEntropyWithSoftmaxNode operation: one of the operants has 0 element.");
+                LogicError("CrossEntropyWithSoftmaxNode operation: one of the operants has 0 element.");
 
             if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match size
                 Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()) )
             {
-                throw std::logic_error("The Matrix<ElemType>  dimension in the CrossEntropyWithSoftmaxNode operation does not match.");
+                LogicError("The Matrix<ElemType>  dimension in the CrossEntropyWithSoftmaxNode operation does not match.");
             }       
 
             FunctionValues().Resize(1,1);
@@ -296,14 +296,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_logSoftmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
             m_softmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<CrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
@@ -326,7 +326,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class CrossEntropyNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CrossEntropyNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
@@ -392,10 +392,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintSelfBeforeValidation();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("CrossEntropyNode criterion requires two inputs.");
-
+                LogicError("CrossEntropyNode criterion requires two inputs.");
             if (Inputs(0)->OperationName() != L"InputValue")
-                throw std::logic_error("CrossEntropyNode criterion requires the first input to be the label.");
+                LogicError("CrossEntropyNode criterion requires the first input to be the label.");
 
             //we may release the constraint that the first operant is an inputValue later so the following code should be kept
             size_t index = 0;
@@ -415,12 +414,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("CrossEntropyNode operation: one of the operants has 0 element.");
+                LogicError("CrossEntropyNode operation: one of the operants has 0 element.");
 
             if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match size
                 Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()) )
             {
-                throw std::logic_error("The Matrix dimension in the CrossEntropyNode operation does not match.");
+                LogicError("The Matrix dimension in the CrossEntropyNode operation does not match.");
             }       
 
             FunctionValues().Resize(1,1);
@@ -448,14 +447,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_logOfRight.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
             m_leftDivRight.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<CrossEntropyNode<ElemType>>(nodeP);
@@ -478,7 +477,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MatrixL1RegNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MatrixL1RegNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
@@ -525,10 +524,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintSelfBeforeValidation();
 
             if (m_children.size() != 1) 
-                throw std::logic_error("MatrixL1Reg criterion should have one input.");
-
+                LogicError("MatrixL1Reg criterion should have one input.");
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("MatrixL1Reg operation: the input node has 0 element.");
+                LogicError("MatrixL1Reg operation: the input node has 0 element.");
 
             FunctionValues().Resize(1,1);
             m_gradientOfL1Norm.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
@@ -552,17 +550,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_gradientOfL1Norm.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<MatrixL1RegNode<ElemType>>(nodeP);
-
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<MatrixL1RegNode<ElemType>>(nodeP);
                 node->m_gradientOfL1Norm = m_gradientOfL1Norm;
             }
         }
@@ -578,7 +575,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MatrixL2RegNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MatrixL2RegNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
@@ -624,10 +621,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintSelfBeforeValidation();
 
             if (m_children.size() != 1) 
-                throw std::logic_error("MatrixL2Reg criterion should have one input.");
-
+                LogicError("MatrixL2Reg criterion should have one input.");
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("MatrixL2Reg operation: the input node has 0 element.");
+                LogicError("MatrixL2Reg operation: the input node has 0 element.");
 
             FunctionValues().Resize(1,1);
             InferImageDimsFromInputs(); 
@@ -650,7 +646,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
     protected:
@@ -670,7 +666,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class NoiseContrastiveEstimationNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         NoiseContrastiveEstimationNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
@@ -691,13 +687,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SaveToFile(File& fstream) const
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
+            Base::SaveToFile(fstream);
             fstream << m_evalMode;
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
+            Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_evalMode;
             if (m_evalMode > NCEEvalMode::None)
             {
@@ -721,7 +717,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //gradient computation@yinggongzhao
             //inputIndex should be 2 this time
             if (m_evalMode != NCEEvalMode::None)
-                throw std::logic_error("ComputeInputPartial should only be called in training mode");
+                LogicError("ComputeInputPartial should only be called in training mode");
             if (inputIndex == 0)
                 InvalidArgument("ComputeInput partial should not be called for label");
             //                                                                              samples+probs                   hidden                  embedding
@@ -792,29 +788,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintSelfBeforeValidation();
 
             if (m_children.size() != 4)
-                throw std::logic_error("NoiseContrastiveEstimationNode criterion requires four inputs.");
-
+                LogicError("NoiseContrastiveEstimationNode criterion requires four inputs.");
             if (Inputs(0)->OperationName() != InputValue<ElemType>::TypeName())
-                throw std::logic_error("NoiseContrastiveEstimationNode criterion requires the first input to be the label.");
-
+                LogicError("NoiseContrastiveEstimationNode criterion requires the first input to be the label.");
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
-            {
-                throw std::logic_error("The Matrix<ElemType>  dimension for observation and weight in the NoiseContrastiveEstimationNode operation does not match.");
-            }
+                LogicError("The Matrix<ElemType>  dimension for observation and weight in the NoiseContrastiveEstimationNode operation does not match.");
             if (!(Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols())) // label and input same obs numbers
-            {
-                throw std::logic_error("The Matrix<ElemType>  dimension for label and observation in the NoiseContrastiveEstimationNode operation does not match.");
-            }
+                LogicError("The Matrix<ElemType>  dimension for label and observation in the NoiseContrastiveEstimationNode operation does not match.");
             //if (!(Inputs(0)->FunctionValues().GetNumRows() == 3)) // label needs to be 4 rows
-            //{
-            //  throw std::logic_error("The label in the NoiseContrastiveEstimationNode operation needs to be 4 rows.");
-            // }
+            //  LogicError("The label in the NoiseContrastiveEstimationNode operation needs to be 4 rows.");
 
             //cerr << Inputs(3)->FunctionValues().GetNumCols() << "\t" << Inputs(0)->FunctionValues().GetNumCols() << endl;
             //if (!(Inputs(3)->FunctionValues().GetNumCols() == Inputs(0)->FunctionValues().GetNumCols())) // number of observations
-            //{
-            //   throw std::logic_error("The number of observations in class log post probability and label in the NoiseContrastiveEstimationNode operation don't match.");
-            // }
+            //   LogicError("The number of observations in class log post probability and label in the NoiseContrastiveEstimationNode operation don't match.");
             FunctionValues().Resize(1, 1);
             InferImageDimsFromInputs();
         }
@@ -839,7 +825,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_logSoftmax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
             m_softMax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
             m_grdToSoftMaxInput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
@@ -871,7 +857,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ClassBasedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
@@ -1154,27 +1140,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintSelfBeforeValidation();
 
             if (m_children.size() != 4)
-                throw std::logic_error("ClassBasedCrossEntropyWithSoftmaxNode criterion requires four inputs.");
-
+                LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires four inputs.");
             if (Inputs(0)->OperationName() != InputValue<ElemType>::TypeName())
-                throw std::logic_error("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
-
+                LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
-            {
-                throw std::logic_error("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
-            }
+                LogicError("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
             if (!(Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols())) // label and input same obs numbers
-            {
-                throw std::logic_error("The Matrix<ElemType>  dimension for label and observation in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
-            }
+                LogicError("The Matrix<ElemType>  dimension for label and observation in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
             if (!(Inputs(0)->FunctionValues().GetNumRows() == 4)) // label needs to be 4 rows
-            {
-                throw std::logic_error("The label in the ClassBasedCrossEntropyWithSoftmaxNode operation needs to be 4 rows.");
-            }
+                LogicError("The label in the ClassBasedCrossEntropyWithSoftmaxNode operation needs to be 4 rows.");
             if (!(Inputs(3)->FunctionValues().GetNumCols() == Inputs(0)->FunctionValues().GetNumCols())) // number of observations
-            {
-                throw std::logic_error("The number of observations in class log post probability and label in the ClassBasedCrossEntropyWithSoftmaxNode operation don't match.");
-            }
+                LogicError("The number of observations in class log post probability and label in the ClassBasedCrossEntropyWithSoftmaxNode operation don't match.");
 
             FunctionValues().Resize(1, 1);
             InferImageDimsFromInputs();
@@ -1203,7 +1179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_logSoftmax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
             m_softMax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
             m_clsLogSoftmax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
@@ -1250,19 +1226,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class CRFNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
-    
-    private:
-        Matrix<ElemType> mAlpha;
-        Matrix<ElemType> mBeta;
-        Matrix<ElemType> mPostProb;
-
-        int mStartLbl;
-        int mEndLbl;
-
-    protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
-
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CRFNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
@@ -1489,14 +1453,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintSelfBeforeValidation();
 
             if (m_children.size() != 3)
-                throw std::logic_error("CRFNode requires three inputs.");
+                LogicError("CRFNode requires three inputs.");
 
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&  // position dependent and pair scores have same number of labels
                 Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
                 Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() && // position dependent and pair scores have the same observation numbers
                 Inputs(2)->FunctionValues().GetNumCols() == Inputs(2)->FunctionValues().GetNumRows()))
             {
-                throw std::logic_error("The Matrix<ElemType>  dimension in the CRFNode operation does not match.");
+                LogicError("The Matrix<ElemType>  dimension in the CRFNode operation does not match.");
             }
 
             FunctionValues().Resize(1, 1);
@@ -1529,7 +1493,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<CRFNode<ElemType>>(nodeP);
@@ -1541,6 +1505,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->mEndLbl = mEndLbl;
             }
         }
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+    private:
+        Matrix<ElemType> mAlpha;    // TODO: m_Alpha etc.
+        Matrix<ElemType> mBeta;
+        Matrix<ElemType> mPostProb;
+        int mStartLbl;
+        int mEndLbl;
     };
 
     // This training criterion node needs derivatives and objectives to be
@@ -1556,7 +1528,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class DummyCriterionNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         DummyCriterionNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
@@ -1580,7 +1552,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI ComputeInputPartialThree(const Matrix<ElemType>& inputFunctionValues1,
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+                                                    Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         {
             Matrix<ElemType>::ScaleAndAdd(gradientValues.Get00Element(), inputFunctionValues1, inputGradientValues);
         }
@@ -1593,7 +1565,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0)  
         {
             if (inputFunctionValues0.GetNumRows() != 1 || inputFunctionValues0.GetNumCols() != 1)
-                throw std::logic_error("DummyCriterionNode expects first input has dimension (1, 1).\n");
+                LogicError("DummyCriterionNode expects first input has dimension (1, 1).\n");
             functionValues.Resize(1, 1);
             functionValues.SetValue(inputFunctionValues0.Get00Element());
 #if NANCHECK
@@ -1606,23 +1578,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintSelfBeforeValidation();
 
             if (m_children.size() != 3) 
-                throw std::logic_error("DummyCriterionNode criterion requires three inputs.");
-
+                LogicError("DummyCriterionNode criterion requires three inputs.");
             if (Inputs(0)->OperationName() != L"InputValue")
-                throw std::logic_error("DummyCriterionNode criterion requires the first input to be computed objectives.");
-
+                LogicError("DummyCriterionNode criterion requires the first input to be computed objectives.");
             if (Inputs(0)->OperationName() != L"InputValue")
-                throw std::logic_error("DummyCriterionNode criterion requires the first input to be computed derivatives.");
-
+                LogicError("DummyCriterionNode criterion requires the first input to be computed derivatives.");
             if (Inputs(0)->FunctionValues().GetNumRows() != 1)
-                throw std::logic_error("DummyCriterionNode criterion requires the first input to have dimension 1.");
-
+                LogicError("DummyCriterionNode criterion requires the first input to have dimension 1.");
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements() || Inputs(2)->FunctionValues().HasNoElements())
-                throw std::logic_error("DummyCriterionNode operation: one of the operants has 0 element.");
-
+                LogicError("DummyCriterionNode operation: one of the operants has 0 element.");
             if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(2)->FunctionValues().GetNumRows())
-                throw std::logic_error("The Matrix dimension in the DummyCriterionNode operation does not match.");
-
+                LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
             if (Inputs(1)->FunctionValues().GetNumCols() != Inputs(2)->FunctionValues().GetNumCols())
                 Inputs(1)->FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(2)->FunctionValues().GetNumCols()); 
 

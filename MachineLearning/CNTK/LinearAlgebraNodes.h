@@ -27,7 +27,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class NegateNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         NegateNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -109,7 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SumElementsNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SumElementsNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -200,7 +200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SumColumnElementsNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SumColumnElementsNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -287,7 +287,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<SumColumnElementsNode<ElemType>>(nodeP);
@@ -307,7 +307,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class RowSliceNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -326,7 +326,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             auto node = dynamic_pointer_cast<RowSliceNode<ElemType>>(nodeP);
 
             node->m_startIndex = m_startIndex;
@@ -335,13 +335,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SaveToFile(File& fstream) const
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
+            Base::SaveToFile(fstream);
             fstream << m_startIndex << m_numRows;
         }
         
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
+            Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_startIndex >> m_numRows;
         }
 
@@ -437,7 +437,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class RowStackNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowStackNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -447,7 +447,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             auto node = dynamic_pointer_cast<RowStackNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeChildren)
@@ -573,7 +573,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ScaleNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ScaleNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -691,7 +691,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class TimesNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -859,7 +859,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class TransposeTimesNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -1023,7 +1023,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ElementTimesNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -1141,7 +1141,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class RowElementTimesNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -1275,7 +1275,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
@@ -1289,7 +1289,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ColumnElementTimesNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ColumnElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -1433,7 +1433,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
@@ -1447,7 +1447,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class PlusNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PlusNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -1695,7 +1695,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MinusNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MinusNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -1979,7 +1979,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class DiagTimesNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         DiagTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -2107,14 +2107,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_innerproduct.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             m_rightGradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<DiagTimesNode<ElemType>>(nodeP);
@@ -2134,7 +2134,7 @@ private:
     template<class ElemType>
     class CosDistanceNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosDistanceNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -2316,7 +2316,7 @@ private:
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_invNorm0.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             m_invNorm1.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             m_leftTerm.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
@@ -2326,7 +2326,7 @@ private:
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
@@ -2354,7 +2354,7 @@ private:
     template<class ElemType>
     class KhatriRaoProductNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         KhatriRaoProductNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -2494,7 +2494,7 @@ private:
     template<class ElemType>
     class CosDistanceWithNegativeSamplesNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
@@ -2729,7 +2729,7 @@ private:
 
         virtual void MoveMatricesToDevice(const short deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_invNorm0.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             m_invNorm1.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             m_invNormSquare.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
@@ -2740,7 +2740,7 @@ private:
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<CosDistanceWithNegativeSamplesNode<ElemType>>(nodeP);
@@ -2769,7 +2769,7 @@ private:
     template<class ElemType>
     class TransposeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 
         Matrix<ElemType> mOnes; 
     public:
@@ -2884,7 +2884,7 @@ private:
     template<class ElemType>
     class StrideTimesNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 
         size_t m_StrideDim; // the dimension index on which stride works 
         size_t m_Stride;    // the stride 

@@ -19,7 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ErrorPredictionNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ErrorPredictionNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
@@ -123,7 +123,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_maxIndexes0.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
             m_maxIndexes1.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
             m_maxValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
@@ -131,7 +131,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<ErrorPredictionNode<ElemType>>(nodeP);

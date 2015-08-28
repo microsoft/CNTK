@@ -32,7 +32,7 @@ output   : [[nDim0 + nDim1] X T]
 template<class ElemType>
 class ParallelNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
 {
-    UsingComputationNodeMembers;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
     ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
@@ -200,7 +200,7 @@ template class ParallelNode<double>;
 template<class ElemType>
 class PreComputedNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
 {
-    UsingComputationNodeMembers;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
     PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
@@ -216,14 +216,14 @@ public:
 
     virtual void SaveToFile(File& fstream)  const
     {
-        ComputationNode<ElemType>::SaveToFile(fstream);
+        Base::SaveToFile(fstream);
         fstream << m_hasComputed;
         fstream << m_functionValues;
     }
 
     virtual void LoadFromFile(File& fstream, size_t modelVersion)
     {
-        ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
+        Base::LoadFromFile(fstream, modelVersion);
         fstream >> m_hasComputed;
         fstream >> m_functionValues;
     }
@@ -245,7 +245,7 @@ public:
     bool m_hasComputed;
 };
 
-#define UsingPreComputedNodeMembers UsingComputationNodeMembers; using PreComputedNode<ElemType>::m_hasComputed
+#define UsingPreComputedNodeMembers UsingComputationNodeMembers; using Base::m_hasComputed
 
 template class PreComputedNode<float>;
 template class PreComputedNode<double>;
@@ -253,8 +253,7 @@ template class PreComputedNode<double>;
 template<class ElemType>
 class MeanNode : public PreComputedNode<ElemType>
 {
-    UsingPreComputedNodeMembers;
-
+    typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
     MeanNode(DEVICEID_TYPE deviceId, const wstring & name) : PreComputedNode<ElemType>(deviceId, name)
@@ -265,7 +264,7 @@ public:
 
     virtual void LoadFromFile(File& fstream, size_t modelVersion)
     {
-        PreComputedNode<ElemType>::LoadFromFile(fstream, modelVersion);
+        Base::LoadFromFile(fstream, modelVersion);
         m_numSamples = 0;
     }
 
@@ -277,25 +276,14 @@ public:
     virtual void MarkComputed(const bool hasComputed)
     {
         m_hasComputed = hasComputed;
-
         if (m_hasComputed)
             m_numSamples = 0;
     }
 
-    virtual bool RequirePreCompute() const
-    {
-        return true;
-    }
+    virtual bool RequirePreCompute() const { return true; }
 
-    virtual const std::wstring OperationName() const
-    {
-        return TypeName();
-    }
-
-    static const std::wstring TypeName()
-    {
-        return L"Mean";
-    }
+    virtual const std::wstring OperationName() const { return TypeName(); }
+    static const std::wstring TypeName() { return L"Mean"; }
 
     virtual void ComputeInputPartial(const size_t /*inputIndex*/)
     {
@@ -350,7 +338,7 @@ public:
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
     {
-        ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+        Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<MeanNode<ElemType>>(nodeP);
@@ -368,7 +356,7 @@ template class MeanNode<double>;
 template<class ElemType>
 class InvStdDevNode : public PreComputedNode<ElemType>
 {
-    UsingPreComputedNodeMembers;
+    typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
     InvStdDevNode(DEVICEID_TYPE deviceId, const wstring & name) : PreComputedNode<ElemType>(deviceId, name)
@@ -380,7 +368,7 @@ public:
 
     virtual void LoadFromFile(File& fstream, size_t modelVersion)
     {
-        PreComputedNode<ElemType>::LoadFromFile(fstream, modelVersion);
+        Base::LoadFromFile(fstream, modelVersion);
         m_numSamples = 0;
     }
 
@@ -501,7 +489,7 @@ public:
 
     virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
     {
-        ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+        Base::MoveMatricesToDevice(deviceId);
         m_mean.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         m_var.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
@@ -509,7 +497,7 @@ public:
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
     {
-        ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+        Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<InvStdDevNode<ElemType>>(nodeP);
@@ -534,7 +522,7 @@ template class InvStdDevNode<double>;
 template<class ElemType>
 class PerDimMeanVarNormalizationNode : public ComputationNode<ElemType>
 {
-    UsingComputationNodeMembers;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
     PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -683,8 +671,7 @@ template class PerDimMeanVarNormalizationNode<double>;
 template<class ElemType>
 class PerDimMeanVarDeNormalizationNode : public ComputationNode<ElemType>
 {
-    UsingComputationNodeMembers;
-
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
     PerDimMeanVarDeNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
@@ -853,13 +840,13 @@ template<class ElemType>
 class BatchModeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
 {
     // all nodes require precomputation should derive from it
-    UsingComputationNodeMembers;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
     BatchModeNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
     {
         // TODO: change this back to proper initializers
-        mMemory = Matrix<ElemType>(deviceId);
+        m_memory = Matrix<ElemType>(deviceId);
     }
 
     virtual bool HasComputed() const = 0;
@@ -869,25 +856,25 @@ public:
 
     virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
     {
-        assert(mMemory.GetNumCols() > 0);
+        assert(m_memory.GetNumCols() > 0);
 
-        FunctionValues().Resize(mMemory.GetNumRows(), m_samplesInRecurrentStep);
+        FunctionValues().Resize(m_memory.GetNumRows(), m_samplesInRecurrentStep);
         if (frameRange.t() == 0)
-            assert(FunctionValues().ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm() == mMemory.ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm());
-        FunctionValues().SetValue(mMemory.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
+            assert(FunctionValues().ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm() == m_memory.ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm());
+        FunctionValues().SetValue(m_memory.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
         assert(FunctionValues().GetNumCols() == m_samplesInRecurrentStep);
     }
 
     virtual void SaveToFile(File& fstream)  const
     {
-        ComputationNode<ElemType>::SaveToFile(fstream);
+        Base::SaveToFile(fstream);
         fstream << m_hasComputed;
         fstream << m_functionValues;
     }
 
     virtual void LoadFromFile(File& fstream, size_t modelVersion)
     {
-        ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
+        Base::LoadFromFile(fstream, modelVersion);
         fstream >> m_hasComputed;
         fstream >> m_functionValues;
     }
@@ -907,23 +894,20 @@ public:
     }
 
 protected:
-    Matrix<ElemType> mMemory;   // the memory of input or output
+    Matrix<ElemType> m_memory;   // the memory of input or output
     bool m_hasComputed;
 };
 
 // add this at the start of each derived class, to get access to the members of ComputationNode
 // TODO: comment here why this is needed and how to maintain it
-#define UsingBatchModeNodeMembers \
-UsingComputationNodeMembers; \
-typedef BatchModeNode<ElemType> C; \
-protected:  \
-typedef BatchModeNode<ElemType>* BatchModeNodePtr;  \
-public: \
-using C::HasComputed; using C::MarkComputed; \
-using C::RequireBatchMode; using C::EvaluateThisNode; using C::SaveToFile; \
-using C::LoadFromFile; using C::DumpNodeInfo; \
-protected:  \
-using C::mMemory; using C::m_hasComputed; \
+#define UsingBatchModeNodeMembers UsingComputationNodeMembers; \
+    protected:  \
+        typedef BatchModeNode<ElemType>* BatchModeNodePtr;  \
+    public: \
+        using Base::HasComputed; using Base::MarkComputed; using Base::RequireBatchMode; \
+    protected:  \
+        using Base::m_memory; using Base::m_hasComputed; \
+    public:
 
 template class BatchModeNode<float>;
 template class BatchModeNode<double>;
@@ -936,8 +920,7 @@ K. Yao and G. Zweig, "Sequence-to-Sequence Neural Net Models for Grapheme-to-Pho
 template<class ElemType>
 class TimeReverseNode : public BatchModeNode<ElemType>
 {
-    UsingBatchModeNodeMembers;
-
+    typedef BatchModeNode<ElemType> Base; UsingBatchModeNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
     TimeReverseNode(DEVICEID_TYPE deviceId, const wstring & name) : BatchModeNode<ElemType>(deviceId, name)
@@ -947,44 +930,30 @@ public:
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
     {
-        ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+        Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<TimeReverseNode<ElemType>>(nodeP);
-            node->mMemory = mMemory;
+            node->m_memory = m_memory;
         }
     }
 
-    virtual void SaveToFile(File& fstream)  const
-    {
-        ComputationNode<ElemType>::SaveToFile(fstream);
-    }
-
-    virtual bool HasComputed() const
-    {
-        return m_hasComputed;
-    }
-
-    virtual void MarkComputed(const bool hasComputed)
-    {
-        m_hasComputed = hasComputed;
-    }
+    virtual bool HasComputed() const { return m_hasComputed; }
+    virtual void MarkComputed(const bool hasComputed) { m_hasComputed = hasComputed; }
 
     virtual const std::wstring OperationName() const { return TypeName(); }
     static const std::wstring TypeName() { return L"TimeReverse"; }
 
     virtual void MoveMatricesToDevice(const short deviceId)
     {
-        ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-        mMemory.TransferToDeviceIfNotThere(deviceId, true, mMemory.HasNoElements());
+        Base::MoveMatricesToDevice(deviceId);
+        m_memory.TransferToDeviceIfNotThere(deviceId, true, m_memory.HasNoElements());
     }
 
     virtual void ComputeInputPartial(const size_t inputIndex)
     {
         if (inputIndex > 0)
-        {
             InvalidArgument("TimeReverse operation only takes one input.");
-        }
         ComputationNodePtr child = Inputs(inputIndex);
         ComputeInputPartialS(GradientValues(), child->GradientValues(), m_samplesInRecurrentStep);
     }
@@ -1020,7 +989,7 @@ public:
         if (m_hasComputed == false)
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
-            mMemory.SetValue(FunctionValues());
+            m_memory.SetValue(FunctionValues());
         }
     }
 
