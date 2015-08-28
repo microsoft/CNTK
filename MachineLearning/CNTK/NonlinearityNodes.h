@@ -41,19 +41,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        NonlinearityNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             m_gradient = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_gradient = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -131,7 +123,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define UsingNonlinearityNodeMembers UsingComputationNodeMembers; typedef NonlinearityNode<ElemType> BB; \
 public:  \
-    using BB::m_gradient; using BB::Construct; using BB::EvaluateThisNode
+    using BB::m_gradient; using BB::EvaluateThisNode
 
     // =======================================================================
     // RectifiedLinearNode -- ReLU non-linearity
@@ -142,6 +134,12 @@ public:  \
     {
         UsingNonlinearityNodeMembers;
     public:
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        RectifiedLinearNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
+        }
+
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"RectifiedLinear";} 
 
@@ -181,8 +179,7 @@ public:  \
         void Construct(const RectifiedLinearNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
             m_gradient = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -205,7 +202,13 @@ public:  \
     {
         UsingNonlinearityNodeMembers;
     public:
-        virtual const std::wstring OperationName() const {return TypeName();}
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"Sigmoid";} 
 
         // we should get rid of this code dup, need to unify the -V functions
@@ -259,8 +262,7 @@ public:  \
         void Construct(const SigmoidNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
             m_gradient = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -283,7 +285,13 @@ public:  \
     {
         UsingNonlinearityNodeMembers;
     public:
-        virtual const std::wstring OperationName() const {return TypeName();}
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        TanhNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
+        }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"Tanh";}
 
         // TODO: unify signature & get rid of code dup
@@ -338,9 +346,7 @@ public:  \
         // copy constructor
         void Construct(const TanhNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_gradient = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -362,7 +368,13 @@ public:  \
     class LogNode : public NonlinearityNode<ElemType>
     {
         UsingNonlinearityNodeMembers;
-     public:
+    public:
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        LogNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
+        }
+
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"Log"; }
 
@@ -424,8 +436,7 @@ public:  \
         void Construct(const LogNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
             m_gradient = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -448,6 +459,12 @@ public:  \
     {
         UsingNonlinearityNodeMembers;
     public:
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        ExpNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
+        }
+
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"Exp"; }
 
@@ -508,8 +525,7 @@ public:  \
         void Construct(const ExpNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
             m_gradient = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -532,6 +548,12 @@ public:  \
     {
         UsingNonlinearityNodeMembers;
     public:
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        CosineNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
+        }
+
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"Cosine";}
 
@@ -593,8 +615,7 @@ public:  \
         void Construct(const CosineNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
             m_gradient = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -619,19 +640,11 @@ public:  \
     {
         UsingNonlinearityNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        SoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             m_diff = Matrix<ElemType>(deviceId);
-            NonlinearityNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_diff = Matrix<ElemType>(deviceId);
-            NonlinearityNode<ElemType>::Construct(deviceId, name);
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -727,8 +740,7 @@ public:  \
         void Construct(const SoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
             m_gradient = Matrix<ElemType>(node->m_deviceId), m_diff = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -754,6 +766,12 @@ public:  \
     {
         UsingNonlinearityNodeMembers;
     public:
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        LogSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) : NonlinearityNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
+        }
+
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"LogSoftmax"; }
 
@@ -837,8 +855,7 @@ public:  \
         void Construct(const LogSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
             m_gradient = Matrix<ElemType>(node->m_deviceId), m_softmax = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -866,29 +883,19 @@ public:  \
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        GMMLogLikelihoodNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            m_prior = Matrix<ElemType>(deviceId), m_normedDeviation = Matrix<ElemType>(deviceId), m_normedDeviationVectors = Matrix<ElemType>(deviceId), m_stddev = Matrix<ElemType>(deviceId), m_posterior = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_prior = Matrix<ElemType>(deviceId), m_normedDeviation = Matrix<ElemType>(deviceId), m_normedDeviationVectors = Matrix<ElemType>(deviceId), m_stddev = Matrix<ElemType>(deviceId), m_posterior = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
+            // TODO: change this back to proper initializers
+            m_prior = Matrix<ElemType>(deviceId), m_normedDeviation = Matrix<ElemType>(deviceId), m_normedDeviationVectors = Matrix<ElemType>(deviceId);
+            m_stddev = Matrix<ElemType>(deviceId), m_posterior = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
         }
 
         // copy constructor
         void Construct(const GMMLogLikelihoodNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_prior = Matrix<ElemType>(node->m_deviceId), m_normedDeviation = Matrix<ElemType>(node->m_deviceId), m_normedDeviationVectors = Matrix<ElemType>(node->m_deviceId);
-            m_stddev = Matrix<ElemType>(node->m_deviceId), m_posterior = Matrix<ElemType>(node->m_deviceId), m_temp = Matrix<ElemType>(m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -1321,22 +1328,12 @@ public:  \
             m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
         }
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        DropoutNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             m_maskOfDropout = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-            Init();
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_maskOfDropout = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            // note: dropout is considered as a training parameter and thus not reinitialized if loadfromfile
-            LoadFromFile(fstream, modelVersion, deviceId);
+            Init(); // TODO: remove Init function if only used in one place
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -1493,9 +1490,7 @@ public:  \
         // copy constructor
         void Construct(const DropoutNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_maskOfDropout = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -1523,37 +1518,29 @@ public:  \
     class ReshapeNode : public ComputationNode<ElemType>
     {
         UsingComputationNodeMembers;
-
     public:
-
-        void Construct(const DEVICEID_TYPE deviceId, size_t numRows, size_t imageWidth, size_t imageHeight, size_t imageChannels, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
+            // TODO: change this back to proper initializers
+            m_numRows = 0;
+            m_imageWidth = 0;
+            m_imageHeight = 0;
+            m_imageChannels = 0;
+        }
+        ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows, size_t imageWidth, size_t imageHeight, size_t imageChannels) : ComputationNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
             m_numRows = numRows;
             m_imageWidth = imageWidth;
             m_imageHeight = imageHeight;
             m_imageChannels = imageChannels;
         }
 
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            m_numRows = 0, m_imageWidth = 0, m_imageHeight = 0, m_imageChannels = 0;
-        }
-
         void Construct(const ReshapeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1579,14 +1566,12 @@ public:  \
         virtual void SaveToFile(File& fstream) const
         {
             ComputationNode<ElemType>::SaveToFile(fstream);
-
             fstream << m_numRows << m_imageWidth << m_imageHeight << m_imageChannels;
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
             fstream >> m_numRows >> m_imageWidth >> m_imageHeight >> m_imageChannels;
         }
 
@@ -1824,34 +1809,25 @@ public:  \
     class RowRepeatNode : public ComputationNode<ElemType>
     {
         UsingComputationNodeMembers;
-
     public:
-
-        void Construct(const DEVICEID_TYPE deviceId, size_t numRepeats, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        RowRepeatNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            m_numRepeat = numRepeats;
-        }
-
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
+            // TODO: change this back to proper initializers
             m_numRepeat = 1;
         }
+        RowRepeatNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRepeats) : ComputationNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
+            m_numRepeat = numRepeats;
+        }
+        // ^^ TODO: merge those two above using optional args
 
+        // copy constructor
         void Construct(const RowRepeatNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1874,14 +1850,12 @@ public:  \
         virtual void SaveToFile(File& fstream) const
         {
             ComputationNode<ElemType>::SaveToFile(fstream);
-
             fstream << m_numRepeat;
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
             fstream >> m_numRepeat;
         }
 

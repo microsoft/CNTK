@@ -29,23 +29,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        NegateNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
+            // TODO: change this back to proper initializers
         }
 
         // copy constructor
         void Construct(const NegateNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -131,22 +124,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        SumElementsNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            LoadFromFile(fstream, modelVersion, deviceId);
+            // TODO: change this back to proper initializers
         }
 
         // copy constructor
         void Construct(const SumElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -241,27 +228,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        SumColumnElementsNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             m_sumValue = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_sumValue = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
         void Construct(const SumColumnElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_sumValue = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -372,36 +349,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            m_startIndex = 0; m_numRows = 0;
+            // TODO: change this back to proper initializers
+            m_startIndex = 0;
+            m_numRows = 0;
         }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name, size_t start_index, size_t num_rows) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
+            // TODO: change this back to proper initializers
+            m_startIndex = start_index;
+            m_numRows = num_rows;
         }
+        // ^^ TODO: can merge these two
 
         // copy constructor
         void Construct(const RowSliceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
         
-        void Construct(const DEVICEID_TYPE deviceId, size_t start_index, size_t num_rows, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            m_startIndex = start_index;
-            m_numRows = num_rows;
-        }
-
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
@@ -420,14 +389,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SaveToFile(File& fstream) const
         {
             ComputationNode<ElemType>::SaveToFile(fstream);
-
             fstream << m_startIndex << m_numRows;
         }
         
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion);
             fstream >> m_startIndex >> m_numRows;
         }
 
@@ -525,24 +492,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        RowStackNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
+            // TODO: change this back to proper initializers
         }
 
         // copy constructor
         void Construct(const RowStackNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -682,24 +641,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        ScaleNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
+            // TODO: change this back to proper initializers
         }
 
         // copy constructor
         void Construct(const ScaleNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -821,24 +772,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        TimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
+            // TODO: change this back to proper initializers
         }
 
         // copy constructor
         void Construct(const TimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -1010,24 +953,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
+            // TODO: change this back to proper initializers
         }
 
         // copy constructor
         void Construct(const TransposeTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -1195,24 +1130,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        ElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
+            // TODO: change this back to proper initializers
         }
 
         // copy constructor
         void Construct(const ElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -1334,28 +1261,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        RowElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             m_tempMatrix = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_tempMatrix = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
         void Construct(const RowElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_tempMatrix = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -1506,28 +1422,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        ColumnElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             m_tempMatrix = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_tempMatrix = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
         void Construct(const ColumnElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            m_tempMatrix = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -1688,25 +1593,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        PlusNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
+            // TODO: change this back to proper initializers
         }
 
         // copy constructor
         void Construct(const PlusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -1958,25 +1854,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        MinusNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
+            // TODO: change this back to proper initializers
         }
 
         // copy constructor
         void Construct(const MinusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -2264,20 +2151,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        DiagTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             m_innerproduct = Matrix<ElemType>(deviceId), m_rightGradient = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_innerproduct = Matrix<ElemType>(deviceId), m_rightGradient = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -2420,8 +2298,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Construct(const DiagTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
             m_innerproduct = Matrix<ElemType>(node->m_deviceId), m_rightGradient = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -2445,20 +2322,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        CosDistanceNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             m_invNorm0 = Matrix<ElemType>(deviceId), m_invNorm1 = Matrix<ElemType>(deviceId), m_leftTerm = Matrix<ElemType>(deviceId), m_rightTerm = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_invNorm0 = Matrix<ElemType>(deviceId), m_invNorm1 = Matrix<ElemType>(deviceId), m_leftTerm = Matrix<ElemType>(deviceId), m_rightTerm = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -2661,8 +2529,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Construct(const CosDistanceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
             m_invNorm0 = Matrix<ElemType>(node->m_deviceId), m_invNorm1 = Matrix<ElemType>(node->m_deviceId), m_leftTerm = Matrix<ElemType>(node->m_deviceId), m_rightTerm = Matrix<ElemType>(node->m_deviceId), m_temp = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -2691,25 +2558,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
-        void Construct(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        KhatriRaoProductNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
+            // TODO: change this back to proper initializers
         }
 
         // copy constructor
         void Construct(const KhatriRaoProductNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -2854,22 +2712,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UsingComputationNodeMembers;
 
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        CosDistanceWithNegativeSamplesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             m_invNorm0 = Matrix<ElemType>(deviceId), m_invNorm1 = Matrix<ElemType>(deviceId), m_invNormSquare = Matrix<ElemType>(deviceId); 
             m_leftTerm = Matrix<ElemType>(deviceId), m_rightTerm = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            MoveMatricesToDevice(deviceId); // TODO: does more than constructor
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            m_invNorm0 = Matrix<ElemType>(deviceId), m_invNorm1 = Matrix<ElemType>(deviceId), m_invNormSquare = Matrix<ElemType>(deviceId); 
-            m_leftTerm = Matrix<ElemType>(deviceId), m_rightTerm = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -3125,8 +2973,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Construct(const CosDistanceWithNegativeSamplesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
             m_invNorm0 = Matrix<ElemType>(node->m_deviceId), m_invNorm1 = Matrix<ElemType>(node->m_deviceId), m_leftTerm = Matrix<ElemType>(node->m_deviceId), m_rightTerm = Matrix<ElemType>(node->m_deviceId), m_temp = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -3157,27 +3004,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType> mOnes; 
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        TransposeNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
         {
+            // TODO: change this back to proper initializers
             mOnes = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            mOnes = Matrix<ElemType>(deviceId);
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
         void Construct(const TransposeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            mOnes = Matrix<ElemType>(node->m_deviceId);
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             node->CopyTo(shared_from_this(), newName, flags);
         }
 
@@ -3293,44 +3130,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
 
-        size_t m_StrideDim; /// the dimension index on which stride works 
-        size_t m_Stride; /// the stride 
-
+        size_t m_StrideDim; // the dimension index on which stride works 
+        size_t m_Stride;    // the stride 
     private:
-
         void UpdateStride(const Matrix<ElemType>& input1) 
         {
             m_Stride = input1.GetNumCols();
         }
-        void Init()
+        void Init() // TODO: remove this function once copy constructor is gone
         {
             m_Stride = 1;
         }
 
     public:
-        void Construct(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        StrideTimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
+            // TODO: change this back to proper initializers
             Init();
-        }
-
-        void Construct(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-        {
-            ComputationNode<ElemType>::Construct(deviceId, name);
-            // further initializations
-            Init();
-            LoadFromFile(fstream, modelVersion, deviceId);
         }
 
         // copy constructor
         void Construct(const StrideTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
         {
-            ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
+            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
             Init();
             node->CopyTo(shared_from_this(), newName, flags);
         }
+        // ^^ BUGBUG: copy constructor should copy m_Stride, no? Where is CopyTo()? We need a CopyTo that copies m_Stride, don't we?
 
         virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
         {

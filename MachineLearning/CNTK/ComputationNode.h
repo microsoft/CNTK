@@ -90,10 +90,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
         typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
         ComputationNode() { }
-    private:
-        // basic init code shared by constructors
-        void Init(DEVICEID_TYPE deviceId, const wstring & name)
+    public:
+        typedef float OurElemType;
+
+        // TODO: this should be protected and only accessible to the New method; maybe just move it in here?
+        // TODO: Once we switch to VS 2015, we shall use inheriting constructors, i.e. we can delete all those redundant constructor forwards in each ComputationNode derivate
+        ComputationNode(DEVICEID_TYPE deviceId, const wstring & name)
         {
+            // TODO: change this back to proper initializers
+            m_functionValues = Matrix<ElemType>(deviceId);
+            m_gradientValues = Matrix<ElemType>(deviceId);
+
             m_deviceId = deviceId;
             m_loopId = -1;
             m_samplesInRecurrentStep = 1;
@@ -109,23 +116,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_reqMultiSeqHandling = false;
 
             m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            MoveMatricesToDevice(deviceId);
             InitRecurrentNode();
-        }
-
-    public:
-        typedef float OurElemType;
-        // call as new ComputationNode()->Construct(args)
-        void Construct(DEVICEID_TYPE deviceId, const wstring & name)
-        {
-            m_functionValues = Matrix<ElemType>(deviceId);
-            m_gradientValues = Matrix<ElemType>(deviceId);
-            Init(deviceId, name);
-        }
-
-        ComputationNode(DEVICEID_TYPE deviceId, const wstring & name)
-        {
-            Construct(deviceId, name);
+            // This constructor does not call MoveMatricesToDevice(), but that is needed for full initialization.
+            // Only call this constructor through the New() factory functions, which will ensure this.
         }
 
         virtual ~ComputationNode()
@@ -134,6 +127,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf (stderr, "Called Destructor NodeName: %s\n",(msra::strfun::utf8 (NodeName())).c_str());
 #endif
         }
+
+        // TODO: make sure this does not get implemented in any of the base classes
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }    // TODO: remove, only used from copy constructor which will go away
 
         // recover a ComputationNodePtr (which is a shared_ptr) from a naked pointer stored as a void* (old NDL parser does that)
         static ComputationNodePtr FromVoidPtr(void * vp)
@@ -148,13 +145,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << OperationName() << NodeName();
         }
 
-        virtual void LoadFromFile(File& /*fstream*/, const size_t /*modelVersion*/, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/)
         {
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            m_minibatchPackingFlag = nullptr;
-            m_sentenceSeg = nullptr;
-            InitRecurrentNode();
+            // base class has nothing to load
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -232,6 +225,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DetachInputs() { m_children.clear(); }
 
+        // TODO: is this always just called with deviceId == m_deviceId?
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId);
 
         //making them virtual so that nodes that only copy values from it's children (e.g., dropout) can be efficient in evaluation
@@ -1119,8 +1113,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // factory functions
+    // These are an important part of object construction. There is only one base constructo that has no access to virtual functions.
+    // These factory functions here call additional initializations that are using virtual functions.
+    // TODO: hide the actual constructor from end users
     // Call these instead of new for any ComputationNode derivatives.  TODO: complete this
-    template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { auto p = make_shared<C>(); p->Construct(std::forward<_Types>(_Args)...); return p; }
+    // TODO: for base constructor, must call MoveMatricesToDevice after construction; for load constructor, must call LoadFromFile
+    template<class C, class... _Types> inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
+    {
+        auto p = make_shared<C>(deviceId, name, forward<_Types>(_Args)...);     // creates objects, esp. assigns deviceId to matrices, but otherwise does nothing
+        p->MoveMatricesToDevice(deviceId);                                      // this is a virtual call, i.e. it will handle extra matrices an object might own
+        return p;
+    }
+    template<class C> inline shared_ptr<C> New(const C * node, const wstring & name, const CopyNodeFlags flags)    // called from Duplicate() only
+    {
+        auto p = New<C>(node->GetDeviceId(), name);       // copy constructor --TODO: replace Duplicate() by NewThis
+        p->Construct(node, name, flags);
+        // TODO: call CopyTo() here
+        return p;
+    }
+    //template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { auto p = make_shared<C>(); p->Construct(std::forward<_Types>(_Args)...); return p; }
+    //template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { auto p = make_shared<C>(); p->Construct(std::forward<_Types>(_Args)...); return p; }
 
     // =======================================================================
     // ComputationNodeNonLooping -- abstract base class for computation nodes that do not implement eval/partial for individual frames
@@ -1129,8 +1141,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // This will provide default implementations for those two functions that will fail at runtime with a meaningful error.
     template<typename ElemType>
-    struct ComputationNodeNonLooping : public ComputationNode<ElemType>
+    class ComputationNodeNonLooping : public ComputationNode<ElemType>
     {
+    public:
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        ComputationNodeNonLooping(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
+        {
+            // TODO: change this back to proper initializers
+        }
+
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &)
         {
             LogicError("%s node should never be in a loop.", typeid(*this).name());
