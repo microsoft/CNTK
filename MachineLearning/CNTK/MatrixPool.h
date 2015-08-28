@@ -38,7 +38,7 @@ namespace Microsoft {
                     MatrixPtr matrixPtr = nullptr;
                     if (m_releasedMatrices.empty())
                     {
-                        matrixPtr = make_shared<Matrix<ElemType>>(deviceId)
+                        matrixPtr = make_shared<Matrix<ElemType>>(deviceId);
                     }
                     else
                     {
@@ -56,6 +56,9 @@ namespace Microsoft {
 
                 vector<MatrixPtr> m_releasedMatrices;
             };
+
+            template class MatrixPool<float>;
+            template class MatrixPool<double>;
         }
     }
 }
