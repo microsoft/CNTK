@@ -89,16 +89,30 @@ bool BatchSequenceReader<ElemType>::refreshCacheSeq(int seq_id)
     if (!fin.is_open())
         return false;
     string word;
+    int wordRead = 0;
+    int last_word_id = -1;
     for (;;) {
         if (!(fin >> word)) {
             fin.close();
-            return false;
+            if (wordRead == 0)
+                return false;
+            else
+                return true;
         }
         int word_id = word4idx[word];
+        wordRead++;
+        last_word_id = -1;
+        if (sequence_cache[seq_id]->size() >= 1)
+            last_word_id = sequence_cache[seq_id]->back();
         sequence_cache[seq_id]->push_back(word_id);
         res = true;
-        if (word_id == sentenceEndId && sequence_cache[seq_id]->size() > 1) { //Meet a sentence End
-            break;
+        if (word_id == sentenceEndId && sequence_cache[seq_id]->size() > 1 && last_word_id != sentenceEndId) { //Meet a sentence End
+            if (!randomize)
+                break;
+            if ((rand() % 10) < 8) {
+                break;
+            }// else
+            //    fprintf(stderr, "debughtx random:goto anoter sentence\n");
         }
     }
     return res;
@@ -128,6 +142,11 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     debughtx = readerConfig("debughtx", "1");
     if (debughtx == 1)
         fprintf(stderr, "debughtx set to one, will give a lot of debug output....\n");
+
+    if ((int)(readerConfig("randomize", "1")) == 1)
+        randomize = true;
+    else
+        randomize = false;
 
     ReadClassInfo(wClassFile, class_size,
         word4idx,
@@ -160,6 +179,7 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     m_mbSize = mbSize; //Size of minibatch requested
     fprintf(stderr, "debughtx StartMinibatchLoop MBSize is %d\n", m_mbSize);
     fprintf(stderr, "debughtx StartMinibatchLoop sequenceSize is %d\n", mBlgSize);
+    fprintf(stderr, "debughtx StartMinibatchLoop randomize is %d\n", randomize);
     DEBUG_HTX fprintf(stderr, "fileName:%s\n", fileName.c_str());
     fin.open(fileName);
 

@@ -41,6 +41,7 @@ public:
     map<int, size_t> idx4cnt;
     string mUnk;
 	int mBlgSize;
+    bool randomize;
 
     size_t m_mbSize;
 
