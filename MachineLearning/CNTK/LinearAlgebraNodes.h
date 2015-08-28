@@ -35,19 +35,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: change this back to proper initializers
         }
 
-        // copy constructor
-        void Construct(const NegateNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<NegateNode<ElemType>>(this, name, flags);
-        }
-
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"Negate";} 
 
@@ -128,19 +115,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SumElementsNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
             // TODO: change this back to proper initializers
-        }
-
-        // copy constructor
-        void Construct(const SumElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<SumElementsNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -235,19 +209,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sumValue = Matrix<ElemType>(deviceId);
         }
 
-        // copy constructor
-        void Construct(const SumColumnElementsNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<SumColumnElementsNode<ElemType>>(this, name, flags);
-        }
-
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"SumColumnElements"; }
 
@@ -327,10 +288,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<SumColumnElementsNode<ElemType>> (nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<SumColumnElementsNode<ElemType>>(nodeP);
                 node->m_sumValue = m_sumValue;
             }
         }
@@ -363,19 +323,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numRows = num_rows;
         }
         // ^^ TODO: can merge these two
-
-        // copy constructor
-        void Construct(const RowSliceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-        
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<RowSliceNode<ElemType>>(this, name, flags);
-        }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -496,19 +443,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         RowStackNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
             // TODO: change this back to proper initializers
-        }
-
-        // copy constructor
-        void Construct(const RowStackNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<RowStackNode<ElemType>>(this, name, flags);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -647,19 +581,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: change this back to proper initializers
         }
 
-        // copy constructor
-        void Construct(const ScaleNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<ScaleNode<ElemType>>(this, name, flags);
-        }
-
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"Scale";} 
 
@@ -776,19 +697,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         TimesNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
             // TODO: change this back to proper initializers
-        }
-
-        // copy constructor
-        void Construct(const TimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<TimesNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -959,19 +867,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: change this back to proper initializers
         }
 
-        // copy constructor
-        void Construct(const TransposeTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<TransposeTimesNode<ElemType>>(this, name, flags);
-        }
-
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"TransposeTimes"; }
 
@@ -1136,19 +1031,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: change this back to proper initializers
         }
 
-        // copy constructor
-        void Construct(const ElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<ElementTimesNode<ElemType>>(this, name, flags);
-        }
-
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"ElementTimes";} 
 
@@ -1266,19 +1148,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // TODO: change this back to proper initializers
             m_tempMatrix = Matrix<ElemType>(deviceId);
-        }
-
-        // copy constructor
-        void Construct(const RowElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<RowElementTimesNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -1427,19 +1296,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // TODO: change this back to proper initializers
             m_tempMatrix = Matrix<ElemType>(deviceId);
-        }
-
-        // copy constructor
-        void Construct(const ColumnElementTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<ColumnElementTimesNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -1597,19 +1453,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PlusNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
             // TODO: change this back to proper initializers
-        }
-
-        // copy constructor
-        void Construct(const PlusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<PlusNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -1858,19 +1701,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MinusNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
             // TODO: change this back to proper initializers
-        }
-
-        // copy constructor
-        void Construct(const MinusNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<MinusNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -2285,30 +2115,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<DiagTimesNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<DiagTimesNode<ElemType>>(nodeP);
                 node->m_innerproduct = m_innerproduct;
                 node->m_rightGradient = m_rightGradient;
             }
         }
-
-        // copy constructor
-        void Construct(const DiagTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            m_innerproduct = Matrix<ElemType>(node->m_deviceId), m_rightGradient = Matrix<ElemType>(node->m_deviceId);
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<DiagTimesNode<ElemType>>(this, name, flags);
-        }
-
-    private:
+private:
         Matrix<ElemType> m_innerproduct;
         Matrix<ElemType> m_rightGradient;
     };
@@ -2513,10 +2327,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
                 node->m_invNorm0 = m_invNorm0;
                 node->m_invNorm1 = m_invNorm1;
                 node->m_leftTerm = m_leftTerm;
@@ -2524,22 +2337,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_temp = m_temp;
             }
         }
-
-        // copy constructor
-        void Construct(const CosDistanceNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            m_invNorm0 = Matrix<ElemType>(node->m_deviceId), m_invNorm1 = Matrix<ElemType>(node->m_deviceId), m_leftTerm = Matrix<ElemType>(node->m_deviceId), m_rightTerm = Matrix<ElemType>(node->m_deviceId), m_temp = Matrix<ElemType>(node->m_deviceId);
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<CosDistanceNode<ElemType>>(this, name, flags);
-        }
-
-    private:
+private:
         // invNorm nodes tranfer data between EvaluateThisNode and ComputeInputPartial
         Matrix<ElemType> m_invNorm0;
         Matrix<ElemType> m_invNorm1;
@@ -2562,19 +2360,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         KhatriRaoProductNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
         {
             // TODO: change this back to proper initializers
-        }
-
-        // copy constructor
-        void Construct(const KhatriRaoProductNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<KhatriRaoProductNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -2956,10 +2741,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<CosDistanceWithNegativeSamplesNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<CosDistanceWithNegativeSamplesNode<ElemType>>(nodeP);
                 node->m_invNorm0 = m_invNorm0;
                 node->m_invNorm1 = m_invNorm1;
                 node->m_invNormSquare = m_invNormSquare;
@@ -2968,22 +2752,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_temp = m_temp;
             }
         }
-
-        // copy constructor
-        void Construct(const CosDistanceWithNegativeSamplesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            m_invNorm0 = Matrix<ElemType>(node->m_deviceId), m_invNorm1 = Matrix<ElemType>(node->m_deviceId), m_leftTerm = Matrix<ElemType>(node->m_deviceId), m_rightTerm = Matrix<ElemType>(node->m_deviceId), m_temp = Matrix<ElemType>(node->m_deviceId);
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<CosDistanceWithNegativeSamplesNode<ElemType>>(this, name, flags);
-        }
-
-    private:
+private:
         // invNorm nodes tranfer data between EvaluateThisNode and ComputeInputPartial
         Matrix<ElemType> m_invNorm0;
         Matrix<ElemType> m_invNorm1;
@@ -3009,19 +2778,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // TODO: change this back to proper initializers
             mOnes = Matrix<ElemType>(deviceId);
-        }
-
-        // copy constructor
-        void Construct(const TransposeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<TransposeNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -3149,21 +2905,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: change this back to proper initializers
             Init();
         }
-
-        // copy constructor
-        void Construct(const StrideTimesNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            Init();
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-        // ^^ BUGBUG: copy constructor should copy m_Stride, no? Where is CopyTo()? We need a CopyTo that copies m_Stride, don't we?
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<StrideTimesNode<ElemType>>(this, name, flags);
-        }
+        // BUGBUG: This node needs to serialize and CopyTo m_Stride
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"StrideTimes"; }

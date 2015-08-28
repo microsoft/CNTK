@@ -209,21 +209,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[1] = position_dependent_score;
             m_children[2] = transition_score;
         }
-
-        // copy constructor
-        void Construct(const SequenceDecoderNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<SequenceDecoderNode<ElemType>>(this, name, flags);
-        }
-
     };
+ 
+
     template class SequenceDecoderNode<float>;
     template class SequenceDecoderNode<double>;
 }}}

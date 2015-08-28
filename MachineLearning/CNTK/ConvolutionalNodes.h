@@ -80,10 +80,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<ConvolutionNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<ConvolutionNode<ElemType>>(nodeP);
                 node->m_kernelWidth = m_kernelWidth;
                 node->m_kernelHeight = m_kernelHeight;
 
@@ -96,20 +95,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 node->m_tempMatrix = m_tempMatrix;
             }
-        }
-
-        // copy constructor
-        void Construct(const ConvolutionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            // further initializations
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<ConvolutionNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -493,10 +478,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<MaxPoolingNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<MaxPoolingNode<ElemType>>(nodeP);
                 node->m_inputWidth = m_inputWidth;
                 node->m_inputHeight = m_inputHeight;
                 node->m_inputChannels = m_inputChannels;
@@ -514,18 +498,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_inputSizePerSample = m_inputSizePerSample;
                 node->m_outputSizePerSample = m_outputSizePerSample;
             }
-        }
-        // copy constructor
-        void Construct(const MaxPoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<MaxPoolingNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -724,10 +696,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<AveragePoolingNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<AveragePoolingNode<ElemType>>(nodeP);
                 node->m_inputWidth = m_inputWidth;
                 node->m_inputHeight = m_inputHeight;
                 node->m_inputChannels = m_inputChannels;
@@ -745,19 +716,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_inputSizePerSample = m_inputSizePerSample;
                 node->m_outputSizePerSample = m_outputSizePerSample;
             }
-        }
-
-        // copy constructor
-        void Construct(const AveragePoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<AveragePoolingNode<ElemType>>(this, name, flags);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}

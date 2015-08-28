@@ -174,20 +174,6 @@ public:  \
             if (flags & CopyNodeFlags::copyNodeValue)
                 node->m_gradient = m_gradient;
         }
-
-        // copy constructor
-        void Construct(const RectifiedLinearNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            m_gradient = Matrix<ElemType>(node->m_deviceId);
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<RectifiedLinearNode<ElemType>>(this, name, flags);
-        }
     };
 
     template class RectifiedLinearNode<float>; 
@@ -256,20 +242,6 @@ public:  \
 
             if (flags & CopyNodeFlags::copyNodeValue)
                 node->m_gradient = m_gradient;
-        }
-
-        // copy constructor
-        void Construct(const SigmoidNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            m_gradient = Matrix<ElemType>(node->m_deviceId);
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<SigmoidNode<ElemType>>(this, name, flags);
         }
     };
 
@@ -341,19 +313,6 @@ public:  \
 
             if (flags & CopyNodeFlags::copyNodeValue)
                 node->m_gradient = m_gradient;
-        }
-
-        // copy constructor
-        void Construct(const TanhNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<TanhNode<ElemType>>(this, name, flags);
         }
     };
 
@@ -431,20 +390,6 @@ public:  \
             if (flags & CopyNodeFlags::copyNodeValue)
                 node->m_gradient = m_gradient;
         }
-
-        // copy constructor
-        void Construct(const LogNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            m_gradient = Matrix<ElemType>(node->m_deviceId);
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<LogNode<ElemType>>(this, name, flags);
-        }
     };
 
     template class LogNode<float>;
@@ -519,20 +464,6 @@ public:  \
 
             if (flags & CopyNodeFlags::copyNodeValue)
                 node->m_gradient = m_gradient;
-        }
-
-        // copy constructor
-        void Construct(const ExpNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            m_gradient = Matrix<ElemType>(node->m_deviceId);
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<ExpNode<ElemType>>(this, name, flags);
         }
     };
 
@@ -609,20 +540,6 @@ public:  \
 
             if (flags & CopyNodeFlags::copyNodeValue)
                 node->m_gradient = m_gradient;
-        }
-
-        // copy constructor
-        void Construct(const CosineNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            m_gradient = Matrix<ElemType>(node->m_deviceId);
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<CosineNode<ElemType>>(this, name, flags);
         }
     };
 
@@ -726,31 +643,16 @@ public:  \
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
+            // BUGBUG: fix all base calls, also in MoveMatrices...
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<SoftmaxNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                node->m_gradient = m_gradient;
+                auto node = dynamic_pointer_cast<SoftmaxNode<ElemType>>(nodeP);
+                node->m_gradient = m_gradient;  // BUGBUG: m_gradient should be copied in base class
                 node->m_diff = m_diff;
             }
         }
-
-        // copy constructor
-        void Construct(const SoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            m_gradient = Matrix<ElemType>(node->m_deviceId), m_diff = Matrix<ElemType>(node->m_deviceId);
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<SoftmaxNode<ElemType>>(this, name, flags);
-        }
-
-    private:
+private:
         Matrix<ElemType> m_diff;
     };
 
@@ -842,30 +744,14 @@ public:  \
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<LogSoftmaxNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<LogSoftmaxNode<ElemType>>(nodeP);
                 node->m_gradient = m_gradient;
                 node->m_softmax = m_softmax;
             }
         }
-
-        // copy constructor
-        void Construct(const LogSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            m_gradient = Matrix<ElemType>(node->m_deviceId), m_softmax = Matrix<ElemType>(node->m_deviceId);
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<LogSoftmaxNode<ElemType>>(this, name, flags);
-        }
-
-    private:
+private:
         Matrix<ElemType> m_softmax;
     };
 
@@ -890,22 +776,7 @@ public:  \
             m_prior = Matrix<ElemType>(deviceId), m_normedDeviation = Matrix<ElemType>(deviceId), m_normedDeviationVectors = Matrix<ElemType>(deviceId);
             m_stddev = Matrix<ElemType>(deviceId), m_posterior = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
         }
-
-        // copy constructor
-        void Construct(const GMMLogLikelihoodNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<GMMLogLikelihoodNode<ElemType>>(this, name, flags);
-        }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
+virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"GMMLogLikelihood"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -1289,10 +1160,9 @@ public:  \
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<GMMLogLikelihoodNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<GMMLogLikelihoodNode<ElemType>>(nodeP);
                 node->m_prior = m_prior;
                 node->m_normedDeviation = m_normedDeviation;
                 node->m_normedDeviationVectors = m_normedDeviationVectors;
@@ -1477,30 +1347,15 @@ public:  \
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeP);
                 node->m_dropoutRate = m_dropoutRate;
                 node->m_randomSeed = m_randomSeed;
                 node->m_maskOfDropout = m_maskOfDropout;
             }
         }
-
-        // copy constructor
-        void Construct(const DropoutNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<DropoutNode<ElemType>>(this, name, flags);
-        }
-
-    private:
+private:
         ElemType m_dropoutRate;
         unsigned long m_randomSeed;
 
@@ -1537,25 +1392,14 @@ public:  \
             m_imageChannels = imageChannels;
         }
 
-        void Construct(const ReshapeNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
+        
 
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<ReshapeNode<ElemType>>(this, name, flags);
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
                 node->m_numRows = m_numRows;
                 node->m_imageWidth = m_imageWidth;
                 node->m_imageHeight = m_imageHeight;
@@ -1823,26 +1667,12 @@ public:  \
         }
         // ^^ TODO: merge those two above using optional args
 
-        // copy constructor
-        void Construct(const RowRepeatNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<RowRepeatNode<ElemType>>(this, name, flags);
-        }
-
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<RowRepeatNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<RowRepeatNode<ElemType>>(nodeP);
                 node->m_numRepeat = m_numRepeat;
             }
         }

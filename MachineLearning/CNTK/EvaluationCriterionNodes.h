@@ -132,30 +132,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<ErrorPredictionNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<ErrorPredictionNode<ElemType>>(nodeP);
                 node->m_maxIndexes0 = m_maxIndexes0;
                 node->m_maxIndexes1 = m_maxIndexes1;
                 node->m_maxValues = m_maxValues;
             }
         }
-
-        // copy constructor
-        void Construct(const ErrorPredictionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<ErrorPredictionNode<ElemType>>(this, name, flags);
-        }
-
-    protected:
+protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     private:

@@ -1054,18 +1054,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        // TODO: eliminate those one; it is only called from one place, namely ComputationNetwork::CopyNode()
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const = 0;
-
-        /// these are used to export hidden state activity
-        virtual bool GetHistory(Matrix<ElemType>& , bool )
+        // duplicate a node
+        ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags)
         {
-            return false;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            ComputationNodePtr node(NewThis(m_deviceId, name)); // NewThis() is a virtual function that creates a new node of the actual type of 'this'
+            node->CopyTo(shared_from_this(), newName, flags);   // note: shared_from_this() is the base class, but CopyTo() up-casts it as needed
+            return node;
         }
 
-        virtual void SetHistory(const Matrix<ElemType>& )
-        {
-        }
+        // these are used to export hidden state activations
+        virtual bool GetHistory(Matrix<ElemType>&, bool) { return false; }
+        virtual void SetHistory(const Matrix<ElemType>&) { }
 
         /// these two are used to pass gradients from future minibatch
         virtual void GetErrorsToPreviousMinibatch(Matrix<ElemType>&) {}
@@ -1124,15 +1124,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         p->MoveMatricesToDevice(deviceId);                                      // this is a virtual call, i.e. it will handle extra matrices an object might own
         return p;
     }
-    template<class C> inline shared_ptr<C> New(const C * node, const wstring & name, const CopyNodeFlags flags)    // called from Duplicate() only
+#if 0
+    template<class C> inline shared_ptr<C> New(const C * node, const wstring & name, const CopyNodeFlags flags)    // called from DuplicateDELETEME() only
     {
-        auto p = New<C>(node->GetDeviceId(), name);       // copy constructor --TODO: replace Duplicate() by NewThis
-        p->Construct(node, name, flags);
+#if 1
+        node; name; flags;
+        LogicError("this is gone, man!");
+#else
+        auto p = New<C>(node->GetDeviceId(), name);
+--TODO: replace DuplicateDELETEME() by NewThis
+        p->ConstructDELETEME(node, name, flags);
         // TODO: call CopyTo() here
         return p;
+#endif
     }
-    //template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { auto p = make_shared<C>(); p->Construct(std::forward<_Types>(_Args)...); return p; }
-    //template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { auto p = make_shared<C>(); p->Construct(std::forward<_Types>(_Args)...); return p; }
+    //template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { auto p = make_shared<C>(); p->ConstructDELETEME(std::forward<_Types>(_Args)...); return p; }
+    //template<class C, class... _Types> inline shared_ptr<C> New(_Types&&... _Args) { auto p = make_shared<C>(); p->ConstructDELETEME(std::forward<_Types>(_Args)...); return p; }
+#endif
 
     // =======================================================================
     // ComputationNodeNonLooping -- abstract base class for computation nodes that do not implement eval/partial for individual frames
@@ -1174,7 +1182,7 @@ public: \
         using B::AttachInputs; using B::ChildrenNeedGradient; using B::ChildrenSize; using B::ClearGradientForChildren; \
         using B::ComputeGradientForChildren; using B::ComputeInputPartial; using B::ConstOnes; using B::InferImageDimsFromInput; \
         using B::InferImageDimsFromInputs; using B::CopyTo; using B::CreateUniqNodeName; using B::DetachInputs; \
-        using B::DumpNodeInfo; using B::Duplicate; using B::EnumerateNodes; using B::EnumerateNodesForEval; \
+        using B::DumpNodeInfo; using B::EnumerateNodes; using B::EnumerateNodesForEval; \
         using B::EnumerateNodesForGradient; using B::EvaluateThisNode; using B::FindChildInASet; using B::FunctionValues; \
         using B::GradientValues; using B::HasLoop; using B::InitRecurrentNode; using B::Inputs; \
         using B::IsChildAnImage; using B::IsEqualTo; using B::IsFuncValueOlderThanInputs; using B::IsLeaf; using B::IsSmaller; \

@@ -131,30 +131,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<SquareErrorNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<SquareErrorNode<ElemType>>(nodeP);
                 node->m_leftMinusRight = m_leftMinusRight;
             }
         }
-
-        // copy constructor
-        void Construct(const SquareErrorNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<SquareErrorNode<ElemType>>(this, name, flags);
-        }
-
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
-
     private:
         Matrix<ElemType> m_leftMinusRight;
     };
@@ -320,31 +304,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<CrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<CrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
                 node->m_logSoftmaxOfRight = m_logSoftmaxOfRight;
                 node->m_softmaxOfRight = m_softmaxOfRight;
             }
         }
-
-        // copy constructor
-        void Construct(const CrossEntropyWithSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<CrossEntropyWithSoftmaxNode<ElemType>>(this, name, flags);
-        }
-
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
-
     protected:
         Matrix<ElemType> m_logSoftmaxOfRight;
         Matrix<ElemType> m_softmaxOfRight;       
@@ -488,31 +456,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<CrossEntropyNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<CrossEntropyNode<ElemType>>(nodeP);
                 node->m_logOfRight = m_logOfRight;
                 node->m_leftDivRight = m_leftDivRight;
             }
         }
-
-        // copy constructor
-        void Construct(const CrossEntropyNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<CrossEntropyNode<ElemType>>(this, name, flags);
-        }
-
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
-
     private:
         // matrix value passed from evaluate to computePartial
         Matrix<ElemType> m_logOfRight;
@@ -614,26 +566,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_gradientOfL1Norm = m_gradientOfL1Norm;
             }
         }
-
-        // copy constructor
-        void Construct(const MatrixL1RegNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<MatrixL1RegNode<ElemType>>(this, name, flags);
-        }
-
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
-
     private:
-        // temporary
-        Matrix<ElemType> m_gradientOfL1Norm;
+        Matrix<ElemType> m_gradientOfL1Norm;    // temporary
     };
 
     template class MatrixL1RegNode<float>; 
@@ -712,28 +648,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[0] = singleInput;
         }
 
-        // copy constructor
-        void Construct(const MatrixL2RegNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<MatrixL2RegNode<ElemType>>(this, name, flags);
-        }
-                
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
             m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
-
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
-
     private:
         Matrix<ElemType> m_temp;
     };
@@ -923,23 +844,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_softMax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
             m_grdToSoftMaxInput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
-
-        // copy constructor
-        void Construct(const NoiseContrastiveEstimationNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<NoiseContrastiveEstimationNode<ElemType>>(this, name, flags);
-        }
-
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
-
     protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
@@ -1304,23 +1210,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_clsSoftmax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
             m_grdToSoftMaxInput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
-
-        // copy constructor
-        void Construct(const ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(this, name, flags);
-        }
-
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
-
     protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
@@ -1639,10 +1530,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<CRFNode<ElemType>>(nodeP);
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<CRFNode<ElemType>>(nodeP);
                 node->mAlpha = mAlpha;
                 node->mBeta= mBeta;
                 node->mPostProb = mPostProb;
@@ -1651,20 +1541,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->mEndLbl = mEndLbl;
             }
         }
-
-        // copy constructor
-        void Construct(const CRFNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<CRFNode<ElemType>>(this, name, flags);
-        }
-
     };
 
     // This training criterion node needs derivatives and objectives to be
@@ -1770,25 +1646,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[1] = derivatives;
             m_children[2] = prediction;
         }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-        }
-
-        // copy constructor
-        void Construct(const DummyCriterionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<DummyCriterionNode<ElemType>>(this, name, flags);
-        }
-
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
     };

@@ -103,20 +103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             PrintNodeValuesToFile(printValues, fstream);
         }
-
-        // copy constructor
-        void Construct(const LearnableParameter<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            return New<LearnableParameter<ElemType>>(this, name, flags);
-        }
-    };
+};
 
     //WARNING: Don't use SparseLearnableParameter yet since the current version assumes the parameter is dense instead of sparse
     //WARNING: After the right implementation is put here we need to turn it on in NetworkDescriptionLangauge.cpp
@@ -144,20 +131,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);       // TODO: needed? Constructor already sets this
             m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
         }
-
-        // copy constructor
-        void Construct(const SparseLearnableParameter <ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            LearnableParameter<ElemType>::Construct(node, newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<SparseLearnableParameter<ElemType>>(this, name, flags);
-        }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
+virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"SparseLearnableParameter";} 
     };
 
@@ -225,21 +199,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Init(rows, cols, isSparse);
         }
-
-        // copy constructor
-        void Construct(const InputValue<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<InputValue<ElemType>>(this, name, flags);
-        }
-
-        virtual void SaveToFile(File& fstream) const
+virtual void SaveToFile(File& fstream) const
         {
             ComputationNode<ElemType>::SaveToFile(fstream);
 
@@ -453,20 +413,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[1] = rightNode;
         }
 
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            ComputationNodePtr node(New<LookupTableNode<ElemType>>(this, name, flags));
-            return node;
-        }
-
-        // copy constructor
-        void Construct(const LookupTableNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-        
         bool UnitTest()
         {
             try
@@ -650,21 +596,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static const std::wstring TypeName() { return L"PairNetwork"; }
-
-        // copy constructor
-        void Construct(const PairNetworkNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-        {
-            //DELETETHIS ComputationNode<ElemType>::Construct(node->m_deviceId, newName);
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            return New<PairNetworkNode<ElemType>>(this, name, flags);
-        }
-
-    protected:
+protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     };
