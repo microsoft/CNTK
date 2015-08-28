@@ -115,7 +115,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;  //allocated by the callee but need to be deleted by the caller
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
+
+        // difference between AssignColumnSlice and SetColumnSlice 
+        // AssignColumnSlice :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, startColumn: startColumn+numCols-1) 
+        // SetColumnSlice    :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, 0: startColumn+numCols-1) 
+        // AssignColumnSlice do not transfer data, it uses external data
+        // SetColumnSlice    copies data 
+
         Matrix<ElemType>& AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
+        Matrix<ElemType>& SetColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
         void ShiftBy(int numShift) ;
 
@@ -474,6 +482,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const int startLbl, /// the time 0 start symbol in the output layer
             const int shift);
 
+        template<typename T>
+        friend class MatrixQuantizer;
+
+        template<typename T>
+        friend class QuantizedMatrix;
     };
 
     typedef Matrix<float> SingleMatrix;

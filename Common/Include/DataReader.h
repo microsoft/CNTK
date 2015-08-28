@@ -63,10 +63,23 @@ public:
     virtual void Init(const ConfigParameters& /*config*/) = 0;
     virtual void Destroy() = 0;
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize) = 0;
+
+    virtual bool SupportsDistributedMBRead() const { return false; };
+    virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize)
+    {
+        if (SupportsDistributedMBRead() || (numSubsets != 1) || (subsetNum != 0))
+        {
+            LogicError("This reader does not support distributed reading of mini-batches");
+        }
+
+        return StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
+    }
+
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
     virtual size_t NumberSlicesInEachRecurrentIter() = 0; 
     virtual int GetSentenceEndIdFromOutputLabel() { return -1; };
     virtual void SetNbrSlicesEachRecurrentIter(const size_t sz) { mBlgSize = sz; };
+    virtual bool RequireSentenceSeg() { return false; };
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; };
     virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
     virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
@@ -173,6 +186,9 @@ public:
     // epoch - [in] epoch number for this loop
     // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize);
+
+    virtual bool SupportsDistributedMBRead() const override;
+    virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
 
     // GetMinibatch - Get the next minibatch (features and labels)
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix, 

@@ -1603,12 +1603,21 @@ void msra::files::make_intermediate_dirs (const wstring & filepath)
     wcscpy (&buf[0], filepath.c_str());
     wstring subpath;
     int skip = 0;
-    // if share (\\) then the first two levels (machine, share name) cannot be made
+#ifdef _WIN32
+    // On windows, if share (\\) then the first two levels (machine, share name) cannot be made.
     if ((buf[0] == '/' && buf[1] == '/') || (buf[0] == '\\' && buf[1] == '\\'))
     {
         subpath = L"/";
         skip = 2;           // skip two levels (machine, share)
     }
+#else
+    // On unix, if the filepath starts with '/' then it is absolute 
+    // path and the created sub-paths should also start with '/'
+    if (buf[0] == '/')
+    {
+        subpath = L"/";
+    }
+#endif
     // make all constituents except the filename (to make a dir, include a trailing slash)
     wchar_t * context = nullptr;
     for (const wchar_t * p = wcstok_s (&buf[0], L"/\\", &context); p; p = wcstok_s (NULL, L"/\\", &context))

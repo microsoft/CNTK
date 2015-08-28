@@ -1,0 +1,24 @@
+load=ndlMnistMacros
+run=DNN
+
+ndlMnistMacros = [
+    FeatDim = 784
+    LabelDim = 10
+
+    features = Input(FeatDim, tag = feature)
+    featScale = Const(0.00390625)
+    featScaled = Scale(featScale, features)
+    labels = Input(LabelDim, tag = label)
+]
+
+DNN=[
+    hiddenDim = 200
+
+    h1=DNNLayer(FeatDim, hiddenDim, featScaled, 1)
+    ol=DNNLastLayer(labelDim, hiddenDim, h1, 1)
+    
+    CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
+    Err = ErrorPrediction(labels, ol, tag = Eval)
+    OutputNodes = ol
+]
+
