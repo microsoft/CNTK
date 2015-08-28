@@ -1122,7 +1122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // convenience wrapper for ComputationNode::New()
     template<class C, class... _Types> inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
     {
-        return ComputationNode<typename C::OurElemType>::New<C>(deviceId, name, forward<_Types>(_Args)...);
+        return ComputationNode<typename C::OurElemType>::template New<C>(deviceId, name, forward<_Types>(_Args)...);
     }
 
     // =======================================================================
