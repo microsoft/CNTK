@@ -598,7 +598,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
             if (iter->second <= cutoff)
                 wordCountLessCutoff--;
     if (wordCountLessCutoff <= 0)
-        throw std::runtime_error("no word remained after cutoff");
+        RuntimeError("no word remained after cutoff");
 
     if (vocabSize > wordCountLessCutoff)
     {
@@ -1193,7 +1193,7 @@ void DoTopologyPlot(const ConfigParameters& config)
     {
         fprintf(stderr, "Executing a third-part tool for rendering dot:\n%S\n", rescmd.c_str());
 #ifdef __unix__
-        system(msra::strfun::utf8(rescmd).c_str());
+        const auto rc = system(msra::strfun::utf8(rescmd).c_str()); rc/*ignoring the result--this gets flagged by gcc if we don't save the return value*/;
 #else
         _wsystem(rescmd.c_str());
 #endif
@@ -1361,37 +1361,33 @@ int wmain(int argc, wchar_t* argv[])
 #endif
         std::string timestamp = TimeDateStamp();
 
-        {
-            //dump config info
-            fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
-            fprintf(stderr, "command line options: \n");
-            for (int i = 1; i < argc; i++)
-                fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
+        //dump config info
+        fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
+        fprintf(stderr, "command line options: \n");
+        for (int i = 1; i < argc; i++)
+            fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
 
-            // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
-            // and prints it.
-            fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
-            fprintf(stderr, "%s\n", rawConfigString.c_str());
-            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
+        // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
+        // and prints it.
+        fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
+        fprintf(stderr, "%s\n", rawConfigString.c_str());
+        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
 
-            // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
-            // All of these assignments will appear, even though only the last assignment matters.
-            fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-            fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
-            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+        // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
+        // All of these assignments will appear, even though only the last assignment matters.
+        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+        fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
+        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
-            // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
-            // value it is set to will appear).
-            fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-            config.dumpWithResolvedVariables();
-            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+        // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
+        // value it is set to will appear).
+        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+        config.dumpWithResolvedVariables();
+        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
-            fprintf(stderr, "command: ");
-            for (int i = 0; i < command.size(); i++)
-            {
-                fprintf(stderr, "%s ", command[i].c_str());
-            }
-        }
+        fprintf(stderr, "command: ");
+        for (int i = 0; i < command.size(); i++)
+            fprintf(stderr, "%s ", command[i].c_str());
 
         //run commands
         std::string type = config("precision", "float");
@@ -1415,7 +1411,7 @@ int wmain(int argc, wchar_t* argv[])
         fprintf(stderr, "COMPLETED\n"), fflush(stderr);
 
         delete g_mpi;
-	}
+    }
     catch (const std::exception &err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());

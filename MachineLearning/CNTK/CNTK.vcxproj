@@ -163,6 +163,7 @@
     <ClInclude Include="..\..\Common\Include\hostname.h" />
     <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h" />
     <ClInclude Include="..\..\Common\Include\nvml.h" />
+    <ClInclude Include="..\..\Common\Include\Platform.h" />
     <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
     <ClInclude Include="CompositeComputationNodes.h" />
     <ClInclude Include="AllReduceDistGradAggregator.h" />

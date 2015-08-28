@@ -568,9 +568,6 @@ static inline const char *strerror_(int e)
     return msgs[e].c_str();
 }
 #endif
-#ifdef __unix__
-extern int fileno(FILE*);   // somehow got deprecated in C++11
-#endif
 
 // ----------------------------------------------------------------------------
 // frequently missing string functions
@@ -1055,6 +1052,7 @@ public:
 #define EPSILON 1e-5
 #define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
 
+// why are the following in basetypes.h?
 /**
 These macros are used for sentence segmentation information. 
 */
