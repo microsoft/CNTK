@@ -732,6 +732,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::SetColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
+    {
+        ASSERT(m_CPUMatrix != nullptr || m_GPUMatrix != nullptr);
+        // must already been allocated 
+
+        DISPATCH_MATRIX_ON_FLAG(&fromMatrix,
+            this,
+            m_CPUMatrix->SetColumnSlice(*fromMatrix.m_CPUMatrix, startColumn, numCols),
+            m_GPUMatrix->SetColumnSlice(*fromMatrix.m_GPUMatrix, startColumn, numCols),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+
+        return *this;
+    }
+
 
     //this function will change the matrix type between DENSE and SPARSE. 
     //WARNING: The correct implementation is to copy the matrix between DENSE and SPARSE
@@ -4710,4 +4727,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class Matrix<float>; 
     template class Matrix<double>;    
+
+    // We use Matrix<char> as the backing store for QuantizedMatrix
+    // Let's explciitly instantiate the methods we need for that purpose
+    template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat);
+    template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char *pArray, const size_t matrixFlags, DEVICEID_TYPE deviceId, const size_t nnz);
+    template Matrix<char>::~Matrix();
+    template char* Matrix<char>::BufferPointer() const;
+    template int Matrix<char>::GetDeviceId() const;
+    template size_t Matrix<char>::GetNumElements() const;
+    template Matrix<char> Matrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
+    template void Matrix<char>::_transferToDevice(int id_to, bool ismoved, bool emptyTransfer) const;
 }}}

@@ -41,12 +41,14 @@ endif
 
 ifndef MATHLIB
 $(info DEFAULTING MATHLIB=acml)
-MATHLIB=acml
+MATHLIB = acml
 endif
 
 #### Configure based on options above
 
-CXX = g++
+# The mpic++ wrapper only adds MPI specific flags to the g++ command line.
+# The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
+CXX = mpic++
 
 INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
@@ -76,7 +78,7 @@ ifdef CUDA_PATH
   ifndef GDK_PATH
     $(info defaulting GDK_PATH to /usr)
     GDK_PATH=/usr
-  endif
+endif
 
   DEVICE = gpu
 
@@ -86,7 +88,7 @@ ifdef CUDA_PATH
   INCLUDEPATH+=$(GDK_PATH)/include/nvidia/gdk
   NVMLPATH=$(GDK_PATH)/src/gdk/nvml/lib
 
-  # Set up CUDA includes and libraries
+# Set up CUDA includes and libraries
   INCLUDEPATH += $(CUDA_PATH)/include
   LIBPATH += $(CUDA_PATH)/lib64
   LIBS += -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
@@ -163,6 +165,9 @@ COMMON_SRC =\
 MATH_SRC =\
 	Math/Math/CPUMatrix.cpp \
 	Math/Math/CPUSparseMatrix.cpp \
+	Math/Math/MatrixQuantizer.cpp \
+	Math/Math/MatrixQuantizerCPU.cpp \
+	Math/Math/QuantizedMatrix.cpp \
 	Math/Math/Matrix.cpp \
 
 ifdef CUDA_PATH
@@ -171,6 +176,8 @@ MATH_SRC +=\
 	Math/Math/GPUMatrixCUDAKernels.cu \
 	Math/Math/GPUSparseMatrix.cu \
 	Math/Math/GPUWatcher.cu \
+	Math/Math/CUDAPageLockedMemAllocator.cpp \
+	Math/Math/MatrixQuantizerGPU.cu \
 
 else
 MATH_SRC +=\

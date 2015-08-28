@@ -247,6 +247,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return slice;
     }
 
+    // set this(:, 0:numCols-1) = fromMatrix(:, startColumn : startColumn+numCols-1)
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
     {
@@ -262,7 +263,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numRows = fromMatrix.m_numRows;
         m_numCols = numCols;
         m_elemSizeAllocated =  GetNumElements();
-        m_pArray = m_pArray + startColumn *m_numRows;
+        m_pArray = fromMatrix.m_pArray + startColumn *m_numRows; 
+
+        return *this;
+    }
+
+    // set this(: , startColumn:startColumn+numCols-1)= fromMatrix;  
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::SetColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
+    {
+        if (numCols == 0)
+            throw std::logic_error("The slice cannot have 0 columns.");
+        if (startColumn + numCols > m_numCols)
+            throw std::logic_error("The slice is out of range of the destination matrix.");
+        if (numCols > fromMatrix.GetNumCols())
+            throw std::logic_error("The slice is out of range of the source matrix.");
+        if (m_numRows != fromMatrix.m_numRows)
+            throw std::logic_error("The number of rows in source and destination matrices do not match");
+
+        //SetOwnBuffer(false);
+        memcpy(m_pArray + startColumn*m_numRows, fromMatrix.m_pArray, numCols*m_numRows*sizeof(ElemType));
 
         return *this;
     }
@@ -4932,7 +4952,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType CPUMatrix<ElemType>::LogAddSumOfElements() const
     {
-        ElemType fAlpha = LZERO;
+        ElemType fAlpha = (ElemType)LZERO;
         for (int k = 0; k < GetNumElements(); k++)
             fAlpha = (ElemType) logadd(fAlpha, m_pArray[k]);
         return fAlpha;
@@ -4975,10 +4995,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t iNumPos = alpha.GetNumCols();
 
         ElemType fSum;
-        ElemType fTmp = LZERO;
+        ElemType fTmp = (ElemType)LZERO;
         if (t == iNumPos - 1)
         {
-            fSum = LZERO;
+            fSum = (ElemType)LZERO;
             for (int j = 0; j < iNumLab; j++)
             {
                 fSum = (ElemType)logadd((double)fSum, alpha(j, t));
@@ -4991,7 +5011,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (int j = 0; j < iNumLab; j++)
             {
-                fSum = LZERO;
+                fSum = (ElemType)LZERO;
                 for (int m = 0; m < iNumLab; m++)
                 {
                     fSum = (ElemType)logadd((double)fSum, alpha(m, t) + pair_scores(j, m));
@@ -5076,14 +5096,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             a = alpha.ColumnSlice(tPos - 1, 1);
 
         {
-            ElemType fTmp = LZERO;
+            ElemType fTmp = (ElemType)LZERO;
             for (int j = 0; j < iNumLab; j++){
                 if (tPos == 0){
                     if (i == firstLbl){
                         fTmp = 0;
                     }
                     else{
-                        fTmp = LZERO;
+                        fTmp = (ElemType)LZERO;
                     }
                 }
                 else{
@@ -5092,7 +5112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fTmp += pair_scores(j, i);
 
 
-                ElemType fSum = LZERO;
+                ElemType fSum = (ElemType)LZERO;
                 for (int k = 0; k < iNumLab; k++){
                     ElemType fTmp2;
                     if (tPos == 0){
@@ -5100,7 +5120,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             fTmp2 = 0;
                         }
                         else{
-                            fTmp2 = LZERO;
+                            fTmp2 = (ElemType)LZERO;
                         }
                     }
                     else{
@@ -5147,5 +5167,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class CPUMatrix<float>;
     template class CPUMatrix<double>;
 
+    // We use Matrix<char> as the backing store for QuantizedMatrix
+    // Let's explciitly instantiate the methods we need for that purpose
+    template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols);
+    template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols, char* pArray, const size_t matrixFlags);
+    template CPUMatrix<char>::CPUMatrix();
+    template CPUMatrix<char>::CPUMatrix(CPUMatrix<char> const &);
+    template size_t CPUMatrix<char>::LocateElement(size_t, size_t) const;
+    template CPUMatrix<char>::~CPUMatrix();
+    template CPUMatrix<char> CPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
+    template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
 }}}
 
