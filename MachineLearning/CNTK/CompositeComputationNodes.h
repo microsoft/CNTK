@@ -34,7 +34,7 @@ class ParallelNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemTyp
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 public:
-    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
     ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) :
         ComputationNodeNonLooping<ElemType>(deviceId, name)
     { }
@@ -246,7 +246,7 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<MeanNode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<PreComputedNode<ElemType>>(nodeP);
             node->m_hasComputed = m_hasComputed;
         }
     }
@@ -264,7 +264,7 @@ class MeanNode : public PreComputedNode<ElemType>
 {
     typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
 public:
-    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
     MeanNode(DEVICEID_TYPE deviceId, const wstring & name) :
         PreComputedNode<ElemType>(deviceId, name),
         m_numSamples(0)
@@ -365,7 +365,7 @@ class InvStdDevNode : public PreComputedNode<ElemType>
 {
     typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
 public:
-    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
     InvStdDevNode(DEVICEID_TYPE deviceId, const wstring & name) :
         PreComputedNode<ElemType>(deviceId, name),
         m_mean(deviceId), m_var(deviceId), m_temp(deviceId),
@@ -519,7 +519,7 @@ class PerDimMeanVarNormalizationNode : public ComputationNode<ElemType>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 public:
-    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
     PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
         ComputationNode<ElemType>(deviceId, name)
     { }
@@ -667,7 +667,7 @@ class PerDimMeanVarDeNormalizationNode : public ComputationNode<ElemType>
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 public:
-    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
     PerDimMeanVarDeNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
         ComputationNode<ElemType>(deviceId, name)
     { }
@@ -914,7 +914,7 @@ class TimeReverseNode : public BatchModeNode<ElemType>
 {
     typedef BatchModeNode<ElemType> Base; UsingBatchModeNodeMembers;
 public:
-    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
     TimeReverseNode(DEVICEID_TYPE deviceId, const wstring & name) :
         BatchModeNode<ElemType>(deviceId, name)
     { }
