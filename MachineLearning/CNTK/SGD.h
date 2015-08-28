@@ -2006,9 +2006,9 @@ protected:
         {
             bool wasDataRead = trainSetDataReader->GetMinibatch(*inputMatrices);
 
-            if (useGradientAggregation)
+            if (useDistributedMBReading)
             {
-                // In case of data-parallel SGD, the current node needs to continue even with a minibatch size of 0 if any
+                // In case of distributed reading, the current node needs to continue even with a minibatch size of 0 if any
                 // other node in the group has a non-zero size minibatch to process. This is needed to ensure that
                 // the gradient aggregation barriers do not get stuck and also to ensure that all nodes update their weights
                 // properly using the aggregate gradients from other nodes before moving on to the next epoch even though the current
@@ -2050,63 +2050,61 @@ protected:
                 }
 
                 actualMBSize = net.GetActualMBSize();
-                if (actualMBSize == 0)
+                if (actualMBSize != 0)
                 {
-                    continue;
-                }
+                    nSamplesSinceLastModelSync += actualMBSize;
+                    net.SetActualMiniBatchSize(actualMBSize);
+                    net.SetActualNbrSlicesInEachRecIter(nSlices);
 
-                nSamplesSinceLastModelSync += actualMBSize;
-                net.SetActualMiniBatchSize(actualMBSize);
-                net.SetActualNbrSlicesInEachRecIter(nSlices);
+                    if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
+                    {
+                        net.SentenceBoundary().SetValue(sentenceBegin);
+                        net.MinibatchPackingFlags() = packingFlags;
+                    }
+                    else
+                    {
+                        trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
+                    }
 
-                if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
-                {
-                    net.SentenceBoundary().SetValue(sentenceBegin);
-                    net.MinibatchPackingFlags() = packingFlags;
-                }
-                else
-                {
-                    trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
-                }
-
-                UpdateEvalTimeStamps(FeatureNodes);
-                UpdateEvalTimeStamps(labelNodes);
+                    UpdateEvalTimeStamps(FeatureNodes);
+                    UpdateEvalTimeStamps(labelNodes);
 
 #ifndef EVALDLL
-                if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
-                {
-                    throw std::logic_error("cannot pass gradient checker");
-                }
+                    if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
+                    {
+                        throw std::logic_error("cannot pass gradient checker");
+                    }
 #endif
-                // TODO: currently only support one node regularization
-                if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
-                {
-                    refNet.SetActualMiniBatchSize(actualMBSize);
-                    refNet.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-                    refNet.Evaluate(refNode);
-                    Matrix<ElemType>::ScaleAndAdd(m_adaptationRegWeight,
-                                                  refNode->FunctionValues(),
-                                                  1 - m_adaptationRegWeight,
-                                                  labelNodes[0]->FunctionValues());
-                }
+                    // TODO: currently only support one node regularization
+                    if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
+                    {
+                        refNet.SetActualMiniBatchSize(actualMBSize);
+                        refNet.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+                        refNet.Evaluate(refNode);
+                        Matrix<ElemType>::ScaleAndAdd(m_adaptationRegWeight,
+                                                      refNode->FunctionValues(),
+                                                      1 - m_adaptationRegWeight,
+                                                      labelNodes[0]->FunctionValues());
+                    }
 
-                //compute eval node first since when gradient is computed the forward function values
-                //may be changed and need to be recomputed when gradient and function value share the same matrix
-                for (size_t i = 0; i < numEvalNodes; i++)
-                {
-                    net.Evaluate(evaluationNodes[i]);
-                }
+                    //compute eval node first since when gradient is computed the forward function values
+                    //may be changed and need to be recomputed when gradient and function value share the same matrix
+                    for (size_t i = 0; i < numEvalNodes; i++)
+                    {
+                        net.Evaluate(evaluationNodes[i]);
+                    }
 
-                // only compute gradient when learning rate is large enough
-                if (learnRatePerSample > m_minLearnRate * 0.01)
-                {
-                    // use only the first criterion. Is there any possibility to use more?
-                    net.ComputeGradient(criterionNodes[0]);
-                }
-                else
-                {
-                    // use only the first criterion. Is there any possibility to use more?
-                    net.Evaluate(criterionNodes[0]);
+                    // only compute gradient when learning rate is large enough
+                    if (learnRatePerSample > m_minLearnRate * 0.01)
+                    {
+                        // use only the first criterion. Is there any possibility to use more?
+                        net.ComputeGradient(criterionNodes[0]);
+                    }
+                    else
+                    {
+                        // use only the first criterion. Is there any possibility to use more?
+                        net.Evaluate(criterionNodes[0]);
+                    }
                 }
             }
 
@@ -2122,10 +2120,13 @@ protected:
             //distributed gradient aggregation
             if (!useGradientAggregation)
             {
-                Matrix<ElemType>::AddElementToElement(criterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
-                for (size_t i = 0; i < numEvalNodes; i++)
+                if (actualMBSize != 0)
                 {
-                    Matrix<ElemType>::AddElementToElement(evaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
+                    Matrix<ElemType>::AddElementToElement(criterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
+                    for (size_t i = 0; i < numEvalNodes; i++)
+                    {
+                        Matrix<ElemType>::AddElementToElement(evaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
+                    }
                 }
             }
             else
@@ -2154,7 +2155,7 @@ protected:
             }
 
             //update model parameters
-            if (learnRatePerSample > m_minLearnRate * 0.01)
+            if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
             {
                 auto smoothedGradientIter = smoothedGradients.begin();
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
