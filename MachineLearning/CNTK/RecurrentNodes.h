@@ -34,7 +34,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     private:
-        void Init(size_t row_size, size_t col_size, ElemType initialActivationValue = (ElemType)DEFAULT_HIDDEN_ACTIVITY)
+        void Init(size_t row_size, size_t col_size, ElemType initialActivationValue = (ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
             m_reqMultiSeqHandling = true;
             m_initialActivationValue = initialActivationValue;
@@ -45,16 +45,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     protected:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
-        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
+        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_delayedActivation(deviceId), m_boundaryInfo(CPUDEVICE)
         {
-            // TODO: change this back to proper initializers
-            m_delayedActivation = Matrix<ElemType>(deviceId), m_boundaryInfo = CPUDEVICE;
             Init(1, 1);
         }
-        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) : ComputationNode<ElemType>(deviceId, name)
+        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_delayedActivation(deviceId), m_boundaryInfo(CPUDEVICE)
         {
-            // TODO: change this back to proper initializers
-            m_delayedActivation = Matrix<ElemType>(deviceId), m_boundaryInfo = CPUDEVICE;
             Init(row_size, col_size, initialActivationValue);
 
             m_functionValues.SetValue(m_initialActivationValue);
@@ -344,14 +344,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef DelayedValueNode<ElemType, -1, SEQUENCE_START, MinibatchPackingFlag::SequenceStart> Base; UsingDelayedValueNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
-        PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) : Base(deviceId, name, initialActivationValue, row_size, col_size)
-        {
-            // TODO: change this back to proper initializers
-        }
+        PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+        PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) :
+            Base(deviceId, name, initialActivationValue, row_size, col_size)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"PastValue"; }
@@ -417,14 +415,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef DelayedValueNode<ElemType, +1, SEQUENCE_END, MinibatchPackingFlag::SequenceEnd> Base; UsingDelayedValueNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
-        FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) : Base(deviceId, name, initialActivationValue, row_size, col_size)
-        {
-            // TODO: change this back to proper initializers
-        }
+        FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+        FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) :
+            Base(deviceId, name, initialActivationValue, row_size, col_size)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"FutureValue"; }
@@ -491,29 +487,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class LSTMNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-
-        void Init()
-        {
-            m_reqMultiSeqHandling = true;
-            m_inputDim = 0;
-            m_outputDim = 0;
-            m_use_errors_from_future_minibatch = false;
-            m_DefaultState = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
-        }
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        LSTMNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
+        LSTMNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name),
+            m_State(deviceId), m_PastState(deviceId),
+            m_PastOutput(deviceId), m_Gi(deviceId), m_Gf(deviceId), m_Go(deviceId), grdToObs(deviceId), grdToInputGate(deviceId),
+            grdToForgetGate(deviceId), grdToOutputGate(deviceId), grdToCellWgt(deviceId), tanhObs(deviceId),
+            tanhState(deviceId), m_tempMatrix(deviceId),
+            mSlicePrevState(deviceId), mSlicePrevOutput(deviceId),
+            grdBeforeInputGate(deviceId),
+            grdBeforeForget(deviceId), grdBeforeGo(deviceId), grdToCell(deviceId),
+            grdBeforeTanhInputGate(deviceId), m_obs_error_from_future_minibatch(deviceId),
+            m_state_error_from_future_minibatch(deviceId), mLastState(deviceId), mLastOutput(deviceId),
+            m_inputDim(0),
+            m_outputDim(0),
+            m_use_errors_from_future_minibatch(false),
+            m_DefaultState((ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
-            m_State = Matrix<ElemType>(deviceId), m_PastState = Matrix<ElemType>(deviceId);
-            m_PastOutput = Matrix<ElemType>(deviceId), m_Gi = Matrix<ElemType>(deviceId), m_Gf = Matrix<ElemType>(deviceId), m_Go = Matrix<ElemType>(deviceId); grdToObs = Matrix<ElemType>(deviceId); grdToInputGate = Matrix<ElemType>(deviceId);
-            grdToForgetGate = Matrix<ElemType>(deviceId); grdToOutputGate = Matrix<ElemType>(deviceId); grdToCellWgt = Matrix<ElemType>(deviceId); tanhObs = Matrix<ElemType>(deviceId);
-            tanhState = Matrix<ElemType>(deviceId), m_tempMatrix = Matrix<ElemType>(deviceId);
-            mSlicePrevState = Matrix<ElemType>(deviceId); mSlicePrevOutput = Matrix<ElemType>(deviceId);
-            grdBeforeInputGate = Matrix<ElemType>(deviceId);
-            grdBeforeForget = Matrix<ElemType>(deviceId); grdBeforeGo = Matrix<ElemType>(deviceId); grdToCell = Matrix<ElemType>(deviceId);
-            grdBeforeTanhInputGate = Matrix<ElemType>(deviceId), m_obs_error_from_future_minibatch = Matrix<ElemType>(deviceId);
-            m_state_error_from_future_minibatch = Matrix<ElemType>(deviceId); mLastState = Matrix<ElemType>(deviceId); mLastOutput = Matrix<ElemType>(deviceId);
-            Init(); // TODO: remove Init() as a function if only used in one place
+            m_reqMultiSeqHandling = true;
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -1473,14 +1464,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+            Base::DumpNodeInfo(printValues, fstream);
             fstream << L"Input[Width:" << m_inputDim << L"]  \n" ; 
             fstream << L"Hidden[Width:" << m_outputDim << L"]    Output[Width:" << m_outputDim << L"]  \n";
         }
-
-
     public:
-
         bool GetHistory(Matrix<ElemType>& hist, bool bLastTime)
         {
             size_t tRow = m_PastOutput.GetNumRows();

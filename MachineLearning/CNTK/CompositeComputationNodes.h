@@ -35,10 +35,9 @@ class ParallelNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemTyp
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-    ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-    {
-        // TODO: change this back to proper initializers
-    }
+    ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        ComputationNodeNonLooping<ElemType>(deviceId, name)
+    { }
 
     virtual const std::wstring OperationName() const { return TypeName(); }
     static const std::wstring TypeName() { return L"Parallel"; }
@@ -230,7 +229,7 @@ public:
 
     virtual void DumpNodeInfo(const bool printValues, File& fstream) const
     {
-        ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+        Base::DumpNodeInfo(printValues, fstream);
 
         char str[4096];
         sprintf(str, "[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
@@ -241,6 +240,16 @@ public:
         PrintNodeValuesToFile(printValues, fstream);
     }
 
+
+    virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<MeanNode<ElemType>>(nodeP);
+            node->m_hasComputed = m_hasComputed;
+        }
+    }
 public:
     bool m_hasComputed;
 };
@@ -256,16 +265,15 @@ class MeanNode : public PreComputedNode<ElemType>
     typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-    MeanNode(DEVICEID_TYPE deviceId, const wstring & name) : PreComputedNode<ElemType>(deviceId, name)
-    {
-        // TODO: change this back to proper initializers
-        m_numSamples = 0;
-    }
+    MeanNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        PreComputedNode<ElemType>(deviceId, name),
+        m_numSamples(0)
+    { }
 
     virtual void LoadFromFile(File& fstream, size_t modelVersion)
     {
         Base::LoadFromFile(fstream, modelVersion);
-        m_numSamples = 0;
+        m_numSamples = 0;   // TODO: intended? Not loaded from file?
     }
 
     virtual bool HasComputed() const        // why are these not in the base class?
@@ -342,7 +350,6 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<MeanNode<ElemType>>(nodeP);
-            node->m_hasComputed = m_hasComputed;
             node->m_numSamples = m_numSamples;
         }
     }
@@ -359,17 +366,16 @@ class InvStdDevNode : public PreComputedNode<ElemType>
     typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-    InvStdDevNode(DEVICEID_TYPE deviceId, const wstring & name) : PreComputedNode<ElemType>(deviceId, name)
-    {
-        // TODO: change this back to proper initializers
-        m_mean = Matrix<ElemType>(deviceId), m_var = Matrix<ElemType>(deviceId), m_temp = Matrix<ElemType>(deviceId);
-        m_numSamples = 0;
-    }
+    InvStdDevNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        PreComputedNode<ElemType>(deviceId, name),
+        m_mean(deviceId), m_var(deviceId), m_temp(deviceId),
+        m_numSamples(0)
+    { }
 
     virtual void LoadFromFile(File& fstream, size_t modelVersion)
     {
         Base::LoadFromFile(fstream, modelVersion);
-        m_numSamples = 0;
+        m_numSamples = 0;   // TODO: intended? not loading from file?
     }
 
     virtual bool HasComputed() const
@@ -405,20 +411,10 @@ public:
         }
     }
 
-    virtual bool RequirePreCompute() const
-    {
-        return true;
-    }
+    virtual bool RequirePreCompute() const { return true; }
 
-    virtual const std::wstring OperationName() const
-    {
-        return TypeName();
-    }
-
-    static const std::wstring TypeName()
-    {
-        return L"InvStdDev";
-    }
+    virtual const std::wstring OperationName() const { return TypeName(); }
+    static const std::wstring TypeName() { return L"InvStdDev"; }
 
     virtual void ComputeInputPartial(const size_t /*inputIndex*/)
     {
@@ -501,7 +497,6 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<InvStdDevNode<ElemType>>(nodeP);
-            node->m_hasComputed = m_hasComputed;
             node->m_numSamples = m_numSamples;
 
             node->m_mean = m_mean;
@@ -525,10 +520,9 @@ class PerDimMeanVarNormalizationNode : public ComputationNode<ElemType>
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-    PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-    {
-        // TODO: change this back to proper initializers
-    }
+    PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        ComputationNode<ElemType>(deviceId, name)
+    { }
 
     virtual const std::wstring OperationName() const { return TypeName(); }
     static const std::wstring TypeName() { return L"PerDimMeanVarNormalization"; }
@@ -674,10 +668,9 @@ class PerDimMeanVarDeNormalizationNode : public ComputationNode<ElemType>
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-    PerDimMeanVarDeNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-    {
-        // TODO: change this back to proper initializers
-    }
+    PerDimMeanVarDeNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        ComputationNode<ElemType>(deviceId, name)
+    { }
 
     virtual const std::wstring OperationName() const
     {
@@ -843,11 +836,10 @@ class BatchModeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemTy
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
-    BatchModeNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-    {
-        // TODO: change this back to proper initializers
-        m_memory = Matrix<ElemType>(deviceId);
-    }
+    BatchModeNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        ComputationNodeNonLooping<ElemType>(deviceId, name),
+        m_memory(deviceId)
+    { }
 
     virtual bool HasComputed() const = 0;
     virtual void MarkComputed(const bool hasComputed) = 0;
@@ -881,7 +873,7 @@ public:
 
     virtual void DumpNodeInfo(const bool printValues, File& fstream) const
     {
-        ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+        Base::DumpNodeInfo(printValues, fstream);
 
         const size_t BUFLEN = 4096;
         WCHAR str[BUFLEN];
@@ -923,10 +915,9 @@ class TimeReverseNode : public BatchModeNode<ElemType>
     typedef BatchModeNode<ElemType> Base; UsingBatchModeNodeMembers;
 public:
     virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-    TimeReverseNode(DEVICEID_TYPE deviceId, const wstring & name) : BatchModeNode<ElemType>(deviceId, name)
-    {
-        // TODO: change this back to proper initializers
-    }
+    TimeReverseNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        BatchModeNode<ElemType>(deviceId, name)
+    { }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
     {

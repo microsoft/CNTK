@@ -33,13 +33,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType  m_default_activity;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        SequenceDecoderNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            mAlpha = Matrix<ElemType>(deviceId); mBacktrace = Matrix<ElemType>(deviceId);
-            mStartLab = -1;
-            mEndLab = -1;
-        }
+        SequenceDecoderNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            mAlpha(deviceId), mBacktrace(deviceId),
+            mStartLab(-1), mEndLab(-1)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"SequenceDecoderNode"; }

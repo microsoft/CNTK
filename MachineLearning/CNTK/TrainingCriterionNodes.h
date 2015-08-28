@@ -22,11 +22,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        SquareErrorNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_leftMinusRight = Matrix<ElemType>(deviceId);
-        }
+        SquareErrorNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            m_leftMinusRight(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"SquareError";} 
@@ -153,11 +152,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        CrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_logSoftmaxOfRight = Matrix<ElemType>(deviceId), m_softmaxOfRight = Matrix<ElemType>(deviceId);
-        }
+        CrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"CrossEntropyWithSoftmax";} 
@@ -329,11 +327,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        CrossEntropyNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_logOfRight = Matrix<ElemType>(deviceId), m_leftDivRight = Matrix<ElemType>(deviceId);
-        }
+        CrossEntropyNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            m_logOfRight(deviceId), m_leftDivRight(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"CrossEntropy";} 
@@ -480,11 +477,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        MatrixL1RegNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_gradientOfL1Norm = Matrix<ElemType>(deviceId);
-        }
+        MatrixL1RegNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            m_gradientOfL1Norm(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"MatrixL1Reg";} 
@@ -578,11 +574,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        MatrixL2RegNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_temp = Matrix<ElemType>(deviceId);
-        }
+        MatrixL2RegNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            m_temp(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"MatrixL2Reg";} 
@@ -669,20 +664,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        NoiseContrastiveEstimationNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_logSoftmax = Matrix<ElemType>(deviceId);
-            m_softMax = Matrix<ElemType>(deviceId), m_grdToSoftMaxInput = Matrix<ElemType>(deviceId), m_ncePrediction = Matrix<ElemType>(deviceId);
-            m_evalMode = NCEEvalMode::None;
-        }
-        NoiseContrastiveEstimationNode(DEVICEID_TYPE deviceId, const wstring & name, NCEEvalMode xm_evalMode) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_logSoftmax = Matrix<ElemType>(deviceId);
-            m_softMax = Matrix<ElemType>(deviceId), m_grdToSoftMaxInput = Matrix<ElemType>(deviceId), m_ncePrediction = Matrix<ElemType>(deviceId);
-            m_evalMode = xm_evalMode;
-        }
+        NoiseContrastiveEstimationNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            m_logSoftmax(deviceId),
+            m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId),
+            m_evalMode(NCEEvalMode::None)
+        { }
+        NoiseContrastiveEstimationNode(DEVICEID_TYPE deviceId, const wstring & name, NCEEvalMode xm_evalMode) :
+            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            m_logSoftmax(deviceId),
+            m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId),
+            m_evalMode(xm_evalMode)
+        { }
         // ^^ TODO: we can merge these two
 
         virtual void SaveToFile(File& fstream) const
@@ -860,11 +853,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        ClassBasedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_logSoftmax = Matrix<ElemType>(deviceId), m_softMax = Matrix<ElemType>(deviceId), m_grdToSoftMaxInput = Matrix<ElemType>(deviceId), m_clsLogSoftmax = Matrix<ElemType>(deviceId), m_clsSoftmax = Matrix<ElemType>(deviceId);
-        }
+        ClassBasedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            m_logSoftmax(deviceId), m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_clsLogSoftmax(deviceId), m_clsSoftmax(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"ClassBasedCrossEntropyWithSoftmax"; }
@@ -1229,11 +1221,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        CRFNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            mAlpha = Matrix<ElemType>(deviceId); mBeta = Matrix<ElemType>(deviceId); mPostProb = Matrix<ElemType>(deviceId);
-        }
+        CRFNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"CRF"; }
@@ -1531,10 +1522,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        DummyCriterionNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        DummyCriterionNode(DEVICEID_TYPE deviceId, const wstring & name) :
+          ComputationNodeNonLooping<ElemType>(deviceId, name)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"DummyCriterion";} 

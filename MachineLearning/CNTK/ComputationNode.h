@@ -22,7 +22,7 @@
 #include "Matrix.h"
 
 //#define RNN_DEBUG 1
-#define DEFAULT_HIDDEN_ACTIVITY 0.1
+#define DEFAULT_HIDDEN_ACTIVATION 0.1
 
 #ifndef NOT_IMPLEMENTED
 #define NOT_IMPLEMENTED \
@@ -95,27 +95,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         // TODO: this should be protected and only accessible to the New method; maybe just move it in here?
         // TODO: Once we switch to VS 2015, we shall use inheriting constructors, i.e. we can delete all those redundant constructor forwards in each ComputationNode derivate
-        ComputationNode(DEVICEID_TYPE deviceId, const wstring & name)
+        ComputationNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            m_functionValues(deviceId),
+            m_gradientValues(deviceId),
+            m_deviceId(deviceId),
+            m_loopId(-1),
+            m_samplesInRecurrentStep(1),
+            m_visitedOrder(-1),
+            m_index(-1),
+            m_lowlink(-1),
+            m_indexInLoop(0),
+            m_visited(false),
+            m_inStack(false),
+            m_minibatchPackingFlag(nullptr),
+            m_sentenceSeg(nullptr),
+            m_reqMultiSeqHandling(false),
+            m_nodeName(name == L"" ? CreateUniqNodeName() : name)
         {
-            // TODO: change this back to proper initializers
-            m_functionValues = Matrix<ElemType>(deviceId);
-            m_gradientValues = Matrix<ElemType>(deviceId);
-
-            m_deviceId = deviceId;
-            m_loopId = -1;
-            m_samplesInRecurrentStep = 1;
-            m_visitedOrder = -1;
-            m_index = -1;
-            m_lowlink = -1;
-            m_indexInLoop = 0;
-            m_visited = false;
-            m_inStack = false;
-            m_minibatchPackingFlag = nullptr;
-            m_sentenceSeg = nullptr;
-
-            m_reqMultiSeqHandling = false;
-
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
             InitRecurrentNode();
             // This constructor does not call MoveMatricesToDevice(), but that is needed for full initialization.
             // Only call this constructor through the New() factory below, which will ensure this.
@@ -1139,10 +1135,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
-        ComputationNodeNonLooping(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-        }
+        ComputationNodeNonLooping(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &)
         {

@@ -44,22 +44,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
+        ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_tempMatrix(deviceId),
+            m_kernelWidth(SIZE_MAX), m_kernelHeight(SIZE_MAX),
+            // initialize to dummy values so we catch missing initialization
+            m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX),
+            m_zeroPadding(false), m_maxTempMemSizeInSamples(SIZE_MAX)
         {
-            // TODO: change this back to proper initializers
-            m_tempMatrix = Matrix<ElemType>(deviceId);
-            m_kernelWidth = SIZE_MAX, m_kernelHeight = SIZE_MAX;    // initialize to dummy values so we catch missing initialization
-            m_horizontalSubsample = SIZE_MAX, m_verticalSubsample = SIZE_MAX;
-            m_zeroPadding = false, m_maxTempMemSizeInSamples = SIZE_MAX;
             m_outputChannels = 0;
         }
-        ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0) : ComputationNode<ElemType>(deviceId, name)
+        ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_tempMatrix(deviceId),
+            m_kernelWidth(kernelWidth), m_kernelHeight(kernelHeight),
+            m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample),
+            m_zeroPadding(zeroPadding), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
         {
-            // TODO: change this back to proper initializers
-            m_tempMatrix = Matrix<ElemType>(deviceId);
-            m_kernelWidth = kernelWidth, m_kernelHeight = kernelHeight;
-            m_horizontalSubsample = horizontalSubsample, m_verticalSubsample = verticalSubsample;
-            m_zeroPadding = zeroPadding, m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
             m_outputChannels = outputChannels;
         }
 
@@ -307,7 +308,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+            Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
             sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
@@ -450,18 +451,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_windowWidth = SIZE_MAX, m_windowHeight = SIZE_MAX;
-            m_horizontalSubsample = SIZE_MAX, m_verticalSubsample = SIZE_MAX;
-        }
-        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_windowWidth = windowWidth, m_windowHeight = windowHeight;
-            m_horizontalSubsample = horizontalSubsample, m_verticalSubsample = verticalSubsample;
-        }
+        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_windowWidth(SIZE_MAX), m_windowHeight(SIZE_MAX),
+            m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX)
+        { }
+        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_windowWidth(windowWidth), m_windowHeight(windowHeight),
+            m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
+        { }
 
         virtual void SaveToFile(File& fstream) const
         {
@@ -638,7 +637,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+            Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
             sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
@@ -668,18 +667,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_windowWidth = SIZE_MAX, m_windowHeight = SIZE_MAX;
-            m_horizontalSubsample = SIZE_MAX, m_verticalSubsample = SIZE_MAX;
-        }
-        AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) : ComputationNode<ElemType>(deviceId, name)
-        {
-            // TODO: change this back to proper initializers
-            m_windowWidth = windowWidth, m_windowHeight = windowHeight;
-            m_horizontalSubsample = horizontalSubsample, m_verticalSubsample = verticalSubsample;
-        }
+        AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_windowWidth(SIZE_MAX), m_windowHeight(SIZE_MAX),
+            m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX)
+        { }
+        AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_windowWidth(windowWidth), m_windowHeight(windowHeight),
+            m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
+        { }
 
         virtual void SaveToFile(File& fstream) const
         {
@@ -852,7 +849,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+            Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
             sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
