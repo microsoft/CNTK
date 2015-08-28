@@ -82,7 +82,11 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         ConfigValuePtr() {} // (formally needed somehow)
         ConfigValuePtr(const shared_ptr<Object> & p, TextLocation location, const wstring & expressionName) : shared_ptr<Object>(p), location(location), expressionName(expressionName) { }
         //ConfigValuePtr(const function<ConfigValuePtr()> & f, TextLocation location, const wstring & expressionName) : shared_ptr<Object>(make_shared<Thunk>(f, location)), location(location), expressionName(expressionName) { }
-        static ConfigValuePtr MakeThunk(const function<ConfigValuePtr()> & f, TextLocation location, const wstring & expressionName) { return ConfigValuePtr(make_shared<Thunk>(f, location), location, expressionName); }
+        static ConfigValuePtr MakeThunk(const function<ConfigValuePtr()> & f, TextLocation location, const wstring & expressionName)
+        {
+            return ConfigValuePtr(make_shared<Thunk>(f, location), location, expressionName);
+            //return ConfigValuePtr(f, location, expressionName);
+        }
         // TODO: somehow the constructor overload from Thunk function fails to compile, so for now use MakeThunk instead
 
         ConfigValuePtr(const ConfigValuePtr & other) { *this = other; }
@@ -97,9 +101,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         }
         void operator=(ConfigValuePtr && other)
         {
-            (shared_ptr<Object>&)*this = move(other);
             location = move(other.location);
             expressionName = move(other.expressionName);
+            (shared_ptr<Object>&)*this = move(other);
         }
 
         // --- retrieving values by type cast
@@ -129,8 +133,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         template<class C>
         bool Is() const
         {
-            EnsureResolved();
-            //ResolveValue();
+            EnsureIsResolved();
             const auto p = dynamic_cast<C*>(get());
             return p != nullptr;
         }
@@ -138,8 +141,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         const C & AsRef() const     // returns reference to what the 'value' member. Configs are considered immutable, so return a const&
         {
             // Note: since this returns a reference into 'this', you must keep the object you call this on around as long as you use the returned reference
-            EnsureResolved();
-            //ResolveValue();
+            EnsureIsResolved();
             const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
             const auto p = dynamic_cast<C*>(get());
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigEvaluator.cpp? We'd need the type name
@@ -149,8 +151,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         template<class C>
         shared_ptr<C> AsPtr() const     // returns a shared_ptr cast to the 'value' member
         {
-            EnsureResolved();
-            //ResolveValue();
+            EnsureIsResolved();
             const auto p = dynamic_pointer_cast<C>(*this);
             if (!p)             // TODO: can we make this look the same as TypeExpected in ConfigEvaluator.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type, expected a " + TypeId<C>(), location);
@@ -179,7 +180,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
             }
             return *this;                           // return ourselves so we can access a value as p_resolved = p->ResolveValue()
         }
-        void EnsureResolved() const
+        void EnsureIsResolved() const
         {
             if (GetThunk())
                 LogicError("ConfigValuePtr: unexpected access to unresolved object; ConfigValuePtrs can only be accessed after resolution");
@@ -262,7 +263,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
     // create a runtime object from its type --general case
     // There can be specializations of this that instantiate objects that do not take ConfigRecords or involve mapping like ComputationNode.
     template<typename C>
-    shared_ptr<C> MakeRuntimeObject(const ConfigRecord & config)
+    shared_ptr<C> MakeRuntimeObject(const ConfigRecordPtr config)
     {
         return make_shared<C>(config);
     }
@@ -305,8 +306,9 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         typedef map<wstring, ConfigValuePtr> NamedParams;   // TODO: maybe even not use a typedef, just use the type
     private:
         // the function itself is a C++ lambda
-        function<ConfigValuePtr(const vector<ConfigValuePtr> &, const NamedParams &, const wstring & exprName)> f;
+        function<ConfigValuePtr(vector<ConfigValuePtr> &&, NamedParams &&, const wstring & exprName)> f;
         // inputs. This defines the interface to the function. Very simple in our case though.
+        // We pass rvalue references because that allows to pass Thunks.
         vector<wstring> paramNames;             // #parameters and parameter names (names are used for naming expressions only)
         NamedParams namedParams;   // lists named parameters with their default values. Named parameters are optional and thus always must have a default.
         // TODO: are these defaults already resolved? Or Thunked and resolved upon first use?
@@ -317,7 +319,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         size_t GetNumParams() const { return paramNames.size(); }
         const vector<wstring> & GetParamNames() const { return paramNames; }    // used for expression naming
         // what this function does is call f() held in this object with the given arguments except optional arguments are verified and fall back to their defaults if not given
-        ConfigValuePtr Apply(vector<ConfigValuePtr> args, const NamedParams & namedArgs, const wstring & exprName)
+        // The arguments are rvalue references, which allows us to pass Thunks, which is important to allow stuff with circular references like CBTK;s DelayedNode.
+        ConfigValuePtr Apply(vector<ConfigValuePtr> && args, NamedParams && namedArgs, const wstring & exprName)
         {
             NamedParams actualNamedArgs;
             // actualNamedArgs is a filtered version of namedArgs that contains all optional args listed in namedParams,
@@ -326,18 +329,25 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
             for (const auto & namedParam : namedParams)
             {
                 const auto & id = namedParam.first;                         // id of expected named parameter
-                const auto valuei = namedArgs.find(id);                    // was such parameter passed?
-                const auto & value = valuei != namedArgs.end() ? valuei->second : namedParam.second.ResolveValue();    // if not given then fall back to default
-                // BUGBUG: default may not have been resolved? -> first do namedParam.second->Resolve()? which would resolve in-place
-                actualNamedArgs[id] = value;
-                //actualNamedArgs->Add(id, value.GetLocation(), value);
+                const auto valuei = namedArgs.find(id);                     // was such parameter passed?
+                if (valuei == namedArgs.end())                              // named parameter not passed
+                {                                                           // if not given then fall back to default
+                    auto f = [&namedParam]()                                // we pass a lambda that resolves it upon first use, in our original location
+                    {
+                        return namedParam.second.ResolveValue();
+                    };
+                    actualNamedArgs[id] = move(ConfigValuePtr::MakeThunk(f, namedParam.second.GetLocation(), exprName));
+                }
+                else                                                        // named parameter was passed
+                    actualNamedArgs[id] = move(valuei->second);             // move it, possibly remaining unresolved
                 // BUGBUG: we should pass in the location of the identifier, not that of the expression
             }
             for (const auto & namedArg : namedArgs)   // make sure there are no extra named args that the macro does not take
                 if (namedParams.find(namedArg.first) == namedParams.end())
                     throw EvaluationError(L"function does not have an optional argument '" + namedArg.first + L"'", namedArg.second.GetLocation());
-            return f(args, actualNamedArgs, exprName);
+            return f(move(args), move(actualNamedArgs), exprName);
         }
+        // TODO: define an overload that takes const & for external users (which will then take a copy and pass it on to Apply &&)
     };
     typedef shared_ptr<ConfigLambda> ConfigLambdaPtr;
 
