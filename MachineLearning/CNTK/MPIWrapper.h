@@ -182,7 +182,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_numNodesInUse = requestednodes;
             fprintf(stderr, "requestnodes [%s]: using %d out of %d MPI nodes (%d requested); we (%d) are %s\n",
-                     msg, m_numNodesInUse, m_numMPINodes, (int) requestednodes,
+                msg, (int) m_numNodesInUse, (int)m_numMPINodes, (int)requestednodes,
                      (int) CurrentNodeRank(), IsIdle() ? "out (idle)" : "in (participating)");
             fflush(stderr);
             Ping("requestnodes (after change)");

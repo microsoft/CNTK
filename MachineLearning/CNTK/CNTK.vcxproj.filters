@@ -104,7 +104,6 @@
     <ClInclude Include="SynchronousExecutionEngine.h">
       <Filter>Execution Engine</Filter>
     </ClInclude>
-    <ClInclude Include="MPIWrapper.h" />
     <ClInclude Include="stdafx.h">
       <Filter>Misc</Filter>
     </ClInclude>
@@ -153,9 +152,6 @@
     <ClInclude Include="InputAndParamNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="AllReduceDistGradAggregator.h" />
-    <ClInclude Include="DistGradHeader.h" />
-    <ClInclude Include="IDistGradAggregator.h" />
     <ClInclude Include="DecoderNode.h">
       <Filter>Nodes</Filter>
     </ClInclude>
@@ -167,6 +163,21 @@
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\Platform.h">
       <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="AllReduceDistGradAggregator.h">
+      <Filter>Parallelization</Filter>
+    </ClInclude>
+    <ClInclude Include="DistGradHeader.h">
+      <Filter>Parallelization</Filter>
+    </ClInclude>
+    <ClInclude Include="IDistGradAggregator.h">
+      <Filter>Parallelization</Filter>
+    </ClInclude>
+    <ClInclude Include="MatrixPool.h">
+      <Filter>Parallelization</Filter>
+    </ClInclude>
+    <ClInclude Include="MPIWrapper.h">
+      <Filter>Parallelization</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -204,6 +215,9 @@
     </Filter>
     <Filter Include="GPU Interfacing">
       <UniqueIdentifier>{8d99b2cc-5209-40e4-8b4b-a7616973ae3b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Parallelization">
+      <UniqueIdentifier>{a7b81fda-f3ed-4e0f-8c81-ebbd9dae3908}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

@@ -109,7 +109,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
             {
                 /* give a warning of potential bandwidth wasting */
                 fprintf(stderr, "WARNING: %d GPUs are used in model averaging, but the number of parallel utterances are %d, a potential training speed degradation.\n",
-                    g_mpi->NumNodesInUse(), (int)nOrigParallelUtts);
+                        (int)g_mpi->NumNodesInUse(), (int)nOrigParallelUtts);
                 warned = true;
             }
             if (rank == numprocs - 1)
@@ -1990,7 +1990,7 @@ protected:
         fprintf(stderr, "\nStarting minibatch loop");
         if (useGradientAggregation)
         {
-            fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)", g_mpi->CurrentNodeRank(), g_mpi->NumNodesInUse(), m_numGradientBits);
+            fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)", (int)g_mpi->CurrentNodeRank(), (int)g_mpi->NumNodesInUse(), (int)m_numGradientBits);
         }
 
         if (useDistributedMBReading)
@@ -2189,7 +2189,7 @@ protected:
                         if (nSynced % m_iMASyncStatsTrace == 0)
                         {
                             fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
-                                            nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
+                                    (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
                             nSecondsOnMASync = 0; 
                             nSecondsSinceLastMAPerfReport = 0; 
                         }
