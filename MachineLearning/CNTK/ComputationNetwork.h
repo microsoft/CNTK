@@ -2578,8 +2578,8 @@ public:
         std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
 
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-        if ((*nodeIter)->UnitTest() == false)
-            return false;
+            if (!(*nodeIter)->UnitTest())
+                return false;
 
         fprintf(stderr, "\n\n");
 
