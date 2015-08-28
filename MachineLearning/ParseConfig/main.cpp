@@ -11,8 +11,8 @@ using namespace Microsoft::MSR::CNTK::Config;
 #endif
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
-    shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecord &) { return nullptr; }
-    shared_ptr<Object> MakeExperimentalComputationNode(const ConfigRecord &) { return nullptr; }
+    shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecordPtr) { return nullptr; }
+    shared_ptr<Object> MakeExperimentalComputationNode(const ConfigRecordPtr) { return nullptr; }
 }}}}
 
 #if 0
@@ -91,7 +91,7 @@ L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode 
 L"Parameter(outD, inD, tag='parameter') = new ComputationNode [ class = 'LearnableParameterNode' ; outDim = outD ; inDim = inD /*; tag = tag*/ ]\n"
 L"Input(dim,tag='features') = Parameter(dim,1,tag=tag)   // TODO: for now \n"
 L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ class = 'RowSliceNode' ; inputs = features ; first = firstRow ; num = rows /* ; tag = tag */ ]\n"
-L"Delay(in, delay, tag='') = new ComputationNode [ class = 'DelayNode' ; input = in ; deltaT = -delay /* ; tag = tag */ ]\n"
+L"Delay(in, delay, tag='') = new RecurrentComputationNode [ class = 'DelayNode' ; inputs = in ; deltaT = -delay /* ; tag = tag */ ]\n"
 L"Sigmoid(z, tag='') = new ComputationNode [ class = 'SigmoidNode' ; inputs = z /* ; tag = tag */ ]\n"
 L"Log(z, tag='') = new ComputationNode [ class = 'LogNode' ; inputs = z /* ; tag = tag */ ]\n"
 L"CrossEntropyWithSoftmax(labels, outZ, tag='') = new ComputationNode [ class = 'CrossEntropyWithSoftmaxNode' ; inputs = labels:outZ /* ; tag = tag */ ]\n"

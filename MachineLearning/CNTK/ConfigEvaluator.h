@@ -263,7 +263,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
     // create a runtime object from its type --general case
     // There can be specializations of this that instantiate objects that do not take ConfigRecords or involve mapping like ComputationNode.
     template<typename C>
-    shared_ptr<C> MakeRuntimeObject(const ConfigRecord & config)
+    shared_ptr<C> MakeRuntimeObject(const ConfigRecordPtr config)
     {
         return make_shared<C>(config);
     }
