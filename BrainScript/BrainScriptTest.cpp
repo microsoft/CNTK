@@ -16,11 +16,11 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
 
     // Note: currently this seems to be the master copy; got to check whether the other one was also changed
 
-    extern wstring standardFunctions, computationNodes, commonMacros;
+    //extern wstring standardFunctions, computationNodes, commonMacros;
 
-#if 0   // TODO: these may be newer, merge into Experimentalthingy
+#if 1   // TODO: these may be newer, merge into Experimentalthingy
 
-    wstring standardFunctions =
+    static wstring standardFunctions =
         L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
         L"Fail(msg) = new FailAction [ what = msg ] \n"
         L"RequiredParameter(message) = Fail('RequiredParameter: ' + message) \n"
@@ -39,7 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         L"Fac(n) = if n > 1 then Fac(n-1) * n else 1 \n"
         ;
 
-    wstring computationNodes =      // BUGBUG: optional args not working yet, some scope problem causing a circular reference
+    static wstring computationNodes =      // BUGBUG: optional args not working yet, some scope problem causing a circular reference
         L"Mean(z, tag='') = new ComputationNode [ class = 'MeanNode' ; inputs = z /* ; tag = tag */ ]\n"
         L"InvStdDev(z, tag='') = new ComputationNode [ class = 'InvStdDevNode' ; inputs = z /* ; tag = tag */ ]\n"
         L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ class = 'PerDimMeanVarNormalizationNode' ; inputs = feat:mean:invStdDev /* ; tag = tag */ ]\n"
@@ -53,7 +53,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ class = 'ErrorPredictionNode' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
         ;
 
-    wstring commonMacros =  // TODO: rename rows and cols to inDim and outDim or vice versa, whichever it is
+    static wstring commonMacros =  // TODO: rename rows and cols to inDim and outDim or vice versa, whichever it is
         L"BFF(in, rows, cols) = [ B = Parameter(rows, 1/*init = fixedvalue, value = 0*/) ; W = Parameter(rows, cols) ; z = W*in+B ] \n"
         L"SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] \n "
         L"MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) \n"

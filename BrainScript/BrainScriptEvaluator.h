@@ -194,30 +194,36 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
     }
 
     // -----------------------------------------------------------------------
-    // ConfigRecord -- collection of named config values
+    // IConfigRecord -- config record
+    // Inside BrainScript, this would be a BS::ConfigRecord, but outside of the
+    // evaluator, we will only pass it through this interface, to allow for
+    // extensibility (e.g. Python interfacing).
+    // Also, Objects themselves can expose this interface to make something accessible.
     // -----------------------------------------------------------------------
 
-    struct IsConfigRecord   // any class that exposes config can derive from this
+    struct IConfigRecord   // any class that exposes config can derive from this
     {
         virtual const ConfigValuePtr & operator()(const wstring & id, wstring message = L"") const = 0; // e.g. config(L"arg", L"arg is the argument to this function")
         virtual const ConfigValuePtr & operator[](const wstring & id) const { return operator()(id); }  // e.g. confRec[L"message"]
         virtual const ConfigValuePtr * Find(const wstring & id) const = 0;                              // returns nullptr if not found
+        virtual vector<wstring> GetMemberIds() const = 0;                                               // returns the names of all members in this record (but not including parent scopes)
     };
 
-    class ConfigRecord : public Object, public IsConfigRecord      // all configuration arguments to class construction, resolved into ConfigValuePtrs
+    // -----------------------------------------------------------------------
+    // ConfigRecord -- collection of named config values
+    // -----------------------------------------------------------------------
+
+    class ConfigRecord : public Object, public IConfigRecord      // all configuration arguments to class construction, resolved into ConfigValuePtrs
     {
-    public:
-        typedef shared_ptr<ConfigRecord> ConfigRecordPtr;
-    private:
         // change to ContextInsensitiveMap<ConfigValuePtr>
         map<wstring, ConfigValuePtr> members;
-        ConfigRecordPtr parentScope;           // we look up the chain
-        ConfigRecord() { }  // must give a scope
+        IConfigRecordPtr parentScope;           // we look up the chain
+        ConfigRecord() { }                      // forbidden (private) to instantiate without a scope
     public:
 
         // --- creation phase
 
-        ConfigRecord(ConfigRecordPtr parentScope) : parentScope(parentScope) { }
+        ConfigRecord(IConfigRecordPtr parentScope) : parentScope(parentScope) { }
         void Add(const wstring & id, TextLocation idLocation/*text location of the identifier*/, const ConfigValuePtr & value) { members[id] = value; idLocation; }
         void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr && value) { members[id] = move(value); idLocation; } // use this for unresolved ConfigPtrs
 
@@ -225,7 +231,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
 
         // regular lookup: just use record[id] or record(id, L"helpful message what 'id' does")
         // Any unresolved value is resolved at this time, as it is being consumed. Only after resolving a ConfigValuePtr, it can be copied.
-        /*IsConfigRecord::*/ const ConfigValuePtr & operator()(const wstring & id, wstring message) const   // e.g. confRec(L"name", L"This specifies the object's internal name.")
+        const ConfigValuePtr & /*IConfigRecord::*/operator()(const wstring & id, wstring message) const   // e.g. confRec(L"name", L"This specifies the object's internal name.")
         {
             const auto memberIter = members.find(id);
             if (memberIter != members.end())
@@ -238,7 +244,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
             else
                 throw EvaluationError(L"required parameter '" + id + L"' not found. " + message, TextLocation());
         }
-        /*IsConfigRecord::*/ const ConfigValuePtr * Find(const wstring & id) const         // returns nullptr if not found
+        const ConfigValuePtr * /*IConfigRecord::*/Find(const wstring & id) const         // returns nullptr if not found
         {
             auto memberIter = members.find(id);
             if (memberIter == members.end())
@@ -249,21 +255,23 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
             else
                 return &memberIter->second.ResolveValue();
         }
-        // get members; use this when you intend to consume all record entries and do not know the names
+        // get member ids; use this when you intend to consume all record entries and do not know the names
         // Note that unlike Find() and operator[], which return parent matches, this only returns entries in this record.
-        const map<wstring, ConfigValuePtr> & GetMembers() const
+        virtual vector<wstring> /*IConfigRecord::*/GetMemberIds() const
         {
+            vector<wstring> ids;
             for (auto & member : members)
-                member.second.ResolveValue();   // we return all values, i.e. all must be resolved
-            return members;
+                ids.push_back(member.first);
+            return ids;
         }
     };
-    typedef ConfigRecord::ConfigRecordPtr ConfigRecordPtr;
+    typedef shared_ptr<ConfigRecord> ConfigRecordPtr;
+    // TODO: can ConfigRecordPtr be IConfigRecordPtr?
 
     // create a runtime object from its type --general case
     // There can be specializations of this that instantiate objects that do not take ConfigRecords or involve mapping like ComputationNode.
     template<typename C>
-    shared_ptr<C> MakeRuntimeObject(const ConfigRecordPtr config)
+    shared_ptr<C> MakeRuntimeObject(const IConfigRecordPtr config)
     {
         return make_shared<C>(config);
     }

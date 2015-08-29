@@ -99,18 +99,18 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         else if (arg.Is<ConfigRecord>())
         {
             let record = arg.AsPtr<ConfigRecord>();
-            let members = record->GetMembers();
+            let memberIds = record->GetMemberIds(); // TODO: test this after change to ids
             wstring result;
             bool first = true;
-            for (auto iter : members)
+            for (let & id : memberIds)
             {
                 if (first)
                     first = false;
                 else
                     result.append(L"\n");
-                result.append(iter.first);
+                result.append(id);
                 result.append(L" = ");
-                result.append(FormatConfigValue(iter.second, how));
+                result.append(FormatConfigValue((*record)[id], how));
             }
             return NestString(result, L'[', true, L']');
         }
@@ -345,7 +345,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         }
     };
     // helper for the factory function for ComputationNodes
-    static vector<ComputationNodePtr> GetInputs(const ConfigRecord & config, size_t expectedNumInputs, const wstring & classId/*for error msg*/)
+    static vector<ComputationNodePtr> GetInputs(const IConfigRecord & config, size_t expectedNumInputs, const wstring & classId/*for error msg*/)
     {
         vector<ComputationNodePtr> inputs;
         let inputsArg = config[L"inputs"];
@@ -364,7 +364,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     }
     // factory function for ComputationNodes
     template<>
-    shared_ptr<ComputationNode> MakeRuntimeObject<ComputationNode>(const ConfigRecordPtr configp)
+    shared_ptr<ComputationNode> MakeRuntimeObject<ComputationNode>(const IConfigRecordPtr configp)
     {
         let & config = *configp;
         let classIdParam = config[L"class"];
@@ -408,7 +408,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     // The difference to the above is that the children are not resolved immediately but later during network connection.
     // This takes the record as a shared_ptr so that we can keep it inside a lambda.
     template<>
-    shared_ptr<RecurrentComputationNode> MakeRuntimeObject<RecurrentComputationNode>(const ConfigRecordPtr configp)
+    shared_ptr<RecurrentComputationNode> MakeRuntimeObject<RecurrentComputationNode>(const IConfigRecordPtr configp)
     {
         let & config = *configp;
         let classIdParam = config[L"class"];
@@ -417,7 +417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         wstring tag = tagp ? *tagp : wstring();
         // instead of passing the array of input nodes, we pass a lambda that computes this array in the network-gathering path in NDLComputationNetwork
         if (classId == L"DelayNode")
-            return make_shared<DelayNode>([configp](){ return GetInputs(configp, 1, L"DelayNode"); }, config[L"deltaT"], tag);
+            return make_shared<DelayNode>([configp](){ return GetInputs(*configp, 1, L"DelayNode"); }, config[L"deltaT"], tag);
         else
             throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
     }
@@ -427,19 +427,23 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     // =======================================================================
 
     // ComputationNetwork class
-    class ComputationNetwork : public Object, public IsConfigRecord
+    class ComputationNetwork : public Object, public IConfigRecord
     {
     protected:
         map<wstring, ComputationNodePtr> m_namesToNodeMap;      // root nodes in this network; that is, nodes defined in the dictionary
     public:
         // pretending to be a ConfigRecord
-        /*IsConfigRecord::*/ const ConfigValuePtr & operator()(const wstring & id, wstring message) const   // e.g. confRec(L"message", helpString)
+        /*IConfigRecord::*/ const ConfigValuePtr & operator()(const wstring & id, wstring message) const   // e.g. confRec(L"message", helpString)
         {
             id; message; RuntimeError("unknown class parameter");    // (for now)
         }
-        /*IsConfigRecord::*/ const ConfigValuePtr * Find(const wstring & id) const         // returns nullptr if not found
+        /*IConfigRecord::*/ const ConfigValuePtr * Find(const wstring & id) const         // returns nullptr if not found
         {
             id; return nullptr; // (for now)
+        }
+        /*IConfigRecord::*/ vector<wstring> GetMemberIds() const
+        {
+            return vector<wstring>();
         }
     };
 
@@ -449,15 +453,18 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         set<ComputationNodePtr> outputs;    // all output nodes
         set<ComputationNodePtr> parameters; // all parameter nodes
     public:
-        NDLComputationNetwork(const ConfigRecordPtr configp)
+        NDLComputationNetwork(const IConfigRecordPtr configp)
         {
             let & config = *configp;
             deque<ComputationNodePtr> workList;
             // flatten the set of all nodes
             // we collect all ComputationNodes from the config; that's it
-            for (auto & iter : config.GetMembers())
-                if (iter.second.Is<ComputationNode>())
-                    workList.push_back((ComputationNodePtr)config[iter.first]);
+            for (let & id : config.GetMemberIds())
+            {
+                let & value = config[id];
+                if (value.Is<ComputationNode>())
+                    workList.push_back((ComputationNodePtr)value);
+            }
             // process work list
             // Also call FinalizeInit where we must.
             set<ComputationNodePtr> allChildren;    // all nodes that are children of others (those that are not are output nodes)
@@ -709,22 +716,22 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     // helper for configurableRuntimeTypes initializer below
     // This returns a ConfigurableRuntimeType info structure that consists of
     //  - a lambda that is a constructor for a given runtime type and
-    //  - a bool saying whether T derives from IsConfigRecord
+    //  - a bool saying whether T derives from IConfigRecord
     struct ConfigurableRuntimeType
     {
-        bool isConfigRecord;
-        function<ConfigValuePtr(const ConfigRecordPtr, TextLocation, const wstring &)> construct; // lambda to construct an object of this class
+        bool IConfigRecord;
+        function<ConfigValuePtr(const IConfigRecordPtr, TextLocation, const wstring &)> construct; // lambda to construct an object of this class
     };
 
     template<class C>
     static ConfigurableRuntimeType MakeRuntimeTypeConstructor()
     {
         ConfigurableRuntimeType info;
-        info.construct = [](const ConfigRecordPtr config, TextLocation location, const wstring & exprPath) // lambda to construct
+        info.construct = [](const IConfigRecordPtr config, TextLocation location, const wstring & exprPath) // lambda to construct
         {
             return ConfigValuePtr(MakeRuntimeObject<C>(config), location, exprPath);
         };
-        info.isConfigRecord = is_base_of<IsConfigRecord, C>::value;
+        info.IConfigRecord = is_base_of<IConfigRecord, C>::value;
         return info;
     }
 #if 0
@@ -735,7 +742,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         {
             return ConfigValuePtr(MakeExperimentalComputationNetwork(config), location, exprPath);
         };
-        info.isConfigRecord = true;
+        info.IConfigRecord = true;
         return info;
     }
     static ConfigurableRuntimeType MakeExperimentalComputationNodeConstructor()
@@ -745,7 +752,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         {
             return ConfigValuePtr(MakeExperimentalComputationNode(config), location, exprPath);
         };
-        info.isConfigRecord = false;
+        info.IConfigRecord = false;
         return info;
     }
 #endif
@@ -1004,7 +1011,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
                     Fail(L"unknown runtime type " + e->id, e->location);
                 // form the config record
                 let dictExpr = e->args[0];
-                let argsExprPath = newIter->second.isConfigRecord ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
+                let argsExprPath = newIter->second.IConfigRecord ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
                 let value = newIter->second.construct(ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath), e->location, exprPath); // this constructs it
                 // if object has a name, we set it
                 let valueWithName = dynamic_cast<HasName*>(value.get());
