@@ -368,7 +368,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     }
     // factory function for ComputationNodes
     template<>
-    shared_ptr<ComputationNode> MakeRuntimeObject<ComputationNode>(const IConfigRecordPtr configp)
+    shared_ptr<Object> MakeRuntimeObject<ComputationNode>(const IConfigRecordPtr configp)
     {
         let & config = *configp;
         let classIdParam = config[L"class"];
@@ -412,7 +412,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     // The difference to the above is that the children are not resolved immediately but later during network connection.
     // This takes the record as a shared_ptr so that we can keep it inside a lambda.
     template<>
-    shared_ptr<RecurrentComputationNode> MakeRuntimeObject<RecurrentComputationNode>(const IConfigRecordPtr configp)
+    shared_ptr<Object> MakeRuntimeObject<RecurrentComputationNode>(const IConfigRecordPtr configp)
     {
         let & config = *configp;
         let classIdParam = config[L"class"];
@@ -544,12 +544,12 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         {
             return MakeRuntimeObject<C>(config);
         };
-        rtInfo.IsConfigRecord = is_base_of<IConfigRecord, C>::value;
+        rtInfo.isConfigRecord = is_base_of<IConfigRecord, C>::value;
         return rtInfo;
     }
     // note: don't forget to duplicate the above when we move this out
 
-#if 0
+#if 1
     // get information about configurable runtime types
     const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring & typeId)
     {
@@ -897,6 +897,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         else if (e->op == L"^")   return MakePrimitiveConfigValuePtr(left ^  right, e->location, exprPath);
         else return CompOp<bool>(e, left, right, exprPath);
     };
+    // NodeOps handle the magic CNTK types, that is, infix operations between ComputeNode objects.
+    // TODO: rename to MagicOps
     static ConfigValuePtr NodeOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)
     {
         if (rightVal.Is<Double>())          // ComputeNode * scalar
@@ -943,7 +945,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     // This lists all infix operators with lambdas for evaluating them.
     static map<wstring, InfixOps> infixOps =
     {
-        // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp
+        // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp  TODO: this comment is incomplete
         { L"*",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, NodeOp, NodeOp, BadOp) },
         { L"/",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
         { L".*", InfixOps(BadOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
@@ -1011,7 +1013,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
             if (e->op == L"d")       return MakePrimitiveConfigValuePtr(e->d, e->location, exprPath);         // === double literal
             else if (e->op == L"s")  return ConfigValuePtr(make_shared<String>(e->s), e->location, exprPath); // === string literal
             else if (e->op == L"b")  return MakePrimitiveConfigValuePtr(e->b, e->location, exprPath);         // === bool literal
-            else if (e->op == L"new")                                                               // === 'new' expression: instantiate C++ runtime object right here
+            else if (e->op == L"new")                                                   // === 'new' expression: instantiate C++ runtime object right here
             {
                 // find the constructor lambda
                 let rtInfo = FindRuntimeTypeInfo(e->id);
@@ -1019,7 +1021,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
                     Fail(L"unknown runtime type " + e->id, e->location);
                 // form the config record
                 let dictExpr = e->args[0];
-                let argsExprPath = rtInfo->IsConfigRecord ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
+                let argsExprPath = rtInfo->isConfigRecord ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
                 let value = ConfigValuePtr(rtInfo->construct(ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath)), e->location, exprPath); // this constructs it
                 // if object has a name, we set it
                 let valueWithName = dynamic_cast<HasName*>(value.get());
