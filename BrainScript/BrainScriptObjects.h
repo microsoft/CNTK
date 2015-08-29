@@ -1,4 +1,4 @@
-// ConfigObjects.h -- objects that the config parser operates on
+// BrainScriptObjects.h -- objects that the config parser operates on
 
 #pragma once
 

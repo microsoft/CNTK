@@ -13,6 +13,15 @@
     <CudaCompile Include="GPUWatcher.cu">
       <Filter>GPU</Filter>
     </CudaCompile>
+    <CudaCompile Include="MatrixQuantizerGPU.cu">
+      <Filter>GPU\1bitSGD</Filter>
+    </CudaCompile>
+    <CudaCompile Include="ValueQuantizer.cu">
+      <Filter>GPU\1bitSGD</Filter>
+    </CudaCompile>
+    <CudaCompile Include="MatrixQuantizer_kernel.cu">
+      <Filter>GPU\1bitSGD</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
@@ -30,6 +39,15 @@
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
       <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="ColumnQuantizer.h">
+      <Filter>GPU\1bitSGD</Filter>
+    </ClInclude>
+    <ClInclude Include="MatrixQuantizerGPU.h">
+      <Filter>GPU\1bitSGD</Filter>
+    </ClInclude>
+    <ClInclude Include="ValueQuantizer.h">
+      <Filter>GPU\1bitSGD</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -55,6 +73,9 @@
     </Filter>
     <Filter Include="Include">
       <UniqueIdentifier>{3c982109-64b1-469a-8d85-2abdf12d636a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU\1bitSGD">
+      <UniqueIdentifier>{3415233d-9ef7-41c6-abbb-cec1b4f8d14c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

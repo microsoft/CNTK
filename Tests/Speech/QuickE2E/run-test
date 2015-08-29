@@ -1,8 +1,11 @@
 #!/bin/bash
-if [ "$TEST_DEVICE" == "CPU" ]; then
-   CNTK_DEVICE_ID=-1
+if [ "$TEST_DEVICE" == "cpu" ]; then
+  CNTK_DEVICE_ID=-1
+elif [ "$TEST_DEVICE" == "gpu" ]; then
+  CNTK_DEVICE_ID=0
 else
-   CNTK_DEVICE_ID=Auto
+  echo "Error: Unknown TEST_DEVICE specified!"
+  exit 3
 fi
 
 configFile=$TEST_DIR/cntk.config
