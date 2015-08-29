@@ -78,8 +78,10 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
 
     // initialize a ComputationNetwork<ElemType> from a ConfigRecord
     template<typename ElemType>
-    shared_ptr<ComputationNetwork<ElemType>> CreateComputationNetwork(const ConfigRecordPtr config)
+    shared_ptr<ComputationNetwork<ElemType>> CreateComputationNetwork(const ConfigRecordPtr configp)
     {
+        let config = *configp;
+
         DEVICEID_TYPE deviceId = -1; // (DEVICEID_TYPE)(int)config[L"deviceId"];
         auto net = make_shared<ComputationNetwork<ElemType>>(deviceId);
 
@@ -161,13 +163,14 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
     }
 
     // create a ComputationNetwork<ElemType> from a config--this implements "new ExperimentalComputationNetwork [ ... ]" in the added config snippet above
-    shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecordPtr config)
+    shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecordPtr configp)
     {
+        let config = *configp;
         wstring precision = config[L"precision"];   // TODO: we need to look those up while traversing upwards
         if (precision == L"float")
-            return CreateComputationNetwork<float>(config);
+            return CreateComputationNetwork<float>(configp);
         else if (precision == L"double")
-            return CreateComputationNetwork<double>(config);
+            return CreateComputationNetwork<double>(configp);
         else
             LogicError("MakeExperimentalComputationNetwork: precision must be 'float' or 'double'");
     }
@@ -178,7 +181,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
     {
         DEVICEID_TYPE deviceId = -1;// (DEVICEID_TYPE)(int)config[L"deviceId"];
         wstring classId = config[L"class"];
-        auto node = make_shared<TimesNode<ElemType>>(deviceId);
+        auto node = New<TimesNode<ElemType>>(deviceId, L""/*name*/);
         config;
         return node;
     }

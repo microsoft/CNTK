@@ -16,6 +16,10 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
 
     // Note: currently this seems to be the master copy; got to check whether the other one was also changed
 
+    extern wstring standardFunctions, computationNodes, commonMacros;
+
+#if 0   // TODO: these may be newer, merge into Experimentalthingy
+
     wstring standardFunctions =
         L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
         L"Fail(msg) = new FailAction [ what = msg ] \n"
@@ -55,6 +59,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         L"MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) \n"
         L"LogPrior(labels) = Log(Mean(labels)) \n"
         ;
+
+#endif
 
     void SomeTests()
     {

@@ -28,45 +28,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class LearnableParameter : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        LearnableParameter(size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
         {
-            //intentionally comment out so that we may support automatic dimention inference
-            //if (rows * cols == 0) 
-            //    throw std::logic_error("This LearnableParameter dimension is 0.");
-
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
             m_needGradient = true;
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            m_functionValues.Resize(rows, cols);
-
+            m_outputWidth = 1;
+            m_outputHeight = SIZE_MAX;
+            m_outputChannels = 1;
+        }
+        LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
+            ComputationNode<ElemType>(deviceId, name)
+        {
+            m_needGradient = true;
             m_outputWidth = 1;
             m_outputHeight = rows;
             m_outputChannels = 1;
-
-            InitRecurrentNode();
-        }
-
-        LearnableParameter(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            LoadFromFile(fstream, modelVersion, deviceId);
+            m_functionValues.Resize(rows, cols);
         }
 
         virtual void SaveToFile(File& fstream) const
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
-
+            Base::SaveToFile(fstream);
             fstream << NeedGradient();
             fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
             fstream << FunctionValues();
         }
         
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+            Base::LoadFromFile(fstream, modelVersion);
 
             size_t rows, cols;
             fstream >> m_needGradient;
@@ -83,13 +76,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputHeight = rows;
             m_outputChannels = 1;
         }
-
-
+        
         virtual const std::wstring OperationName() const {return TypeName();}
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
-        virtual void EvaluateThisNode()  {}
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
+        virtual void EvaluateThisNode() {}
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) {}
         virtual void Validate() 
         {
             PrintSelfBeforeValidation();
@@ -99,7 +91,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+            Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
             sprintf(str, "[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
@@ -109,20 +101,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             PrintNodeValuesToFile(printValues, fstream);
         }
-
-        // copy constructor
-        LearnableParameter(const LearnableParameter<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
-        {
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<LearnableParameter<ElemType>>(this, name, flags);
-            return node;
-        }
     };
 
     //WARNING: Don't use SparseLearnableParameter yet since the current version assumes the parameter is dense instead of sparse
@@ -130,45 +108,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SparseLearnableParameter : public LearnableParameter<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        SparseLearnableParameter(size_t rows, size_t cols, const size_t size, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : LearnableParameter<ElemType>(rows, cols, deviceId, name)
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
+            LearnableParameter<ElemType>(deviceId, name)
+        {
+            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
+        }
+        SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, size_t size) :
+            LearnableParameter<ElemType>(deviceId, name, rows, cols)
         {
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
             m_gradientValues.Resize(rows, cols, size);
         }
 
-        SparseLearnableParameter (File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"") 
-            : LearnableParameter<ElemType>(fstream, modelVersion, deviceId, name)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
+            LearnableParameter<ElemType>::LoadFromFile(fstream, modelVersion);
+            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);       // TODO: needed? Constructor already sets this
             m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
-        {
-            LearnableParameter<ElemType>::LoadFromFile(fstream,   modelVersion, deviceId);
-            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
-            m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-        }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"SparseLearnableParameter";} 
-
-        // copy constructor
-        SparseLearnableParameter (const SparseLearnableParameter <ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : LearnableParameter<ElemType>( node, newName, flags)
-        {
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<SparseLearnableParameter<ElemType>>(this, name, flags);
-            return node;
-        }
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
     };
 
     template class SparseLearnableParameter<float>; 
@@ -177,77 +140,73 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class InputValue : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
-    public:
-        InputValue(size_t rows, size_t cols, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false) : ComputationNode<ElemType>(deviceId) 
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        void Init(size_t rows, size_t cols, bool isSparse)
         {
-            if (rows * cols == 0) 
+            m_isSparse = isSparse;
+            if (isSparse)
+                ConvertToSparseMatrix();
+
+            m_functionValues.Resize(rows, cols);
+            m_needGradient = false;
+        }
+    public:
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        {
+            m_outputWidth = SIZE_MAX;
+            m_outputHeight = SIZE_MAX;
+            m_outputChannels = SIZE_MAX;
+            Init(0, 0, false);
+        }
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
+            ComputationNode<ElemType>(deviceId, name)
+        {
+            m_outputWidth = SIZE_MAX;
+            m_outputHeight = SIZE_MAX;
+            m_outputChannels = SIZE_MAX;
+            Init(0, 0, isSparse);
+        }
+        // ^^ TODO: merge the two above with optional arg
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse = false) :
+            ComputationNode<ElemType>(deviceId, name)
+        {
+            if (rows * cols == 0)
                 throw std::logic_error("This InputValue dimension is 0.");
 
             m_outputWidth = 1;
             m_outputHeight = rows;
             m_outputChannels = 1;
 
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-
-            m_isSparse = isSparse;
-            if (isSparse)
-            {
-                ConvertToSparseMatrix();
-            }
-
-            m_functionValues.Resize(rows, cols);
-            m_needGradient = false;
-            InitRecurrentNode();
+            Init(rows, cols, isSparse);
         }
-        
-        InputValue(size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false) : ComputationNode<ElemType>(deviceId)
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, bool isSparse = false) :
+            ComputationNode<ElemType>(deviceId, name)
         {
             size_t rows = imageWidth * imageHeight * imageChannels;
             size_t cols = numImages;
 
-            if (rows * cols == 0) 
+            if (rows * cols == 0)
                 throw std::logic_error("This InputValue dimension is 0.");
 
             m_outputWidth = imageWidth;
             m_outputHeight = imageHeight;
             m_outputChannels = imageChannels;
 
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-
-            m_isSparse = isSparse;
-            if (isSparse)
-            {
-                ConvertToSparseMatrix();
-            }
-
-            m_functionValues.Resize(rows, cols);
-            m_needGradient = false;
-            InitRecurrentNode();
-        }        
-
-        InputValue(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"", bool isSparse = false) : ComputationNode<ElemType>(deviceId)
-        {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_isSparse = isSparse;
-            LoadFromFile(fstream, modelVersion, deviceId);
+            Init(rows, cols, isSparse);
         }
 
         virtual void SaveToFile(File& fstream) const
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
-
+            Base::SaveToFile(fstream);
             fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
             fstream << m_outputWidth << m_outputHeight << m_outputChannels; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
+            Base::LoadFromFile(fstream, modelVersion);
 
             size_t rows, cols;
             fstream >> rows >> cols;
@@ -257,23 +216,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels; 
 
             if (m_isSparse)
-            {
                 ConvertToSparseMatrix();
-            }
 
             m_functionValues.Resize(rows, cols);
             m_needGradient = false;
         }
 
         virtual const std::wstring OperationName() const {return m_isSparse ? SparseTypeName() : TypeName();}
+
         static const std::wstring TypeName() {return L"InputValue";} 
         static const std::wstring SparseTypeName() {return L"SparseInputValue";}
 
         virtual void EvaluateThisNode()  {} 
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) {}
-        
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) {}
+
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) {}
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
 
         virtual void Validate() 
         {
@@ -283,27 +241,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+            Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
             sprintf(str, "[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
             fstream << string(str);        
         }
-
-        // copy constructor
-        InputValue(const InputValue<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
-        {
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = make_shared<InputValue<ElemType>>(this, name, flags);
-            return node;
-        }
-
     private:
         bool m_isSparse = false;
         void ConvertToSparseMatrix()
@@ -323,21 +266,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class LookupTableNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        LookupTableNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
-        }
-
-        LookupTableNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        LookupTableNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
         static const std::wstring TypeName() {return L"LookupTable";} 
@@ -345,7 +279,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 1)
-                throw std::invalid_argument("LookupTable operation only takes two inputs.");
+                InvalidArgument("LookupTable operation only takes two inputs.");
 
             DEVICEID_TYPE input1DeviceId = Inputs(1)->FunctionValues().GetDeviceId();
             DEVICEID_TYPE input0DeviceId = Inputs(0)->FunctionValues().GetDeviceId();
@@ -362,22 +296,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
             if (inputIndex > 1)
-                throw std::invalid_argument("LookupTable operation only takes two inputs.");
+                InvalidArgument("LookupTable operation only takes two inputs.");
 
             if (inputIndex == 0)  //left derivative
-        {
-                Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            {
+                Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
                 ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
             }
             else  //right derivative
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
             }
@@ -421,10 +355,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
         }
@@ -476,21 +410,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[1] = rightNode;
         }
 
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-            ComputationNodePtr node = make_shared<LookupTableNode<ElemType>>(this, name, flags);
-            return node;
-        }
-
-        LookupTableNode(const LookupTableNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
-        {
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-        
         bool UnitTest()
         {
-            try{
+            try
+            {
                 size_t nInput = 2;
                 size_t nHidden = 3;
                 size_t nOutput = 3;
@@ -516,8 +439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     !ISCLOSE(FunctionValues()(1, 1), 2.0, EPSILON) )
                     throw("LSTMNode forward computation error");
 
-                if (FunctionValues().GetDeviceId() != m_deviceId)
-                    FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+                FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
                 GradientValues().Resize(nInput, nOutput);
                 GradientValues().SetValue(1.0);
@@ -538,11 +460,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     throw("LSTMNode gradient error on input gates");
 
                 for (size_t i = 0; i < 2; i++)
-                {
-                    if (Inputs(i)->GradientValues().GetDeviceId() != m_deviceId)
-                        Inputs(i)->GradientValues().TransferFromDeviceToDevice(Inputs(i)->GradientValues().GetDeviceId(), m_deviceId, true);
-                }
-
+                    Inputs(i)->GradientValues().TransferToDeviceIfNotThere(m_deviceId, true);
             }
             catch (...)
             {
@@ -565,43 +483,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class PairNetworkNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
-    public:
-        PairNetworkNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId)
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        void Init(size_t row_size, size_t col_size)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
             m_reqMultiSeqHandling = true;
-            m_functionValues.Resize(1, 1);
-            InitRecurrentNode();
-        }
-
-        PairNetworkNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId)
-        {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-
-            m_functionValues.Resize(1, 1);
-            m_reqMultiSeqHandling = true;
-
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-
-        PairNetworkNode(const DEVICEID_TYPE deviceId, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
-        {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            m_reqMultiSeqHandling = true;
-
             m_functionValues.Resize(row_size, col_size);
-
+        }
+    public:
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        {
+            Init(1, 1); // TODO: do we not need to resize m_gradientValues?
+        }
+        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size, size_t col_size) :
+            ComputationNode<ElemType>(deviceId, name)
+        {
+            Init(row_size, col_size);
             m_gradientValues.Resize(row_size, col_size);
             m_gradientValues.SetValue(0.0f);
+        }
 
-            InitRecurrentNode();
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        {
+            Init(1, 1); // TODO: this looks wrong; should the dimension not come from the loaded model data?
+            Base::LoadFromFile(fstream, modelVersion);
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -610,20 +516,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 0)
-                throw std::invalid_argument("PairNetwork operation only takes one input.");
+                InvalidArgument("PairNetwork operation only takes one input.");
 
             Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues(), Inputs(inputIndex)->GradientValues());
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
             if (inputIndex > 0)
-                throw std::invalid_argument("Delay operation only takes one input.");
+                InvalidArgument("Delay operation only takes one input.");
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
             assert(m_sentenceSeg != nullptr);
 
-            Matrix<ElemType> mTmp = Inputs(inputIndex)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep), 
+            Matrix<ElemType> mTmp = Inputs(inputIndex)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep), 
                 mTmp);
         }
 
@@ -632,10 +538,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_functionValues.SetValue(Inputs(0)->FunctionValues());
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
-            Matrix<ElemType> mTmp = FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            mTmp.SetValue(Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
+            Matrix<ElemType> mTmp = FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            mTmp.SetValue(Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
         }
 
         virtual void Validate()
@@ -687,23 +593,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static const std::wstring TypeName() { return L"PairNetwork"; }
-
-        // copy constructor
-        PairNetworkNode(const PairNetworkNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId)
-        {
-            node->CopyTo(shared_from_this(), newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = make_shared<PairNetworkNode<ElemType>>(this, name, flags);
-            return node;
-        }
-
-    protected:
+protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     };

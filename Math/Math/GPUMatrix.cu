@@ -567,6 +567,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
+    {
+        if (numCols == 0)
+            throw std::logic_error("The slice cannot have 0 columns.");
+        if (startColumn + numCols > m_numCols)
+            throw std::logic_error("The slice is out of range of the destination matrix.");
+        if (numCols > fromMatrix.GetNumCols())
+            throw std::logic_error("The slice is out of range of the source matrix.");
+        if (m_numRows != fromMatrix.m_numRows)
+            throw std::logic_error("The number of rows in source and destination matrices do not match");
+
+        CUDA_CALL(cudaMemcpy(m_pArray + LocateColumn(startColumn), fromMatrix.m_pArray, sizeof(ElemType)*m_numRows*numCols, cudaMemcpyDeviceToDevice));
+        return *this;
+    }
+
+
     //for each column of a, we assign all rows of a to this starting from startIndex
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
@@ -4133,6 +4150,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void* GPUMatrix<ElemType>::s_curandGenerator=NULL;    
+
+    // We use Matrix<char> as the backing store for QuantizedMatrix
+    // Let's explicitly instantiate the methods we need for that purpose
+    template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
+    template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, char *pArray, const size_t matrixFlags, int deviceId);
+    template GPUMatrix<char>::GPUMatrix(const GPUMatrix<char>&);
+    template char* GPUMatrix<char>::CopyToArray() const;
+    template void GPUMatrix<char>::ChangeDeviceTo(int);
+    template void GPUMatrix<char>::Resize(size_t, size_t, bool);
+
+    template GPUMatrix<char>::~GPUMatrix();
+    template int GPUMatrix<char>::GetBestGPUDeviceId();
+    template GPUMatrix<char> GPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
+    template GPUMatrix<char>& GPUMatrix<char>::operator=(GPUMatrix<char>&&);
+    template GPUMatrix<char>::GPUMatrix(int);
 }}}
 
 // !!!!This is from helper_cuda.h which comes with CUDA samples!!!! Consider if it is beneficial to just include all helper_cuda.h
