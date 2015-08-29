@@ -37,7 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         va_start(args, format);
         vsprintf(buffer, format, args);
-        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw std::runtime_error(buffer);
     };
     static inline void RuntimeError(const string & message) { RuntimeError("%s", message.c_str()); }
@@ -53,7 +53,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         va_start(args, format);
         vsprintf(buffer, format, args);
-        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw std::logic_error(buffer);
     };
     static inline void LogicError(const string & message) { LogicError("%s", message.c_str()); }
