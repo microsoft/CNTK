@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS { // or BS::
     //  - a bool saying whether T derives from IConfigRecord
     struct ConfigurableRuntimeType
     {
-        bool IsConfigRecord;        // exposes IConfigRecord  --in this case the expression name is computed differently, namely relative to this item
+        bool isConfigRecord;        // exposes IConfigRecord  --in this case the expression name is computed differently, namely relative to this item
         function<shared_ptr<Object>(const IConfigRecordPtr)> construct; // lambda to construct an object of this class
     };
 
