@@ -15,7 +15,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;
 
-void DebugUtil::PrintStack()
+void DebugUtil::PrintCallStack()
 {
 
 #ifdef _WIN32
@@ -61,6 +61,17 @@ void DebugUtil::PrintStack()
     free(symbolInfo);
 #endif // _WIN32
 
+}
+
+int DebugUtil::PrintStructuredExceptionInfo(unsigned int /*code*/, struct _EXCEPTION_POINTERS * /*ep*/)
+{
+#ifdef _WIN32
+
+    // Print debug info here
+
+#endif // _WIN32
+
+    return EXCEPTION_CONTINUE_SEARCH;
 }
 
 }}}

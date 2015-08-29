@@ -71,7 +71,7 @@ void CURAND_CALL(curandStatus x)
     if (x != CURAND_STATUS_SUCCESS)
     {
         std::cerr << "!!!!!!!!CURAND EXCEPTION: " << std::endl;
-        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw std::runtime_error("CURAND fail");
     }
 }
@@ -81,7 +81,7 @@ void CUBLAS_CALL(cublasStatus_t x)
     if(x!=CUBLAS_STATUS_SUCCESS) 
     { 
         std::cerr << "!!!!!!!!CUBLAS EXCEPTION: " << std::endl;
-        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw std::runtime_error("CUBLAS fail");
     }
 }
@@ -92,7 +92,7 @@ void CUDA_CALL(cudaError_t x)
     { 
         const char* errmsg = cudaGetErrorString(x);
         std::cerr << "!!!!!!!!CUDA EXCEPTION: " << errmsg << std::endl;
-        Microsoft::MSR::CNTK::DebugUtil::PrintStack();
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         cudaDeviceSynchronize();
         throw std::runtime_error(errmsg);
     }    
@@ -686,17 +686,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType> GPUMatrix<ElemType>::Diagonal() const
     {
-        if (GetNumRows() != GetNumCols())
-            throw std::logic_error("Diagonal can be called only for square matrix.");
+        size_t m = GetNumRows();
+        size_t n = GetNumCols();
+        if (m != n)
+            LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", m, n);
 
-        GPUMatrix<ElemType> diag(1, m_numCols, m_computeDevice);
+        GPUMatrix<ElemType> diag(1, n, m_computeDevice);
 
         CUDA_LONG N = (CUDA_LONG)GetNumElements();
         int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
         PrepareDevice();
         cudaEvent_t done = nullptr;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-        _assignToDiagonalValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(diag.m_pArray, m_pArray, N, (CUDA_LONG)GetNumCols());
+        _assignToDiagonalValuesOf<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(diag.m_pArray, m_pArray, N, (CUDA_LONG)n);
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));

@@ -27,8 +27,8 @@ private:
     static const unsigned short MAX_CALL_STACK_DEPTH = 20;
 
 public:
-    static void PrintStack();
-
+    static void PrintCallStack();
+    static int PrintStructuredExceptionInfo(unsigned int code, struct _EXCEPTION_POINTERS *ep);
 };
 
 }}}
