@@ -2,9 +2,14 @@
 
 #pragma once
 
+#include <memory>
+
 namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
 
     using namespace std;
+
+    // TODO: comment this
+    typedef shared_ptr<struct IConfigRecord> IConfigRecordPtr;
 
     // -----------------------------------------------------------------------
     // Object -- common base class for objects that can be used in config files

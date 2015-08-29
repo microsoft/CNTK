@@ -80,7 +80,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
     template<typename ElemType>
     shared_ptr<ComputationNetwork<ElemType>> CreateComputationNetwork(const ConfigRecordPtr configp)
     {
-        let config = *configp;
+        let & config = *configp;
 
         DEVICEID_TYPE deviceId = -1; // (DEVICEID_TYPE)(int)config[L"deviceId"];
         auto net = make_shared<ComputationNetwork<ElemType>>(deviceId);
@@ -91,9 +91,12 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
         deque<ComputationNodePtr> workList;
         // flatten the set of all nodes
         // we collect all ComputationNodes from the config; that's it
-        for (auto & iter : config.GetMembers())
-            if (iter.second.Is<ComputationNode<ElemType>>())
-                workList.push_back((ComputationNodePtr)config[iter.first]);
+        for (let & id : config.GetMemberIds())
+        {
+            let & value = config[id];
+            if (value.Is<ComputationNode<ElemType>>())
+                workList.push_back((ComputationNodePtr)value);
+        }
         // process work list
         // Also call FinalizeInit where we must.
         set<ComputationNodePtr> inputs;     // all input nodes
@@ -177,8 +180,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
 
     // initialize a ComputationNetwork<ElemType> from a ConfigRecord
     template<typename ElemType>
-    shared_ptr<ComputationNode<ElemType>> CreateComputationNode(const ConfigRecord & config)
+    shared_ptr<ComputationNode<ElemType>> CreateComputationNode(const IConfigRecordPtr configp)
     {
+        let & config = *configp;
         DEVICEID_TYPE deviceId = -1;// (DEVICEID_TYPE)(int)config[L"deviceId"];
         wstring classId = config[L"class"];
         auto node = New<TimesNode<ElemType>>(deviceId, L""/*name*/);
@@ -187,13 +191,13 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
     }
 
     // create a ComputationNetwork<ElemType> from a config--this implements "new ExperimentalComputationNetwork [ ... ]" in the added config snippet above
-    shared_ptr<Object> MakeExperimentalComputationNode(const ConfigRecordPtr config)
+    shared_ptr<Object> MakeExperimentalComputationNode(const IConfigRecordPtr configp)
     {
         wstring precision = L"float"; // config[L"precision"];   // TODO: we need to look those up while traversing upwards
         if (precision == L"float")
-            return CreateComputationNode<float>(config);
+            return CreateComputationNode<float>(configp);
         else if (precision == L"double")
-            return CreateComputationNode<double>(config);
+            return CreateComputationNode<double>(configp);
         else
             LogicError("MakeExperimentalComputationNetwork: precision must be 'float' or 'double'");
     }
