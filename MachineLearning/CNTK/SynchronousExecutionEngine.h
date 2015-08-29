@@ -18,6 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <typename ElemType>
 class SynchronousNodeEvaluator : public NDLNodeEvaluator<ElemType>
 {
+    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 public:
     // Constructor - create evaluator
     SynchronousNodeEvaluator(ComputationNetwork<ElemType>& cn) : m_net(cn)
@@ -51,16 +52,16 @@ public:
 
         std::wstring cnNodeType = msra::strfun::utf16(node->GetValue());
 
-        ComputationNodePtr nodePtr = nullptr;
+        ComputationNodePtr nodePtr;
 
         // get the node pointer for the node, should be stored in the EvalValue;
         if (pass > ndlPassInitial) 
         {
-            nodePtr = (ComputationNodePtr)node->GetEvalValue();
-            if (nodePtr == nullptr)
+            nodePtr = ComputationNode<ElemType>::FromVoidPtr(node->GetEvalValue());
+            if (!nodePtr)
             {
-                nodePtr = (ComputationNodePtr)m_net.GetNodeFromName(name);
-                node->SetEvalValue(nodePtr);
+                nodePtr = m_net.GetNodeFromName(name);
+                node->SetEvalValue(nodePtr.get());
             }
         }
         
@@ -360,12 +361,12 @@ public:
                 if (cnNodeType == PastValueNode<ElemType>::TypeName())
                 {
                     nodePtr = m_net.PastValue(NULL, defaultHiddenActivity, rows, cols, name);
-                    ((PastValueNode<ElemType>*)nodePtr)->SetTimeStep(timeStep);
+                    static_pointer_cast<PastValueNode<ElemType>>(nodePtr)->SetTimeStep(timeStep);
                 }
                 else
                 {
                     nodePtr = m_net.FutureValue(NULL, defaultHiddenActivity, rows, cols, name);
-                    ((FutureValueNode<ElemType>*)nodePtr)->SetTimeStep(timeStep);
+                    static_pointer_cast<FutureValueNode<ElemType>>(nodePtr)->SetTimeStep(timeStep);
                 }
 
                 nodePtr->NeedGradient() = needGradient;
@@ -474,7 +475,7 @@ public:
         switch (pass)
         {
         case ndlPassInitial:
-            node->SetEvalValue(nodePtr);
+            node->SetEvalValue(nodePtr.get());
             // evaluate parameters
             EvaluateParameters(node, baseName, nodeParamStart, nodeParamCount, pass);
             break;
@@ -487,7 +488,7 @@ public:
                 std::vector<ComputationNodePtr> inputNodes;
                 inputNodes.resize(inputs.size());
                 for (int i = 0; i < inputs.size(); i++)
-                    inputNodes[i] = ComputationNodePtr(inputs[i]);
+                    inputNodes[i] = ComputationNode<ElemType>::FromVoidPtr(inputs[i]);
 
                 nodePtr->AttachInputs(inputNodes);
             }
@@ -495,23 +496,24 @@ public:
             {
                 switch (inputs.size())
                 {
+                    // TODO: just use a vector attach
                 case 1:
-                    nodePtr->AttachInputs(ComputationNodePtr(inputs[0]));
+                    nodePtr->AttachInputs(ComputationNode<ElemType>::FromVoidPtr(inputs[0]));
                     break;
                 case 2:
-                    nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]));
+                    nodePtr->AttachInputs(ComputationNode<ElemType>::FromVoidPtr(inputs[0]), ComputationNode<ElemType>::FromVoidPtr(inputs[1]));
                     break;
                 case 3:
-                    nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]));
+                    nodePtr->AttachInputs(ComputationNode<ElemType>::FromVoidPtr(inputs[0]), ComputationNode<ElemType>::FromVoidPtr(inputs[1]), ComputationNode<ElemType>::FromVoidPtr(inputs[2]));
                     break;
                 case 4:
-                    nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]), ComputationNodePtr(inputs[3]));
+                    nodePtr->AttachInputs(ComputationNode<ElemType>::FromVoidPtr(inputs[0]), ComputationNode<ElemType>::FromVoidPtr(inputs[1]), ComputationNode<ElemType>::FromVoidPtr(inputs[2]), ComputationNode<ElemType>::FromVoidPtr(inputs[3]));
                     break;
                 case 5:
-                    nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]), ComputationNodePtr(inputs[3]), ComputationNodePtr(inputs[4]));
+                    nodePtr->AttachInputs(ComputationNode<ElemType>::FromVoidPtr(inputs[0]), ComputationNode<ElemType>::FromVoidPtr(inputs[1]), ComputationNode<ElemType>::FromVoidPtr(inputs[2]), ComputationNode<ElemType>::FromVoidPtr(inputs[3]), ComputationNode<ElemType>::FromVoidPtr(inputs[4]));
                     break;
                 case 6:
-                    nodePtr->AttachInputs(ComputationNodePtr(inputs[0]), ComputationNodePtr(inputs[1]), ComputationNodePtr(inputs[2]), ComputationNodePtr(inputs[3]), ComputationNodePtr(inputs[4]), ComputationNodePtr(inputs[5]));
+                    nodePtr->AttachInputs(ComputationNode<ElemType>::FromVoidPtr(inputs[0]), ComputationNode<ElemType>::FromVoidPtr(inputs[1]), ComputationNode<ElemType>::FromVoidPtr(inputs[2]), ComputationNode<ElemType>::FromVoidPtr(inputs[3]), ComputationNode<ElemType>::FromVoidPtr(inputs[4]), ComputationNode<ElemType>::FromVoidPtr(inputs[5]));
                     break;
                 default:
                     if (nodeParamCount > 0)
@@ -669,7 +671,7 @@ public:
                     std::wstring wname = msra::strfun::utf16(name);
                     if (m_net.NodeNameExist(wname))
                     {
-                        void* np = (void*)m_net.GetNodeFromName(wname);
+                        void* np = (void*)m_net.GetNodeFromName(wname).get();
                         // if we don't have a resolve node, it's because the name didn't exist in NDL
                         if (!nodeResolve)
                             nodeResolve = nodeParam;
@@ -760,7 +762,7 @@ public:
     virtual void ProcessOptionalParameters(NDLNode<ElemType>* node)
     {
         vector<NDLNode<ElemType>*> params = node->GetParameters(true); // get all the optional parameters only
-        ComputationNode<ElemType>* compNode = (ComputationNode<ElemType>*)node->GetEvalValue();
+        auto compNode = ComputationNode<ElemType>::FromVoidPtr(node->GetEvalValue());
         std::string empty;
 
         // loop through all the optional parameters processing them as necessary
@@ -802,14 +804,15 @@ public:
     // SetOutputNode - Set the output node, checks to see if it already exists first
     // nodeGroup - group vector to add to
     // compNode - computation node to add
-    void SetOutputNode(std::vector<ComputationNode<ElemType>*>* nodeGroup, ComputationNode<ElemType>* compNode)
+    // TODO: It seems that this is also applied to other tyoes of nodes, so the name of this function is wrong.
+    void SetOutputNode(std::vector<ComputationNodePtr> & nodeGroup, ComputationNodePtr compNode)
     {
-        for (ComputationNodePtr node : *nodeGroup)
+        for (ComputationNodePtr node : nodeGroup)
         {
             if (node == compNode)
                 return;
         }
-        nodeGroup->push_back(compNode);
+        nodeGroup.push_back(compNode);
     }
 
     // FindSymbol - Search the nodes for a fully quantified symbol
@@ -818,8 +821,8 @@ public:
     virtual void* FindSymbol(const wstring& symbol)
     {
         if (m_net.NodeNameExist(symbol))
-            return m_net.GetNodeFromName(symbol);
-        return NULL;
+            return m_net.GetNodeFromName(symbol).get();
+        return nullptr;
     }
 
     virtual ~SynchronousNodeEvaluator()
@@ -828,7 +831,6 @@ public:
 
 private:
     ComputationNetwork<ElemType>& m_net;
-    typedef ComputationNode<ElemType>* ComputationNodePtr;
     void operator=(const SynchronousNodeEvaluator&);
 };
 

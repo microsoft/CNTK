@@ -63,15 +63,4 @@ void DebugUtil::PrintCallStack()
 
 }
 
-int DebugUtil::PrintStructuredExceptionInfo(unsigned int /*code*/, struct _EXCEPTION_POINTERS * /*ep*/)
-{
-#ifdef _WIN32
-
-    // Print debug info here
-
-#endif // _WIN32
-
-    return EXCEPTION_CONTINUE_SEARCH;
-}
-
 }}}

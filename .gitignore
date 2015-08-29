@@ -6,6 +6,11 @@
 *.user
 *.sln.docstates
 *.orig
+\#*
+.\#*
+
+# Local build configuration
+Config.make
 
 # Build results
 
@@ -16,6 +21,8 @@ build/
 [Bb]in/
 [Oo]bj/
 .run-*
+lib/
+bin/
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
 !packages/*/build/

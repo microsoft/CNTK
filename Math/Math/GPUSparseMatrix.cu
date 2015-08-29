@@ -2426,6 +2426,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class GPUSparseMatrix<float>; 
     template class GPUSparseMatrix<double>;    
 
+    // We use Matrix<char> as the backing store for QuantizedMatrix
+    // Let's explciitly instantiate the methods we need for that purpose
+    template GPUSparseMatrix<char>::GPUSparseMatrix(const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice);
+    template GPUSparseMatrix<char>::GPUSparseMatrix(const size_t numRows, const size_t numCols, const size_t numNZ, const MatrixFormat matrixFormat, const DEVICEID_TYPE computeDevice);
+    template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char> const &);
+    template void GPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const &);
+    template void GPUSparseMatrix<char>::SetValue(GPUMatrix<char> const &);
+    template void GPUSparseMatrix<char>::CopyToDenseMatrix(GPUMatrix<char> &)const;
+    template void GPUSparseMatrix<char>::CopyToCPUSparseMatrix(CPUSparseMatrix<char> &)const;
+    template void GPUSparseMatrix<char>::ChangeDeviceTo(int);
+    template void GPUSparseMatrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues);
+    template GPUSparseMatrix<char>::~GPUSparseMatrix();
+    template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char>&&);
+    template GPUMatrix<char> GPUSparseMatrix<char>::ColumnSliceToDense(size_t startColumn, size_t numCols) const;
+
     template <class ElemType>
     MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
     {

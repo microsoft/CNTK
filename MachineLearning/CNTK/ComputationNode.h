@@ -21,8 +21,10 @@
 #include "Basics.h"
 #include "Matrix.h"
 
+#include "MatrixPool.h"
+
 //#define RNN_DEBUG 1
-#define DEFAULT_HIDDEN_ACTIVITY 0.1
+#define DEFAULT_HIDDEN_ACTIVATION 0.1
 
 #ifndef NOT_IMPLEMENTED
 #define NOT_IMPLEMENTED \
@@ -50,38 +52,99 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         copyNodeChildrenCrossNetwork=4, // allow a cross network child copy
     };
 
-#pragma region base computation class
-    template<class ElemType>
-    class ComputationNode //Abstract Class that cannot be instantiated
+    // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure
+    // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
+    // TODO: m_samplesInRecurrentStep should be subsumed here & removed from nodes
+    struct FrameRange
     {
-    protected:
-        //std containers such as list and map does not support class reference so we need to use pointer
-        typedef ComputationNode<ElemType>* ComputationNodePtr;
-        typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
-
-    public:
-        ComputationNode(DEVICEID_TYPE deviceId): m_functionValues(deviceId), m_gradientValues(deviceId) 
+        const size_t timeIdxInSeq;  // start frame
+        const size_t numFrames;     // number of frames; currently only 1 or SIZE_MAX. SIZE_MAX means entire MB, or all input assuming ot is no time sequence
+        // can construct from a single size_t -> a single-frame range
+        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), numFrames(1) { }
+        // or without arguments -> entire minibatch / no frame-range
+        FrameRange() : timeIdxInSeq(0), numFrames(SIZE_MAX) { }
+        // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
+        size_t t() const
         {
-            m_deviceId = deviceId;
-            m_loopId = -1;
-            m_samplesInRecurrentStep = 1;
-            m_visitedOrder = -1;
-            m_index = -1;
-            m_lowlink = -1;
-            m_indexInLoop = 0;
-            m_visited = false;
-            m_inStack = false;
-            m_minibatchPackingFlag = nullptr;
-            m_sentenceSeg = nullptr;
+            if (numFrames != 1)
+                LogicError("FrameRange::t() called for a frame range > 1 frame");
+            else
+                return timeIdxInSeq;
+        }
+    private:
+        FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
+        void operator=(const FrameRange &);
+    };
 
-            m_reqMultiSeqHandling = false;
+#pragma region base computation class
+
+    // =======================================================================
+    // ComputationNode -- abstract base class for all computation nodes
+    // =======================================================================
+
+    template<class ElemType>
+    class ComputationNode : public enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
+    {
+        // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
+    protected:
+        using std::enable_shared_from_this<ComputationNode<ElemType>>::shared_from_this;
+        //std containers such as list and map does not support class reference so we need to use pointer
+        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
+        typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
+        ComputationNode() { }
+    public:
+        typedef float OurElemType;
+    protected:
+        // TODO: this should be protected and only accessible to the New method; maybe just move it in here?
+        // TODO: Once we switch to VS 2015, we shall use inheriting constructors, i.e. we can delete all those redundant constructor forwards in each ComputationNode derivate
+        ComputationNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            m_functionValues(deviceId),
+            m_gradientValues(deviceId),
+            m_deviceId(deviceId),
+            m_loopId(-1),
+            m_samplesInRecurrentStep(1),
+            m_visitedOrder(-1),
+            m_index(-1),
+            m_lowlink(-1),
+            m_indexInLoop(0),
+            m_visited(false),
+            m_inStack(false),
+            m_minibatchPackingFlag(nullptr),
+            m_sentenceSeg(nullptr),
+            m_reqMultiSeqHandling(false),
+            m_nodeName(name == L"" ? CreateUniqNodeName() : name)
+        {
+            InitRecurrentNode();
+            // This constructor does not call MoveMatricesToDevice(), but that is needed for full initialization.
+            // Only call this constructor through the New() factory below, which will ensure this.
+        }
+    public:
+        // public constructor
+        // You must construct ComputationNode derivates with this function. The real C++ constructor itself is hidden,
+        // as we need to call a virtual function after construction. This function does that.
+        template<class C, class... _Types> static inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
+        {
+            auto p = make_shared<C>(deviceId, name, forward<_Types>(_Args)...);     // creates objects, esp. assigns deviceId to matrices, but otherwise does nothing
+            p->MoveMatricesToDevice(deviceId);                                      // this is a virtual call, i.e. it will handle extra matrices an object might own
+            return p;
         }
 
         virtual ~ComputationNode()
         {
 #ifdef DISPLAY_DEBUG
-            fprintf (stderr, "Called Destructor NodeName: %s\n",(msra::strfun::utf8 (NodeName())).c_str());
+            fprintf (stderr, "Called Destructor NodeName: %s\n", (msra::strfun::utf8 (NodeName())).c_str()), fflush(stderr);
 #endif
+        }
+
+        // TODO: make sure this does not get implemented in any of the base classes
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }    // TODO: remove, only used from copy constructor which will go away
+
+        // recover a ComputationNodePtr (which is a shared_ptr) from a naked pointer stored as a void* (old NDL parser does that)
+        static ComputationNodePtr FromVoidPtr(void * vp)
+        {
+            auto p = (ComputationNode<ElemType>*)vp;
+            return p->shared_from_this();
         }
 
         virtual const std::wstring OperationName() const = 0;
@@ -90,25 +153,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << OperationName() << NodeName();
         }
 
-        virtual void LoadFromFile(File& /*fstream*/, const size_t /*modelVersion*/, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/)
         {
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            // base class has nothing to load
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex) = 0;
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/) 
+        virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            NOT_IMPLEMENTED;
+            FrameRange fr;
+            ComputeInputPartial(inputIndex, fr);      // nodes that do not implement this will know to understand SIZE_MAX as full batch
         }
-        
-        virtual void EvaluateThisNode() = 0;
-        // evaluate only at time index timeIdxInSeq
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/) 
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) = 0;
+
+        virtual void EvaluateThisNode()
         {
-            NOT_IMPLEMENTED;
+            EvaluateThisNode(FrameRange());      // nodes that do not implement this will know to understand SIZE_MAX as full batch
         }
+        // evaluate only N frames at time index timeIdxInSeq
+        // Normally, N is 1 or it spans the entire minibatch.
+        virtual void EvaluateThisNode(const FrameRange &) = 0;
 
         void EvaluateThisNodeGivenInputs()
         {
@@ -128,6 +191,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void Validate() = 0;
         virtual bool UnitTest() { return true; }
+
+        virtual void AttachInputs(const std::vector<ComputationNodePtr>& inputs, size_t numExpected = SIZE_MAX)
+        {
+            if (numExpected != SIZE_MAX && numExpected != inputs.size())
+                RuntimeError(msra::strfun::strprintf("AttachInputs: unexpected number of arguments: %d, expected: %d", (int) inputs.size(), (int) numExpected));
+            m_children = inputs;
+        }
 
         virtual void AttachInputs(const ComputationNodePtr /*singleInput*/) 
         {
@@ -150,44 +220,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, 
-            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
+                                  const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
         {
             throw std::logic_error("This operation does not support five inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/,
-            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
+                                  const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
         {
             throw std::logic_error("This operation does not support six inputs.");
         }
 
-        virtual void AttachInputs(const std::vector<ComputationNodePtr>& /*inputs*/)
-        {
-            throw std::logic_error("This operation does not support variable-length inputs.");
-        }
+        virtual void DetachInputs() { m_children.clear(); }
 
-        virtual void DetachInputs()
-        {
-            m_children.resize(0);
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (m_functionValues.GetDeviceId() != deviceId)
-                {
-                    bool fEmpty = m_functionValues.GetNumElements() == 0;
-                    m_functionValues.TransferFromDeviceToDevice(m_functionValues.GetDeviceId(), deviceId,true, fEmpty);
-                }
-
-                if (m_gradientValues.GetDeviceId() != deviceId)
-                {
-                    bool fEmpty = m_gradientValues.GetNumElements() == 0;
-                    m_gradientValues.TransferFromDeviceToDevice(m_gradientValues.GetDeviceId(), deviceId,true, fEmpty);
-                }
-            }
-        }
+        // TODO: is this always just called with deviceId == m_deviceId?
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId);
 
         //making them virtual so that nodes that only copy values from it's children (e.g., dropout) can be efficient in evaluation
         virtual const Matrix<ElemType>& FunctionValues() const {return m_functionValues;}
@@ -199,22 +246,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // return true if the node's value should be computed in batch mode only, e.g., time-reverse node
         virtual bool RequireBatchMode() const { return false; }
 
-        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const
-        {
-            fstream << L"\n" + NodeName() + L"=" + OperationName();
-
-            if (!IsLeaf())
-            {
-                fstream << wstring(L"(");
-                for (size_t i=0; i<ChildrenSize(); i++)
-                {
-                    if (i > 0)
-                        fstream << wstring(L",");
-                    fstream << (Inputs(i) ? Inputs(i)->NodeName() : L"NULL");
-                }
-                fstream << wstring(L")");
-            }
-        }
+        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
 
         virtual void SetFunctionAndGradientSize(const int numSamples) 
         {
@@ -247,9 +279,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
             colPos.SetValue(sentenceBegin); /// -1 0 1
-            colPos.InplaceTruncateBottom(SENTENCE_BEGIN);
+            colPos.InplaceTruncateBottom(SEQUENCE_START);
             Matrix<ElemType>::Scale((ElemType)-1.0, colPos);
-            colPos += SENTENCE_MIDDLE;
+            colPos += SEQUENCE_MIDDLE;
             colSeg.SetDiagonalValue(colPos);
             Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
             ones.Resize(nStateRow, nStream);
@@ -291,7 +323,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         colSeg = m_sentenceSeg->ColumnSlice(j,1);
                         for (int i = 0; i < nS; i++)
                         {
-                            if (colSeg(i,0) == NO_LABELS)
+                            if ((int)colSeg(i,0) & NO_LABEL)
                             {
                                 matrixToBeMasked.ColumnSlice(utt_t+i, 1).SetValue(0);
                             }
@@ -303,6 +335,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             return processedExistsNoLabelorFeatureMissing;
         }
+
+        /*
+        virtual size_t GetNumSamplesWithLabel(const size_t numAllSamples)
+        {
+            if (m_sentenceSeg != nullptr &&
+                m_minibatchPackingFlag != nullptr &&
+                !m_sentenceSeg->IsEmpty() &&
+                !m_minibatchPackingFlag->size() == 0)
+            {
+                size_t numTimeSteps = m_sentenceSeg->GetNumCols();
+                size_t numSequences = m_sentenceSeg->GetNumRows();
+
+                if (m_minibatchPackingFlag->size() != numTimeSteps)
+                {
+                    LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlag should have one element for each timestep of all streams.Check feature reader. ");
+                }
+
+                size_t numSamplesWithoutLabel = 0;
+
+                for (size_t j = 0; j < numTimeSteps; j++)
+                {
+                    if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
+                    {
+                        for (int i = 0; i < numSequences; i++)
+                        {
+                            if ((int)(*m_sentenceSeg)(i, j) & NO_LABEL)
+                            {
+                                numSamplesWithoutLabel++;
+                            }
+                        }
+                    }
+                }
+
+                return numTimeSteps*numSequences - numSamplesWithoutLabel;
+            }
+            else
+            {
+                return numAllSamples;
+            }
+        }
+        */
 
         void SetLoopId(const int id)
         {
@@ -337,32 +410,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_indexInLoop = index;
         }
 
-		void clearCache()
-		{
-			m_loopId = -1;
-			m_visitedOrder = -1;
-			m_index = -1;
-			m_lowlink = -1;
-			m_indexInLoop = 0;
-			m_visited = false;
-			m_inStack = false;
-		}
-        size_t GetIndex()
+        void clearCache()
+        {
+            m_loopId = -1;
+            m_visitedOrder = -1;
+            m_index = -1;
+            m_lowlink = -1;
+            m_indexInLoop = 0;
+            m_visited = false;
+            m_inStack = false;
+        }
+
+        size_t GetIndex() const
         {
             return m_index;
         }
 
-        size_t GetVisitedOrder()
+        size_t GetVisitedOrder() const
         {
             return m_visitedOrder;
         }
 
-        size_t Getlowlink ()
+        size_t Getlowlink() const
         {
             return m_lowlink;
         }
 
-        size_t GetIndexInLoop()
+        size_t GetIndexInLoop() const
         {
             return m_indexInLoop;
         }
@@ -372,31 +446,59 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_nodeName;
         }
 
-        std::vector<ComputationNodePtr>	GetChildren() const
+        std::vector<ComputationNodePtr> GetChildren() const
         {
             return m_children;
         }
 
-        bool isVisisted()
+        // TODO: These 4 functions will be completed after refactoring.
+        //request matrices needed to do node function value evaluation
+        virtual void RequestEvalMatrices(MatrixPool<ElemType>& matrixPool)
+        {
+            matrixPool;
+        }
+
+        //release temp matrices that are only used by forward computation
+        //don't release matrices that need to be used in the gradient computation
+        virtual void ReleaseMatricesAfterEval(MatrixPool<ElemType>& matrixPool)
+        {
+            matrixPool;
+        }
+
+        //request matrices that are needed for gradient computation
+        virtual void RequestGradientMatrices(MatrixPool<ElemType>& matrixPool, const int numParents)
+        {
+            matrixPool; numParents;
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseGradientMatrices(MatrixPool<ElemType>& matrixPool)
+        {
+            matrixPool;
+        }
+
+
+        bool isVisisted() const
         {
             return m_visited;
         }
 
-        bool isInStack()
+        bool isInStack() const
         {
             return m_inStack;
         }
-        int LoopId()
+        int LoopId() const
         {
             return m_loopId;
         }
 
+        // TODO: these two should disappear, the information should be in FrameRange record instead
         void SetNbrSlicesInEachRecurrentIteration(size_t bsz)
         {
             m_samplesInRecurrentStep = bsz;
         }
 
-        size_t GetNbrSlicesInEachRecurrentIteration()
+        size_t GetNbrSlicesInEachRecurrentIteration() const
         {
             return m_samplesInRecurrentStep;
         }
@@ -452,15 +554,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetReqMultiSeqHandlingTo(const bool v) { m_reqMultiSeqHandling = v; }
         bool ReqMultiSeqHandling() const { return m_reqMultiSeqHandling; }
 
-        void InitRecurrentNode() 
+        void InitRecurrentNode()
         {
-            SetLoop(0);     // TODO: SetLoop() takes a bool, not an int?
+            SetLoop(false);
         }
 
-        bool HasLoop() const { return m_hasloop ; }
-        void SetLoop(const bool bl)
+        bool HasLoop() const { return m_hasloop; }
+        void SetLoop(bool hasLoop)
         {
-            m_hasloop = bl; 
+            m_hasloop = hasLoop;
         }
 
         virtual ComputationNodePtr FindChildInASet(const std::list<ComputationNodePtr>& loop) const
@@ -495,7 +597,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
 #ifdef DEBUG  // profile shows this is range check very expensive in release mode, skip it  
             if (childIndex >= m_children.size())
-                throw std::invalid_argument ("childIndex is out of range.");
+                InvalidArgument ("childIndex is out of range.");
 #endif
             return m_children[childIndex];
         }
@@ -504,7 +606,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
 #ifdef DEBUG // profile shows this is range check very expensive in release mode, skip it  
             if (childIndex >= m_children.size())
-                throw std::invalid_argument ("childIndex is out of range.");
+                InvalidArgument ("childIndex is out of range.");
 #endif
             return m_children[childIndex];
         }
@@ -556,7 +658,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         (msra::strfun::utf8 (child->NodeName())).c_str());
 #endif              
             }
-            
         }
 
         void ComputeGradientForChildren(const size_t timeIdxInSeq)
@@ -688,33 +789,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //  [1/13/2015 erw] add to enumerate all the edges 
-        void EnumerateArcs(std::unordered_set<ComputationNodePtr>& vistied, std::list<ComputationArc>& arcs)
+        void EnumerateArcs(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationArc>& arcs)
             //  enumerate arcs that can be reached starting from the current node's children
             //  [in/out] visited record already visited nodes 
         {
             std::list<ComputationNodePtr>	tovisit;
 
-            if (vistied.find(this) == vistied.end()) // only do when this node has not been visited before
+            if (visited.find(shared_from_this()) == visited.end()) // only do when this node has not been visited before
             {
-                tovisit.push_back(this);
+                tovisit.push_back(shared_from_this());
 
                 while (!tovisit.empty())
                 {
                     ComputationNodePtr curNode = tovisit.front();
                     tovisit.pop_front();
 
-                    if (vistied.find(curNode) == vistied.end())
+                    if (visited.find(curNode) == visited.end())
                     {
                         for (size_t i = 0; i < curNode->m_children.size(); i++)
                         {
                             arcs.push_back(ComputationArc(curNode, curNode->m_children[i]));
 
-                            if (vistied.find(curNode->m_children[i]) == vistied.end()) // this children has not been visited before 
+                            if (visited.find(curNode->m_children[i]) == visited.end()) // this children has not been visited before 
                             {
                                 tovisit.push_front(curNode->m_children[i]);		// going to visit each of the children
                             }
                         }
-                        vistied.insert(curNode);
+                        visited.insert(curNode);
                     }
                 }
             }
@@ -740,6 +841,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
+
         void InferImageDimsFromInput(const size_t index, const bool outputSameAsInput = true)
         {
             if (index >= ChildrenSize())
@@ -835,7 +937,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             UuidCreate(&uuid);
             WCHAR* szUuid = nullptr;
             if (UuidToStringW(&uuid, (RPC_WSTR*)&szUuid) != RPC_S_OK)
-                throw std::runtime_error("Failed to craete unique node name.");
+                RuntimeError("Failed to craete unique node name.");
             else
             {
               name = szUuid;
@@ -868,9 +970,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
         std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool isFromPastOrFutureValueNode) 
         {
-            if (visited.find(this) == visited.end())  //not visited
+            if (visited.find(shared_from_this()) == visited.end())  //not visited
             {   
-                visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
+                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 for (int i=0; i<m_children.size(); i++)
                 {
@@ -889,22 +991,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_needGradient = false;
                 }
                 
-                result.push_back(ComputationNodePtr(this));  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
+                result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
                 this->m_visitedOrder = result.size();
             }
             else
             {
                 if (!IsLeaf() && isFromPastOrFutureValueNode)
-                    sourceRecurrentNodePtr.push_back(this) ;
+                    sourceRecurrentNodePtr.push_back(shared_from_this()) ;
             }
         }
 
         void ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodePtr>& visited, std::map<int, std::list<ComputationNodePtr>>& recurrentResult, 
             std::list<ComputationNodePtr>& noRecurrentResult) 
         {
-            if (visited.find(this) == visited.end())  //not visited
+            if (visited.find(shared_from_this()) == visited.end())  //not visited
             {   
-                visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
+                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 for (int i=0; i<m_children.size(); i++)
                 {
@@ -922,20 +1024,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 
                 if (LoopId() >= 0)
                 {
-                    recurrentResult[LoopId()].push_back(ComputationNodePtr(this));
+                    recurrentResult[LoopId()].push_back(shared_from_this());
                 }
                 else
                 {
-                    noRecurrentResult.push_back(ComputationNodePtr(this));  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
+                    noRecurrentResult.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
                 }
             }
         }
 
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result) 
         {
-            if (visited.find(this) == visited.end())  //not visited
+            if (visited.find(shared_from_this()) == visited.end())  //not visited
             {   
-                visited.insert(this);   // have visited tagged here to avoid infinite loop over children, children's children, etc
+                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 for (int i=0; i<m_children.size(); i++)
                 {
@@ -951,7 +1053,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_needGradient = false;
                 }
                 
-                result.push_back(ComputationNodePtr(this));  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
+                result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
             }
         }
 
@@ -960,7 +1062,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr node, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             if (OperationName() != node->OperationName())
-                throw std::runtime_error("Cannot copy from one node type to another node type");
+                RuntimeError("Cannot copy from one node type to another node type");
             if (flags & CopyNodeFlags::copyNodeChildren)
             {
                 node->m_children = m_children;
@@ -989,17 +1091,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const = 0;
-
-        /// these are used to export hidden state activity
-        virtual bool GetHistory(Matrix<ElemType>& , bool )
+        // duplicate a node
+        ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags)
         {
-            return false;
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+            ComputationNodePtr node(NewThis(m_deviceId, name)); // NewThis() is a virtual function that creates a new node of the actual type of 'this'
+            node->CopyTo(shared_from_this(), newName, flags);   // note: shared_from_this() is the base class, but CopyTo() up-casts it as needed
+            return node;
         }
 
-        virtual void SetHistory(const Matrix<ElemType>& )
-        {
-        }
+        // these are used to export hidden state activations
+        virtual bool GetHistory(Matrix<ElemType>&, bool) { return false; }
+        virtual void SetHistory(const Matrix<ElemType>&) { }
 
         /// these two are used to pass gradients from future minibatch
         virtual void GetErrorsToPreviousMinibatch(Matrix<ElemType>&) {}
@@ -1046,36 +1149,70 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_hasloop; 
     };
 
-    // add this at the start of each derived class, to get access to the members of ComputationNode
+    // convenience wrapper for ComputationNode::New()
+    template<class C, class... _Types> inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
+    {
+        return ComputationNode<typename C::OurElemType>::template New<C>(deviceId, name, forward<_Types>(_Args)...);
+    }
+
+    // =======================================================================
+    // ComputationNodeNonLooping -- abstract base class for computation nodes that do not implement eval/partial for individual frames
+    // Such as CRFNode, LSTMNode, ParallelNode, SequenceDecoderNode, TimeReverseNode (BatchModeNode), and TransposeNode.
+    // =======================================================================
+
+    // This will provide default implementations for those two functions that will fail at runtime with a meaningful error.
+    template<typename ElemType>
+    class ComputationNodeNonLooping : public ComputationNode<ElemType>
+    {
+    public:
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        ComputationNodeNonLooping(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name)
+        { }
+
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &)
+        {
+            LogicError("%s node should never be in a loop.", typeid(*this).name());
+        }
+        virtual void EvaluateThisNode(const FrameRange &)
+        {
+            LogicError("%s node should never be in a loop.", typeid(*this).name());
+        }
+        // classes that derive from this must implement the non-range version
+        virtual void ComputeInputPartial(const size_t inputIndex) = 0;
+        virtual void EvaluateThisNode() = 0;
+    };
+
+    // add 'typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;' at the start of each derived class, to get access to the members of ComputationNode
     // BUGBUG: some should be protected, not public; TODO: comment here why this is needed and how to maintain it
+    // Whoever invented that insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain. [fseide]
 #define UsingComputationNodeMembers    \
-        typedef ComputationNode<ElemType> B; \
 protected:  \
-        typedef ComputationNode<ElemType>* ComputationNodePtr;  \
+    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  \
 public: \
-        using B::AttachInputs; using B::ChildrenNeedGradient; using B::ChildrenSize; using B::ClearGradientForChildren; \
-        using B::ComputeGradientForChildren; using B::ComputeInputPartial; using B::ConstOnes; using B::InferImageDimsFromInput; \
-        using B::InferImageDimsFromInputs; using B::CopyTo; using B::CreateUniqNodeName; using B::DetachInputs; \
-        using B::DumpNodeInfo; using B::Duplicate; using B::EnumerateNodes; using B::EnumerateNodesForEval; \
-        using B::EnumerateNodesForGradient; using B::EvaluateThisNode; using B::FindChildInASet; using B::FunctionValues; \
-        using B::GradientValues; using B::HasLoop; using B::InitRecurrentNode; using B::Inputs; \
-        using B::IsChildAnImage; using B::IsEqualTo; using B::IsFuncValueOlderThanInputs; using B::IsLeaf; using B::IsSmaller; \
-        using B::LoadFromFile; using B::MoveMatricesToDevice; using B::NeedGradient; using B::NodeName; \
-        using B::OperationName; using B::PrintNodeValuesToFile; using B::PrintSelf; using B::PrintSelfBeforeValidation; \
-        using B::RequirePreCompute; using B::ReshuffleNodes; using B::ReshuffleNodesForEvalWithRecurrentLoops; \
-        using B::SaveToFile; using B::SetFunctionAndGradientSize; using B::SetInput; using B::Validate; \
+    using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; \
+    using Base::ComputeGradientForChildren; using Base::ComputeInputPartial; using Base::ConstOnes; using Base::InferImageDimsFromInput; \
+    using Base::InferImageDimsFromInputs; using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
+    using Base::DumpNodeInfo; using Base::EnumerateNodes; using Base::EnumerateNodesForEval; \
+    using Base::EnumerateNodesForGradient; using Base::EvaluateThisNode; using Base::FindChildInASet; using Base::FunctionValues; \
+    using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
+    using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
+    using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
+    using Base::OperationName; using Base::PrintNodeValuesToFile; using Base::PrintSelf; using Base::PrintSelfBeforeValidation; \
+    using Base::RequirePreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
+    using Base::SaveToFile; using Base::SetFunctionAndGradientSize; using Base::SetInput; using Base::Validate; \
 protected:  \
-        using B::m_loopId; using B::m_samplesInRecurrentStep; \
-        using B::m_visitedOrder; using B::m_index; using B::m_lowlink; using B::m_visited; using B::m_inStack; \
-        using B::m_indexInLoop;  \
-        using B::m_sentenceSeg; using B::m_minibatchPackingFlag; \
-        using B::m_reqMultiSeqHandling; using B::UseCustomizedMultiSeqHandling; \
-        using B::m_children; using B::m_deviceId; using B::m_evalTimeStamp; using B::m_functionValues; using B::m_gradientValues; \
-        using B::m_inputChannels; using B::m_inputHeight; using B::m_inputWidth; using B::m_needGradient; using B::m_nodeName; \
-        using B::m_outputChannels; using B::m_outputHeight; using B::m_outputWidth; using B::s_constOnes; using B::s_timeStampCounter
+    using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
+    using Base::m_visitedOrder; using Base::m_index; using Base::m_lowlink; using Base::m_visited; using Base::m_inStack; \
+    using Base::m_indexInLoop; \
+    using Base::m_sentenceSeg; using Base::m_minibatchPackingFlag; \
+    using Base::m_reqMultiSeqHandling; using Base::UseCustomizedMultiSeqHandling; \
+    using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
+    using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
+    using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; using Base::s_timeStampCounter; \
+    using Base::shared_from_this; \
+public:
 
 #pragma endregion base computation class
-
-
 
 }}}

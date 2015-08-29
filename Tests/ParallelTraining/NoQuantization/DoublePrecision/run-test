@@ -1,0 +1,41 @@
+#!/bin/bash
+if [ "$TEST_DEVICE" == "cpu" ]; then
+  CNTK_DEVICE_ID=-1
+elif [ "$TEST_DEVICE" == "gpu" ]; then
+  CNTK_DEVICE_ID=0
+else
+  echo "Error: Unknown TEST_DEVICE specified!"
+  exit 3
+fi
+
+configFile=$TEST_DIR/../../SimpleMultiGPU.config
+RunDir=$TEST_RUN_DIR
+DataDir=$TEST_DATA_DIR
+
+if [ "$OS" == "Windows_NT" ]; then
+  # When running on cygwin translating /cygdrive/xxx paths to proper windows paths:
+  configFile=$(cygpath -aw $configFile)
+  RunDir=$(cygpath -aw $RunDir)
+  DataDir=$(cygpath -aw $DataDir)
+fi
+
+# Since we use the MS MPI program on Windows, the CNTK binary path argument
+# passed to mpiexec must be in the windows format
+CNTKBinaryPath=$TEST_CNTK_BINARY
+if [ "$OS" == "Windows_NT" ]; then
+  CNTKBinaryPath=$(cygpath -aw $CNTKBinaryPath)
+fi
+
+MPI_ARGS="-n 4"
+CNTK_ARGS="configFile=$configFile RunDir=$RunDir DataDir=$DataDir DeviceId=$CNTK_DEVICE_ID stderr=$RunDir/stderr precision=double SimpleMultiGPU=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=64]]]]"
+MODELS_DIR=$TEST_RUN_DIR/models
+[ -d $MODELS_DIR ] && rm -rf $MODELS_DIR
+mkdir -p $MODELS_DIR || exit $?
+echo === Running "$MPI_BINARY" $MPI_ARGS $CNTKBinaryPath $CNTK_ARGS
+"$MPI_BINARY" $MPI_ARGS $CNTKBinaryPath $CNTK_ARGS
+ExitCode=$?
+sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/stderr_SimpleMultiGPU.logrank0
+sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/stderr_SimpleMultiGPU.logrank1
+sed 's/^/MPI Rank 2: /' $TEST_RUN_DIR/stderr_SimpleMultiGPU.logrank2
+sed 's/^/MPI Rank 3: /' $TEST_RUN_DIR/stderr_SimpleMultiGPU.logrank3
+exit $ExitCode

@@ -192,7 +192,7 @@ private:
 
     NDLNode& operator=(NDLNode& /*copyMe*/)  //this is just a place holder implementation which is not functioning but prevent callers to use it.
     {            
-        throw std::logic_error("'NDLNode& operator=(NDLNode& copyMe)' should never be called.");
+        LogicError("'NDLNode& operator=(NDLNode& copyMe)' should never be called.");
     } 
 
     // generate a generic symbol name for a node
@@ -238,8 +238,8 @@ public:
     }
     
     // Get/Set eval values
-    void* GetEvalValue() const { return m_eval;}
-    void SetEvalValue(void* evalValue) {m_eval = evalValue;}
+    void* GetEvalValue() const { return m_eval; }
+    void SetEvalValue(void* evalValue) { m_eval = evalValue; }
 
     // GetOptionalParameter - Get an optional parameter value
     // name - the name to search for in the optional parameters

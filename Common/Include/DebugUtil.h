@@ -28,7 +28,6 @@ private:
 
 public:
     static void PrintCallStack();
-    static int PrintStructuredExceptionInfo(unsigned int code, struct _EXCEPTION_POINTERS *ep);
 };
 
 }}}

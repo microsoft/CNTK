@@ -25,6 +25,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef BaseMatrix<ElemType> B; using B::m_elemSizeAllocated; using B::m_computeDevice; using B::m_externalBuffer; using B::m_format; using B::m_matrixName;
         using B::m_numCols; using B::m_numRows; using B::m_nz; using B::m_pArray;    // without this, base members would require to use thi-> in GCC
+        using B::Clear;
+    public:
+        using B::SetMatrixName;
 
     private:
         void ZeroInit();

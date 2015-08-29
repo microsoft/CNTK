@@ -50,14 +50,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\CNTK;..\..\common\include;..\..\math\math;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(CUDA_PATH)\lib\$(Platform);$(SolutionDir)$(Platform)\;$(Configuration);$(SolutionDir)..\Common\lib;$(SolutionDir)..\CNTK\Common\lib;$(Configuration)\;$(SolutionDir)..\..\cntk\Common\lib;$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\;$(Platform)</LibraryPath>
+    <IncludePath>C:\Program Files (x86)\Microsoft SDKs\MPI\Include;..\CNTK;..\..\common\include;..\..\math\math;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(CUDA_PATH)\lib\$(Platform);$(SolutionDir)$(Platform)\;$(Configuration);$(SolutionDir)..\Common\lib;$(SolutionDir)..\CNTK\Common\lib;$(Configuration)\;$(SolutionDir)..\..\cntk\Common\lib;$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\;$(Platform)</LibraryPath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\CNTK;..\..\common\include;..\..\math\math;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(CUDA_PATH)\lib\$(Platform);$(SolutionDir)$(Platform)\;$(Configuration);$(SolutionDir)..\Common\lib;$(SolutionDir)..\CNTK\Common\lib;$(Configuration)\;$(SolutionDir)..\..\cntk\Common\lib;$(Configuration)\;$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <IncludePath>C:\Program Files (x86)\Microsoft SDKs\MPI\Include;..\CNTK;..\..\common\include;..\..\math\math;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
+    <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(CUDA_PATH)\lib\$(Platform);$(SolutionDir)$(Platform)\;$(Configuration);$(SolutionDir)..\Common\lib;$(SolutionDir)..\CNTK\Common\lib;$(Configuration)\;$(SolutionDir)..\..\cntk\Common\lib;$(Configuration)\;$(VCInstallDir)lib\amd64;$(VCInstallDir)atlmfc\lib\amd64;$(WindowsSDK_LibraryPath_x64)</LibraryPath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

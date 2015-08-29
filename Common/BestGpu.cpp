@@ -11,7 +11,7 @@
 
 // From the SDK documentation:
 // "The NVML library can be found at: %ProgramW6432%\"NVIDIA Corporation"\NVSMI\ on Windows, but will not be added to the path. To dynamically link to NVML, add this path to the PATH environmental variable. To dynamically load NVML, call LoadLibrary with this path."
-// "On Linux the NVML library will be found on the standard library path. For 64-bit Linux, both the 32-bit and 64-bit NVML libraries will be installed.
+// "On Linux the NVML library will be found on the standard library path. For 64-bit Linux, both the 32-bit and 64-bit NVML libraries will be installed."
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 #include "Platform.h"
@@ -40,16 +40,13 @@
 #define PATH_DELIMITER '/'
 #endif//__WINDOWS__
 #include <stdio.h>
+#include <string.h>
 
-#ifdef MPI_SUPPORT
-#include "mpi.h"
-#endif
 #include <memory>
-
 #include "CrossProcessMutex.h"
+#include "../../MachineLearning/CNTK/MPIWrapper.h"
+extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
-extern int mpiRank;
-extern int mpiNumProcesses;
 
 // ---------------------------------------------------------------------------
 // BestGpu class
@@ -154,39 +151,8 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 
     if (!_stricmp(val.c_str(), "Auto"))
     {
-#ifdef MPI_SUPPORT
-        // make sure deviceId is unique among processes on the same machine
-        g_bestGpu->AllowAll();
-        std::string MyName(getenv("COMPUTERNAME"));
-        for (int i = 0; i < mpiNumProcesses; i++)
-        {
-            DEVICEID_TYPE yourDeviceId = deviceId;
-            if (mpiRank == i)
-            {
-                std::vector<int> devices = g_bestGpu->GetDevices(1);
-                deviceId = yourDeviceId = (DEVICEID_TYPE)devices[0];
-            }
-            MPI_Bcast(&yourDeviceId, 1, MPI_INT, i, MPI_COMM_WORLD);
-            {
-                INT32 YourSize = (INT32)MyName.length();
-                MPI_Bcast(&YourSize,1,MPI_INT,i,MPI_COMM_WORLD);
-                vector<char> YourName(YourSize+1);
-                if (mpiRank == i)
-                    copy(MyName.begin(), MyName.end(), YourName.begin());
-                MPI_Bcast(YourName.data(), YourSize + 1, MPI_CHAR, i, MPI_COMM_WORLD);
-                if (mpiRank != i)
-                {
-                    if (!_strcmpi(MyName.data(), YourName.data()))
-                    {
-                        g_bestGpu->DisallowDevice(yourDeviceId);
-                    }
-                }
-            }
-        }
-#else
         deviceId = (DEVICEID_TYPE)
             g_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
-#endif
     }
     else if (!_stricmp(val.c_str(), "All"))
     {

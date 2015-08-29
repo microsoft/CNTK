@@ -41,55 +41,49 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ConvolutionNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        ConvolutionNode(const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, 
-                        const size_t horizontalSubsample, const size_t verticalSubsample, 
-                        const bool zeroPadding = false, 
-                        const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"",
-                        const size_t maxTempMemSizeInSamples = 0)
-                        : ComputationNode<ElemType>(deviceId), m_tempMatrix(deviceId),
-                          m_kernelWidth(kernelWidth), m_kernelHeight(kernelHeight), 
-                          m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample),
-                          m_zeroPadding(zeroPadding), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_tempMatrix(deviceId),
+            m_kernelWidth(SIZE_MAX), m_kernelHeight(SIZE_MAX),
+            // initialize to dummy values so we catch missing initialization
+            m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX),
+            m_zeroPadding(false), m_maxTempMemSizeInSamples(SIZE_MAX)
+        {
+            m_outputChannels = 0;
+        }
+        ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_tempMatrix(deviceId),
+            m_kernelWidth(kernelWidth), m_kernelHeight(kernelHeight),
+            m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample),
+            m_zeroPadding(zeroPadding), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
         {
             m_outputChannels = outputChannels;
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
         }
 
-        ConvolutionNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
-            : ComputationNode<ElemType>(deviceId), m_tempMatrix(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-                
         virtual void SaveToFile(File& fstream) const
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
-
+            Base::SaveToFile(fstream);
             fstream <<  m_kernelWidth << m_kernelHeight << m_horizontalSubsample << m_verticalSubsample; 
             fstream << m_outputChannels << m_zeroPadding << m_maxTempMemSizeInSamples; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
-            fstream >>  m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample; 
+            Base::LoadFromFile(fstream, modelVersion);
+            fstream >> m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample; 
             fstream >> m_outputChannels >> m_zeroPadding >> m_maxTempMemSizeInSamples; 
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            ConvolutionNode<ElemType>* node = (ConvolutionNode<ElemType>*) nodeP;
-
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<ConvolutionNode<ElemType>>(nodeP);
                 node->m_kernelWidth = m_kernelWidth;
                 node->m_kernelHeight = m_kernelHeight;
 
@@ -102,21 +96,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 node->m_tempMatrix = m_tempMatrix;
             }
-        }
-
-        // copy constructor
-        ConvolutionNode(const ConvolutionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : ComputationNode<ElemType>(node->m_deviceId), m_tempMatrix(node->m_deviceId)
-        {
-            node->CopyTo(this, newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = new ConvolutionNode<ElemType>(this, name, flags);
-            return node;
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -160,13 +139,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) 
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) 
         {
             if (inputIndex > 1)
                 throw std::invalid_argument("Convolution operation only takes two inputs.");
 
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             if (inputIndex == 0)  //derivative with regard to the weight matrix
             {
@@ -174,7 +153,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else  // derivative with regard to the input feature
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
                 ComputeInputPartialOverInputFeature(this, sliceOutputGrad, sliceInput1Grad, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
             }
         }
@@ -184,10 +163,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(this, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_tempMatrix);
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) 
         {
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(this, sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
         }
@@ -261,7 +240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputChannels;
 
-            if (Inputs(0)->OperationName() == LearnableParameter<ElemType>::TypeName() && Inputs(0)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->OperationName() == LearnableParameter<ElemType>::TypeName() && Inputs(0)->FunctionValues().HasNoElements())
             {
                 Inputs(0)->FunctionValues().Resize(m_outputChannels, weightCols);
             }
@@ -286,7 +265,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error(msg.c_str());            
             }
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0 )
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements() )
                 throw std::logic_error("Convolution operation: one of the operants has 0 element.");
             
             size_t outputDim = m_outputWidth * m_outputHeight * m_outputChannels;
@@ -323,18 +302,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (m_tempMatrix.GetDeviceId() != deviceId)
-                    m_tempMatrix.TransferFromDeviceToDevice(m_tempMatrix.GetDeviceId(), deviceId);
-            }
+            Base::MoveMatricesToDevice(deviceId);
+            m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+            Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
             sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
@@ -474,47 +448,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MaxPoolingNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        MaxPoolingNode( const size_t windowWidth, const size_t windowHeight, 
-                        const size_t horizontalSubsample, const size_t verticalSubsample, 
-                        const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId),
-                          m_windowWidth(windowWidth), m_windowHeight(windowHeight),
-                          m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)                       
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
-        }
-                
-        MaxPoolingNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-                
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_windowWidth(SIZE_MAX), m_windowHeight(SIZE_MAX),
+            m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX)
+        { }
+        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_windowWidth(windowWidth), m_windowHeight(windowHeight),
+            m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
+        { }
+
         virtual void SaveToFile(File& fstream) const
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
-
+            Base::SaveToFile(fstream);
             fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+            Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample; 
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            MaxPoolingNode<ElemType>* node = (MaxPoolingNode<ElemType>*) nodeP;
-
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<MaxPoolingNode<ElemType>>(nodeP);
                 node->m_inputWidth = m_inputWidth;
                 node->m_inputHeight = m_inputHeight;
                 node->m_inputChannels = m_inputChannels;
@@ -532,19 +497,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_inputSizePerSample = m_inputSizePerSample;
                 node->m_outputSizePerSample = m_outputSizePerSample;
             }
-        }
-        // copy constructor
-        MaxPoolingNode(const MaxPoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
-        {
-            node->CopyTo(this, newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = new MaxPoolingNode<ElemType>(this, name, flags);
-            return node;
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -580,16 +532,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(this, GradientValues(), Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), FunctionValues());
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) 
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) 
         {
             if (inputIndex > 0)
                 throw std::invalid_argument("MaxPooling operation only takes one inputs.");
 
-            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             ComputeInputPartialS(this, sliceOutputGrad, sliceInput0Grad, sliceInput0Value, sliceOutputValue);
         }
@@ -615,10 +567,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) 
         {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(this, sliceOutputValue, sliceInput0Value);
         }
@@ -659,7 +611,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error(msg.c_str());            
             }
             
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements())
                 throw std::logic_error("MaxPoolingNode operation: the input node has 0 element.");
 
             m_functionValues.Resize(m_outputSizePerSample, m_children[0]->FunctionValues().GetNumCols());
@@ -685,7 +637,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+            Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
             sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
@@ -712,47 +664,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class AveragePoolingNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        AveragePoolingNode(const size_t windowWidth, const size_t windowHeight, 
-                        const size_t horizontalSubsample, const size_t verticalSubsample, 
-                        const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId),
-                          m_windowWidth(windowWidth), m_windowHeight(windowHeight),
-                          m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)                     
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
-        }
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_windowWidth(SIZE_MAX), m_windowHeight(SIZE_MAX),
+            m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX)
+        { }
+        AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_windowWidth(windowWidth), m_windowHeight(windowHeight),
+            m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
+        { }
 
-        AveragePoolingNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }                
-                
         virtual void SaveToFile(File& fstream) const
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
-
+            Base::SaveToFile(fstream);
             fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample; 
         }
 
-        virtual void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+            Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample; 
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            AveragePoolingNode<ElemType>* node = (AveragePoolingNode<ElemType>*) nodeP;
-
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<AveragePoolingNode<ElemType>>(nodeP);
                 node->m_inputWidth = m_inputWidth;
                 node->m_inputHeight = m_inputHeight;
                 node->m_inputChannels = m_inputChannels;
@@ -770,20 +713,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_inputSizePerSample = m_inputSizePerSample;
                 node->m_outputSizePerSample = m_outputSizePerSample;
             }
-        }
-
-        // copy constructor
-        AveragePoolingNode(const AveragePoolingNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) : ComputationNode<ElemType>(node->m_deviceId)
-        {
-            node->CopyTo(this, newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = new AveragePoolingNode<ElemType>(this, name, flags);
-            return node;
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -818,13 +747,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(this, GradientValues(), Inputs(0)->GradientValues());
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq) 
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) 
         {
             if (inputIndex > 0)
                 throw std::invalid_argument("AveragePooling operation only takes one inputs.");
 
-            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             ComputeInputPartialS(this, sliceOutputGrad, sliceInput0Grad);
         }
 
@@ -849,10 +778,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq) 
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) 
         {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(timeIdxInSeq * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(this, sliceOutputValue, sliceInput0Value);
         }
@@ -894,7 +823,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error(msg.c_str());            
             }
                         
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements())
                 throw std::logic_error("AveragePoolingNode operation: the input node has 0 element.");
 
             FunctionValues().Resize(m_outputSizePerSample, m_children[0]->FunctionValues().GetNumCols());
@@ -920,7 +849,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
+            Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
             sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
