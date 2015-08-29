@@ -66,88 +66,93 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
     struct MustFinalizeInit { virtual void FinalizeInit() = 0; };   // derive from this to indicate ComputationNetwork should call FinalizeIitlate initialization
 
     template<typename ElemType>
-    shared_ptr<ComputationNetwork<ElemType>> /*ComputationNetworkPtr*/ CreateNetwork(const wstring & sourceCode, DEVICEID_TYPE deviceId, const wchar_t * precision)
+    struct DualPrecisionHelpers
     {
-        // we pass deviceId and precision in as dictionary entries, which the constructor below will pull out again
-        let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros
-                                     + wstrprintf(L"deviceId = %d ; precision = '%s' ; network = new ExperimentalComputationNetwork", (int)deviceId, precision)
-                                     + sourceCode);
-        let network = dynamic_pointer_cast<ComputationNetwork<ElemType>>(EvaluateField(expr, L"network"));
-        return network;
-    }
+        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
-    // initialize a ComputationNetwork<ElemType> from a ConfigRecord
-    template<typename ElemType>
-    shared_ptr<ComputationNetwork<ElemType>> CreateComputationNetwork(const ConfigRecordPtr configp)
-    {
-        let & config = *configp;
-
-        DEVICEID_TYPE deviceId = -1; // (DEVICEID_TYPE)(int)config[L"deviceId"];
-        auto net = make_shared<ComputationNetwork<ElemType>>(deviceId);
-
-        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;   // this is only needed in this experimental setup; will go away once this function becomes part of ComputationNetwork itself
-        auto & m_nameToNodeMap = net->GetNameToNodeMap();
-
-        deque<ComputationNodePtr> workList;
-        // flatten the set of all nodes
-        // we collect all ComputationNodes from the config; that's it
-        for (let & id : config.GetMemberIds())
+        // basic function template, for classes that can instantiate themselves from IConfigRecordPtr
+        // TODO: do we even have any?
+        template<class C>
+        static shared_ptr<Object> MakeRuntimeObject(const IConfigRecordPtr config)
         {
-            let & value = config[id];
-            if (value.Is<ComputationNode<ElemType>>())
-                workList.push_back((ComputationNodePtr)value);
+            return make_shared<C>(config);
         }
-        // process work list
-        // Also call FinalizeInit where we must.
-        set<ComputationNodePtr> inputs;     // all input nodes
-        set<ComputationNodePtr> outputs;    // all output nodes
-        set<ComputationNodePtr> parameters; // all parameter nodes
-        set<ComputationNodePtr> allChildren;    // all nodes that are children of others (those that are not are output nodes)
-        while (!workList.empty())
+
+        // -------------------------------------------------------------------
+        // ComputationNetwork
+        // -------------------------------------------------------------------
+
+        // initialize a ComputationNetwork<ElemType> from a ConfigRecord
+        template<>
+        static shared_ptr<Object> MakeRuntimeObject<ComputationNetwork<ElemType>>(const IConfigRecordPtr configp)
         {
-            let n = workList.front();
-            workList.pop_front();
-            // add to set
-            let res = m_nameToNodeMap.insert(make_pair(n->NodeName(), n));
-            if (!res.second)        // not inserted: we already got this one
-            if (res.first->second != n)
-                LogicError("NDLComputationNetwork: multiple nodes with the same NodeName()");
-            else
-                continue;
-            // If node derives from MustFinalizeInit() then it has unresolved ConfigValuePtrs. Resolve them now.
-            // This may generate a whole new load of nodes, including nodes which in turn have late init.
-            // TODO: think this through whether it may generate delays nevertheless
-            let mustFinalizeInit = dynamic_pointer_cast<MustFinalizeInit>(n);
-            if (mustFinalizeInit)
-                mustFinalizeInit->FinalizeInit();
-            // TODO: ...can we do stuff like propagating dimensions here? Or still too early?
-            // get children
-            // traverse children (i.e., append them to the work list)
-            let children = n->GetChildren();
-            for (auto c : children)
+            let & config = *configp;
+
+            DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
+            auto net = make_shared<ComputationNetwork<ElemType>>(deviceId);
+
+            auto & m_nameToNodeMap = net->GetNameToNodeMap();
+
+            deque<ComputationNodePtr> workList;
+            // flatten the set of all nodes
+            // we collect all root ComputationNodes from the config record, and then expand into all their children by work-list processing
+            for (let & id : config.GetMemberIds())
             {
-                workList.push_back(c);  // (we could check whether c is in 'nodes' here to optimize, but this way it is cleaner)
-                allChildren.insert(c);  // also keep track of all children, for computing the 'outputs' set below
+                let & value = config[id];
+                if (value.Is<ComputationNode<ElemType>>())
+                    workList.push_back((ComputationNodePtr)value);
             }
-        }
-        // build sets of special nodes
-        for (auto iter : m_nameToNodeMap)
-        {
-            let n = iter.second;
-            //if (n->GetChildren().empty())
+            // process work list
+            // Also call FinalizeInit where we must.
+            set<ComputationNodePtr> inputs;         // all input nodes
+            set<ComputationNodePtr> outputs;        // all output nodes
+            set<ComputationNodePtr> parameters;     // all parameter nodes
+            set<ComputationNodePtr> allChildren;    // all nodes that are children of others (those that are not are output nodes)
+            while (!workList.empty())
+            {
+                let n = workList.front();
+                workList.pop_front();
+                // add to set
+                let res = m_nameToNodeMap.insert(make_pair(n->NodeName(), n));
+                if (!res.second)        // not inserted: we already got this one
+                    if (res.first->second == n)
+                        continue;       // the same
+                    else                // oops, a different node with the same name
+                        LogicError("NDLComputationNetwork: multiple nodes with the same NodeName()");
+                // If node derives from MustFinalizeInit() then it has unresolved inputs. Resolve them now.
+                // This may generate a whole new load of nodes, including nodes which in turn have late init.
+                // TODO: think this through whether it may generate circular references nevertheless
+                let mustFinalizeInit = dynamic_pointer_cast<MustFinalizeInit>(n);
+                if (mustFinalizeInit)
+                    mustFinalizeInit->FinalizeInit();
+                // TODO: ...can we do stuff like propagating dimensions here? Or still too early?
+                // traverse children: append them to the end of the work list
+                let children = n->GetChildren();
+                for (auto c : children)
+                {
+                    workList.push_back(c);  // (we could check whether c is in 'nodes' here to optimize, but this way it is cleaner)
+                    allChildren.insert(c);  // also keep track of all children, for computing the 'outputs' set below
+                }
+            }
+            // build sets of special nodes
+            // TODO: figure out the rule. This is somehow based on the tags.
+            for (auto iter : m_nameToNodeMap)
+            {
+                let n = iter.second;
+                //if (n->GetChildren().empty())
+                //{
+                //    if (dynamic_pointer_cast<InputValue>(n))
+                //        inputs.insert(n);
+                //    else if (dynamic_pointer_cast<LearnableParameter>(n))
+                //        parameters.insert(n);
+                //    else
+                //        LogicError("ComputationNetwork: found child-less node that is neither InputValue nor LearnableParameter");
+                //}
+                if (allChildren.find(n) == allChildren.end())
+                    outputs.insert(n);
+            }
+            ///*HasToString::*/ wstring ToString() const
             //{
-            //    if (dynamic_pointer_cast<InputValue>(n))
-            //        inputs.insert(n);
-            //    else if (dynamic_pointer_cast<LearnableParameter>(n))
-            //        parameters.insert(n);
-            //    else
-            //        LogicError("ComputationNetwork: found child-less node that is neither InputValue nor LearnableParameter");
-            //}
-            if (allChildren.find(n) == allChildren.end())
-                outputs.insert(n);
-        }
-        ///*HasToString::*/ wstring ToString() const
-        //{
             wstring args;
             bool first = true;
             for (auto & iter : m_nameToNodeMap)
@@ -161,68 +166,80 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
             }
             fprintf(stderr, "ExperimentalComputationNetwork = [\n%ls\n]\n", NestString(args, L'[', true, ']').c_str());
             //return L"NDLComputationNetwork " + NestString(args, L'[', true, ']');
-        //}
-        return net;
-    }
+            //}
+            return net;
+        }
 
-    // create a ComputationNetwork<ElemType> from a config--this implements "new ExperimentalComputationNetwork [ ... ]" in the added config snippet above
-    shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecordPtr configp)
-    {
-        let config = *configp;
-        wstring precision = config[L"precision"];   // TODO: we need to look those up while traversing upwards
-        if (precision == L"float")
-            return CreateComputationNetwork<float>(configp);
-        else if (precision == L"double")
-            return CreateComputationNetwork<double>(configp);
-        else
-            LogicError("MakeExperimentalComputationNetwork: precision must be 'float' or 'double'");
-    }
+        // -------------------------------------------------------------------
+        // ComputationNode -- covers all standard nodes
+        // -------------------------------------------------------------------
 
-    // initialize a ComputationNetwork<ElemType> from a ConfigRecord
-    template<typename ElemType>
-    shared_ptr<ComputationNode<ElemType>> CreateComputationNode(const IConfigRecordPtr configp)
-    {
-        let & config = *configp;
-        DEVICEID_TYPE deviceId = -1;// (DEVICEID_TYPE)(int)config[L"deviceId"];
-        wstring classId = config[L"class"];
-        auto node = New<TimesNode<ElemType>>(deviceId, L""/*name*/);
-        config;
-        return node;
-    }
+    private:
+        // helper for the factory function for ComputationNodes
+        static vector<ComputationNodePtr> GetInputs(const IConfigRecord & config)
+        {
+            vector<ComputationNodePtr> inputs;
+            let inputsArg = config[L"inputs"];
+            if (inputsArg.Is<ComputationNode<ElemType>>())          // single arg
+                inputs.push_back(inputsArg);
+            else                                                    // a whole vector
+            {
+                let inputsArray = (ConfigArrayPtr)inputsArg;
+                let range = inputsArray->GetIndexRange();
+                for (int i = range.first; i <= range.second; i++)   // pull them. This will resolve all of them.
+                    inputs.push_back(inputsArray->At(i, inputsArg.GetLocation()));
+            }
+            return inputs;
+        }
+    public:
+        // create ComputationNode
+        template<>
+        static shared_ptr<Object> MakeRuntimeObject<ComputationNode<ElemType>>(const IConfigRecordPtr configp)
+        {
+            let & config = *configp;
+            wstring nodeType = config[L"class"];
+            let inputs = GetInputs(config);
+            DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
+            auto node = ComputationNetwork<ElemType>::NewStandardNode(nodeType, deviceId, L"placeholder");   // name will be overwritten by caller upon return (TODO: fix this here? pass expression name in?)
+            node->AttachInputs(inputs); // TODO: where to check the number of inputs?
+            return node;
+        }
 
-    // create a ComputationNetwork<ElemType> from a config--this implements "new ExperimentalComputationNetwork [ ... ]" in the added config snippet above
-    shared_ptr<Object> MakeExperimentalComputationNode(const IConfigRecordPtr configp)
-    {
-        wstring precision = L"float"; // config[L"precision"];   // TODO: we need to look those up while traversing upwards
-        if (precision == L"float")
-            return CreateComputationNode<float>(configp);
-        else if (precision == L"double")
-            return CreateComputationNode<double>(configp);
-        else
-            LogicError("MakeExperimentalComputationNetwork: precision must be 'float' or 'double'");
-    }
+        // -------------------------------------------------------------------
+        // ... more specialized node types that have extra constructor parameters
+        // -------------------------------------------------------------------
 
-    //// create ComputationNode
-    //template<>
-    //shared_ptr<ComputationNode<float>> MakeRuntimeObject<ComputationNode<float>>(const IConfigRecordPtr config)
-    //{
-    //}
+        // fragment from original NDL--optional params are evaluated afterwards, such as initvalue
+        // node->EvaluateMacro(nodeEval, baseName, pass);
+        // nodeEval.ProcessOptionalParameters(node);
+    };
 
-    template<class C>
-    static ConfigurableRuntimeType MakeRuntimeTypeConstructors()
+    // creates the lambda for creating an object that can exist as 'float' or 'double'
+    // Pass both types as the two template args.
+    template<class Cfloat, class Cdouble>
+    static ConfigurableRuntimeType MakeRuntimeTypeConstructorDualPrecision()
     {
         ConfigurableRuntimeType rtInfo;
-        rtInfo.construct = [](const IConfigRecordPtr config) // lambda to construct
+        rtInfo.construct = [](const IConfigRecordPtr config)    // lambda to construct--this lambda can construct both the <float> and the <double> variant based on config parameter 'precision'
         {
-            return nullptr;// MakeRuntimeObject<C>(config);
+            wstring precision = (*config)[L"precision"];           // dispatch on ElemType
+            if (precision == L"float")
+                return DualPrecisionHelpers<float>::MakeRuntimeObject<Cfloat>(config);
+            else if (precision == L"double")
+                return DualPrecisionHelpers<double>::MakeRuntimeObject<Cdouble>(config);
+            else
+                RuntimeError("invalid value for 'precision', must be 'float' or 'double'");
         };
-        rtInfo.IsConfigRecord = is_base_of<IConfigRecord, C>::value;
+        rtInfo.isConfigRecord = is_base_of<IConfigRecord, Cfloat>::value;
+        static_assert(is_base_of<IConfigRecord, Cfloat>::value == is_base_of<IConfigRecord, Cdouble>::value, "");   // we assume that both float and double have the same behavior
         return rtInfo;
     }
 
-#define DefineRuntimeType(T) { L#T L"<float>", MakeRuntimeTypeConstructors<T<float>>() }, { L#T L"<double>", MakeRuntimeTypeConstructors<T<double>>() }
+    //#define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructors<T>() } }
+#define DefineRuntimeTypeDualPrecision(T) { L#T, MakeRuntimeTypeConstructorDualPrecision<T<float>,T<double>>() }
 
     // get information about configurable runtime types
+    // This returns a ConfigurableRuntimeType structure which primarily contains a lambda to construct a runtime object from a ConfigRecord ('new' expression).
     const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring & typeId)
     {
         // lookup table for "new" expression
@@ -230,14 +247,11 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
         static map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes =
         {
             // ComputationNodes
-            DefineRuntimeType(ComputationNode),
+            DefineRuntimeTypeDualPrecision(ComputationNode),
 #if 0
             DefineRuntimeType(RecurrentComputationNode),
-            // other relevant classes
-            DefineRuntimeType(NDLComputationNetwork),           // currently our fake
-            // glue to experimental integration
-            //{ L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() },
-            //{ L"ComputationNode", MakeExperimentalComputationNodeConstructor() },
+            // In this experimental state, we only have Node and Network.
+            // Once BrainScript becomes the driver of everything, we will add other objects like Readers, Optimizers, and Actions here.
 #endif
         };
 
@@ -252,20 +266,34 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // sorry for code dup--this will be made nicer when this gets fully integrated
-    /*virtual*/ /*IComputationNetBuilder::*/ComputationNetwork<float>* ExperimentalNetworkBuilder<float>::BuildNetworkFromDescription(ComputationNetwork<float>*)
+    // build a ComputationNetwork from BrainScript source code
+    template<typename ElemType>
+    /*virtual*/ /*IComputationNetBuilder::*/ComputationNetwork<ElemType>* ExperimentalNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork<ElemType>*)
     {
         if (!m_net || m_net->GetTotalNumberOfNodes() < 1) //not built yet
-            m_net = BS::CreateNetwork<float>(m_sourceCode, m_deviceId, L"float");
+        {
+            // We interface with outer old CNTK config by taking the inner part, which we get as a string, as BrainScript.
+            // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
+            // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source?
+            let expr = BS::ParseConfigString(BS::standardFunctions + BS::computationNodes + BS::commonMacros
+                + wstrprintf(L"deviceId = %d ; precision = '%s' ; network = new ExperimentalComputationNetwork ", (int)m_deviceId, typeid(ElemType).name())  // TODO: check if typeid needs postprocessing
+                + m_sourceCode);    // source code has the form [ ... ]
+            // evaluate the parse tree--specifically the top-level field 'network'--which will create the network
+            let object = EvaluateField(expr, L"network");                               // this comes back as a BS::Object
+            let network = dynamic_pointer_cast<ComputationNetwork<ElemType>>(object);   // cast it
+            // This should not really fail since we constructed the source code above such that this is the right type.
+            // However, it is possible (though currently not meaningful) to locally declare a different 'precision' value.
+            // In that case, the network might come back with a different element type. We need a runtime check for that.
+            if (!network)
+                RuntimeError("BuildNetworkFromDescription: network has the wrong element type (float vs. double)");
+            // success
+            m_net = network;
+        }
         m_net->ResetEvalTimeStamp();
         return m_net.get();
     }
-    /*virtual*/ /*IComputationNetBuilder::*/ComputationNetwork<double>* ExperimentalNetworkBuilder<double>::BuildNetworkFromDescription(ComputationNetwork<double>*)
-    {
-        if (!m_net || m_net->GetTotalNumberOfNodes() < 1) //not built yet
-            m_net = BS::CreateNetwork<double>(m_sourceCode, m_deviceId, L"float");
-        m_net->ResetEvalTimeStamp();
-        return m_net.get();
-    }
+
+    template class ExperimentalNetworkBuilder<float>;
+    template class ExperimentalNetworkBuilder<double>;
 
 }}}

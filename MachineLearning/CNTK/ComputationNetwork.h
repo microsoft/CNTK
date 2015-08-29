@@ -1172,8 +1172,8 @@ public:
     // This function only creates nodes that accept (m_deviceId, nodeName).
     // TODO: Is this ever called with additional _Args? If not, simplify
     template<class... _Types>
-    ComputationNodePtr NewStandardNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
-        {
+    static ComputationNodePtr NewStandardNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
+    {
         // please keep this table sorted
         if (nodeType == CRFNode<ElemType>::TypeName())	return New<CRFNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
         else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName()) return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
@@ -1229,12 +1229,12 @@ public:
         else if (nodeType == TransposeNode<ElemType>::TypeName())	    return New<TransposeNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
         else if (nodeType == TransposeTimesNode<ElemType>::TypeName())	    return New<TransposeTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
         else return nullptr;
-        }
+    }
     // create a new node of a type given as a string, with var args so that this can be used at multiple places
     // This function is used for loading, while the above is used for creating standard-type networks.
     template<class... _Types>
-    ComputationNodePtr NewNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
-        {
+    static ComputationNodePtr NewNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
+    {
         // TODO: Is this ever called with additional _Args? If not, simplify
         // try first those that accept the standard two constructor arguments
         auto newNode = NewStandardNode(nodeType, deviceId, name, forward<_Types>(_Args)...);
@@ -1248,7 +1248,7 @@ public:
         else if (nodeType == MaxPoolingNode<ElemType>::TypeName())	     return New<MaxPoolingNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
         else if (nodeType == SparseLearnableParameter<ElemType>::TypeName()) return New<SparseLearnableParameter<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
         else return nullptr;
-        }
+    }
 
     // -----------------------------------------------------------------------
     // serialization
@@ -1935,7 +1935,7 @@ public:
             (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
             if ((*nodeIter)->ReqMultiSeqHandling())
                     (*nodeIter)->ResetBound(&m_SentenceBoundary, &m_minibatchPackingFlag);
-            }
+        }
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
