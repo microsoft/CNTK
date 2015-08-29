@@ -41,7 +41,7 @@
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
 #include "BestGpu.h"
-#include "ConfigEvaluator.h"
+#include "BrainScriptEvaluator.h"
 #include <fileutil.h>
 
 // MPI builds on windows require the following installed to "c:\program files\Microsoft MPI\"
@@ -1485,7 +1485,7 @@ int wmain(int argc, wchar_t* argv[])
         }
         fprintf(stderr, "COMPLETED\n"), fflush(stderr);
     }
-    catch (const Config::ConfigError &err)
+    catch (const BS::ConfigError &err)
     {
         fprintf(stderr, "EXCEPTION occurred:\n", err.what());
         err.PrintError();

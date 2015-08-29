@@ -54,7 +54,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region base computation class
 
     template<class ElemType>
-    class ComputationNode : public Config::Object, public Config::HasName, public std::enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
+    class ComputationNode : public BS::Object, public BS::HasName, public std::enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
     {
         // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
     protected:

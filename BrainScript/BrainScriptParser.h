@@ -3,14 +3,14 @@
 #pragma once
 
 #include "Basics.h"
-#include "ConfigObjects.h"
+#include "BrainScriptObjects.h"
 #include "File.h"
 #include <string>
 #include <vector>
 #include <map>
 #include <memory>
 
-namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
+namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
 
     using namespace std;
 

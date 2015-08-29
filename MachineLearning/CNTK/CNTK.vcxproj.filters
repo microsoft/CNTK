@@ -43,13 +43,16 @@
     </ClCompile>
     <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="ExperimentalNetworkBuilder.cpp">
-      <Filter>Experimental</Filter>
+      <Filter>BrainScript</Filter>
     </ClCompile>
-    <ClCompile Include="ConfigEvaluator.cpp">
-      <Filter>Experimental</Filter>
+    <ClCompile Include="..\..\BrainScript\BrainScriptEvaluator.cpp">
+      <Filter>BrainScript</Filter>
     </ClCompile>
-    <ClCompile Include="ConfigParser.cpp">
-      <Filter>Experimental</Filter>
+    <ClCompile Include="..\..\BrainScript\BrainScriptParser.cpp">
+      <Filter>BrainScript</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\BrainScript\BrainScriptTest.cpp">
+      <Filter>BrainScript</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -171,16 +174,16 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="ExperimentalNetworkBuilder.h">
-      <Filter>Experimental</Filter>
+      <Filter>BrainScript</Filter>
     </ClInclude>
-    <ClInclude Include="ConfigEvaluator.h">
-      <Filter>Experimental</Filter>
+    <ClInclude Include="..\..\BrainScript\BrainScriptEvaluator.h">
+      <Filter>BrainScript</Filter>
     </ClInclude>
-    <ClInclude Include="ConfigObjects.h">
-      <Filter>Experimental</Filter>
+    <ClInclude Include="..\..\BrainScript\BrainScriptObjects.h">
+      <Filter>BrainScript</Filter>
     </ClInclude>
-    <ClInclude Include="ConfigParser.h">
-      <Filter>Experimental</Filter>
+    <ClInclude Include="..\..\BrainScript\BrainScriptParser.h">
+      <Filter>BrainScript</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -193,8 +196,8 @@
     <Text Include="DefaultMacros.txt">
       <Filter>Misc</Filter>
     </Text>
-    <Text Include="ConfigSpec.txt">
-      <Filter>Experimental</Filter>
+    <Text Include="..\..\BrainScript\Notes.txt">
+      <Filter>BrainScript</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>
@@ -222,7 +225,7 @@
     <Filter Include="GPU Interfacing">
       <UniqueIdentifier>{8d99b2cc-5209-40e4-8b4b-a7616973ae3b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Experimental">
+    <Filter Include="BrainScript">
       <UniqueIdentifier>{fe2443a1-6323-449f-96be-cbd0f608f382}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -231,7 +234,7 @@
       <Filter>Misc</Filter>
     </None>
     <None Include="..\ParseConfig\test.config">
-      <Filter>Experimental</Filter>
+      <Filter>BrainScript</Filter>
     </None>
   </ItemGroup>
 </Project>

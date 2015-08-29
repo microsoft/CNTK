@@ -145,19 +145,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\BrainScript\BrainScriptEvaluator.cpp" />
+    <ClCompile Include="..\..\BrainScript\BrainScriptParser.cpp" />
+    <ClCompile Include="..\..\BrainScript\BrainScriptTest.cpp" />
     <ClCompile Include="..\..\Common\File.cpp" />
     <ClCompile Include="..\..\Common\fileutil.cpp" />
-    <ClCompile Include="..\CNTK\ConfigEvaluator.cpp" />
-    <ClCompile Include="..\CNTK\ConfigParser.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\CNTK\ConfigObjects.h" />
-    <ClInclude Include="..\CNTK\ConfigEvaluator.h" />
-    <ClInclude Include="..\CNTK\ConfigParser.h" />
+    <Text Include="..\..\BrainScript\Notes.txt" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\CNTK\ConfigSpec.txt" />
+    <ClInclude Include="..\..\BrainScript\BrainScriptEvaluator.h" />
+    <ClInclude Include="..\..\BrainScript\BrainScriptObjects.h" />
+    <ClInclude Include="..\..\BrainScript\BrainScriptParser.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

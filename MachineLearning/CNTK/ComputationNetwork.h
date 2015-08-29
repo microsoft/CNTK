@@ -40,7 +40,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>
-class ComputationNetwork : public Config::Object
+class ComputationNetwork : public BS::Object
 {
 protected:
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;

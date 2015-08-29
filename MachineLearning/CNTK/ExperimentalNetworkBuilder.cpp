@@ -5,7 +5,7 @@
 
 #include "Basics.h"
 #include "ExperimentalNetworkBuilder.h"
-#include "ConfigEvaluator.h"
+#include "BrainScriptEvaluator.h"
 
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
@@ -19,7 +19,7 @@
 #define let const auto
 #endif
 
-namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {   // new config parsing lives in a sub-namespace, as to avoid conflict with existing ones which get implicitly pulled in by some headers we need
+namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new config parsing lives in a sub-namespace, as to avoid conflict with existing ones which get implicitly pulled in by some headers we need
 
     wstring standardFunctions =
         L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
@@ -203,14 +203,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /*virtual*/ /*IComputationNetBuilder::*/ComputationNetwork<float>* ExperimentalNetworkBuilder<float>::BuildNetworkFromDescription(ComputationNetwork<float>*)
     {
         if (!m_net || m_net->GetTotalNumberOfNodes() < 1) //not built yet
-            m_net = Config::CreateNetwork<float>(m_sourceCode, m_deviceId, L"float");
+            m_net = BS::CreateNetwork<float>(m_sourceCode, m_deviceId, L"float");
         m_net->ResetEvalTimeStamp();
         return m_net.get();
     }
     /*virtual*/ /*IComputationNetBuilder::*/ComputationNetwork<double>* ExperimentalNetworkBuilder<double>::BuildNetworkFromDescription(ComputationNetwork<double>*)
     {
         if (!m_net || m_net->GetTotalNumberOfNodes() < 1) //not built yet
-            m_net = Config::CreateNetwork<double>(m_sourceCode, m_deviceId, L"float");
+            m_net = BS::CreateNetwork<double>(m_sourceCode, m_deviceId, L"float");
         m_net->ResetEvalTimeStamp();
         return m_net.get();
     }

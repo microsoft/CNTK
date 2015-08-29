@@ -1,13 +1,13 @@
-// ConfigEvaluator.h -- execute what's given in a config file
+// BrainScriptEvaluator.h -- execute what's given in a config file
 
 #pragma once
 
 #include "Basics.h"
-#include "ConfigParser.h"
-#include "ConfigObjects.h"
+#include "BrainScriptParser.h"
+#include "BrainScriptObjects.h"
 #include <memory>   // for shared_ptr
 
-namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
+namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
 
     using namespace std;
     using namespace msra::strfun;   // for wstrprintf()
@@ -29,7 +29,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
     //  - specifically, it holds a shared_ptr to a strongly typed C++ object
     //  - ConfigValuePtrs are immutable when consumed.
     //
-    // All configuration values, that is, values that can be held by a ConfigValuePtr, derive from Config::Object.
+    // All configuration values, that is, values that can be held by a ConfigValuePtr, derive from BS::Object.
     // To get a shared_ptr<T> of an expected type T, type-cast the ConfigValuePtr to it.
     // To get the value of a copyable type like T=double or wstring, type-cast to T directly.
     //
@@ -144,7 +144,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
             EnsureIsResolved();
             const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
             const auto p = dynamic_cast<C*>(get());
-            if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in ConfigEvaluator.cpp? We'd need the type name
+            if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type, expected a " + TypeId<C>(), location);
             return *p;
         }
@@ -153,7 +153,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
         {
             EnsureIsResolved();
             const auto p = dynamic_pointer_cast<C>(*this);
-            if (!p)             // TODO: can we make this look the same as TypeExpected in ConfigEvaluator.cpp? We'd need the type name
+            if (!p)             // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
                 throw EvaluationError(L"config member has wrong type, expected a " + TypeId<C>(), location);
             return p;
         }
@@ -359,5 +359,8 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
     ConfigValuePtr Evaluate(ExpressionPtr);     // evaluate the expression tree
     void Do(ExpressionPtr e);                   // evaluate e.do
     shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring & id);  // for experimental CNTK integration
+
+    // some simple tests
+    void SomeTests();
 
 }}}} // end namespaces
