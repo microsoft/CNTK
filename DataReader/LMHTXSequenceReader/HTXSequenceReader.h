@@ -49,6 +49,7 @@ public:
     ifstream fin;
     vector<list<int>*> sequence_cache;
     int debughtx; //used in the DEBUG_HTX macro, control the debug output
+    int oneSentenceInMB; //Only allow at most one sentence in a MB, should be turned on for bi-directional training, so we will have sentence end in MB
 
     int sentenceEndId;
     Matrix<ElemType>* label_m_ref; //A reference to the label matrix in the getMinibatch

@@ -109,7 +109,7 @@ bool BatchSequenceReader<ElemType>::refreshCacheSeq(int seq_id)
         if (word_id == sentenceEndId && sequence_cache[seq_id]->size() > 1 && last_word_id != sentenceEndId) { //Meet a sentence End
             if (!randomize)
                 break;
-            if ((rand() % 10) < 8) {
+            if ((rand() % 10) < 5) {
                 break;
             }// else
             //    fprintf(stderr, "debughtx random:goto anoter sentence\n");
@@ -136,6 +136,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     if (wClassFile.compare(L"") == 0) {
         RuntimeError("[LMHTXSequenceReader] wordclass option not set.");
     }
+    oneSentenceInMB = (int)readerConfig("oneSentenceInMB", "0");
     std::wstring temp_s = readerConfig("file");
     fileName = std::string(temp_s.begin(), temp_s.end());
 
@@ -180,6 +181,7 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     fprintf(stderr, "debughtx StartMinibatchLoop MBSize is %d\n", m_mbSize);
     fprintf(stderr, "debughtx StartMinibatchLoop sequenceSize is %d\n", mBlgSize);
     fprintf(stderr, "debughtx StartMinibatchLoop randomize is %d\n", randomize);
+    fprintf(stderr, "debughtx StartMinibatchLoop oneSentenceInMB is %d\n", oneSentenceInMB);
     DEBUG_HTX fprintf(stderr, "fileName:%s\n", fileName.c_str());
     fin.open(fileName);
 
@@ -216,21 +218,20 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     DEVICEID_TYPE featureDeviceId = feature_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
     DEVICEID_TYPE labelDeviceId = label_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
-    feature_m->TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false); 
-    label_m->TransferFromDeviceToDevice(labelDeviceId, CPUDEVICE, false, true, false);
+    feature_m->TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, true); 
+    label_m->TransferFromDeviceToDevice(labelDeviceId, CPUDEVICE, true);
 
-    feature_m->Resize(nwords, wordNumber, wordNumber);
-    feature_m->Reset();
-    
-    /*
-    for (int i = 0; i < wordNumber; i++) {
-        fprintf(stderr, "1\n");
-        feature_m->SetValue(0, i, (ElemType)2); //All word 0! This is for stupid version, should be deleted for simple version
-        fprintf(stderr, "2\n");
-        feature_m->SetValue(0, i, (ElemType)2); //All word 0! This is for stupid version, should be deleted for simple version
-        fprintf(stderr, "3\n");
+    if (feature_m->GetMatrixType() == MatrixType::DENSE)
+    {
+        feature_m->Resize(nwords, wordNumber);
+        feature_m->SetValue((ElemType)0);
     }
-    */
+    else
+    {
+        feature_m->Resize(nwords, wordNumber, wordNumber);
+        feature_m->Reset();
+    }
+
     label_m->Resize(4, wordNumber);
     //label_m->Reset(); //Can't do this 
 
@@ -265,7 +266,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             if (sequence_cache[i]->front() == sentenceEndId) { //End of a sentence, pop it out for a new one.
                 sequence_cache[i]->pop_front();
                 minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceEnd);
-                end = true;
+                if (oneSentenceInMB)
+                    end = true; //When commented, the reader will get multiple sentence in a MB, which also means more random(random through boundary)
             }
         }
     }
