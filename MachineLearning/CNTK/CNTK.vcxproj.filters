@@ -262,5 +262,8 @@
     <None Include="..\ParseConfig\test.config">
       <Filter>Experimental</Filter>
     </None>
+    <None Include="..\..\BrainScript\test.config">
+      <Filter>BrainScript</Filter>
+    </None>
   </ItemGroup>
 </Project>

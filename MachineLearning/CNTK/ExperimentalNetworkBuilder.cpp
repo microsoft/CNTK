@@ -1,4 +1,4 @@
-// ExperimentalNetworkBuilder.h -- interface to new version of NDL (and config) parser  --fseide
+// ExperimentalNetworkBuilder.cpp -- interface to new version of NDL (and config) parser  --fseide
 
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 #define _CRT_SECURE_NO_WARNINGS     // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
@@ -200,6 +200,52 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
             return CreateComputationNode<double>(configp);
         else
             LogicError("MakeExperimentalComputationNetwork: precision must be 'float' or 'double'");
+    }
+
+    //// create ComputationNode
+    //template<>
+    //shared_ptr<ComputationNode<float>> MakeRuntimeObject<ComputationNode<float>>(const IConfigRecordPtr config)
+    //{
+    //}
+
+    template<class C>
+    static ConfigurableRuntimeType MakeRuntimeTypeConstructors()
+    {
+        ConfigurableRuntimeType rtInfo;
+        rtInfo.construct = [](const IConfigRecordPtr config) // lambda to construct
+        {
+            return nullptr;// MakeRuntimeObject<C>(config);
+        };
+        rtInfo.IsConfigRecord = is_base_of<IConfigRecord, C>::value;
+        return rtInfo;
+    }
+
+#define DefineRuntimeType(T) { L#T L"<float>", MakeRuntimeTypeConstructors<T<float>>() }, { L#T L"<double>", MakeRuntimeTypeConstructors<T<double>>() }
+
+    // get information about configurable runtime types
+    const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring & typeId)
+    {
+        // lookup table for "new" expression
+        // This table lists all C++ types that can be instantiated from "new" expressions, and gives a constructor lambda and type flags.
+        static map<wstring, ConfigurableRuntimeType> configurableRuntimeTypes =
+        {
+            // ComputationNodes
+            DefineRuntimeType(ComputationNode),
+#if 0
+            DefineRuntimeType(RecurrentComputationNode),
+            // other relevant classes
+            DefineRuntimeType(NDLComputationNetwork),           // currently our fake
+            // glue to experimental integration
+            //{ L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() },
+            //{ L"ComputationNode", MakeExperimentalComputationNodeConstructor() },
+#endif
+        };
+
+        // first check our own
+        let newIter = configurableRuntimeTypes.find(typeId);
+        if (newIter != configurableRuntimeTypes.end())
+            return &newIter->second;
+        return nullptr; // not found
     }
 
 }}}}

@@ -723,7 +723,7 @@ void DoTrain(const ConfigParameters& config)
     ConfigParameters readerConfig(config("reader"));
     readerConfig.Insert("traceLevel", config("traceLevel", "0"));
 
-    unique_ptr<IComputationNetBuilder<ElemType> > netBuilder;
+    unique_ptr<IComputationNetBuilder<ElemType>> netBuilder;
 
     if (config.Exists("NDLNetworkBuilder"))
     {
@@ -746,9 +746,9 @@ void DoTrain(const ConfigParameters& config)
         RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
     }
 
-    unique_ptr<DataReader<ElemType> > dataReader { new DataReader<ElemType>(readerConfig) };
+    unique_ptr<DataReader<ElemType>> dataReader { new DataReader<ElemType>(readerConfig) };
 
-    unique_ptr<DataReader<ElemType> > cvDataReader;
+    unique_ptr<DataReader<ElemType>> cvDataReader;
     ConfigParameters cvReaderConfig(config("cvReader", L""));
 
     if (cvReaderConfig.size() != 0)
