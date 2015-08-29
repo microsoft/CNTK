@@ -118,7 +118,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         {
             let arr = arg.AsPtr<ConfigArray>();
             wstring result;
-            let range = arr->GetRange();
+            let range = arr->GetIndexRange();
             for (int i = range.first; i <= range.second; i++)
             {
                 if (i > range.first)
@@ -358,7 +358,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         else
         {
             let inputsArray = (ConfigArrayPtr)inputsArg;
-            let range = inputsArray->GetRange();
+            let range = inputsArray->GetIndexRange();
             for (int i = range.first; i <= range.second; i++)
                 inputs.push_back(inputsArray->At(i, inputsArg.GetLocation()));
         }
@@ -479,10 +479,10 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
                 // add to set
                 let res = m_namesToNodeMap.insert(make_pair(n->NodeName(), n));
                 if (!res.second)        // not inserted: we already got this one
-                if (res.first->second != n)
-                    LogicError("NDLComputationNetwork: multiple nodes with the same NodeName()");
-                else
-                    continue;
+                    if (res.first->second != n)
+                        LogicError("NDLComputationNetwork: multiple nodes with the same NodeName()");
+                    else
+                        continue;
                 // If node derives from MustFinalizeInit() then it has unresolved ConfigValuePtrs. Resolve them now.
                 // This may generate a whole new load of nodes, including nodes which in turn have late init.
                 // TODO: think this through whether it may generate delays nevertheless
@@ -549,7 +549,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     }
     // note: don't forget to duplicate the above when we move this out
 
-#if 1
+#if 0
     // get information about configurable runtime types
     const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring & typeId)
     {
@@ -589,10 +589,11 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     //  - Chr(c) -- gives a string of one character with Unicode value 'c'
     //  - Replace(s,what,withwhat) -- replace all occurences of 'what' with 'withwhat'
     //  - Substr(s,begin,num) -- get a substring
-    // TODO: RegexReplace()     Substr takes negative position to index from end, and length -1
+    // TODO: RegexReplace()
     class StringFunction : public String
     {
-        wstring Replace(wstring s, const wstring & what, const wstring & withwhat)
+        // actual operations that we perform
+        static wstring Replace(wstring s, const wstring & what, const wstring & withwhat)
         {
             wstring res = s;
             auto pos = res.find(what);
@@ -603,7 +604,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
             }
             return res;
         }
-        wstring Substr(const wstring & s, int ibegin, int inum)
+        static wstring Substr(const wstring & s, int ibegin, int inum)
         {
             // negative index indexes from end; index may exceed
             let begin = min(ibegin < 0 ? s.size() + ibegin : ibegin, s.size());
@@ -611,6 +612,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
             let num = min(inum < 0 ? SIZE_MAX : inum, s.size() - begin);
             return s.substr(begin, num);
         }
+        // TODO: RegexReplace!
     public:
         StringFunction(const ConfigRecord & config)
         {
@@ -652,7 +654,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
                 else        // otherwise expect an array
                 {
                     let arr = (ConfigArray)arg;
-                    let range = arr.GetRange();
+                    let range = arr.GetIndexRange();
                     us = (double)(range.second + 1 - range.first);
                 }
             }

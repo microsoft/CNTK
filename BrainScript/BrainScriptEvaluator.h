@@ -295,7 +295,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
     public:
         ConfigArray() : firstIndex(0) { }
         ConfigArray(int firstIndex, vector<ConfigValuePtr> && values) : firstIndex(firstIndex), values(move(values)) { }
-        pair<int, int> GetRange() const { return make_pair(firstIndex, firstIndex+(int)values.size()-1); }
+        pair<int, int> GetIndexRange() const { return make_pair(firstIndex, firstIndex+(int)values.size()-1); }
         // building the array from expressions: append an element or an array
         void Append(ConfigValuePtr value) { values.push_back(value); }
         void Append(const ConfigArray & other) { values.insert(values.end(), other.values.begin(), other.values.end()); }

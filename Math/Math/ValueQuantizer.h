@@ -1,28 +1,31 @@
 #pragma once 
-#ifndef __VALLUE_QUANTIZER_H__
-#define __VALLUE_QUANTIZER_H__
+#ifndef __VALUE_QUANTIZER_H__
+#define __VALUE_QUANTIZER_H__
 
+#include "BestGpu.h"    // for CPUONLY
+#ifndef CPUONLY
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 #include <device_launch_parameters.h>
+#endif  // CPUONLY
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     
-    #ifdef __device__  // this can be used in CUDA; if this is not defined, then we are compiling in a non-CUDA context
-    #define cudacode       __device__           // CUDA: we assume we ONLY run these functions on CUDA (otherwise we'd need to mess with specifiers of matrixref)
-    #define cudasharedcode __device__ __host__  // shared on both CUDA and CPU; note that such functions cannot call into __device__ only functions like matrixref::operator(,)
-    #undef assert
-    #define assert(c)
-    #else
-    #define cudacode  // non-CUDA context: defines to nothing
-    #define cudasharedcode
-    //#define QUANTUSEPPL
-    #endif
+#ifdef __device__  // this can be used in CUDA; if this is not defined, then we are compiling in a non-CUDA context
+#define cudacode       __device__           // CUDA: we assume we ONLY run these functions on CUDA (otherwise we'd need to mess with specifiers of matrixref)
+#define cudasharedcode __device__ __host__  // shared on both CUDA and CPU; note that such functions cannot call into __device__ only functions like matrixref::operator(,)
+#undef assert
+#define assert(c)
+#else
+#define cudacode  // non-CUDA context: defines to nothing
+#define cudasharedcode
+//#define QUANTUSEPPL
+#endif
 
-    #ifdef QUANTUSEPPL
-    #include <ppl.h>    // in non-CUDA: also use PPL lib
-    #endif
+#ifdef QUANTUSEPPL
+#include <ppl.h>    // in non-CUDA: also use PPL lib
+#endif
 
     template <typename ElemType> 
     class QuantizedWordHelper;
@@ -105,4 +108,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType ufactor;
     };
 }}}
-#endif 
+
+#endif  // __VALUE_QUANTIZER_H__

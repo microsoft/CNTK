@@ -21,8 +21,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // build a ComputationNetwork from description language
         // TODO: change return type of these interfaces to shared_ptrs
         virtual /*IComputationNetBuilder::*/ComputationNetwork<ElemType>* BuildNetworkFromDescription(ComputationNetwork<ElemType>* = nullptr);
+        // TODO: what is that function argument for?
 
-        // nothing experimental about loading an existing file--this is the same code as for NDLNetworkBuilder.h
+        // load an existing file--this is the same code as for NDLNetworkBuilder.h (OK to copy it here because this is temporary code anyway)
         virtual /*IComputationNetBuilder::*/ComputationNetwork<ElemType>* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
                                                                                               bool bAllowNoCriterionNode = false, ComputationNetwork<ElemType>* anotherNetwork = nullptr)
         {
@@ -32,8 +33,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_net.get();
         }
     };
-
-    template class ExperimentalNetworkBuilder<float>;
-    template class ExperimentalNetworkBuilder<double>;
 
 }}}

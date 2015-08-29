@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "CUDAPageLockedMemAllocator.h"
+#include "BestGpu.h"    // for CPUONLY
+#ifndef CPUONLY
 #include <cuda_runtime_api.h>
+#endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -11,6 +14,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     char* CUDAPageLockedMemAllocator::Malloc(size_t size)
     {
+#ifndef CPUONLY
         void* p;
         cudaSetDevice(m_deviceID);
 
@@ -18,11 +22,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaHostAlloc(&p, size, cudaHostAllocDefault) || "Malloc in CUDAPageLockedMemAllocator failed";
 
         return (char*)p;
+#else
+        return (char*) malloc(size);
+#endif
     }
 
     void CUDAPageLockedMemAllocator::Free(char* p)
     {
+#ifndef CPUONLY
         cudaSetDevice(m_deviceID);
         cudaFreeHost(p) || "Free in CUDAPageLockedMemAllocator failed";
+#else
+        free(p);
+#endif
     }
 }}}

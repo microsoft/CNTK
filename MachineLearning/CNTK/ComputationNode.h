@@ -335,9 +335,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nS = m_sentenceSeg->GetNumRows();
 
                 if (m_minibatchPackingFlag->size() != nT / nS)
-                {
                     LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_minibatchPackingFlag should have one element for each timestep of all streams. Check feature reader. ");
-                }
 
                 Matrix<ElemType> colSeg(m_sentenceSeg->GetDeviceId());
 
@@ -351,12 +349,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         colSeg = m_sentenceSeg->ColumnSlice(j,1);
                         for (int i = 0; i < nS; i++)
-                        {
                             if ((int)colSeg(i,0) & NO_LABEL)
-                            {
                                 matrixToBeMasked.ColumnSlice(utt_t+i, 1).SetValue(0);
-                            }
-                        }
                         processedExistsNoLabelorFeatureMissing = true;
                     }
                 }
@@ -522,11 +516,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // TODO: these two should disappear, the information should be in FrameRange record instead
+        // This is called at 3 places; two are directly before ComputeGradientForChildren().
         void SetNbrSlicesInEachRecurrentIteration(size_t bsz)
         {
             m_samplesInRecurrentStep = bsz;
         }
 
+        // Note: only used in one place, SimpleEvaluator.h PreComputeActivityAtTime().
+        // The member is, however, read out at 284 places inside nodes,
+        // most of the time as
+        // ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep)
+        // This expression will be turned into a function call to right here, so that we compute this only at one place
+        // and can also handle the full-minibatch case.
+        // Let us try to get this member out of this class altogether; it belongs elsewhere.
         size_t GetNbrSlicesInEachRecurrentIteration() const
         {
             return m_samplesInRecurrentStep;
