@@ -21,6 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template<class ElemType>
 class CNTKEval : public IEvaluateModel<ElemType>
 {
+    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     EvalReader<ElemType>* m_reader;
     EvalWriter<ElemType>* m_writer;
     ConfigParameters m_config;

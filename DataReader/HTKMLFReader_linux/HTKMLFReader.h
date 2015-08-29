@@ -7,6 +7,7 @@
 #pragma once
 #include "DataReader.h"
 #include "commandArgUtil.h" // for intargvector
+#include "CUDAPageLockedMemAllocator.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -52,9 +53,10 @@ private:
     std::vector<size_t> m_featuresStartIndexMultiUtt;
     std::vector<size_t> m_labelsStartIndexMultiUtt;
 
-    std::vector<ElemType*> m_featuresBufferMultiIO;
+    CUDAPageLockedMemAllocator* m_cudaAllocator;
+    std::vector<std::shared_ptr<ElemType>> m_featuresBufferMultiIO;
     std::vector<size_t> m_featuresBufferAllocatedMultiIO;
-    std::vector<ElemType*> m_labelsBufferMultiIO;
+    std::vector<std::shared_ptr<ElemType>> m_labelsBufferMultiIO;
     std::vector<size_t> m_labelsBufferAllocatedMultiIO;
 
     std::map<std::wstring,size_t> m_featureNameToIdMap;
@@ -80,7 +82,7 @@ private:
     bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>&matrices);
     bool GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>&matrices);
     
-    void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+    void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize);
     void StartMinibatchLoopToWrite(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
 
     bool ReNewBufferForMultiIO(size_t i);
@@ -99,7 +101,43 @@ private:
         category,
     };
 
+private:
+    CUDAPageLockedMemAllocator* GetCUDAAllocator(int deviceID)
+    {
+        if (m_cudaAllocator != nullptr)
+        {
+            if (m_cudaAllocator->GetDeviceID() != deviceID)
+            {
+                delete m_cudaAllocator;
+                m_cudaAllocator = nullptr;
+            }
+        }
 
+        if (m_cudaAllocator == nullptr)
+        {
+            m_cudaAllocator = new CUDAPageLockedMemAllocator(deviceID);
+        }
+
+        return m_cudaAllocator;
+    }
+
+    std::shared_ptr<ElemType> AllocateIntermediateBuffer(int deviceID, size_t numElements)
+    {
+        if (deviceID >= 0)
+        {
+            // Use pinned memory for GPU devices for better copy performance
+            size_t totalSize = sizeof(ElemType) * numElements;
+            return std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
+                this->GetCUDAAllocator(deviceID)->Free((char*)p);
+            });
+        }
+        else
+        {
+            return std::shared_ptr<ElemType>(new ElemType[numElements], [](ElemType* p) {
+                delete[] p;
+            });
+        }
+    }
 
 public:
     /// a matrix of n_stream x n_length
@@ -107,7 +145,7 @@ public:
     /// n_length is the maximum lenght of each stream
     /// for example, two sentences used in parallel in one minibatch would be
     /// [2 x 5] if the max length of one of the sentences is 5
-    /// the elements of the matrix is 0, 1, or -1, defined as SENTENCE_BEGIN, SENTENCE_MIDDLE, NO_LABELS in cbasetype.h 
+    /// the elements of the matrix is 0, 1, or -1, defined as SEQUENCE_START, SEQUENCE_MIDDLE, NO_INPUT in cbasetype.h 
     /// 0 1 1 0 1
     /// 1 0 1 0 0 
     /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
@@ -124,7 +162,7 @@ public:
     vector<MinibatchPackingFlag> m_minibatchPackingFlag;
 
     /// by default it is false
-    /// if true, reader will set to SENTENCE_MIDDLE for time positions that are orignally correspond to SENTENCE_BEGIN
+    /// if true, reader will set to SEQUENCE_MIDDLE for time positions that are orignally correspond to SEQUENCE_START
     /// set to true so that a current minibatch can uses state activities from the previous minibatch. 
     /// default will have truncated BPTT, which only does BPTT inside a minibatch
 
@@ -135,7 +173,19 @@ public:
     virtual void Init(const ConfigParameters& config);
     virtual void Destroy() {delete this;}
     virtual ~HTKMLFReader();
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
+    {
+        return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
+    }
+
+    virtual bool SupportsDistributedMBRead() const override
+    {
+        return m_frameSource->supportsbatchsubsetting(); 
+    }
+
+    virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
+
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
@@ -146,6 +196,7 @@ public:
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
 
+    bool RequireSentenceSeg() { return !m_framemode; };
 };
 
 }}}

@@ -36,13 +36,15 @@
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
 
+#include "MatrixPool.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>
 class ComputationNetwork
 {
 protected:
-    typedef ComputationNode<ElemType>* ComputationNodePtr;
+    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     typedef std::pair<ComputationNodePtr, ComputationNodePtr> ComputationArc;
 
     typedef struct stRecurrentInfo
@@ -63,19 +65,27 @@ protected:
             m_loopClosed = false;
         }
 
-                    void Copy(const stRecurrentInfo& src)
-                    {
-                        m_recurrentNodes = src.m_recurrentNodes;
-                        m_recurrentNodesForForward = src.m_recurrentNodesForForward;
-                        m_sourceNode = src.m_sourceNode;
-                        m_loopId = src.m_loopId; 
-                        m_completedGradient = src.m_completedGradient;
-                        m_completedEvaluate = src.m_completedEvaluate;
-                        m_loopClosed = src.m_loopClosed;
-                    }
+        // TODO: why is this not a copy constructor or assignment operator?
+        void Copy(const stRecurrentInfo& src)
+        {
+            m_recurrentNodes = src.m_recurrentNodes;
+            m_recurrentNodesForForward = src.m_recurrentNodesForForward;
+            m_sourceNode = src.m_sourceNode;
+            m_loopId = src.m_loopId;
+            m_completedGradient = src.m_completedGradient;
+            m_completedEvaluate = src.m_completedEvaluate;
+            m_loopClosed = src.m_loopClosed;
+        }
     } RecurrentInfo;
 
 public:
+
+    // TODO: sort methods into functional groups; some methods are at random places
+
+    // -----------------------------------------------------------------------
+    // construction
+    // -----------------------------------------------------------------------
+
     ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
                     : m_deviceId(deviceId), m_SentenceBoundary(CPUDEVICE)
     {
@@ -93,20 +103,24 @@ public:
         ClearNet();
     }
 
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
     static bool IsSmaller(const ComputationNodePtr lhs, const ComputationNodePtr rhs)
     {
         return lhs->GetVisitedOrder() < rhs->GetVisitedOrder();
     }
 
+    // -----------------------------------------------------------------------
+    // construction
+    // -----------------------------------------------------------------------
+
     void ClearNet()
     {
-        m_features.clear();
-        m_labels.clear();
-        m_finalCriteria.clear();
-        m_nodesReqMultiSeqHandling.clear();
-        m_evalNodes.clear();
-        m_outputNodes.clear();
-                    m_pairNodes.clear();
+        for (auto groupIter : GetAllNodeGroups())
+            (groupIter)->clear();
+
         m_recurrentInfo.clear();
 
         m_built.clear();
@@ -117,16 +131,20 @@ public:
         m_inputs.clear();
         m_learnableParameters.clear();
 
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        {
-            delete nodeIter->second;
-        }
-        m_nameToNodeMap.clear();
+        //for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+        //{
+        //    delete nodeIter->second;
+        //}
+        m_nameToNodeMap.clear();    // will also deref and likely deallocate all nodes we hold in here
     }
+
+    // -----------------------------------------------------------------------
+    // diagnostics
+    // -----------------------------------------------------------------------
 
     //if node name is not found, dump all nodes
     //otherwise dump just that node
-    void DumpNodeInfoToFile(const std::wstring nodeName, const bool printValues, const std::wstring outputFile)
+    void DumpNodeInfoToFile(const std::wstring & nodeName, const bool printValues, const std::wstring outputFile)
     {
         if (NodeNameExist(nodeName))
         {
@@ -167,7 +185,7 @@ public:
         }
     }
 
-    void DumpNodeInfoToFile(const vector<ComputationNode<ElemType>*>& nodes,
+    void DumpNodeInfoToFile(const vector<ComputationNodePtr>& nodes,
                             const bool printValues,
                             const std::wstring outputFile)
     {
@@ -184,7 +202,12 @@ public:
     }
 
 private:
-    // [erw] added for Toplological Plot only
+
+    // -----------------------------------------------------------------------
+    // topological plot [erw]
+    // TODO: Can this be a separate class? Can it be moved to a CPP?
+    // -----------------------------------------------------------------------
+
     class DotGraphConfigure
     {
     public:
@@ -211,6 +234,7 @@ private:
             m_futureValueNodeStyle = L"node [ shape = box3d  , color = red, style = \"filled\" , fillcolor = white ] ";
         }
     };
+
     wstring FormSpecialNodes(wstring style, std::vector<ComputationNodePtr>& specialNodes)
     {
         if (specialNodes.empty())
@@ -286,29 +310,21 @@ public:
         fstream << L"// special nodes \n";
 
         // learnable parameters:
-        fstream << FormSpecialNodes(dotcfg.m_LearnableParameterStyle,
-                                    learnableParameters);
+        fstream << FormSpecialNodes(dotcfg.m_LearnableParameterStyle, learnableParameters);
         // features
         fstream << FormSpecialNodes(dotcfg.m_featuresStyle, m_features);
-
         // labels
         fstream << FormSpecialNodes(dotcfg.m_labelsStyle, m_labels);
-
         // critera
         fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_finalCriteria);
-
         // nodes that requires multi sequence handling 
         fstream << FormSpecialNodes(dotcfg.m_nodesReqMultiSeqHandlingStyle, m_nodesReqMultiSeqHandling);            
-        
         // pre-compute nodes
-        fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle,
-                                    PreComputedNodes);
+        fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
         // PastValue nodes
         fstream << FormSpecialNodes(dotcfg.m_pastValueNodeStyle, pastValueNodes);
-
         // FutureValue nodes
         fstream << FormSpecialNodes(dotcfg.m_futureValueNodeStyle, futureValueNodes);
-
         // normal nodes
         fstream << dotcfg.m_normalNodeStyle << L"\n";
 
@@ -345,29 +361,15 @@ public:
         fstream << L"\t\t rank=sink ; ";
         line.clear();
         for (auto x : m_finalCriteria)
-        {
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        }
-
         for (auto x : m_nodesReqMultiSeqHandling)
-        {
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        }
-        
         for (auto x : m_outputNodes)
-        {
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        }
-
-                    for (auto x : m_pairNodes)
-                    {
-                        line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-                    }
-
+        for (auto x : m_pairNodes)
+            line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
         for (auto x : m_evalNodes)
-        {
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        }
 
         fstream << line << L"\n}\n";
 
@@ -426,62 +428,52 @@ public:
         std::unordered_set<ComputationNodePtr> visited;
         std::list<ComputationArc> arcs;
 
-        for (size_t i = 0; i < m_finalCriteria.size(); i++)
+        for (auto groupIter : GetAllNodeGroups())
         {
-            m_finalCriteria[i]->EnumerateArcs(visited, arcs);
-        }
-
-        for (size_t i = 0; i < m_nodesReqMultiSeqHandling.size(); i++)
-        {
-            m_nodesReqMultiSeqHandling[i]->EnumerateArcs(visited, arcs);
-        }
-        
-        for (size_t i = 0; i < m_outputNodes.size(); i++)
-        {
-            m_outputNodes[i]->EnumerateArcs(visited, arcs);
-        }
-
-                    for (size_t i = 0; i < m_pairNodes.size(); i++)
-                    {
-                        m_pairNodes[i]->EnumerateArcs(visited, arcs);
-                    }
-
-        for (size_t i = 0; i < m_evalNodes.size(); i++)
-        {
-            m_evalNodes[i]->EnumerateArcs(visited, arcs);
+            // note: this will also loop over m_features and m_labels, which will do nothing since they have no inputs
+            // TODO: test whether that is true
+            const auto & group = *groupIter;
+            for (size_t i = 0; i < group.size(); i++)
+                group[i]->EnumerateArcs(visited, arcs);
         }
 
         //////////////////////////////////////////////////////////////////////////
         //	step 2.		output dot description
         //////////////////////////////////////////////////////////////////////////
         DescribeNetworkUsingDot(arcs, outputFile);
-
     }
+
+    // -----------------------------------------------------------------------
+    // construction
+    // -----------------------------------------------------------------------
 
     void SetDeviceID(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
     {
         m_deviceId = deviceId;
-        if (m_deviceId == AUTOPLACEMATRIX) {
+        if (m_deviceId == AUTOPLACEMATRIX)
             m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
         }
-    }
 
-    DEVICEID_TYPE GetDeviceID()
-    {
-        return m_deviceId;
-    }
+    DEVICEID_TYPE GetDeviceID() { return m_deviceId; }
 
-    unsigned long GetRandomSeedOffset()
-    {
-        return m_randomSeedOffset;
-    }
+    unsigned long GetRandomSeedOffset() { return m_randomSeedOffset; }
+    void SetRandomSeedOffset(unsigned long value) { m_randomSeedOffset = value; }
 
-    void SetRandomSeedOffset(unsigned long value)
-    {
-        m_randomSeedOffset = value;
-    }
+    // -----------------------------------------------------------------------
+    // serialization
+    // -----------------------------------------------------------------------
 
     void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const
+    {
+       // Saving into temporary file and then renaming it to the requested fileName
+       // This is a standard trick to avoid havign corrupted model files if process dies during writing
+       wstring tmpFileName = fileName + L".tmp";
+       SaveToFileImpl(tmpFileName, fileFormat);
+       renameOrDie(tmpFileName, fileName);
+    }
+
+private:
+    void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const
     {
         File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
@@ -512,16 +504,11 @@ public:
             for (size_t i = 0; i < nodePtr->ChildrenSize(); i++)
             {
                 if (nodePtr->Inputs(i) == nullptr)
-                {
-                    fprintf(stderr, "Warning: node %ls 's child is null, please check your ndl/mel file.\n",
-                            nodePtr->NodeName().c_str());
-                }
+                    fprintf(stderr, "Warning: node %ls 's child is null, please check your ndl/mel file.\n", nodePtr->NodeName().c_str());
                 else
-                {
                     fstream << nodePtr->Inputs(i)->NodeName();
                 }
             }
-        }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERelation");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BRootNodes");
@@ -529,41 +516,31 @@ public:
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BFeatureNodes");
         fstream << m_features.size();
         for (size_t i = 0; i < m_features.size(); i++)
-        {
             fstream << m_features[i]->NodeName();
-        }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EFeatureNodes");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLabelNodes");
         fstream << m_labels.size();
         for (size_t i = 0; i < m_labels.size(); i++)
-        {
             fstream << m_labels[i]->NodeName();
-        }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELabelNodes");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCriteriaNodes");
         fstream << m_finalCriteria.size();
         for (size_t i = 0; i < m_finalCriteria.size(); i++)
-        {
             fstream << m_finalCriteria[i]->NodeName();
-        }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling");
         fstream << m_nodesReqMultiSeqHandling.size();
         for (size_t i = 0; i<m_nodesReqMultiSeqHandling.size(); i++)
-        {
             fstream << m_nodesReqMultiSeqHandling[i]->NodeName();
-        }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
         fstream << m_evalNodes.size();
         for (size_t i = 0; i < m_evalNodes.size(); i++)
-        {
             fstream << m_evalNodes[i]->NodeName();
-        }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EEvalNodes");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BOutputNodes");
@@ -580,17 +557,18 @@ public:
 
                         fstream << m_pairNodes.size();
                         for (size_t i = 0; i < m_pairNodes.size(); i++)
-                        {
                             fstream << m_pairNodes[i]->NodeName();
-                        }
                         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
                     }
 
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECN");
+       
+        fstream.Flush();
     }
 
+public:
     void LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation = true,
                                            const FileOptions fileFormat = FileOptions::fileOptionsBinary)
     {
@@ -616,7 +594,8 @@ public:
             std::wstring opName, nodeName;
             fstream >> opName >> nodeName;
             ComputationNodePtr nodePtr = GetNodeFromName(nodeName);
-            nodePtr->LoadFromFile(fstream, modelVersion, m_deviceId);
+            // TODO: don't we have a load constructor? Then when to call which? Document the calling sequence
+            nodePtr->LoadFromFile(fstream, modelVersion);
         }
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
@@ -630,12 +609,16 @@ public:
         }
     }
 
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
     size_t GetActualMBSize()
     {
         size_t actualMBSize = 0;
 
-                    std::vector<ComputationNodePtr>* featureNodes = FeatureNodes();
-                    for (auto nodeIter = featureNodes->begin(); nodeIter != featureNodes->end(); nodeIter++)
+        const auto & FeatureNodes = this->FeatureNodes();   // TODO: a getter; should be called GetFeatureNodes()
+        for (auto nodeIter = FeatureNodes.begin(); nodeIter != FeatureNodes.end(); nodeIter++)
         {
             actualMBSize = max(actualMBSize, ((*nodeIter)->FunctionValues()).GetNumCols());
         }
@@ -643,8 +626,12 @@ public:
         return actualMBSize;
     }
 
-        virtual void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary, 
-                    const bool bAllowNoCriterionNode = false, ComputationNetwork<ElemType>* anotherNetwork = nullptr)
+    // -----------------------------------------------------------------------
+    // serialization
+    // -----------------------------------------------------------------------
+
+    virtual void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
+                              const bool bAllowNoCriterionNode = false, ComputationNetwork<ElemType>* anotherNetwork = nullptr)
     {
         ClearNet();
 
@@ -730,7 +717,7 @@ public:
                             break;
 
                         default:
-                            throw std::logic_error("Invalid number of children.");
+                            LogicError("Invalid number of children.");
                     }
                 }
             }
@@ -806,7 +793,7 @@ public:
                         if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes"))
                         {
                             fstream >> num;
-                            for (size_t i = 0; i<num; i++)
+                for (size_t i = 0; i < num; i++)
                             {
                                 fstream >> nodeName;
                                 m_pairNodes.push_back(GetNodeFromName(nodeName));
@@ -854,6 +841,48 @@ public:
         }
     }
 
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
+    // TODO: describe what this function does
+    //this is a temp solution since some nodes such as plus can be just aggregate of two scalar values 
+    //in which case the packing info is not available (and not meaningful) for them
+    size_t GetNumSamplesWithLabel(const size_t numAllSamples)
+    {
+        if (!m_SentenceBoundary.IsEmpty() &&
+            !m_minibatchPackingFlag.size() == 0)
+        {
+            size_t numTimeSteps = m_SentenceBoundary.GetNumCols();
+            size_t numSequences = m_SentenceBoundary.GetNumRows();
+
+            if (m_minibatchPackingFlag.size() != numTimeSteps)
+                LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlag should have one element for each timestep of all streams.Check feature reader. ");
+
+            size_t numSamplesWithoutLabel = 0;
+
+            for (size_t j = 0; j < numTimeSteps; j++)
+            {
+                if (m_minibatchPackingFlag[j] & MinibatchPackingFlag::NoLabel)
+                {
+                    for (int i = 0; i < numSequences; i++)
+                    {
+                        if ((int)(m_SentenceBoundary(i, j)) & NO_LABEL)
+                            numSamplesWithoutLabel++;
+                    }
+                }
+            }
+
+            return numTimeSteps*numSequences - numSamplesWithoutLabel;
+        }
+        else
+            return numAllSamples;
+    }
+
+    // -----------------------------------------------------------------------
+    // serialization
+    // -----------------------------------------------------------------------
+
     // Read a matrix stored in text format from 'filePath' (whitespace-separated columns, newline-separated rows),
     // and return a flat array containing the contents of this file in column-major format.
     // filePath: path to file containing matrix in text format.
@@ -879,9 +908,7 @@ public:
             {
                 // Break on empty line.  This allows there to be an empty line at the end of the file.
                 if (line == "")
-                {
                     break;
-                }
 
                 istringstream iss(line);
                 ElemType element;
@@ -894,23 +921,16 @@ public:
                 }
 
                 if (r == 0)
-                {
                     numColsInFirstRow = numElementsInRow;
-                }
                 else if (numElementsInRow != numColsInFirstRow)
-                {
-                    throw std::runtime_error(
-                        "The rows in the provided file do not all have the same number of columns: " + filePath);
-                }
+                    RuntimeError("The rows in the provided file do not all have the same number of columns: " + filePath);
 
                 r++;
             }
             myfile.close();
         }
         else
-        {
-            throw std::runtime_error("Unable to open file");
-        }
+            RuntimeError("Unable to open file");
 
         numRows = r;
         numCols = numColsInFirstRow;
@@ -922,9 +942,7 @@ public:
         for (int i = 0; i < numCols; i++)
         {
             for (int j = 0; j < numRows; j++)
-            {
                 pArray[i * numRows + j] = elements[j][i];
-            }
         }
 
         return pArray;
@@ -939,6 +957,10 @@ public:
         node->FunctionValues().SetValue(numRows, numCols, pArray, matrixFlagNormal, this->GetDeviceID());
         delete[] pArray;
     }
+
+    // -----------------------------------------------------------------------
+    // node construction
+    // -----------------------------------------------------------------------
 
     void InitLearnableParameters(const ComputationNodePtr node,
                                  const bool uniformInit,
@@ -960,7 +982,11 @@ public:
         }
     }
 
-    void DeleteNode(const std::wstring nodeName)
+    // -----------------------------------------------------------------------
+    // network editing
+    // -----------------------------------------------------------------------
+
+    void DeleteNode(const std::wstring & nodeName)
     {
         //so that deleted node will not be referenced
         ClearCaches();
@@ -986,56 +1012,20 @@ public:
         }
 
         //nodeToDelete is a parent
-        nodeToDelete->DetachInputs();
+        nodeToDelete->DetachInputs();       // deref all its inputs; if we don't do that, we might end up with a mem leak due to a circular reference
 
-        auto search = std::find(m_labels.begin(), m_labels.end(), nodeToDelete);
-        if (search != m_labels.end())
+        // unlink from all node-group sets
+        for (auto groupIter : GetAllNodeGroups())
         {
-            m_labels.erase(search);
+            auto search = std::find(groupIter->begin(), groupIter->end(), nodeToDelete);
+            if (search != groupIter->end())
+                groupIter->erase(search);
         }
-
-        search = std::find(m_features.begin(), m_features.end(), nodeToDelete);
-        if (search != m_features.end())
-        {
-            m_features.erase(search);
-        }
-
-        search = std::find(m_finalCriteria.begin(), m_finalCriteria.end(), nodeToDelete);
-        if (search != m_finalCriteria.end())
-        {
-            m_finalCriteria.erase(search);
-        }
-
-        search = std::find(m_nodesReqMultiSeqHandling.begin(), m_nodesReqMultiSeqHandling.end(), nodeToDelete);
-        if (search != m_nodesReqMultiSeqHandling.end())
-        {
-            m_nodesReqMultiSeqHandling.erase(search);
-        }
-        
-        search = std::find(m_evalNodes.begin(), m_evalNodes.end(), nodeToDelete);
-        if (search != m_evalNodes.end())
-        {
-            m_evalNodes.erase(search);
-        }
-
-        search = std::find(m_outputNodes.begin(), m_outputNodes.end(), nodeToDelete);
-        if (search != m_outputNodes.end())
-        {
-            m_outputNodes.erase(search);
-        }
-
-                    search = std::find(m_pairNodes.begin(), m_pairNodes.end(), nodeToDelete);
-                    if (search != m_pairNodes.end())
-                    {
-                        m_pairNodes.erase(search);
-                    }
-
 
         // ? how to deal with m_recurrentInfo, when we delete a node.
 
         //delete the node itself
-        m_nameToNodeMap.erase(nodeName);
-        delete nodeToDelete;
+        m_nameToNodeMap.erase(nodeName);    // this will deref the node and possibly deallocate it
     }
 
     // RenameNode - Rename a node to another name
@@ -1049,40 +1039,41 @@ public:
         ComputationNodePtr nodeToRename = GetNodeFromName(nodeNameOrig);
 
         auto iter = m_nameToNodeMap.find(nodeNameNew);
-        if (iter != m_nameToNodeMap.end()) {
-            //found
-            throw std::runtime_error("RenameNode: Target name already exists.");
-        }
+        if (iter != m_nameToNodeMap.end()) //found
+            RuntimeError("RenameNode: Target name already exists.");
 
         //rename the node and update the mapping table
         nodeToRename->NodeName() = nodeNameNew;
         m_nameToNodeMap.erase(nodeNameOrig);
         m_nameToNodeMap[nodeNameNew] = nodeToRename;
-
     }
 
-    ComputationNodePtr SetNodeValue(const std::wstring nodeName, const ElemType value)
+    // -----------------------------------------------------------------------
+    // node construction
+    // -----------------------------------------------------------------------
+
+    // TODO: comment what this function does. Seems to either initialize LearnableParameters or precompute nodes.
+    ComputationNodePtr SetNodeValue(const std::wstring & nodeName, const ElemType value)
     {
         ComputationNodePtr pNode = GetNodeFromName(nodeName);
 
         if (pNode->OperationName() == LearnableParameter<ElemType>::TypeName())
-        {
             pNode->FunctionValues().SetValue(value);
-        }
         else if (pNode->RequirePreCompute())
         {
-            PreComputedNode<ElemType> * preComputedNode = static_cast<PreComputedNode<ElemType> *>(pNode);
-            pNode->FunctionValues().SetValue(value);
+            auto preComputedNode = static_pointer_cast<PreComputedNode<ElemType>>(pNode);
+            pNode->FunctionValues().SetValue(value);    // TODO: comment: is this an expensive operation?
             preComputedNode->MarkComputed(true);
         }
         else
-        {
-            throw std::logic_error(
-                "Only values of learnable parameters and precomputed nodes can be set.");
-        }
+            LogicError("Only values of learnable parameters and precomputed nodes can be set.");
 
         return pNode;
     }
+
+    // -----------------------------------------------------------------------
+    // network editing
+    // -----------------------------------------------------------------------
 
     ComputationNodePtr CopyNode(const ComputationNetwork<ElemType> & fromNet,
                                 const std::wstring fromName,
@@ -1094,14 +1085,13 @@ public:
         }
 
         ComputationNodePtr pFromNode = fromNet.GetNodeFromName(fromName);
-        ComputationNodePtr pToNode = nullptr;
+        ComputationNodePtr pToNode;
 
         // don't allow cross network child copy unless caller explicity handles children fixup
         if ((flags & CopyNodeFlags::copyNodeChildren) &&
             this != &fromNet && !(flags & CopyNodeFlags::copyNodeChildrenCrossNetwork))
         {
-            throw std::logic_error(
-                "CopyNode: Copy node children across network is invalid.");
+            LogicError("CopyNode: Copying node children across network is invalid.");
         }
 
         if (!NodeNameExist(toName))
@@ -1117,14 +1107,9 @@ public:
 
             //same node. no copy needed
             if (pFromNode == pToNode)
-            {
-                throw std::logic_error(
-                    "CopyNode: You are copying the node to the same network with same node name.");
-            }
+                LogicError("CopyNode: You are copying the node to the same network with same node name.");
             else
-            {
-                pFromNode->CopyTo(pToNode, toName, flags);
-            }
+                pFromNode->CopyTo(pToNode, toName, flags);  // blast it over the existing node
         }
         return pToNode;
     }
@@ -1136,10 +1121,7 @@ public:
                      const CopyNodeFlags flags = copyNodeAll)
     {
         if (!(flags & CopyNodeFlags::copyNodeValue))
-        {
-            throw std::logic_error(
-                "CopySubTree: you cannot copy a tree without copying the node values.");
-        }
+            LogicError("CopySubTree: you cannot copy a tree without copying the node values.");
 
         ComputationNodePtr fromRoot = fromNet.GetNodeFromName(fromName);
 
@@ -1158,9 +1140,7 @@ public:
             {
                 //copy the children structure but use the new nodes generated
                 for (int i = 0; i < fromNode->ChildrenSize(); i++)
-                {
                     toNode->SetInput(i, GetNodeFromName(toNamePrefix + fromNode->Inputs(i)->NodeName()));
-                }
             }
         }
     }
@@ -1173,609 +1153,252 @@ public:
 
 #pragma endregion Network Modification
 
-    ComputationNode<ElemType>* CreateNodeFromFile(const std::wstring nodeType,
-                                                  const std::wstring nodeName,
-                                                  File& fstream,
-                                                  size_t modelVersion)
+    // -----------------------------------------------------------------------
+    // node creation
+    // -----------------------------------------------------------------------
+
+    // TODO: There is quite a bit of redundancy here
+    //  - create/load by name
+    //  - create by calling constructor directly
+    //  - create node by type--one function per node; one could just use the constructor
+    //  - create node and add to network--users could just add the node by themselves
+    // We should
+    //  - move node creation to a separate class, e.g. NodeFactory
+    //    One goal would be that ComputationNetwork.h becomes agnostic of node types as much as possible, and does not have to pull in all node headers
+    //  - choose one of the methods above (probably we need the by-name method separately, but tucked away in a CPP please)
+
+    // create a new node of a type given as a string, with var args so that this can be used at multiple places
+    // This function only creates nodes that accept (m_deviceId, nodeName).
+    // TODO: Is this ever called with additional _Args? If not, simplify
+    template<class... _Types>
+    ComputationNodePtr NewStandardNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
     {
-        ComputationNode<ElemType>* newNode = nullptr;
-
-        if (nodeType == LearnableParameter<ElemType>::TypeName())
-        {
-            newNode = new LearnableParameter<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == InputValue<ElemType>::TypeName())
-        {
-            newNode = new InputValue<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == SparseLearnableParameter<ElemType>::TypeName())
-        {
-            newNode = new SparseLearnableParameter<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == InputValue<ElemType>::SparseTypeName())
-        {
-            newNode = new InputValue<ElemType>(fstream, modelVersion, m_deviceId, nodeName, true);
-        }
-        else if (nodeType == ConvolutionNode<ElemType>::TypeName())
-        {
-            newNode = new ConvolutionNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == MaxPoolingNode<ElemType>::TypeName())
-        {
-            newNode = new MaxPoolingNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == AveragePoolingNode<ElemType>::TypeName())
-        {
-            newNode = new AveragePoolingNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == NegateNode<ElemType>::TypeName())
-        {
-            newNode = new NegateNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == RectifiedLinearNode<ElemType>::TypeName())
-        {
-            newNode = new RectifiedLinearNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == SigmoidNode<ElemType>::TypeName())
-        {
-            newNode = new SigmoidNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == TanhNode<ElemType>::TypeName())
-        {
-            newNode = new TanhNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == ExpNode<ElemType>::TypeName())
-        {
-            newNode = new ExpNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == LogNode<ElemType>::TypeName())
-        {
-            newNode = new LogNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == CosineNode<ElemType>::TypeName())
-        {
-            newNode = new CosineNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == SoftmaxNode<ElemType>::TypeName())
-        {
-            newNode = new SoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == LogSoftmaxNode<ElemType>::TypeName())
-        {
-            newNode = new LogSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == SumElementsNode<ElemType>::TypeName())
-        {
-            newNode = new SumElementsNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())
-        {
-            newNode = new SumColumnElementsNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == ScaleNode<ElemType>::TypeName())
-        {
-            newNode = new ScaleNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == TransposeNode<ElemType>::TypeName())
-        {
-            newNode = new TransposeNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == TimesNode<ElemType>::TypeName())
-        {
-            newNode = new TimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == TransposeTimesNode<ElemType>::TypeName())
-        {
-            newNode = new TransposeTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-                    else if (nodeType == StrideTimesNode<ElemType>::TypeName())
-                    {
-                        newNode = new StrideTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-                    }
-        else if (nodeType == ElementTimesNode<ElemType>::TypeName())
-        {
-            newNode = new ElementTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == DiagTimesNode<ElemType>::TypeName())
-        {
-            newNode = new DiagTimesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == CosDistanceNode<ElemType>::TypeName())
-        {
-            newNode = new CosDistanceNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == KhatriRaoProductNode<ElemType>::TypeName())
-        {
-            newNode = new KhatriRaoProductNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == PlusNode<ElemType>::TypeName())
-        {
-            newNode = new PlusNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == MinusNode<ElemType>::TypeName())
-        {
-            newNode = new MinusNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == SquareErrorNode<ElemType>::TypeName())
-        {
-            newNode = new SquareErrorNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == CrossEntropyWithSoftmaxNode<ElemType>::TypeName())
-        {
-            newNode = new CrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId,nodeName);
-        }
-        else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
-        {
-            newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == NoiseContrastiveEstimationNode<ElemType>::TypeName())
-        {
-            newNode = new NoiseContrastiveEstimationNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == CRFNode<ElemType>::TypeName())
-        {
-            newNode = new CRFNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == DummyCriterionNode<ElemType>::TypeName())
-        {
-            newNode = new DummyCriterionNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == LSTMNode<ElemType>::TypeName())
-        {
-            newNode = new LSTMNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == CrossEntropyNode<ElemType>::TypeName())
-        {
-            newNode = new CrossEntropyNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
-        {
-            newNode = new MatrixL1RegNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())
-        {
-            newNode = new MatrixL2RegNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == PerDimMeanVarNormalizationNode<ElemType>::TypeName() ||
-                 nodeType == L"PerDimMeanVarNormalizationNode")
-        {
-            // mseltzer - hack b/c this changed (Dong?) and old models didn't load...
-            newNode = new PerDimMeanVarNormalizationNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == PerDimMeanVarDeNormalizationNode<ElemType>::TypeName() ||
-                 nodeType == L"PerDimMeanVarDeNormalizationNode")
-        {
-            // mseltzer - hack b/c this changed (Dong?) and old models didn't load...
-            newNode = new PerDimMeanVarDeNormalizationNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == ErrorPredictionNode<ElemType>::TypeName())
-        {
-            newNode = new ErrorPredictionNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == DropoutNode<ElemType>::TypeName())
-        {
-            newNode = new DropoutNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == ReshapeNode<ElemType>::TypeName())
-        {
-            newNode = new ReshapeNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == RowRepeatNode<ElemType>::TypeName())
-        {
-            newNode = new RowRepeatNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == DiagonalNode<ElemType>::TypeName())
-        {
-            newNode = new DiagonalNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == MeanNode<ElemType>::TypeName())
-        {
-            newNode = new MeanNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == InvStdDevNode<ElemType>::TypeName())
-        {
-            newNode = new InvStdDevNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == PastValueNode<ElemType>::TypeName() || nodeType == L"Delay")
-        {
-            newNode = new PastValueNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == FutureValueNode<ElemType>::TypeName())
-        {
-            newNode = new FutureValueNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == LookupTableNode<ElemType>::TypeName())
-        {
-            newNode = new LookupTableNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == RowSliceNode<ElemType>::TypeName())
-        {
-            newNode = new RowSliceNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == RowStackNode<ElemType>::TypeName())
-        {
-            newNode = new RowStackNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
-        {
-            newNode = new GMMLogLikelihoodNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())
-        {
-            newNode = new SequenceDecoderNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
-        {
-            newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == TimeReverseNode<ElemType>::TypeName())
-        {
-            newNode = new TimeReverseNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-        else if (nodeType == ParallelNode<ElemType>::TypeName())
-        {
-            newNode = new ParallelNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-        }
-                    else if (nodeType == PairNetworkNode<ElemType>::TypeName())
-                    {
-                        newNode = new PairNetworkNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
-                    }
-        else
-        {
-            fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n",
-                    nodeType.c_str(), nodeName.c_str());
-            throw std::invalid_argument("Invalid node type.");
-        }
-
-        AddNodeToNet(newNode);
-        return newNode;
+        // please keep this table sorted
+        if (nodeType == CRFNode<ElemType>::TypeName())	return New<CRFNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName()) return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ColumnElementTimesNode<ElemType>::TypeName())  return New<ColumnElementTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == CosDistanceNode<ElemType>::TypeName())	    return New<CosDistanceNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName()) return New<CosDistanceWithNegativeSamplesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == CosineNode<ElemType>::TypeName())	            return New<CosineNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == CrossEntropyNode<ElemType>::TypeName())	    return New<CrossEntropyNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == CrossEntropyWithSoftmaxNode<ElemType>::TypeName())	return New<CrossEntropyWithSoftmaxNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == DiagonalNode<ElemType>::TypeName())	        return New<DiagonalNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == DiagTimesNode<ElemType>::TypeName())	    return New<DiagTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == DropoutNode<ElemType>::TypeName())	            return New<DropoutNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == DummyCriterionNode<ElemType>::TypeName())	    return New<DummyCriterionNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ElementTimesNode<ElemType>::TypeName())	    return New<ElementTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ErrorPredictionNode<ElemType>::TypeName())	    return New<ErrorPredictionNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ExpNode<ElemType>::TypeName())	            return New<ExpNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == FutureValueNode<ElemType>::TypeName())	    return New<FutureValueNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())    return New<GMMLogLikelihoodNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == InvStdDevNode<ElemType>::TypeName())	    return New<InvStdDevNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == KhatriRaoProductNode<ElemType>::TypeName())    return New<KhatriRaoProductNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == LSTMNode<ElemType>::TypeName())	            return New<LSTMNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == LogNode<ElemType>::TypeName())	            return New<LogNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == LogSoftmaxNode<ElemType>::TypeName())	    return New<LogSoftmaxNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == LookupTableNode<ElemType>::TypeName())	    return New<LookupTableNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())	    return New<MatrixL1RegNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())	    return New<MatrixL2RegNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == MeanNode<ElemType>::TypeName())	            return New<MeanNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == MinusNode<ElemType>::TypeName())	            return New<MinusNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == NegateNode<ElemType>::TypeName())	            return New<NegateNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == NoiseContrastiveEstimationNode<ElemType>::TypeName()) return New<NoiseContrastiveEstimationNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == PairNetworkNode<ElemType>::TypeName())	    return New<PairNetworkNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ParallelNode<ElemType>::TypeName())	    return New<ParallelNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == PastValueNode<ElemType>::TypeName() || nodeType == L"Delay") return New<PastValueNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == PerDimMeanVarDeNormalizationNode<ElemType>::TypeName() || nodeType == L"PerDimMeanVarDeNormalizationNode")	return New<PerDimMeanVarDeNormalizationNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == PerDimMeanVarNormalizationNode<ElemType>::TypeName() || nodeType == L"PerDimMeanVarNormalizationNode")	return New<PerDimMeanVarNormalizationNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == PlusNode<ElemType>::TypeName())	            return New<PlusNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == RectifiedLinearNode<ElemType>::TypeName())	    return New<RectifiedLinearNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ReshapeNode<ElemType>::TypeName())	            return New<ReshapeNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == RowElementTimesNode<ElemType>::TypeName())	    return New<RowElementTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == RowRepeatNode<ElemType>::TypeName())	    return New<RowRepeatNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == RowSliceNode<ElemType>::TypeName())	    return New<RowSliceNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == RowStackNode<ElemType>::TypeName())	    return New<RowStackNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ScaleNode<ElemType>::TypeName())	            return New<ScaleNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())	    return New<SequenceDecoderNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SigmoidNode<ElemType>::TypeName())	            return New<SigmoidNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SoftmaxNode<ElemType>::TypeName())	            return New<SoftmaxNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SquareErrorNode<ElemType>::TypeName())	    return New<SquareErrorNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == StrideTimesNode<ElemType>::TypeName())	    return New<StrideTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())   return New<SumColumnElementsNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SumElementsNode<ElemType>::TypeName())	    return New<SumElementsNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == TanhNode<ElemType>::TypeName())	            return New<TanhNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == TimeReverseNode<ElemType>::TypeName())	    return New<TimeReverseNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == TimesNode<ElemType>::TypeName())	            return New<TimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == TransposeNode<ElemType>::TypeName())	    return New<TransposeNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == TransposeTimesNode<ElemType>::TypeName())	    return New<TransposeTimesNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else return nullptr;
+    }
+    // create a new node of a type given as a string, with var args so that this can be used at multiple places
+    // This function is used for loading, while the above is used for creating standard-type networks.
+    template<class... _Types>
+    ComputationNodePtr NewNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
+    {
+        // TODO: Is this ever called with additional _Args? If not, simplify
+        // try first those that accept the standard two constructor arguments
+        auto newNode = NewStandardNode(nodeType, deviceId, name, forward<_Types>(_Args)...);
+        if (newNode) return newNode;
+        // check more types
+        else if (nodeType == AveragePoolingNode<ElemType>::TypeName())	     return New<AveragePoolingNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == ConvolutionNode<ElemType>::TypeName())	     return New<ConvolutionNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == InputValue<ElemType>::SparseTypeName())	     return New<InputValue<ElemType>>(deviceId, name, forward<_Types>(_Args)..., true);
+        else if (nodeType == InputValue<ElemType>::TypeName())	             return New<InputValue<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == LearnableParameter<ElemType>::TypeName())	     return New<LearnableParameter<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == MaxPoolingNode<ElemType>::TypeName())	     return New<MaxPoolingNode<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else if (nodeType == SparseLearnableParameter<ElemType>::TypeName()) return New<SparseLearnableParameter<ElemType>>(deviceId, name, forward<_Types>(_Args)...);
+        else return nullptr;
     }
 
-                ComputationNodePtr CreateLearnableParameter(const std::wstring paramName, const size_t rows, const size_t cols)
+    // -----------------------------------------------------------------------
+    // serialization
+    // -----------------------------------------------------------------------
+
+    ComputationNodePtr CreateNodeFromFile(const std::wstring& nodeType,
+                                          const std::wstring & nodeName,
+                                          File& fstream,
+                                          size_t modelVersion)
     {
-        ComputationNodePtr newNode(new LearnableParameter<ElemType>(rows, cols, m_deviceId, paramName));
-        AddNodeToNet(newNode);
-        return newNode;
+        auto newNode = NewNode(nodeType, m_deviceId, nodeName);
+        if (!newNode)
+        {
+            fprintf(stderr, "Unknown ComputationNode type %ls (node name %ls)\n", nodeType.c_str(), nodeName.c_str());
+            InvalidArgument("Invalid node type.");
+        }
+        newNode->LoadFromFile(fstream, modelVersion);
+        return AddNodeToNet(newNode);
+    }
+
+    // -----------------------------------------------------------------------
+    // node creation
+    // -----------------------------------------------------------------------
+
+    // The following functions create nodes and add them to the net, but don't attach inputs (some don't have inputs).
+    // There are special versions for nodes with custom constructors, and a catch-all, CreateComputationNode(), for all others.
+    // TODO: Do we really need these? Folks who want to use C++ can instead say net->AddNodeToNet(New<>(...)), which is not that different.
+    // TODO: separate into nodes that have inputs and those that duplicate functions with input adding except just not adding inputs. Clear?
+
+    ComputationNodePtr CreateLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols)
+    {
+        return AddNodeToNet(New<LearnableParameter<ElemType>>(m_deviceId, paramName, rows, cols));
     }
 
     //sparse matrix size is optionally specified
-    ComputationNodePtr CreateSparseLearnableParameter(const std::wstring paramName, const size_t rows, const size_t cols, const size_t size = 0)
+    ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0)
     {
-        ComputationNodePtr newNode(new SparseLearnableParameter<ElemType>(rows, cols, size, m_deviceId, paramName));
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNet(New<SparseLearnableParameter<ElemType>>(m_deviceId, paramName, rows, cols, size));
     }
 
-    ComputationNodePtr CreateInputNode(const std::wstring inputName, const size_t rows, const size_t cols)
+    ComputationNodePtr CreateInputNode(const std::wstring & inputName, const size_t rows, const size_t cols)
     {
-        ComputationNodePtr newNode(
-                new InputValue<ElemType>(rows, cols, m_deviceId, inputName));
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNet(New<InputValue<ElemType>>(m_deviceId, inputName, rows, cols));
     }
 
-                ComputationNodePtr PairNetwork(const ComputationNodePtr & a, const std::wstring nodeName = L"")
-                {
-                    ComputationNodePtr newNode(new PairNetworkNode<ElemType>(m_deviceId, nodeName));
-                    if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
-                    {
-                        fprintf(stderr, "PairNetwork : asked to pair a node with name l%s in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
-                        throw std::runtime_error("PairNetwork : asked to pair a node with name in another network.However, this network has already a node with the same name.Should avoid this case.\n");
-                    }
-                    newNode->AttachInputs(a);
-                    AddNodeToNet(newNode);
-                    return newNode;
-                }
-
-    ComputationNodePtr CreateSparseInputNode(const std::wstring inputName, const size_t rows, const size_t cols)
+    ComputationNodePtr CreateSparseInputNode(const std::wstring & inputName, const size_t rows, const size_t cols)
     {
-        ComputationNodePtr newNode(
-                new InputValue<ElemType>(rows, cols, m_deviceId, inputName, true));
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNet(New<InputValue<ElemType>>(m_deviceId, inputName, rows, cols, true));
     }
 
-    ComputationNodePtr CreateInputNode(const std::wstring inputName,
+    ComputationNodePtr CreateInputNode(const std::wstring & inputName,
                                        const size_t imageWidth,
                                        const size_t imageHeight,
                                        const size_t imageChannels,
                                        const size_t numImages)
     {
-        ComputationNodePtr newNode(new InputValue<ElemType>(imageWidth, imageHeight, imageChannels, numImages, m_deviceId, inputName));
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNet(New<InputValue<ElemType>>(m_deviceId, inputName, imageWidth, imageHeight, imageChannels, numImages));
     }
 
-    ComputationNodePtr CreateSparseInputNode(const std::wstring inputName,
+    ComputationNodePtr CreateSparseInputNode(const std::wstring & inputName,
                                              const size_t imageWidth,
                                              const size_t imageHeight,
                                              const size_t imageChannels,
                                              const size_t numImages)
     {
-        ComputationNodePtr newNode(new InputValue<ElemType>(imageWidth, imageHeight, imageChannels, numImages, m_deviceId, inputName, true));
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNet(New<InputValue<ElemType>>(m_deviceId, inputName, imageWidth, imageHeight, imageChannels, numImages, true));
     }
 
-                ComputationNodePtr CreatePairNetworkNode(const std::wstring inputName, const size_t rows, const size_t cols)
-                {
-                    ComputationNodePtr newNode(new PairNetworkNode<ElemType>(rows, cols, m_deviceId, inputName));
-                    AddNodeToNet(newNode);
-                    return newNode;
-                }
+    ComputationNodePtr CreatePairNetworkNode(const std::wstring & inputName, const size_t rows, const size_t cols)
+    {
+        return AddNodeToNet(New<PairNetworkNode<ElemType>>(m_deviceId, inputName, rows, cols));
+    }
 
-                ComputationNodePtr CreateConvolutionNode(const std::wstring nodeName,
-                    const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
+    ComputationNodePtr CreateConvolutionNode(const std::wstring & nodeName,
+                                             const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
                                              const size_t horizontalSubsample, const size_t verticalSubsample,
                                              const bool zeroPadding = false,
                                              const size_t maxTempMemSizeInSamples = 0)
     {
-        ComputationNodePtr newNode(new ConvolutionNode<ElemType>(kernelWidth, kernelHeight,
-                                                                 outputChannels,
-                                                                 horizontalSubsample,
-                                                                 verticalSubsample, zeroPadding,
-                                                                 m_deviceId, nodeName,
-                                                                 maxTempMemSizeInSamples));
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNet(New<ConvolutionNode<ElemType>>(m_deviceId, nodeName,
+                                                           kernelWidth, kernelHeight,
+                                                           outputChannels,
+                                                           horizontalSubsample,
+                                                           verticalSubsample, zeroPadding,
+                                                           maxTempMemSizeInSamples));
     }
 
-    ComputationNodePtr CreateMaxPoolingNode(const std::wstring nodeName,
+    ComputationNodePtr CreateMaxPoolingNode(const std::wstring & nodeName,
                                             const size_t windowWidth,
                                             const size_t windowHeight,
                                             const size_t horizontalSubsample,
                                             const size_t verticalSubsample)
     {
-        ComputationNodePtr newNode(new MaxPoolingNode<ElemType>(windowWidth, windowHeight,
-                                                                horizontalSubsample,
-                                                                verticalSubsample, m_deviceId,
-                                                                nodeName));
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNet(New<MaxPoolingNode<ElemType>>(m_deviceId, nodeName,
+                                                          windowWidth, windowHeight,
+                                                          horizontalSubsample,
+                                                          verticalSubsample));
     }
 
-    ComputationNodePtr CreateAveragePoolingNode(const std::wstring nodeName, const size_t windowWidth,
+    ComputationNodePtr CreateAveragePoolingNode(const std::wstring & nodeName, const size_t windowWidth,
                                                 const size_t windowHeight, const size_t horizontalSubsample,
                                                 const size_t verticalSubsample)
     {
-        ComputationNodePtr newNode(new AveragePoolingNode<ElemType>(windowWidth, windowHeight,
-                                                                    horizontalSubsample,
-                                                                    verticalSubsample, m_deviceId,
-                                                                    nodeName));
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNet(New<AveragePoolingNode<ElemType>>(m_deviceId, nodeName,
+                                                              windowWidth, windowHeight,
+                                                              horizontalSubsample,
+                                                              verticalSubsample));
     }
 
-    ComputationNodePtr CreateComputationNode(const std::wstring nodeType, const std::wstring nodeName)
+    // this is the catch-all for all cases not covered as special cases above
+    // Unlike the specialized ones above, this one creates nodes by type given as a string.
+    ComputationNodePtr CreateComputationNode(const std::wstring & nodeType, const std::wstring & nodeName)
     {
-        ComputationNode<ElemType>* newNode;
-
-        if (nodeType == NegateNode<ElemType>::TypeName())
-        {
-            newNode = new NegateNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == RectifiedLinearNode<ElemType>::TypeName())
-        {
-            newNode = new RectifiedLinearNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == SigmoidNode<ElemType>::TypeName())
-        {
-            newNode = new SigmoidNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == TanhNode<ElemType>::TypeName())
-        {
-            newNode = new TanhNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == ExpNode<ElemType>::TypeName())
-        {
-            newNode = new ExpNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == LogNode<ElemType>::TypeName())
-        {
-            newNode = new LogNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == CosineNode<ElemType>::TypeName())
-        {
-            newNode = new CosineNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == SoftmaxNode<ElemType>::TypeName())
-        {
-            newNode = new SoftmaxNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == LogSoftmaxNode<ElemType>::TypeName())
-        {
-            newNode = new LogSoftmaxNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == SumElementsNode<ElemType>::TypeName())
-        {
-            newNode = new SumElementsNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == SumColumnElementsNode<ElemType>::TypeName())
-        {
-            newNode = new SumColumnElementsNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == ScaleNode<ElemType>::TypeName())
-        {
-            newNode = new ScaleNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == TransposeNode<ElemType>::TypeName())
-        {
-            newNode = new TransposeNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == TimesNode<ElemType>::TypeName())
-        {
-            newNode = new TimesNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == TransposeTimesNode<ElemType>::TypeName())
-        {
-            newNode = new TransposeTimesNode<ElemType>(m_deviceId, nodeName);
-        }
-                    else if (nodeType == StrideTimesNode<ElemType>::TypeName())
-                    {
-                        newNode = new StrideTimesNode<ElemType>(m_deviceId, nodeName);
-                    }
-        else if (nodeType == ElementTimesNode<ElemType>::TypeName())
-        {
-            newNode = new ElementTimesNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == DiagTimesNode<ElemType>::TypeName())
-        {
-            newNode = new DiagTimesNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == CosDistanceNode<ElemType>::TypeName())
-        {
-            newNode = new CosDistanceNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == KhatriRaoProductNode<ElemType>::TypeName())
-        {
-            newNode = new KhatriRaoProductNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == PlusNode<ElemType>::TypeName())
-        {
-            newNode = new PlusNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == MinusNode<ElemType>::TypeName())
-        {
-            newNode = new MinusNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == SquareErrorNode<ElemType>::TypeName())
-        {
-            newNode = new SquareErrorNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == CrossEntropyWithSoftmaxNode<ElemType>::TypeName())
-        {
-            newNode = new CrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == CrossEntropyNode<ElemType>::TypeName())
-        {
-            newNode = new CrossEntropyNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
-        {
-            newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == CRFNode<ElemType>::TypeName())
-        {
-            newNode = new CRFNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == DummyCriterionNode<ElemType>::TypeName())
-        {
-            newNode = new DummyCriterionNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == LSTMNode<ElemType>::TypeName())
-        {
-            newNode = new LSTMNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == MatrixL1RegNode<ElemType>::TypeName())
-        {
-            newNode = new MatrixL1RegNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == MatrixL2RegNode<ElemType>::TypeName())
-        {
-            newNode = new MatrixL2RegNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == PerDimMeanVarNormalizationNode<ElemType>::TypeName())
-        {
-            newNode = new PerDimMeanVarNormalizationNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == PerDimMeanVarDeNormalizationNode<ElemType>::TypeName())
-        {
-            newNode = new PerDimMeanVarDeNormalizationNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == ErrorPredictionNode<ElemType>::TypeName())
-        {
-            newNode = new ErrorPredictionNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == DropoutNode<ElemType>::TypeName())
-        {
-            newNode = new DropoutNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == ReshapeNode<ElemType>::TypeName())
-        {
-            newNode = new ReshapeNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == RowRepeatNode<ElemType>::TypeName())
-        {
-            newNode = new RowRepeatNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == DiagonalNode<ElemType>::TypeName())
-        {
-            newNode = new DiagonalNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == MeanNode<ElemType>::TypeName())
-        {
-            newNode = new MeanNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == InvStdDevNode<ElemType>::TypeName())
-        {
-            newNode = new InvStdDevNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == PastValueNode<ElemType>::TypeName() || nodeType == L"Delay")
-        {
-            newNode = new PastValueNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == FutureValueNode<ElemType>::TypeName())
-        {
-            newNode = new FutureValueNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == LookupTableNode<ElemType>::TypeName())
-        {
-            newNode = new LookupTableNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == GMMLogLikelihoodNode<ElemType>::TypeName())
-        {
-            newNode = new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == SequenceDecoderNode<ElemType>::TypeName())
-        {
-            newNode = new SequenceDecoderNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == TimeReverseNode<ElemType>::TypeName())
-        {
-            newNode = new TimeReverseNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == CosDistanceWithNegativeSamplesNode<ElemType>::TypeName())
-        {
-            newNode = new CosDistanceWithNegativeSamplesNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == ParallelNode<ElemType>::TypeName())
-        {
-            newNode = new ParallelNode<ElemType>(m_deviceId, nodeName);
-        }
-        else if (nodeType == RowStackNode<ElemType>::TypeName())
-        {
-            newNode = new RowStackNode<ElemType>(m_deviceId, nodeName);
-        }
-                    else if (nodeType == PairNetworkNode<ElemType>::TypeName())
-                    {
-                        newNode = new PairNetworkNode<ElemType>(m_deviceId, nodeName);
-                    }
-        else
-        {
-            fprintf(stderr, "Error creating new ComputationNode of type %ls, with name %ls\n",
-                    nodeType.c_str(), nodeName.c_str());
-            throw std::invalid_argument("Invalid node type.");
-        }
-
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNet(NewStandardNode(nodeType, m_deviceId, nodeName));
     }
 
-    ComputationNodePtr Parameter(const size_t rows, size_t cols, const std::wstring nodeName = L"")
+    // TODO: These next three functions are wrappers around CreateXXXNode(). Remove these.
+
+    ComputationNodePtr Parameter(const size_t rows, size_t cols, const std::wstring nodeName = L"") // TODO: remove
     {
         return CreateLearnableParameter(nodeName, rows, cols);
     }
 
-    ComputationNodePtr Input(const size_t rows, const size_t cols, const std::wstring nodeName = L"")
+    ComputationNodePtr Input(const size_t rows, const size_t cols, const std::wstring nodeName = L"")   // TODO: remove
     {
         return CreateInputNode(nodeName, rows, cols);
     }
 
-    ComputationNodePtr Input(const size_t imageWidth, const size_t imageHeight,
+    ComputationNodePtr Input(const size_t imageWidth, const size_t imageHeight,     // TODO: remove
                              const size_t imageChannels, const size_t numImages,
                              const std::wstring nodeName = L"")
     {
         return CreateInputNode(nodeName, imageWidth, imageHeight, imageChannels, numImages);
+    }
+
+    // -----------------------------------------------------------------------
+    // node creation
+    // -----------------------------------------------------------------------
+
+    // The following functions create nodes and link them to the network and their inputs.
+    // TODO: Do we need both this set and the one above that does not add inputs? Can they share more code?
+
+    ComputationNodePtr PairNetwork(const ComputationNodePtr & a, const std::wstring nodeName = L"")
+    {
+        if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
+        {
+            fprintf(stderr, "PairNetwork: asked to pair a node with name %ls in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
+            RuntimeError("PairNetwork: asked to pair a node with name in another network.However, this network has already a node with the same name.Should avoid this case.\n");
+        }
+        return AddNodeToNetAndAttachInputs(New<PairNetworkNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr Convolution(const ComputationNodePtr weight,
@@ -1789,15 +1412,13 @@ public:
                                    const std::wstring nodeName = L"",
                                    const size_t maxTempMemSizeInSamples = 0)
     {
-        ComputationNodePtr newNode(new ConvolutionNode<ElemType>(kernelWidth, kernelHeight,
-                                                                 outputChannels,
-                                                                 horizontalSubsample,
-                                                                 verticalSubsample, zeroPadding,
-                                                                 m_deviceId, nodeName,
-                                                                 maxTempMemSizeInSamples));
-        newNode->AttachInputs(weight, inputValues);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(m_deviceId, nodeName,
+                                                                          kernelWidth, kernelHeight,
+                                                                          outputChannels,
+                                                                          horizontalSubsample,
+                                                                          verticalSubsample, zeroPadding,
+                                                                          maxTempMemSizeInSamples),
+                                           weight, inputValues);
     }
 
     ComputationNodePtr MaxPooling(const ComputationNodePtr inputValues,
@@ -1807,13 +1428,11 @@ public:
                                   const size_t verticalSubsample,
                                   const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new MaxPoolingNode<ElemType>(windowWidth, windowHeight,
-                                                                horizontalSubsample,
-                                                                verticalSubsample, m_deviceId,
-                                                                nodeName));
-        newNode->AttachInputs(inputValues);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<MaxPoolingNode<ElemType>>(m_deviceId, nodeName,
+                                                                         windowWidth, windowHeight,
+                                                                         horizontalSubsample,
+                                                                         verticalSubsample),
+                                           inputValues);
     }
 
     ComputationNodePtr AveragePooling(const ComputationNodePtr inputValues,
@@ -1823,74 +1442,45 @@ public:
                                       const size_t verticalSubsample,
                                       const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new AveragePoolingNode<ElemType>(windowWidth, windowHeight,
-                                                                    horizontalSubsample,
-                                                                    verticalSubsample, m_deviceId,
-                                                                    nodeName));
-        newNode->AttachInputs(inputValues);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<AveragePoolingNode<ElemType>>(m_deviceId, nodeName,
+                                                                             windowWidth, windowHeight,
+                                                                             horizontalSubsample,
+                                                                             verticalSubsample),
+                                           inputValues);
     }
 
-    ComputationNodePtr ErrorPrediction(const ComputationNodePtr a,
-                                       const ComputationNodePtr b,
-                                       const std::wstring nodeName = L"")
+    ComputationNodePtr ErrorPrediction(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ErrorPredictionNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a, b);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<ErrorPredictionNode<ElemType>>(m_deviceId, nodeName), a, b);
     }
 
     ComputationNodePtr PerDimMeanVarNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean,
                                                   const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new PerDimMeanVarNormalizationNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(feature, mean, InvStdDev);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<PerDimMeanVarNormalizationNode<ElemType>>(m_deviceId, nodeName), feature, mean, InvStdDev);
     }
 
     ComputationNodePtr PerDimMeanVarDeNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean,
                                                     const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new PerDimMeanVarDeNormalizationNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(feature, mean, InvStdDev);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<PerDimMeanVarDeNormalizationNode<ElemType>>(m_deviceId, nodeName), feature, mean, InvStdDev);
     }
 
-    ComputationNodePtr SquareError(const ComputationNodePtr a,
-                                   const ComputationNodePtr b,
-                                   const std::wstring nodeName = L"")
+    ComputationNodePtr SquareError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new SquareErrorNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a, b);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<SquareErrorNode<ElemType>>(m_deviceId, nodeName), a, b);
     }
 
 
-    ComputationNodePtr SequenceDecoder(const ComputationNodePtr label, 
-                                        const ComputationNodePtr prediction, 
-                                        const ComputationNodePtr pairscore, 
-                                        const std::wstring nodeName = L"")
+    ComputationNodePtr SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new SequenceDecoderNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(label, prediction, pairscore);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<SequenceDecoderNode<ElemType>>(m_deviceId, nodeName), label, prediction, pairscore);
     }
 
-    ComputationNodePtr CrossEntropyWithSoftmax(const ComputationNodePtr label, 
-                                               const ComputationNodePtr prediction,
-                                               const std::wstring nodeName = L"")
+    ComputationNodePtr CrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"")
 
     {
-        ComputationNodePtr newNode(new CrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(label, prediction);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<CrossEntropyWithSoftmaxNode<ElemType>>(m_deviceId, nodeName), label, prediction);
     }
 
     ComputationNodePtr NoiseContrastiveEstimation(const ComputationNodePtr label, const ComputationNodePtr prediction,
@@ -1898,10 +1488,7 @@ public:
                                                   const ComputationNodePtr input_bias, const std::wstring nodeName = L"",
                                                   NCEEvalMode mode = NCEEvalMode::None)
     {
-        ComputationNodePtr newNode(new NoiseContrastiveEstimationNode<ElemType>(m_deviceId, nodeName, mode));
-        newNode->AttachInputs(label, prediction, input_weight, input_bias);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<NoiseContrastiveEstimationNode<ElemType>>(m_deviceId, nodeName, mode), label, prediction, input_weight, input_bias);
     }
 
     ComputationNodePtr ClassCrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction,
@@ -1909,10 +1496,7 @@ public:
                                                     const ComputationNodePtr cls_log_post_prob,
                                                     const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(label, prediction, input_weight, cls_log_post_prob);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(m_deviceId, nodeName), label, prediction, input_weight, cls_log_post_prob);
     }
 
     ComputationNodePtr CRF(const ComputationNodePtr label,
@@ -1920,19 +1504,12 @@ public:
                            const ComputationNodePtr transition_score,
                            const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new CRFNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(label, postDepScore, transition_score);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<CRFNode<ElemType>>(m_deviceId, nodeName), label, postDepScore, transition_score);
     }
 
-    ComputationNodePtr DummyCriterion(const ComputationNodePtr objectives, const ComputationNodePtr derivatives,
-        const ComputationNodePtr prediction, const std::wstring nodeName = L"")
+    ComputationNodePtr DummyCriterion(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new DummyCriterionNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(objectives, derivatives, prediction);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<DummyCriterionNode<ElemType>>(m_deviceId, nodeName), objectives, derivatives, prediction);
     }
 
     ComputationNodePtr LSTM(const ComputationNodePtr obs, 
@@ -1942,246 +1519,154 @@ public:
                             const ComputationNodePtr memoryCellWgt, 
                             const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new LSTMNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(obs, inputGate, forgetGate, outputGate, memoryCellWgt);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<LSTMNode<ElemType>>(m_deviceId, nodeName), obs, inputGate, forgetGate, outputGate, memoryCellWgt);
     }
 
-    ComputationNodePtr CrossEntropy(const ComputationNodePtr label,
-                                    const ComputationNodePtr prediction,
-                                    const std::wstring nodeName = L"")
+    ComputationNodePtr CrossEntropy(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new CrossEntropyNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(label, prediction);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<CrossEntropyNode<ElemType>>(m_deviceId, nodeName), label, prediction);
     }
 
     ComputationNodePtr MatrixL1Reg(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new MatrixL1RegNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<MatrixL1RegNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr MatrixL2Reg(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new MatrixL2RegNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<MatrixL2RegNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr Mean(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new MeanNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<MeanNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr InvStdDev(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new InvStdDevNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<InvStdDevNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr Negate(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new NegateNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<NegateNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr RectifiedLinear(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new RectifiedLinearNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<RectifiedLinearNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr Sigmoid(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new SigmoidNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<SigmoidNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr Tanh(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new TanhNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<TanhNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr Exp(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ExpNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<ExpNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new LogNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<LogNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr Cos(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new CosineNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<CosineNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr Softmax(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new SoftmaxNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<SoftmaxNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr LogSoftmax(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new LogSoftmaxNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<LogSoftmaxNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new SumElementsNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<SumElementsNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
-    ComputationNodePtr Scale(const ComputationNodePtr scalar,
-                             const ComputationNodePtr matrix,
-                             const std::wstring nodeName = L"")
+    ComputationNodePtr Scale(const ComputationNodePtr scalar, const ComputationNodePtr matrix, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ScaleNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(scalar, matrix);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<ScaleNode<ElemType>>(m_deviceId, nodeName), scalar, matrix);
     }
 
     ComputationNodePtr Transpose(const ComputationNodePtr matrix, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new TransposeNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(matrix);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<TransposeNode<ElemType>>(m_deviceId, nodeName), matrix);
     }
 
-    ComputationNodePtr Times(const ComputationNodePtr a,
-                             const ComputationNodePtr b,
-                             const std::wstring nodeName = L"")
+    ComputationNodePtr Times(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new TimesNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a, b);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, nodeName), a, b);
     }
 
-    ComputationNodePtr TransposeTimes(const ComputationNodePtr a,
-        const ComputationNodePtr b,
-        const std::wstring nodeName = L"")
+    ComputationNodePtr TransposeTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new TransposeTimesNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a, b);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<TransposeTimesNode<ElemType>>(m_deviceId, nodeName), a, b);
     }
 
-    ComputationNodePtr ElementTimes(const ComputationNodePtr a,
-                                    const ComputationNodePtr b,
-                                    const std::wstring nodeName = L"")
+    ComputationNodePtr ElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ElementTimesNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a, b);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<ElementTimesNode<ElemType>>(m_deviceId, nodeName), a, b);
     }
 
-                ComputationNodePtr StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
-                {
-                    ComputationNodePtr newNode(new StrideTimesNode<ElemType>(m_deviceId, nodeName));
-                    newNode->AttachInputs(a, b, c);
-                    AddNodeToNet(newNode);
-                    return newNode;
-                }
-
-    ComputationNodePtr DiagTimes(const ComputationNodePtr a,
-                                 const ComputationNodePtr b,
-                                 const std::wstring nodeName = L"")
+    ComputationNodePtr RowElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new DiagTimesNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a, b);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<RowElementTimesNode<ElemType>>(m_deviceId, nodeName), a, b);
     }
 
-    ComputationNodePtr CosDistance(const ComputationNodePtr a,
-                                   const ComputationNodePtr b,
-                                   const std::wstring nodeName = L"")
+    ComputationNodePtr ColumnElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new CosDistanceNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a, b);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<ColumnElementTimesNode<ElemType>>(m_deviceId, nodeName), a, b);
     }
 
-    ComputationNodePtr KhatriRaoProduct(const ComputationNodePtr a,
-                                        const ComputationNodePtr b,
-                                        const std::wstring nodeName = L"")
+    ComputationNodePtr StrideTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new KhatriRaoProductNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a, b);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<StrideTimesNode<ElemType>>(m_deviceId, nodeName), a, b, c);
     }
 
-    ComputationNodePtr Plus(const ComputationNodePtr a,
-                            const ComputationNodePtr b,
-                            const std::wstring nodeName = L"")
+    ComputationNodePtr DiagTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new PlusNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a, b);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<DiagTimesNode<ElemType>>(m_deviceId, nodeName), a, b);
+    }
+
+    ComputationNodePtr CosDistance(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
+    {
+        return AddNodeToNetAndAttachInputs(New<CosDistanceNode<ElemType>>(m_deviceId, nodeName), a, b);
+    }
+
+    ComputationNodePtr KhatriRaoProduct(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
+    {
+        return AddNodeToNetAndAttachInputs(New<KhatriRaoProductNode<ElemType>>(m_deviceId, nodeName), a, b);
+    }
+
+    ComputationNodePtr Plus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
+    {
+        return AddNodeToNetAndAttachInputs(New<PlusNode<ElemType>>(m_deviceId, nodeName), a, b);
     }
 
     ComputationNodePtr Minus(const ComputationNodePtr a,
                              const ComputationNodePtr b,
                              const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new MinusNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a, b);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<MinusNode<ElemType>>(m_deviceId, nodeName), a, b);
     }
 
     ComputationNodePtr Dropout(const ComputationNodePtr a, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new DropoutNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<DropoutNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
     ComputationNodePtr Reshape(const ComputationNodePtr a,
@@ -2191,86 +1676,43 @@ public:
                                const size_t img_channels,
                                const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ReshapeNode<ElemType>(m_deviceId, num_rows, img_width, img_height, img_channels, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<ReshapeNode<ElemType>>(m_deviceId, nodeName, num_rows, img_width, img_height, img_channels), a);
     }
 
-    ComputationNodePtr RowRepeat(const ComputationNodePtr a,
-                                 const size_t num_repeat,
-                                 const std::wstring nodeName = L"")
+    ComputationNodePtr RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new RowRepeatNode<ElemType>(m_deviceId, num_repeat, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<RowRepeatNode<ElemType>>(m_deviceId, nodeName, num_repeat), a);
     }
 
     ComputationNodePtr Diagonal(const ComputationNodePtr a,
                                 const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new DiagonalNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<DiagonalNode<ElemType>>(m_deviceId, nodeName), a);
     }
 
-    ComputationNodePtr PastValue(const ComputationNodePtr a,
-                             const float initHiddenActivity,
-                             const size_t row_size, const size_t col_size,
-                             const std::wstring nodeName = L"")
+    ComputationNodePtr PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new PastValueNode<ElemType>(m_deviceId, initHiddenActivity,
-                                                           row_size, col_size, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<PastValueNode<ElemType>>(m_deviceId, nodeName, initHiddenActivity, row_size, col_size), a);
     }
 
-    ComputationNodePtr FutureValue(const ComputationNodePtr a,
-        const float initHiddenActivity,
-        const size_t row_size, const size_t col_size,
-        const std::wstring nodeName = L"")
+    ComputationNodePtr FutureValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new FutureValueNode<ElemType>(m_deviceId, initHiddenActivity,
-            row_size, col_size, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<FutureValueNode<ElemType>>(m_deviceId, nodeName, initHiddenActivity, row_size, col_size), a);
     }
 
-    ComputationNodePtr Parallel(const ComputationNodePtr a,
-                                const ComputationNodePtr b, 
-                                const std::wstring nodeName = L"")
+    ComputationNodePtr Parallel(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new ParallelNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(a, b);
-        AddNodeToNet(newNode);
-
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<ParallelNode<ElemType>>(m_deviceId, nodeName), a, b);
     }
 
-    ComputationNodePtr RowSlice(const ComputationNodePtr a,
-                                const size_t start_index, const size_t num_rows,
-                                const std::wstring nodeName = L"")
+    ComputationNodePtr RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new RowSliceNode<ElemType>(m_deviceId, start_index, num_rows, nodeName));
-        newNode->AttachInputs(a);
-        AddNodeToNet(newNode);
-
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<RowSliceNode<ElemType>>(m_deviceId, nodeName, start_index, num_rows), a);
     }
 
     ComputationNodePtr RowStack(const std::vector<ComputationNodePtr> inputs, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new RowStackNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(inputs);
-        AddNodeToNet(newNode);
-
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<RowStackNode<ElemType>>(m_deviceId, nodeName), inputs);
     }
 
     ComputationNodePtr GMMLogLikelihood(const ComputationNodePtr unnormedPrior,
@@ -2279,29 +1721,22 @@ public:
                                         const ComputationNodePtr feature,
                                         const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new GMMLogLikelihoodNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(unnormedPrior, mean, logStddev, feature);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<GMMLogLikelihoodNode<ElemType>>(m_deviceId, nodeName), unnormedPrior, mean, logStddev, feature);
     }
 
     ComputationNodePtr TimeReverse(const ComputationNodePtr input, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new TimeReverseNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(input);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<TimeReverseNode<ElemType>>(m_deviceId, nodeName), input);
     }
 
-    ComputationNodePtr LookupTable(const ComputationNodePtr dictionary,
-                                   const ComputationNodePtr input,
-                                   const std::wstring nodeName = L"")
+    ComputationNodePtr LookupTable(const ComputationNodePtr dictionary, const ComputationNodePtr input, const std::wstring nodeName = L"")
     {
-        ComputationNodePtr newNode(new LookupTableNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(dictionary, input);
-        AddNodeToNet(newNode);
-        return newNode;
+        return AddNodeToNetAndAttachInputs(New<LookupTableNode<ElemType>>(m_deviceId, nodeName), dictionary, input);
     }
+
+    // -----------------------------------------------------------------------
+    // node access
+    // -----------------------------------------------------------------------
 
     bool NodeNameExist(const std::wstring& name) const
     {
@@ -2309,8 +1744,7 @@ public:
         return (iter != m_nameToNodeMap.end());
     }
 
-                ComputationNodePtr GetNodeFromName(const std::wstring& name, ComputationNetwork<ElemType>* anotherNetwork = nullptr,
-                    bool bPanic = true)  const
+    ComputationNodePtr GetNodeFromName(const std::wstring& name, ComputationNetwork<ElemType>* anotherNetwork = nullptr, bool bPanic = true) const
     {
         auto iter = m_nameToNodeMap.find(name);
         if (iter != m_nameToNodeMap.end())
@@ -2319,13 +1753,13 @@ public:
             return iter->second;
         }
 
-                    if (anotherNetwork != nullptr)
-                        return anotherNetwork->GetNodeFromName(name);
+        if (anotherNetwork != nullptr)
+            return anotherNetwork->GetNodeFromName(name);
 
-                    if (bPanic)
-                        RuntimeError("GetNodeFromName: Node name %s does not exist.", name.c_str());
+        if (bPanic)
+            RuntimeError("GetNodeFromName: Node name %s does not exist.", name.c_str());
         else
-                        return nullptr;
+            return nullptr;
     }
 
     // GetNodesFromName - Get all the nodes from a name that may match a wildcard '*' pattern
@@ -2339,9 +1773,7 @@ public:
         if (found == std::wstring::npos)
         {
             if (NodeNameExist(name))
-            {
                 nodes.push_back(GetNodeFromName(name));
-            }
         }
         else
         {
@@ -2355,17 +1787,17 @@ public:
                 bool headMatch = head.empty() || nodeName.find(head) == 0;
                 bool tailMatch = tail.empty() || nodeName.rfind(tail) == nodeName.size() - tail.size();
                 if (headMatch && tailMatch)
-                {
                     nodes.push_back(nodeIter->second);
-                }
             }
         }
         return nodes;
     }
 
-    int FindInRecurrentLoop(const ComputationNodePtr startNode,
-                            std::vector<ComputationNodePtr>& recurrentNodes,
-                            bool isForwardComputing = false)
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
+    int FindInRecurrentLoop(const ComputationNodePtr startNode, vector<ComputationNodePtr>& recurrentNodes)
     {
         int iFound = -1;
 
@@ -2374,14 +1806,7 @@ public:
             if (std::find((*iter).m_recurrentNodes.begin(), (*iter).m_recurrentNodes.end(), startNode) != (*iter).m_recurrentNodes.end())
             {
                 iFound = (*iter).m_loopId;
-                if (isForwardComputing)
-                {
-                    recurrentNodes = (*iter).m_recurrentNodesForForward;
-                }
-                else
-                {
-                    recurrentNodes = (*iter).m_recurrentNodesForForward;
-                }
+                recurrentNodes = (*iter).m_recurrentNodesForForward;
                 break;
             }
         }
@@ -2422,14 +1847,11 @@ public:
     void EvaluateLoop(std::list<ComputationNodePtr>& /*allNodes*/, const ComputationNodePtr startNode)
     {
         std::vector<ComputationNodePtr> recurrentNodes;
-        int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes, true);
-        if (iLoopId != -1 && IsFuncValueOlderThanInputs(recurrentNodes) && 
-            m_recurrentInfo[iLoopId].m_completedEvaluate == false)
+        int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
+        if (iLoopId != -1 && IsFuncValueOlderThanInputs(recurrentNodes) && m_recurrentInfo[iLoopId].m_completedEvaluate == false)
         {
             for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
-            {
                 (*nodeIter)->SetFunctionAndGradientSize(m_actMiniBSize);
-            }
 
             int iMBSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
 
@@ -2440,7 +1862,6 @@ public:
                     for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                     {
                         (*nodeIter)->EvaluateThisNodeGivenInputs(timeIndex);
-
                         (*nodeIter)->UpdateEvalTimeStamp();
                     }
                 } 
@@ -2452,7 +1873,6 @@ public:
                     for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                     {
                         (*nodeIter)->EvaluateThisNodeGivenInputs(timeIndex);
-
                         (*nodeIter)->UpdateEvalTimeStamp();
                     }
                 }
@@ -2494,17 +1914,13 @@ public:
         //if a typical criterion node is used as the training criterion node we assume it requires multiseq handling 
         //this is for backward compatibility
         for (auto node : m_finalCriteria)
-        {
             if (IsTypicalCriterionNode(node))
                 node->SetReqMultiSeqHandlingTo(true);
-        }
 
         for (auto node : m_evalNodes)
-        {
             if (IsTypicalCriterionNode(node))
                 node->SetReqMultiSeqHandlingTo(true);
         }
-    }
 
     void Evaluate(const ComputationNodePtr rootNode)
     {
@@ -2514,28 +1930,21 @@ public:
 
 #ifdef DISPLAY_DEBUG
         for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-        {
             fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
-        }
 #endif
 
         for (int i = 0; i < m_recurrentInfo.size(); i++)
-        {
             m_recurrentInfo[i].m_completedEvaluate = false;
-        }
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
             (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
             if ((*nodeIter)->ReqMultiSeqHandling())
-            {
                     (*nodeIter)->ResetBound(&m_SentenceBoundary, &m_minibatchPackingFlag);
             }
-        }
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
-
             EvaluateLoop(allNodes, (*nodeIter));
 
             if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
@@ -2553,7 +1962,7 @@ public:
         }
     }
 
-                void SetActualMiniBatchSize(const size_t aSize, vector<ComputationNodePtr>* featNodes = nullptr)
+    void SetActualMiniBatchSize(const size_t aSize, vector<ComputationNodePtr>* featNodes = nullptr)
     {
         m_actMiniBSize = (int) aSize;
 
@@ -2565,29 +1974,22 @@ public:
         }
 
         for (int i = 0; i < m_recurrentInfo.size(); i++)
-        {
             for (auto nodeIter = m_recurrentInfo[i].m_recurrentNodes.begin(); nodeIter != m_recurrentInfo[i].m_recurrentNodes.end(); nodeIter++)
-            {
                 (*nodeIter)->SetFunctionAndGradientSize(m_actMiniBSize);
+
+        if (featNodes)
+        {
+            for (auto ptr = featNodes->begin(); ptr != featNodes->end(); ptr++)
+            {
+                size_t nr = (*ptr)->FunctionValues().GetNumRows();
+                (*ptr)->FunctionValues().Resize(nr, aSize);
             }
         }
-
-                    if (featNodes != nullptr)
-                    {
-                        for (auto ptr = featNodes->begin(); ptr != featNodes->end(); ptr++)
-                        {
-                            size_t nr = (*ptr)->FunctionValues().GetNumRows();
-                            (*ptr)->FunctionValues().Resize(nr, aSize);
-                        }
-                    }
     }
 
     // GetMaxMBSize - Get the maximum minibatch size that will be seen in a training run
     // returns the result from SetActualMiniBatchSize(). Note GetActualMBSize() also exists but returns a value derived from the inputs dimensions
-    size_t GetMaxMBSize()
-    {
-        return m_actMiniBSize;
-    }
+    size_t GetMaxMBSize() { return m_actMiniBSize; }
 
     void SetActualNbrSlicesInEachRecIter(const size_t aSize)
     {
@@ -2609,7 +2011,7 @@ public:
                     {
                         for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                         {
-                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
+                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration); // TODO: move to FrameRange object
                             (*nodeIter)->ComputeGradientForChildren(timeIndex);
                         }
                     }
@@ -2633,21 +2035,19 @@ public:
 
     virtual void ComputeGradient(const ComputationNodePtr rootNode, 
                                  bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
-                    const Matrix<ElemType>* rootGradientInitValue = nullptr,
-                    bool bClearGradient = true
-                    )
+                                 const Matrix<ElemType>* rootGradientInitValue = nullptr,
+                                 bool bClearGradient = true,
+                                 bool resetTimeStampAfterComputation = false
+                                )
     {
         if (bResetToOne && rootNode->FunctionValues().GetNumElements() != 1)
-        {
-            throw std::runtime_error(
-                "ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
-        }
+            RuntimeError("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
 
         //run forward pass first
         Evaluate(rootNode);
 
-                    if (bClearGradient)
-        ClearGradientForAllNodes(rootNode);
+        if (bClearGradient)
+            ClearGradientForAllNodes(rootNode);
 
         //run backward pass
         std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
@@ -2659,9 +2059,7 @@ public:
         }
 
         if (rootGradientInitValue != nullptr)
-        {
             rootNode->GradientValues().SetValue(*rootGradientInitValue);
-        }
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
@@ -2674,6 +2072,12 @@ public:
 
             (*nodeIter)->ComputeGradientForChildren();
         }
+
+        //since we now allow sharing of the matrix for function value and gradient value. the function values are now destroyed
+        //after gradient computation and need to be recomputed. This is indicated by the timestamp updated using this function
+        //resetTimeStampAfterComputation is by default false because ComputeGradient in normal case is followed by new batch of input
+        if (resetTimeStampAfterComputation)
+            ResetEvalTimeStamp();
     }
 
     //for debugging purpose
@@ -2702,17 +2106,25 @@ public:
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
             ComputationNodePtr node = (*nodeIter);
-
             node->PrintSelf(printMatrices);
         }
     }
 
+    // -----------------------------------------------------------------------
+    // network editing
+    // -----------------------------------------------------------------------
+
     void RenameNode(const ComputationNodePtr node, const std::wstring newNodeName)
     {
+        // TODO: check if new name exists
         m_nameToNodeMap.erase(node->NodeName());
         node->NodeName() = newNodeName;
         AddNodeToNet(node);
     }
+
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
 
     void ClearCaches()
     {
@@ -2728,85 +2140,65 @@ public:
         BuildAndValidateNetwork(rootNode);
     }
 
-                std::list<ComputationNodePtr>* InputNodes(const ComputationNodePtr rootNode, bool bNoBuild = false)
+    // -----------------------------------------------------------------------
+    // node-group access
+    // -----------------------------------------------------------------------
+
+    std::list<ComputationNodePtr> & InputNodes(const ComputationNodePtr rootNode, bool bNoBuild = false)
     {
-                    if (bNoBuild == false)
+        if (bNoBuild == false)
+            BuildAndValidateNetwork(rootNode);
+        return m_inputs[rootNode];
+    }
+
+    std::list<ComputationNodePtr> & LearnableNodes(const ComputationNodePtr rootNode)
+    {
         BuildAndValidateNetwork(rootNode);
-                    return &(m_inputs[rootNode]);
+        return m_learnableParameters[rootNode];
     }
 
-                std::list<ComputationNodePtr>* LearnableNodes(const ComputationNodePtr rootNode)
+    inline std::vector<ComputationNodePtr> & FeatureNodes()        { return m_features; }
+    inline std::vector<ComputationNodePtr> & LabelNodes()          { return m_labels; }
+    inline std::vector<ComputationNodePtr> & FinalCriterionNodes() { return m_finalCriteria; }
+
+    inline std::vector<ComputationNodePtr> & TrainCriterionNodesFrom(wstring criterionNodeName)
     {
-        BuildAndValidateNetwork(rootNode);
-                    return &(m_learnableParameters[rootNode]);
+        ComputationNodePtr node = this->GetNodeFromName(criterionNodeName);
+        this->ValidateNetwork(node);
+        if (node->FunctionValues().GetNumElements() != 1)
+            InvalidArgument("the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
+        m_tmpTrainCriterion.clear();
+        m_tmpTrainCriterion.push_back(node);
+        return m_tmpTrainCriterion;
     }
 
-                inline std::vector<ComputationNodePtr>* FeatureNodes()
+    inline std::vector<ComputationNodePtr> & EvalCriterionNodesFrom(wstring criterionNodeName)
     {
-                    return &m_features;
+        ComputationNodePtr node = this->GetNodeFromName(criterionNodeName);
+        this->ValidateNetwork(node);
+        if (node->FunctionValues().GetNumElements() != 1)
+            InvalidArgument("the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
+        m_tmpEvalulationCriterion.clear();
+        m_tmpEvalulationCriterion.push_back(node);
+        return m_tmpEvalulationCriterion;
     }
 
-                inline std::vector<ComputationNodePtr>* LabelNodes()
-    {
-                    return &m_labels;
-    }
+    inline std::vector<ComputationNodePtr> & NodesReqMultiSeqHandling() { return m_nodesReqMultiSeqHandling; }
+    inline std::vector<ComputationNodePtr> & EvaluationNodes()          { return m_evalNodes; }
+    inline std::vector<ComputationNodePtr> & OutputNodes()              { return m_outputNodes; }
+    inline std::vector<ComputationNodePtr> & PairNodes()                { return m_pairNodes; }
 
-                inline std::vector<ComputationNodePtr>* FinalCriterionNodes()
-    {
-                    return &m_finalCriteria;
-    }
+    inline std::vector<RecurrentInfo> & RecurrentNodes() { return m_recurrentInfo; }
 
-                inline std::vector<ComputationNodePtr>* TrainCriterionNodesFrom(wstring criterionNodeName)
-                {
-                    ComputationNodePtr node = this->GetNodeFromName(criterionNodeName);
-                    this->ValidateNetwork(node);
-                    if (node->FunctionValues().GetNumElements() != 1)
-                    { 
-                        throw invalid_argument(
-                            "the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
-                    }
-                    m_tmpTrainCriterion.clear();
-                    m_tmpTrainCriterion.push_back(node);
-                    return &m_tmpTrainCriterion;
-    }
+    // -----------------------------------------------------------------------
+    // node access
+    // -----------------------------------------------------------------------
 
-                inline std::vector<ComputationNodePtr>* EvalCriterionNodesFrom(wstring criterionNodeName)
-    {
-                    ComputationNodePtr node = this->GetNodeFromName(criterionNodeName);
-                    this->ValidateNetwork(node);
-                    if (node->FunctionValues().GetNumElements() != 1)
-                    {
-                        throw invalid_argument(
-                            "the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
-                    }
-                    m_tmpEvalulationCriterion.clear();
-                    m_tmpEvalulationCriterion.push_back(node);
-                    return &m_tmpEvalulationCriterion;
-    }
+    size_t GetTotalNumberOfNodes() const { return m_nameToNodeMap.size(); }
 
-                inline std::vector<ComputationNodePtr>* NodesReqMultiSeqHandling()
-    {
-                    return &m_nodesReqMultiSeqHandling;
-    }
-
-                inline std::vector<ComputationNodePtr>* EvaluationNodes()
-    {
-                    return &m_evalNodes;
-                }
-
-                inline std::vector<ComputationNodePtr>* OutputNodes() { return &m_outputNodes; }
-
-                inline std::vector<ComputationNodePtr>* PairNodes() { return &m_pairNodes; }
-
-                inline std::vector<RecurrentInfo>* RecurrentNodes()
-                {
-                    return &m_recurrentInfo;
-    }
-
-    size_t GetTotalNumberOfNodes() const
-    {
-        return m_nameToNodeMap.size();
-    }
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
 
     void ResetEvalTimeStamp()
     {
@@ -2814,92 +2206,40 @@ public:
             nodeIter->second->ResetEvalTimeStamp();
     }
 
+    // -----------------------------------------------------------------------
+    // network editing
+    // -----------------------------------------------------------------------
+
     //change the node associated with nodeName to newNode; used in the KL-reg based adaptation to reduce feature copy
     //need to update all the mappings as well childrens
     void ChangeNode(wstring nodeName, ComputationNodePtr newNode)
     {
         ComputationNodePtr oldNode = GetNodeFromName(nodeName);
         if (oldNode->OperationName() != newNode->OperationName())
-        {
-            throw invalid_argument("newNode must have the same type as the old node.");
-        }
+            InvalidArgument("newNode must have the same type as the old node.");
 
         //change children
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
             ComputationNodePtr node = nodeIter->second;
             for (int i = 0; i < node->ChildrenSize(); i++)
-            {
                 if (node->Inputs(i) == oldNode)
-                {
                     node->SetInput(i, newNode);
-                }
-            }
         }
 
         //change name map
         m_nameToNodeMap[nodeName] = newNode;
         for (int i = 0; i < oldNode->ChildrenSize(); i++)
-        {
             newNode->SetInput(i, oldNode->Inputs(i));
-        }
 
         //change other maps
-        for (int i = 0; i < m_features.size(); i++)
+        for (auto groupIter : GetAllNodeGroups())
         {
-            if (m_features[i] == oldNode)
-            {
-                m_features[i] = newNode;
-            }
+            auto & group = *groupIter;
+            for (int i = 0; i < group.size(); i++)
+                if (group[i] == oldNode)
+                    group[i] = newNode;
         }
-
-        for (int i = 0; i < m_labels.size(); i++)
-        {
-            if (m_labels[i] == oldNode)
-            {
-                m_labels[i] = newNode;
-            }
-        }
-
-        for (int i = 0; i < m_finalCriteria.size(); i++)
-        {
-            if (m_finalCriteria[i] == oldNode)
-            {
-                m_finalCriteria[i] = newNode;
-            }
-        }
-
-        for (int i = 0; i < m_nodesReqMultiSeqHandling.size(); i++)
-        {
-            if (m_nodesReqMultiSeqHandling[i] == oldNode)
-            {
-                m_nodesReqMultiSeqHandling[i] = newNode;
-            }
-        }
-
-        for (int i = 0; i < m_evalNodes.size(); i++)
-        {
-            if (m_evalNodes[i] == oldNode)
-            {
-                m_evalNodes[i] = newNode;
-            }
-        }
-
-        for (int i = 0; i < m_outputNodes.size(); i++)
-        {
-            if (m_outputNodes[i] == oldNode)
-            {
-                m_outputNodes[i] = newNode;
-            }
-        }
-
-                    for (int i = 0; i < m_pairNodes.size(); i++)
-                    {
-                        if (m_pairNodes[i] == oldNode)
-                        {
-                            m_pairNodes[i] = newNode;
-                        }
-                    }
     }
 
     // replace the old node with the current node, assuming the old node is a leaf node
@@ -2913,13 +2253,9 @@ public:
         {
             ComputationNodePtr node = nodeIter->second;
             for (int i = 0; i < node->ChildrenSize(); i++)
-            {
                 if (node->Inputs(i) == oldNode)
-                {
                     node->SetInput(i, newNode);
                 }
-            }
-        }
         m_nameToNodeMap[newNode->GetName()] = newNode;
 
         // now the old node becomes a orphan node , remove it
@@ -2940,13 +2276,13 @@ public:
             }
         }
         if (index == -1)
-            throw std::runtime_error("ReplaceFinalCriterionNode: the node to be replaced is not a criterion node.");
+            RuntimeError("ReplaceFinalCriterionNode: the node to be replaced is not a criterion node.");
 
         // Replaces children.
         for (int i = 0; i < newNode->ChildrenSize(); ++i)
         {
             if (m_nameToNodeMap.find(newNode->Inputs(i)->NodeName()) == m_nameToNodeMap.end())
-                throw std::runtime_error("Child node does not exist.");
+                RuntimeError("Child node does not exist.");
             newNode->SetInput(i, m_nameToNodeMap[newNode->Inputs(i)->NodeName()]);
         }
 
@@ -2959,7 +2295,7 @@ public:
     {
         wstring nodeName = featureNode->NodeName();
         if (NodeNameExist(nodeName))
-            throw std::runtime_error("AddFeatureNode: feature node already exists.");
+            RuntimeError("AddFeatureNode: feature node already exists.");
         m_nameToNodeMap[nodeName] = featureNode;
         m_features.push_back(featureNode);
     }
@@ -2969,7 +2305,7 @@ public:
     {
         wstring nodeName = featureNode->NodeName();
         if (!NodeNameExist(nodeName))
-            throw std::runtime_error("RemoveFeatureNode: feature node does not exist.");
+            RuntimeError("RemoveFeatureNode: feature node does not exist.");
 
         ClearCaches();
 
@@ -2996,6 +2332,10 @@ public:
         m_nameToNodeMap.erase(nodeName);
     }
 
+    // -----------------------------------------------------------------------
+    // node access
+    // -----------------------------------------------------------------------
+
     std::vector<ComputationNodePtr> GetAllNodes() const
     {
         std::vector<ComputationNodePtr> nodes;
@@ -3017,9 +2357,8 @@ public:
             for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
             {
                 ComputationNodePtr node = nodeIter->second;
-                if (node->OperationName() == typeName) {
+                if (node->OperationName() == typeName)
                     nodesWithType.push_back(node);
-                }
             }
         }
         else
@@ -3030,9 +2369,7 @@ public:
             {
                 ComputationNodePtr node = (*nodeIter);
                 if (node->OperationName() == typeName)
-                {
                     nodesWithType.push_back(node);
-                }
             }
         }
 
@@ -3040,6 +2377,7 @@ public:
     }
 
     //return list of nodes that require precomputation and not precomputed yet.
+    // TODO: name has a grammar error, fix
     std::list<ComputationNodePtr> GetNodesRequirePreComputation(const ComputationNodePtr rootNode = nullptr, bool checkComputed = true)
     {
         std::list<ComputationNodePtr> nodesRequirePreComputation;
@@ -3052,7 +2390,7 @@ public:
                 ComputationNodePtr node = nodeIter->second;
                 if (node->RequirePreCompute())
                 {
-                    PreComputedNode<ElemType> * preComputedNode = static_cast<PreComputedNode<ElemType> *>(node);
+                    auto preComputedNode = static_pointer_cast<PreComputedNode<ElemType>>(node);
                     if (!checkComputed || !preComputedNode->HasComputed())
                     {
                         nodesRequirePreComputation.push_back(node);
@@ -3068,7 +2406,7 @@ public:
                 ComputationNodePtr node = *nodeIter;
                 if (node->RequirePreCompute())
                 {
-                    PreComputedNode<ElemType> * preComputedNode = static_cast<PreComputedNode<ElemType> *>(node);
+                    auto preComputedNode = static_pointer_cast<PreComputedNode<ElemType>>(node);
                     if (!checkComputed || !preComputedNode->HasComputed())
                     {
                         nodesRequirePreComputation.push_back(node);
@@ -3080,59 +2418,61 @@ public:
         return nodesRequirePreComputation;
     }
 
-        //return list of nodes that require precomputation and not precomputed yet.
-        std::list<ComputationNodePtr> GetNodesRequireBatchMode(const ComputationNodePtr rootNode = nullptr, bool checkComputed = true)
+    //return list of nodes that require precomputation and not precomputed yet.
+    // TODO: name has grammar error, fix
+    std::list<ComputationNodePtr> GetNodesRequireBatchMode(const ComputationNodePtr rootNode = nullptr, bool checkComputed = true)
+    {
+        std::list<ComputationNodePtr> nodesRequirePreComputation;
+
+        if (rootNode == nullptr) //find nodes from all available nodes
         {
-            std::list<ComputationNodePtr> nodesRequirePreComputation;
-
-            if (rootNode == nullptr) //find nodes from all available nodes
+            for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
             {
-                for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+                ComputationNodePtr node = nodeIter->second;
+                if (node->RequireBatchMode())
                 {
-                    ComputationNodePtr node = nodeIter->second;
-                    if (node->RequireBatchMode())
-                    {
-                        BatchModeNode<ElemType> * preComputedNode = static_cast<BatchModeNode<ElemType> *> (node);
-                        if (!checkComputed || !preComputedNode->HasComputed())
-                            nodesRequirePreComputation.push_back(node);
-                    }
+                    auto preComputedNode = static_pointer_cast<BatchModeNode<ElemType>>(node);
+                    if (!checkComputed || !preComputedNode->HasComputed())
+                        nodesRequirePreComputation.push_back(node);
                 }
             }
-            else //for calculating a specific node
-            {
-                std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
-                for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-                {
-                    ComputationNodePtr node = (*nodeIter);
-                    if (node->RequireBatchMode())
-                    {
-                        BatchModeNode<ElemType> * preComputedNode = static_cast<BatchModeNode<ElemType> *> (node);
-                        if (!checkComputed || !preComputedNode->HasComputed())
-                            nodesRequirePreComputation.push_back(node);
-                    }
-                }
-            }
-
-            return nodesRequirePreComputation;
         }
+        else //for calculating a specific node
+        {
+            std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
+            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            {
+                ComputationNodePtr node = (*nodeIter);
+                if (node->RequireBatchMode())
+                {
+                    auto preComputedNode = static_pointer_cast<BatchModeNode<ElemType>>(node);
+                    if (!checkComputed || !preComputedNode->HasComputed())
+                        nodesRequirePreComputation.push_back(node);
+                }
+            }
+        }
+
+        return nodesRequirePreComputation;
+    }
+
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
 
     // Validate - Validate the network
     void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false)
     {
         // currently only validates nodes, we should validate everything we can
-                    if (FeatureNodes()->size() == 0 && !allowFragment)
-        {
-            throw std::runtime_error("No Feature nodes specified");
-        }
+        if (FeatureNodes().size() == 0 && !allowFragment)
+            RuntimeError("No Feature nodes specified");
+
         // first give criteria nodes as root node
-                    if (FinalCriterionNodes()->size() > 0)
+        if (FinalCriterionNodes().size() > 0)
         {
-                        for (ComputationNodePtr node : *FinalCriterionNodes())
+            for (ComputationNodePtr & node : FinalCriterionNodes())
             {
                 if (!allowFragment)
-                {
-                    FormRecurentLoops(node);
-                }
+                    FormRecurrentLoops(node);
                 PrintComputationTree(node, false);
                 size_t actualMBSize = this->GetActualMBSize();
                 this->SetActualMiniBatchSize(actualMBSize);
@@ -3144,35 +2484,28 @@ public:
             // do nothing
         }
         else if (!allowFragment)
-        {
-            throw std::runtime_error("No Criterion nodes specified");
-        }
+            RuntimeError("No Criterion nodes specified");
 
         // now output nodes
-                    if (OutputNodes()->size() > 0)
+        if (OutputNodes().size() > 0)
         {
-                        for (ComputationNodePtr node : *OutputNodes())
+            for (ComputationNodePtr node : OutputNodes())
             {
-                if (!allowFragment) {
-                    FormRecurentLoops(node);
-                }
-
+                if (!allowFragment)
+                    FormRecurrentLoops(node);
                 ValidateNetwork(node);
             }
         }
         else if (!allowFragment)
-        {
-            throw std::runtime_error("No Output nodes specified");
-        }
+            RuntimeError("No Output nodes specified");
 
         // now evaluation nodes
-                    if (EvaluationNodes()->size() > 0)
+        if (EvaluationNodes().size() > 0)
         {
-                        for (ComputationNodePtr node : *EvaluationNodes())
+            for (ComputationNodePtr node : EvaluationNodes())
             {
-                if (!allowFragment) {
-                    FormRecurentLoops(node);
-                }
+                if (!allowFragment)
+                    FormRecurrentLoops(node);
                 ValidateNetwork(node);
             }
         }
@@ -3200,80 +2533,154 @@ public:
         if (m_built.find(key) == m_built.end())
         {
             m_built[key] = true;
-            FormRecurentLoops(rootNode);
+            FormRecurrentLoops(rootNode);
             ValidateNetwork(rootNode);
             CollectInputAndLeanableParameters(rootNode);
             SetNodesReqMultiSeqHandling();
         }
     }
 
-                /**
+    //this function will need to be called before actual validation and execution to 
+    //predetermine how to share matrices to reduce memory usage.
+    //evalRootNodes do not need gradient computation
+    //trainRootNodes need gradient computation
+    void AllocateMatrices(std::vector<ComputationNodePtr>& evalRootNodes, std::vector<ComputationNodePtr>& trainRootNodes)
+    {
+        //allocate memory for forward computation
+        fprintf(stderr, "\n\nAllocate matrices for forward computing\n");
+        for (int i = 0; i < evalRootNodes.size(); i++)
+            AllocateEvalMatrices(evalRootNodes[i]);
+
+        for (int i = 0; i < trainRootNodes.size(); i++)
+            AllocateEvalMatrices(trainRootNodes[i]);
+
+        //allocate memory for backward computation
+        //we intentionally separate it from above loop to make sure forward computing gets the right matrices
+        for (int i = 0; i < trainRootNodes.size(); i++)
+            AllocateGradientMatrices(trainRootNodes[i]);
+    }
+
+    void AllocateEvalMatrices(ComputationNodePtr rootNode)
+    {
+        FormRecurrentLoops(rootNode);
+
+        std::list<ComputationNodePtr>& nodes = GetEvalOrder(rootNode);
+
+        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        {
+            (*nodeIter)->RequestEvalMatrices(m_matrixPool);
+            (*nodeIter)->ReleaseMatricesAfterEval(m_matrixPool);
+        }
+    }
+
+    void AllocateGradientMatrices(ComputationNodePtr rootNode)
+    {
+        //first, compute the number of parents for each node
+        std::map<ComputationNodePtr, int> numParents;
+
+        std::list<ComputationNodePtr>& nodes = GetEvalOrder(rootNode);
+
+        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        {
+            std::vector<ComputationNodePtr> children = (*nodeIter)->GetChildren();
+            for (int i = 0; i < children.size(); i++)
+                numParents[children[i]] ++;
+        }
+
+        //now, simulate the gradient computation order to determine how to allocate matrices
+        std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
+
+        for (int i = 0; i < m_recurrentInfo.size(); i++)
+            m_recurrentInfo[i].m_completedGradient = false;
+
+        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+        {
+            std::vector<ComputationNodePtr> recurrentNodes;
+            int iLoopId = FindInRecurrentLoop(*nodeIter, recurrentNodes);
+            if (iLoopId != -1 && m_recurrentInfo[iLoopId].m_completedGradient == false)
+            {
+                for (auto nodeIterInLoop = recurrentNodes.rbegin(); nodeIterInLoop != recurrentNodes.rend(); ++nodeIterInLoop)
+                    AllocateGradientMatricesForChildren(*nodeIterInLoop, numParents);
+                m_recurrentInfo[iLoopId].m_completedGradient = true;
+            }
+            else
+                AllocateGradientMatricesForChildren(*nodeIter, numParents);
+
+            (*nodeIter)->ReleaseGradientMatrices(m_matrixPool);
+        }
+    }
+
+    void AllocateGradientMatricesForChildren(ComputationNodePtr parentNode, std::map<ComputationNodePtr, int>& numParents)
+    {
+        std::vector<ComputationNodePtr> children = parentNode->GetChildren();
+        for (int i = 0; i < children.size(); i++)
+            children[i]->RequestGradientMatrices(m_matrixPool, numParents[children[i]]);
+    }
+
+    /**
                 call unit test of each node
                 this adds a verification of the correctness of node operations.
                 */
-                bool UnitTest(bool allowFragment = false)
-                {
-                    vector<wstring> vErrors;
-                    // currently only validates nodes, we should validate everything we can
-                    if (FeatureNodes()->size() == 0 && !allowFragment)
-                    {
-                        throw std::runtime_error("No Feature nodes specified");
-                    }
-                    // first give criteria nodes as root node
-                    if (FinalCriterionNodes()->size() > 0)
-                    {
-                        for (auto node : *FinalCriterionNodes())
-                        {
-                            if (!allowFragment) FormRecurentLoops(node);
-                            size_t actualMBSize = this->GetActualMBSize();
-                            this->SetActualMiniBatchSize(actualMBSize);
-                            if (UnitTest(node) == false)
-                                vErrors.push_back(node->NodeName().c_str());
-                        }
-                    }
-                    else if (!allowFragment)
-                    {
-                        throw std::runtime_error("No Criterion nodes specified");
-                    }
-                    // now output nodes
-                    if (OutputNodes()->size() > 0)
-                    {
-                        for (auto node : *OutputNodes())
-                            if (UnitTest(node) == false)
-                                vErrors.push_back(node->NodeName().c_str());
-                    }
-                    else if (!allowFragment)
-                    {
-                        throw std::runtime_error("No Output nodes specified");
-                    }
-                    // now evaluation nodes
-                    if (EvaluationNodes()->size() > 0)
-                    {
-                        for (auto node : *EvaluationNodes())
-                            if (UnitTest(node) == false)
-                                vErrors.push_back(node->NodeName().c_str());
-                    }
-                    if (vErrors.size() > 0)
-                        return false;
-                    return true;
-                }
+    bool UnitTest(bool allowFragment = false)
+    {
+        vector<wstring> vErrors;
+        // currently only validates nodes, we should validate everything we can
+        if (FeatureNodes().size() == 0 && !allowFragment)
+            RuntimeError("No Feature nodes specified");
+        // first give criteria nodes as root node
+        if (FinalCriterionNodes().size() > 0)
+        {
+            for (auto node : FinalCriterionNodes())
+            {
+                if (!allowFragment)
+                    FormRecurrentLoops(node);
+                size_t actualMBSize = this->GetActualMBSize();
+                this->SetActualMiniBatchSize(actualMBSize);
+                if (!UnitTest(node))
+                    vErrors.push_back(node->NodeName().c_str());
+            }
+        }
+        else if (!allowFragment)
+            RuntimeError("No Criterion nodes specified");
+        // now output nodes
+        if (OutputNodes().size() > 0)
+        {
+            for (auto node : OutputNodes())
+            if (!UnitTest(node))
+                vErrors.push_back(node->NodeName().c_str());
+        }
+        else if (!allowFragment)
+            RuntimeError("No Output nodes specified");
+        // now evaluation nodes
+        if (EvaluationNodes().size() > 0)
+        {
+            for (auto node : EvaluationNodes())
+            if (!UnitTest(node))
+                vErrors.push_back(node->NodeName().c_str());
+        }
+        return vErrors.empty();
+    }
 
-                bool UnitTest(const ComputationNodePtr rootNode)
-                {
-                    fprintf(stderr, "\n\n Unit test node %ws \n", rootNode->NodeName().c_str());
+    bool UnitTest(const ComputationNodePtr rootNode)
+    {
+        fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
 
-                    std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
+        std::list<ComputationNodePtr>&  nodes = GetEvalOrder(rootNode);
 
-                    for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-                    {
-                        if ((*nodeIter)->UnitTest() == false)
-                            return false;
-                    }
+        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        if (!(*nodeIter)->UnitTest())
+            return false;
 
-                    fprintf(stderr, "\n\n");
+        fprintf(stderr, "\n\n");
 
-                    return true;
-                }
+        return true;
+    }
+
+    // -----------------------------------------------------------------------
+    // specialized operations
+    // -----------------------------------------------------------------------
+
+    // TODO: lift this into config language, move underlying code to math lib
 
     //========================================
     // This function performs SVD decomposition for different groups of learnable  parameters
@@ -3305,15 +2712,11 @@ public:
 
                 ComputationNodePtr ptr = n->second;
                 if (ptr->OperationName() != LearnableParameter<ElemType>::TypeName())
-                {
                     continue;
-                }
 
                 Matrix<ElemType> W = ptr->FunctionValues();
                 if (W.GetNumCols() == 1 || W.GetNumRows() == 1)
-                {
                     continue;
-                }
 
                 // still here ?
                 NamesInGroup.push_back(n->first);
@@ -3348,9 +2751,8 @@ public:
                 Matrix<ElemType> A = pNode->FunctionValues();
 
                 // it is a vector, no need to do it
-                if (A.GetNumCols() == 1 || A.GetNumRows() == 1) {
+                if (A.GetNumCols() == 1 || A.GetNumRows() == 1)
                     continue;
-                }
 
                 size_t m = A.GetNumRows();
                 size_t n = A.GetNumCols();
@@ -3368,9 +2770,7 @@ public:
                 //
                 ElemType totalenergy = 0.0f;
                 for (size_t i = 0; i < S.GetNumRows(); i++)
-                {
                     totalenergy += S(i, 0);
-                }
                 ElemType keepenergy = totalenergy * keepratio;
                 ElemType runenergy = 0.0f;
 
@@ -3436,6 +2836,10 @@ public:
     }
 
 public:
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
     virtual void GetHistory(map<wstring, Matrix<ElemType>>& history, bool bLastTime = false)
     {
         //put all node info first
@@ -3444,9 +2848,7 @@ public:
         {
             ComputationNodePtr nodePtr = nodeIter->second;
             if (nodePtr->GetHistory(hist, bLastTime))
-            {
                 history[nodeIter->first] = hist;
-            }
         }
     };
 
@@ -3463,44 +2865,44 @@ public:
         }
     };
 
-    Matrix<ElemType> & SentenceBoundary()
-    {
-        return m_SentenceBoundary;
-    }
+    Matrix<ElemType> & SentenceBoundary() { return m_SentenceBoundary; }
 
-    vector<MinibatchPackingFlag> & MinibatchPackingFlags()
-    {
-        return m_minibatchPackingFlag;
-    }
+    vector<MinibatchPackingFlag> & MinibatchPackingFlags() { return m_minibatchPackingFlag; }
 
 protected:
+    // -----------------------------------------------------------------------
+    // construction
+    // -----------------------------------------------------------------------
+
     // Copy constructor, should never be called.
 #pragma warning (push)
 #pragma warning (disable: 4702) // this function is flagged but unclear why
     ComputationNetwork(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)
     {
-        //assert(false);
-        throw std::logic_error(
-            "'ComputationNetwork(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
+        // TODO: can we just define it as private without implementation?
+        LogicError("'ComputationNetwork(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
     }
 #pragma warning (pop)
 
     // Assignment operator, should never be called.
     ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)
     {
-        throw std::logic_error(
-            "'ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
+        // TODO: can we just define it as private without implementation?
+        LogicError("'ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
     }
+
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
+    // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
+    // TODO: Can this be moved to a separate class, or at least a separate CPP?
 
     void ClearCalcOrderCaches()
     {
         for (typename std::map<const ComputationNodePtr, std::list<ComputationNodePtr>>::iterator it = m_cacheEvalOrders.begin(); it != m_cacheEvalOrders.end(); ++it)
-        {
             for (auto iter2 = m_cacheEvalOrders[it->first].begin(); iter2 != m_cacheEvalOrders[it->first].end(); iter2++)
-            {
                 (*iter2)->clearCache();
-            }
-        }
         m_cacheEvalOrders.clear();
         m_cacheGradientCalcOrders.clear();
     }
@@ -3539,32 +2941,26 @@ protected:
                     m_recurrentInfoTmp.push_back(rInfo);
                 }
                 else
-                {
-                                continue; 
-        }
+                    continue;
             }
         }
 
                     /// no need to sort the vector of recurrent loops, because they are pushed and later used as FIFO
         m_recurrentInfo.clear();
         for (auto iter = m_recurrentInfoTmp.begin(); iter != m_recurrentInfoTmp.end(); iter++)
-        {
-                        m_recurrentInfo.push_back(*iter);
-        }
+            m_recurrentInfo.push_back(*iter);
 
         /// debug purpose
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
         {
             fprintf(stderr, " nodes in the recurrent loops : \n");
             for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
-            {
                 fprintf(stderr, "%ls\t", (*itr)->NodeName().c_str());
-            }
         }
     }
 
     // get the strong connected component from the graph
-                void getStrongSCC(const ComputationNodePtr rootNode)
+    void getStrongSCC(const ComputationNodePtr rootNode)    // TODO: method names start uppercase
     {
                     /// notice that this graph including graphs from a parent networks if two or more networks are connected via pairnetwork node
         std::unordered_set<ComputationNodePtr> visited;
@@ -3572,12 +2968,10 @@ protected:
         size_t index = 0;
         size_t loopId = 0;
         if (rootNode->isVisisted() == false)
-        {
-                        strongSCC(rootNode, sccStack, index, loopId);
-        }
+            strongSCC(rootNode, sccStack, index, loopId);
     }
 
-    void strongSCC(ComputationNodePtr cur,
+    void strongSCC(ComputationNodePtr cur,      // TODO: method names start uppercase
                    std::list<ComputationNodePtr>& sccStack,
                    size_t& index, size_t& loopId)
     {
@@ -3620,12 +3014,10 @@ protected:
                 rInfo.m_recurrentNodes.push_back(w);
                 sccSize++;
                 if (w == cur)
-                {
                     break;
-                }
             }
             rInfo.Reset();
-                        if (sccSize > 1)
+            if (sccSize > 1)
             {
                 loopId++;
                 m_recurrentInfo.push_back(rInfo);
@@ -3633,7 +3025,7 @@ protected:
         }
     }
 
-    void getLoopForwordOrder(std::unordered_set<ComputationNodePtr>& visited,
+    void getLoopForwordOrder(std::unordered_set<ComputationNodePtr>& visited,   // TODO: method name
                              std::unordered_set<ComputationNodePtr>& recStack,
                              std::list<ComputationNodePtr>& nodesStack,
                              ComputationNodePtr cur)
@@ -3647,12 +3039,8 @@ protected:
                 cur->OperationName() != FutureValueNode<ElemType>::TypeName())
             {
                 for (size_t i = 0; i < cur->ChildrenSize(); i++)
-                {
                     if (cur->Inputs(i)->LoopId() == cur->LoopId())
-                    {
                         getLoopForwordOrder(visited, recStack, nodesStack, cur->Inputs(i));
-                    }
-                }
             }
             recStack.erase(cur);
             nodesStack.push_back(cur);
@@ -3660,23 +3048,20 @@ protected:
         else
         {
             if (!(recStack.find(cur) == recStack.end()))
-            {
-                throw std::logic_error("There is infinite Loop which cannot be unrolled!!");
-            }
-
+                LogicError("There is infinite Loop which cannot be unrolled!!");
         }
     }
             
     //must be called before ValidateNetwork
-                void FormRecurentLoops(const ComputationNodePtr rootNode)
+    void FormRecurrentLoops(const ComputationNodePtr rootNode)
     {
         std::vector<ComputationNodePtr> sourceLoopNodes;
 
-                    getStrongSCC(rootNode);
+        getStrongSCC(rootNode);
         std::list<ComputationNodePtr>& nodes = GetEvalOrder(rootNode, sourceLoopNodes);
         std::list<ComputationNodePtr> nodesForGrad;
 
-                    MergeRecurrentLoops(rootNode);
+        MergeRecurrentLoops(rootNode);
 
         /// debug purpose
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
@@ -3687,14 +3072,10 @@ protected:
             {
                 fprintf(stderr, "%ls\t", (*itr)->NodeName().c_str());
                 if (max_visitedOrderInLoop < (*itr)->GetVisitedOrder())
-                {
                     max_visitedOrderInLoop = (*itr)->GetVisitedOrder();
-                }
             }
             for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
-            {
                 (*itr)->SetVisitedOrder(max_visitedOrderInLoop);
-            }
         }
 
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
@@ -3786,10 +3167,9 @@ protected:
         DetermineLoopTypes();
         
         for (auto iter = nodes.begin(); iter != nodes.end(); iter++)
-        {
             (*iter)->clearCache();
-        }
     }
+
     void DetermineLoopTypes()
     {
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
@@ -3931,45 +3311,57 @@ protected:
         }
     }
 
-    void AddNodeToNet(const ComputationNodePtr nodePtr)
+    // -----------------------------------------------------------------------
+    // node creation
+    // -----------------------------------------------------------------------
+
+    // TODO: move these close to where they are used
+
+    // add a node to m_nameToNodeMap[], which is our node holder
+    // Duplicate node names are rejected.
+    ComputationNodePtr AddNodeToNet(const ComputationNodePtr nodePtr)
     {
         //found
+        // TODO: use .insert() and test result.second == false means not inserted since already exists
         if (m_nameToNodeMap.find(nodePtr->NodeName()) != m_nameToNodeMap.end())
-        {
-            throw std::runtime_error("Duplicated computation node name.");
-        }
+            RuntimeError("Duplicated computation node name.");
 
         m_nameToNodeMap[nodePtr->NodeName()] = nodePtr;
+        return nodePtr; // allows e.g. return AddNodeToNet(New...);
+    }
+
+    template<class... _Types>
+    ComputationNodePtr AddNodeToNetAndAttachInputs(const ComputationNodePtr nodePtr, _Types&&... _Args)
+    {
+        nodePtr->AttachInputs(std::forward<_Types>(_Args)...);
+        AddNodeToNet(nodePtr);
+        return nodePtr; // allows e.g. return AddNodeToNetAndAttachInputs(New..., inputs);
     }
 
 public:
+
+    // -----------------------------------------------------------------------
+    // evaluation
+    // -----------------------------------------------------------------------
+
     void ClearGradientForAllNodes(const ComputationNodePtr rootNode)
     {
-        std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(
-                rootNode);
+        std::list<ComputationNodePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-        {
             (*nodeIter)->ClearGradientForChildren(m_actMiniBSize);
-        }
 
-        for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
-        {
-            (*nodeIter).m_completedGradient = false;
-        }
+        //for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
+        //    (*nodeIter).m_completedGradient = false;
 
         for (int i = 0; i < m_recurrentInfo.size(); i++)
-        {
             m_recurrentInfo[i].m_completedGradient = false;
-        }
     }
 
     std::list<ComputationNodePtr>& GetEvalOrder(const ComputationNodePtr rootNode)
     {
         if (!rootNode)
-        {
-            throw std::logic_error("rootNode is pointing to a nullptr.");
-        }
+            LogicError("rootNode is pointing to a nullptr.");
 
         return GetCalcOrder(rootNode, m_cacheEvalOrders, true);
     }
@@ -3978,9 +3370,7 @@ public:
                                                 std::vector<ComputationNodePtr>& recurrentNodes)
     {
         if (!rootNode)
-        {
-            throw std::logic_error("rootNode is pointing to a nullptr.");
-        }
+            LogicError("rootNode is pointing to a nullptr.");
 
         return GetCalcOrder(rootNode, m_cacheEvalOrders, true, recurrentNodes);
     }
@@ -3988,15 +3378,13 @@ public:
     std::list<ComputationNodePtr>& GetGradientCalcOrder(const ComputationNodePtr rootNode)
     {
         if (!rootNode)
-        {
-            throw std::logic_error("rootNode is pointing to a nullptr.");
-        }
+            LogicError("rootNode is pointing to a nullptr.");
 
         return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false);
     }
 
-
 protected:
+
     std::list<ComputationNodePtr>& GetCalcOrder(const ComputationNodePtr rootNode,
                                                 std::map<const ComputationNodePtr, std::list<ComputationNodePtr>>& orderMap,
                                                 const bool forwardCompute)
@@ -4005,9 +3393,8 @@ protected:
 
         //not found
         if (orderMap.find(key) == orderMap.end())
-        {
             orderMap[key] = rootNode->EnumerateNodes(forwardCompute);
-        }
+
         return orderMap[key];
     }
 
@@ -4031,25 +3418,39 @@ protected:
         return orderMap[key];
     }
 
-    DEVICEID_TYPE m_deviceId;
+protected:
+
+    // -----------------------------------------------------------------------
+    // data members
+    // -----------------------------------------------------------------------
+
+    // TODO: move basic accessors in here?
+
+    DEVICEID_TYPE m_deviceId;           // TODO: is this shared by all nodes?
     unsigned long m_randomSeedOffset;
 
+    // node groups
     std::vector<ComputationNodePtr> m_features;
     std::vector<ComputationNodePtr> m_labels;
     std::vector<ComputationNodePtr> m_finalCriteria;
     std::vector<ComputationNodePtr> m_evalNodes;
     std::vector<ComputationNodePtr> m_outputNodes;
-                std::vector<ComputationNodePtr> m_pairNodes; /// nodes for the children network to pair
+    std::vector<ComputationNodePtr> m_pairNodes; /// nodes for the children network to pair
     std::vector<ComputationNodePtr> m_nodesReqMultiSeqHandling;
+    vector<std::vector<ComputationNodePtr>*> GetAllNodeGroups()    // get all groups to allow to iterate over all of them ...continue
+    {
+        return vector<std::vector<ComputationNodePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_nodesReqMultiSeqHandling };
+    }
+
     std::vector<RecurrentInfo> m_recurrentInfo;
 
-                /** temperary space 
-                */
-                std::vector<ComputationNodePtr> m_tmpTrainCriterion; /// array saving tempary query terms
-                std::vector<ComputationNodePtr> m_tmpEvalulationCriterion; /// array saving tempary query terms
+    /** temporary space
+    */
+    std::vector<ComputationNodePtr> m_tmpTrainCriterion; /// array saving tempary query terms
+    std::vector<ComputationNodePtr> m_tmpEvalulationCriterion; /// array saving tempary query terms
 
     //used for sentence boundary information passed from reader to reset RNN state 
-                Matrix<ElemType> m_SentenceBoundary; // this matrix is always in CPU memory
+    Matrix<ElemType> m_SentenceBoundary; // this matrix is always in CPU memory
     // specify how the minibatch is packed for each sample
     vector<MinibatchPackingFlag> m_minibatchPackingFlag;
 
@@ -4057,16 +3458,18 @@ protected:
     size_t m_nbrSlicesInEachRecurrentIteration;
 
     std::map<const ComputationNodePtr, bool> m_built;
-    std::map<const std::wstring, ComputationNodePtr, nocase_compare> m_nameToNodeMap;
+    std::map<const std::wstring, ComputationNodePtr, nocase_compare> m_nameToNodeMap;   // this is the main container that holds this networks' nodes
 
     std::map<const ComputationNodePtr, std::list<ComputationNodePtr>> m_cacheEvalOrders;
     std::map<const ComputationNodePtr, std::list<ComputationNodePtr>> m_cacheGradientCalcOrders;
 
     std::map<const ComputationNodePtr, std::list<ComputationNodePtr>> m_inputs;
     std::map<const ComputationNodePtr, std::list<ComputationNodePtr>> m_learnableParameters;
+
+    MatrixPool<ElemType> m_matrixPool;
 };
 
-template class ComputationNetwork<float> ;
-template class ComputationNetwork<double> ;
+template class ComputationNetwork<float>;
+template class ComputationNetwork<double>;
 
 }}}

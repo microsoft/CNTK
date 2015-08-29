@@ -58,6 +58,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
     static inline void LogicError(const string & message) { LogicError("%s", message.c_str()); }
 
+    // InvalidArgument - throw a std::logic_error with a formatted error string
+#ifdef _MSC_VER
+    __declspec(noreturn)
+#endif
+    static inline void InvalidArgument(const char * format, ...)
+    {
+        va_list args;
+        char buffer[1024];
+
+        va_start(args, format);
+        vsprintf(buffer, format, args);
+        throw std::invalid_argument(buffer);
+    };
+    static inline void InvalidArgument(const string & message) { InvalidArgument("%s", message.c_str()); }
+
     // Warning - warn with a formatted error string
     static inline void Warning(const char * format, ...)
     {
@@ -125,18 +140,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 #endif
 
-}
-}
-}
-
-// ===========================================================================
-// emulation of some MSVC proprietary CRT
-// ===========================================================================
-
-#ifndef _MSC_VER
-static inline int _wsystem(const wchar_t *command) { return system(msra::strfun::utf8(command).c_str()); }
-static inline FILE * _wpopen(const wchar_t * command, const wchar_t *mode) { return popen(msra::strfun::utf8(command).c_str(), msra::strfun::utf8(std::wstring(mode)).c_str()); }
-static inline int _pclose(FILE *stream) { return pclose(stream); }
-#endif
+}}}
 
 #endif // _BASICS_H_

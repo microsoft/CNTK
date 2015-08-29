@@ -22,110 +22,75 @@
 #include "Matrix.h"
 #include "ComputationNode.h"
 
-/**
-to-dos:
-PastValue_node : has another input that points to additional observations. 
-memory_node: M x N node, with a argument telling whether to save the last observation, or save a window size of observations, or save all observations
-pair_node : copy function values and gradient values from one node in source network to target network
-
-decoder PastValue_node -> memory_node -> pair(source, target) pair(source, target) -> memory_node -> encoder output node
-sequential_alignment_node: compute similarity of the previous time or any matrix, versus a block of input, and output a weighted average from the input
-decoder delay_node -> memory_node -> pair(source, target) pair(source, target) -> memory_node -> encoder output node
-
-
-*/
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // =======================================================================
+    // DelayedValueNode -- abstract base class for PastValueNode and FutureValueNode to hold all shared code
+    // The two differ in the step direction, some loop directions, and sequence-boundary flags.
+    // =======================================================================
 
-    template<class ElemType>
-    class PastValueNode : public ComputationNode<ElemType>
+    template<class ElemType, int direction/*-1 or +1*/, int SEQUENCE_START_or_END/*_START or _END*/, MinibatchPackingFlag SequenceStart_or_End/*-Start or -End*/>
+    class DelayedValueNode : public ComputationNode<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+    private:
+        void Init(size_t row_size, size_t col_size, ElemType initialActivationValue = (ElemType)DEFAULT_HIDDEN_ACTIVATION)
+        {
+            m_reqMultiSeqHandling = true;
+            m_initialActivationValue = initialActivationValue;
+            m_timeStep = 1;
+            m_functionValues.Resize(row_size, col_size);
+            m_delayedActivation.Resize(row_size, col_size);
+            m_historyAlreadySet = false;    // PastValueNode only
+        }
+    protected:
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_delayedActivation(deviceId), m_boundaryInfo(CPUDEVICE)
+        {
+            Init(1, 1);
+        }
+        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) :
+            ComputationNode<ElemType>(deviceId, name),
+            m_delayedActivation(deviceId), m_boundaryInfo(CPUDEVICE)
+        {
+            Init(row_size, col_size, initialActivationValue);
 
+            m_functionValues.SetValue(m_initialActivationValue);
+            m_delayedActivation.SetValue(m_initialActivationValue);
+
+            m_gradientValues.Resize(row_size, col_size);
+            m_gradientValues.SetValue(0.0f);
+        }
     public:
-        PastValueNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")  
-            : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId), m_boundaryInfo(CPUDEVICE)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            m_reqMultiSeqHandling = true;
-            m_default_activity = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
-            m_timeStep = 1;
-            m_functionValues.Resize(1,1);
-            m_pastActivity.Resize(1,1);
-            m_historyAlreadySet = false;
-            InitRecurrentNode();
-        }
-                
-        PastValueNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_pastActivity(deviceId), m_boundaryInfo(CPUDEVICE)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-
-            m_default_activity = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
-            m_timeStep = 1;
-            m_functionValues.Resize(1,1);
-            m_pastActivity.Resize(1,1);
-            m_reqMultiSeqHandling = true;
-
-            m_historyAlreadySet = false; 
-
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-
         void SaveToFile(File& fstream) const
         {
             fstream << OperationName() << NodeName();
-            fstream << m_timeStep; 
-            fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
+            fstream << m_timeStep;
+            fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols();
 
-            fstream << m_default_activity;
+            fstream << m_initialActivationValue;
         }
 
-        void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
+            // the node has already been initialized e.g. w.r.t. direction and sequence flags
+            Base::LoadFromFile(fstream, modelVersion);
 
             fstream >> m_timeStep;
 
             size_t iRow, timeIdxInSeq;
             fstream >> iRow >> timeIdxInSeq;
-            FunctionValues().Resize(iRow,timeIdxInSeq);
-            m_pastActivity.Resize(iRow, timeIdxInSeq);
+            FunctionValues().Resize(iRow, timeIdxInSeq);
+            m_delayedActivation.Resize(iRow, timeIdxInSeq);
 
             if (modelVersion >= CNTK_MODEL_VERSION_2)
-                fstream >> m_default_activity;
+                fstream >> m_initialActivationValue;
         }
 
-        PastValueNode(const DEVICEID_TYPE deviceId, ElemType initHiddenActivity, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)  
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            m_reqMultiSeqHandling = true;
-            m_default_activity = initHiddenActivity;
-            m_timeStep = 1;
-
-            m_functionValues.Resize(row_size, col_size);
-            m_functionValues.SetValue(m_default_activity);
-
-            m_pastActivity.Resize(row_size, col_size);
-            m_pastActivity.SetValue(m_default_activity);
-
-            m_gradientValues.Resize(row_size, col_size);
-            m_gradientValues.SetValue(0.0f);
-
-            m_historyAlreadySet = false;
-
-            InitRecurrentNode();
-        }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"DelayedValue"; }
 
         //Set sentence boundary information according to a specified time step. 
         void ResetBound(Matrix<ElemType> * seg, vector<MinibatchPackingFlag> * minibatchPackingFlag)
@@ -134,101 +99,85 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("timeStep should be 1 or larger");
 
             ComputationNode<ElemType>::ResetBound(seg, minibatchPackingFlag);
+
+            m_shiftedMinibatchPackingFlag = *minibatchPackingFlag;
+            m_boundaryInfo = *seg;
+
             if (m_timeStep > 1)
             {
-                m_shiftedMinibatchPackingFlag = *minibatchPackingFlag;
-                m_boundaryInfo = *seg;
-
                 //each row has a number to indicate how many values should be reset for that utterance
                 int numRows = (int)seg->GetNumRows();
                 vector<int> numResetLeft;
                 numResetLeft.resize(numRows);
                 std::fill(numResetLeft.begin(), numResetLeft.end(), 0);
 
-                for (int i = 0; i < minibatchPackingFlag->size(); i++)
+                // Note: this loop direction is from PastValueNode. FutureValueNode uses this for loop:
+                //   for (int i = minibatchPackingFlag->size() - 1; i >= 0; i--) // Future
+                // The loop bodies for each 'i' are independent, so the loop order should not matter; hence, this code can be shared.
+                for (int i = 0; i < minibatchPackingFlag->size(); i++)      // Past
                 {
-                    if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::UtteranceStartOrNoLabel)
+                    if ((*minibatchPackingFlag)[i] & (SequenceStart_or_End | MinibatchPackingFlag::NoFeature))
                     {
-                        //we set timeStep-1 elements following it to be UtteranceStart until met NoLabel
+                        //we set timeStep-1 elements following it to be SequenceStart until met NoInput
                         for (int j = 0; j < numRows; j++)
                         {
-                            if ((*seg)(j, i) == SENTENCE_BEGIN)
-                            {
+                            //we use & since SEQUENCE_START may come with NoLabel
+                            if ((int)(*seg)(j, i) & SEQUENCE_START_or_END)
                                 numResetLeft[j] = m_timeStep;
-                            }
-                            else if ((*seg)(j, i) == NO_LABELS)
-                            {
+                            else if ((int)(*seg)(j, i) & NO_FEATURE)
                                 numResetLeft[j] = 0;
-                            }
                         }
                     }
 
-                    //now set the UtteranceStart
+                    //now set the sequence-boundary flag
                     bool valueChanged = false;
                     for (int j = 0; j < numRows; j++)
                     {
                         if (numResetLeft[j]-- > 0)
                         {
-                            m_boundaryInfo(j, i) = SENTENCE_BEGIN;
+                            m_boundaryInfo(j, i) = (ElemType)(SEQUENCE_START_or_END | ((int)m_boundaryInfo(j, i) & NO_LABEL));
                             valueChanged = true;
                         }
                     }
 
                     if (valueChanged)
-                    {
-                        m_shiftedMinibatchPackingFlag[i] |= MinibatchPackingFlag::UtteranceStart;
-                    }
+                        m_shiftedMinibatchPackingFlag[i] |= SequenceStart_or_End;
                 }
-
-                m_minibatchPackingFlag = &m_shiftedMinibatchPackingFlag;
-                m_sentenceSeg = &m_boundaryInfo;
-            }
-
-        }
-
-        virtual void ComputeInputPartial(const size_t inputIndex)
-        {
-            if (inputIndex > 0)
-                throw std::invalid_argument("PastValue operation only takes one input.");
-
-            int nbrSamples = GradientValues().GetNumCols() / m_samplesInRecurrentStep; 
-            for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
-            {
-                Matrix<ElemType> colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
-
-                ComputeInputPartialSRP(timeIdxInSeq, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin, (*m_minibatchPackingFlag)[timeIdxInSeq]);
             }
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
+        // this one differs in loop direction
+        virtual void ComputeInputPartial(const size_t inputIndex) = 0;
+
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
             if (inputIndex > 0)
-                throw std::invalid_argument("PastValue operation only takes one input.");
+                InvalidArgument("PastValue and FutureValue operations only take one input.");
 
-            assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); 
-
+            assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows());
             assert(m_sentenceSeg != nullptr);
             assert(m_minibatchPackingFlag != nullptr);
 
-            Matrix<ElemType> colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
-
-            ComputeInputPartialSRP(timeIdxInSeq, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBegin, (*m_minibatchPackingFlag)[timeIdxInSeq]);
+            Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(frameRange.t(), 1);
+            ComputeInputPartialSRP(frameRange.t(), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
         }
 
-        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int timeStep, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr, const Matrix<ElemType>& colBegin, MinibatchPackingFlag minibatchPackingFlag)
+        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int timeStep,
+                                                  Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr,
+                                                  const Matrix<ElemType>& colBoundaryFlags, MinibatchPackingFlag minibatchPackingFlag)
         {
             assert(timeIdxInSeq >= 0);
-            if ((timeIdxInSeq - timeStep) >= 0)
+            if (timeIdxInSeq + direction * timeStep >= 0 && timeIdxInSeq + direction * timeStep < gradientValues.GetNumCols())
             {
-                if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceStartOrNoLabel)
-                {                   
+                if (minibatchPackingFlag & (SequenceStart_or_End | MinibatchPackingFlag::NoFeature))
+                {
                     for (int i = 0; i < mNbr; i++)
                     {
-                        if (colBegin(i, 0) != SENTENCE_BEGIN && colBegin(i, 0) != NO_LABELS)
+                        if (! ((int)colBoundaryFlags(i,0) & SEQUENCE_START_or_END) &&
+                            ! ((int)colBoundaryFlags(i,0) & NO_FEATURE))
                         {
-                            Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - timeStep)*mNbr + i, 1);
-                            Matrix<ElemType> frm= gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
-
+                            Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + direction * timeStep)*mNbr + i, 1);
+                            Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
                             to += frm;
                         }
                     }
@@ -237,78 +186,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                 {
                     Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-                    Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq - timeStep)*mNbr, mNbr);
-
+                    Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + direction * timeStep)*mNbr, mNbr);
                     to += frm;
                 }
             }
         }
 
+        // this one differs in loop direction
+        virtual void EvaluateThisNode() = 0;
 
-        virtual void EvaluateThisNode()  
-        {
-            ASSERT(m_timeStep > 0);
-            int blogSize = Inputs(0)->FunctionValues().GetNumCols();
+        // this one differs in the starting condition
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) = 0;
 
-            for (int timeIdxInSeq = 0; timeIdxInSeq < blogSize / m_samplesInRecurrentStep; timeIdxInSeq++)
-            {
-                Matrix<ElemType> colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
-                EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, (*m_minibatchPackingFlag)[timeIdxInSeq]);
-            }
-
-            //set the past activity to be used by next minibatch
-            m_pastActivity = Inputs(0)->FunctionValues();
-        }
-
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)  
-        {
-            /// reset past activity as it reached to the begining of a minibatch
-            /// the node pointed hasn't yet updated, so it is the past activity 
-            assert(m_sentenceSeg != nullptr);
-            assert(m_minibatchPackingFlag != nullptr);
-
-            if (timeIdxInSeq == 0 && m_historyAlreadySet == false)
-            {
-                m_pastActivity = Inputs(0)->FunctionValues();
-            }
-            
-            Matrix<ElemType>  colBegin = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
-            EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_pastActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colBegin, (*m_minibatchPackingFlag)[timeIdxInSeq]);
-
-        }
-
-        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int timeStep, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pastActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const ElemType & initStateValue, const Matrix<ElemType> & colBegin, const MinibatchPackingFlag minibatchPackingFlag)
+        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int timeStep,
+                                                Matrix<ElemType>& functionValues, const Matrix<ElemType>& delayedActivation, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr,
+                                                const ElemType & initStateValue, const Matrix<ElemType> & colBoundaryFlags, const MinibatchPackingFlag minibatchPackingFlag)
         {
             ASSERT(timeStep > 0);
 
             if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
                 functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
                 functionValues.Resize(inputFunctionValues.GetNumRows(),
-                    inputFunctionValues.GetNumCols());
+                inputFunctionValues.GetNumCols());
 
-            int iPastIndex = (int)(timeIdxInSeq - timeStep) * mNbr;
-            int d = iPastIndex; 
-            if (d < 0)
-                d = (int)functionValues.Mod((float)iPastIndex, (float)pastActivity.GetNumCols());  
-            /// this can point to the past activity of the previous mninibatch
+            int delayedIndex = (int)(timeIdxInSeq + direction * timeStep) * mNbr;
+            int d = delayedIndex;
+            if (d < 0 || d >= inputFunctionValues.GetNumCols())
+                d = (int)functionValues.Mod((float)delayedIndex, (float)delayedActivation.GetNumCols());
+            // this can point to the past activity of the previous mninibatch
 
             Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-            Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId()) ;
+            Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
 
-            if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceStartOrNoLabel)
+            if (minibatchPackingFlag & SequenceStart_or_End)
             {
-                for (int i = 0; i < mNbr; i ++)
+                for (int i = 0; i < mNbr; i++)
                 {
-                    out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + i,1);
+                    out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
 
-                    if (colBegin(i,0) == SENTENCE_BEGIN)
-                    {
+                    if ((int)colBoundaryFlags(i,0) & SEQUENCE_START_or_END)
                         out.SetValue(initStateValue);
-                    }
                     else
                     {
-                        if (iPastIndex < 0)
-                            inp = pastActivity.ColumnSlice(d + i, 1);
+                        if (delayedIndex < 0 || delayedIndex >= inputFunctionValues.GetNumCols())
+                            inp = delayedActivation.ColumnSlice(d + i, 1);
                         else
                             inp = inputFunctionValues.ColumnSlice(d + i, 1);
 
@@ -318,42 +239,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                if (iPastIndex < 0)
-                    inp = pastActivity.ColumnSlice(d, mNbr);
+                if (delayedIndex < 0 || delayedIndex >= inputFunctionValues.GetNumCols())
+                    inp = delayedActivation.ColumnSlice(d, mNbr);
                 else
                     inp = inputFunctionValues.ColumnSlice(d, mNbr);
 
-
                 out.SetValue(inp);
             }
-        }
-
-        virtual const Matrix<ElemType>& FunctionValues() const 
-        {
-            return m_functionValues;
-        }
-
-        virtual Matrix<ElemType>& FunctionValues() 
-        {
-            return m_functionValues;
         }
 
         virtual void Validate()
         {
             PrintSelfBeforeValidation(true/*allowNulls*/);
 
-            if (m_children.size() != 1) 
+            if (m_children.size() != 1)
                 throw std::logic_error("PastValue operation should have one input.");
 
             if (!(Inputs(0) == nullptr))
             {
-                size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
+                size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(),
+                    cols0 = Inputs(0)->FunctionValues().GetNumCols();
 
                 if (rows0 > 0 && cols0 > 0) FunctionValues().Resize(rows0, cols0);
             }
-            InferImageDimsFromInputs(); 
+            InferImageDimsFromInputs();
         }
 
+        // the following two are only used for PastValueNode
         bool GetHistory(Matrix<ElemType>& hist, bool)
         {
             DEVICEID_TYPE device = hist.GetDeviceId();
@@ -370,7 +282,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DEVICEID_TYPE device = hist.GetDeviceId();
             hist.TransferFromDeviceToDevice(device, m_deviceId, true);
 
-            m_pastActivity.SetValue(hist);
+            m_delayedActivation.SetValue(hist);
             m_historyAlreadySet = true;
 
             hist.TransferFromDeviceToDevice(m_deviceId, device, true);
@@ -391,475 +303,194 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (m_boundaryInfo.GetDeviceId() != deviceId)
-                    m_boundaryInfo.TransferFromDeviceToDevice(m_boundaryInfo.GetDeviceId(), deviceId);
-                if (m_pastActivity.GetDeviceId() != deviceId)
-                    m_pastActivity.TransferFromDeviceToDevice(m_pastActivity.GetDeviceId(), deviceId, true);
-            }
+            Base::MoveMatricesToDevice(deviceId);
+            m_boundaryInfo.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_delayedActivation.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
-
-        static const std::wstring TypeName() {return L"PastValue";} 
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            PastValueNode<ElemType>* node = (PastValueNode<ElemType>*) nodeP;
-
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<DelayedValueNode<ElemType, direction, SEQUENCE_START_or_END, SequenceStart_or_End>>(nodeP);
                 node->m_timeStep = m_timeStep;
-                node->m_default_activity = m_default_activity;
-                node->m_pastActivity = m_pastActivity;
+                node->m_initialActivationValue = m_initialActivationValue;
+                node->m_delayedActivation = m_delayedActivation;
+                node->m_historyAlreadySet = false;
+            }
+        }
+    protected:
+        ElemType m_initialActivationValue;      // starting value for hidden activation vector at boundary
+        Matrix<ElemType> m_delayedActivation;   // saves the activation of the previous step that this node points to
+        int      m_timeStep;                    // delay in frames (typ. 1)
+        vector<MinibatchPackingFlag> m_shiftedMinibatchPackingFlag;
+        Matrix<ElemType> m_boundaryInfo;        // individual sentence boundary information 
+        bool m_historyAlreadySet;               // for PastValueNode only
+    };
+
+#define UsingDelayedValueNodeMembers UsingComputationNodeMembers; \
+    using Base::m_initialActivationValue; using Base::m_delayedActivation; using Base::m_timeStep; \
+    using Base::m_shiftedMinibatchPackingFlag; using Base::m_boundaryInfo; using Base::m_historyAlreadySet; \
+    using Base::ComputeInputPartialSRP; using Base::EvaluateThisNodeSRP
+
+    // =======================================================================
+    // PastValueNode -- delay node
+    // =======================================================================
+
+    template<class ElemType>
+    class PastValueNode : public DelayedValueNode<ElemType, -1, SEQUENCE_START, MinibatchPackingFlag::SequenceStart>
+    {
+        typedef DelayedValueNode<ElemType, -1, SEQUENCE_START, MinibatchPackingFlag::SequenceStart> Base; UsingDelayedValueNodeMembers;
+    public:
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+        PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) :
+            Base(deviceId, name, initialActivationValue, row_size, col_size)
+        { }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"PastValue"; }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 0)
+                InvalidArgument("PastValue and FutureValue operations only take one input.");
+
+            int nbrSamples = GradientValues().GetNumCols() / m_samplesInRecurrentStep; 
+            for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
+            {
+                // TODO: call the looping version below to avoid code dup
+                Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(timeIdxInSeq, 1);
+                ComputeInputPartialSRP(timeIdxInSeq, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
             }
         }
 
-        // copy constructor
-        PastValueNode(const PastValueNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_pastActivity(node->m_deviceId)
+        // TODO: why is this loop not in th underlying execution engine? This node should not have to know about this.
+        virtual void EvaluateThisNode()  
         {
-            node->CopyTo(this, newName, flags);
+            ASSERT(m_timeStep > 0);
+            int blockSize = Inputs(0)->FunctionValues().GetNumCols();
+
+            for (int timeIdxInSeq = 0; timeIdxInSeq < blockSize / m_samplesInRecurrentStep; timeIdxInSeq++)
+            {
+                // TODO: call the looping version below to avoid code dup
+                Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(timeIdxInSeq, 1);
+                EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
+            }
+
+            //set the past activity to be used by next minibatch
+            m_delayedActivation = Inputs(0)->FunctionValues();
         }
 
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)  
         {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = new PastValueNode<ElemType>(this, name, flags);
-            return node;
+            // reset past activity as it reached to the begining of a minibatch
+            // the node pointed hasn't yet updated, so it is the past activity 
+            assert(m_sentenceSeg != nullptr);
+            assert(m_minibatchPackingFlag != nullptr);
+
+            if (frameRange.t() == 0 && m_historyAlreadySet == false)
+                m_delayedActivation = Inputs(0)->FunctionValues();
+            
+            Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(frameRange.t(), 1);
+            EvaluateThisNodeSRP(frameRange.t(), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
         }
-
-    protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
-
-    private:
-        ElemType  m_default_activity;
-        Matrix<ElemType> m_pastActivity;  /// saves the past activity this PastValue node points to
-        int      m_timeStep;    /// steps for PastValue 
-        vector<MinibatchPackingFlag> m_shiftedMinibatchPackingFlag;
-        Matrix<ElemType> m_boundaryInfo; /// individual sentence boundary information 
-        bool m_historyAlreadySet;
     };
 
     template class PastValueNode<float>; 
     template class PastValueNode<double>;
 
+
+    // =======================================================================
+    // FutureValueNode -- delay node in future direction
+    // =======================================================================
+
     //get value from future (used in the bi-directional models)
     template<class ElemType>
-    class FutureValueNode : public ComputationNode<ElemType>
+    class FutureValueNode : public DelayedValueNode<ElemType, +1, SEQUENCE_END, MinibatchPackingFlag::SequenceEnd>
     {
-        UsingComputationNodeMembers;
-
+        typedef DelayedValueNode<ElemType, +1, SEQUENCE_END, MinibatchPackingFlag::SequenceEnd> Base; UsingDelayedValueNodeMembers;
     public:
-        FutureValueNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_futureActivity(deviceId),m_boundaryInfo(CPUDEVICE)
-        {
-                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-                m_deviceId = deviceId;
-                MoveMatricesToDevice(deviceId);
-                m_reqMultiSeqHandling = true;
-                m_default_activity = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
-                m_timeStep = 1;
-                m_functionValues.Resize(1, 1);
-                m_futureActivity.Resize(1, 1);
-                InitRecurrentNode();
-            }
-
-        FutureValueNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_futureActivity(deviceId), m_boundaryInfo(CPUDEVICE)
-        {
-                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-
-                m_default_activity = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
-                m_timeStep = 1;
-                m_functionValues.Resize(1, 1);
-                m_futureActivity.Resize(1, 1);
-                m_reqMultiSeqHandling = true;
-
-                LoadFromFile(fstream, modelVersion, deviceId);
-            }
-
-        void SaveToFile(File& fstream) const
-        {
-            fstream << OperationName() << NodeName();
-            fstream << m_timeStep;
-            fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols();
-
-            fstream << m_default_activity;
-        }
-
-        void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
-        {
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
-
-            fstream >> m_timeStep;
-
-            size_t iRow, timeIdxInSeq;
-            fstream >> iRow >> timeIdxInSeq;
-            FunctionValues().Resize(iRow, timeIdxInSeq);
-            m_futureActivity.Resize(iRow, timeIdxInSeq);
-
-            if (modelVersion >= CNTK_MODEL_VERSION_2)
-                fstream >> m_default_activity;
-        }
-
-        FutureValueNode(const DEVICEID_TYPE deviceId, ElemType initHiddenActivity, size_t row_size, size_t col_size, const std::wstring name = L"") : ComputationNode<ElemType>(deviceId)
-        {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            m_reqMultiSeqHandling = true;
-            m_default_activity = initHiddenActivity;
-            m_timeStep = 1;
-
-            m_functionValues.Resize(row_size, col_size);
-            m_functionValues.SetValue(m_default_activity);
-
-            m_futureActivity.Resize(row_size, col_size);
-            m_futureActivity.SetValue(m_default_activity);
-
-            m_gradientValues.Resize(row_size, col_size);
-            m_gradientValues.SetValue(0.0f);
-
-            InitRecurrentNode();
-        }
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+        FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) :
+            Base(deviceId, name, initialActivationValue, row_size, col_size)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"FutureValue"; }
 
-        //Set sentence boundary information according to a specified time step. 
-        void ResetBound(Matrix<ElemType> * seg, vector<MinibatchPackingFlag> * minibatchPackingFlag)
-        {
-            if (m_timeStep <= 0)
-                LogicError("timeStep should be 1 or larger");
-
-            ComputationNode<ElemType>::ResetBound(seg, minibatchPackingFlag);
-            if (m_timeStep > 1)
-            {
-                m_shiftedMinibatchPackingFlag = *minibatchPackingFlag;
-                m_boundaryInfo = *seg;
-
-                //each row has a number to indicate how many values should be reset for that utterance
-                int numRows = (int)seg->GetNumRows();
-                vector<int> numResetLeft;
-                numResetLeft.resize(numRows);
-                std::fill(numResetLeft.begin(), numResetLeft.end(), 0);
-
-                for (int i = minibatchPackingFlag->size()-1; i <=0; i--)
-                {
-                    if ((*minibatchPackingFlag)[i] & MinibatchPackingFlag::UtteranceEndOrNoLabel)
-                    {
-                        //we set timeStep-1 elements following it to be UtteranceStart until met NoLabel
-                        for (int j = 0; j < numRows; j++)
-                        {
-                            if ((*seg)(j, i) == SENTENCE_END)
-                            {
-                                numResetLeft[j] = m_timeStep;
-                            }
-                            else if ((*seg)(j, i) == NO_LABELS)
-                            {
-                                numResetLeft[j] = 0;
-                            }
-                        }
-                    }
-
-                    //now set the UtteranceEnd
-                    bool valueChanged = false;
-                    for (int j = 0; j < numRows; j++)
-                    {
-                        if (numResetLeft[j]-- > 0)
-                        {
-                            m_boundaryInfo(j, i) = SENTENCE_END;
-                            valueChanged = true;
-                        }
-                    }
-
-                    if (valueChanged)
-                    {
-                        m_shiftedMinibatchPackingFlag[i] |= MinibatchPackingFlag::UtteranceEnd;
-                    }
-                }
-
-                m_minibatchPackingFlag = &m_shiftedMinibatchPackingFlag;
-                m_sentenceSeg = &m_boundaryInfo;
-            }
-        }
-
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 0)
-                throw std::invalid_argument("FutureValue operation only takes one input.");
+                InvalidArgument("PastValue and FutureValue operations only take one input.");
 
             int nbrSamples = GradientValues().GetNumCols() / m_samplesInRecurrentStep;
-            for (int timeIdxInSeq = 0; timeIdxInSeq< nbrSamples; timeIdxInSeq++)
+            for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
             {
-                Matrix<ElemType> colFlag = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
-
-                ComputeInputPartialSRP(timeIdxInSeq, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colFlag, (*m_minibatchPackingFlag)[timeIdxInSeq]);
-            }
-        }
-
-        virtual void ComputeInputPartial(const size_t inputIndex, const size_t timeIdxInSeq)
-        {
-            if (inputIndex > 0)
-                throw std::invalid_argument("FutureValue operation only takes one input.");
-
-            assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
-            assert(m_sentenceSeg != nullptr);
-            assert(m_minibatchPackingFlag != nullptr);
-
-            Matrix<ElemType> colFlag = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
-
-            ComputeInputPartialSRP(timeIdxInSeq, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colFlag, (*m_minibatchPackingFlag)[timeIdxInSeq]);
-        }
-
-        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int timeStep, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr, const Matrix<ElemType>& colFlag, MinibatchPackingFlag minibatchPackingFlag)
-        {
-            assert(timeIdxInSeq >= 0);
-            if ((timeIdxInSeq + timeStep) < gradientValues.GetNumCols())
-            {
-                if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceEndOrNoLabel)
-                {
-                    for (int i = 0; i < mNbr; i++)
-                    {
-                        if (colFlag(i, 0) != SENTENCE_END && colFlag(i, 0) != NO_LABELS)
-                        {
-                            Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + timeStep)*mNbr + i, 1);
-                            Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
-
-                            to += frm;
-                        }
-                    }
-
-                }
-                else
-                {
-                    Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-                    Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + timeStep)*mNbr, mNbr);
-
-                    to += frm;
-                }
+                // TODO: call the looping version below to avoid code dup
+                Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(timeIdxInSeq, 1);
+                ComputeInputPartialSRP(timeIdxInSeq, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
             }
         }
 
         virtual void EvaluateThisNode()
         {
             ASSERT(m_timeStep > 0);
-            int blogSize = Inputs(0)->FunctionValues().GetNumCols();
+            int blockSize = Inputs(0)->FunctionValues().GetNumCols();
 
-            for (int timeIdxInSeq = blogSize / m_samplesInRecurrentStep - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
+            for (int timeIdxInSeq = blockSize / m_samplesInRecurrentStep - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
             {
-                Matrix<ElemType> colFlag = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
-                EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_futureActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colFlag, (*m_minibatchPackingFlag)[timeIdxInSeq]);
+                Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(timeIdxInSeq, 1);
+                EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
             }
 
             //set the future activity to be used by next minibatch
-            m_futureActivity = Inputs(0)->FunctionValues();
+            m_delayedActivation = Inputs(0)->FunctionValues();
         }
 
-        virtual void EvaluateThisNode(const size_t timeIdxInSeq)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
             assert(m_sentenceSeg != nullptr);
             assert(m_minibatchPackingFlag != nullptr);
 
-            if (timeIdxInSeq == Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep - 1)
-            {
-                m_futureActivity = Inputs(0)->FunctionValues();
-            }
+            if (frameRange.t() == Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep - 1)
+                m_delayedActivation = Inputs(0)->FunctionValues();
 
-            Matrix<ElemType> colFlag = m_sentenceSeg->ColumnSlice(timeIdxInSeq, 1);
-            EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_futureActivity, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_default_activity, colFlag, (*m_minibatchPackingFlag)[timeIdxInSeq]);
+            Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(frameRange.t(), 1);
+            EvaluateThisNodeSRP(frameRange.t(), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
         }
-
-        /// to-do: need to change to the new way of resetting state
-        static void WINAPI EvaluateThisNodeSR(const size_t timeIdxInSeq, const int timeStep, const bool reset, const ElemType default_activity, Matrix<ElemType>& functionValues, const Matrix<ElemType>& futureActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr)
-        {
-            ASSERT(timeStep > 0);
-
-            if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
-                functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
-                functionValues.Resize(inputFunctionValues.GetNumRows(),
-                inputFunctionValues.GetNumCols());
-
-            int futureIndex = (int)(timeIdxInSeq + timeStep) * mNbr;
-            int d = futureIndex;
-            if (d >= inputFunctionValues.GetNumCols())
-                d = (int)functionValues.Mod((float)futureIndex, (float)futureActivity.GetNumCols());
-            /// this can point to the future activity of the previous mninibatch
-
-            Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-            Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
-
-            if (reset)
-            {
-                out.SetValue(default_activity);
-            }
-            else
-            {
-                if (futureIndex >= inputFunctionValues.GetNumCols())
-                    inp = futureActivity.ColumnSlice(d, mNbr);
-                else
-                    inp = inputFunctionValues.ColumnSlice(d, mNbr);
-                out.SetValue(inp);
-            }
-        }
-
-        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int timeStep, Matrix<ElemType>& functionValues, const Matrix<ElemType>& futureActivity, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr, const ElemType & initStateValue, const Matrix<ElemType> & colFlag, const MinibatchPackingFlag minibatchPackingFlag)
-        {
-            ASSERT(timeStep > 0);
-
-            if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
-                functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
-                functionValues.Resize(inputFunctionValues.GetNumRows(),
-                inputFunctionValues.GetNumCols());
-
-            int futureIndex = (int)(timeIdxInSeq + timeStep) * mNbr;
-            int d = futureIndex;
-            if (d >= inputFunctionValues.GetNumCols())
-                d = (int)functionValues.Mod((float)futureIndex, (float)futureActivity.GetNumCols());
-
-            Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-            Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
-
-            if (minibatchPackingFlag & MinibatchPackingFlag::UtteranceEndOrNoLabel)
-            {
-                for (int i = 0; i < mNbr; i++)
-                {
-                    out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
-
-                    if (colFlag(i, 0) == SENTENCE_END)
-                    {
-                        out.SetValue(initStateValue);
-                    }
-                    else
-                    {
-                        if (futureIndex >= inputFunctionValues.GetNumCols())
-                            inp = futureActivity.ColumnSlice(d + i, 1);
-                        else
-                            inp = inputFunctionValues.ColumnSlice(d + i, 1);
-
-                        out.SetValue(inp);
-                    }
-                }
-            }
-            else
-            {
-                if (futureIndex >= inputFunctionValues.GetNumCols())
-                    inp = futureActivity.ColumnSlice(d, mNbr);
-                else
-                    inp = inputFunctionValues.ColumnSlice(d, mNbr);
-
-                out.SetValue(inp);
-            }
-        }
-
-        virtual void Validate()
-        {
-            PrintSelfBeforeValidation(true/*allowNulls*/);
-
-            if (m_children.size() != 1)
-                throw std::logic_error("FutureValue operation should have one input.");
-
-            if (!(Inputs(0) == nullptr))
-            {
-                size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), 
-                       cols0 = Inputs(0)->FunctionValues().GetNumCols();
-
-                if (rows0 > 0 && cols0 > 0) FunctionValues().Resize(rows0, cols0);
-            }
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr inputNode)
-        {
-            m_children.resize(1);
-            m_children[0] = inputNode;
-        }
-
-        void SetTimeStep(const int val)
-        {
-            if (val <= 0)
-                throw std::logic_error("timeStep must be > 0.");
-            m_timeStep = val;
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (m_boundaryInfo.GetDeviceId() != deviceId)
-                    m_boundaryInfo.TransferFromDeviceToDevice(m_boundaryInfo.GetDeviceId(), deviceId);
-                if (m_futureActivity.GetDeviceId() != deviceId)
-                    m_futureActivity.TransferFromDeviceToDevice(m_futureActivity.GetDeviceId(), deviceId, true);
-            }
-        }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            FutureValueNode<ElemType>* node = (FutureValueNode<ElemType>*) nodeP;
-
-            if (flags & CopyNodeFlags::copyNodeValue)
-            {
-                node->m_timeStep = m_timeStep;
-                node->m_default_activity = m_default_activity;
-                node->m_futureActivity = m_futureActivity;
-            }
-        }
-
-        // copy constructor
-        FutureValueNode(const FutureValueNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_futureActivity(node->m_deviceId)
-        {
-                node->CopyTo(this, newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = new FutureValueNode<ElemType>(this, name, flags);
-            return node;
-        }
-
-    protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
-
-    private:
-        ElemType  m_default_activity;
-        Matrix<ElemType> m_futureActivity;  /// saves the future activity this FutureValue node points to
-        int      m_timeStep;    /// steps for FutureValue 
-        vector<MinibatchPackingFlag> m_shiftedMinibatchPackingFlag;
-        Matrix<ElemType> m_boundaryInfo; /// individual sentence boundary information 
-        bool m_historyAlreadySet;
     };
 
     template class FutureValueNode<float>;
     template class FutureValueNode<double>;
 
+
+    // =======================================================================
+    // LSTMNode -- deprecated early implementation of LSTM operating on minibatches directly
+    // =======================================================================
+
     /**
     LSTM specific node. This node uses matrix operations to have LSTM functionality. 
     It avoids using general recurrent loop operations in the network operations in computationnetwork. 
-
 
     Developed by Kaisheng Yao
     Used in the following works:
     K. Yao, G. Zweig, "Sequence to sequence neural net models for graphone to phoneme conversion", in Interspeech 2015
     */
     template<class ElemType>
-    class LSTMNode : public ComputationNode<ElemType>
+    class LSTMNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
-
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        LSTMNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_State(deviceId), m_PastState(deviceId),
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        LSTMNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name),
+            m_State(deviceId), m_PastState(deviceId),
             m_PastOutput(deviceId), m_Gi(deviceId), m_Gf(deviceId), m_Go(deviceId), grdToObs(deviceId), grdToInputGate(deviceId),
             grdToForgetGate(deviceId), grdToOutputGate(deviceId), grdToCellWgt(deviceId), tanhObs(deviceId),
             tanhState(deviceId), m_tempMatrix(deviceId),
@@ -867,54 +498,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             grdBeforeInputGate(deviceId),
             grdBeforeForget(deviceId), grdBeforeGo(deviceId), grdToCell(deviceId),
             grdBeforeTanhInputGate(deviceId), m_obs_error_from_future_minibatch(deviceId),
-            m_state_error_from_future_minibatch(deviceId), mLastState(deviceId), mLastOutput(deviceId)
+            m_state_error_from_future_minibatch(deviceId), mLastState(deviceId), mLastOutput(deviceId),
+            m_inputDim(0),
+            m_outputDim(0),
+            m_use_errors_from_future_minibatch(false),
+            m_DefaultState((ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
             m_reqMultiSeqHandling = true;
-            InitRecurrentNode();
-            m_inputDim = 0;
-            m_outputDim = 0;
-            m_use_errors_from_future_minibatch = false;
-            m_DefaultState = (ElemType) DEFAULT_HIDDEN_ACTIVITY;
-        }
-
-        LSTMNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_State(deviceId), m_PastState(deviceId), m_PastOutput(deviceId), m_Gi(deviceId), m_Gf(deviceId), m_Go(deviceId), grdToObs(deviceId), grdToInputGate(deviceId), grdToForgetGate(deviceId), grdToOutputGate(deviceId), grdToCellWgt(deviceId), tanhObs(deviceId), tanhState(deviceId), m_tempMatrix(deviceId), mSlicePrevState(deviceId), mSlicePrevOutput(deviceId),
-            grdBeforeInputGate(deviceId),
-            grdBeforeForget(deviceId), grdBeforeGo(deviceId), grdToCell(deviceId),
-            grdBeforeTanhInputGate(deviceId), m_obs_error_from_future_minibatch(deviceId),
-            m_state_error_from_future_minibatch(deviceId), mLastState(deviceId), mLastOutput(deviceId)
-        {
-            m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
-            m_inputDim = 0;
-            m_outputDim = 0;
-            m_reqMultiSeqHandling = true;
-            m_use_errors_from_future_minibatch = false;
-            m_DefaultState = (ElemType)DEFAULT_HIDDEN_ACTIVITY;
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
-
-        // copy constructor
-        LSTMNode(const LSTMNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
-            : ComputationNode<ElemType>(node->m_deviceId), m_State(node->m_deviceId), m_PastState(node->m_deviceId), m_PastOutput(node->m_deviceId), m_Gi(node->m_deviceId), m_Gf(node->m_deviceId), m_Go(node->m_deviceId), grdToObs(node->m_deviceId), grdToInputGate(node->m_deviceId), grdToForgetGate(node->m_deviceId), grdToOutputGate(node->m_deviceId), grdToCellWgt(node->m_deviceId), tanhObs(node->m_deviceId), tanhState(node->m_deviceId), m_tempMatrix(node->m_deviceId), mSlicePrevState(node->m_deviceId), mSlicePrevOutput(node->m_deviceId),
-            grdBeforeInputGate(node->m_deviceId),
-            grdBeforeForget(node->m_deviceId), grdBeforeGo(node->m_deviceId), grdToCell(node->m_deviceId),
-            grdBeforeTanhInputGate(node->m_deviceId), m_obs_error_from_future_minibatch(node->m_deviceId),
-            m_state_error_from_future_minibatch(node->m_deviceId), mLastState(node->m_deviceId), mLastOutput(node->m_deviceId)
-        {
-            m_use_errors_from_future_minibatch = false;
-            node->CopyTo(this, newName, flags);
-            m_DefaultState = (ElemType) DEFAULT_HIDDEN_ACTIVITY;
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"") ? NodeName() : newName;
-
-            ComputationNodePtr node = new LSTMNode<ElemType>(this, name, flags);
-            return node;
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -922,16 +512,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SaveToFile(File& fstream) const
         {
-            ComputationNode<ElemType>::SaveToFile(fstream);
-
+            Base::SaveToFile(fstream);
             fstream << m_inputDim << m_outputDim;
             fstream << m_DefaultState;
         }
 
-        void LoadFromFile(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
-            ComputationNode<ElemType>::LoadFromFile(fstream, modelVersion, deviceId);
-
+            Base::LoadFromFile(fstream, modelVersion);
             if (modelVersion == 2)
                 fstream >> m_inputDim >> m_outputDim;
             fstream >> m_DefaultState;
@@ -939,21 +527,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            LSTMNode<ElemType>* node = (LSTMNode<ElemType>*) nodeP;
-
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<LSTMNode<ElemType>>(nodeP);
                 node->m_inputDim = m_inputDim;
                 node->m_outputDim = m_outputDim;
 
-                node->m_State = m_State;  /// hidden state activity
-                node->m_PastState = m_PastState; /// state activity in the previous minibatch
-                node->m_PastOutput = m_PastOutput; /// output in the previou minibatch 
+                node->m_State = m_State;  // hidden state activity
+                node->m_PastState = m_PastState; // state activity in the previous minibatch
+                node->m_PastOutput = m_PastOutput; // output in the previou minibatch 
 
-                node->m_Gi = m_Gi;     /// input gate activity
-                node->m_Gf = m_Gf;     /// forget gate activity
-                node->m_Go = m_Go;     /// output gate activity
+                node->m_Gi = m_Gi;     // input gate activity
+                node->m_Gf = m_Gf;     // forget gate activity
+                node->m_Go = m_Go;     // output gate activity
 
                 node->mSlicePrevOutput = mSlicePrevOutput;
                 node->mSlicePrevState = mSlicePrevState;
@@ -968,7 +555,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 4)
-                throw std::invalid_argument("LSTM operation only takes five inputs.");
+                InvalidArgument("LSTM operation only takes five inputs.");
 
             size_t nT = Inputs(0)->FunctionValues().GetNumCols();
             size_t inputDim = Inputs(0)->FunctionValues().GetNumRows();
@@ -979,10 +566,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (FunctionValues().GetNumCols() != GradientValues().GetNumCols() ||
                     FunctionValues().GetNumRows() != GradientValues().GetNumRows())
                 {
-                    throw std::runtime_error("LSTMNode::GradientValue size doesn't match to the function value size");
+                    RuntimeError("LSTMNode::GradientValue size doesn't match to the function value size");
                 }
 
-                /// reset gradients
+                // reset gradients
                 grdToObs.Resize(inputDim, nT); grdToObs.SetValue(0);
                 grdToInputGate.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols()); grdToInputGate.SetValue(0);
                 grdToForgetGate.Resize(Inputs(2)->FunctionValues().GetNumRows(), Inputs(2)->FunctionValues().GetNumCols()); grdToForgetGate.SetValue(0);
@@ -1040,31 +627,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, m_sentenceSeg);
 
-                        ComputeInputGradientWrtGates(
-                            error,
-                            sliceObs,
-                            grdToObsSlice,
-                            Inputs(1)->FunctionValues(),
-                            grdToInputGate,
-                            Inputs(2)->FunctionValues(),
-                            grdToForgetGate,
-                            Inputs(3)->FunctionValues(),
-                            grdToOutputGate,
-                            Inputs(4)->FunctionValues(),
-                            grdToCellWgt,
-                            mSlicePrevOutput,
-                            mSlicePrevState,
-                            stateError,
-                            sliceState,
-                            sliceTanhState,
-                            sliceTanhObs,
-                            sliceGi,
-                            sliceGf,
-                            sliceGo,
-                            grdToPrevOutput,
-                            grdToPrevState,
-                            m_tempMatrix
-                            );
+                    ComputeInputGradientWrtGates(
+                        error,
+                        sliceObs,
+                        grdToObsSlice,
+                        Inputs(1)->FunctionValues(),
+                        grdToInputGate,
+                        Inputs(2)->FunctionValues(),
+                        grdToForgetGate,
+                        Inputs(3)->FunctionValues(),
+                        grdToOutputGate,
+                        Inputs(4)->FunctionValues(),
+                        grdToCellWgt,
+                        mSlicePrevOutput,
+                        mSlicePrevState,
+                        stateError,
+                        sliceState,
+                        sliceTanhState,
+                        sliceTanhObs,
+                        sliceGi,
+                        sliceGf,
+                        sliceGo,
+                        grdToPrevOutput,
+                        grdToPrevState,
+                        m_tempMatrix
+                    );
                     grdToObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep).SetValue(grdToObsSlice);
 
                     PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, m_samplesInRecurrentStep, m_sentenceSeg);
@@ -1084,7 +671,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 0)  //derivative with regard to the observation
             {
-                if (Inputs(inputIndex)->GradientValues().GetNumElements() == 0)
+                if (Inputs(inputIndex)->GradientValues().HasNoElements())
                     Inputs(inputIndex)->GradientValues().SetValue(grdToObs);
                 else
                     Inputs(inputIndex)->GradientValues() += grdToObs;
@@ -1092,7 +679,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 1)
             {
-                if (Inputs(inputIndex)->GradientValues().GetNumElements() == 0)
+                if (Inputs(inputIndex)->GradientValues().HasNoElements())
                     Inputs(inputIndex)->GradientValues().SetValue(grdToInputGate);
                 else
                     Inputs(inputIndex)->GradientValues() += grdToInputGate;
@@ -1100,7 +687,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 2)
             {
-                if (Inputs(inputIndex)->GradientValues().GetNumElements() == 0)
+                if (Inputs(inputIndex)->GradientValues().HasNoElements())
                     Inputs(inputIndex)->GradientValues().SetValue(grdToForgetGate);
                 else
                     Inputs(inputIndex)->GradientValues() += grdToForgetGate;
@@ -1108,7 +695,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 3)
             {
-                if (Inputs(inputIndex)->GradientValues().GetNumElements() == 0)
+                if (Inputs(inputIndex)->GradientValues().HasNoElements())
                     Inputs(inputIndex)->GradientValues().SetValue(grdToOutputGate);
                 else
                     Inputs(inputIndex)->GradientValues() += grdToOutputGate;
@@ -1116,7 +703,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 4)
             {
-                if (Inputs(inputIndex)->GradientValues().GetNumElements() == 0)
+                if (Inputs(inputIndex)->GradientValues().HasNoElements())
                     Inputs(inputIndex)->GradientValues().SetValue(grdToCellWgt);
                 else
                     Inputs(inputIndex)->GradientValues() += grdToCellWgt;
@@ -1142,7 +729,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI ComputeInputGradientWrtGates(
-            const Matrix<ElemType>& outGrd,  /// the error to h_t from upper layer
+            const Matrix<ElemType>& outGrd,  // the error to h_t from upper layer
             const Matrix<ElemType> & obs,
             Matrix<ElemType> &grdToObs,
             const Matrix<ElemType>& mInputGate,
@@ -1155,7 +742,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> &grdToCellWgt,
             const Matrix<ElemType>& prevOutput,
             const Matrix<ElemType>& prevState,
-            const Matrix<ElemType>& stateError,  /// the error propagated to cell from t+1
+            const Matrix<ElemType>& stateError,  // the error propagated to cell from t+1
             const Matrix<ElemType> &state,
             const Matrix<ElemType> &tanhState,
             const Matrix<ElemType> & tanhBeforeApplyingInputGating,
@@ -1203,7 +790,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> grdToWxi = grdToInputGate.ColumnSlice(1, inputDim);
             Matrix<ElemType> grdTobi = grdToInputGate.ColumnSlice(0, 1);
 
-            /// error backpropagate to output gate
+            // error backpropagate to output gate
             Matrix<ElemType> grdToGo(tmpMat.GetDeviceId()), gradientOfSigmoid(tmpMat.GetDeviceId());
             Matrix<ElemType> grdBeforeGo(tmpMat.GetDeviceId()), grdBeforeInputGate(tmpMat.GetDeviceId());
             Matrix<ElemType> grdToCell(tmpMat.GetDeviceId());
@@ -1214,104 +801,104 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef DEBUG_DECODER
             fprintf(stderr, "output gate error = %.4e\n", grdBeforeGo(0, 0));
 #endif
-            Matrix<ElemType>::MultiplyAndAdd(Who, true, grdBeforeGo, false, grdToPrevOutput);  /// error to previous output
-            Matrix<ElemType>::MultiplyAndAdd(Wxo, true, grdBeforeGo, false, grdToObs);      /// error to observation 
+            Matrix<ElemType>::MultiplyAndAdd(Who, true, grdBeforeGo, false, grdToPrevOutput);  // error to previous output
+            Matrix<ElemType>::MultiplyAndAdd(Wxo, true, grdBeforeGo, false, grdToObs);      // error to observation 
             tmpMat = grdBeforeGo;
             tmpMat.ColumnElementMultiplyWith(Wco);
-            grdToCell = tmpMat;                                                            /// error to memory cell
+            grdToCell = tmpMat;                                                            // error to memory cell
 
-            Matrix<ElemType>::MultiplyAndAdd(grdBeforeGo, false, prevOutput, true, grdToWho); /// gradient to Who
-            Matrix<ElemType>::MultiplyAndAdd(grdBeforeGo, false, obs, true, grdToWxo); /// gradient to Wxo
+            Matrix<ElemType>::MultiplyAndAdd(grdBeforeGo, false, prevOutput, true, grdToWho); // gradient to Who
+            Matrix<ElemType>::MultiplyAndAdd(grdBeforeGo, false, obs, true, grdToWxo); // gradient to Wxo
             tmpMat.AssignInnerProductOf(grdBeforeGo, state, false);
-            grdToWco += tmpMat;                    /// to Wco
+            grdToWco += tmpMat;                    // to Wco
             for (size_t i = 0; i < grdBeforeGo.GetNumCols(); i++)
             {
-                grdTobo += grdBeforeGo.ColumnSlice(i, 1);  /// gradient to bo
+                grdTobo += grdBeforeGo.ColumnSlice(i, 1);  // gradient to bo
             }
 
             grdToGo.AssignElementProductOf(outGrd, go);  // error to tanh
             GradientOfTanh(tanhState, grdToGo, grdToCell, tmpMat); // error to memory cell
-            grdToCell += stateError; /// add error to memory cell from t+1
+            grdToCell += stateError; // add error to memory cell from t+1
 #ifdef DEBUG_DECODER
             fprintf(stderr, "previous state[0] = %.4e norm = %.4e\n", prevState(0, 0), prevState.FrobeniusNorm());
             fprintf(stderr, "state error = %.4e\n", grdToCell(0, 0));
             fprintf(stderr, "state error norm = %.4e\n", grdToCell.FrobeniusNorm());
 #endif
-            /// error backpropagate to memory cells
+            // error backpropagate to memory cells
             grdToPrevState.AssignElementProductOf(gf, grdToCell);  // error to previous memory cell
-            /// be careful, need to double check if errors are missing
+            // be careful, need to double check if errors are missing
 
             Matrix<ElemType> grdBeforeForget(tmpMat.GetDeviceId());
             tmpMat.AssignElementProductOf(prevState, grdToCell);  // error to f_t
             gradientOfSigmoid.AssignSigmoidDerivativeOf(gf);
-            grdBeforeForget.AssignElementProductOf(gradientOfSigmoid, tmpMat); /// error before forget gate
+            grdBeforeForget.AssignElementProductOf(gradientOfSigmoid, tmpMat); // error before forget gate
 #ifdef DEBUG_DECODER
             fprintf(stderr, "forget gate error = %.4e\n", grdBeforeForget(0, 0));
 #endif
 
-            Matrix<ElemType>::MultiplyAndAdd(Whf, true, grdBeforeForget, false, grdToPrevOutput);  /// error to previous output
+            Matrix<ElemType>::MultiplyAndAdd(Whf, true, grdBeforeForget, false, grdToPrevOutput);  // error to previous output
             tmpMat = grdBeforeForget;
             tmpMat.ColumnElementMultiplyWith(Wcf);
-            grdToPrevState += tmpMat;                                                            /// error to previous state
+            grdToPrevState += tmpMat;                                                            // error to previous state
 
-            Matrix<ElemType>::MultiplyAndAdd(Wxf, true, grdBeforeForget, false, grdToObs);  /// error to observation
+            Matrix<ElemType>::MultiplyAndAdd(Wxf, true, grdBeforeForget, false, grdToObs);  // error to observation
 
-            Matrix<ElemType>::MultiplyAndAdd(grdBeforeForget, false, prevOutput, true, grdToWhf); /// gradient to Whf
+            Matrix<ElemType>::MultiplyAndAdd(grdBeforeForget, false, prevOutput, true, grdToWhf); // gradient to Whf
             tmpMat.AssignInnerProductOf(grdBeforeForget, prevState, false);
-            grdToWcf += tmpMat;                                                             /// gradient to Wcf
+            grdToWcf += tmpMat;                                                             // gradient to Wcf
 
-            Matrix<ElemType>::MultiplyAndAdd(grdBeforeForget, false, obs, true, grdToWxf); /// gradient to Wxf
+            Matrix<ElemType>::MultiplyAndAdd(grdBeforeForget, false, obs, true, grdToWxf); // gradient to Wxf
             for (size_t i = 0; i < grdBeforeForget.GetNumCols(); i++)
-                grdTobf += grdBeforeForget.ColumnSlice(i, 1);                                                    /// gradient to bf
+                grdTobf += grdBeforeForget.ColumnSlice(i, 1);                                                    // gradient to bf
 
-            /// error backpropagate to input gate
+            // error backpropagate to input gate
             tmpMat.AssignElementProductOf(tanhBeforeApplyingInputGating, grdToCell);
             gradientOfSigmoid.AssignSigmoidDerivativeOf(gi);
-            grdBeforeInputGate.AssignElementProductOf(gradientOfSigmoid, tmpMat); /// error before input gate
+            grdBeforeInputGate.AssignElementProductOf(gradientOfSigmoid, tmpMat); // error before input gate
 #ifdef DEBUG_DECODER
             fprintf(stderr, "input gate error = %.4e\n", grdBeforeInputGate(0, 0));
 #endif
 
-            Matrix<ElemType>::MultiplyAndAdd(Whi, true, grdBeforeInputGate, false, grdToPrevOutput);  /// error to previous output
+            Matrix<ElemType>::MultiplyAndAdd(Whi, true, grdBeforeInputGate, false, grdToPrevOutput);  // error to previous output
             tmpMat = grdBeforeInputGate;
             tmpMat.ColumnElementMultiplyWith(Wci);
-            grdToPrevState += tmpMat;                                                            /// error to previous state
+            grdToPrevState += tmpMat;                                                            // error to previous state
 
 #ifdef DEBUG_DECODER
             fprintf(stderr, "to previous state error = %.4e\n", grdToPrevState(0, 0));
             fprintf(stderr, "to previous state error norm = %.4e\n", grdToPrevState.FrobeniusNorm());
 #endif
-            Matrix<ElemType>::MultiplyAndAdd(Wxi, true, grdBeforeInputGate, false, grdToObs);  /// error to observation
+            Matrix<ElemType>::MultiplyAndAdd(Wxi, true, grdBeforeInputGate, false, grdToObs);  // error to observation
 
-            Matrix<ElemType>::MultiplyAndAdd(grdBeforeInputGate, false, prevOutput, true, grdToWhi); /// gradient to Whi
+            Matrix<ElemType>::MultiplyAndAdd(grdBeforeInputGate, false, prevOutput, true, grdToWhi); // gradient to Whi
             tmpMat.AssignInnerProductOf(grdBeforeInputGate, prevState, false);
-            grdToWci += tmpMat;                                                             /// gradient to Wci
-            Matrix<ElemType>::MultiplyAndAdd(grdBeforeInputGate, false, obs, true, grdToWxi); /// gradient to Wxi
+            grdToWci += tmpMat;                                                             // gradient to Wci
+            Matrix<ElemType>::MultiplyAndAdd(grdBeforeInputGate, false, obs, true, grdToWxi); // gradient to Wxi
             for (size_t i = 0; i < grdBeforeInputGate.GetNumCols(); i++)
-                grdTobi += grdBeforeInputGate.ColumnSlice(i, 1);                                                  /// gradient to bi
+                grdTobi += grdBeforeInputGate.ColumnSlice(i, 1);                                                  // gradient to bi
 
-            /// error backpropagate to inputs
+            // error backpropagate to inputs
             Matrix<ElemType> grdTmp2(tmpMat.GetDeviceId());
             Matrix<ElemType> grdBeforeTanhInputGate(tmpMat.GetDeviceId());
             grdTmp2.AssignElementProductOf(gi, grdToCell);
             grdBeforeTanhInputGate.Resize(tanhBeforeApplyingInputGating.GetNumRows(), tanhBeforeApplyingInputGating.GetNumCols());
             GradientOfTanh(tanhBeforeApplyingInputGating, grdTmp2, grdBeforeTanhInputGate, tmpMat); // error to memory cell
-            Matrix<ElemType>::MultiplyAndAdd(Wxc, true, grdBeforeTanhInputGate, false, grdToObs);  /// error to observation
+            Matrix<ElemType>::MultiplyAndAdd(Wxc, true, grdBeforeTanhInputGate, false, grdToObs);  // error to observation
 #ifdef DEBUG_DECODER
             fprintf(stderr, "to observation error = %.4e\n", grdToObs(0, 0));
 #endif
 
-            Matrix<ElemType>::MultiplyAndAdd(Whc, true, grdBeforeTanhInputGate, false, grdToPrevOutput);  /// error to previous output
-            Matrix<ElemType>::MultiplyAndAdd(grdBeforeTanhInputGate, false, obs, true, grdToWxc); /// gradient to Wxc
+            Matrix<ElemType>::MultiplyAndAdd(Whc, true, grdBeforeTanhInputGate, false, grdToPrevOutput);  // error to previous output
+            Matrix<ElemType>::MultiplyAndAdd(grdBeforeTanhInputGate, false, obs, true, grdToWxc); // gradient to Wxc
 
-            Matrix<ElemType>::MultiplyAndAdd(grdBeforeTanhInputGate, false, prevOutput, true, grdToWhc); /// gradient to Whc
+            Matrix<ElemType>::MultiplyAndAdd(grdBeforeTanhInputGate, false, prevOutput, true, grdToWhc); // gradient to Whc
             for (size_t i = 0; i < grdBeforeTanhInputGate.GetNumCols(); i++)
-                grdTobc += grdBeforeTanhInputGate.ColumnSlice(i, 1);                                                    /// gradient to bc
+                grdTobc += grdBeforeTanhInputGate.ColumnSlice(i, 1);                                                    // gradient to bc
 
         }
 
         /**
-        get the segmentation information, SENTENECE_BEGIN, SENTENCE_MIDDLE, NO_LABELS 
+        get the segmentation information, SENTENECE_BEGIN, SEQUENCE_MIDDLE, NO_INPUT 
         for time at t and stream of streamid
         */
         int GetSegInfo(size_t t, size_t streamid)
@@ -1337,7 +924,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t nT = Inputs(0)->FunctionValues().GetNumCols();
             size_t outputDim = Inputs(1)->FunctionValues().GetNumRows();
             
-            /// save the hidden activities and output for the next minibatch
+            // save the hidden activities and output for the next minibatch
             mLastOutput.Resize(outputDim, m_samplesInRecurrentStep);
             mLastState.Resize(outputDim, m_samplesInRecurrentStep);
 
@@ -1345,7 +932,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (int t = nT - m_samplesInRecurrentStep + i; t >= 0; t -= m_samplesInRecurrentStep)
                 {
-                    if (GetSegInfo(t, i) == SENTENCE_MIDDLE)
+                    if (GetSegInfo(t, i) == SEQUENCE_MIDDLE)
                     {
                         mLastOutput.ColumnSlice(i, 1).SetValue(FunctionValues().ColumnSlice(t, 1));
                         mLastState.ColumnSlice(i, 1).SetValue(m_State.ColumnSlice(t, 1));
@@ -1362,19 +949,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             {
                 FunctionValues().Resize(outputDim, nT);
-                FunctionValues().SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                FunctionValues().SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
                 m_State.Resize(outputDim, nT);
-                m_State.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                m_State.SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
                 m_Gi.Resize(outputDim, nT);
-                m_Gi.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                m_Gi.SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
                 m_Gf.Resize(outputDim, nT);
-                m_Gf.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                m_Gf.SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
                 m_Go.Resize(outputDim, nT);
-                m_Go.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                m_Go.SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
                 tanhState.Resize(outputDim, nT);
-                tanhState.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                tanhState.SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
                 tanhObs.Resize(outputDim, nT);
-                tanhObs.SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+                tanhObs.SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
 
                 if (m_PastState.IsEmpty() || m_PastState.GetNumCols() != m_samplesInRecurrentStep)
                 {
@@ -1395,18 +982,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += m_samplesInRecurrentStep)
                 {
+                    FrameRange frameRange(timeIdxInSeq);
+                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceOutput = FunctionValues().ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceState = m_State.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
 
-                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceOutput = FunctionValues().ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceState = m_State.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGi = m_Gi.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGf = m_Gf.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGo = m_Go.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
 
-                    Matrix<ElemType> sliceGi = m_Gi.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceGf = m_Gf.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceGo = m_Go.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-
-                    Matrix<ElemType> sliceTanhState = tanhState.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceTanhState = tanhState.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
                     Matrix<ElemType> sliceTanhInput =
-                        tanhObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+                        tanhObs.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
 
                     PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, m_sentenceSeg);
 
@@ -1414,7 +1001,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
                     }
 
-                /// save the hidden activities and output for the next minibatch
+                // save the hidden activities and output for the next minibatch
                 SaveLastStateActity();
 
 #ifdef DEBUG_DECODER
@@ -1441,15 +1028,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         Prepare history for LSTMnode
 
-        This function returns state and output from the previous time instance. For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from sentenceBegin. In case of sentence begining, the state activity is set to an initial value. The sentenceBegin has element of SENTENCE_BEGIN, SENTENCE_MIDDLE and NO_LABELS, which are 0, 1, and -1, respectively. 
+        This function returns state and output from the previous time instance. For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from sentenceBegin. In case of sentence begining, the state activity is set to an initial value. The sentenceBegin has element of SEQUENCE_START, SEQUENCE_MIDDLE and NO_INPUT, which are 0, 1, and -1, respectively. 
         To compute the initial value, we use
-        prevState = sentenceBegin * pastActivity + ~sentenceBegin * initialStateValue
+        prevState = sentenceBegin * delayedActivation + ~sentenceBegin * initialStateValue
         and ~sentenceBegin is computed as -1*(sentenceBegin - 1), assuming that sentenceBegin is either 0 or 1. For example, when sentenceBegin == 1, ~sentenceBegin == 0. 
         The previous-time output doesn't have initial value, so it is computed as 
         prevOutput = sentenceBegin * pastOutput
 
         */
-        /// prepare prevstate and prevoutput
+        // prepare prevstate and prevoutput
         static void WINAPI PrepareHistory(
             size_t timeIdxInSeq,
             Matrix<ElemType> & slicePrevOutput,
@@ -1478,26 +1065,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             colBegin.SetValue(sentenceBegin->ColumnSlice(utt_t, 1));
             Matrix<ElemType> colSeg(colBegin.GetDeviceId()); 
             colSeg.Resize(nStream, nStream);
-            /// will reset to 0 if sentence begining at a posiiton is 0
-            /// will keep the output if it is not the sentence begining
-            colBegin.InplaceTruncateBottom(SENTENCE_BEGIN);
-            colBegin.InplaceTruncateTop(SENTENCE_MIDDLE);
+            // will reset to 0 if sentence begining at a posiiton is 0
+            // will keep the output if it is not the sentence begining
+            colBegin.InplaceTruncateBottom(SEQUENCE_START);
+            colBegin.InplaceTruncateTop(SEQUENCE_MIDDLE);
             colSeg.SetDiagonalValue(colBegin);
 
             Matrix<ElemType> newPrevOutput(colBegin.GetDeviceId());
             Matrix<ElemType> newPrevState(colBegin.GetDeviceId());
             if (utt_t == 0)
             {
-                /// this is the begining of this minibatch
+                // this is the begining of this minibatch
                 Matrix<ElemType>::Multiply(pastOutput.ColumnSlice(0, nsamples), false, colSeg, false, newPrevOutput);
                 Matrix<ElemType>::Multiply(pastState.ColumnSlice(0, nsamples), false, colSeg, false, newPrevState);
 
             }
             else
             {
-                /// this is in the minibatch
-                Matrix<ElemType>::Multiply(output.ColumnSlice(timeIdxInSeq - nsamples, nsamples), false, colSeg, false, newPrevOutput);
-                Matrix<ElemType>::Multiply(state.ColumnSlice(timeIdxInSeq - nsamples, nsamples), false, colSeg, false, newPrevState);
+                // this is in the minibatch
+                FrameRange frameRange(timeIdxInSeq);
+                Matrix<ElemType>::Multiply(output.ColumnSlice(frameRange.t() - nsamples, nsamples), false, colSeg, false, newPrevOutput);
+                Matrix<ElemType>::Multiply(state.ColumnSlice(frameRange.t() - nsamples, nsamples), false, colSeg, false, newPrevState);
             }
 
             ComputationNode<ElemType>::SetToInitStateValueForResetSeg(sentenceBegin->ColumnSlice(utt_t, 1), nStream, initStateValue, newPrevState);
@@ -1506,10 +1094,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             slicePrevState.ColumnSlice(0, nsamples).SetValue(newPrevState);
         }
 
-        /// prepare prevstate and prevoutput
+        // prepare prevstate and prevoutput
         void PrepareThisErrorsBeforeBackProp(
             size_t timeIdxInSeq,
-            size_t nT, /// number of columns
+            size_t nT, // number of columns
             Matrix<ElemType> & error,
             Matrix<ElemType> & stateError,
             const Matrix<ElemType>& grdToPrevOutput,
@@ -1528,9 +1116,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (size_t utt_id = 0; utt_id < nsamples; utt_id++)
                 {
-                    /// if uses errors from future minibatch
-                    if ((GetSegInfo(timeIdxInSeq, utt_id) == SENTENCE_MIDDLE && utt_t == total_utt_t - 1) /// last time 
-                        || (utt_t < total_utt_t - 1 && GetSegInfo(timeIdxInSeq, utt_id) == SENTENCE_MIDDLE && GetSegInfo(timeIdxInSeq + nsamples, utt_id) == NO_LABELS) /// future observation is no observation
+                    // if uses errors from future minibatch
+                    if ((GetSegInfo(timeIdxInSeq, utt_id) == SEQUENCE_MIDDLE && utt_t == total_utt_t - 1) // last time 
+                        || (utt_t < total_utt_t - 1 && GetSegInfo(timeIdxInSeq, utt_id) == SEQUENCE_MIDDLE && GetSegInfo(timeIdxInSeq + nsamples, utt_id) == NO_INPUT) // future observation is no observation
                         )
                     {
                         error.ColumnSlice(utt_id, 1) += obs_error_from_future_minibatch.ColumnSlice(utt_id, 1);
@@ -1542,14 +1130,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> colBegin(sentenceBegin->GetDeviceId());
             colBegin.SetValue(sentenceBegin->ColumnSlice(utt_t, 1));
-            colBegin.InplaceTruncateBottom(NO_LABELS);
-            colBegin.InplaceTruncateTop(SENTENCE_BEGIN);
-            colBegin += fabs((ElemType)NO_LABELS); /// raise this so that -1 -> 0 and therefore 
+            colBegin.InplaceTruncateBottom(NO_INPUT);
+            colBegin.InplaceTruncateTop(SEQUENCE_START);
+            colBegin += fabs((ElemType)NO_INPUT); // raise this so that -1 -> 0 and therefore 
             Matrix<ElemType> colSeg(colBegin.GetDeviceId());
             colSeg.Resize(nsamples, nsamples);
             colSeg.SetDiagonalValue(colBegin);
 
-            /// times the errors with the mask
+            // times the errors with the mask
             Matrix<ElemType> newOutputError(colBegin.GetDeviceId());
             Matrix<ElemType> newStateError(colBegin.GetDeviceId());
 
@@ -1560,7 +1148,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             stateError.ColumnSlice(0, nsamples).SetValue(newStateError);
         }
 
-        /// prepare prevstate and prevoutput
+        // prepare prevstate and prevoutput
         static void WINAPI PrepareErrors(
             size_t timeIdxInSeq,
             Matrix<ElemType> & errors,
@@ -1570,16 +1158,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int utt_t = (int)floor(timeIdxInSeq / nsamples);
             Matrix<ElemType> colBegin(sentenceBegin->GetDeviceId());
             colBegin.SetValue(sentenceBegin->ColumnSlice(utt_t, 1));
-            /// will reset to 0 if sentence begining at a posiiton is 0
-            /// will keep the output if it is not the sentence begining
-            colBegin.InplaceTruncateBottom(SENTENCE_BEGIN);
-            colBegin.InplaceTruncateTop(SENTENCE_MIDDLE);
+            // will reset to 0 if sentence begining at a posiiton is 0
+            // will keep the output if it is not the sentence begining
+            colBegin.InplaceTruncateBottom(SEQUENCE_START);
+            colBegin.InplaceTruncateTop(SEQUENCE_MIDDLE);
 
             Matrix<ElemType> colSeg(colBegin.GetDeviceId());
             colSeg.Resize(nsamples, nsamples);
             colSeg.SetDiagonalValue(colBegin);
 
-            /// times the errors with the mask
+            // times the errors with the mask
             Matrix<ElemType> newOutputError(colBegin.GetDeviceId());
             Matrix<ElemType> newStateError(colBegin.GetDeviceId());
 
@@ -1609,7 +1197,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int inputDim = obs.GetNumRows();
             int outputDim = mOutputGate.GetNumRows();
 
-            /// for input gate
+            // for input gate
             Matrix<ElemType>::Multiply(mInputGate.ColumnSlice(1, inputDim), false, obs, false, gi);
             Matrix<ElemType>::MultiplyAndAdd(mInputGate.ColumnSlice(1 + inputDim, outputDim), false, prevOutput, false, gi);
             gi += mInputGate.ColumnSlice(0, 1);
@@ -1618,7 +1206,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gi += tmp;
             gi.AssignSigmoidOf(gi);
 
-            /// for forget gate
+            // for forget gate
             Matrix<ElemType>::Multiply(mForgetGate.ColumnSlice(1, inputDim), false, obs, false, gf);
             Matrix<ElemType>::MultiplyAndAdd(mForgetGate.ColumnSlice(1 + inputDim, outputDim), false, prevOutput, false, gf);
             gf += mForgetGate.ColumnSlice(0, 1);
@@ -1627,7 +1215,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gf += tmp;
             gf.AssignSigmoidOf(gf);
 
-            /// for cell state
+            // for cell state
             Matrix<ElemType>::Multiply(mCellWgt.ColumnSlice(1, inputDim), false, obs, false, state);
             Matrix<ElemType>::MultiplyAndAdd(mCellWgt.ColumnSlice(1 + inputDim, outputDim), false, prevOutput, false, state);
             state += mCellWgt.ColumnSlice(0, 1);
@@ -1640,7 +1228,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             state.AssignElementProductOf(gi, tanhObs);
             state.AddElementProductOf(gf, prevState);
 
-            /// for output gate
+            // for output gate
             Matrix<ElemType>::Multiply(mOutputGate.ColumnSlice(1, inputDim), false, obs, false, go);
             Matrix<ElemType>::MultiplyAndAdd(mOutputGate.ColumnSlice(1 + inputDim, outputDim), false, prevOutput, false, go);
             go += mOutputGate.ColumnSlice(0, 1);
@@ -1649,18 +1237,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             go += tmp;
             go.AssignSigmoidOf(go);
 
-            /// to return output
+            // to return output
             tanhState.AssignTanhOf(state);
             output.AssignElementProductOf(go, tanhState);
         }
 
 
-        /// input(0) : child with dimension [inputdim x T]
-        /// input(1) : input gate [outputdim x [inputdim + outputdim + 2]] bi, Wxi, Whi, Wci
-        /// input(2) : forget gate [outputdim x [inputdim + outputdim + 2]] for bf, Wxf, Whf, Wcf
-        /// input(3) : output gate [outputdim x [inputdim + outputdim + 2]] for bo, Wxo, Who, and Wco
-        /// input(4) : memory cell weight [outputdim x [inputdim + outputdim + 1]] for bc, Wxc, and Whc 
-        /// output : dimension [outputdim x T]
+        // input(0) : child with dimension [inputdim x T]
+        // input(1) : input gate [outputdim x [inputdim + outputdim + 2]] bi, Wxi, Whi, Wci
+        // input(2) : forget gate [outputdim x [inputdim + outputdim + 2]] for bf, Wxf, Whf, Wcf
+        // input(3) : output gate [outputdim x [inputdim + outputdim + 2]] for bo, Wxo, Who, and Wco
+        // input(4) : memory cell weight [outputdim x [inputdim + outputdim + 1]] for bc, Wxc, and Whc 
+        // output : dimension [outputdim x T]
         virtual void Validate()
         {
             PrintSelfBeforeValidation();
@@ -1679,13 +1267,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(4)->OperationName() != LearnableParameter<ElemType>::TypeName())
                 throw std::logic_error("LSTM validation: need to have learnable parameters ");
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements())
                 throw std::logic_error("LSTM validation: input size is zero!");
 
-            if (Inputs(1)->FunctionValues().GetNumElements() == 0 ||
-                Inputs(2)->FunctionValues().GetNumElements() == 0 ||
-                Inputs(3)->FunctionValues().GetNumElements() == 0 ||
-                Inputs(4)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(1)->FunctionValues().HasNoElements() ||
+                Inputs(2)->FunctionValues().HasNoElements() ||
+                Inputs(3)->FunctionValues().HasNoElements() ||
+                Inputs(4)->FunctionValues().HasNoElements())
                 throw std::logic_error("LSTM validation : parameter size is zero!");
 
 
@@ -1714,7 +1302,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             FunctionValues().Resize(noutdim, nT);
-            FunctionValues().SetValue(NAN);  /// set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
+            FunctionValues().SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
         }
 
         bool UnitTest()
@@ -1725,20 +1313,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nHidden = 3;
                 size_t nOutput = 3;
 
-                /// backup 
+                // backup 
                 Matrix<ElemType> f0(m_deviceId), f1(m_deviceId), f2(m_deviceId), f3(m_deviceId), f4(m_deviceId), func(m_deviceId), f5(m_deviceId);
                 Matrix<ElemType> target(m_deviceId);
                 Matrix<ElemType> giWeight, ghWeight, goWeight;
                 ElemType initStateValue = m_DefaultState;
                 Matrix<ElemType> boundary(m_deviceId);
                 boundary.Resize(1, nT);
-                boundary.SetValue(SENTENCE_MIDDLE);
-                boundary.ColumnSlice(0, 1).SetValue(SENTENCE_BEGIN);
+                boundary.SetValue(SEQUENCE_MIDDLE);
+                boundary.ColumnSlice(0, 1).SetValue(SEQUENCE_START);
 
                 vector<MinibatchPackingFlag> minibatchPackingFlag;
                 minibatchPackingFlag.resize(nT);
                 std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-                minibatchPackingFlag[1] = MinibatchPackingFlag::UtteranceStart;
+                minibatchPackingFlag[1] = MinibatchPackingFlag::SequenceStart;
                 ComputationNode<ElemType>::ResetBound(&boundary, &minibatchPackingFlag);
 
                 f0 = Inputs(0)->FunctionValues();
@@ -1768,15 +1356,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_DefaultState = 0.0;
                 EvaluateThisNode();
 
-                /// check with expected values
+                // check with expected values
                 if (!ISCLOSE(FunctionValues()(0, 0), 0.0335975, EPSILON) ||
                     !ISCLOSE(FunctionValues()(0, 1), 0.05485132, EPSILON) ||
                     !ISCLOSE(FunctionValues()(0, 2), 0.06838435, EPSILON) ||
                     !(FunctionValues()(0, 0) == FunctionValues()(1, 0)))
                     throw("LSTMNode forward computation error");
 
-                if (FunctionValues().GetDeviceId() != m_deviceId)
-                    FunctionValues().TransferFromDeviceToDevice(FunctionValues().GetDeviceId(), m_deviceId, true);
+                
+                    FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
                 GradientValues().Resize(nOutput, nT);
                 GradientValues().SetValue(1.0);
@@ -1788,8 +1376,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < 5; i++)
                     ComputeInputPartial(i);
 
-                /// check with expected values
-                if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 0.07843818, EPSILON) /// bi
+                // check with expected values
+                if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 0.07843818, EPSILON) // bi
                     || !ISCLOSE(Inputs(1)->GradientValues()(0, 1), 0.00784382, EPSILON)  // Wxi
                     || !ISCLOSE(Inputs(1)->GradientValues()(0, 3), 0.00192997, EPSILON)  // Whi
                     || !ISCLOSE(Inputs(1)->GradientValues()(0, 6), 0.00362767, EPSILON)  // Wci
@@ -1815,8 +1403,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t i = 0; i < 5; i++)
                 {
-                    if (Inputs(i)->GradientValues().GetDeviceId() != m_deviceId)
-                        Inputs(i)->GradientValues().TransferFromDeviceToDevice(Inputs(i)->GradientValues().GetDeviceId(), m_deviceId, true);
+                    
+                        Inputs(i)->GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
                 }
                 m_DefaultState = initStateValue;
             }
@@ -1830,12 +1418,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false);
         }
 
-        /// input(0) : child with dimension [inputdim x T]
-        /// input(1) : input gate [outputdim x [inputdim + outputdim + 2]] bi, Wxi, Whi, Wci
-        /// input(2) : forget gate [outputdim x [inputdim + outputdim + 2]] for bf, Wxf, Whf, Wcf
-        /// input(3) : output gate [outputdim x [inputdim + outputdim + 2]] for bo, Wxo, Who, and Wco
-        /// input(4) : memory cell weight [outputdim x [inputdim + outputdim + 1]] for bc, Wxc, and Whc 
-        /// output : dimension [outputdim x T]
+        // input(0) : child with dimension [inputdim x T]
+        // input(1) : input gate [outputdim x [inputdim + outputdim + 2]] bi, Wxi, Whi, Wci
+        // input(2) : forget gate [outputdim x [inputdim + outputdim + 2]] for bf, Wxf, Whf, Wcf
+        // input(3) : output gate [outputdim x [inputdim + outputdim + 2]] for bo, Wxo, Who, and Wco
+        // input(4) : memory cell weight [outputdim x [inputdim + outputdim + 1]] for bc, Wxc, and Whc 
+        // output : dimension [outputdim x T]
         virtual void AttachInputs(const ComputationNodePtr obs, const ComputationNodePtr inputGate, const ComputationNodePtr forgetGate, const ComputationNodePtr outputGate, const ComputationNodePtr memoryCellWgt)
         {
             m_children.resize(5);
@@ -1848,81 +1436,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const short deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (m_functionValues.GetDeviceId() != deviceId)
-                {
-                    bool fEmpty = m_functionValues.GetNumElements() == 0;
-                    m_functionValues.TransferFromDeviceToDevice(m_functionValues.GetDeviceId(), deviceId, true, fEmpty);
-                }
-
-                if (m_gradientValues.GetDeviceId() != deviceId)
-                {
-                    bool fEmpty = m_gradientValues.GetNumElements() == 0;
-                    m_gradientValues.TransferFromDeviceToDevice(m_gradientValues.GetDeviceId(), deviceId, true, fEmpty);
-                }
-
-                if (grdToObs.GetDeviceId() != deviceId)
-                    grdToObs.TransferFromDeviceToDevice(grdToObs.GetDeviceId(), deviceId);
-                if (grdToInputGate.GetDeviceId() != deviceId)
-                    grdToInputGate.TransferFromDeviceToDevice(grdToInputGate.GetDeviceId(), deviceId);
-                if (grdToForgetGate.GetDeviceId() != deviceId)
-                    grdToForgetGate.TransferFromDeviceToDevice(grdToForgetGate.GetDeviceId(), deviceId);
-                if (grdToOutputGate.GetDeviceId() != deviceId)
-                    grdToOutputGate.TransferFromDeviceToDevice(grdToOutputGate.GetDeviceId(), deviceId);
-                if (grdToCellWgt.GetDeviceId() != deviceId)
-                    grdToCellWgt.TransferFromDeviceToDevice(grdToCellWgt.GetDeviceId(), deviceId);
-
-                if (m_State.GetDeviceId() != deviceId)
-                    m_State.TransferFromDeviceToDevice(m_State.GetDeviceId(), deviceId);
-                if (m_PastState.GetDeviceId() != deviceId)
-                    m_PastState.TransferFromDeviceToDevice(m_PastState.GetDeviceId(), deviceId);
-                if (m_PastOutput.GetDeviceId() != deviceId)
-                    m_PastOutput.TransferFromDeviceToDevice(m_PastOutput.GetDeviceId(), deviceId);
-                if (m_Gi.GetDeviceId() != deviceId)
-                    m_Gi.TransferFromDeviceToDevice(m_Gi.GetDeviceId(), deviceId);
-                if (m_Gf.GetDeviceId() != deviceId)
-                    m_Gf.TransferFromDeviceToDevice(m_Gf.GetDeviceId(), deviceId);
-                if (m_Go.GetDeviceId() != deviceId)
-                    m_Go.TransferFromDeviceToDevice(m_Go.GetDeviceId(), deviceId);
-
-                if (tanhState.GetDeviceId() != deviceId)
-                    tanhState.TransferFromDeviceToDevice(tanhState.GetDeviceId(), deviceId);
-                if (tanhObs.GetDeviceId() != deviceId)
-                    tanhObs.TransferFromDeviceToDevice(tanhObs.GetDeviceId(), deviceId);
-                if (m_tempMatrix.GetDeviceId() != deviceId)
-                    m_tempMatrix.TransferFromDeviceToDevice(m_tempMatrix.GetDeviceId(), deviceId);
-
-                if (mSlicePrevState.GetDeviceId() != deviceId)
-                    mSlicePrevState.TransferFromDeviceToDevice(mSlicePrevState.GetDeviceId(), deviceId);
-                if (mSlicePrevOutput.GetDeviceId() != deviceId)
-                    mSlicePrevOutput.TransferFromDeviceToDevice(mSlicePrevOutput.GetDeviceId(), deviceId);
-                if (grdBeforeInputGate.GetDeviceId() != deviceId)
-                    grdBeforeInputGate.TransferFromDeviceToDevice(grdBeforeInputGate.GetDeviceId(), deviceId);
-                if (grdBeforeForget.GetDeviceId() != deviceId)
-                    grdBeforeForget.TransferFromDeviceToDevice(grdBeforeForget.GetDeviceId(), deviceId);
-                if (grdBeforeGo.GetDeviceId() != deviceId)
-                    grdBeforeGo.TransferFromDeviceToDevice(grdBeforeGo.GetDeviceId(), deviceId);
-                if (grdToCell.GetDeviceId() != deviceId)
-                    grdToCell.TransferFromDeviceToDevice(grdToCell.GetDeviceId(), deviceId);
-                if (grdBeforeTanhInputGate.GetDeviceId() != deviceId)
-                    grdBeforeTanhInputGate.TransferFromDeviceToDevice(grdBeforeTanhInputGate.GetDeviceId(), deviceId);
-            }
+            Base::MoveMatricesToDevice(deviceId);
+            m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_functionValues.HasNoElements());
+            m_gradientValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_gradientValues.HasNoElements());
+            grdToObs.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdToInputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdToForgetGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdToOutputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdToCellWgt.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_State.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_PastState.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_PastOutput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_Gi.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_Gf.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_Go.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            tanhState.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            tanhObs.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            mSlicePrevState.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            mSlicePrevOutput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdBeforeInputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdBeforeForget.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdBeforeGo.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdToCell.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            grdBeforeTanhInputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
-            ComputationNode<ElemType>::DumpNodeInfo(printValues, fstream);
-
+            Base::DumpNodeInfo(printValues, fstream);
             fstream << L"Input[Width:" << m_inputDim << L"]  \n" ; 
             fstream << L"Hidden[Width:" << m_outputDim << L"]    Output[Width:" << m_outputDim << L"]  \n";
         }
-
-
     public:
-
         bool GetHistory(Matrix<ElemType>& hist, bool bLastTime)
         {
             size_t tRow = m_PastOutput.GetNumRows();
@@ -2005,30 +1551,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_inputDim;
         size_t m_outputDim;
 
-        Matrix<ElemType> m_State;  /// hidden state activity
-        Matrix<ElemType> m_PastState; /// state activity in the previous minibatch
-        Matrix<ElemType> m_PastOutput; /// output in the previou minibatch 
+        Matrix<ElemType> m_State;  // hidden state activity
+        Matrix<ElemType> m_PastState; // state activity in the previous minibatch
+        Matrix<ElemType> m_PastOutput; // output in the previou minibatch 
 
-        Matrix<ElemType> mLastState; /// last state activity 
-        Matrix<ElemType> mLastOutput; /// last output 
+        Matrix<ElemType> mLastState; // last state activity 
+        Matrix<ElemType> mLastOutput; // last output 
 
-        Matrix<ElemType> m_Gi;     /// input gate activity
-        Matrix<ElemType> m_Gf;     /// forget gate activity
-        Matrix<ElemType> m_Go;     /// output gate activity
+        Matrix<ElemType> m_Gi;     // input gate activity
+        Matrix<ElemType> m_Gf;     // forget gate activity
+        Matrix<ElemType> m_Go;     // output gate activity
 
         Matrix<ElemType> grdToObs, grdToInputGate, grdToForgetGate, grdToOutputGate, grdToCellWgt;
         Matrix<ElemType> tanhState, tanhObs;
 
-        Matrix<ElemType> m_tempMatrix; /// temp matrix for speed-up
+        Matrix<ElemType> m_tempMatrix; // temp matrix for speed-up
 
-        bool     m_GradientComputed; /// true if LSTM node has computed gradients, set to false if forward computation is just finished 
+        bool     m_GradientComputed; // true if LSTM node has computed gradients, set to false if forward computation is just finished 
 
         Matrix<ElemType> mSlicePrevOutput, mSlicePrevState;
 
         Matrix<ElemType> grdBeforeInputGate, grdBeforeForget, grdBeforeGo, grdToCell, grdBeforeTanhInputGate;
 
     public:
-        /// errors from future minibatch
+        // errors from future minibatch
         Matrix<ElemType> m_obs_error_from_future_minibatch;
         Matrix<ElemType> m_state_error_from_future_minibatch;
         bool m_use_errors_from_future_minibatch;

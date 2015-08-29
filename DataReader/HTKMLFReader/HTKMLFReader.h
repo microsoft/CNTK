@@ -7,6 +7,7 @@
 #pragma once
 #include "DataReader.h"
 #include "commandArgUtil.h" // for intargvector
+#include "CUDAPageLockedMemAllocator.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -50,9 +51,10 @@ private:
     std::vector<size_t> m_featuresStartIndexMultiUtt;
     std::vector<size_t> m_labelsStartIndexMultiUtt;
 
-    std::vector<ElemType*> m_featuresBufferMultiIO;
+    CUDAPageLockedMemAllocator* m_cudaAllocator;
+    std::vector<std::shared_ptr<ElemType>> m_featuresBufferMultiIO;
     std::vector<size_t> m_featuresBufferAllocatedMultiIO;
-    std::vector<ElemType*> m_labelsBufferMultiIO;
+    std::vector<std::shared_ptr<ElemType>> m_labelsBufferMultiIO;
     std::vector<size_t> m_labelsBufferAllocatedMultiIO;
 
     std::map<std::wstring,size_t> m_featureNameToIdMap;
@@ -78,7 +80,7 @@ private:
     bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>&matrices);
     bool GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>&matrices);
     
-    void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+    void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize);
     void StartMinibatchLoopToWrite(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
 
     bool ReNewBufferForMultiIO(size_t i);
@@ -100,7 +102,43 @@ private:
         category,
     };
 
+private:
+    CUDAPageLockedMemAllocator* GetCUDAAllocator(int deviceID)
+    {
+        if (m_cudaAllocator != nullptr)
+        {
+            if (m_cudaAllocator->GetDeviceID() != deviceID)
+            {
+                delete m_cudaAllocator;
+                m_cudaAllocator = nullptr;
+            }
+        }
 
+        if (m_cudaAllocator == nullptr)
+        {
+            m_cudaAllocator = new CUDAPageLockedMemAllocator(deviceID);
+        }
+
+        return m_cudaAllocator;
+    }
+
+    std::shared_ptr<ElemType> AllocateIntermediateBuffer(int deviceID, size_t numElements)
+    {
+        if (deviceID >= 0)
+        {
+            // Use pinned memory for GPU devices for better copy performance
+            size_t totalSize = sizeof(ElemType) * numElements;
+            return std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
+                this->GetCUDAAllocator(deviceID)->Free((char*)p);
+            });
+        }
+        else
+        {
+            return std::shared_ptr<ElemType>(new ElemType[numElements], [](ElemType* p) {
+                delete[] p;
+            });
+        }
+    }
 
 public:
     Matrix<ElemType> m_sentenceBegin;
@@ -112,16 +150,30 @@ public:
     virtual void Init(const ConfigParameters& config);
     virtual void Destroy() {delete this;}
     virtual ~HTKMLFReader();
-    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
+
+    virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
+    {
+        return StartDistributedMinibatchLoop(mbSize, epoch, 0, 1, requestedEpochSamples);
+    }
+
+    virtual bool SupportsDistributedMBRead() const override
+    {
+        return m_frameSource->supportsbatchsubsetting();
+    }
+
+    virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
+
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<unsigned, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
-    void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
+    void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoInputs);
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetRandomSeed(int){ NOT_IMPLEMENTED };
+
+    bool RequireSentenceSeg() { return !m_framemode; }; 
 };
 
 }}}

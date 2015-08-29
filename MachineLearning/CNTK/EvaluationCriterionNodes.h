@@ -17,25 +17,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //note: to save computation the gradient may be scaled by an constant. 
 
     template<class ElemType>
-    class ErrorPredictionNode : public ComputationNode<ElemType>
+    class ErrorPredictionNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        ErrorPredictionNode(const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"") 
-            : ComputationNode<ElemType>(deviceId), m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            m_deviceId = deviceId;
-            MoveMatricesToDevice(deviceId);
-            InitRecurrentNode();
-        }
-
-        ErrorPredictionNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, const std::wstring name = L"")
-            : ComputationNode<ElemType>(deviceId), m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
-        {
-            m_nodeName = (name == L""? CreateUniqNodeName() : name);
-            LoadFromFile(fstream, modelVersion, deviceId);
-        }
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        ErrorPredictionNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
+        { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() {return L"ErrorPrediction";} 
@@ -49,19 +39,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("ErrorPrediction is used for evaluation only.");
         }
 
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
-        {
-            throw std::logic_error("ErrorPrediction is used for evaluation only.");
-        }
-
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues, this);
-        }
-
-        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
-        {
-            throw std::logic_error("ErrorPrediction node should never be in a loop.");
+            EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues, shared_from_this());
         }
 
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& maxIndexes0, Matrix<ElemType>& maxIndexes1, Matrix<ElemType>& maxValues, ComputationNodePtr curNode)
@@ -105,7 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_maxValues.Resize(1,cols);
             }
 
-            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 throw std::logic_error("ErrorPrediction operation: one of the operants has 0 element.");
 
             if (((!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match size
@@ -142,50 +122,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
-
-            if (deviceId != AUTOPLACEMATRIX)
-            {
-                if (m_maxIndexes0.GetDeviceId() != deviceId)
-                    m_maxIndexes0.TransferFromDeviceToDevice(m_maxIndexes0.GetDeviceId(), deviceId,true);
-
-                if (m_maxIndexes1.GetDeviceId() != deviceId)
-                    m_maxIndexes1.TransferFromDeviceToDevice(m_maxIndexes1.GetDeviceId(), deviceId,true);
-
-                if (m_maxValues.GetDeviceId() != deviceId)
-                    m_maxValues.TransferFromDeviceToDevice(m_maxValues.GetDeviceId(), deviceId,true);
-            }
+            Base::MoveMatricesToDevice(deviceId);
+            m_maxIndexes0.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_maxIndexes1.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_maxValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
-            ErrorPredictionNode<ElemType>* node = (ErrorPredictionNode<ElemType>*) nodeP;
-
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = dynamic_pointer_cast<ErrorPredictionNode<ElemType>>(nodeP);
                 node->m_maxIndexes0 = m_maxIndexes0;
                 node->m_maxIndexes1 = m_maxIndexes1;
                 node->m_maxValues = m_maxValues;
             }
         }
-
-        // copy constructor
-        ErrorPredictionNode(const ErrorPredictionNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags) 
-            : ComputationNode<ElemType>(node->m_deviceId), m_maxIndexes0(node->m_deviceId), m_maxIndexes1(node->m_deviceId), m_maxValues(node->m_deviceId)
-        {
-            node->CopyTo(this, newName, flags);
-        }
-
-        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            const std::wstring& name = (newName == L"")?NodeName():newName;
-                
-            ComputationNodePtr node = new ErrorPredictionNode<ElemType>(this, name, flags);
-            return node;
-        }
-
-    protected:
+protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
 
     private:

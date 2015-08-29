@@ -42,16 +42,8 @@
 #include "BestGpu.h"
 #include <fileutil.h>
 
-// MPI builds on windows require the following installed to "c:\program files\Microsoft MPI\"
-// HPC Pack 2012 R2 MS-MPI Redistributable Package
-// http://www.microsoft.com/en-us/download/details.aspx?id=41634
-
-#ifdef MPI_SUPPORT
-#include "mpi.h"
-#pragma comment(lib, "msmpi.lib")
-#endif
-int mpiNumProcesses;    // when running in MPI mode, this is the number of participating processes
-int mpiRank;            // and this is who we are amonghst these processes
+// TODO: Get rid of this global
+Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
@@ -59,6 +51,9 @@ using namespace Microsoft::MSR::CNTK;
 // internal test routine forward declaration
 template <typename ElemType>
 void TestCn(const ConfigParameters& config);
+
+template <typename ElemType>
+void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& reader);
 
 template <typename T>
 struct compare_second
@@ -603,7 +598,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
             if (iter->second <= cutoff)
                 wordCountLessCutoff--;
     if (wordCountLessCutoff <= 0)
-        throw std::runtime_error("no word remained after cutoff");
+        RuntimeError("no word remained after cutoff");
 
     if (vocabSize > wordCountLessCutoff)
     {
@@ -726,41 +721,37 @@ void DoTrain(const ConfigParameters& config)
     ConfigParameters readerConfig(config("reader"));
     readerConfig.Insert("traceLevel", config("traceLevel", "0"));
 
-    IComputationNetBuilder<ElemType>* netBuilder = NULL;
+    unique_ptr<IComputationNetBuilder<ElemType> > netBuilder;
 
     if (config.Exists("NDLNetworkBuilder"))
     {
         ConfigParameters configNDL(config("NDLNetworkBuilder"));
-        netBuilder = (IComputationNetBuilder<ElemType>*)new NDLBuilder<ElemType>(configNDL);
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType> >( static_cast<IComputationNetBuilder<ElemType>*>(new NDLBuilder<ElemType>(configNDL)));
     }
     else if (config.Exists("SimpleNetworkBuilder"))
     {
         ConfigParameters configSNB(config("SimpleNetworkBuilder"));
-        netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType> >{ static_cast<IComputationNetBuilder<ElemType>*>(new SimpleNetworkBuilder<ElemType>(configSNB)) };
     }
     else
     {
         RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
     }
 
-    DataReader<ElemType>* dataReader = new DataReader<ElemType>(readerConfig);
+    unique_ptr<DataReader<ElemType> > dataReader { new DataReader<ElemType>(readerConfig) };
 
-    DataReader<ElemType>* cvDataReader = nullptr;
+    unique_ptr<DataReader<ElemType> > cvDataReader;
     ConfigParameters cvReaderConfig(config("cvReader", L""));
 
     if (cvReaderConfig.size() != 0)
     {
         cvReaderConfig.Insert("traceLevel", config("traceLevel", "0"));
-        cvDataReader = new DataReader<ElemType>(cvReaderConfig);
+        cvDataReader = unique_ptr<DataReader<ElemType> >{ new DataReader<ElemType>(cvReaderConfig) };
     }
 
     SGD<ElemType> sgd(configSGD);
 
-    sgd.Train(netBuilder, dataReader, cvDataReader, makeMode);
-
-    delete netBuilder;
-    delete dataReader;
-    delete cvDataReader;
+    sgd.Train(netBuilder.get(), dataReader.get(), cvDataReader.get(), makeMode);
 }
 
 template <typename ElemType>
@@ -1202,7 +1193,7 @@ void DoTopologyPlot(const ConfigParameters& config)
     {
         fprintf(stderr, "Executing a third-part tool for rendering dot:\n%S\n", rescmd.c_str());
 #ifdef __unix__
-        system(msra::strfun::utf8(rescmd).c_str());
+        const auto rc = system(msra::strfun::utf8(rescmd).c_str()); rc/*ignoring the result--this gets flagged by gcc if we don't save the return value*/;
 #else
         _wsystem(rescmd.c_str());
 #endif
@@ -1297,50 +1288,6 @@ std::string TimeDateStamp()
     return buf;
 }
 
-#ifdef MPI_SUPPORT
-// Oh, my gosh, this is going to be ugly. MPI_INIT needs a char* argv[], so let's interface.
-int MPIAPI MPI_Init(_In_opt_ int *argc, _Inout_count_(*argc) wchar_t*** argv)
-{
-    // this maps from the strings 
-    std::map<std::string, wchar_t*> recover_wstring;
-
-    // do the mapping to 8-bit encoding for MPI_Init()
-    vector<vector<char>> argv_string_vector;
-    transform(*argv, *argv + *argc, std::back_inserter(argv_string_vector),
-        [&recover_wstring](wchar_t*pws)->vector<char>
-    {
-        std::string tmp = msra::strfun::utf8(std::wstring(pws));
-        recover_wstring[tmp] = pws;
-        vector<char> rv(tmp.begin(), tmp.end());
-        rv.push_back('\0');
-        return rv;
-    }
-    );
-    vector<char*> argv_charptr_vector;
-    transform(argv_string_vector.begin(), argv_string_vector.end(), std::back_inserter(argv_charptr_vector),
-        [](std::vector<char>&cs)->char*{ return &(cs[0]); }
-    );
-    char** argv_char = &(argv_charptr_vector[0]);
-
-    // Do the initialization
-    int rv = MPI_Init(argc, &argv_char);
-
-    // try and reconstruct how MPI_Init changed the argv
-    transform(argv_char, argv_char + *argc, stdext::checked_array_iterator<wchar_t**>(*argv, *argc),
-        [&recover_wstring](char*pc)->wchar_t*
-    {
-        auto it = recover_wstring.find(std::string(pc));
-        if (it == recover_wstring.end())
-            RuntimeError("Unexpected interaction between MPI_Init and command line parameters");
-        return it->second;
-    }
-    );
-
-    // pass through return value from internal call to MPI_Init()
-    return rv;
-}
-#endif
-
 #ifdef _WIN32
 void PrintBuiltInfo()
 {
@@ -1373,24 +1320,6 @@ int wmain(int argc, wchar_t* argv[])
 {
     try
     {
-#ifdef MPI_SUPPORT
-        {
-            int rc;
-            rc = MPI_Init(&argc, &argv);
-            if (rc != MPI_SUCCESS)
-            {
-                MPI_Abort(MPI_COMM_WORLD, rc);
-                RuntimeError("Failure in MPI_Init: %d", rc);
-            }
-            MPI_Comm_size(MPI_COMM_WORLD, &mpiNumProcesses);
-            MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
-            fprintf(stderr, "MPI: RUNNING ON (%s), process %d/%d\n", getenv("COMPUTERNAME"), mpiRank, mpiNumProcesses);
-            fflush(stderr);
-        }
-#else
-        mpiNumProcesses = 1;
-        mpiRank = 0;
-#endif
 
         ConfigParameters config;
         std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);
@@ -1401,6 +1330,14 @@ int wmain(int argc, wchar_t* argv[])
         wstring DoneFile = config("DoneFile", L"");
         ConfigArray command = config("command", "train");
 
+        // paralleltrain training
+        g_mpi = nullptr;
+        bool paralleltrain = config("parallelTrain", "false");
+        if (paralleltrain)
+        {
+            g_mpi = new MPIWrapper();
+        }
+
         if (logpath != L"")
         {
             for (int i = 0; i < command.size(); i++)
@@ -1409,10 +1346,11 @@ int wmain(int argc, wchar_t* argv[])
                 logpath += (wstring)command[i];
             }
             logpath += L".log";
-            if (mpiNumProcesses > 1)
+
+            if (paralleltrain)
             {
                 std::wostringstream oss;
-                oss << mpiRank;
+                oss << g_mpi->CurrentNodeRank();
                 logpath += L"rank" + oss.str();
             }
             RedirectStdErr(logpath);
@@ -1423,46 +1361,40 @@ int wmain(int argc, wchar_t* argv[])
 #endif
         std::string timestamp = TimeDateStamp();
 
-        if (mpiRank == 0) // main process
-        {
-            //dump config info
-            fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
-            fprintf(stderr, "command line options: \n");
-            for (int i = 1; i < argc; i++)
-                fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
+        //dump config info
+        fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
+        fprintf(stderr, "command line options: \n");
+        for (int i = 1; i < argc; i++)
+            fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
 
-            // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
-            // and prints it.
-            fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
-            fprintf(stderr, "%s\n", rawConfigString.c_str());
-            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
+        // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
+        // and prints it.
+        fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
+        fprintf(stderr, "%s\n", rawConfigString.c_str());
+        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
 
-            // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
-            // All of these assignments will appear, even though only the last assignment matters.
-            fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-            fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
-            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+        // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
+        // All of these assignments will appear, even though only the last assignment matters.
+        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+        fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
+        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
-            // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
-            // value it is set to will appear).
-            fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-            config.dumpWithResolvedVariables();
-            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+        // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
+        // value it is set to will appear).
+        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+        config.dumpWithResolvedVariables();
+        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
-            fprintf(stderr, "command: ");
-            for (int i = 0; i < command.size(); i++)
-            {
-                fprintf(stderr, "%s ", command[i].c_str());
-            }
-        }
+        fprintf(stderr, "command: ");
+        for (int i = 0; i < command.size(); i++)
+            fprintf(stderr, "%s ", command[i].c_str());
 
         //run commands
         std::string type = config("precision", "float");
         // accept old precision key for backward compatibility
         if (config.Exists("type"))
             type = config("type", "float");
-        if (mpiRank == 0)
-            fprintf(stderr, "\nprecision = %s\n", type.c_str());
+        fprintf(stderr, "\nprecision = %s\n", type.c_str());
         if (type == "float")
             DoCommand<float>(config);
         else if (type == "double")
@@ -1476,7 +1408,9 @@ int wmain(int argc, wchar_t* argv[])
             fprintf(fp, "successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
             fcloseOrDie(fp);
         }
-        fprintf(stderr, "COMPLETED\n");
+        fprintf(stderr, "COMPLETED\n"), fflush(stderr);
+
+        delete g_mpi;
     }
     catch (const std::exception &err)
     {
@@ -1490,9 +1424,6 @@ int wmain(int argc, wchar_t* argv[])
         PrintUsageInfo();
         return EXIT_FAILURE;
     }
-#ifdef MPI_SUPPORT
-    MPI_Finalize();
-#endif
     return EXIT_SUCCESS;
 }
 
