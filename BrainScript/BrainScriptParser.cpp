@@ -2,7 +2,7 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
-#include "ConfigParser.h"
+#include "BrainScriptParser.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cctype>
@@ -17,7 +17,7 @@
 #define let const auto
 #endif
 
-namespace Microsoft{ namespace MSR { namespace CNTK { namespace Config {
+namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
 
 using namespace std;
 using namespace msra::strfun;

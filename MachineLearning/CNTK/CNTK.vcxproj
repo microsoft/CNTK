@@ -146,12 +146,15 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="ConfigSpec.txt" />
+    <Text Include="..\..\BrainScript\Notes.txt" />
     <Text Include="DefaultMacros.txt" />
     <Text Include="modelEditor.txt" />
     <Text Include="modelEditorFromScratch.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\BrainScript\BrainScriptEvaluator.h" />
+    <ClInclude Include="..\..\BrainScript\BrainScriptObjects.h" />
+    <ClInclude Include="..\..\BrainScript\BrainScriptParser.h" />
     <ClInclude Include="..\..\Common\CrossProcessMutex.h" />
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\Basics.h" />
@@ -169,9 +172,6 @@
     <ClInclude Include="ComputationNetwork.h" />
     <ClInclude Include="ComputationNetworkHelper.h" />
     <ClInclude Include="ComputationNode.h" />
-    <ClInclude Include="ConfigEvaluator.h" />
-    <ClInclude Include="ConfigObjects.h" />
-    <ClInclude Include="ConfigParser.h" />
     <ClInclude Include="ConvolutionalNodes.h" />
     <ClInclude Include="DecoderNode.h" />
     <ClInclude Include="EvaluationCriterionNodes.h" />
@@ -197,6 +197,9 @@
     <ClInclude Include="TrainingCriterionNodes.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\BrainScript\BrainScriptEvaluator.cpp" />
+    <ClCompile Include="..\..\BrainScript\BrainScriptParser.cpp" />
+    <ClCompile Include="..\..\BrainScript\BrainScriptTest.cpp" />
     <ClCompile Include="..\..\Common\BestGpu.cpp" />
     <ClCompile Include="..\..\Common\ConfigFile.cpp" />
     <ClCompile Include="..\..\Common\DataReader.cpp" />
@@ -210,8 +213,6 @@
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
     <ClCompile Include="CNTK.cpp" />
     <ClCompile Include="ComputationNode.cpp" />
-    <ClCompile Include="ConfigEvaluator.cpp" />
-    <ClCompile Include="ConfigParser.cpp" />
     <ClCompile Include="ExperimentalNetworkBuilder.cpp" />
     <ClCompile Include="ModelEditLanguage.cpp" />
     <ClCompile Include="NetworkDescriptionLanguage.cpp" />

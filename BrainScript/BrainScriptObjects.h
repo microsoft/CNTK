@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
+namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
 
     using namespace std;
 
@@ -13,7 +13,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
     // All values that can be used in config files
     //  - are heap objects
     //     - primitives are wrapped
-    //     - object pointers are ref-counted shared_ptr, wrapped in ConfigValuePtr (see ConfigEvaluator.h)
+    //     - object pointers are ref-counted shared_ptr, wrapped in ConfigValuePtr (see BrainScriptEvaluator.h)
     //  - derive from Object (outside classes get wrapped)
     //
     // This code supports three kinds of value types:

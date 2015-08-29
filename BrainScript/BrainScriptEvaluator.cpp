@@ -1,4 +1,4 @@
-// ConfigEvaluator.cpp -- execute what's given in a config file
+// BrainScriptEvaluator.cpp -- execute what's given in a config file
 
 // main TODO items:
 //  - dictionary merging, to allow overwriting from command line
@@ -24,7 +24,7 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "Basics.h"
-#include "ConfigEvaluator.h"
+#include "BrainScriptEvaluator.h"
 #include <deque>
 #include <set>
 #include <functional>
@@ -37,7 +37,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK { class ComputationNetwork; }}}
 
-namespace Microsoft { namespace MSR { namespace CNTK { namespace Config {
+namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
 
     using namespace std;
     using namespace msra::strfun;
