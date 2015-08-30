@@ -32,8 +32,9 @@ namespace Microsoft { namespace MSR { namespace BS {
         size_t lineNo, charPos;         // line number and character index (0-based)
         const SourceFile & GetSourceFile() const { return sourceFileMap[sourceFileAsIndex]; }    // get the corresponding source-code line
 
-        // helpesr for pretty-printing errors: Show source-code line with ...^ under it to mark up the point of error
+        // helpers for pretty-printing errors: Show source-code line with ...^ under it to mark up the point of error
         static void PrintIssue(const vector<TextLocation> & locations, const wchar_t * errorKind, const wchar_t * kind, const wchar_t * what);
+        static void Trace(TextLocation, const wchar_t * traceKind, const wchar_t * op, const wchar_t * exprPath);
 
         // construction
         TextLocation();

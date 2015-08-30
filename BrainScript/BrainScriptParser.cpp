@@ -65,6 +65,17 @@ struct Issue
     Issue(TextLocation location) : location(location) { }
 };
 
+// trace
+/*static*/ void TextLocation::Trace(TextLocation location, const wchar_t * traceKind, const wchar_t * op, const wchar_t * exprPath)
+{
+    fprintf(stderr, "%ls: %ls (path %ls)\n", traceKind, op, exprPath);
+    const auto & lines = location.GetSourceFile().lines;
+    const auto line = (location.lineNo == lines.size()) ? L"(end)" : lines[location.lineNo].c_str();
+    Issue issue(location);
+    issue.AddMarkup(L'^', location.charPos);
+    fprintf(stderr, "  %ls\n  %ls\n", line, issue.markup.c_str());
+}
+
 // report an error
 // The source line is shown, and the position is marked as '^'.
 // Because it is often hard to recognize an issue only from the point where it occurred, we also report the history in compact visual form.

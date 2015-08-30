@@ -21,6 +21,10 @@
 //  - short-circuit eval of boolean operators   --easy, just evaluate right directly inside the C++ expression
 //  - doc strings for every parameter? E.g. LearnableParameter(rows{"Output dimension"},cols{"Input dimension"}) = new ...
 //     - identifier become more complicated; they become a struct that carries the doc string
+//  - expression-path problem:
+//     - macro arg expressions get their path assigned when their thunk is created, the thunk remembers it
+//     - however, really, the thunk should get the expression path from the context it is executed in, not the context it was created in
+//     - maybe there is some clever scheme of overwriting when a result comes back? E.g. we retrieve a value but its name is not right, can we patch it up? Very tricky to find the right rules/conditions
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
@@ -1003,7 +1007,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         function<ConfigValuePtr()> f = [expr, scope, exprPath, exprId]()   // lambda that computes this value of 'expr'
         {
             if (trace)
-                TextLocation::PrintIssue(vector<TextLocation>(1, expr->location), L"", exprPath.c_str(), L"executing thunk");
+                TextLocation::Trace(expr->location, L"thunk", expr->op.c_str(), (exprPath + L":" + exprId).c_str());
             let value = Evaluate(expr, scope, exprPath, exprId);
             return value;   // this is a great place to set a breakpoint!
         };
@@ -1037,7 +1041,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             exprPath.append(exprId);
             // tracing
             if (trace)
-                TextLocation::PrintIssue(vector<TextLocation>(1, e->location), L"", L"", L"trace");
+                TextLocation::Trace(e->location, L"eval", e->op.c_str(), exprPath.c_str());
             // --- literals
             if (e->op == L"d")       return MakePrimitiveConfigValuePtr(e->d, e->location, exprPath);         // === double literal
             else if (e->op == L"s")  return ConfigValuePtr(make_shared<String>(e->s), e->location, exprPath); // === string literal
@@ -1114,7 +1118,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     if (pos != wstring::npos)
                         macroId.erase(0, pos + 1);
                     // now evaluate the function
-                    return Evaluate(fnExpr, argScope, callerExprPath, L"[" + macroId + L"]");  // bring args into scope; keep lex scope of '=>' as upwards chain
+                    return Evaluate(fnExpr, argScope, callerExprPath, L""/*L"[" + macroId + L"]"*/);  // bring args into scope; keep lex scope of '=>' as upwards chain
                 };
                 // positional args
                 vector<wstring> paramNames;
@@ -1143,7 +1147,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             {
                 let lambdaExpr = e->args[0];            // [0] = function
                 let argsExpr = e->args[1];              // [1] = arguments passed to the function ("()" expression of expressions)
-                let lambda = AsPtr<ConfigLambda>(Evaluate(lambdaExpr, scope, exprPath, L"_lambda"), lambdaExpr, L"function");
+                let lambda = AsPtr<ConfigLambda>(Evaluate(lambdaExpr, scope, exprPath, L""/*macros are not visible in expression names*/), lambdaExpr, L"function");
                 if (argsExpr->op != L"()") LogicError("argument list expected");
                 // put all args into a vector of values
                 // Like in an [] expression, we do not evaluate at this point, but pass in a lambda to compute on-demand.
@@ -1151,11 +1155,12 @@ namespace Microsoft { namespace MSR { namespace BS {
                 if (args.size() != lambda->GetNumParams())
                     Fail(wstrprintf(L"function expects %d parameters, %d were provided", (int)lambda->GetNumParams(), (int)args.size()), argsExpr->location);
                 vector<ConfigValuePtr> argVals(args.size());
+                //bool onlyOneArg = args.size() == 1 && argsExpr->namedArgs.empty();
                 for (size_t i = 0; i < args.size(); i++)    // positional arguments
                 {
                     let argValExpr = args[i];               // expression to evaluate arg [i]
                     let argName = lambda->GetParamNames()[i];
-                    argVals[i] = move(MakeEvaluateThunkPtr(argValExpr, scope, exprPath/*TODO??*/, L"(" + argName + L")"));
+                    argVals[i] = move(MakeEvaluateThunkPtr(argValExpr, scope, exprPath/*TODO??*/, /*onlyOneArg ? L"" :*/ argName));
                     // Make it a thunked value and pass by rvalue ref since unresolved ConfigValuePtrs may not be copied.
                     /*this wstrprintf should be gone, this is now the exprName*/
                     // Note on scope: macro arguments form a scope (ConfigRecord), the expression for an arg does not have access to that scope.
@@ -1219,7 +1224,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 for (size_t i = 0; i < e->args.size(); i++) // concatenate the two args
                 {
                     let expr = e->args[i];
-                    let item = Evaluate(expr, scope, exprPath, wstrprintf(L"_vecelem%d", i));           // result can be an item or a vector
+                    let item = Evaluate(expr, scope, exprPath, wstrprintf(L"[%d]", i));           // result can be an item or a vector
                     if (item.Is<ConfigArray>())
                         arr->Append(item.AsRef<ConfigArray>());     // append all elements (this flattens it)
                     else
@@ -1301,8 +1306,8 @@ namespace Microsoft { namespace MSR { namespace BS {
                 let & functions = opIter->second;
                 let leftArg = e->args[0];
                 let rightArg = e->args[1];
-                let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"[" + e->op + L"](left)");
-                let rightValPtr = Evaluate(rightArg, scope, exprPath, L"[" + e->op + L"](right)");
+                let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"/*" + e->op + L"*/left");
+                let rightValPtr = Evaluate(rightArg, scope, exprPath, L"/*" + e->op + L"*/right");
                 if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
                     return functions.NumbersOp(e, leftValPtr, rightValPtr, scope, exprPath);
                 else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
