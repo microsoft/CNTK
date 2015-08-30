@@ -48,6 +48,7 @@
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 using namespace std;
+using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK;
 
 // internal test routine forward declaration

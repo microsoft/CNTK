@@ -9,7 +9,7 @@
 #define let const auto
 #endif
 
-namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
+namespace Microsoft { namespace MSR { namespace BS {
 
     using namespace std;
     using namespace msra::strfun;
@@ -213,4 +213,4 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         }
     }
 
-}}}}     // namespaces
+}}}     // namespaces

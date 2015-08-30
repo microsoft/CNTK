@@ -10,7 +10,7 @@
 #include <map>
 #include <memory>
 
-namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
+namespace Microsoft { namespace MSR { namespace BS {
 
     using namespace std;
 
@@ -99,4 +99,4 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
     ExpressionPtr ParseConfigString(wstring text);
     ExpressionPtr ParseConfigFile(wstring path);
 
-}}}} // namespaces
+}}} // namespaces

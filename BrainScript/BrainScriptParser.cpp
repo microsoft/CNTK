@@ -17,10 +17,11 @@
 #define let const auto
 #endif
 
-namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
+namespace Microsoft { namespace MSR { namespace BS {
 
 using namespace std;
 using namespace msra::strfun;
+using namespace Microsoft::MSR::CNTK;
 
 // ---------------------------------------------------------------------------
 // source files and text references (location) into them
@@ -785,4 +786,4 @@ static ExpressionPtr Parse(SourceFile && sourceFile) { return Parser(move(source
 ExpressionPtr ParseConfigString(wstring text) { return Parse(SourceFile(L"(command line)", text)); }
 ExpressionPtr ParseConfigFile(wstring path) { return Parse(SourceFile(path)); }
 
-}}}}     // namespaces
+}}}     // namespaces

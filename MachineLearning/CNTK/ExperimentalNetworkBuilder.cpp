@@ -19,7 +19,9 @@
 #define let const auto
 #endif
 
-namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new config parsing lives in a sub-namespace, as to avoid conflict with existing ones which get implicitly pulled in by some headers we need
+namespace Microsoft { namespace MSR { namespace BS {
+
+    using namespace Microsoft::MSR;
 
     wstring standardFunctions =
         L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
@@ -40,11 +42,11 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
 
     wstring computationNodes =      // BUGBUG: optional args not working yet, some scope problem causing a circular reference
         L"Parameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValueor|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
+        L"Input(rows, cols, tag='feature') = new ComputationNode [ operation = 'Input' /*plus the function args*/ ]\n"
         // ^^ already works; vv not yet working
         L"Mean(z, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = z /* ; tag = tag */ ]\n"
         L"InvStdDev(z, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = z /* ; tag = tag */ ]\n"
         L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = feat:mean:invStdDev /* ; tag = tag */ ]\n"
-        L"Input(dim, tag='feature') = Parameter(dim, 1, needGradient = false)   // TODO: for now \n"
         L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = features ; first = firstRow ; num = rows /* ; tag = tag */ ]\n"
         L"Delay(in, delay, tag='') = new ComputationNode [ operation = 'Delay' ; input = in ; deltaT = -delay /* ; tag = tag */ ]\n"
         // standard nodes, tested
@@ -240,6 +242,10 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
                 else
                     RuntimeError("init must be one of the values of [uniform|gaussian|fixedValue|fromFile]");
             }
+            else if (operationName == L"Input")
+            {
+                node = New<InputValue<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"]);
+            }
             else        // nodes with inputs
             {
                 let inputs = GetInputs(config);
@@ -314,9 +320,11 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
         return nullptr; // not found
     }
 
-}}}}
+}}}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+    using namespace Microsoft::MSR;
 
     // helper that returns 'float' or 'double' depending on ElemType
     template<typename ElemType> static const wchar_t * ElemTypeName();

@@ -4,16 +4,11 @@
 
 #include "../../BrainScript/BrainScriptEvaluator.h"
 
-using namespace Microsoft::MSR::CNTK::BS;
+using namespace Microsoft::MSR::BS;
 
 #ifndef let
 #define let const auto
 #endif
-
-namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
-    shared_ptr<Object> MakeExperimentalComputationNetwork(const ConfigRecordPtr) { return nullptr; }
-    shared_ptr<Object> MakeExperimentalComputationNode(const ConfigRecordPtr) { return nullptr; }
-}}}}
 
 #if 0
 // notes on integrating
