@@ -40,8 +40,8 @@ namespace Microsoft { namespace MSR { namespace BS {
         L"Fac(n) = if n > 1 then Fac(n-1) * n else 1 \n"
         ;
 
-    wstring computationNodes =      // BUGBUG: optional args not working yet, some scope problem causing a circular reference
-        L"Parameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValueor|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
+    wstring computationNodes =
+        L"Parameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
         L"Input(rows, cols, tag='feature') = new ComputationNode [ operation = 'Input' /*plus the function args*/ ]\n"
         // ^^ already works; vv not yet working
         L"Mean(z, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = z /* ; tag = tag */ ]\n"
@@ -57,8 +57,8 @@ namespace Microsoft { namespace MSR { namespace BS {
         L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
         ;
 
-    wstring commonMacros =  // TODO: rename rows and cols to inDim and outDim or vice versa, whichever it is
-        L"BFF(in, rows, cols) = [ B = Parameter(rows, 1/*init = fixedvalue, value = 0*/) ; W = Parameter(rows, cols) ; z = /*W*in+B*/Log(in) ] \n" // TODO: fix this once we got the ComputationNode type connected correctly
+    wstring commonMacros =
+        L"BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ; W = Parameter(rows, cols) ; z = W*in+B ] \n"
         L"SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] \n "
         L"MeanVarNorm(feat) = PerDimMeanVarNormalization(feat, Mean(feat), InvStdDev(feat)) \n"
         L"LogPrior(labels) = Log(Mean(labels)) \n"
