@@ -29,6 +29,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define DEBUG_HTX if(debughtx) //Do you want to print the debug info?
 
+enum LMSLabelType
+{
+    compressed = 0,  //dim-4, for classBasedCESoftmaxNode
+    onehot = 1, //dim-vocab, for crossEntropy
+};
+
 template<class ElemType>
 class BatchSequenceReader : public IDataReader<ElemType>
 {
@@ -50,6 +56,8 @@ public:
     vector<list<int>*> sequence_cache;
     int debughtx; //used in the DEBUG_HTX macro, control the debug output
     int oneSentenceInMB; //Only allow at most one sentence in a MB, should be turned on for bi-directional training, so we will have sentence end in MB
+    LMSLabelType outputLabelType; //"compressed", "onehot"
+    int labelDim;
 
     int sentenceEndId;
     Matrix<ElemType>* label_m_ref; //A reference to the label matrix in the getMinibatch

@@ -137,6 +137,16 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
         RuntimeError("[LMHTXSequenceReader] wordclass option not set.");
     }
     oneSentenceInMB = (int)readerConfig("oneSentenceInMB", "0");
+    string outputLabelType_str;
+    outputLabelType_str = std::string(readerConfig("outptuLabelType", "compressed"));
+    if (strcmp(outputLabelType_str.c_str(), "compressed") == 0)
+        outputLabelType = LMSLabelType::compressed;
+    else
+    if (strcmp(outputLabelType_str.c_str(), "onehot") == 0)
+        outputLabelType = LMSLabelType::onehot;
+    else
+        RuntimeError("[LMHTXSequenceReader] outputLabelType not right, can be 'compressed' or 'onehot'.");
+
     std::wstring temp_s = readerConfig("file");
     fileName = std::string(temp_s.begin(), temp_s.end());
 
