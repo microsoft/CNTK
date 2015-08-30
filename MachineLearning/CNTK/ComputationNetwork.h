@@ -619,8 +619,8 @@ public:
     {
         size_t actualMBSize = 0;
 
-        const auto & FeatureNodes = this->FeatureNodes();   // TODO: a getter; should be called GetFeatureNodes()
-        for (auto nodeIter = FeatureNodes.begin(); nodeIter != FeatureNodes.end(); nodeIter++)
+        const auto & featureNodes = this->FeatureNodes();   // TODO: a getter; should be called GetFeatureNodes()
+        for (auto nodeIter = featureNodes.begin(); nodeIter != featureNodes.end(); nodeIter++)
         {
             actualMBSize = max(actualMBSize, ((*nodeIter)->FunctionValues()).GetNumCols());
         }
