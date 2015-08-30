@@ -39,17 +39,17 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
         ;
 
     wstring computationNodes =      // BUGBUG: optional args not working yet, some scope problem causing a circular reference
-        L"Mean(z, tag='') = new ComputationNode [ class = 'MeanNode' ; inputs = z /* ; tag = tag */ ]\n"
-        L"InvStdDev(z, tag='') = new ComputationNode [ class = 'InvStdDevNode' ; inputs = z /* ; tag = tag */ ]\n"
-        L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ class = 'PerDimMeanVarNormalizationNode' ; inputs = feat:mean:invStdDev /* ; tag = tag */ ]\n"
-        L"Parameter(outD, inD/*, tag=''*/) = new ComputationNode [ class = 'LearnableParameterNode' ; outDim = outD ; inDim = inD /*; optionalTag = 'tag'*/ ]\n"
-        L"Input(dim) = Parameter(dim,1/*,tag='features'*/)   // TODO: for now \n"
-        L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ class = 'RowSliceNode' ; inputs = features ; first = firstRow ; num = rows /* ; tag = tag */ ]\n"
-        L"Delay(in, delay, tag='') = new ComputationNode [ class = 'DelayNode' ; input = in ; deltaT = -delay /* ; tag = tag */ ]\n"
-        L"Sigmoid(z, tag='') = new ComputationNode [ class = 'SigmoidNode' ; inputs = z /* ; tag = tag */ ]\n"
-        L"Log(z, tag='') = new ComputationNode [ class = 'LogNode' ; inputs = z /* ; tag = tag */ ]\n"
-        L"CrossEntropyWithSoftmax(labels, outZ, tag='') = new ComputationNode [ class = 'CrossEntropyWithSoftmaxNode' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
-        L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ class = 'ErrorPredictionNode' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
+        L"Mean(z, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = z /* ; tag = tag */ ]\n"
+        L"InvStdDev(z, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = z /* ; tag = tag */ ]\n"
+        L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = feat:mean:invStdDev /* ; tag = tag */ ]\n"
+        L"Parameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValueor|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
+        L"Input(dim) = Parameter(dim, 1, needGradient = false, tag = 'features')   // TODO: for now \n"
+        L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = features ; first = firstRow ; num = rows /* ; tag = tag */ ]\n"
+        L"Delay(in, delay, tag='') = new ComputationNode [ operation = 'Delay' ; input = in ; deltaT = -delay /* ; tag = tag */ ]\n"
+        L"Sigmoid(z, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = z /* ; tag = tag */ ]\n"
+        L"Log(z, tag='') = new ComputationNode [ operation = 'Log' ; inputs = z /* ; tag = tag */ ]\n"
+        L"CrossEntropyWithSoftmax(labels, outZ, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
+        L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
         ;
 
     wstring commonMacros =  // TODO: rename rows and cols to inDim and outDim or vice versa, whichever it is
@@ -89,13 +89,15 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
             let & config = *configp;
 
             DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
-            auto net = make_shared<ComputationNetwork<ElemType>>(deviceId);
+            auto net = make_shared<BoxOf<ComputationNetwork<ElemType>>>(deviceId);
 
             auto & m_nameToNodeMap = net->GetNameToNodeMap();
 
             deque<ComputationNodePtr> workList;
             // flatten the set of all nodes
             // we collect all root ComputationNodes from the config record, and then expand into all their children by work-list processing
+            // TODO: This currently only collects nodes of the same ElemType. We could allow conversion operators.
+            // TODO: Can we even make the ComputationNetwork independent of ElemType?? As long as the nodes themselves are hooked up properly that should be OK!
             for (let & id : config.GetMemberIds())
             {
                 let & value = config[id];
@@ -193,16 +195,70 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
         }
     public:
         // create ComputationNode
+        // This is the equivalent of the old SynchronousNodeEvaluator::Evaluate(), and we duplicate code from there.
         template<>
         static shared_ptr<Object> MakeRuntimeObject<ComputationNode<ElemType>>(const IConfigRecordPtr configp)
         {
             let & config = *configp;
-            wstring nodeType = config[L"class"];
-            let inputs = GetInputs(config);
+            wstring operationName = config[L"operation"];
+            wstring nodeName = L"<placeholder>";   // name will be overwritten by caller upon return (TODO: fix this here? pass expression name in?)
             DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
-            auto node = ComputationNetwork<ElemType>::NewStandardNode(nodeType, deviceId, L"placeholder");   // name will be overwritten by caller upon return (TODO: fix this here? pass expression name in?)
-            node->AttachInputs(inputs); // TODO: where to check the number of inputs?
-            return node;
+            static unsigned long m_randomSeedOffset = 0;    // TODO: this is held in the ComputationNetwork, but we don't have one yet
+
+            /*  from SynchronousNodeEvaluator::Evaluate()
+            if (InputValue<ElemType>::TypeName() == cnoperationName)
+            else if (InputValue<ElemType>::SparseTypeName() == cnNodeType)
+            else if (cnNodeType == L"ImageInput")
+            else if (cnNodeType == L"SparseImageInput")
+            else if (LearnableParameter<ElemType>::TypeName() == cnNodeType)
+            else if (SparseLearnableParameter<ElemType>::TypeName() == cnNodeType)
+            else if (cnNodeType == L"Constant")
+            else if (cnNodeType == RowSliceNode<ElemType>::TypeName())
+            else if (cnNodeType == RowRepeatNode<ElemType>::TypeName())
+            else if (cnNodeType == ReshapeNode<ElemType>::TypeName())
+            else if (cnNodeType == PastValueNode<ElemType>::TypeName() ||
+                cnNodeType == FutureValueNode<ElemType>::TypeName())
+            else if (cnNodeType == ConvolutionNode<ElemType>::TypeName())
+            else if (cnNodeType == MaxPoolingNode<ElemType>::TypeName())
+            else if (cnNodeType == AveragePoolingNode<ElemType>::TypeName())
+            */
+
+            // note on optional parameters
+            // Instead of defining optional parameters here in code, they are defined as optional args to the creating macro.
+
+            // first group: nodes without inputs
+            if (operationName == L"LearnableParameter")
+            {
+                // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
+                // TODO: do we need a default value mechanism? How to make sure it does not pop upwards? Current functions do not allow overloads.
+                auto node = New<LearnableParameter<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"]);
+                node->NeedGradient() = config[L"needGradient"];
+                static int randomSeed = 1;
+                wstring initString = config[L"init"];
+                if (initString == L"fixedValue")
+                    node->FunctionValues().SetValue((ElemType)config[L"value"]);
+                else if (initString == L"uniform" || initString == L"gaussian")
+                    ComputationNetwork<ElemType>::InitLearnableParameters(node, (initString == L"uniform"), randomSeed++, config[L"initValueScale"], m_randomSeedOffset);
+                else if (initString == L"fromFile")
+                {
+                    wstring initFromFilePath = config[L"initFromFilePath"];
+                    if (initFromFilePath.empty())
+                        RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
+                    ComputationNetwork<ElemType>::InitLearnableParametersFromFile(node, initFromFilePath, node->GetDeviceId());
+                }
+                else
+                    RuntimeError("init must be one of the values of [uniform|gaussian|fixedValue|fromFile]");
+                return node;
+            }
+            else        // nodes with inputs
+            {
+                let inputs = GetInputs(config);
+                // second group: nodes with special initializers
+                // third group: 
+                auto node = ComputationNetwork<ElemType>::NewStandardNode(operationName, deviceId, nodeName);
+                node->AttachInputs(inputs); // TODO: where to check the number of inputs?
+                return node;
+            }
         }
 
         // -------------------------------------------------------------------
@@ -248,6 +304,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
         {
             // ComputationNodes
             DefineRuntimeTypeDualPrecision(ComputationNode),
+            DefineRuntimeTypeDualPrecision(ComputationNetwork),
 #if 0
             DefineRuntimeType(RecurrentComputationNode),
             // In this experimental state, we only have Node and Network.
@@ -266,6 +323,11 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // helper that returns 'float' or 'double' depending on ElemType
+    template<typename ElemType> static const wchar_t * ElemTypeName();
+    template<> static const wchar_t * ElemTypeName<float>() { return L"float"; }
+    template<> static const wchar_t * ElemTypeName<double>() { return L"double"; }
+
     // build a ComputationNetwork from BrainScript source code
     template<typename ElemType>
     /*virtual*/ /*IComputationNetBuilder::*/ComputationNetwork<ElemType>* ExperimentalNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork<ElemType>*)
@@ -276,7 +338,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
             // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source?
             let expr = BS::ParseConfigString(BS::standardFunctions + BS::computationNodes + BS::commonMacros
-                + wstrprintf(L"deviceId = %d ; precision = '%s' ; network = new ExperimentalComputationNetwork ", (int)m_deviceId, typeid(ElemType).name())  // TODO: check if typeid needs postprocessing
+                + wstrprintf(L"deviceId = %d ; precision = '%s' ; network = new ComputationNetwork ", (int)m_deviceId, ElemTypeName<ElemType>())  // TODO: check if typeid needs postprocessing
                 + m_sourceCode);    // source code has the form [ ... ]
             // evaluate the parse tree--specifically the top-level field 'network'--which will create the network
             let object = EvaluateField(expr, L"network");                               // this comes back as a BS::Object

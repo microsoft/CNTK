@@ -59,8 +59,13 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS { // or BS::
     class BoxOf : public Object, public C
     {
     public:
+#if 1
+        template<class... _Types> BoxOf(_Types&&... _Args) : C(forward<_Types>(_Args)...) { }
+#else
+        // TODO: change this to variadic templates, then we can instantiate everything we need through this
         BoxOf(const C & val) : C(val) { }
         BoxOf(){}
+#endif
     };
 
     // -----------------------------------------------------------------------
@@ -69,6 +74,12 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS { // or BS::
     // -----------------------------------------------------------------------
 
     typedef BoxOf<wstring> String;
+
+    // -----------------------------------------------------------------------
+    // ComputationNodeObject -- ths 'magic' class that our parser understands for infix operations
+    // -----------------------------------------------------------------------
+
+    class ComputationNodeObject : public BS::Object { };   // a base class for all nodes (that has no template parameter)
 
     // -----------------------------------------------------------------------
     // HasToString -- trait to indicate an object can print their content
@@ -92,6 +103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS { // or BS::
     {
         bool isConfigRecord;        // exposes IConfigRecord  --in this case the expression name is computed differently, namely relative to this item
         function<shared_ptr<Object>(const IConfigRecordPtr)> construct; // lambda to construct an object of this class
+        // TODO: we should pass the expression name to construct() as well
     };
 
 }}}} // end namespaces

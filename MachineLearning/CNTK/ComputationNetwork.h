@@ -42,7 +42,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>
-class ComputationNetwork : public BS::Object
+class ComputationNetwork
 {
 protected:
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
@@ -67,16 +67,16 @@ protected:
         }
 
         // TODO: why is this not a copy constructor or assignment operator?
-                    void Copy(const stRecurrentInfo& src)
-                    {
-                        m_recurrentNodes = src.m_recurrentNodes;
-                        m_recurrentNodesForForward = src.m_recurrentNodesForForward;
-                        m_sourceNode = src.m_sourceNode;
-                        m_loopId = src.m_loopId; 
-                        m_completedGradient = src.m_completedGradient;
-                        m_completedEvaluate = src.m_completedEvaluate;
-                        m_loopClosed = src.m_loopClosed;
-                    }
+        void Copy(const stRecurrentInfo& src)
+        {
+            m_recurrentNodes = src.m_recurrentNodes;
+            m_recurrentNodesForForward = src.m_recurrentNodesForForward;
+            m_sourceNode = src.m_sourceNode;
+            m_loopId = src.m_loopId;
+            m_completedGradient = src.m_completedGradient;
+            m_completedEvaluate = src.m_completedEvaluate;
+            m_loopClosed = src.m_loopClosed;
+        }
     } RecurrentInfo;
 
 public:
@@ -453,7 +453,7 @@ public:
         m_deviceId = deviceId;
         if (m_deviceId == AUTOPLACEMATRIX)
             m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
-        }
+    }
 
     DEVICEID_TYPE GetDeviceID() { return m_deviceId; }
 
@@ -890,7 +890,9 @@ public:
     // numRows/numCols: after this function is called, these parameters contain the number of rows/columns in the matrix.
     // returns: a flat array containing the contents of this file in column-major format
     // NOTE: caller is responsible for deleting the returned buffer once it is finished using it.
-    ElemType* LoadArrayFromTextFile(const std::string filePath, size_t& numRows, size_t& numCols)
+    // TODO: change to return a std::vector<ElemType>; solves the ownership issue
+    // TODO: move this elsewhere, this is a general utility function that does not belong into the ComputationNetwork class
+    static ElemType* LoadArrayFromTextFile(const std::string filePath, size_t& numRows, size_t& numCols)
     {
         size_t r = 0;
         size_t numColsInFirstRow = 0;
@@ -949,24 +951,32 @@ public:
         return pArray;
     }
 
-    void InitLearnableParametersFromFile(const ComputationNodePtr node,
-                                         const std::string initFromFilePath)
+    // TODO: why is this here? Move to LearnableParameter class?
+    static void InitLearnableParametersFromFile(const ComputationNodePtr node,
+                                         const std::wstring & initFromFilePath,
+                                         DEVICEID_TYPE deviceId)    // TODO: why not just use node->m_deviceId?
     {
         size_t numRows = 0;
         size_t numCols = 0;
-        ElemType *pArray = LoadArrayFromTextFile(initFromFilePath, numRows, numCols);
-        node->FunctionValues().SetValue(numRows, numCols, pArray, matrixFlagNormal, this->GetDeviceID());
-        delete[] pArray;
+        ElemType *pArray = LoadArrayFromTextFile(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
+        node->FunctionValues().SetValue(numRows, numCols, pArray, matrixFlagNormal, deviceId);
+        delete[] pArray;    // TODO: use std::vector to avoid mem leak on error
+    }
+    void InitLearnableParametersFromFile(const ComputationNodePtr node, const std::string & initFromFilePath)   // TODO: remove this method or change pathname to wstring
+    {
+        InitLearnableParametersFromFile(node, msra::strfun::utf16(initFromFilePath), this->GetDeviceID());
     }
 
     // -----------------------------------------------------------------------
     // node construction
     // -----------------------------------------------------------------------
 
-    void InitLearnableParameters(const ComputationNodePtr node,
-                                 const bool uniformInit,
-                                 const unsigned long randomSeed,
-                                 const ElemType initValueScale)
+    // TODO: move this into LearnableParameter directly; no value to keep it out
+    static void InitLearnableParameters(const ComputationNodePtr node,
+                                        const bool uniformInit,
+                                        const unsigned long randomSeed,
+                                        const ElemType initValueScale,
+                                        unsigned long randomSeedOffset)
     {
         size_t inputSize = node->FunctionValues().GetNumCols();
 
@@ -974,13 +984,21 @@ public:
         if (uniformInit)
         {
             ElemType randRange = 0.05f * initValueScale; //initValueScale/sqrt(inputSize);
-            node->FunctionValues().SetUniformRandomValue(-randRange, randRange, GetRandomSeedOffset() + randomSeed);
+            node->FunctionValues().SetUniformRandomValue(-randRange, randRange, randomSeedOffset + randomSeed);
         }
         else
         {
             ElemType randInitstd = 0.2f * initValueScale / sqrt(ElemType(inputSize));
-            node->FunctionValues().SetGaussianRandomValue(0, randInitstd, GetRandomSeedOffset() + randomSeed);
+            node->FunctionValues().SetGaussianRandomValue(0, randInitstd, randomSeedOffset + randomSeed);
         }
+    }
+    // non-static version needed because it access m_randomSeedOffset
+    void InitLearnableParameters(const ComputationNodePtr node,
+        const bool uniformInit,
+        const unsigned long randomSeed,
+        const ElemType initValueScale)
+    {
+        return InitLearnableParameters(node, uniformInit, randomSeed, initValueScale, GetRandomSeedOffset());
     }
 
     // -----------------------------------------------------------------------
@@ -1290,9 +1308,9 @@ public:
     }
 
     ComputationNodePtr CreateInputNode(const std::wstring & inputName, const size_t rows, const size_t cols)
-                    {
+    {
         return AddNodeToNet(New<InputValue<ElemType>>(m_deviceId, inputName, rows, cols));
-                }
+    }
 
     ComputationNodePtr CreateSparseInputNode(const std::wstring & inputName, const size_t rows, const size_t cols)
     {
@@ -1361,9 +1379,9 @@ public:
     // this is the catch-all for all cases not covered as special cases above
     // Unlike the specialized ones above, this one creates nodes by type given as a string.
     ComputationNodePtr CreateComputationNode(const std::wstring & nodeType, const std::wstring & nodeName)
-        {
+    {
         return AddNodeToNet(NewStandardNode(nodeType, m_deviceId, nodeName));
-        }
+    }
 
     // TODO: These next three functions are wrappers around CreateXXXNode(). Remove these.
 
@@ -1395,8 +1413,8 @@ public:
     {
         if (this->GetNodeFromName(a->NodeName(), nullptr, false) != nullptr)
         {
-            fprintf(stderr, "PairNetwork: asked to pair a node with name %ls in another network.However, this network has already a node with the same name.Should avoid this case.\n", a->NodeName().c_str());
-            RuntimeError("PairNetwork: asked to pair a node with name in another network.However, this network has already a node with the same name.Should avoid this case.\n");
+            fprintf(stderr, "PairNetwork: asked to pair a node with name %ls in another network. However, this network has already a node with the same name. Should avoid this case.\n", a->NodeName().c_str());
+            RuntimeError("PairNetwork: asked to pair a node with name in another network. However, this network has already a node with the same name. Should avoid this case.\n");
         }
         return AddNodeToNetAndAttachInputs(New<PairNetworkNode<ElemType>>(m_deviceId, nodeName), a);
     }
@@ -1414,9 +1432,9 @@ public:
     {
         return AddNodeToNetAndAttachInputs(New<ConvolutionNode<ElemType>>(m_deviceId, nodeName,
                                                                           kernelWidth, kernelHeight,
-                                                                 outputChannels,
-                                                                 horizontalSubsample,
-                                                                 verticalSubsample, zeroPadding,
+                                                                          outputChannels,
+                                                                          horizontalSubsample,
+                                                                          verticalSubsample, zeroPadding,
                                                                           maxTempMemSizeInSamples),
                                            weight, inputValues);
     }
@@ -1430,7 +1448,7 @@ public:
     {
         return AddNodeToNetAndAttachInputs(New<MaxPoolingNode<ElemType>>(m_deviceId, nodeName,
                                                                          windowWidth, windowHeight,
-                                                                horizontalSubsample,
+                                                                         horizontalSubsample,
                                                                          verticalSubsample),
                                            inputValues);
     }
@@ -1444,7 +1462,7 @@ public:
     {
         return AddNodeToNetAndAttachInputs(New<AveragePoolingNode<ElemType>>(m_deviceId, nodeName,
                                                                              windowWidth, windowHeight,
-                                                                    horizontalSubsample,
+                                                                             horizontalSubsample,
                                                                              verticalSubsample),
                                            inputValues);
     }
