@@ -259,9 +259,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: similar to DumpInfo; used by ExperimentalNetworkBuilder test implementation
         /*HasToString::*/ wstring ToString() const
         {
-            // we format it like "[TYPE] ( args )"
+            // we format it like "name : type rows x cols ( args )"
             wstring result = /*TidyName*/(NodeName()) + L" : " + OperationName();
-            if (m_children.empty()) result.append(L"()");
+            result.append(msra::strfun::wstrprintf(L" %d x %d", (int)m_functionValues.GetNumRows(), (int)m_functionValues.GetNumCols()));
+            if (m_children.empty()) result.append(L" ()");
             else
             {
                 wstring args;
