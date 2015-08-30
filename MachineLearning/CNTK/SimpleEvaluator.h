@@ -102,13 +102,13 @@ namespace Microsoft {
                     }
 
                     //prepare features and labels
-                    auto & FeatureNodes = m_net.FeatureNodes();
+                    auto & featureNodes = m_net.FeatureNodes();
                     auto & labelNodes = m_net.LabelNodes();
 
                     std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-                    for (size_t i = 0; i < FeatureNodes.size(); i++)
+                    for (size_t i = 0; i < featureNodes.size(); i++)
                     {
-                        inputMatrices[FeatureNodes[i]->NodeName()] = &FeatureNodes[i]->FunctionValues();
+                        inputMatrices[featureNodes[i]->NodeName()] = &featureNodes[i]->FunctionValues();
                     }
                     for (size_t i = 0; i < labelNodes.size(); i++)
                     {
@@ -130,7 +130,7 @@ namespace Microsoft {
 
                     while (dataReader->GetMinibatch(inputMatrices))
                     {
-                        UpdateEvalTimeStamps(FeatureNodes);
+                        UpdateEvalTimeStamps(featureNodes);
                         UpdateEvalTimeStamps(labelNodes);
 
                         actualMBSize = m_net.GetActualMBSize();
@@ -199,7 +199,7 @@ namespace Microsoft {
                 //returns error rate
                 ElemType EvaluateUnroll(IDataReader<ElemType>* dataReader, const size_t mbSize, ElemType &evalSetCrossEntropy, const wchar_t* output = nullptr, const size_t testSize = requestDataSize)
                 {
-                    std::vector<ComputationNodePtr> & FeatureNodes = m_net.FeatureNodes();
+                    std::vector<ComputationNodePtr> & featureNodes = m_net.FeatureNodes();
                     std::vector<ComputationNodePtr> & labelNodes = m_net.LabelNodes();
                     std::vector<ComputationNodePtr> & criterionNodes = m_net.FinalCriterionNodes();
                     std::vector<ComputationNodePtr> & evaluationNodes = m_net.EvaluationNodes();
@@ -210,9 +210,9 @@ namespace Microsoft {
                         RuntimeError("No Evaluation node found\n");
 
                     std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-                    for (size_t i = 0; i < FeatureNodes.size(); i++)
+                    for (size_t i = 0; i < featureNodes.size(); i++)
                     {
-                        inputMatrices[FeatureNodes[i]->NodeName()] = &FeatureNodes[i]->FunctionValues();
+                        inputMatrices[featureNodes[i]->NodeName()] = &featureNodes[i]->FunctionValues();
                     }
                     for (size_t i = 0; i < labelNodes.size(); i++)
                     {
@@ -252,7 +252,7 @@ namespace Microsoft {
 
                         for (int npos = 0; npos < nbrSamples; npos++)
                         {
-                            FeatureNodes[npos]->UpdateEvalTimeStamp();
+                            featureNodes[npos]->UpdateEvalTimeStamp();
                             labelNodes[npos]->UpdateEvalTimeStamp();
 
                             m_net.Evaluate(criterionNodes[npos]); //use only the first criterion. Is there any possibility to use more?
@@ -792,7 +792,7 @@ namespace Microsoft {
 
                 //return true if precomputation is executed.
                 bool PreCompute(ComputationNetwork<ElemType>& net,
-                                std::vector<ComputationNodePtr>& FeatureNodes)
+                                std::vector<ComputationNodePtr>& featureNodes)
                 {
                     batchComputeNodes = net.GetNodesRequireBatchMode();
 
@@ -801,7 +801,7 @@ namespace Microsoft {
                         return false;
                     }
 
-                    UpdateEvalTimeStamps(FeatureNodes);
+                    UpdateEvalTimeStamps(featureNodes);
 
                     size_t actualMBSize = net.GetActualMBSize();
                     net.SetActualMiniBatchSize(actualMBSize);
@@ -855,13 +855,13 @@ namespace Microsoft {
                         writeNodes.push_back(m_net.GetNodeFromName(writeNodeNames[i]));
 
                     //prepare features and labels
-                    std::vector<ComputationNodePtr>& FeatureNodes = m_net.FeatureNodes();
+                    std::vector<ComputationNodePtr>& featureNodes = m_net.FeatureNodes();
                     std::vector<ComputationNodePtr>& labelNodes = m_net.LabelNodes();
 
                     std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-                    for (size_t i = 0; i < FeatureNodes.size(); i++)
+                    for (size_t i = 0; i < featureNodes.size(); i++)
                     {
-                        inputMatrices[FeatureNodes[i]->NodeName()] = &FeatureNodes[i]->FunctionValues();
+                        inputMatrices[featureNodes[i]->NodeName()] = &featureNodes[i]->FunctionValues();
                     }
                     for (size_t i = 0; i < labelNodes.size(); i++)
                     {
@@ -880,7 +880,7 @@ namespace Microsoft {
                     ElemType ComputeTimeInMBs = 0;
                     while (dataReader->GetMinibatch(inputMatrices))
                     {
-                        UpdateEvalTimeStamps(FeatureNodes);
+                        UpdateEvalTimeStamps(featureNodes);
 
                         actualMBSize = m_net.GetActualMBSize();
                         m_net.SetActualMiniBatchSize(actualMBSize);
@@ -889,7 +889,7 @@ namespace Microsoft {
 
                         FindBestPath(&m_net, dataReader,
                             dataWriter, outputNodes,
-                            writeNodes, FeatureNodes,
+                            writeNodes, featureNodes,
                             beam, &inputMatrices, best_path);
 
                         totalEpochSamples += actualMBSize;
@@ -920,7 +920,7 @@ namespace Microsoft {
                     IDataReader<ElemType>* dataReader, IDataWriter<ElemType>& dataWriter,
                     std::vector<ComputationNodePtr>& evalNodes,
                     std::vector<ComputationNodePtr>& outputNodes,
-                    std::vector<ComputationNodePtr>& FeatureNodes,
+                    std::vector<ComputationNodePtr>& featureNodes,
                     const ElemType beam,
                     std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
                     vector<size_t> &best_path)
@@ -962,11 +962,11 @@ namespace Microsoft {
                     size_t maxSize = min(maxMbSize, mbSize);
 
                     ResetPreCompute();
-                    PreCompute(*evalnet, FeatureNodes);
+                    PreCompute(*evalnet, featureNodes);
 
                     /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
                     /// is the begining of sentence
-                    evalnet->SetActualMiniBatchSize(1, &FeatureNodes);
+                    evalnet->SetActualMiniBatchSize(1, &featureNodes);
                     dataReader->SetSentenceSegBatch(evalnet->SentenceBoundary(), evalnet->MinibatchPackingFlags());
                     /// need to set the sentence begining segmentation info
                     evalnet->SentenceBoundary().SetValue(SEQUENCE_START);
@@ -989,7 +989,7 @@ namespace Microsoft {
                             vector<size_t> history = from_token.sequence;
 
                             /// update feature nodes once, as the observation is the same for all propsoals in labels
-                            UpdateEvalTimeStamps(FeatureNodes);
+                            UpdateEvalTimeStamps(featureNodes);
 
                             /// history is updated in the getproposalobs function
                             dataReader->GetProposalObs(inputMatrices, itdx, history);
@@ -1077,7 +1077,7 @@ namespace Microsoft {
                     IDataWriter<ElemType>& dataWriter,
                     std::vector<ComputationNodePtr>& evalNodes,
                     std::vector<ComputationNodePtr>& outputNodes,
-                    std::vector<ComputationNodePtr>& FeatureNodes,
+                    std::vector<ComputationNodePtr>& featureNodes,
                     const ElemType beam,
                     std::map<std::wstring, Matrix<ElemType>*> * inputMatrices,
                     vector<size_t> &best_path)
@@ -1122,7 +1122,7 @@ namespace Microsoft {
                     size_t itdx = 0;
 
                     ResetPreCompute();
-                    PreCompute(*evalnet, FeatureNodes);
+                    PreCompute(*evalnet, featureNodes);
 
                     /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
                     /// is the begining of sentence
@@ -1151,7 +1151,7 @@ namespace Microsoft {
                             vector<size_t> history = from_token.sequence;
 
                             /// update feature nodes once, as the observation is the same for all propsoals in labels
-                            UpdateEvalTimeStamps(FeatureNodes);
+                            UpdateEvalTimeStamps(featureNodes);
 
                             /// history is updated in the getproposalobs function
                             dataReader->GetProposalObs(inputMatrices, itdx, history);

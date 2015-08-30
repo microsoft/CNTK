@@ -497,7 +497,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<IDataReader<ElemType>*> validationDataReader)
         {
             size_t iNumNetworks = nets.size();
-            vector<std::vector<ComputationNodePtr>*> FeatureNodes;
+            vector<std::vector<ComputationNodePtr>*> featureNodes;
             vector<std::vector<ComputationNodePtr>*> outputNodes;
             vector<std::vector<ComputationNodePtr>*> pairNodes;
             vector<std::vector<ComputationNodePtr>*> labelNodes;
@@ -509,7 +509,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 auto * featPtr = &nets[i]->FeatureNodes();
                 auto * lablPtr = &nets[i]->LabelNodes();
-                FeatureNodes.push_back(featPtr);
+                featureNodes.push_back(featPtr);
                 outputNodes.push_back(&nets[i]->OutputNodes());
                 pairNodes.push_back(&nets[i]->PairNodes());
 
@@ -673,7 +673,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 TrainOneEpochEncoderDecoderWithHiddenStates(i, m_epochSize, nets,
                     trainDataReader,
-                    FeatureNodes,
+                    featureNodes,
                     pairNodes,
                     evaluationNodes,
                     inputMatrices,
@@ -826,7 +826,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const size_t epochSize,
             vector<ComputationNetwork<ElemType>*> nets,  /// encoder network
             vector<IDataReader<ElemType>*> dataReader,
-            vector<std::vector<ComputationNodePtr>*> FeatureNodes,
+            vector<std::vector<ComputationNodePtr>*> featureNodes,
             vector<std::vector<ComputationNodePtr>*> pairNodes,
             vector<std::vector<ComputationNodePtr>*> evaluationNodes,
             vector<std::map<std::wstring, Matrix<ElemType>*>*> inputMatrices,
@@ -904,7 +904,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t i = 0; i < iNumNetworks; i++)
                 {
-                    UpdateEvalTimeStamps(*FeatureNodes[i]);
+                    UpdateEvalTimeStamps(*featureNodes[i]);
                     if (labelNodes[i]->size() > 0)
                         UpdateEvalTimeStamps(*labelNodes[i]);
                 }
@@ -923,7 +923,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         dataReader,
                         evaluationNodes,
                         pairNodes,
-                        FeatureNodes,
+                        featureNodes,
                         criterionNodes,
                         localEpochCriterion, localEpochEvalErrors) == false)
                     {
@@ -935,7 +935,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 EncoderDecoderWithHiddenStatesForwardPass(nets,
                     dataReader, pairNodes, evaluationNodes,
-                    FeatureNodes, criterionNodes,
+                    featureNodes, criterionNodes,
                     localEpochCriterion, localEpochEvalErrors);
 
                 EncoderDecoderWithHiddenStatesErrorProp(nets, pairNodes, criterionNodes);
@@ -1025,7 +1025,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<IDataReader<ElemType>*> dataReader,
             vector<std::vector<ComputationNodePtr>*> evaluationNodes,
             vector<std::vector<ComputationNodePtr>*> pairNodes,
-            vector<std::vector<ComputationNodePtr>*> FeatureNodes,
+            vector<std::vector<ComputationNodePtr>*> featureNodes,
             vector<std::vector<ComputationNodePtr>*> criterionNodes,
             Matrix<ElemType>& localEpochCriterion,
             Matrix<ElemType>& localEpochEvalErrors
@@ -1074,7 +1074,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         EncoderDecoderWithHiddenStatesForwardPass(nets,
                             dataReader, pairNodes, evaluationNodes,
-                            FeatureNodes, criterionNodes, 
+                            featureNodes, criterionNodes, 
                             localEpochCriterion, localEpochEvalErrors);
 
                         ElemType score1 = localEpochCriterion.Get00Element();
@@ -1089,7 +1089,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         EncoderDecoderWithHiddenStatesForwardPass(nets,
                             dataReader, pairNodes, evaluationNodes,
-                            FeatureNodes, criterionNodes, 
+                            featureNodes, criterionNodes, 
                             localEpochCriterion, localEpochEvalErrors);
 
                         ElemType score1r = localEpochCriterion.Get00Element();
@@ -1105,7 +1105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         EncoderDecoderWithHiddenStatesForwardPass(nets,
                             dataReader, pairNodes, evaluationNodes,
-                            FeatureNodes, criterionNodes, 
+                            featureNodes, criterionNodes, 
                             localEpochCriterion, localEpochEvalErrors);
 
                         EncoderDecoderWithHiddenStatesErrorProp(nets, pairNodes, criterionNodes);
@@ -1139,7 +1139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<IDataReader<ElemType>*> & dataReader,
             vector<vector<ComputationNodePtr>*> & pairNodes,
             vector<vector<ComputationNodePtr>*> & evaluationNodes,
-            vector<vector<ComputationNodePtr>*> & /*FeatureNodes*/,
+            vector<vector<ComputationNodePtr>*> & /*featureNodes*/,
             vector<vector<ComputationNodePtr>*> & criterionNodes,
             Matrix<ElemType>& localEpochCriterion,
             Matrix<ElemType>& localEpochEvalErrors

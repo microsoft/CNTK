@@ -55,12 +55,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             //specify feature value nodes
-            std::vector<ComputationNodePtr>& FeatureNodes = m_net.FeatureNodes();
+            std::vector<ComputationNodePtr>& featureNodes = m_net.FeatureNodes();
             std::vector<ComputationNodePtr>& labelNodes = m_net.LabelNodes();
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-            for (size_t i=0; i<FeatureNodes.size(); i++)
+            for (size_t i=0; i<featureNodes.size(); i++)
             {
-                inputMatrices[FeatureNodes[i]->NodeName()] = &FeatureNodes[i]->FunctionValues();
+                inputMatrices[featureNodes[i]->NodeName()] = &featureNodes[i]->FunctionValues();
             }
             for (size_t i=0; i<labelNodes.size(); i++)
             {
@@ -78,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             while (dataReader.GetMinibatch(inputMatrices))
             {
-                UpdateEvalTimeStamps(FeatureNodes);
+                UpdateEvalTimeStamps(featureNodes);
                 UpdateEvalTimeStamps(labelNodes);
 
                 size_t actualMBSize = m_net.GetActualMBSize();
@@ -151,11 +151,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
             //specify feature value nodes
-            auto & FeatureNodes = m_net.FeatureNodes();
+            auto & featureNodes = m_net.FeatureNodes();
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
-            for (size_t i=0; i<FeatureNodes.size(); i++)
+            for (size_t i=0; i<featureNodes.size(); i++)
             {
-                inputMatrices[FeatureNodes[i]->NodeName()] = &FeatureNodes[i]->FunctionValues();
+                inputMatrices[featureNodes[i]->NodeName()] = &featureNodes[i]->FunctionValues();
             }
                         
             //evaluate with minibatches
@@ -168,7 +168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             while (dataReader.GetMinibatch(inputMatrices))
             {
-                UpdateEvalTimeStamps(FeatureNodes);
+                UpdateEvalTimeStamps(featureNodes);
 
                 size_t actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);

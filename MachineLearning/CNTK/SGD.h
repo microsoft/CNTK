@@ -899,15 +899,15 @@ protected:
                            IDataReader<ElemType>* trainSetDataReader,
                            IDataReader<ElemType>* validationSetDataReader)
     {
-        auto & FeatureNodes = net.FeatureNodes();
+        auto & featureNodes = net.FeatureNodes();
         auto & labelNodes = net.LabelNodes();
         auto & criterionNodes = GetTrainCriterionNodes(net);
         auto & evaluationNodes = GetEvalCriterionNodes(net);
 
         std::map<std::wstring, Matrix<ElemType>*>* inputMatrices = new std::map<std::wstring, Matrix<ElemType>*>();
-        for (size_t i = 0; i < FeatureNodes.size(); i++)
+        for (size_t i = 0; i < featureNodes.size(); i++)
         {
-            (*inputMatrices)[FeatureNodes[i]->NodeName()] = &FeatureNodes[i]->FunctionValues();
+            (*inputMatrices)[featureNodes[i]->NodeName()] = &featureNodes[i]->FunctionValues();
         }
 
         for (size_t i = 0; i < labelNodes.size(); i++)
@@ -920,12 +920,12 @@ protected:
         std::vector<ComputationNodePtr> refFeatureNodes;
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
         {
-            refFeatureNodes.resize(FeatureNodes.size());
-            for (size_t i = 0; i < FeatureNodes.size(); i++)
+            refFeatureNodes.resize(featureNodes.size());
+            for (size_t i = 0; i < featureNodes.size(); i++)
             {
                 //we need to keep this info to handle deletion
-                refFeatureNodes[i] = refNet.GetNodeFromName(FeatureNodes[i]->NodeName());
-                refNet.ChangeNode(FeatureNodes[i]->NodeName(), FeatureNodes[i]);
+                refFeatureNodes[i] = refNet.GetNodeFromName(featureNodes[i]->NodeName());
+                refNet.ChangeNode(featureNodes[i]->NodeName(), featureNodes[i]);
             }
 
             refNet.RebuildNetwork(refNode);
@@ -968,7 +968,7 @@ protected:
         }
 
         //precompute mean and invStdDev nodes and save initial model
-        if (PreCompute(net, trainSetDataReader, FeatureNodes, labelNodes, inputMatrices) || startEpoch == 0)
+        if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || startEpoch == 0)
         {
             // Synchronize all ranks before writing the model to ensure that 
             // everyone is done loading the model
@@ -1067,7 +1067,7 @@ protected:
 
                 // return a reasonable learning rate based on the initial minibatchSize
                 ElemType newLearningRatePerSample = SearchForBestLearnRate(net, refNet, refNode, i, learnRatePerSample,
-                                                                           trainSetDataReader, FeatureNodes, labelNodes,
+                                                                           trainSetDataReader, featureNodes, labelNodes,
                                                                            criterionNodes, evaluationNodes, inputMatrices,
                                                                            learnableNodes, smoothedGradients,
                                                                            learnRateInitialized, largestPrevLearnRatePerSample);
@@ -1114,7 +1114,7 @@ protected:
                 chosenMinibatchSize = AdaptiveMinibatchSizing(net, refNet, refNode, i,
                                                               numFramesToUseInSearch,
                                                               trainSetDataReader, learnRatePerSample,
-                                                              m_mbSize[i], FeatureNodes, labelNodes,
+                                                              m_mbSize[i], featureNodes, labelNodes,
                                                               criterionNodes, evaluationNodes,
                                                               inputMatrices, learnableNodes,
                                                               smoothedGradients, learningRateAdjustmentFactor);
@@ -1143,7 +1143,7 @@ protected:
                           trainSetDataReader, 
                           learnRatePerSample, 
                           chosenMinibatchSize, 
-                          FeatureNodes,
+                          featureNodes,
                           labelNodes, 
                           criterionNodes, 
                           evaluationNodes,
@@ -1363,7 +1363,7 @@ protected:
     // return true if precomputation is executed.
     bool PreCompute(ComputationNetwork<ElemType>& net,
                     IDataReader<ElemType>* trainSetDataReader,
-                    std::vector<ComputationNodePtr> & FeatureNodes,
+                    std::vector<ComputationNodePtr> & featureNodes,
                     std::vector<ComputationNodePtr> & labelNodes,
                     std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
     {
@@ -1399,7 +1399,7 @@ protected:
 
         while (trainSetDataReader->GetMinibatch(*inputMatrices))
         {
-            UpdateEvalTimeStamps(FeatureNodes);
+            UpdateEvalTimeStamps(featureNodes);
             UpdateEvalTimeStamps(labelNodes);
 
             size_t actualMBSize = net.GetActualMBSize();
@@ -1429,7 +1429,7 @@ protected:
                                     const ComputationNodePtr refNode, const int epochNumber,
                                     const ElemType curLearnRate,
                                     IDataReader<ElemType>* trainSetDataReader,
-                                    const std::vector<ComputationNodePtr> & FeatureNodes,
+                                    const std::vector<ComputationNodePtr> & featureNodes,
                                     const std::vector<ComputationNodePtr> & labelNodes,
                                     const std::vector<ComputationNodePtr> & criterionNodes,
                                     const std::vector<ComputationNodePtr> & evaluationNodes,
@@ -1480,7 +1480,7 @@ protected:
         // if model is not changed this is what we will get
         TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
                                         numFramesToUseInSearch, trainSetDataReader, 0, m_mbSize[epochNumber],
-                                        FeatureNodes, labelNodes,
+                                        featureNodes, labelNodes,
                                         criterionNodes, evaluationNodes,
                                         inputMatrices, learnableNodes,
                                         smoothedGradients, /*out*/ baseCriterion,
@@ -1509,7 +1509,7 @@ protected:
             learnRatePerSample *= 0.618f;
             TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
                                             numFramesToUseInSearch, trainSetDataReader,
-                                            learnRatePerSample, m_mbSize[epochNumber], FeatureNodes,
+                                            learnRatePerSample, m_mbSize[epochNumber], featureNodes,
                                             labelNodes, criterionNodes,
                                             evaluationNodes, inputMatrices,
                                             learnableNodes, smoothedGradients,
@@ -1530,7 +1530,7 @@ protected:
             TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
                                             numFramesToUseInSearch, trainSetDataReader,
                                             leftLearnRatePerSample, m_mbSize[epochNumber],
-                                            FeatureNodes, labelNodes,
+                                            featureNodes, labelNodes,
                                             criterionNodes, evaluationNodes,
                                             inputMatrices, learnableNodes,
                                             smoothedGradients, /*out*/ leftCriterion,
@@ -1547,7 +1547,7 @@ protected:
                                                     epochNumber, numFramesToUseInSearch,
                                                     trainSetDataReader,
                                                     rightLearnRatePerSample, m_mbSize[epochNumber],
-                                                    FeatureNodes, labelNodes,
+                                                    featureNodes, labelNodes,
                                                     criterionNodes,
                                                     evaluationNodes,
                                                     inputMatrices,
@@ -1566,7 +1566,7 @@ protected:
                                                     epochNumber, numFramesToUseInSearch,
                                                     trainSetDataReader,
                                                     leftLearnRatePerSample, m_mbSize[epochNumber],
-                                                    FeatureNodes, labelNodes,
+                                                    featureNodes, labelNodes,
                                                     criterionNodes,
                                                     evaluationNodes,
                                                     inputMatrices,
@@ -1595,7 +1595,7 @@ protected:
                                          const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
                                          const ElemType learnRatePerSample,
                                          const size_t minibatchSize,
-                                         const std::vector<ComputationNodePtr> & FeatureNodes,
+                                         const std::vector<ComputationNodePtr> & featureNodes,
                                          const std::vector<ComputationNodePtr> & labelNodes,
                                          const std::vector<ComputationNodePtr> & criterionNodes,
                                          const std::vector<ComputationNodePtr> & evaluationNodes,
@@ -1608,7 +1608,7 @@ protected:
                                          std::string prefixMsg = "")
     {
         TrainOneEpoch(net, refNet, refNode, epochNumber, epochSize,
-                      trainSetDataReader, learnRatePerSample, minibatchSize, FeatureNodes,
+                      trainSetDataReader, learnRatePerSample, minibatchSize, featureNodes,
                       labelNodes, criterionNodes, evaluationNodes,
                       inputMatrices, learnableNodes, smoothedGradients,
                       /*out*/ epochCriterion, /*out*/ epochEvalErrors, /*out*/ totalSamplesSeen,
@@ -1656,7 +1656,7 @@ protected:
                                    IDataReader<ElemType>* trainSetDataReader,
                                    const ElemType learnRatePerSample,
                                    const size_t initialMinibatchSize,
-                                   const std::vector<ComputationNodePtr> & FeatureNodes,
+                                   const std::vector<ComputationNodePtr> & featureNodes,
                                    const std::vector<ComputationNodePtr> & labelNodes,
                                    const std::vector<ComputationNodePtr> & criterionNodes,
                                    const std::vector<ComputationNodePtr> & evaluationNodes,
@@ -1729,7 +1729,7 @@ protected:
 
             chosenMinibatchSize = SearchForBestMinibatchSize(net, refNet, refNode, epochNumber,
                                                              numFramesToUseInSearch, trainSetDataReader,
-                                                             learnRatePerSample, FeatureNodes,
+                                                             learnRatePerSample, featureNodes,
                                                              labelNodes, criterionNodes,
                                                              evaluationNodes, inputMatrices,
                                                              learnableNodes, smoothedGradients,
@@ -1758,7 +1758,7 @@ protected:
                                       const size_t numFramesToUseInSearch,
                                       IDataReader<ElemType>* trainSetDataReader,
                                       const ElemType learnRatePerSample,
-                                      const std::vector<ComputationNodePtr> & FeatureNodes,
+                                      const std::vector<ComputationNodePtr> & featureNodes,
                                       const std::vector<ComputationNodePtr> & labelNodes,
                                       const std::vector<ComputationNodePtr> & criterionNodes,
                                       const std::vector<ComputationNodePtr> & evaluationNodes,
@@ -1800,7 +1800,7 @@ protected:
             // minibatches with iteration of this loop.
             TrainOneMiniEpochAndReloadModel(net, refNet, refNode, epochNumber,
                                             numFramesToUseInSearch, trainSetDataReader,
-                                            learnRatePerSample, trialMinibatchSize, FeatureNodes,
+                                            learnRatePerSample, trialMinibatchSize, featureNodes,
                                             labelNodes, criterionNodes,
                                             evaluationNodes, inputMatrices,
                                             learnableNodes, smoothedGradients,
@@ -1853,7 +1853,7 @@ protected:
     // fed to the neural network as features.
     void AttemptUtteranceDerivativeFeatures(ComputationNetwork<ElemType>& net,
                                             IDataReader<ElemType>* trainSetDataReader,
-                                            const std::vector<ComputationNodePtr> & FeatureNodes,
+                                            const std::vector<ComputationNodePtr> & featureNodes,
                                             std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
     {
         // Tries to read an utterance and run forward computation on the
@@ -1866,7 +1866,7 @@ protected:
                                                     sentenceBoundary,
                                                     minibatchPackingFlag))
         {
-            UpdateEvalTimeStamps(FeatureNodes);
+            UpdateEvalTimeStamps(featureNodes);
 
             auto & outputNodes = net.OutputNodes();
             if (outputNodes.size() < 1)
@@ -1914,7 +1914,7 @@ protected:
                          IDataReader<ElemType>* trainSetDataReader,
                          const ElemType learnRatePerSample,
                          size_t tunedMBSize,
-                         const std::vector<ComputationNodePtr> & FeatureNodes,
+                         const std::vector<ComputationNodePtr> & featureNodes,
                          const std::vector<ComputationNodePtr> & labelNodes,
                          const std::vector<ComputationNodePtr> & criterionNodes,
                          const std::vector<ComputationNodePtr> & evaluationNodes,
@@ -1985,7 +1985,7 @@ protected:
             trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, m_epochSize);
         }
 
-        AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
+        AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, featureNodes, inputMatrices);
 
         fprintf(stderr, "\nStarting minibatch loop");
         if (useGradientAggregation)
@@ -2066,7 +2066,7 @@ protected:
                         trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
                     }
 
-                    UpdateEvalTimeStamps(FeatureNodes);
+                    UpdateEvalTimeStamps(featureNodes);
                     UpdateEvalTimeStamps(labelNodes);
 
 #ifndef EVALDLL
@@ -2276,7 +2276,7 @@ protected:
             trainSetDataReader->DataEnd(endDataSentence);
 
             // Tries to set up derivative features for the next utterance.
-            AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, FeatureNodes, inputMatrices);
+            AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, featureNodes, inputMatrices);
 
             profiler.NextSample();
         }
