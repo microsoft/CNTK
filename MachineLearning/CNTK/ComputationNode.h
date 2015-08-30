@@ -283,6 +283,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /*HasName::*/void SetName(const std::wstring & newName) // also for use by ExperimentalNetworkBuilder
         {
             m_nodeName = newName;
+            fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
         }
 
         virtual void SetFunctionAndGradientSize(const int numSamples) 
