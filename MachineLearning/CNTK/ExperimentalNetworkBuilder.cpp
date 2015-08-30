@@ -153,6 +153,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
                 for (auto child : children)
                     workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
             }
+
+            // TODO: what is missing is the dimensions
 #if 1
             wstring args = net->ToString();
             fprintf(stderr, "%ls\n", args.c_str());
