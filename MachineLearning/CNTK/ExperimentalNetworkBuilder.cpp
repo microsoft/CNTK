@@ -44,14 +44,14 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
         L"Mean(z, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = z /* ; tag = tag */ ]\n"
         L"InvStdDev(z, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = z /* ; tag = tag */ ]\n"
         L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = feat:mean:invStdDev /* ; tag = tag */ ]\n"
-        L"Input(dim) = Parameter(dim, 1, needGradient = false, tag = 'feature')   // TODO: for now \n"
+        L"Input(dim, tag='feature') = Parameter(dim, 1, needGradient = false)   // TODO: for now \n"
         L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = features ; first = firstRow ; num = rows /* ; tag = tag */ ]\n"
         L"Delay(in, delay, tag='') = new ComputationNode [ operation = 'Delay' ; input = in ; deltaT = -delay /* ; tag = tag */ ]\n"
         // standard nodes, tested
         // standard nodes, untested
         L"Sigmoid(z, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = z /* ; tag = tag */ ]\n"
         L"Log(z, tag='') = new ComputationNode [ operation = 'Log' ; inputs = z /* ; tag = tag */ ]\n"
-        L"CrossEntropyWithSoftmax(labels, outZ, tag='criterion') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
+        L"CrossEntropyWithSoftmax(labels, outZ, tag='criterion') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = labels:outZ ]\n"
         L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
         ;
 
