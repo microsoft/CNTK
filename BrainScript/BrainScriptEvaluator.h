@@ -113,6 +113,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
         // access as a (const & to) value  --use this for primitive types (also works to get a const wstring & from a String)
         template<typename T> operator T() const { return AsRef<T>(); }
         operator double() const { return AsRef<Double>(); }
+        operator float() const { return (float) AsRef<Double>(); }
         operator bool() const { return AsRef<Bool>(); }
         template<typename INT> INT AsInt() const
         {

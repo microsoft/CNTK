@@ -13,13 +13,14 @@
 //        - pass into new NDLComputationNetwork
 //     - also, any access needs to go up the chain and check for qualified matches there, and take the first
 //       Or is that maybe the sole solution to the filter problem? [ ] + [ ] just computes a merged dict with possibly fully qualified names detected downstream?
-//  - fix the (new) DelayNode problem
 //  - I get stack overflows...? What's wrong with stack usage?? Need to use more references? Or only a problem in Debug?
 //  - a way to access a symbol up from the current scope, needed for function parameters of the same name as dict entries created from them, e.g. the optional 'tag'
 //     - ..X (e.g. ..tag)? Makes semi-sense, but syntactically easy, and hopefully not used too often
 //     - or MACRO.X (e.g. Parameter.tag); latter would require to reference macros by name as a clearly defined mechanism, but hard to implement (ambiguity)
 //  - name lookup should inject TextLocation into error stack
-//  - short-circuit eval of boolean operators
+//  - short-circuit eval of boolean operators   --easy, just evaluate right directly inside the C++ expression
+//  - doc strings for every parameter? E.g. LearnableParameter(rows{"Output dimension"},cols{"Input dimension"}) = new ...
+//     - identifier become more complicated; they become a struct that carries the doc string
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
@@ -35,7 +36,7 @@
 #define let const auto
 #endif
 
-namespace Microsoft { namespace MSR { namespace CNTK { class ComputationNetwork; }}}
+namespace Microsoft { namespace MSR { namespace CNTK { class ComputationNodeObject; class ComputationNetwork; } } }
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
 
@@ -353,7 +354,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     {
         vector<ComputationNodePtr> inputs;
         let inputsArg = config[L"inputs"];
-        if (inputsArg.Is<ComputationNode>())  // single arg
+        if (inputsArg.Is<ComputationNodeObject>())  // single arg
             inputs.push_back(inputsArg);
         else
         {
@@ -371,40 +372,40 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     shared_ptr<Object> MakeRuntimeObject<ComputationNode>(const IConfigRecordPtr configp)
     {
         let & config = *configp;
-        let classIdParam = config[L"class"];
+        let classIdParam = config[L"operation"];
         wstring classId = classIdParam;
         let tagp = config.Find(L"tag");
         wstring tag = tagp ? *tagp : wstring();
         // TODO: factor these GetInputs() calls out
-        if (classId == L"LearnableParameterNode")
+        if (classId == L"LearnableParameter")
             return make_shared<LearnableParameter>(config[L"outDim"], config[L"inDim"], tag);
-        else if (classId == L"PlusNode")
-            return make_shared<PlusNode>(GetInputs(config, 2, L"PlusNode"), tag);
-        else if (classId == L"MinusNode")
-            return make_shared<MinusNode>(GetInputs(config, 2, L"MinusNode"), tag);
-        else if (classId == L"TimesNode")
-            return make_shared<TimesNode>(GetInputs(config, 2, L"TimesNode"), tag);
-        else if (classId == L"DiagTimesNode")
-            return make_shared<DiagTimesNode>(GetInputs(config, 2, L"DiagTimesNode"), tag);
+        else if (classId == L"Plus")
+            return make_shared<PlusNode>(GetInputs(config, 2, L"Plus"), tag);
+        else if (classId == L"Minus")
+            return make_shared<MinusNode>(GetInputs(config, 2, L"Minus"), tag);
+        else if (classId == L"Times")
+            return make_shared<TimesNode>(GetInputs(config, 2, L"Times"), tag);
+        else if (classId == L"DiagTimes")
+            return make_shared<DiagTimesNode>(GetInputs(config, 2, L"DiagTimes"), tag);
         // BUGBUG: ScaleNode is given a BoxOf<Double>, not ComputationNode; need to create a Const first
-        else if (classId == L"ScaleNode")
-            return make_shared<ScaleNode>(GetInputs(config, 2, L"ScaleNode"), tag);
-        else if (classId == L"LogNode")
-            return make_shared<LogNode>(GetInputs(config, 1, L"LogNode"), tag);
-        else if (classId == L"SigmoidNode")
-            return make_shared<SigmoidNode>(GetInputs(config, 1, L"SigmoidNode"), tag);
-        else if (classId == L"MeanNode")
-            return make_shared<MeanNode>(GetInputs(config, 1, L"MeanNode"), tag);
-        else if (classId == L"InvStdDevNode")
-            return make_shared<InvStdDevNode>(GetInputs(config, 1, L"InvStdDevNode"), tag);
-        else if (classId == L"PerDimMeanVarNormalizationNode")
-            return make_shared<PerDimMeanVarNormalizationNode>(GetInputs(config, 3, L"PerDimMeanVarNormalizationNode"), tag);
-        else if (classId == L"RowSliceNode")
-            return make_shared<RowSliceNode>(GetInputs(config, 1, L"RowSliceNode"), (size_t)config[L"first"], (size_t)config[L"num"], tag);
-        else if (classId == L"CrossEntropyWithSoftmaxNode")
-            return make_shared<CrossEntropyWithSoftmaxNode>(GetInputs(config, 2, L"CrossEntropyWithSoftmaxNode"), tag);
-        else if (classId == L"ErrorPredictionNode")
-            return make_shared<ErrorPredictionNode>(GetInputs(config, 2, L"ErrorPredictionNode"), tag);
+        else if (classId == L"Scale")
+            return make_shared<ScaleNode>(GetInputs(config, 2, L"Scale"), tag);
+        else if (classId == L"Log")
+            return make_shared<LogNode>(GetInputs(config, 1, L"Log"), tag);
+        else if (classId == L"Sigmoid")
+            return make_shared<SigmoidNode>(GetInputs(config, 1, L"Sigmoid"), tag);
+        else if (classId == L"Mean")
+            return make_shared<MeanNode>(GetInputs(config, 1, L"Mean"), tag);
+        else if (classId == L"InvStdDev")
+            return make_shared<InvStdDevNode>(GetInputs(config, 1, L"InvStdDev"), tag);
+        else if (classId == L"PerDimMeanVarNormalization")
+            return make_shared<PerDimMeanVarNormalizationNode>(GetInputs(config, 3, L"PerDimMeanVarNormalization"), tag);
+        else if (classId == L"RowSlice")
+            return make_shared<RowSliceNode>(GetInputs(config, 1, L"RowSlice"), (size_t)config[L"first"], (size_t)config[L"num"], tag);
+        else if (classId == L"CrossEntropyWithSoftmax")
+            return make_shared<CrossEntropyWithSoftmaxNode>(GetInputs(config, 2, L"CrossEntropyWithSoftmax"), tag);
+        else if (classId == L"ErrorPrediction")
+            return make_shared<ErrorPredictionNode>(GetInputs(config, 2, L"ErrorPrediction"), tag);
         else
             throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
     }
@@ -420,8 +421,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         let tagp = config.Find(L"tag");
         wstring tag = tagp ? *tagp : wstring();
         // instead of passing the array of input nodes, we pass a lambda that computes this array in the network-gathering path in NDLComputationNetwork
-        if (classId == L"DelayNode")
-            return make_shared<DelayNode>([configp](){ return GetInputs(*configp, 1, L"DelayNode"); }, config[L"deltaT"], tag);
+        if (classId == L"Delay")
+            return make_shared<DelayNode>([configp](){ return GetInputs(*configp, 1, L"Delay"); }, config[L"deltaT"], tag);
         else
             throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
     }
@@ -466,7 +467,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
             for (let & id : config.GetMemberIds())
             {
                 let & value = config[id];
-                if (value.Is<ComputationNode>())
+                if (value.Is<ComputationNodeObject>())
                     workList.push_back((ComputationNodePtr)value);
             }
             // process work list
@@ -564,7 +565,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
             DefineRuntimeType(NDLComputationNetwork),           // currently our fake
             // glue to experimental integration
             //{ L"ExperimentalComputationNetwork", MakeExperimentalComputationNetworkConstructor() },
-            //{ L"ComputationNode", MakeExperimentalComputationNodeConstructor() },
+            //{ L"Computation", MakeExperimentalComputationNodeConstructor() },
         };
 
         // first check our own
@@ -843,25 +844,23 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     // -----------------------------------------------------------------------
 
     // entry for infix-operator lookup table
-    typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)> InfixOp /*const*/;
+    typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, ConfigRecordPtr scope, const wstring & exprPath)> InfixOp /*const*/;
     struct InfixOps
     {
         InfixOp NumbersOp;            // number OP number -> number
         InfixOp StringsOp;            // string OP string -> string
         InfixOp BoolOp;               // bool OP bool -> bool
-        InfixOp ComputeNodeOp;        // ComputeNode OP ComputeNode -> ComputeNode
-        InfixOp NumberComputeNodeOp;  // number OP ComputeNode -> ComputeNode, e.g. 3 * M
-        InfixOp ComputeNodeNumberOp;  // ComputeNode OP Number -> ComputeNode, e.g. M * 3
+        InfixOp ComputeNodeOp;        // one operand is ComputeNode -> ComputeNode
         InfixOp DictOp;               // dict OP dict
-        InfixOps(InfixOp NumbersOp, InfixOp StringsOp, InfixOp BoolOp, InfixOp ComputeNodeOp, InfixOp NumberComputeNodeOp, InfixOp ComputeNodeNumberOp, InfixOp DictOp)
-            : NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), NumberComputeNodeOp(NumberComputeNodeOp), ComputeNodeNumberOp(ComputeNodeNumberOp), DictOp(DictOp) { }
+        InfixOps(InfixOp NumbersOp, InfixOp StringsOp, InfixOp BoolOp, InfixOp ComputeNodeOp, InfixOp DictOp)
+            : NumbersOp(NumbersOp), StringsOp(StringsOp), BoolOp(BoolOp), ComputeNodeOp(ComputeNodeOp), DictOp(DictOp) { }
     };
 
     // functions that implement infix operations
     __declspec(noreturn)
     static void InvalidInfixOpTypes(ExpressionPtr e) { Fail(L"operator " + e->op + L" cannot be applied to these operands", e->location); }
     template<typename T>
-    static ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right, const wstring & exprPath)
+    static ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right, ConfigRecordPtr, const wstring & exprPath)
     {
         if (e->op == L"==")      return MakePrimitiveConfigValuePtr(left == right, e->location, exprPath);
         else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, e->location, exprPath);
@@ -871,7 +870,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, e->location, exprPath);
         else LogicError("unexpected infix op");
     }
-    static ConfigValuePtr NumOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)
+    static ConfigValuePtr NumOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, ConfigRecordPtr scope, const wstring & exprPath)
     {
         let left = leftVal.AsRef<Double>();
         let right = rightVal.AsRef<Double>();
@@ -881,42 +880,50 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         else if (e->op == L"/")  return MakePrimitiveConfigValuePtr(left / right,      e->location, exprPath);
         else if (e->op == L"%")  return MakePrimitiveConfigValuePtr(fmod(left, right), e->location, exprPath);
         else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right),  e->location, exprPath);
-        else return CompOp<double>(e, left, right, exprPath);
+        else return CompOp<double>(e, left, right, scope, exprPath);
     };
-    static ConfigValuePtr StrOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)
+    static ConfigValuePtr StrOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, ConfigRecordPtr scope, const wstring & exprPath)
     {
         let left = leftVal.AsRef<String>();
         let right = rightVal.AsRef<String>();
         if (e->op == L"+")  return ConfigValuePtr(make_shared<String>(left + right), e->location, exprPath);
-        else return CompOp<wstring>(e, left, right, exprPath);
+        else return CompOp<wstring>(e, left, right, scope, exprPath);
     };
-    static ConfigValuePtr BoolOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)
+    static ConfigValuePtr BoolOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, ConfigRecordPtr scope, const wstring & exprPath)
     {
         let left = leftVal.AsRef<Bool>();
-        let right = rightVal.AsRef<Bool>();
-        if (e->op == L"||")       return MakePrimitiveConfigValuePtr(left || right, e->location, exprPath);
-        else if (e->op == L"&&")  return MakePrimitiveConfigValuePtr(left && right, e->location, exprPath);
-        else if (e->op == L"^")   return MakePrimitiveConfigValuePtr(left ^  right, e->location, exprPath);
-        else return CompOp<bool>(e, left, right, exprPath);
+        //let right = rightVal.AsRef<Bool>();   // we do this inline, as to get the same short-circuit semantics as C++ (if rightVal is thunked, it will remain so unless required for this operation)
+        if (e->op == L"||")       return MakePrimitiveConfigValuePtr(left || rightVal.AsRef<Bool>(), e->location, exprPath);
+        else if (e->op == L"&&")  return MakePrimitiveConfigValuePtr(left && rightVal.AsRef<Bool>(), e->location, exprPath);
+        else if (e->op == L"^")   return MakePrimitiveConfigValuePtr(left ^  rightVal.AsRef<Bool>(), e->location, exprPath);
+        else return CompOp<bool>(e, left, rightVal.AsRef<Bool>(), scope, exprPath);
     };
     // NodeOps handle the magic CNTK types, that is, infix operations between ComputeNode objects.
     // TODO: rename to MagicOps
-    static ConfigValuePtr NodeOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const wstring & exprPath)
+    static ConfigValuePtr NodeOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, ConfigRecordPtr scope, const wstring & exprPath)
     {
-        if (rightVal.Is<Double>())          // ComputeNode * scalar
-            swap(leftVal, rightVal);        // -> scalar * ComputeNode
-        wstring classId;
-        if (leftVal.Is<Double>())           // scalar * ComputeNode
+        // special cases/overloads:
+        //  - unary minus -> NegateNode
+        //  - product with a scalar
+        // TODO: test these two (code was updated after originally tested)
+        wstring operationName;
+        if (e->op == L"-(")
         {
-            if (e->op == L"*" || e->op == L"-(") classId = L"ScaleNode";    // "-(" is unary minus, which also calls this function with Double(-1) as leftVal
-            else LogicError("unexpected infix op");
+            if (rightVal.get()) LogicError("unexpected infix op");
+            operationName = L"Negate";
+        }
+        else if (e->op == L"*")
+        {
+            if (rightVal.Is<Double>())          // ComputeNode * scalar
+                swap(leftVal, rightVal);        // -> scalar * ComputeNode
+            if (leftVal.Is<Double>()) operationName = L"Scale";       // scalar * ComputeNode
+            else                      operationName = L"Times";       // ComputeNode * ComputeNode (matrix produt)
         }
         else                                // ComputeNode OP ComputeNode
         {
-            if (e->op == L"+")       classId = L"PlusNode";
-            else if (e->op == L"-")  classId = L"MinusNode";
-            else if (e->op == L"*")  classId = L"TimesNode";
-            else if (e->op == L".*") classId = L"DiagTimesNode";
+            if (e->op == L"+")       operationName = L"Plus";
+            else if (e->op == L"-")  operationName = L"Minus";
+            else if (e->op == L".*") operationName = L"DiagTimes";
             else LogicError("unexpected infix op");
         }
         // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
@@ -925,14 +932,31 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         if (!rtInfo)
             LogicError("unknown magic runtime-object class");
         // form the ConfigRecord
-        auto config = make_shared<ConfigRecord>(nullptr);
+        auto config = make_shared<ConfigRecord>(scope);
         // Note on scope: This config holds the arguments of the XXXNode runtime-object instantiations.
         // When they fetch their parameters, they should only look in this record, not in any parent scope (if they don't find what they are looking for, it's a bug in this routine here).
         // The values themselves are already in ConfigValuePtr form, so we won't need any scope lookups there either.
-        config->Add(L"class", e->location, ConfigValuePtr(make_shared<String>(classId), e->location, exprPath));
+        config->Add(L"operation", e->location, ConfigValuePtr(make_shared<String>(operationName), e->location, exprPath));
         vector<ConfigValuePtr> inputs;
+        if (operationName == L"Scale")
+        {
+            // if we scale, the first operand is a Double, and we must convert that into a 1x1 Constant
+            auto constantConfig = make_shared<ConfigRecord>(config);
+            let leftLocation = leftVal.GetLocation();
+            constantConfig->Add(L"operation", leftLocation, ConfigValuePtr(make_shared<String>(L"Constant"), leftLocation, exprPath));
+            let one = MakePrimitiveConfigValuePtr(1.0, leftVal.GetLocation(), exprPath);
+            constantConfig->Add(L"rows",      leftLocation, one);
+            constantConfig->Add(L"cols",      leftLocation, one);
+            constantConfig->Add(L"value",     leftLocation, leftVal);
+            let value = ConfigValuePtr(rtInfo->construct(constantConfig), e->location, exprPath);
+            let valueWithName = dynamic_cast<HasName*>(value.get());
+            if (valueWithName)
+                valueWithName->SetName(value.GetExpressionName());
+            leftVal = value;            // and that's our actual left value
+        }
         inputs.push_back(leftVal);
-        inputs.push_back(rightVal);
+        if (operationName != L"Negate") // Negate only has one input (rightVal is a nullptr)
+            inputs.push_back(rightVal);
         config->Add(L"inputs", leftVal.GetLocation(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftVal.GetLocation(), exprPath));
         // instantiate
         let value = ConfigValuePtr(rtInfo->construct(config), e->location, exprPath);
@@ -941,29 +965,29 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
             valueWithName->SetName(value.GetExpressionName());
         return value;
     };
-    static ConfigValuePtr BadOp(ExpressionPtr e, ConfigValuePtr, ConfigValuePtr, const wstring &) { InvalidInfixOpTypes(e); };
+    static ConfigValuePtr BadOp(ExpressionPtr e, ConfigValuePtr, ConfigValuePtr, ConfigRecordPtr, const wstring &) { InvalidInfixOpTypes(e); };
 
     // lookup table for infix operators
     // This lists all infix operators with lambdas for evaluating them.
     static map<wstring, InfixOps> infixOps =
     {
         // NumbersOp StringsOp BoolOp ComputeNodeOp DictOp  TODO: this comment is incomplete
-        { L"*",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, NodeOp, NodeOp, BadOp) },
-        { L"/",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
-        { L".*", InfixOps(BadOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
-        { L"**", InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
-        { L"%",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp,  BadOp,  BadOp) },
-        { L"+",  InfixOps(NumOp, StrOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
-        { L"-",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, BadOp,  BadOp,  BadOp) },
-        { L"==", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-        { L"!=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-        { L"<",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-        { L">",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-        { L"<=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-        { L">=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-        { L"&&", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-        { L"||", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) },
-        { L"^",  InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp,  BadOp,  BadOp) }
+        { L"*",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, BadOp) },
+        { L"/",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp) },
+        { L".*", InfixOps(BadOp, BadOp, BadOp,  NodeOp, BadOp) },
+        { L"**", InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp) },
+        { L"%",  InfixOps(NumOp, BadOp, BadOp,  BadOp,  BadOp) },
+        { L"+",  InfixOps(NumOp, StrOp, BadOp,  NodeOp, BadOp) },
+        { L"-",  InfixOps(NumOp, BadOp, BadOp,  NodeOp, BadOp) },
+        { L"==", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
+        { L"!=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
+        { L"<",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
+        { L">",  InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
+        { L"<=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
+        { L">=", InfixOps(NumOp, StrOp, BoolOp, BadOp,  BadOp) },
+        { L"&&", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp) },
+        { L"||", InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp) },
+        { L"^",  InfixOps(BadOp, BadOp, BoolOp, BadOp,  BadOp) }
     };
 
     // -----------------------------------------------------------------------
@@ -1252,9 +1276,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
                 if (argValPtr.Is<Double>())
                     if (e->op == L"+(") return argValPtr;
                     else return MakePrimitiveConfigValuePtr(-(double)argValPtr, e->location, exprPath);
-                else if (argValPtr.Is<ComputationNode>())   // -ComputationNode becomes ScaleNode(-1,arg)
+                else if (argValPtr.Is<ComputationNodeObject>())   // -ComputationNode becomes NegateNode(arg)
                     if (e->op == L"+(") return argValPtr;
-                    else return NodeOp(e, MakePrimitiveConfigValuePtr(-1.0, e->location, exprPath), argValPtr, exprPath);
+                    else return NodeOp(e, argValPtr, ConfigValuePtr(), scope, exprPath);
                 else
                     Fail(L"operator '" + e->op.substr(0, 1) + L"' cannot be applied to this operand (which has type " + msra::strfun::utf16(argValPtr.TypeName()) + L")", e->location);
             }
@@ -1275,18 +1299,18 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
                 let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"[" + e->op + L"](left)");
                 let rightValPtr = Evaluate(rightArg, scope, exprPath, L"[" + e->op + L"](right)");
                 if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
-                    return functions.NumbersOp(e, leftValPtr, rightValPtr, exprPath);
+                    return functions.NumbersOp(e, leftValPtr, rightValPtr, scope, exprPath);
                 else if (leftValPtr.Is<String>() && rightValPtr.Is<String>())
-                    return functions.StringsOp(e, leftValPtr, rightValPtr, exprPath);
+                    return functions.StringsOp(e, leftValPtr, rightValPtr, scope, exprPath);
                 else if (leftValPtr.Is<Bool>() && rightValPtr.Is<Bool>())
-                    return functions.BoolOp(e, leftValPtr, rightValPtr, exprPath);
+                    return functions.BoolOp(e, leftValPtr, rightValPtr, scope, exprPath);
                 // ComputationNode is "magic" in that we map *, +, and - to know classes of fixed names.
-                else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<ComputationNode>())
-                    return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, exprPath);
-                else if (leftValPtr.Is<ComputationNode>() && rightValPtr.Is<Double>())
-                    return functions.ComputeNodeNumberOp(e, leftValPtr, rightValPtr, exprPath);
-                else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNode>())
-                    return functions.NumberComputeNodeOp(e, leftValPtr, rightValPtr, exprPath);
+                else if (leftValPtr.Is<ComputationNodeObject>() && rightValPtr.Is<ComputationNodeObject>())
+                    return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, scope, exprPath);
+                else if (leftValPtr.Is<ComputationNodeObject>() && rightValPtr.Is<Double>())
+                    return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, scope, exprPath);
+                else if (leftValPtr.Is<Double>() && rightValPtr.Is<ComputationNodeObject>())
+                    return functions.ComputeNodeOp(e, leftValPtr, rightValPtr, scope, exprPath);
                 // TODO: DictOp  --maybe not; maybedo this in ModelMerger class instead
                 else
                     InvalidInfixOpTypes(e);

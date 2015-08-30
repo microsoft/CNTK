@@ -44,17 +44,17 @@
     <ClCompile Include="ExperimentalNetworkBuilder.cpp">
       <Filter>Experimental</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\BrainScript\BrainScriptEvaluator.cpp">
-      <Filter>BrainScript</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\BrainScript\BrainScriptParser.cpp">
-      <Filter>BrainScript</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\BrainScript\BrainScriptTest.cpp">
-      <Filter>BrainScript</Filter>
-    </ClCompile>
     <ClCompile Include="Profiler.cpp">
       <Filter>GPU Interfacing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\BrainScript\BrainScriptEvaluator.cpp">
+      <Filter>Experimental</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\BrainScript\BrainScriptParser.cpp">
+      <Filter>Experimental</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\BrainScript\BrainScriptTest.cpp">
+      <Filter>Experimental</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -178,15 +178,6 @@
     <ClInclude Include="ExperimentalNetworkBuilder.h">
       <Filter>Experimental</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\BrainScript\BrainScriptEvaluator.h">
-      <Filter>BrainScript</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\BrainScript\BrainScriptObjects.h">
-      <Filter>BrainScript</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\BrainScript\BrainScriptParser.h">
-      <Filter>BrainScript</Filter>
-    </ClInclude>
     <ClInclude Include="AllReduceDistGradAggregator.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
@@ -205,6 +196,15 @@
     <ClInclude Include="MatrixPool.h">
       <Filter>Evaluation</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\BrainScript\BrainScriptEvaluator.h">
+      <Filter>Experimental</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\BrainScript\BrainScriptObjects.h">
+      <Filter>Experimental</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\BrainScript\BrainScriptParser.h">
+      <Filter>Experimental</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">
@@ -217,7 +217,7 @@
       <Filter>Misc</Filter>
     </Text>
     <Text Include="..\..\BrainScript\Notes.txt">
-      <Filter>BrainScript</Filter>
+      <Filter>Experimental</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>
@@ -245,9 +245,6 @@
     <Filter Include="Experimental">
       <UniqueIdentifier>{fe2443a1-6323-449f-96be-cbd0f608f382}</UniqueIdentifier>
     </Filter>
-    <Filter Include="BrainScript">
-      <UniqueIdentifier>{5d5faa3b-1374-449b-85cd-9022bd015de6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Parallelization">
       <UniqueIdentifier>{8531d7fb-a673-491a-988a-012c92fafbfd}</UniqueIdentifier>
     </Filter>
@@ -263,7 +260,7 @@
       <Filter>Experimental</Filter>
     </None>
     <None Include="..\..\BrainScript\test.config">
-      <Filter>BrainScript</Filter>
+      <Filter>Experimental</Filter>
     </None>
   </ItemGroup>
 </Project>

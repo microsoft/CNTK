@@ -582,7 +582,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 1)
                 InvalidArgument("ScaleNode operation only takes two inputs.");
 
-            //left Node must be a scalar
+            //left Node must be a scalar Constant
             if (inputIndex == 0)  //left derivative
             {
                 ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());

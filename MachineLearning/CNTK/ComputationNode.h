@@ -83,8 +83,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // ComputationNode -- abstract base class for all computation nodes
     // =======================================================================
 
+    // TODO: number of inputs should be a template parameter! SIZE_MAX for those that take variable numvber
+
     template<class ElemType>
-    class ComputationNode : public BS::Object, public BS::HasName, public std::enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
+    class ComputationNode : public BS::ComputationNodeObject, public BS::HasName, public std::enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
     {
         // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
     protected:
@@ -98,10 +100,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         // TODO: this should be protected and only accessible to the New method; maybe just move it in here?
         // TODO: Once we switch to VS 2015, we shall use inheriting constructors, i.e. we can delete all those redundant constructor forwards in each ComputationNode derivate
+        // TODO: verify that we initialize all members (e.g. m_needGradient was missing before)
         ComputationNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            m_deviceId(deviceId),
             m_functionValues(deviceId),
             m_gradientValues(deviceId),
-            m_deviceId(deviceId),
+            m_needGradient(false),
             m_loopId(-1),
             m_samplesInRecurrentStep(1),
             m_visitedOrder(-1),
@@ -148,7 +152,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return p->shared_from_this();
         }
 
+        // TODO: OperationName calls static TypeName which does not match the actual type names in that the 'Node' is missing.
         virtual const std::wstring OperationName() const = 0;
+
         virtual void SaveToFile(File& fstream) const
         {
             fstream << OperationName() << NodeName();
@@ -156,6 +162,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/)
         {
+            // it is assumed that OperationName and NodeName have already been consumed--some asymmetry between Save and Load
             // base class has nothing to load
         }
 
@@ -1217,6 +1224,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define UsingComputationNodeMembers    \
 protected:  \
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  \
+        /* TODO: move NewThis() here  */ \
 public: \
     using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; \
     using Base::ComputeGradientForChildren; using Base::ComputeInputPartial; using Base::ConstOnes; using Base::InferImageDimsFromInput; \
