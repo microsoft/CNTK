@@ -82,6 +82,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static inline void Warning(const string & message) { Warning("%s", message.c_str()); }
 
     // ----------------------------------------------------------------------------
+    // random collection of stuff we needed at some place
+    // ----------------------------------------------------------------------------
+
+    // TODO: maybe change to type id of an actual thing we pass in
+    // TODO: is this header appropriate?
+    template<class C> static wstring TypeId() { return msra::strfun::utf16(typeid(C).name()); }
+
+    // ----------------------------------------------------------------------------
     // dynamic loading of modules  --TODO: not Basics, should move to its own header
     // ----------------------------------------------------------------------------
 
@@ -91,7 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         HMODULE m_hModule;      // module handle for the writer DLL
         std::wstring m_dllName; // name of the writer DLL
     public:
-        Plugin() { m_hModule = NULL; }
+        Plugin() : m_hModule(NULL) { }
         template<class STRING>  // accepts char (UTF-8) and wide string 
         FARPROC Load(const STRING & plugin, const std::string & proc)
         {
@@ -99,13 +107,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_dllName += L".dll";
             m_hModule = LoadLibrary(m_dllName.c_str());
             if (m_hModule == NULL)
-                Microsoft::MSR::CNTK::RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName).c_str());
-
+                RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName).c_str());
             // create a variable of each type just to call the proper templated version
             return GetProcAddress(m_hModule, proc.c_str());
         }
         ~Plugin(){}
-        // removed because this causes the exception messages to be lost  (exception vftables are unloaded when DLL is unloaded) 
+        // we do not unload because this causes the exception messages to be lost (exception vftables are unloaded when DLL is unloaded) 
         // ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
     };
 #else
@@ -114,11 +121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         void *handle;
     public:
-        Plugin()
-        {
-            handle = NULL;
-        }
-
+        Plugin() : handle (NULL) { }
         template<class STRING>  // accepts char (UTF-8) and wide string 
         void * Load(const STRING & plugin, const std::string & proc)
         {
@@ -129,11 +132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("Plugin not found: %s", soName.c_str());
             return dlsym(handle, proc.c_str());
         }
-
-        ~Plugin() {
-            if (handle != NULL)
-                dlclose(handle);
-        }
+        ~Plugin() { if (handle != NULL) dlclose(handle); }
     };
 #endif
 

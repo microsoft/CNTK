@@ -36,13 +36,14 @@
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
 #include "BrainScriptObjects.h"
+#include "BrainScriptEvaluator.h"   // TODO: move (I)ConfigRecord to BrainScriptConfig that only has the config-related stuff (ConfigValuePtr and IConfigRecord, possibly need to do the same for Array and Lambda)
 
 #include "MatrixPool.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>
-class ComputationNetwork
+class ComputationNetwork : public BS::Object, public BS::HasToString, public BS::IConfigRecord
 {
 protected:
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
@@ -367,8 +368,8 @@ public:
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
         for (auto x : m_outputNodes)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-                    for (auto x : m_pairNodes)
-                        line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
+        for (auto x : m_pairNodes)
+            line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
         for (auto x : m_evalNodes)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 
@@ -552,15 +553,15 @@ private:
         }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
 
-                    if (m_pairNodes.size() > 0)
-                    {
-                        fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes");
+        if (m_pairNodes.size() > 0)
+        {
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes");
 
-                        fstream << m_pairNodes.size();
-                        for (size_t i = 0; i < m_pairNodes.size(); i++)
-                            fstream << m_pairNodes[i]->NodeName();
-                        fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
-                    }
+            fstream << m_pairNodes.size();
+            for (size_t i = 0; i < m_pairNodes.size(); i++)
+                fstream << m_pairNodes[i]->NodeName();
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
+        }
 
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
@@ -791,16 +792,16 @@ public:
             }
             fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
 
-                        if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes"))
-                        {
-                            fstream >> num;
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes"))
+            {
+                fstream >> num;
                 for (size_t i = 0; i < num; i++)
-                            {
-                                fstream >> nodeName;
-                                m_pairNodes.push_back(GetNodeFromName(nodeName));
-                            }
-                            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
-                        }
+                {
+                    fstream >> nodeName;
+                    m_pairNodes.push_back(GetNodeFromName(nodeName));
+                }
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
+            }
         }
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
@@ -3434,6 +3435,40 @@ protected:
 
         }
         return orderMap[key];
+    }
+
+public:
+
+    // -----------------------------------------------------------------------
+    // BS integration
+    // -----------------------------------------------------------------------
+
+    // create a somewhat readable representation, aimed at diagnostics/debugging
+    wstring /*HasToString::*/ToString() const
+    {
+        wstring args;
+        for (auto & iter : m_nameToNodeMap)
+        {
+            const auto node = iter.second;
+            if (!args.empty())
+                args.append(L"\n");
+            args.append(node->ToString());
+        }
+        return TypeId<decltype(*this)>() + L" " + NestString(args, L'[', true, ']');
+    }
+
+    // pretending to be a ConfigRecord. TODO: implement this when we actually need it (when we get to MEL)
+    const BS::ConfigValuePtr & /*IConfigRecord::*/operator()(const wstring & id, wstring message) const   // e.g. confRec(L"message", helpString)
+    {
+        id; message; RuntimeError("unknown class parameter");    // (for now)
+    }
+    const BS::ConfigValuePtr * /*IConfigRecord::*/Find(const wstring & id) const         // returns nullptr if not found
+    {
+        id; return nullptr; // (for now)
+    }
+    vector<wstring> /*IConfigRecord::*/GetMemberIds() const
+    {
+        return vector<wstring>();
     }
 
 protected:

@@ -51,7 +51,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     // string formatting
     // =======================================================================
 
-    wstring IndentString(wstring s, size_t indent)
+    wstring HasToString::IndentString(wstring s, size_t indent)
     {
         const wstring prefix(indent, L' ');
         size_t pos = 0;
@@ -64,7 +64,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
             pos++;
         }
     }
-    wstring NestString(wstring s, wchar_t open, bool newline, wchar_t close)
+    wstring HasToString::NestString(wstring s, wchar_t open, bool newline, wchar_t close)
     {
         wstring result = IndentString(s, 2);
         if (newline)        // have a new line after the open symbol
@@ -97,7 +97,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
             else
                 return wstrprintf((L"%" + how + L"f").c_str(), val);
         }
-        else if (arg.Is<ConfigRecord>())
+        else if (arg.Is<ConfigRecord>())            // TODO: should have its own ToString() method
         {
             let record = arg.AsPtr<ConfigRecord>();
             let memberIds = record->GetMemberIds(); // TODO: test this after change to ids
@@ -113,9 +113,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
                 result.append(L" = ");
                 result.append(FormatConfigValue((*record)[id], how));
             }
-            return NestString(result, L'[', true, L']');
+            return HasToString::NestString(result, L'[', true, L']');
         }
-        else if (arg.Is<ConfigArray>())
+        else if (arg.Is<ConfigArray>())             // TODO: should have its own ToString() method
         {
             let arr = arg.AsPtr<ConfigArray>();
             wstring result;
@@ -126,7 +126,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
                     result.append(L"\n");
                 result.append(FormatConfigValue(arr->At(i, TextLocation()), how));
             }
-            return NestString(result, L'(', false, L')');
+            return HasToString::NestString(result, L'(', false, L')');
         }
         else if (arg.Is<HasToString>())
             return arg.AsRef<HasToString>().ToString();
@@ -958,6 +958,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         if (operationName != L"Negate") // Negate only has one input (rightVal is a nullptr)
             inputs.push_back(rightVal);
         config->Add(L"inputs", leftVal.GetLocation(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftVal.GetLocation(), exprPath));
+        config->Add(L"tag", leftVal.GetLocation(), ConfigValuePtr(make_shared<String>(), leftVal.GetLocation(), exprPath)); // infix nodes have no tag
         // instantiate
         let value = ConfigValuePtr(rtInfo->construct(config), e->location, exprPath);
         let valueWithName = dynamic_cast<HasName*>(value.get());
@@ -1023,6 +1024,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     //  - this is meant to be able to give ComputationNodes a name for later lookup that behaves the same as looking up an object directly
     //  - not all nodes get their own path, in particular nodes with only one child, e.g. "-x", that would not be useful to address
     // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
+    // TODO: change ConfigRecordPtr to IConfigRecordPtr if possible, throughout
     static ConfigValuePtr Evaluate(ExpressionPtr e, ConfigRecordPtr scope, wstring exprPath, const wstring & exprId)
     {
         try // catch clause for this will catch error, inject this tree node's TextLocation, and rethrow

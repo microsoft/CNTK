@@ -86,7 +86,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: number of inputs should be a template parameter! SIZE_MAX for those that take variable numvber
 
     template<class ElemType>
-    class ComputationNode : public BS::ComputationNodeObject, public BS::HasName, public std::enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
+    class ComputationNode : public BS::ComputationNodeObject, public BS::WithTag, public BS::HasName, public BS::HasToString, public std::enable_shared_from_this<ComputationNode<ElemType>> //Abstract Class that cannot be instantiated
     {
         // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
     protected:
@@ -274,7 +274,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         args.append(L"\n");
                     args.append(/*TidyName*/(child->NodeName()));
                 }
-                result += L" "    + (L"(" + args + L")");// NestString(args, L'(', true, ')');    // TODO: move NestStrings to Basics?
+                result += L" " + NestString(args, L'(', true, ')');
             }
             return result;
         }
