@@ -717,8 +717,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
     // -----------------------------------------------------------------------
 
     __declspec(noreturn) static void Fail(const wstring & msg, TextLocation where) { throw EvaluationError(msg, where); }
-    __declspec(noreturn) static void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type " + what, e->location); }
-    __declspec(noreturn) static void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown identifier " + id, where); }
+    __declspec(noreturn) static void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type '" + what + L"'", e->location); }
+    __declspec(noreturn) static void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown identifier '" + id + L"'", where); }
 
     // -----------------------------------------------------------------------
     // access to ConfigValuePtr content with error messages
@@ -1093,7 +1093,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
                     for (size_t i = 0; i < args.size(); i++)    // positional arguments
                     {
                         let argName = argList[i];       // parameter name
-                        if (argName->op != L"id") LogicError("function parameter list must consist of identifiers");
+                        if (argName->op != L"id")
+                            LogicError("function parameter list must consist of identifiers");
                         auto argVal = move(args[i]);         // value of the parameter
                         argScope->Add(argName->id, argName->location, move(argVal));
                         // note: these are expressions for the parameter values; so they must be evaluated in the current scope
@@ -1119,7 +1120,8 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
                 let & argList = argListExpr->args;
                 for (let arg : argList)
                 {
-                    if (arg->op != L"id") LogicError("function parameter list must consist of identifiers");
+                    if (arg->op != L"id")
+                        LogicError("function parameter list must consist of identifiers");
                     paramNames.push_back(arg->id);
                 }
                 // named args
@@ -1146,7 +1148,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
                 // Like in an [] expression, we do not evaluate at this point, but pass in a lambda to compute on-demand.
                 let args = argsExpr->args;
                 if (args.size() != lambda->GetNumParams())
-                    Fail(L"function parameter list must consist of identifiers", argsExpr->location);
+                    Fail(wstrprintf(L"function expects %d parameters, %d were provided", (int)lambda->GetNumParams(), (int)args.size()), argsExpr->location);
                 vector<ConfigValuePtr> argVals(args.size());
                 for (size_t i = 0; i < args.size(); i++)    // positional arguments
                 {
