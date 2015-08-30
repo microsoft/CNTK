@@ -787,7 +787,7 @@ public:
     // nodeGroup - group vector to add to
     // compNode - computation node to add
     // TODO: It seems that this is also applied to other tyoes of nodes, so the name of this function is wrong.
-    void SetOutputNode(std::vector<ComputationNodePtr> & nodeGroup, ComputationNodePtr compNode)
+    static void SetOutputNode(std::vector<ComputationNodePtr> & nodeGroup, ComputationNodePtr compNode)
     {
         for (ComputationNodePtr node : nodeGroup)
         {

@@ -39,16 +39,19 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
         ;
 
     wstring computationNodes =      // BUGBUG: optional args not working yet, some scope problem causing a circular reference
+        L"Parameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValueor|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
+        // ^^ already works; vv not yet working
         L"Mean(z, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = z /* ; tag = tag */ ]\n"
         L"InvStdDev(z, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = z /* ; tag = tag */ ]\n"
         L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = feat:mean:invStdDev /* ; tag = tag */ ]\n"
-        L"Parameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValueor|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
-        L"Input(dim) = Parameter(dim, 1, needGradient = false, tag = 'features')   // TODO: for now \n"
+        L"Input(dim) = Parameter(dim, 1, needGradient = false, tag = 'feature')   // TODO: for now \n"
         L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = features ; first = firstRow ; num = rows /* ; tag = tag */ ]\n"
         L"Delay(in, delay, tag='') = new ComputationNode [ operation = 'Delay' ; input = in ; deltaT = -delay /* ; tag = tag */ ]\n"
+        // standard nodes, tested
+        // standard nodes, untested
         L"Sigmoid(z, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = z /* ; tag = tag */ ]\n"
         L"Log(z, tag='') = new ComputationNode [ operation = 'Log' ; inputs = z /* ; tag = tag */ ]\n"
-        L"CrossEntropyWithSoftmax(labels, outZ, tag='') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
+        L"CrossEntropyWithSoftmax(labels, outZ, tag='criterion') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
         L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
         ;
 
@@ -89,7 +92,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
             let & config = *configp;
 
             DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
-            auto net = make_shared<BoxOf<ComputationNetwork<ElemType>>>(deviceId);
+            auto net = make_shared<ComputationNetwork<ElemType>>(deviceId);
 
             auto & m_nameToNodeMap = net->GetNameToNodeMap();
 
@@ -106,69 +109,54 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
             }
             // process work list
             // Also call FinalizeInit where we must.
-            set<ComputationNodePtr> inputs;         // all input nodes
-            set<ComputationNodePtr> outputs;        // all output nodes
-            set<ComputationNodePtr> parameters;     // all parameter nodes
-            set<ComputationNodePtr> allChildren;    // all nodes that are children of others (those that are not are output nodes)
             while (!workList.empty())
             {
-                let n = workList.front();
+                let node = workList.front();
                 workList.pop_front();
+
                 // add to set
-                let res = m_nameToNodeMap.insert(make_pair(n->NodeName(), n));
+                let res = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
                 if (!res.second)        // not inserted: we already got this one
-                    if (res.first->second == n)
+                    if (res.first->second == node)
                         continue;       // the same
                     else                // oops, a different node with the same name
-                        LogicError("NDLComputationNetwork: multiple nodes with the same NodeName()");
+                        LogicError("ComputationNetwork: multiple nodes with the same NodeName() '%ls'", node->NodeName().c_str());
+
                 // If node derives from MustFinalizeInit() then it has unresolved inputs. Resolve them now.
                 // This may generate a whole new load of nodes, including nodes which in turn have late init.
                 // TODO: think this through whether it may generate circular references nevertheless
-                let mustFinalizeInit = dynamic_pointer_cast<MustFinalizeInit>(n);
+                let mustFinalizeInit = dynamic_pointer_cast<MustFinalizeInit>(node);
                 if (mustFinalizeInit)
                     mustFinalizeInit->FinalizeInit();
-                // TODO: ...can we do stuff like propagating dimensions here? Or still too early?
-                // traverse children: append them to the end of the work list
-                let children = n->GetChildren();
-                for (auto c : children)
+
+                // add it to the respective node group based on the tag
+                let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
+                if (nodeWithTag)
                 {
-                    workList.push_back(c);  // (we could check whether c is in 'nodes' here to optimize, but this way it is cleaner)
-                    allChildren.insert(c);  // also keep track of all children, for computing the 'outputs' set below
+                    wstring tag = nodeWithTag->GetTag();
+                    if (tag == L"feature")                              net->FeatureNodes().push_back(node);
+                    else if (tag == L"label")                           net->LabelNodes().push_back(node);
+                    else if (tag == L"criterion" || tag == L"criteria") net->FinalCriterionNodes().push_back(node); // 'criteria' is wrong (plural); we keep it for compat
+                    else if (!_wcsnicmp(tag.c_str(), L"eval", 4))       net->EvaluationNodes().push_back(node);     // eval*
+                    else if (tag == L"output")                          net->OutputNodes().push_back(node);
+                    else if (tag == L"pair")                            net->PairNodes().push_back(node);           // TODO: I made this up; the original code in SynchronousExecutionEngine did not have this
+                    else if (tag == L"multiseq")                        net->NodesReqMultiSeqHandling().push_back(node);
+                    else if (!tag.empty())
+                        RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
+                    // TODO: are there nodes without tag? Where do they go?
                 }
+
+                // TODO: ...can we do stuff like propagating dimensions here? Or still too early?
+
+                // traverse children: append them to the end of the work list
+                let children = node->GetChildren();
+                for (auto child : children)
+                    workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
             }
-            // build sets of special nodes
-            // TODO: figure out the rule. This is somehow based on the tags.
-            for (auto iter : m_nameToNodeMap)
-            {
-                let n = iter.second;
-                //if (n->GetChildren().empty())
-                //{
-                //    if (dynamic_pointer_cast<InputValue>(n))
-                //        inputs.insert(n);
-                //    else if (dynamic_pointer_cast<LearnableParameter>(n))
-                //        parameters.insert(n);
-                //    else
-                //        LogicError("ComputationNetwork: found child-less node that is neither InputValue nor LearnableParameter");
-                //}
-                if (allChildren.find(n) == allChildren.end())
-                    outputs.insert(n);
-            }
-            ///*HasToString::*/ wstring ToString() const
-            //{
-            wstring args;
-            bool first = true;
-            for (auto & iter : m_nameToNodeMap)
-            {
-                let node = iter.second;
-                if (first)
-                    first = false;
-                else
-                    args.append(L"\n");
-                args.append(node->ToString());
-            }
-            fprintf(stderr, "ExperimentalComputationNetwork = [\n%ls\n]\n", NestString(args, L'[', true, ']').c_str());
-            //return L"NDLComputationNetwork " + NestString(args, L'[', true, ']');
-            //}
+#if 1
+            wstring args = net->ToString();
+            fprintf(stderr, "%ls\n", args.c_str());
+#endif
             return net;
         }
 
@@ -226,12 +214,13 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
             // note on optional parameters
             // Instead of defining optional parameters here in code, they are defined as optional args to the creating macro.
 
+            ComputationNodePtr node;
             // first group: nodes without inputs
             if (operationName == L"LearnableParameter")
             {
                 // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
                 // TODO: do we need a default value mechanism? How to make sure it does not pop upwards? Current functions do not allow overloads.
-                auto node = New<LearnableParameter<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"]);
+                node = New<LearnableParameter<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"]);
                 node->NeedGradient() = config[L"needGradient"];
                 static int randomSeed = 1;
                 wstring initString = config[L"init"];
@@ -248,17 +237,21 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
                 }
                 else
                     RuntimeError("init must be one of the values of [uniform|gaussian|fixedValue|fromFile]");
-                return node;
             }
             else        // nodes with inputs
             {
                 let inputs = GetInputs(config);
                 // second group: nodes with special initializers
                 // third group: 
-                auto node = ComputationNetwork<ElemType>::NewStandardNode(operationName, deviceId, nodeName);
-                node->AttachInputs(inputs); // TODO: where to check the number of inputs?
-                return node;
+                node = ComputationNetwork<ElemType>::NewStandardNode(operationName, deviceId, nodeName);
+                node->AttachInputs(inputs); // TODO: where to check the number of inputs? Should be a template parameter to ComputationNode!
             }
+            // add a tag
+            let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
+            if (nodeWithTag)
+                nodeWithTag->SetTag(config[L"tag"]);
+            // and done
+            return node;
         }
 
         // -------------------------------------------------------------------
@@ -276,9 +269,9 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {   // new c
     static ConfigurableRuntimeType MakeRuntimeTypeConstructorDualPrecision()
     {
         ConfigurableRuntimeType rtInfo;
-        rtInfo.construct = [](const IConfigRecordPtr config)    // lambda to construct--this lambda can construct both the <float> and the <double> variant based on config parameter 'precision'
+        rtInfo.construct = [](const IConfigRecordPtr config)        // lambda to construct--this lambda can construct both the <float> and the <double> variant based on config parameter 'precision'
         {
-            wstring precision = (*config)[L"precision"];           // dispatch on ElemType
+            wstring precision = (*config)[L"precision"];            // dispatch on ElemType
             if (precision == L"float")
                 return DualPrecisionHelpers<float>::MakeRuntimeObject<Cfloat>(config);
             else if (precision == L"double")
@@ -325,7 +318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // helper that returns 'float' or 'double' depending on ElemType
     template<typename ElemType> static const wchar_t * ElemTypeName();
-    template<> static const wchar_t * ElemTypeName<float>() { return L"float"; }
+    template<> static const wchar_t * ElemTypeName<float>()  { return L"float"; }
     template<> static const wchar_t * ElemTypeName<double>() { return L"double"; }
 
     // build a ComputationNetwork from BrainScript source code

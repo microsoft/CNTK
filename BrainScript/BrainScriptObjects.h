@@ -87,12 +87,27 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS { // or BS::
     // FormatConfigValue() will then return ToString().
     // -----------------------------------------------------------------------
 
-    struct HasToString { virtual wstring ToString() const = 0; };
+    struct HasToString
+    {
+        virtual wstring ToString() const = 0;
 
-    // some useful string helpers
-    wstring IndentString(wstring s, size_t indent);
-    wstring NestString(wstring s, wchar_t open, bool newline, wchar_t close);
-    template<class C> static wstring TypeId() { return msra::strfun::utf16(typeid(C).name()); }
+        // some string helpers useful for ToString() operations of nested structures
+        static wstring IndentString(wstring s, size_t indent);
+        static wstring NestString(wstring s, wchar_t open, bool newline, wchar_t close);
+    };
+
+    // -----------------------------------------------------------------------
+    // WithTag -- trait to give an object a tag string
+    // -----------------------------------------------------------------------
+
+    class WithTag
+    {
+        wstring m_tag;
+    public:
+        WithTag(){}
+        void SetTag(const wstring & tag) { m_tag = tag; }
+        const wstring & GetTag() const { return m_tag; }
+    };
 
     // TODO: where does this belong? We need to define the minimal interface to runtime types. (They will still need the type casts eventually.)
     // helper for configurableRuntimeTypes initializer below
