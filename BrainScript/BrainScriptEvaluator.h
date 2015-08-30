@@ -7,10 +7,11 @@
 #include "BrainScriptObjects.h"
 #include <memory>   // for shared_ptr
 
-namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
+namespace Microsoft { namespace MSR { namespace BS {
 
     using namespace std;
     using namespace msra::strfun;   // for wstrprintf()
+    using namespace Microsoft::MSR::CNTK;
 
     // error object
 
@@ -94,7 +95,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
         void operator=(const ConfigValuePtr & other)
         {
             if (other.GetThunk())       // unresolved ConfigValuePtrs are not copyable, only movable
-                LogicError("ConfigValuePtr::operator=() on unresolved object; ConfigValuePtr is not assignable until resolved");
+                Microsoft::MSR::CNTK::LogicError("ConfigValuePtr::operator=() on unresolved object; ConfigValuePtr is not assignable until resolved");
             (shared_ptr<Object>&)*this = other;
             location = other.location;
             expressionName = other.expressionName;
@@ -184,7 +185,7 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
         void EnsureIsResolved() const
         {
             if (GetThunk())
-                LogicError("ConfigValuePtr: unexpected access to unresolved object; ConfigValuePtrs can only be accessed after resolution");
+                Microsoft::MSR::CNTK::LogicError("ConfigValuePtr: unexpected access to unresolved object; ConfigValuePtrs can only be accessed after resolution");
         }
     };  // ConfigValuePtr
 
@@ -372,4 +373,4 @@ namespace Microsoft{ namespace MSR { namespace CNTK { namespace BS {
     // some simple tests
     void SomeTests();
 
-}}}} // end namespaces
+}}} // end namespaces

@@ -38,10 +38,11 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK { class ComputationNodeObject; class ComputationNetwork; } } }
 
-namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
+namespace Microsoft { namespace MSR { namespace BS {
 
     using namespace std;
     using namespace msra::strfun;
+    using namespace Microsoft::MSR::CNTK;
 
     bool trace = false;// true;      // enable to get debug output
 
@@ -1357,4 +1358,4 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS {
         return /*Evaluator().*/EvaluateParse(e);
     }
 
-}}}}     // namespaces
+}}}     // namespaces

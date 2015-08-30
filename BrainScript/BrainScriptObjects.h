@@ -5,7 +5,7 @@
 #include <memory>       // for shared_ptr<>
 #include <functional>   // for function<>
 
-namespace Microsoft { namespace MSR { namespace CNTK { namespace BS { // or BS::Config? or MSR::BS?
+namespace Microsoft { namespace MSR { namespace BS {
 
     using namespace std;
 
@@ -121,4 +121,4 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace BS { // or BS::
         // TODO: we should pass the expression name to construct() as well
     };
 
-}}}} // end namespaces
+}}} // end namespaces
