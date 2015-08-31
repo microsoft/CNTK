@@ -216,7 +216,7 @@ namespace CNTKMathTest
                     Assert::AreEqual<float>(0,C(i,j));
             }
             
-            //void SetDiagonalValue(Matrix<ElemType>& vector);
+            //void SetDiagonalValue(const Matrix<ElemType>& vector);
             SingleMatrix D(4,1,AUTOPLACEMATRIX);
             float val1=43.324;
             D.SetValue(val1);

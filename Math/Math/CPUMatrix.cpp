@@ -880,7 +880,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void CPUMatrix<ElemType>::SetDiagonalValue(CPUMatrix<ElemType>& vector)
+    void CPUMatrix<ElemType>::SetDiagonalValue(const CPUMatrix<ElemType>& vector)
     {
         if (IsEmpty() || vector.IsEmpty())
             throw std::logic_error("SetDiagonalValue: Matrix is empty.");

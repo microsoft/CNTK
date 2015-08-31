@@ -529,7 +529,7 @@ namespace Microsoft {
 
             template<class ElemType> void GPUMatrix<ElemType>::SetDiagonalValue(const ElemType v) { }
 
-            template<class ElemType> void GPUMatrix<ElemType>::SetDiagonalValue(GPUMatrix<ElemType>& vector) { }
+            template<class ElemType> void GPUMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector) { }
 
             template<class ElemType> void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed) { }
 

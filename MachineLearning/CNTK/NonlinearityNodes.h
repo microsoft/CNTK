@@ -1669,9 +1669,13 @@ private:
         }
 
         static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
-        {
+		{
+			Matrix<ElemType> diag(gradientValues.GetNumRows(), gradientValues.GetNumCols(), gradientValues.GetDeviceId());			
+			diag = gradientValues;
+			diag.Resize(gradientValues.GetNumCols(), 1);
+
             inputGradientValues.SetValue(0);
-            gradientValues.AssignDiagonalValuesTo(inputGradientValues);
+			inputGradientValues.SetDiagonalValue(diag);
         }
 
         virtual const Matrix<ElemType>& FunctionValues() const

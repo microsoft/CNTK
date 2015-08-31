@@ -1127,7 +1127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUMatrix<ElemType>::SetDiagonalValue(GPUMatrix<ElemType>& vector)
+    void GPUMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
     {
         if (IsEmpty() || vector.IsEmpty())
             throw std::logic_error("SetDiagonalValue: Matrix is empty.");

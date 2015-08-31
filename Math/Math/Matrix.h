@@ -158,7 +158,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetColumn(const Matrix<ElemType>& valMat, size_t colInd);
 
         void SetDiagonalValue(const ElemType v);
-        void SetDiagonalValue(Matrix<ElemType>& vector);
+        void SetDiagonalValue(const Matrix<ElemType>& vector);
         void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED);
         void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED);
         void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed=USE_TIME_BASED_SEED); 

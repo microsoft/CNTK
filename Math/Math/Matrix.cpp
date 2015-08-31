@@ -1158,7 +1158,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void Matrix<ElemType>::SetDiagonalValue(Matrix<ElemType>& vector)
+    void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
     {
         if (IsEmpty() || vector.IsEmpty())
             throw std::logic_error("SetDiagonalValue: Matrix is empty.");
