@@ -307,17 +307,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        //RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        //    ComputationNode<ElemType>(deviceId, name),
+        //    m_startIndex(0),
+        //    m_numRows(0)
+        //{ }
+        RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name, size_t startIndex = 0, size_t numRows = 0) :
             ComputationNode<ElemType>(deviceId, name),
-            m_startIndex(0),
-            m_numRows(0)
+            m_startIndex(startIndex),
+            m_numRows(numRows)
         { }
-        RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name, size_t start_index, size_t num_rows) :
-            ComputationNode<ElemType>(deviceId, name),
-            m_startIndex(start_index),
-            m_numRows(num_rows)
-        { }
-        // ^^ TODO: can merge these two
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {

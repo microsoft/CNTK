@@ -222,10 +222,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_needGradient = false;
         }
 
-        virtual const std::wstring OperationName() const {return m_isSparse ? SparseTypeName() : TypeName();}
+        // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type; this special-casing will cause grief
+        virtual const std::wstring OperationName() const { return m_isSparse ? SparseTypeName() : TypeName(); }
 
         static const std::wstring TypeName() {return L"InputValue";} 
-        static const std::wstring SparseTypeName() {return L"SparseInputValue";}
+        static const std::wstring SparseTypeName() {return L"SparseInputValue";}    // special case used by old NDL
 
         virtual void EvaluateThisNode()  {} 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) {}

@@ -1264,6 +1264,7 @@ private:
 
     // =======================================================================
     // ReshapeNode -- reshape input matrix
+    // TODO: Why is this in NonlinearityNodes.h? Should he linear algebra no?
     // =======================================================================
 
     template<class ElemType>
@@ -1287,14 +1288,12 @@ private:
             m_imageChannels(imageChannels)
         { }
 
-        
-
-virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
+                auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP); // TODO: change to Base for all
                 node->m_numRows = m_numRows;
                 node->m_imageWidth = m_imageWidth;
                 node->m_imageHeight = m_imageHeight;
