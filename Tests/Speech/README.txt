@@ -8,12 +8,20 @@ Install Cygwin with the python module.
 
 Execute 'Tests/Testdriver.py run' script. This will run the test in Tests/Speech/QuickE2E directory for various configurations. Note that the first time you may get an error about the missing YAML python module that you will need to install. 
 
-Simple command line for debugging
----------------------------------
+Command lines for debugging
+---------------------------
+
+--- QuickE2E:
 
 WORKING DIR: $(SolutionDir)Tests\Speech\Data
-COMMAND:     configFile=$(SolutionDir)Tests\Speech\QuickE2E\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir  DataDir=$(SolutionDir)Tests\Speech\Data  DeviceId=Auto
+COMMAND:     configFile=$(SolutionDir)Tests\Speech\QuickE2E\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\QuickE2E\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\QuickE2E  DataDir=$(SolutionDir)Tests\Speech\Data  DeviceId=Auto
 
+# TODO: can stderr refer to RunDir?
+
+--- LSTM:
+
+WORKING DIR: $(SolutionDir)Tests\Speech\Data
+COMMAND:     configFile=$(SolutionDir)Tests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\LSTM\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\LSTM  TEST_DIR=$(SolutionDir)Tests\Speech\LSTM  DataDir=$(SolutionDir)Tests\Speech\Data  DeviceId=Auto
 
 Simple test
 -----------
