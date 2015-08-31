@@ -256,9 +256,6 @@
     <None Include="prebuild.bat">
       <Filter>Misc</Filter>
     </None>
-    <None Include="..\ParseConfig\test.config">
-      <Filter>Experimental</Filter>
-    </None>
     <None Include="..\..\BrainScript\test.config">
       <Filter>Experimental</Filter>
     </None>
