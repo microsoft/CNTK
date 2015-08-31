@@ -56,15 +56,17 @@ namespace Microsoft { namespace MSR { namespace BS {
     wstring computationNodes =  // TODO: use actual TypeName() here? would first need to make it a wide string; we should also extract those two methods into the base macro
         L"Parameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
         // ^^ already works; vv untested
-        L"Input(rows, cols, tag='feature') = new ComputationNode [ operation = 'InputValue', isSparse = false, isImage = false /*plus the function args*/ ]\n" // note: naming a little inconsistent  // TODO: re-test after flag change
-        L"SparseInput(rows, cols, tag='feature') = new ComputationNode [ operation = 'InputValue', isSparse = true, isImage = false /*plus the function args*/ ]\n"
-        L"ImageInput(imageWidth, imageHeight, imageChannels, numImages, tag='feature') = new ComputationNode [ operation = 'InputValue', isSparse = true, isImage = true /*plus the function args*/ ]\n"
-        L"SparseImageInput(imageWidth, imageHeight, imageChannels, numImages, tag='feature') = new ComputationNode [ operation = 'InputValue', isSparse = true, isImage = true /*plus the function args*/ ]\n"
-        L"Constant(value, rows = 1, cols = 1, tag='') = Parameter(rows, cols, needGradient = false, init = 'fixedValue') ]\n"
-        L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice', inputs = input /*plus the function args*/ ]\n"
-        L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat', inputs = input /*plus the function args*/ ]\n"
-        L"PastValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1) = new ComputationNode [ operation = 'PastValue', inputs = input /*plus the function args*/ ]\n"
-        L"FutureValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1) = new ComputationNode [ operation = 'FutureValue', inputs = input /*plus the function args*/ ]\n"
+        L"Input(rows, cols, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = false ; isImage = false /*plus the function args*/ ]\n" // note: naming a little inconsistent  // TODO: re-test after flag change
+        L"SparseInput(rows, cols, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = true ; isImage = false /*plus the function args*/ ]\n"
+        L"ImageInput(imageWidth, imageHeight, imageChannels, numImages, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = true ; isImage = true /*plus the function args*/ ]\n"
+        L"SparseImageInput(imageWidth, imageHeight, imageChannels, numImages, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = true ; isImage = true /*plus the function args*/ ]\n"
+        L"Constant(value, rows = 1, cols = 1, tag='') = Parameter(rows, cols, needGradient = false, init = 'fixedValue') \n"
+        L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
+        L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
+        L"PastValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1) = new ComputationNode [ operation = 'PastValue' ; inputs = input /*plus the function args*/ ]\n"
+        L"FutureValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1) = new ComputationNode [ operation = 'FutureValue' ; inputs = input /*plus the function args*/ ]\n"
+        L"ConvolutionNode(weightNode, inputValueNode, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0) = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode) /*plus the function args*/ ]\n"
+        L"MaxPoolingNode(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample) = new ComputationNode [ operation = 'MaxPooling' ; inputs = input /*plus the function args*/ ]\n"
         // TODO: define DelayedValue, with negative delay for future; cannot do this yet, need to be able to say something like delay = -(^.delay)
         // standard nodes, tested
         L"Mean(z, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = z /* ; tag = tag */ ]\n"
@@ -119,14 +121,13 @@ namespace Microsoft { namespace MSR { namespace BS {
             wstring nodeName = L"<placeholder>";   // name will be overwritten by caller upon return (TODO: fix this here? pass expression name in?)
             DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
             static unsigned long m_randomSeedOffset = 0;    // TODO: this is held in the ComputationNetwork, but we don't have one yet
-            // TODO" ^^actually it seems only used by initialization of LearnableParameters--check that again; in that case, we can have a local
+            // TODO" ^^ actually it seems only used by initialization of LearnableParameters--check that again; in that case, we can have a local
 
             // note on optional parameters
             // Instead of defining optional parameters here in code, they are defined as optional args to the creating macro.
 
             ComputationNodePtr node;
 
-//#define OpIs(op) (operationName == L#op)  // TODO: use utf16(op<ElemType>::TypeName())
 #define OpIs(op) (operationName == msra::strfun::utf16(op<ElemType>::TypeName()))
 
             // TODO: in the code below, for reference, each block is preceded by an #if-0'ed out copy of the respective code from SynchronousNodeEvaluator::Evaluate()--remove these when this all works
@@ -313,7 +314,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 }
             }
 #endif
-            if (OpIs(LearnableParameter) || OpIs(SparseLearnableParameter))
+            else if (OpIs(LearnableParameter) || OpIs(SparseLearnableParameter))
             {
                 // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
                 // TODO: do we need a default value mechanism? How to make sure it does not pop upwards? Current functions do not allow overloads.
@@ -547,6 +548,15 @@ namespace Microsoft { namespace MSR { namespace BS {
                             horizontalSubsample, verticalSubsample, zeroPadding, name, maxTempMemSizeInSamples);
                     }
                 }
+#endif
+                else if (OpIs(ConvolutionNode)) // TODO: untested
+                {
+                    // weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0
+                    node = New<ConvolutionNode<ElemType>>(deviceId, nodeName, (size_t)config[L"kernelWidth"], (size_t)config[L"kernelHeight"], (size_t)config[L"outputChannels"],
+                                                                              (size_t)config[L"horizontalSubsample"], (size_t)config[L"verticalSubsample"],
+                                                                              (bool)config[L"zeroPadding"], (size_t)config[L"maxTempMemSizeInSamples"]);
+                }
+#if 0
                 else if (cnNodeType == MaxPoolingNode<ElemType>::TypeName())
                 {
                     if (parameter.size() != 5)
@@ -574,6 +584,13 @@ namespace Microsoft { namespace MSR { namespace BS {
                             horizontalSubsample, verticalSubsample, name);
                     }
                 }
+#endif
+                else if (OpIs(MaxPoolingNode)) // TODO: untested
+                {
+                    // input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample
+                    node = New<MaxPoolingNode<ElemType>>(deviceId, nodeName, (size_t)config[L"windowWidth"], (size_t)config[L"windowHeight"], (size_t)config[L"horizontalSubsample"], (size_t)config[L"verticalSubsample"]);
+                }
+#if 0
                 else if (cnNodeType == AveragePoolingNode<ElemType>::TypeName())
                 {
                     if (parameter.size() != 5)
@@ -602,7 +619,12 @@ namespace Microsoft { namespace MSR { namespace BS {
                     }
                 }
 #endif
-                // third group: standard nodes that only take 'inputs'
+                else if (OpIs(AveragePoolingNode)) // TODO: untested
+                {
+                    // input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample
+                    node = New<AveragePoolingNode<ElemType>>(deviceId, nodeName, (size_t)config[L"windowWidth"], (size_t)config[L"windowHeight"], (size_t)config[L"horizontalSubsample"], (size_t)config[L"verticalSubsample"]);
+                }
+                // last group: standard nodes that only take 'inputs'
                 else
                 {
                     node = ComputationNetwork<ElemType>::NewStandardNode(operationName, deviceId, nodeName);
