@@ -10,7 +10,9 @@
 #include "basetypes.h"                  // for attempt()
 #include "htkfeatio.h"                  // for reading HTK features
 #include "minibatchsourcehelpers.h"
+#ifndef __unix__
 #include "ssematrix.h"
+#endif
 
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
@@ -58,7 +60,7 @@ namespace msra { namespace dbn {
                 unsigned int sampperiod = sampperiods[k];
                 size_t n = numframes[k];
                 msra::files::make_intermediate_dirs (outfile);
-                fprintf (stderr, "saveandflush: writing %d frames to %S\n", n, outfile.c_str());
+                fprintf (stderr, "saveandflush: writing %d frames to %S\n", (int)n, outfile.c_str());
                 msra::dbn::matrixstripe thispred (pred, firstframe, n);
                 // some sanity check for the data we've written
                 const size_t nansinf = thispred.countnaninf();
@@ -171,7 +173,7 @@ namespace msra { namespace dbn {
                 unsigned int sampperiod = sampperiods[index][k];
                 size_t n = numframes[k];
                 msra::files::make_intermediate_dirs (outfile);
-                fprintf (stderr, "saveandflush: writing %d frames to %S\n", n, outfile.c_str());
+                fprintf (stderr, "saveandflush: writing %d frames to %S\n", (int)n, outfile.c_str());
                 msra::dbn::matrixstripe thispred (pred, firstframe, n);
                 // some sanity check for the data we've written
                 const size_t nansinf = thispred.countnaninf();

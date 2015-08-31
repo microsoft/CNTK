@@ -16,6 +16,8 @@
 #include <set>
 #include <hash_map>
 #include <stdint.h>
+#include <limits.h>
+#include <wchar.h>
 
 namespace msra { namespace asr {
 
@@ -263,9 +265,11 @@ public:
 #else
         W.close (numframes);
 #endif
+#ifdef _WIN32
         // rename to final destination
         // (This would only fail in strange circumstances such as accidental multiple processes writing to the same file.)
         renameOrDie (tmppath, path);
+#endif
     }
 };
 
@@ -386,7 +390,7 @@ private:
     {
         wstring physpath = ppath.physicallocation();
         //auto_file_ptr f = fopenOrDie (physpath, L"rbS");
-        auto_file_ptr f = fopenOrDie (physpath, L"rb"); // removed 'S' for now, as we mostly run local anyway, and this will speed up debugging
+        auto_file_ptr f(fopenOrDie (physpath, L"rb")); // removed 'S' for now, as we mostly run local anyway, and this will speed up debugging
 
         // read the header (12 bytes for htk feature files)
         fileheader H;
@@ -655,7 +659,7 @@ private:
 public:
 
     // parse format with original HTK state align MLF format and state list
-    void parsewithstatelist (const vector<char*> & toks, const hash_map<const string, size_t> & statelisthash, const double htkTimeToFrame)
+    void parsewithstatelist (const vector<char*> & toks, const hash_map<std::string, size_t> & statelisthash, const double htkTimeToFrame)
     {
         size_t ts, te;
         parseframerange (toks, ts, te, htkTimeToFrame);
@@ -682,7 +686,7 @@ template<class ENTRY, class WORDSEQUENCE>
 class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
 {
     wstring curpath;                                    // for error messages
-    hash_map<const std::string, size_t> statelistmap;   // for state <=> index
+    hash_map<std::string, size_t> statelistmap;   // for state <=> index
     map<wstring,WORDSEQUENCE> wordsequences;            // [key] word sequences (if we are building word entries as well, for MMI)
 
     void strtok (char * s, const char * delim, vector<char*> & toks)
@@ -700,7 +704,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
     vector<char*> readlines (const wstring & path, vector<char> & buffer)
     {
         // load it into RAM in one huge chunk
-        auto_file_ptr f = fopenOrDie (path, L"rb");
+        auto_file_ptr f(fopenOrDie (path, L"rb"));
         size_t len = filesize (f);
         buffer.reserve (len +1);
         freadOrDie (buffer, len, f);
@@ -752,7 +756,12 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
 
         filename = filename.substr (1, filename.length() -2);   // strip quotes
         if (filename.find ("*/") == 0) filename = filename.substr (2);
+#ifdef _WIN32
         wstring key = msra::strfun::utf16 (regex_replace (filename, regex ("\\.[^\\.\\\\/:]*$"), string()));  // delete extension (or not if none)
+#endif
+#ifdef __unix__
+        wstring key = msra::strfun::utf16(removeExtension(basename(filename))); // note that c++ 4.8 is incomplete for supporting regex
+#endif
 
         // determine lines range
         size_t s = line;
@@ -785,7 +794,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
                     const char * w = toks[6];       // the word name
                     int wid = (*wordmap)[w];        // map to word id --may be -1 for unseen words in the transcript (word list typically comes from a test LM)
                     size_t wordindex = (wid == -1) ? WORDSEQUENCE::word::unknownwordindex : (size_t) wid;
-                    wordseqbuffer.push_back (WORDSEQUENCE::word (wordindex, entries[i-s].firstframe, alignseqbuffer.size()));
+                    wordseqbuffer.push_back (typename WORDSEQUENCE::word (wordindex, entries[i-s].firstframe, alignseqbuffer.size()));
                 }
                 if (unitmap)
                 {
@@ -796,7 +805,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
                         if (iter == unitmap->end())
                             throw std::runtime_error (string ("parseentry: unknown unit ") + u + " in utterance " + strfun::utf8 (key));
                         const size_t uid = iter->second;
-                        alignseqbuffer.push_back (WORDSEQUENCE::aligninfo (uid, 0/*#frames--we accumulate*/));
+                        alignseqbuffer.push_back (typename WORDSEQUENCE::aligninfo (uid, 0/*#frames--we accumulate*/));
                     }
                     if (alignseqbuffer.empty())
                         throw std::runtime_error ("parseentry: lonely senone entry at start without phone/word entry found, for utterance " + strfun::utf8 (key));
@@ -880,7 +889,7 @@ public:
     template<typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
     void read (const wstring & path, const set<wstring> & restricttokeys, const WORDSYMBOLTABLE * wordmap, const UNITSYMBOLTABLE * unitmap, const double htkTimeToFrame)
     {
-        if (!restricttokeys.empty() && size() >= restricttokeys.size()) // no need to even read the file if we are there (we support multiple files)
+        if (!restricttokeys.empty() && this->size() >= restricttokeys.size()) // no need to even read the file if we are there (we support multiple files)
             return;
 
         fprintf (stderr, "htkmlfreader: reading MLF file %S ...", path.c_str());
@@ -888,18 +897,18 @@ public:
 
         vector<char> buffer;    // buffer owns the characters--don't release until done
         vector<char*> lines = readlines (path, buffer);
-        vector<WORDSEQUENCE::word> wordsequencebuffer;
-        vector<WORDSEQUENCE::aligninfo> alignsequencebuffer;
+        vector<typename WORDSEQUENCE::word> wordsequencebuffer;
+        vector<typename WORDSEQUENCE::aligninfo> alignsequencebuffer;
 
         if (lines.empty() || strcmp (lines[0], "#!MLF!#")) malformed ("header missing");
 
         // parse entries
         size_t line = 1;
-        while (line < lines.size() && (restricttokeys.empty() || size() < restricttokeys.size()))
+        while (line < lines.size() && (restricttokeys.empty() || this->size() < restricttokeys.size()))
             parseentry (lines, line, restricttokeys, wordmap, unitmap, wordsequencebuffer, alignsequencebuffer, htkTimeToFrame);
 
         curpath.clear();
-        fprintf (stderr, " total %lu entries\n", size());
+        fprintf (stderr, " total %lu entries\n", this->size());
     }
 
     // read state list, index is from 0

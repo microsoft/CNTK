@@ -95,27 +95,27 @@ public:
 template<typename ELEMTYPE> class biggrowablevector : public growablevectorbase<std::vector<ELEMTYPE>>
 {
 public:
-    biggrowablevector() : growablevectorbase (65536) { }
+    biggrowablevector() : growablevectorbase<std::vector<ELEMTYPE>>::growablevectorbase (65536) { }
 
     template<typename VALTYPE> void push_back (VALTYPE e)   // VALTYPE could be an rvalue reference
     {
-        size_t i = size();
-        resize_without_commit (i + 1);
-        auto & block = getblockptr (i);
+        size_t i = this->size();
+        this->resize_without_commit (i + 1);
+        auto & block = this->getblockptr (i);
         if (block.get() == NULL)
-            block.reset (new std::vector<ELEMTYPE> (elementsperblock));
-        (*block)[getblockt (i)] = e;
+            block.reset (new std::vector<ELEMTYPE> (this->elementsperblock));
+        (*block)[this->getblockt (i)] = e;
     }
 
-          ELEMTYPE & operator[] (size_t t)       { return getblock(t)[getblockt (t)]; }    // get an element
-    const ELEMTYPE & operator[] (size_t t) const { return getblock(t)[getblockt (t)]; }    // get an element
+          ELEMTYPE & operator[] (size_t t)       { return this->getblock(t)[this->getblockt (t)]; }    // get an element
+    const ELEMTYPE & operator[] (size_t t) const { return this->getblock(t)[this->getblockt (t)]; }    // get an element
 
     void resize (const size_t n)
     {
-        resize_without_commit (n);
-        foreach_index (i, blocks)
-            if (blocks[i].get() == NULL)
-                blocks[i].reset (new std::vector<ELEMTYPE> (elementsperblock));
+        this->resize_without_commit (n);
+        foreach_index (i, this->blocks)
+            if (this->blocks[i].get() == NULL)
+                this->blocks[i].reset (new std::vector<ELEMTYPE> (this->elementsperblock));
     }
 };
 

@@ -7,31 +7,46 @@
 //
 
 #include "stdafx.h"
+#ifdef _WIN32
 #include <objbase.h>
+#endif
 #include "basetypes.h"
 
 #include "htkfeatio.h"                  // for reading HTK features
 #include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)
 #include "simplesenonehmm.h"            // for MMI scoring
+#ifdef _WIN32
 #include "msra_mgram.h"                 // for unigram scores of ground-truth path in sequence training
+#endif
 
 #include "rollingwindowsource.h"        // minibatch sources
 #include "utterancesourcemulti.h"
 #include "utterancesource.h"
 #include "utterancesourcemulti.h"
+#ifdef _WIN32
 #include "readaheadsource.h"
+#endif
 #include "chunkevalsource.h"
 #include "minibatchiterator.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
+#include "commandArgUtil.h"
 #include "HTKMLFReader.h"
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
 #endif
 
+#ifdef __unix__
+#include <limits.h>
+typedef unsigned long DWORD;
+typedef unsigned short WORD;
+typedef unsigned int UNINT32;
+#endif
 #pragma warning (disable: 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 
+#ifdef _WIN32
 int msra::numa::node_override = -1;     // for numahelpers.h
+#endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -44,7 +59,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_cudaAllocator = nullptr;
             m_mbiter = NULL;
             m_frameSource = NULL;
+#ifdef _WIN32
             m_readAheadSource = NULL;
+#endif
             m_lattices = NULL;
 
             m_truncated = readerConfig("Truncated", "false");
@@ -271,7 +288,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             // see if they want to use readAhead
+#ifdef _WIN32
             m_readAhead = readerConfig("readAhead", "false");
+#endif
 
             // read all input files (from multiple inputs)
             // TO DO: check for consistency (same number of files in each script file)
@@ -318,6 +337,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 infilesmulti.push_back(filelist);
             }
 
+#ifdef _WIN32
             if (readerConfig.Exists("unigram"))
                 unigrampath = readerConfig("unigram");
 
@@ -338,6 +358,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (!unigram)
                 fprintf (stderr, "trainlayer: OOV-exclusion code enabled, but no unigram specified to derive the word set from, so you won't get OOV exclusion\n");
+#endif
 
             // currently assumes all mlfs will have same root name (key)
             set<wstring> restrictmlftokeys;     // restrict MLF reader to these files--will make stuff much faster without having to use shortened input files
@@ -361,12 +382,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //std::vector<std::wstring> pagepath;
             foreach_index(i, mlfpathsmulti)
             {
+#ifdef WIN32
+                const msra::lm::CSymbolSet* wordmap = unigram ? &unigramsymbols : NULL;
+#else
+		const map<string, size_t>* wordmap = NULL;
+#endif
                 msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>  
-                    labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], unigram ? &unigramsymbols : NULL, (map<string,size_t>*) NULL, htktimetoframe);      // label MLF
+                labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordmap, (map<string,size_t>*) NULL, htktimetoframe);      // label MLF
                 // get the temp file name for the page file
                 labelsmulti.push_back(labels);
             }
-
 
             if (!_stricmp(readMethod.c_str(),"blockRandomize"))
             {
@@ -383,7 +408,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (!_stricmp(readMethod.c_str(),"rollingWindow"))
             {
+#ifdef _WIN32
                 std::wstring pageFilePath;
+#else
+                std::string pageFilePath;
+#endif
                 std::vector<std::wstring> pagePaths;
                 if (readerConfig.Exists("pageFilePath"))
                 {
@@ -391,28 +420,57 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     // replace any '/' with '\' for compat with default path
                     std::replace(pageFilePath.begin(), pageFilePath.end(), '/','\\'); 
-
+#ifdef _WIN32               
                     // verify path exists
                     DWORD attrib = GetFileAttributes(pageFilePath.c_str());
                     if (attrib==INVALID_FILE_ATTRIBUTES || !(attrib & FILE_ATTRIBUTE_DIRECTORY))
                         throw std::runtime_error ("pageFilePath does not exist");                
+#endif
+#ifdef __unix__
+                struct stat statbuf;
+                if (stat(pageFilePath.c_str(), &statbuf)==-1)
+                {
+                    throw std::runtime_error ("pageFilePath does not exist");
                 }
+
+#endif
+            }
                 else  // using default temporary path
                 {
+#ifdef _WIN32
                     pageFilePath.reserve(MAX_PATH);
                     GetTempPath(MAX_PATH, &pageFilePath[0]);
+#endif
+#ifdef __unix__
+                pageFilePath.reserve(PATH_MAX);
+                pageFilePath = "/tmp/temp.CNTK.XXXXXX";
+#endif
                 }
 
+#ifdef _WIN32
                 if (pageFilePath.size()>MAX_PATH-14) // max length of input to GetTempFileName is MAX_PATH-14
                     throw std::runtime_error (msra::strfun::strprintf ("pageFilePath must be less than %d characters", MAX_PATH-14));
-
+#endif
+#ifdef __unix__
+            if (pageFilePath.size()>PATH_MAX-14) // max length of input to GetTempFileName is PATH_MAX-14
+                throw std::runtime_error (msra::strfun::strprintf ("pageFilePath must be less than %d characters", PATH_MAX-14));       
+#endif
                 foreach_index(i, infilesmulti)
                 {
-
+#ifdef _WIN32
                     wchar_t tempFile[MAX_PATH];
                     GetTempFileName(pageFilePath.c_str(), L"CNTK", 0, tempFile);
                     pagePaths.push_back(tempFile);
-
+#endif
+#ifdef __unix__
+                char* tempFile;
+                //GetTempFileName(pageFilePath.c_str(), L"CNTK", 0, tempFile);
+                tempFile = (char*) pageFilePath.c_str();
+                int fid = mkstemp(tempFile);
+                unlink (tempFile);
+                close (fid);
+                pagePaths.push_back(GetWC(tempFile));
+#endif
                 }
 
                 const bool mayhavenoframe=false;
@@ -513,7 +571,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     n++;
                 }
 
-                fprintf (stderr, " %d entries\n", n);
+                fprintf (stderr, " %d entries\n", (int)n);
 
                 if (i==0)
                     numFiles=n;
@@ -534,7 +592,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         HTKMLFReader<ElemType>::~HTKMLFReader()
         {
             delete m_mbiter;
+#ifdef _WIN32
             delete m_readAheadSource;
+#endif
             delete m_frameSource;
             delete m_lattices;
 
@@ -664,6 +724,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // delete the old one first (in case called more than once)
             delete m_mbiter;
             msra::dbn::minibatchsource* source = m_frameSource;
+#ifdef _WIN32
             if (m_readAhead)
             {
                 if (m_readAheadSource == NULL)
@@ -677,6 +738,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 source = m_readAheadSource;
             }
+#endif
             m_mbiter = new msra::dbn::minibatchiterator(*source, epoch, requestedEpochSamples, mbSize, subsetNum, numSubsets, datapasses);
             if (!m_featuresBufferMultiIO.empty())
             {
@@ -789,7 +851,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     // now, access all features and and labels by iterating over map of "matrices"
                     bool first = true;
-                    std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
+                typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                     for (iter = matrices.begin();iter!=matrices.end(); iter++)
                     {
                         // dereference matrix that corresponds to key (input/output name) and 
@@ -810,9 +872,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                                 m_sentenceBegin.SetValue((ElemType) SEQUENCE_MIDDLE);
                                 m_sentenceBegin.SetValue(0, 0, (ElemType) SEQUENCE_START);
-
+                                m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SEQUENCE_END);
                                 std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
                                 m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
+                                m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::SequenceEnd;
                                 first = false;
                             }
 
@@ -969,7 +1032,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 m_sentenceEnd[i] = false;
                                 m_switchFrame[i] = m_mbSize+1;
+                            if (m_processedFrame[i] == 1)
+                            {
+                                m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_END);
+                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceEnd;
                             }
+                        }
                             else
                             {
                                 m_switchFrame[i] = 0;
@@ -979,7 +1047,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                             actualmbsize[i] = m_mbSize;
                             endFr = startFr + actualmbsize[i];
-                            std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
+                        typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                             for (iter = matrices.begin();iter!=matrices.end(); iter++)
                             {
                                 // dereference matrix that corresponds to key (input/output name) and 
@@ -1044,7 +1112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             actualmbsize[i] = m_toProcess[i] - m_processedFrame[i];
                             endFr = startFr + actualmbsize[i];
 
-                            std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
+                        typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                             for (iter = matrices.begin();iter!=matrices.end(); iter++)
                             {
                                 // dereference matrix that corresponds to key (input/output name) and 
@@ -1108,6 +1176,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SEQUENCE_START);
                                 m_minibatchPackingFlag[actualmbsize[i]] |= MinibatchPackingFlag::SequenceStart;
                             }
+                        if (actualmbsize[i] == m_mbSize)
+                        {
+                            m_sentenceBegin.SetValue(i, actualmbsize[i]-1, (ElemType)SEQUENCE_END);
+                            m_minibatchPackingFlag[actualmbsize[i]] = m_minibatchPackingFlag[actualmbsize[i]-1] | MinibatchPackingFlag::SequenceEnd;
+                        }
                             startFr = m_switchFrame[i];
                             endFr = m_mbSize;
                             bool reNewSucc = ReNewBufferForMultiIO(i);
@@ -1158,7 +1231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         }
                     }
-                    std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
+                typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                     for (iter = matrices.begin();iter!=matrices.end(); iter++)
                     {
                         // dereference matrix that corresponds to key (input/output name) and 
@@ -1195,7 +1268,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (matrices.find(iter->first)==matrices.end())
                     {
-                        fprintf(stderr,"GetMinibatchToWrite: feature node %ws specified in reader not found in the network\n",iter->first.c_str());
+                        fprintf(stderr,"GetMinibatchToWrite: feature node %ls specified in reader not found in the network\n", iter->first.c_str());
                         throw std::runtime_error("GetMinibatchToWrite: feature node specified in reader not found in the network.");
                     }
                 }
@@ -1227,7 +1300,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                             reader.read (path, featkind, sampperiod, feat);   // whole file read as columns of feature vectors
                             });
-                    fprintf (stderr, "evaluate: reading %d frames of %S\n", feat.cols(), ((wstring)path).c_str());
+                    fprintf (stderr, "evaluate: reading %d frames of %S\n", (int)feat.cols(), ((wstring)path).c_str());
                     m_fileEvalSource->AddFile(feat, featkind, sampperiod, i);
                 }
                 m_inputFileIndex++;
@@ -1237,7 +1310,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // populate input matrices
                 bool first = true;
-                std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
+            typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                 for (iter = matrices.begin();iter!=matrices.end(); iter++)
                 {
                     // dereference matrix that corresponds to key (input/output name) and 
@@ -1256,9 +1329,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_minibatchPackingFlag.resize((size_t)feat.cols());
                             m_sentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
                             m_sentenceBegin.SetValue(0, 0, (ElemType)SEQUENCE_START);
-
+                        m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SEQUENCE_END);
                             std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
                             m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
+                        m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::SequenceEnd;
                             first = false;
                         }
 
@@ -1555,6 +1629,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             return ret;
         }
+
+    template<class ElemType>
+    void HTKMLFReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &sentenceEnd)
+    {
+        sentenceEnd.resize(m_switchFrame.size());
+        for (size_t i = 0; i < m_switchFrame.size() ; i++)
+        {
+            sentenceEnd[i] = m_switchFrame[i];
+        }
+    }
 
     template<class ElemType>
         void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)

@@ -228,10 +228,10 @@ $(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB)
 
 
 HTKMLFREADER_SRC =\
-	DataReader/HTKMLFReader_linux/DataReader.cpp \
-	DataReader/HTKMLFReader_linux/DataWriter.cpp \
-	DataReader/HTKMLFReader_linux/HTKMLFReader.cpp \
-	DataReader/HTKMLFReader_linux/HTKMLFWriter.cpp \
+	DataReader/HTKMLFReader/DataReader.cpp \
+	DataReader/HTKMLFReader/DataWriter.cpp \
+	DataReader/HTKMLFReader/HTKMLFReader.cpp \
+	DataReader/HTKMLFReader/HTKMLFWriter.cpp \
 
 HTKMLREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
 
