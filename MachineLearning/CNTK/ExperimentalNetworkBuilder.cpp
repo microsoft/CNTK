@@ -40,23 +40,6 @@ namespace Microsoft { namespace MSR { namespace BS {
         L"Fac(n) = if n > 1 then Fac(n-1) * n else 1 \n"
         ;
 
-    wstring computationNodes =
-        L"Parameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
-        L"Input(rows, cols, tag='feature') = new ComputationNode [ operation = 'Input' /*plus the function args*/ ]\n"
-        // ^^ already works; vv not yet working
-        L"Mean(z, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = z /* ; tag = tag */ ]\n"
-        L"InvStdDev(z, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = z /* ; tag = tag */ ]\n"
-        L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = feat:mean:invStdDev /* ; tag = tag */ ]\n"
-        L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = features ; first = firstRow ; num = rows /* ; tag = tag */ ]\n"
-        L"Delay(in, delay, tag='') = new ComputationNode [ operation = 'Delay' ; input = in ; deltaT = -delay /* ; tag = tag */ ]\n"
-        // standard nodes, tested
-        // standard nodes, untested
-        L"Sigmoid(z, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = z /* ; tag = tag */ ]\n"
-        L"Log(z, tag='') = new ComputationNode [ operation = 'Log' ; inputs = z /* ; tag = tag */ ]\n"
-        L"CrossEntropyWithSoftmax(labels, outZ, tag='criterion') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = labels:outZ ]\n"
-        L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
-        ;
-
     wstring commonMacros =
         L"BFF(in, rows, cols) = [ B = Parameter(rows, 1, init = 'fixedValue', value = 0) ; W = Parameter(rows, cols) ; z = W*in+B ] \n"
         L"SBFF(in, rows, cols) = [ Eh = Sigmoid(BFF(in, rows, cols).z) ] \n "
@@ -69,6 +52,25 @@ namespace Microsoft { namespace MSR { namespace BS {
     // assuming they are not ready during construction.
     // This is specifically meant to be used by DelayNode, see comments there.
     struct MustFinalizeInit { virtual void FinalizeInit() = 0; };   // derive from this to indicate ComputationNetwork should call FinalizeIitlate initialization
+
+    wstring computationNodes =
+        L"Parameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
+        L"Input(rows, cols, tag='feature') = new ComputationNode [ operation = 'InputValue' /*plus the function args*/ ]\n" // note: naming a little inconsistent
+        // untested:
+        L"SparseInput(rows, cols, tag='feature') = new ComputationNode [ operation = 'SparseInputValue' /*plus the function args*/ ]\n"
+        // ^^ already works; vv not yet working
+        L"RowSlice(firstRow, rows, features, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = features ; first = firstRow ; num = rows /* ; tag = tag */ ]\n"
+        L"Delay(in, delay, tag='') = new ComputationNode [ operation = 'Delay' ; input = in ; deltaT = -delay /* ; tag = tag */ ]\n"
+        // standard nodes, tested
+        L"Mean(z, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = z /* ; tag = tag */ ]\n"
+        L"InvStdDev(z, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = z /* ; tag = tag */ ]\n"
+        L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = feat:mean:invStdDev /* ; tag = tag */ ]\n"
+        L"Sigmoid(z, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = z /* ; tag = tag */ ]\n"
+        L"CrossEntropyWithSoftmax(labels, outZ, tag='criterion') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = labels:outZ ]\n"
+        L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
+        // standard nodes, untested
+        L"Log(z, tag='') = new ComputationNode [ operation = 'Log' ; inputs = z /* ; tag = tag */ ]\n"
+        ;
 
     template<typename ElemType>
     struct DualPrecisionHelpers
@@ -196,34 +198,158 @@ namespace Microsoft { namespace MSR { namespace BS {
             wstring nodeName = L"<placeholder>";   // name will be overwritten by caller upon return (TODO: fix this here? pass expression name in?)
             DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
             static unsigned long m_randomSeedOffset = 0;    // TODO: this is held in the ComputationNetwork, but we don't have one yet
-
-            /*  from SynchronousNodeEvaluator::Evaluate()
-            if (InputValue<ElemType>::TypeName() == cnoperationName)
-            else if (InputValue<ElemType>::SparseTypeName() == cnNodeType)
-            else if (cnNodeType == L"ImageInput")
-            else if (cnNodeType == L"SparseImageInput")
-            else if (LearnableParameter<ElemType>::TypeName() == cnNodeType)
-            else if (SparseLearnableParameter<ElemType>::TypeName() == cnNodeType)
-            else if (cnNodeType == L"Constant")
-            else if (cnNodeType == RowSliceNode<ElemType>::TypeName())
-            else if (cnNodeType == RowRepeatNode<ElemType>::TypeName())
-            else if (cnNodeType == ReshapeNode<ElemType>::TypeName())
-            else if (cnNodeType == PastValueNode<ElemType>::TypeName() ||
-                cnNodeType == FutureValueNode<ElemType>::TypeName())
-            else if (cnNodeType == ConvolutionNode<ElemType>::TypeName())
-            else if (cnNodeType == MaxPoolingNode<ElemType>::TypeName())
-            else if (cnNodeType == AveragePoolingNode<ElemType>::TypeName())
-            */
+            // TODO" ^^actually it seems only used by initialization of LearnableParameters--check that again; in that case, we can have a local
 
             // note on optional parameters
             // Instead of defining optional parameters here in code, they are defined as optional args to the creating macro.
 
             ComputationNodePtr node;
+
             // first group: nodes without inputs
+            // TODO: each block is preceded by the respective code from SynchronousNodeEvaluator::Evaluate()--remove these when this all works
+#if 0
+            if (InputValue<ElemType>::TypeName() == cnNodeType)
+            {
+                if (parameter.size() < 1 || parameter.size() > 2)
+                    RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType.c_str());
+
+                if (pass == ndlPassInitial)
+                {
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                    size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                    size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
+
+                    // first look for this node already existing in the network
+                    if (m_net.NodeNameExist(name))
+                        nodePtr = m_net.GetNodeFromName(name);
+                    else
+                        nodePtr = m_net.CreateInputNode(name, rows, cols);
+                }
+            }
+            else if (InputValue<ElemType>::SparseTypeName() == cnNodeType)
+            {
+                if (parameter.size() < 1 || parameter.size() > 2)
+                    RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType.c_str());
+
+                if (pass == ndlPassInitial)
+                {
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                    size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                    size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
+
+                    // first look for this node already existing in the network
+                    if (m_net.NodeNameExist(name))
+                        nodePtr = m_net.GetNodeFromName(name);
+                    else
+                        nodePtr = m_net.CreateSparseInputNode(name, rows, cols);
+                }
+            }
+#endif
+            if (operationName == L"InputValue" || operationName == L"SparseInputValue") // TODO: sparse case untested
+            {
+                let isSparse = (operationName == L"SparseInputValue");
+                node = New<InputValue<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"], isSparse);
+            }
+            if (operationName == L"ImageInput" || operationName == L"SparseImageInput") // TODO: untested
+            {
+                let isSparse = (operationName == L"SparseImageInput");
+                //size_t imageWidth = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                //size_t imageHeight = ((NDLNode<ElemType>*)params[1])->GetScalar();
+                //size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
+                //size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
+                node = New<InputValue<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"], isSparse);
+            }
+#if 0
+            else if (cnNodeType == L"ImageInput")
+            {
+                if (parameter.size() < 3 || parameter.size() > 4)
+                    RuntimeError("%ls should have 3 or 4 parameters[imageWidth, imageHeight, imageChannels, [numImages=1]].", cnNodeType.c_str());
+
+                if (pass == ndlPassInitial)
+                {
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                    size_t imageWidth = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                    size_t imageHeight = ((NDLNode<ElemType>*)params[1])->GetScalar();
+                    size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
+                    size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
+
+                    nodePtr = m_net.CreateInputNode(name, imageWidth, imageHeight, imageChannels, numImages);
+                }
+            }
+            else if (cnNodeType == L"SparseImageInput")
+            {
+                if (parameter.size() < 3 || parameter.size() > 4)
+                    RuntimeError("%ls should have 3 or 4 parameters[imageWidth, imageHeight, imageChannels, [numImages=1]].", cnNodeType.c_str());
+
+                if (pass == ndlPassInitial)
+                {
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                    size_t imageWidth = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                    size_t imageHeight = ((NDLNode<ElemType>*)params[1])->GetScalar();
+                    size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
+                    size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
+
+                    nodePtr = m_net.CreateSparseInputNode(name, imageWidth, imageHeight, imageChannels, numImages);
+                }
+            }
+            else if (LearnableParameter<ElemType>::TypeName() == cnNodeType)
+            {
+                if (parameter.size() < 1 || parameter.size() > 2)
+                    RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
+
+                if (pass == ndlPassInitial)
+                {
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                    size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                    size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
+
+                    bool needGradient = node->GetOptionalParameter("needGradient", "true");
+
+                    nodePtr = m_net.CreateLearnableParameter(name, rows, cols);
+
+                    nodePtr->NeedGradient() = needGradient;
+                }
+                else if (pass == ndlPassFinal)
+                {
+                    static int randomSeed = 1;
+                    std::string initString = node->GetOptionalParameter("init", "uniform");
+                    ElemType initValueScale = node->GetOptionalParameter("initValueScale", "1");
+                    ElemType value = node->GetOptionalParameter("value", "0");
+
+                    msra::strfun::tolower_ascii(initString);
+                    if (initString == "fixedvalue")
+                        nodePtr->FunctionValues().SetValue(value);
+                    else if (initString == "uniform")
+                        m_net.InitLearnableParameters(nodePtr, true, randomSeed++, initValueScale);
+                    else if (initString == "gaussian")
+                        m_net.InitLearnableParameters(nodePtr, false, randomSeed++, initValueScale);
+                    else if (initString == "fromfile")
+                    {
+                        std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
+                        if (initFromFilePath == "")
+                            RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
+                        if (initFromFilePath[0] == '\"' && initFromFilePath[initFromFilePath.size() - 1] == '\"')
+                            // remove the opening and closing double quotes
+                            initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size() - 2);
+                        if (!fexists(initFromFilePath))
+                            RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
+                        m_net.InitLearnableParametersFromFile(nodePtr, initFromFilePath);
+                    }
+                    else
+                        RuntimeError("init must be one of the values of [uniform|gaussian|fixedvalue]");
+                }
+            }
+#endif
             if (operationName == L"LearnableParameter")
             {
                 // parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float])
                 // TODO: do we need a default value mechanism? How to make sure it does not pop upwards? Current functions do not allow overloads.
+                // TODO: test this with random init for QuickE2E on CPU against SimpleNetworkBuilder
                 node = New<LearnableParameter<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"]);
                 node->NeedGradient() = config[L"needGradient"];
                 static int randomSeed = 1;
@@ -242,10 +368,264 @@ namespace Microsoft { namespace MSR { namespace BS {
                 else
                     RuntimeError("init must be one of the values of [uniform|gaussian|fixedValue|fromFile]");
             }
-            else if (operationName == L"Input")
+#if 0
+            else if (SparseLearnableParameter<ElemType>::TypeName() == cnNodeType)
             {
-                node = New<InputValue<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"]);
+                if (parameter.size() < 1 || parameter.size() > 2)
+                    RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
+
+                if (pass == ndlPassInitial)
+                {
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                    size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                    size_t cols = params.size() > 1 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
+
+                    bool needGradient = node->GetOptionalParameter("needGradient", "true");
+
+                    nodePtr = m_net.CreateSparseLearnableParameter(name, rows, cols);
+
+                    nodePtr->NeedGradient() = needGradient;
+                }
+                else if (pass == ndlPassFinal)
+                {
+                    static int randomSeed = 1;
+                    std::string initString = node->GetOptionalParameter("init", "uniform");
+                    ElemType initValueScale = node->GetOptionalParameter("initValueScale", "1");
+                    ElemType value = node->GetOptionalParameter("value", "0");
+
+                    msra::strfun::tolower_ascii(initString);
+                    if (initString == "fixedvalue")
+                        nodePtr->FunctionValues().SetValue(value);
+                    else if (initString == "uniform")
+                        m_net.InitLearnableParameters(nodePtr, true, randomSeed++, initValueScale);
+                    else if (initString == "gaussian")
+                        m_net.InitLearnableParameters(nodePtr, false, randomSeed++, initValueScale);
+                    else if (initString == "fromfile")
+                    {
+                        std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
+                        if (initFromFilePath == "")
+                            RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
+                        if (initFromFilePath[0] == '\"' && initFromFilePath[initFromFilePath.size() - 1] == '\"')
+                            // remove the opening and closing double quotes
+                            initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size() - 2);
+                        if (!fexists(initFromFilePath))
+                            RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
+                        m_net.InitLearnableParametersFromFile(nodePtr, initFromFilePath);
+                    }
+                    else
+                        RuntimeError("init must be one of the values of [uniform|gaussian|fixedvalue]");
+                }
             }
+            else if (cnNodeType == L"Constant")
+            {
+                if (parameter.size() != 1)
+                    RuntimeError("Constant should have 1 fixed parameter [val] and two optional parameters [rows=[1|yourvalue], cols=[1|yourvalue]].");
+
+                if (pass == ndlPassInitial)
+                {
+                    size_t rows = node->GetOptionalParameter("rows", "1");
+                    size_t cols = node->GetOptionalParameter("cols", "1");
+
+                    nodePtr = m_net.CreateLearnableParameter(name, rows, cols);
+                    nodePtr->NeedGradient() = false;
+                }
+                else if (pass == ndlPassFinal || nodePtr->FunctionValues().GetNumElements() != 0)
+                {
+                    ElemType val = parameter[0]->GetScalar();
+                    nodePtr->FunctionValues().SetValue(val);
+                }
+            }
+            else if (cnNodeType == RowSliceNode<ElemType>::TypeName())
+            {
+                if (parameter.size() != 3)
+                    RuntimeError("RowSlice should have three parameters. Usage: RowSlice(startRowIndex, numRows, origNodeName.");
+
+                nodeParamCount = 1;
+                nodeParamStart = 2;
+
+                if (pass == ndlPassInitial)
+                {
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                    size_t start_index = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                    size_t num_rows = ((NDLNode<ElemType>*)params[1])->GetScalar();
+
+                    bool needGradient = node->GetOptionalParameter("needGradient", "false");
+                    nodePtr = m_net.RowSlice(NULL, start_index, num_rows, name);
+                    nodePtr->NeedGradient() = needGradient;
+                }
+            }
+            else if (cnNodeType == RowRepeatNode<ElemType>::TypeName())
+            {
+                if (parameter.size() != 2)
+                    RuntimeError("RowRepeat should have two parameters. Usage: RowRepeat(origNodeName, numRepeats.");
+
+                nodeParamCount = 1;
+                nodeParamStart = 0;
+
+                if (pass == ndlPassInitial)
+                {
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                    size_t num_repeat = ((NDLNode<ElemType>*)params[1])->GetScalar();
+
+                    bool needGradient = node->GetOptionalParameter("needGradient", "false");
+                    nodePtr = m_net.RowRepeat(NULL, num_repeat, name);
+                    nodePtr->NeedGradient() = needGradient;
+                }
+            }
+            else if (cnNodeType == ReshapeNode<ElemType>::TypeName())
+            {
+                if (parameter.size() < 2 || parameter.size() > 5)
+                    RuntimeError("Reshape should have two to five parameters. Usage: Reshape(origNodeName, numRows, [imageWidth=], [imageHeight=], [imageChannels=].");
+
+                nodeParamCount = 1;
+                nodeParamStart = 0;
+
+                if (pass == ndlPassInitial)
+                {
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                    size_t num_rows = ((NDLNode<ElemType>*)params[1])->GetScalar();
+                    size_t img_width = node->GetOptionalParameter("imageWidth", "0");
+                    size_t img_height = node->GetOptionalParameter("imageHeight", "0");
+                    size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
+
+                    bool needGradient = node->GetOptionalParameter("needGradient", "false");
+                    nodePtr = m_net.Reshape(NULL, num_rows, img_width, img_height, img_channels, name);
+                    nodePtr->NeedGradient() = needGradient;
+                }
+            }
+            else if (cnNodeType == PastValueNode<ElemType>::TypeName() ||
+                cnNodeType == FutureValueNode<ElemType>::TypeName())
+            {
+                if (parameter.size() <2 || parameter.size() >3)
+                    RuntimeError("PastValue or FutureValue should have two to three fixed parameters. Usage: PastValue(rows, [cols], m, [timeStep=1, defaultPastValue=0.1]).");
+
+                nodeParamCount = 1;
+                nodeParamStart = parameter.size() > 2 ? 2 : 1;
+
+                if (pass == ndlPassInitial)
+                {
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                    size_t rows = ((NDLNode<ElemType>*)params[0])->GetScalar();
+                    // if we have three parameters the second is columns
+                    size_t cols = parameter.size() > 2 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
+
+                    bool needGradient = node->GetOptionalParameter("needGradient", "false");
+                    float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1");
+
+                    //for backward compatibility we check timeStep first
+                    size_t timeStep = node->GetOptionalParameter("timeStep", "1");
+                    if (timeStep == 1)
+                    {
+                        timeStep = node->GetOptionalParameter("delayTime", "1");
+                    }
+
+                    if (cnNodeType == PastValueNode<ElemType>::TypeName())
+                    {
+                        nodePtr = m_net.PastValue(NULL, defaultHiddenActivity, rows, cols, name);
+                        static_pointer_cast<PastValueNode<ElemType>>(nodePtr)->SetTimeStep(timeStep);
+                    }
+                    else
+                    {
+                        nodePtr = m_net.FutureValue(NULL, defaultHiddenActivity, rows, cols, name);
+                        static_pointer_cast<FutureValueNode<ElemType>>(nodePtr)->SetTimeStep(timeStep);
+                    }
+
+                    nodePtr->NeedGradient() = needGradient;
+                }
+            }
+            else if (cnNodeType == ConvolutionNode<ElemType>::TypeName())
+            {
+                if (parameter.size() != 7)
+                    RuntimeError("%ls should have 7 fixed parameters[weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue]].", cnNodeType.c_str());
+
+                // setup the parameter position of children so we can hook them up later
+                nodeParamCount = 2;
+                nodeParamStart = 0;
+
+                if (pass == ndlPassInitial)
+                {
+                    int id = 2; // skip weightNode and inputValueNode
+
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
+                    id = 0; // reset counter because the params array starts at zero
+                    size_t kernelWidth = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+                    size_t kernelHeight = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+                    size_t outputChannels = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+                    size_t horizontalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+                    size_t verticalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+
+                    assert(id == 5);
+
+                    //optional
+                    bool zeroPadding = node->GetOptionalParameter("zeroPadding", "false");
+                    size_t maxTempMemSizeInSamples = node->GetOptionalParameter("maxTempMemSizeInSamples", "0");
+
+
+                    nodePtr = m_net.Convolution(NULL, NULL, kernelWidth, kernelHeight, outputChannels,
+                        horizontalSubsample, verticalSubsample, zeroPadding, name, maxTempMemSizeInSamples);
+                }
+            }
+            else if (cnNodeType == MaxPoolingNode<ElemType>::TypeName())
+            {
+                if (parameter.size() != 5)
+                    RuntimeError("%ls should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType.c_str());
+
+                // setup the parameter position of children so we can hook them up later
+                nodeParamCount = 1;
+                nodeParamStart = 0;
+
+                if (pass == ndlPassInitial)
+                {
+                    int id = 1; // skip inputValueNode
+
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
+                    id = 0; // reset counter because the params array starts at zero
+                    size_t windowWidth = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+                    size_t windowHeight = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+                    size_t horizontalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+                    size_t verticalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+
+                    assert(id == 4);
+
+                    nodePtr = m_net.MaxPooling(NULL, /*inputWidth,inputHeight, channels,*/windowWidth, windowHeight,
+                        horizontalSubsample, verticalSubsample, name);
+                }
+            }
+            else if (cnNodeType == AveragePoolingNode<ElemType>::TypeName())
+            {
+                if (parameter.size() != 5)
+                    RuntimeError("%ls should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType.c_str());
+
+                // setup the parameter position of children so we can hook them up later
+                nodeParamCount = 1;
+                nodeParamStart = 0;
+
+                if (pass == ndlPassInitial)
+                {
+                    int id = 1; // skip inputValueNode
+
+                    // evaluate only scalar parameters
+                    vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
+                    id = 0; // reset counter because the params array starts at zero
+                    size_t windowWidth = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+                    size_t windowHeight = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+                    size_t horizontalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+                    size_t verticalSubsample = ((NDLNode<ElemType>*)params[id++])->GetScalar();
+
+                    assert(id == 4);
+
+                    nodePtr = m_net.AveragePooling(NULL, /*inputWidth,inputHeight, channels,*/windowWidth, windowHeight,
+                        horizontalSubsample, verticalSubsample, name);
+                }
+            }
+#endif
             else        // nodes with inputs
             {
                 let inputs = GetInputs(config);
