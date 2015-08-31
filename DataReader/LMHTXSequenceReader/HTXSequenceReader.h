@@ -40,13 +40,13 @@ class BatchSequenceReader : public IDataReader<ElemType>
 {
 public:
 	int class_size;
-	int nwords;
+	int nwords; //vocabSize
     map<string, int> word4idx;
     map<int, string> idx4word;
     map<int, int> idx4class;
     map<int, size_t> idx4cnt;
     string mUnk;
-	int mBlgSize;
+	int mBlgSize; //sequence Number
     bool randomize;
 
     size_t m_mbSize;
@@ -60,7 +60,6 @@ public:
     int labelDim;
 
     int sentenceEndId;
-    Matrix<ElemType>* label_m_ref; //A reference to the label matrix in the getMinibatch
     Matrix<ElemType> minibatchFlag; //A place to set minibatchFlag in the getMinibatch function
 
     static void ReadClassInfo(const wstring & vocfile, int& class_size,

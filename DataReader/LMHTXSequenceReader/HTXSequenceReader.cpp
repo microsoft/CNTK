@@ -138,7 +138,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     }
     oneSentenceInMB = (int)readerConfig("oneSentenceInMB", "0");
     string outputLabelType_str;
-    outputLabelType_str = std::string(readerConfig("outptuLabelType", "compressed"));
+    outputLabelType_str = std::string(readerConfig("outputLabelType", "compressed"));
     if (strcmp(outputLabelType_str.c_str(), "compressed") == 0)
         outputLabelType = LMSLabelType::compressed;
     else
@@ -150,7 +150,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     std::wstring temp_s = readerConfig("file");
     fileName = std::string(temp_s.begin(), temp_s.end());
 
-    debughtx = readerConfig("debughtx", "1");
+    debughtx = readerConfig("debughtx", "0");
     if (debughtx == 1)
         fprintf(stderr, "debughtx set to one, will give a lot of debug output....\n");
 
@@ -222,8 +222,6 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     //features idx2cls labels
     Matrix<ElemType>* feature_m = matrices[L"features"];
     Matrix<ElemType>* label_m = matrices[L"labels"];
-    label_m_ref = label_m;
-    //All zero!
     size_t wordNumber = mBlgSize * m_mbSize;
 
     DEVICEID_TYPE featureDeviceId = feature_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
@@ -242,7 +240,11 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         feature_m->Reset();
     }
 
-    label_m->Resize(4, wordNumber);
+    if (outputLabelType == LMSLabelType::compressed)
+        label_m->Resize(4, wordNumber);
+    else
+        label_m->Resize(nwords, wordNumber);
+    label_m->SetValue(0);
     //label_m->Reset(); //Can't do this 
 
     bool res = false; //Got something new?
@@ -272,7 +274,10 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
                 minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceStart);
             res = true; //Got some word new
             sequence_cache[i]->pop_front();
-            label_m->SetValue(0, idx, (ElemType)sequence_cache[i]->front());
+            if (outputLabelType == LMSLabelType::compressed)
+                label_m->SetValue(0, idx, (ElemType)sequence_cache[i]->front());
+            else
+                label_m->SetValue(sequence_cache[i]->front(), idx, (ElemType)1);
             if (sequence_cache[i]->front() == sentenceEndId) { //End of a sentence, pop it out for a new one.
                 sequence_cache[i]->pop_front();
                 minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceEnd);
