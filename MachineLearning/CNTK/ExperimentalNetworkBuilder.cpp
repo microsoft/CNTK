@@ -76,118 +76,13 @@ namespace Microsoft { namespace MSR { namespace BS {
     struct DualPrecisionHelpers
     {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
-
-        // basic function template, for classes that can instantiate themselves from IConfigRecordPtr
-        // TODO: do we even have any?
-        template<class C>
-        static shared_ptr<Object> MakeRuntimeObject(const IConfigRecordPtr config)
-        {
-            return make_shared<C>(config);
-        }
-
-        // -------------------------------------------------------------------
-        // ComputationNetwork
-        // -------------------------------------------------------------------
-
-        // initialize a ComputationNetwork<ElemType> from a ConfigRecord
-        template<>
-        static shared_ptr<Object> MakeRuntimeObject<ComputationNetwork<ElemType>>(const IConfigRecordPtr configp)
-        {
-            let & config = *configp;
-
-            DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
-            auto net = make_shared<ComputationNetwork<ElemType>>(deviceId);
-
-            auto & m_nameToNodeMap = net->GetNameToNodeMap();
-
-            deque<ComputationNodePtr> workList;
-            // flatten the set of all nodes
-            // we collect all root ComputationNodes from the config record, and then expand into all their children by work-list processing
-            // TODO: This currently only collects nodes of the same ElemType. We could allow conversion operators.
-            // TODO: Can we even make the ComputationNetwork independent of ElemType?? As long as the nodes themselves are hooked up properly that should be OK!
-            for (let & id : config.GetMemberIds())
-            {
-                let & value = config[id];
-                if (value.Is<ComputationNode<ElemType>>())
-                    workList.push_back((ComputationNodePtr)value);
-            }
-            // process work list
-            // Also call FinalizeInit where we must.
-            while (!workList.empty())
-            {
-                let node = workList.front();
-                workList.pop_front();
-
-                // add to set
-                let res = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
-                if (!res.second)        // not inserted: we already got this one
-                    if (res.first->second == node)
-                        continue;       // the same
-                    else                // oops, a different node with the same name
-                        LogicError("ComputationNetwork: multiple nodes with the same NodeName() '%ls'", node->NodeName().c_str());
-
-                // If node derives from MustFinalizeInit() then it has unresolved inputs. Resolve them now.
-                // This may generate a whole new load of nodes, including nodes which in turn have late init.
-                // TODO: think this through whether it may generate circular references nevertheless
-                let mustFinalizeInit = dynamic_pointer_cast<MustFinalizeInit>(node);
-                if (mustFinalizeInit)
-                    mustFinalizeInit->FinalizeInit();
-
-                // add it to the respective node group based on the tag
-                let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
-                if (nodeWithTag)
-                {
-                    wstring tag = nodeWithTag->GetTag();
-                    if (tag == L"feature")                              net->FeatureNodes().push_back(node);
-                    else if (tag == L"label")                           net->LabelNodes().push_back(node);
-                    else if (tag == L"criterion" || tag == L"criteria") net->FinalCriterionNodes().push_back(node); // 'criteria' is wrong (plural); we keep it for compat
-                    else if (!_wcsnicmp(tag.c_str(), L"eval", 4))       net->EvaluationNodes().push_back(node);     // eval*
-                    else if (tag == L"output")                          net->OutputNodes().push_back(node);
-                    else if (tag == L"pair")                            net->PairNodes().push_back(node);           // TODO: I made this up; the original code in SynchronousExecutionEngine did not have this
-                    else if (tag == L"multiseq")                        net->NodesReqMultiSeqHandling().push_back(node);
-                    else if (!tag.empty())
-                        RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
-                    // TODO: are there nodes without tag? Where do they go?
-                }
-
-                // TODO: ...can we do stuff like propagating dimensions here? Or still too early?
-
-                // traverse children: append them to the end of the work list
-                let children = node->GetChildren();
-                for (auto child : children)
-                    workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
-            }
-
-            // TODO: what is missing is the dimensions
-#if 1
-            wstring args = net->ToString();
-            fprintf(stderr, "%ls\n", args.c_str());
-#endif
-            return net;
-        }
+        // basic function template, for classes that can instantiate themselves from IConfigRecordPtr  TODO: do we even have any?
+        template<class C> static shared_ptr<Object> MakeRuntimeObject(const IConfigRecordPtr config) { return make_shared<C>(config); }
 
         // -------------------------------------------------------------------
         // ComputationNode -- covers all standard nodes
         // -------------------------------------------------------------------
 
-    private:
-        // helper for the factory function for ComputationNodes
-        static vector<ComputationNodePtr> GetInputs(const IConfigRecord & config)
-        {
-            vector<ComputationNodePtr> inputs;
-            let inputsArg = config[L"inputs"];
-            if (inputsArg.Is<ComputationNode<ElemType>>())          // single arg
-                inputs.push_back(inputsArg);
-            else                                                    // a whole vector
-            {
-                let inputsArray = (ConfigArrayPtr)inputsArg;
-                let range = inputsArray->GetIndexRange();
-                for (int i = range.first; i <= range.second; i++)   // pull them. This will resolve all of them.
-                    inputs.push_back(inputsArray->At(i, inputsArg.GetLocation()));
-            }
-            return inputs;
-        }
-    public:
         // create ComputationNode
         // This is the equivalent of the old SynchronousNodeEvaluator::Evaluate(), and we duplicate code from there.
         template<>
@@ -640,6 +535,105 @@ namespace Microsoft { namespace MSR { namespace BS {
                 nodeWithTag->SetTag(config[L"tag"]);
             // and done
             return node;
+        }
+    private:
+        // helper for the factory function for ComputationNodes
+        static vector<ComputationNodePtr> GetInputs(const IConfigRecord & config)
+        {
+            vector<ComputationNodePtr> inputs;
+            let inputsArg = config[L"inputs"];
+            if (inputsArg.Is<ComputationNode<ElemType>>())          // single arg
+                inputs.push_back(inputsArg);
+            else                                                    // a whole vector
+            {
+                let inputsArray = (ConfigArrayPtr)inputsArg;
+                let range = inputsArray->GetIndexRange();
+                for (int i = range.first; i <= range.second; i++)   // pull them. This will resolve all of them.
+                    inputs.push_back(inputsArray->At(i, inputsArg.GetLocation()));
+            }
+            return inputs;
+        }
+    public:
+
+        // -------------------------------------------------------------------
+        // ComputationNetwork
+        // -------------------------------------------------------------------
+
+        // initialize a ComputationNetwork<ElemType> from a ConfigRecord
+        template<>
+        static shared_ptr<Object> MakeRuntimeObject<ComputationNetwork<ElemType>>(const IConfigRecordPtr configp)
+        {
+            let & config = *configp;
+
+            DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
+            auto net = make_shared<ComputationNetwork<ElemType>>(deviceId);
+
+            auto & m_nameToNodeMap = net->GetNameToNodeMap();
+
+            deque<ComputationNodePtr> workList;
+            // flatten the set of all nodes
+            // we collect all root ComputationNodes from the config record, and then expand into all their children by work-list processing
+            // TODO: This currently only collects nodes of the same ElemType. We could allow conversion operators.
+            // TODO: Can we even make the ComputationNetwork independent of ElemType?? As long as the nodes themselves are hooked up properly that should be OK!
+            for (let & id : config.GetMemberIds())
+            {
+                let & value = config[id];
+                if (value.Is<ComputationNode<ElemType>>())
+                    workList.push_back((ComputationNodePtr)value);
+            }
+            // process work list
+            // Also call FinalizeInit where we must.
+            while (!workList.empty())
+            {
+                let node = workList.front();
+                workList.pop_front();
+
+                // add to set
+                let res = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
+                if (!res.second)        // not inserted: we already got this one
+                    if (res.first->second == node)
+                        continue;       // the same
+                    else                // oops, a different node with the same name
+                        LogicError("ComputationNetwork: multiple nodes with the same NodeName() '%ls'", node->NodeName().c_str());
+
+                // If node derives from MustFinalizeInit() then it has unresolved inputs. Resolve them now.
+                // This may generate a whole new load of nodes, including nodes which in turn have late init.
+                // TODO: think this through whether it may generate circular references nevertheless
+                let mustFinalizeInit = dynamic_pointer_cast<MustFinalizeInit>(node);
+                if (mustFinalizeInit)
+                    mustFinalizeInit->FinalizeInit();
+
+                // add it to the respective node group based on the tag
+                let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
+                if (nodeWithTag)
+                {
+                    wstring tag = nodeWithTag->GetTag();
+                    if (tag == L"feature")                              net->FeatureNodes().push_back(node);
+                    else if (tag == L"label")                           net->LabelNodes().push_back(node);
+                    else if (tag == L"criterion" || tag == L"criteria") net->FinalCriterionNodes().push_back(node); // 'criteria' is wrong (plural); we keep it for compat
+                    else if (!_wcsnicmp(tag.c_str(), L"eval", 4))       net->EvaluationNodes().push_back(node);     // eval*
+                    else if (tag == L"output")                          net->OutputNodes().push_back(node);
+                    else if (tag == L"pair")                            net->PairNodes().push_back(node);           // TODO: I made this up; the original code in SynchronousExecutionEngine did not have this
+                    else if (tag == L"multiseq")                        net->NodesReqMultiSeqHandling().push_back(node);
+                    else if (!tag.empty())
+                        RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
+                    // TODO: are there nodes without tag? Where do they go?
+                }
+
+                // TODO: ...can we do stuff like propagating dimensions here? Or still too early?
+
+                // traverse children: append them to the end of the work list
+                let children = node->GetChildren();
+                for (auto child : children)
+                    workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
+            }
+
+            // TODO: what is missing is the dimensions
+#if 1
+            wstring args = net->ToString();
+            fprintf(stderr, "%ls\n", args.c_str());
+#endif
+            return net;
         }
 
         // -------------------------------------------------------------------
