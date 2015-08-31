@@ -351,7 +351,7 @@ public:
                     static_pointer_cast<FutureValueNode<ElemType>>(nodePtr)->SetTimeStep(timeStep);
                 }
 
-                nodePtr->NeedGradient() = needGradient;
+                nodePtr->NeedGradient() = needGradient;    // TODO: what's this for?
             }
         }    
         else if (cnNodeType == ConvolutionNode<ElemType>::TypeName())

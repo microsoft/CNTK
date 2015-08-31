@@ -51,11 +51,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Init(1, 1);
         }
-        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) :
+        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
             ComputationNode<ElemType>(deviceId, name),
             m_delayedActivation(deviceId), m_boundaryInfo(CPUDEVICE)
         {
             Init(row_size, col_size, initialActivationValue);
+
+            m_timeStep = (int)timeStep;
 
             m_functionValues.SetValue(m_initialActivationValue);
             m_delayedActivation.SetValue(m_initialActivationValue);
@@ -294,10 +296,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[0] = inputNode;
         }
 
+        // this function is only used from old NDL  --TODO: delete once no longer used
         void SetTimeStep(const int val)
         {
             if (val <= 0)
-                throw std::logic_error("timeStep must be > 0.");
+                throw std::logic_error("timeStep must be > 0.");    // TODO: then make 'val' a size_t please?
             m_timeStep = val;
         }
 
@@ -347,8 +350,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-        PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) :
-            Base(deviceId, name, initialActivationValue, row_size, col_size)
+        PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
+            Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
         { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -418,8 +421,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-        FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size) :
-            Base(deviceId, name, initialActivationValue, row_size, col_size)
+        FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
+            Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
         { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
