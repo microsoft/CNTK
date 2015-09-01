@@ -37,32 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // FixupInputMinibatchSize - go through all the inputs and make sure they have a consistent minibatch size
         void FixupInputMinibatchSize()
         {
-            std::list<ComputationNodePtr> inputs = m_net->GetNodesWithType(InputValue<ElemType>::TypeName());
-            int minibatchMax = 0;
-            bool minibatchDifferent = false; // flag to see if all the values are already the same
-            for (ComputationNodePtr node : inputs)
-            {
-                size_t cols = node->FunctionValues().GetNumCols();
-                if (cols != minibatchMax)
-                {
-                    if (minibatchMax != 0)
-                        minibatchDifferent = true;
-                    if (minibatchMax < cols)
-                        minibatchMax = cols;
-                }
-            }
-            if (minibatchDifferent)
-            {
-                for (ComputationNodePtr node : inputs)
-                {
-                    Matrix<ElemType>& matrix = node->FunctionValues();
-                    size_t cols = matrix.GetNumCols();
-                    if (cols != minibatchMax)
-                    {
-                        matrix.Resize(matrix.GetNumRows(), minibatchMax);
-                    }
-                }
-            }
+            m_net->FixupInputMinibatchSize();
         }
 
         // ProcessNDLConfig - Process the NDL script from a configuration string value

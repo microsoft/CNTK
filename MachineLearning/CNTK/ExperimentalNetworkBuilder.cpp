@@ -789,6 +789,9 @@ namespace Microsoft { namespace MSR { namespace BS {
             wstring args = net->ToString();
             fprintf(stderr, "%ls\n", args.c_str());
 #endif
+            // these post-processing steps are done by the other network builders, but I don't know why they are necessary
+            net->FixupInputMinibatchSize();         // make sure dimensions are set up correctly
+            net->ResetEvalTimeStamp();              // (should not really be needed)
             return net;
         }
 
@@ -883,6 +886,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("BuildNetworkFromDescription: network has the wrong element type (float vs. double)");
             // success
             m_net = network;
+            // TODO: old CNTK code seems to be able to load the network in-place--is that important; is it OK to just replace the pointer?
         }
         m_net->ResetEvalTimeStamp();
         return m_net.get();
