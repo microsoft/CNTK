@@ -47,7 +47,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     using namespace msra::strfun;
     using namespace Microsoft::MSR::CNTK;
 
-    bool trace = false;// true;      // enable to get debug output
+    bool trace = true;      // enable to get debug output
 
 #define exprPathSeparator L"."
 
@@ -983,7 +983,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         function<ConfigValuePtr()> f = [expr, scope, exprPath, exprId]()   // lambda that computes this value of 'expr'
         {
             if (trace)
-                TextLocation::Trace(expr->location, L"thunk", expr->op.c_str(), (exprPath + L":" + exprId).c_str());
+                TextLocation::Trace(expr->location, msra::strfun::wstrprintf(L"thunk SP=0x%p", &exprPath).c_str(), expr->op.c_str(), (exprPath + L":" + exprId).c_str());
             let value = Evaluate(expr, scope, exprPath, exprId);
             return value;   // this is a great place to set a breakpoint!
         };
@@ -1017,7 +1017,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             exprPath.append(exprId);
             // tracing
             if (trace)
-                TextLocation::Trace(e->location, L"eval", e->op.c_str(), exprPath.c_str());
+                TextLocation::Trace(e->location, msra::strfun::wstrprintf(L"eval SP=0x%p", &exprPath).c_str(), e->op.c_str(), exprPath.c_str());
             // --- literals
             if (e->op == L"d")       return MakePrimitiveConfigValuePtr(e->d, e->location, exprPath);         // === double literal
             else if (e->op == L"s")  return ConfigValuePtr(make_shared<String>(e->s), e->location, exprPath); // === string literal
