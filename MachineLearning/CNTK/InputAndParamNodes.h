@@ -76,8 +76,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputHeight = rows;
             m_outputChannels = 1;
         }
-        
+
+        // TODO: 'LearnableParameters' is now redundant in the name; rename to InitRandom()
+        // TODO: also move file loading here?
+        void InitLearnableParameters(const bool uniformInit,
+                                     const unsigned long randomSeed,
+                                     const ElemType initValueScale,
+                                     bool initOnCPUOnly) // if true then always init on CPU, making initialization consistent across both (for testing)
+        {
+            size_t inputSize = FunctionValues().GetNumCols();
+
+            // the random seed offset is set via the "randomSeedOffset" parameter in config
+            if (initOnCPUOnly)
+                m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE);
+            if (uniformInit)
+            {
+                ElemType randRange = 0.05f * initValueScale; //initValueScale/sqrt(inputSize);
+                FunctionValues().SetUniformRandomValue(-randRange, randRange, randomSeed);
+            }
+            else
+            {
+                ElemType randInitstd = 0.2f * initValueScale / sqrt(ElemType(inputSize));
+                FunctionValues().SetGaussianRandomValue(0, randInitstd, randomSeed);
+            }
+            if (initOnCPUOnly)
+                m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId);
+        }
+
         virtual const std::wstring OperationName() const {return TypeName();}
+
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
         virtual void EvaluateThisNode() {}

@@ -954,8 +954,8 @@ public:
 
     // TODO: why is this here? Move to LearnableParameter class?
     static void InitLearnableParametersFromFile(const ComputationNodePtr node,
-                                         const std::wstring & initFromFilePath,
-                                         DEVICEID_TYPE deviceId)    // TODO: why not just use node->m_deviceId?
+                                                const std::wstring & initFromFilePath,
+                                                DEVICEID_TYPE deviceId)    // TODO: why not just use node->m_deviceId?
     {
         size_t numRows = 0;
         size_t numCols = 0;
@@ -972,34 +972,16 @@ public:
     // node construction
     // -----------------------------------------------------------------------
 
-    // TODO: move this into LearnableParameter directly; no value to keep it out
-    static void InitLearnableParameters(const ComputationNodePtr node,
-                                        const bool uniformInit,
-                                        const unsigned long randomSeed,
-                                        const ElemType initValueScale,
-                                        unsigned long randomSeedOffset)
-    {
-        size_t inputSize = node->FunctionValues().GetNumCols();
-
-        // the random seed offset is set via the "randomSeedOffset" parameter in config
-        if (uniformInit)
-        {
-            ElemType randRange = 0.05f * initValueScale; //initValueScale/sqrt(inputSize);
-            node->FunctionValues().SetUniformRandomValue(-randRange, randRange, randomSeedOffset + randomSeed);
-        }
-        else
-        {
-            ElemType randInitstd = 0.2f * initValueScale / sqrt(ElemType(inputSize));
-            node->FunctionValues().SetGaussianRandomValue(0, randInitstd, randomSeedOffset + randomSeed);
-        }
-    }
-    // non-static version needed because it access m_randomSeedOffset
+    // non-static version needed because it accesses m_randomSeedOffset
+    // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
     void InitLearnableParameters(const ComputationNodePtr node,
-        const bool uniformInit,
-        const unsigned long randomSeed,
-        const ElemType initValueScale)
+                                 const bool uniformInit,
+                                 const unsigned long randomSeed,
+                                 const ElemType initValueScale,
+                                 bool initOnCPUOnly = false)
     {
-        return InitLearnableParameters(node, uniformInit, randomSeed, initValueScale, GetRandomSeedOffset());
+        auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
+        learnableParameterNode->InitLearnableParameters(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
     }
 
     // -----------------------------------------------------------------------
@@ -1299,6 +1281,7 @@ public:
 
     ComputationNodePtr CreateLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols)
     {
+        // TODO: in SimpleNetworkBuilder, this is very often followed by InitLearnableParameter()--we should have an overload that just does it right away
         return AddNodeToNet(New<LearnableParameter<ElemType>>(m_deviceId, paramName, rows, cols));
     }
 
@@ -1951,6 +1934,7 @@ public:
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
+            // TODO: nbrSlices set once to the same value for all nodes each evaluation--is it ever changed later?
             (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
             if ((*nodeIter)->ReqMultiSeqHandling())
                     (*nodeIter)->ResetBound(&m_SentenceBoundary, &m_minibatchPackingFlag);
@@ -1958,6 +1942,7 @@ public:
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
+            // TODO: is this the frame-by-frame evaluation? Why is there no comment here??
             EvaluateLoop(allNodes, (*nodeIter));
 
             if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
@@ -1969,6 +1954,7 @@ public:
                 fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
 #endif
                 // we manage time stamp here so that derived classes don't need to worry about it
+                // TODO: is this the whole-batch evaluation?
                 (*nodeIter)->EvaluateThisNodeGivenInputs(); 
                 (*nodeIter)->UpdateEvalTimeStamp();
             }

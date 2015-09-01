@@ -54,7 +54,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     struct MustFinalizeInit { virtual void FinalizeInit() = 0; };   // derive from this to indicate ComputationNetwork should call FinalizeIitlate initialization
 
     wstring computationNodes =  // TODO: use actual TypeName() here? would first need to make it a wide string; we should also extract those two methods into the base macro
-        L"LearnableParameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
+        L"LearnableParameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', initOnCPUOnly=true, randomSeed=-1, tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
         L"Parameter = LearnableParameter // deprecated \n"
         // ^^ already works; vv untested
         L"Input(rows, cols, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = false ; isImage = false /*plus the function args*/ ]\n" // note: naming a little inconsistent  // TODO: re-test after flag change
@@ -384,7 +384,11 @@ namespace Microsoft { namespace MSR { namespace BS {
                 if (initString == L"fixedValue")
                     node->FunctionValues().SetValue((ElemType)config[L"value"]);
                 else if (initString == L"uniform" || initString == L"gaussian")
-                    ComputationNetwork<ElemType>::InitLearnableParameters(node, (initString == L"uniform"), randomSeed++, config[L"initValueScale"], m_randomSeedOffset);
+                {
+                    // TODO: add these options also to old NDL
+                    int forcedRandomSeed = config[L"randomSeed"];   // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
+                    dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->InitLearnableParameters((initString == L"uniform"), forcedRandomSeed < 0 ? (randomSeed++ + m_randomSeedOffset) : (unsigned long) forcedRandomSeed, config[L"initValueScale"], config[L"initOnCPUOnly"]);
+                }
                 else if (initString == L"fromFile")
                 {
                     wstring initFromFilePath = config[L"initFromFilePath"];
