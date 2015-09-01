@@ -385,7 +385,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef WIN32
                 const msra::lm::CSymbolSet* wordmap = unigram ? &unigramsymbols : NULL;
 #else
-		const map<string, size_t>* wordmap = NULL;
+                const map<string, size_t>* wordmap = NULL;
 #endif
                 msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>  
                 labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordmap, (map<string,size_t>*) NULL, htktimetoframe);      // label MLF
@@ -851,7 +851,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     // now, access all features and and labels by iterating over map of "matrices"
                     bool first = true;
-                typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
+                    typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                     for (iter = matrices.begin();iter!=matrices.end(); iter++)
                     {
                         // dereference matrix that corresponds to key (input/output name) and 
@@ -875,7 +875,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SEQUENCE_END);
                                 std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
                                 m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
-                                m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::SequenceEnd;
+                                m_minibatchPackingFlag[(size_t)feat.cols() - 1] = MinibatchPackingFlag::SequenceEnd;
                                 first = false;
                             }
 
@@ -1032,12 +1032,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 m_sentenceEnd[i] = false;
                                 m_switchFrame[i] = m_mbSize+1;
-                            if (m_processedFrame[i] == 1)
-                            {
-                                m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_END);
-                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceEnd;
+                                if (m_processedFrame[i] == 1)
+                                {
+                                    m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_END);
+                                    m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceEnd;
+                                }
                             }
-                        }
                             else
                             {
                                 m_switchFrame[i] = 0;
@@ -1047,7 +1047,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                             actualmbsize[i] = m_mbSize;
                             endFr = startFr + actualmbsize[i];
-                        typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
+                            typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                             for (iter = matrices.begin();iter!=matrices.end(); iter++)
                             {
                                 // dereference matrix that corresponds to key (input/output name) and 
@@ -1112,7 +1112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             actualmbsize[i] = m_toProcess[i] - m_processedFrame[i];
                             endFr = startFr + actualmbsize[i];
 
-                        typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
+                            typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                             for (iter = matrices.begin();iter!=matrices.end(); iter++)
                             {
                                 // dereference matrix that corresponds to key (input/output name) and 
@@ -1176,11 +1176,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SEQUENCE_START);
                                 m_minibatchPackingFlag[actualmbsize[i]] |= MinibatchPackingFlag::SequenceStart;
                             }
-                        if (actualmbsize[i] == m_mbSize)
-                        {
-                            m_sentenceBegin.SetValue(i, actualmbsize[i]-1, (ElemType)SEQUENCE_END);
-                            m_minibatchPackingFlag[actualmbsize[i]] = m_minibatchPackingFlag[actualmbsize[i]-1] | MinibatchPackingFlag::SequenceEnd;
-                        }
+                            if (actualmbsize[i] == m_mbSize)
+                            {
+                                m_sentenceBegin.SetValue(i, actualmbsize[i]-1, (ElemType)SEQUENCE_END);
+                                m_minibatchPackingFlag[actualmbsize[i]] = m_minibatchPackingFlag[actualmbsize[i]-1] | MinibatchPackingFlag::SequenceEnd;
+                            }
                             startFr = m_switchFrame[i];
                             endFr = m_mbSize;
                             bool reNewSucc = ReNewBufferForMultiIO(i);
@@ -1231,7 +1231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         }
                     }
-                typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
+                    typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                     for (iter = matrices.begin();iter!=matrices.end(); iter++)
                     {
                         // dereference matrix that corresponds to key (input/output name) and 
@@ -1310,7 +1310,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // populate input matrices
                 bool first = true;
-            typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
+                typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                 for (iter = matrices.begin();iter!=matrices.end(); iter++)
                 {
                     // dereference matrix that corresponds to key (input/output name) and 
@@ -1329,10 +1329,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_minibatchPackingFlag.resize((size_t)feat.cols());
                             m_sentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
                             m_sentenceBegin.SetValue(0, 0, (ElemType)SEQUENCE_START);
-                        m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SEQUENCE_END);
+                            m_sentenceBegin.SetValue(0, (size_t)feat.cols() - 1, (ElemType)SEQUENCE_END);
                             std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
                             m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
-                        m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::SequenceEnd;
+                            m_minibatchPackingFlag[(size_t)feat.cols() - 1] = MinibatchPackingFlag::SequenceEnd;
                             first = false;
                         }
 
@@ -1631,14 +1631,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     template<class ElemType>
-    void HTKMLFReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &sentenceEnd)
-    {
-        sentenceEnd.resize(m_switchFrame.size());
-        for (size_t i = 0; i < m_switchFrame.size() ; i++)
+        void HTKMLFReader<ElemType>::SetSentenceEndInBatch(vector<size_t> &sentenceEnd)
         {
-            sentenceEnd[i] = m_switchFrame[i];
+            sentenceEnd.resize(m_switchFrame.size());
+            for (size_t i = 0; i < m_switchFrame.size() ; i++)
+            {
+                sentenceEnd[i] = m_switchFrame[i];
+            }
         }
-    }
 
     template<class ElemType>
         void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
