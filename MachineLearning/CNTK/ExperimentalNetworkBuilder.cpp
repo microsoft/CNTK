@@ -54,30 +54,84 @@ namespace Microsoft { namespace MSR { namespace BS {
     struct MustFinalizeInit { virtual void FinalizeInit() = 0; };   // derive from this to indicate ComputationNetwork should call FinalizeIitlate initialization
 
     wstring computationNodes =  // TODO: use actual TypeName() here? would first need to make it a wide string; we should also extract those two methods into the base macro
-        L"Parameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
+        L"LearnableParameter(rows, cols, needGradient = true, init = 'uniform'/*|fixedValue|gaussian|fromFile*/, initValueScale = 1, value = 0, initFromFilePath = '', tag='') = new ComputationNode [ operation = 'LearnableParameter' /*plus the function args*/ ]\n"
+        L"Parameter = LearnableParameter // deprecated \n"
         // ^^ already works; vv untested
         L"Input(rows, cols, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = false ; isImage = false /*plus the function args*/ ]\n" // note: naming a little inconsistent  // TODO: re-test after flag change
         L"SparseInput(rows, cols, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = true ; isImage = false /*plus the function args*/ ]\n"
         L"ImageInput(imageWidth, imageHeight, imageChannels, numImages, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = true ; isImage = true /*plus the function args*/ ]\n"
         L"SparseImageInput(imageWidth, imageHeight, imageChannels, numImages, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = true ; isImage = true /*plus the function args*/ ]\n"
         L"Constant(value, rows = 1, cols = 1, tag='') = Parameter(rows, cols, needGradient = false, init = 'fixedValue') \n"
-        L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
-        L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
         L"PastValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1) = new ComputationNode [ operation = 'PastValue' ; inputs = input /*plus the function args*/ ]\n"
         L"FutureValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1) = new ComputationNode [ operation = 'FutureValue' ; inputs = input /*plus the function args*/ ]\n"
+        L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
+        L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
+        L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input /*plus the function args*/ ]\n"
         L"ConvolutionNode(weightNode, inputValueNode, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0) = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode) /*plus the function args*/ ]\n"
         L"MaxPoolingNode(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample) = new ComputationNode [ operation = 'MaxPooling' ; inputs = input /*plus the function args*/ ]\n"
+        L"AveragePoolingNode(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample) = new ComputationNode [ operation = 'AveragePoolingNode' ; inputs = input /*plus the function args*/ ]\n"
         // TODO: define DelayedValue, with negative delay for future; cannot do this yet, need to be able to say something like delay = -(^.delay)
-        // standard nodes, tested
-        L"Mean(z, tag='') = new ComputationNode [ operation = 'Mean' ; inputs = z /* ; tag = tag */ ]\n"
-        L"InvStdDev(z, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = z /* ; tag = tag */ ]\n"
-        L"PerDimMeanVarNormalization(feat,mean,invStdDev, tag='') = new ComputationNode [ operation = 'PerDimMeanVarNormalization' ; inputs = feat:mean:invStdDev /* ; tag = tag */ ]\n"
-        L"Sigmoid(z, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = z /* ; tag = tag */ ]\n"
-        L"CrossEntropyWithSoftmax(labels, outZ, tag='criterion') = new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = labels:outZ ]\n"
-        L"ErrorPrediction(labels, outZ, tag='') = new ComputationNode [ operation = 'ErrorPrediction' ; inputs = labels:outZ /* ; tag = tag */ ]\n"
-        // standard nodes, untested
-        L"Log(z, tag='') = new ComputationNode [ operation = 'Log' ; inputs = z /* ; tag = tag */ ]\n"
-        ;
+        // aliases
+        L"ColumnwiseCrossProduct = KhatriRaoProduct // deprecated \n"   // TODO: should it be deprecated? It is described as easier to understand in the CNTKBook.
+        L"ClassificationError = ErrorPrediction \n"
+        L"Delay = PastValue \n" // TODO: should it allow negative offsets and an if test here?
+        // standard nodes. We use macros to define these strings.
+#define UnaryStandardNode(Op,a) L#Op L"(" L#a L", tag='') = new ComputationNode [ operation = '" L#Op  L"' ; inputs = " L#a L" /*plus the function args*/ ]\n"
+#define BinaryStandardNode(Op,a,b) L#Op L"(" L#a L", " L#b L", tag='') = new ComputationNode [ operation = '" L#Op  L"' ; inputs = (" L#a L" : " L#b L") /*plus the function args*/ ]\n"
+#define TernaryStandardNode(Op,a,b,c) L#Op L"(" L#a L", " L#b L", " L#c L", tag='') = new ComputationNode [ operation = '" L#Op  L"' ; inputs = (" L#a L" : " L#b L" : " L#c L") /*plus the function args*/ ]\n"
+#define QuaternaryStandardNode(Op,a,b,c,d) L#Op L"(" L#a L", " L#b L", " L#c L", " L#d L", tag='') = new ComputationNode [ operation = '" L#Op  L"' ; inputs = (" L#a L" : " L#b L" : " L#c L" : " L#d L") /*plus the function args*/ ]\n"
+        TernaryStandardNode(CRF, labelVectorSequence, positionDependenScoreVectorSequence, transitionScores)    // TODO: better names
+        QuaternaryStandardNode(ClassBasedCrossEntropyWithSoftmax, labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax)
+        // BUGBUG: the commented-out ones are not mentioned in the CNTK book, nor are their parameters documented in the source code
+        //BinaryStandardNode(ColumnElementTimesNode)
+        BinaryStandardNode(CosDistance, aVectorSequence, anotherVectorSequence)
+        QuaternaryStandardNode(CosDistanceWithNegativeSamples, aVectorSequence, anotherVectorSequence, numShifts, numNegSamples)
+        //BinaryStandardNode(CosDistanceWithNegativeSamplesNode)
+        UnaryStandardNode(Cosine, x)
+        BinaryStandardNode(CrossEntropy, refProbVectorSequence, outProbVectorSequence)
+        BinaryStandardNode(CrossEntropyWithSoftmax, labelVectorSequence, outProbVectorSequence)
+        BinaryStandardNode(DiagTimes, diagonalMatrixAsColumnVector, matrix)
+        UnaryStandardNode(Dropout, activationVectorSequence)
+        //BinaryStandardNode(DummyCriterionNode)
+        BinaryStandardNode(ElementTimes, aMatrix, anotherMatrix)
+        BinaryStandardNode(ErrorPrediction, labelVectorSequence, outVectorSequence) // CNTKBook: ClassificationError?
+        UnaryStandardNode(Exp, x)
+        QuaternaryStandardNode(GMMLogLikelihood, unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVectorSequence)
+        UnaryStandardNode(InvStdDev, dataVectorSequence)
+        BinaryStandardNode(KhatriRaoProduct, leftMatrix, rightMatrix)
+        //BinaryStandardNode(LSTMNode)
+        UnaryStandardNode(Log, x)
+        UnaryStandardNode(LogSoftmax, z)
+        //BinaryStandardNode(LookupTableNode)
+        UnaryStandardNode(MatrixL1Reg, matrix)
+        UnaryStandardNode(MatrixL2Reg, matrix)
+        // BUGBUG: CNTKBook also mentions L1Norm and L2Norm
+        UnaryStandardNode(Mean, dataVectorSequence)
+        BinaryStandardNode(Minus, leftMatrix, rightMatrix)
+        UnaryStandardNode(Negate, input)
+        //BinaryStandardNode(NoiseContrastiveEstimationNode)
+        //BinaryStandardNode(PairNetworkNode)
+        //BinaryStandardNode(ParallelNode)
+        TernaryStandardNode(PerDimMeanVarDeNormalization, dataVectorSequence, meanVector, invStdDevVector)   // TODO: correct?
+        TernaryStandardNode(PerDimMeanVarNormalization, dataVectorSequence, meanVector, invStdDevVector)
+        BinaryStandardNode(Plus, leftMatrix, rightMatrix)
+        UnaryStandardNode(RectifiedLinear, z)
+        //BinaryStandardNode(RowElementTimesNode)
+        //BinaryStandardNode(RowStackNode)
+        BinaryStandardNode(Scale, scalarScalingFactor, matrix)
+        //BinaryStandardNode(SequenceDecoderNode)
+        UnaryStandardNode(Sigmoid, z)
+        UnaryStandardNode(Softmax, z)
+        BinaryStandardNode(SquareError, aMatrix, anotherMatrix)
+        //BinaryStandardNode(StrideTimesNode)
+        //BinaryStandardNode(SumColumnElementsNode)
+        UnaryStandardNode(SumElements, matrix)
+        UnaryStandardNode(Tanh, z)
+        UnaryStandardNode(TimeReverse, vectorSequence)
+        BinaryStandardNode(Times, leftMatrix, rightMatrix)
+        UnaryStandardNode(Transpose, matrix)
+        //BinaryStandardNode(TransposeTimesNode)
+    ;
 
     template<typename ElemType>
     struct DualPrecisionHelpers
