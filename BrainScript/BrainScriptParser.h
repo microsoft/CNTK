@@ -37,7 +37,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         static void Trace(TextLocation, const wchar_t * traceKind, const wchar_t * op, const wchar_t * exprPath);
 
         // construction
-        TextLocation();
+        TextLocation() : lineNo(SIZE_MAX), charPos(SIZE_MAX), sourceFileAsIndex(SIZE_MAX) { }   // default constructor constructs an unmissably invalid object
         bool IsValid() const;
 
         // register a new source file and return a TextPosition that points to its start

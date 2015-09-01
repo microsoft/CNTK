@@ -55,31 +55,6 @@ namespace Microsoft { namespace MSR { namespace BS {
     // string formatting
     // =======================================================================
 
-    wstring HasToString::IndentString(wstring s, size_t indent)
-    {
-        const wstring prefix(indent, L' ');
-        size_t pos = 0;
-        for (;;)
-        {
-            s.insert(pos, prefix);
-            pos = s.find(L'\n', pos + 2);
-            if (pos == wstring::npos)
-                return s;
-            pos++;
-        }
-    }
-    wstring HasToString::NestString(wstring s, wchar_t open, bool newline, wchar_t close)
-    {
-        wstring result = IndentString(s, 2);
-        if (newline)        // have a new line after the open symbol
-            result = L" \n" + result + L"\n ";
-        else
-            result.append(L"  ");
-        result.front() = open;
-        result.back() = close;
-        return result;
-    }
-
     // 'how' is the center of a printf format string, without % and type. Example %.2f -> how=".2"
     // TODO: change to taking a regular format string and a :: array of args that are checked. Support d,e,f,g,x,c,s (s also for ToString()).
     // TODO: :: array. Check if that is the right operator for e.g. Haskell.

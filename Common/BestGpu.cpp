@@ -43,9 +43,6 @@
 
 #include <memory>
 #include "CrossProcessMutex.h"
-#include "../../MachineLearning/CNTK/MPIWrapper.h"
-extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
-
 
 // ---------------------------------------------------------------------------
 // BestGpu class
