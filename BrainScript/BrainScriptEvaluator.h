@@ -142,12 +142,13 @@ namespace Microsoft { namespace MSR { namespace BS {
         template<class C>
         const C & AsRef() const     // returns reference to what the 'value' member. Configs are considered immutable, so return a const&
         {
+            // TODO: factor these lines into a separate function
             // Note: since this returns a reference into 'this', you must keep the object you call this on around as long as you use the returned reference
             EnsureIsResolved();
-            const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
+            //const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
             const auto p = dynamic_cast<C*>(get());
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
-                throw EvaluationError(L"config member has wrong type, expected a " + TypeId<C>(), location);
+                throw EvaluationError(L"config member has wrong type (" + msra::strfun::utf16(typeid(*get()).name()) + L"), expected a " + TypeId<C>(), location);
             return *p;
         }
         template<class C>
@@ -156,7 +157,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             EnsureIsResolved();
             const auto p = dynamic_pointer_cast<C>(*this);
             if (!p)             // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
-                throw EvaluationError(L"config member has wrong type, expected a " + TypeId<C>(), location);
+                throw EvaluationError(L"config member has wrong type (" + msra::strfun::utf16(typeid(*get()).name()) + L"), expected a " + TypeId<C>(), location);
             return p;
         }
 
