@@ -41,8 +41,8 @@ private:
     vector<size_t> m_switchFrame;
     bool m_noData;
     bool m_trainOrTest; // if false, in file writing mode
-	using LabelType = typename IDataReader<ElemType>::LabelType;
-	using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
+    using LabelType = typename IDataReader<ElemType>::LabelType;
+    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
  
     std::map<LabelIdType, LabelType> m_idToLabelMap;
     

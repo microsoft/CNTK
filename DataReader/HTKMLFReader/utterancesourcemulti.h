@@ -225,24 +225,13 @@ class minibatchutterancesourcemulti : public minibatchsource
     // frame-level randomization layered on top of utterance chunking (randomized, where randomization is cached)
     struct frameref
     {
-#ifndef  _WIN32  // (sadly, the compiler makes this 8 bytes, not 6)
         unsigned short chunkindex;           // lives in this chunk (index into randomizedchunks[])
         unsigned short utteranceindex;       // utterance index in that chunk
         static const size_t maxutterancesperchunk = 65535;
         unsigned short frameindex;           // frame index within the utterance
         static const size_t maxframesperutterance = 65535;
-#else   // For Win32, we care to keep it inside 32 bits. We have already encountered setups where that's not enough.
-        unsigned int chunkindex : 13;           // lives in this chunk (index into randomizedchunks[])
-        unsigned int utteranceindex : 8;        // utterance index in that chunk
-        static const size_t maxutterancesperchunk = 255;
-        unsigned int frameindex : 11;           // frame index within the utterance
-        static const size_t maxframesperutterance = 2047;
-#endif
         frameref (size_t ci, size_t ui, size_t fi) : chunkindex ((unsigned short) ci), utteranceindex ((unsigned short) ui), frameindex ((unsigned short) fi)
         {
-#ifdef  _WIN32
-            static_assert (sizeof (frameref) == 4, "frameref: bit fields too large to fit into 32-bit integer");
-#endif
             if (ci == chunkindex && ui == utteranceindex && fi == frameindex)
                 return;
             throw std::logic_error ("frameref: bit fields too small");

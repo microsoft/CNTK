@@ -712,10 +712,10 @@ template<class _T> struct _strprintf : public std::basic_string<_T>
     _strprintf (const _T * format, ...)
     {
         va_list args; 
-		va_start (args, format);  // varargs stuff
+        va_start (args, format);  // varargs stuff
         size_t n = _cprintf (format, args);     // num chars excl. '\0'
-		va_end(args);
-		va_start(args, format);
+        va_end(args);
+        va_start(args, format);
         const int FIXBUF_SIZE = 128;            // incl. '\0'
         if (n < FIXBUF_SIZE)
         {
@@ -730,7 +730,7 @@ template<class _T> struct _strprintf : public std::basic_string<_T>
     }
 private:
     // helpers
-    inline size_t _cprintf (const wchar_t * format, va_list args) 
+    inline size_t _cprintf (const wchar_t* format, va_list args) 
 	{ 
 #ifdef __WINDOWS__
 		return vswprintf (nullptr, 0, format, args);
@@ -745,7 +745,7 @@ private:
 		return n;
 #endif
 	}
-    inline size_t _cprintf (const  char   * format, va_list args) 
+    inline size_t _cprintf (const char* format, va_list args) 
 	{ 
 #ifdef __WINDOWS__
 		return vsprintf (nullptr, format, args);
