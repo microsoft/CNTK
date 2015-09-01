@@ -62,14 +62,14 @@ namespace Microsoft { namespace MSR { namespace BS {
         L"ImageInput(imageWidth, imageHeight, imageChannels, numImages, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = true ; isImage = true /*plus the function args*/ ]\n"
         L"SparseImageInput(imageWidth, imageHeight, imageChannels, numImages, tag='feature') = new ComputationNode [ operation = 'InputValue' ; isSparse = true ; isImage = true /*plus the function args*/ ]\n"
         L"Constant(value, rows = 1, cols = 1, tag='') = Parameter(rows, cols, needGradient = false, init = 'fixedValue') \n"
-        L"PastValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1) = new ComputationNode [ operation = 'PastValue' ; inputs = input /*plus the function args*/ ]\n"
-        L"FutureValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1) = new ComputationNode [ operation = 'FutureValue' ; inputs = input /*plus the function args*/ ]\n"
+        L"PastValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input /*plus the function args*/ ]\n"
+        L"FutureValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input /*plus the function args*/ ]\n"
         L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
         L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
         L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input /*plus the function args*/ ]\n"
-        L"ConvolutionNode(weightNode, inputValueNode, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0) = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode) /*plus the function args*/ ]\n"
-        L"MaxPoolingNode(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample) = new ComputationNode [ operation = 'MaxPooling' ; inputs = input /*plus the function args*/ ]\n"
-        L"AveragePoolingNode(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample) = new ComputationNode [ operation = 'AveragePoolingNode' ; inputs = input /*plus the function args*/ ]\n"
+        L"ConvolutionNode(weightNode, inputValueNode, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode) /*plus the function args*/ ]\n"
+        L"MaxPoolingNode(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = input /*plus the function args*/ ]\n"
+        L"AveragePoolingNode(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, tag='') = new ComputationNode [ operation = 'AveragePoolingNode' ; inputs = input /*plus the function args*/ ]\n"
         // TODO: define DelayedValue, with negative delay for future; cannot do this yet, need to be able to say something like delay = -(^.delay)
         // aliases
         L"ColumnwiseCrossProduct = KhatriRaoProduct // deprecated \n"   // TODO: should it be deprecated? It is described as easier to understand in the CNTKBook.
@@ -152,16 +152,16 @@ namespace Microsoft { namespace MSR { namespace BS {
         template<class N>
         class LateAttachingNode : public N, public ILateAttachingNode
         {
-            function<void(ComputationNodePtr)> attachInputs;
+            function<void(ComputationNode<ElemType>*)> attachInputs;
         public:
             // constructor
             template<class... _Types>
-            LateAttachingNode(DEVICEID_TYPE deviceId, const wstring & name, const function<void(ComputationNodePtr)> & attachInputs, _Types&&... _Args) : attachInputs(attachInputs), N(deviceId, name, forward<_Types>(_Args)...) {}
+            LateAttachingNode(DEVICEID_TYPE deviceId, const wstring & name, const function<void(ComputationNode<ElemType>*)> & attachInputs, _Types&&... _Args) : attachInputs(attachInputs), N(deviceId, name, forward<_Types>(_Args)...) {}
             // the one member that does the work
             void /*ILateAttachingNode::*/LateAttachInputs()
             {
-                attachInputs(N::shared_from_this());
-                attachInputs = [](ComputationNodePtr){ LogicError("LateAttachingNode::AttachInputs: must only be called once"); };
+                attachInputs(dynamic_cast<N*>(this));
+                attachInputs = [](ComputationNode<ElemType>*){ LogicError("LateAttachingNode::AttachInputs: must only be called once"); };
             }
         };
 
@@ -467,7 +467,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 // Note: changed names of optional args compared to current NDL
                 // TODO: we really should NOT have to specify the dimensions; network builder can figure it out. Keep it for now, fix when it is time.
                 // We instantiate not the node directly, but a wrapped version that can cast to LateAttachingNode, which holds a lambda to complete the attachment process at the appropriate time.
-                function<void(ComputationNodePtr)> completeAttachInputs = [configp](ComputationNodePtr node)   // This is the lambda to complete the process. Note that config captured as a shared_ptr.
+                function<void(ComputationNode<ElemType>*)> completeAttachInputs = [configp](ComputationNode<ElemType>* node)   // This is the lambda to complete the process. Note that config captured as a shared_ptr.
                 {
                     node->AttachInputs(GetInputs(*configp));    // this is executed by network builder while iterating the nodes
                 };

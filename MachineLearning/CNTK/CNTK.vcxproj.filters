@@ -256,8 +256,5 @@
     <None Include="prebuild.bat">
       <Filter>Misc</Filter>
     </None>
-    <None Include="..\..\BrainScript\test.config">
-      <Filter>Experimental</Filter>
-    </None>
   </ItemGroup>
 </Project>

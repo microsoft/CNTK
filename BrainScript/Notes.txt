@@ -1,6 +1,10 @@
 CNTK configuration language redesign (ongoing work)
 ====================================
 
+F. Seide, August 2015
+
+These are the original notes from before coding began. Basic ideas are correct, but may be a bit outdated.
+
  - config specifies all configurable runtime objects and their initialization parameters
  - basic concepts: dictionaries and runtime-object definitions
  - basic syntactic elements:
