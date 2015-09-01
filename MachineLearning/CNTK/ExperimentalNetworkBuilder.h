@@ -28,7 +28,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                                                               bool bAllowNoCriterionNode = false, ComputationNetwork<ElemType>* anotherNetwork = nullptr)
         {
             if (!m_net || m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
-                m_net->LoadFromFile(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
+            {
+                auto net = make_shared<ComputationNetwork<ElemType>>(m_deviceId);
+                net->LoadFromFile(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
+                m_net = net;
+            }
             m_net->ResetEvalTimeStamp();
             return m_net.get();
         }
