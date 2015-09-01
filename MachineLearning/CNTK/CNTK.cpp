@@ -24,6 +24,7 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include <memory>
 
 #include "Basics.h"
 #include "ComputationNetwork.h"
