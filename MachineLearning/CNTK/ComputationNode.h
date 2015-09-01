@@ -120,6 +120,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_nodeName(name == L"" ? CreateUniqNodeName() : name)
         {
             InitRecurrentNode();
+            ResetEvalTimeStamp();   // bring it into defined state
             // This constructor does not call MoveMatricesToDevice(), but that is needed for full initialization.
             // Only call this constructor through the New() factory below, which will ensure this.
         }
@@ -545,7 +546,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int64_t UpdateEvalTimeStamp()
         {
-            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
+            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);    // TODO: does this really need to be atomic? We are not multi-threaded
             return m_evalTimeStamp;
         }
 

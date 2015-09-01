@@ -503,7 +503,7 @@ public:
                     break;
                 }
             }
-            // process common optional parameters (like "tag");
+            // process common optional parameters (currently only "tag");
             ProcessOptionalParameters(node);
             break;
             }
