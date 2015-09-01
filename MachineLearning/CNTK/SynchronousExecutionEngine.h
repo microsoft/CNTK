@@ -161,14 +161,16 @@ public:
                 std::string initString = node->GetOptionalParameter("init", "uniform");
                 ElemType initValueScale = node->GetOptionalParameter("initValueScale", "1");
                 ElemType value = node->GetOptionalParameter("value", "0");
-                
+                bool initOnCPUOnly = node->GetOptionalParameter("initOnCPUOnly", "false");
+                int forcedRandomSeed = node->GetOptionalParameter("randomSeed", "-1"/*disabled*/);
+
                 msra::strfun::tolower_ascii (initString);
                 if (initString == "fixedvalue")
                     nodePtr->FunctionValues().SetValue(value);
                 else if (initString == "uniform")
-                    m_net.InitLearnableParameters(nodePtr, true, randomSeed++, initValueScale);
+                    m_net.InitLearnableParameters(nodePtr, true, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initValueScale, initOnCPUOnly);
                 else if (initString == "gaussian")
-                    m_net.InitLearnableParameters(nodePtr, false, randomSeed++, initValueScale);
+                    m_net.InitLearnableParameters(nodePtr, false, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initValueScale, initOnCPUOnly);
                 else if (initString == "fromfile")
                 {
                     std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");

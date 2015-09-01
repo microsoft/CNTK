@@ -3500,7 +3500,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if (m_GPUMatrix->GetNumElements() !=0 && !emptyTransfer)
                         {
-                            ElemType *arr = m_GPUMatrix->CopyToArray();
+                            ElemType *arr = m_GPUMatrix->CopyToArray(); // TODO: unnecessary allocation/copy; why not make this a vector that we move over as an rvalue ref?
                             m_CPUMatrix = new CPUMatrix<ElemType>(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), arr, matrixFlagNormal);
                             delete[] arr;
                         }
