@@ -34,9 +34,6 @@ SourceFile::SourceFile(wstring path) : path(path)       // from file
     File(path, fileOptionsRead).GetLines(lines);
 }
 
-// default constructor constructs an unmissably invalid object
-TextLocation::TextLocation() : lineNo(SIZE_MAX), charPos(SIZE_MAX), sourceFileAsIndex(SIZE_MAX) { }
-
 bool TextLocation::IsValid() const { return sourceFileAsIndex != SIZE_MAX; }
 
 // register a new source file and return a TextPosition that points to its start

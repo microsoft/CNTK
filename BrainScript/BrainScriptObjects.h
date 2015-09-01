@@ -92,8 +92,32 @@ namespace Microsoft { namespace MSR { namespace BS {
         virtual wstring ToString() const = 0;
 
         // some string helpers useful for ToString() operations of nested structures
-        static wstring IndentString(wstring s, size_t indent);
-        static wstring NestString(wstring s, wchar_t open, bool newline, wchar_t close);
+        // TODO: move these out from this header into some more general place (I had to move them here because otherwise CNTKEval failed to compile)
+        static wstring HasToString::IndentString(wstring s, size_t indent)
+        {
+            const wstring prefix(indent, L' ');
+            size_t pos = 0;
+            for (;;)
+            {
+                s.insert(pos, prefix);
+                pos = s.find(L'\n', pos + 2);
+                if (pos == wstring::npos)
+                    return s;
+                pos++;
+            }
+        }
+        static wstring HasToString::NestString(wstring s, wchar_t open, bool newline, wchar_t close)
+        {
+            wstring result = IndentString(s, 2);
+            if (newline)        // have a new line after the open symbol
+                result = L" \n" + result + L"\n ";
+            else
+                result.append(L"  ");
+            result.front() = open;
+            result.back() = close;
+            return result;
+        }
+
     };
 
     // -----------------------------------------------------------------------
