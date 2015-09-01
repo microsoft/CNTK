@@ -160,7 +160,7 @@ bool DataReader<ElemType>::SupportsDistributedMBRead() const
 // numSubsets - [in] total number of nodes participating in the parallel training
 // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
 template<class ElemType>
-void DataReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize)
+void DataReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples/* = requestDataSize*/)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
