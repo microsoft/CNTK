@@ -8,6 +8,7 @@
 #define _BASICS_H_
 
 #include "basetypes.h"  // TODO: gradually move over here all that's needed of basetypes.h, then remove basetypes.h.
+#include "Platform.h"
 
 #define TWO_PI 6.283185307f // TODO: find the official standards-confirming definition of this and use it instead
 
@@ -26,10 +27,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // RuntimeError - throw a std::runtime_error with a formatted error string
-#ifdef _MSC_VER
-    __declspec(noreturn)
-#endif
-    static inline void RuntimeError(const char * format, ...)
+    __declspec_noreturn static inline void RuntimeError(const char * format, ...)
     {
         va_list args;
         char buffer[1024];
@@ -41,10 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static inline void RuntimeError(const string & message) { RuntimeError("%s", message.c_str()); }
 
     // LogicError - throw a std::logic_error with a formatted error string
-#ifdef _MSC_VER
-    __declspec(noreturn)
-#endif
-    static inline void LogicError(const char * format, ...)
+    __declspec_noreturn static inline void LogicError(const char * format, ...)
     {
         va_list args;
         char buffer[1024];
@@ -56,10 +51,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static inline void LogicError(const string & message) { LogicError("%s", message.c_str()); }
 
     // InvalidArgument - throw a std::logic_error with a formatted error string
-#ifdef _MSC_VER
-    __declspec(noreturn)
-#endif
-    static inline void InvalidArgument(const char * format, ...)
+    __declspec_noreturn static inline void InvalidArgument(const char * format, ...)
     {
         va_list args;
         char buffer[1024];

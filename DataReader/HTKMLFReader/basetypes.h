@@ -1002,9 +1002,7 @@ using namespace msra::basetypes;    // for compatibility
 #pragma warning (pop)
 
 // RuntimeError - throw a std::runtime_error with a formatted error string
-#ifdef _MSC_VER
-__declspec(noreturn)
-#endif
+__declspec_noreturn
 static inline void RuntimeError(const char * format, ...)
 {
     va_list args;
@@ -1016,9 +1014,7 @@ static inline void RuntimeError(const char * format, ...)
 };
 
 // LogicError - throw a std::logic_error with a formatted error string
-#ifdef _MSC_VER
-__declspec(noreturn)
-#endif
+__declspec_noreturn
 static inline void LogicError(const char * format, ...)
 {
     va_list args;
