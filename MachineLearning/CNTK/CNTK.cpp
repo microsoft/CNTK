@@ -1326,7 +1326,7 @@ void PrintUsageInfo()
     fprintf(stderr, "-------------------------------------------------------------------\n");
 }
 
-int wmain(int argc, wchar_t* argv[])
+int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper that catches & repots Win32 exceptions
 {
     try
     {
@@ -1443,6 +1443,26 @@ int wmain(int argc, wchar_t* argv[])
     return EXIT_SUCCESS;
 }
 
+#ifdef __WINDOWS__
+void terminate_this() { fprintf(stderr, "terminate_this: aborting\n"), fflush(stderr); exit(EXIT_FAILURE); }
+
+int wmain(int argc, wchar_t* argv[])    // wmain wrapper that reports Win32 exceptions
+{
+    set_terminate (terminate_this); // insert a termination handler to ensure stderr gets flushed before actually terminating
+    // Note: this does not seem to work--processes with this seem to just hang instead of terminating
+    __try
+    {
+        return wmain1 (argc, argv);
+    }
+    __except (1/*EXCEPTION_EXECUTE_HANDLER, see excpt.h--not using constant to avoid Windows header in here*/)
+    {
+        fprintf (stderr, "dbn: Win32 exception caught\n");
+        fflush (stderr);
+        exit (EXIT_FAILURE);
+    }
+}
+#endif
+
 #ifdef __UNIX__
 /// UNIX main function converts arguments in UTF-8 encoding and passes to Visual-Studio style wmain() which takes wchar_t strings.
 int main(int argc, char* argv[])
@@ -1455,7 +1475,7 @@ int main(int argc, char* argv[])
         size_t ans = ::mbstowcs(wargs[i], argv[i], strlen(argv[i]) + 1);
         assert(ans == strlen(argv[i]));
     }
-    int ret = wmain(argc, wargs);
+    int ret = wmain1(argc, wargs);
     for (int i = 0; i < argc; ++i)
         delete[] wargs[i];
     delete[] wargs;
