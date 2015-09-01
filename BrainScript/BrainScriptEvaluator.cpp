@@ -775,11 +775,11 @@ namespace Microsoft { namespace MSR { namespace BS {
     // name lookup
     // -----------------------------------------------------------------------
 
-    static ConfigValuePtr Evaluate(ExpressionPtr e, ConfigRecordPtr scope, wstring exprPath, const wstring & exprId); // forward declare
+    static ConfigValuePtr Evaluate(const ExpressionPtr & e, const IConfigRecordPtr & scope, wstring exprPath, const wstring & exprId); // forward declare
 
     // look up a member by id in the search scope
     // If it is not found, it tries all lexically enclosing scopes inside out. This is handled by the ConfigRecord itself.
-    static const ConfigValuePtr & ResolveIdentifier(const wstring & id, TextLocation idLocation, ConfigRecordPtr scope)
+    static const ConfigValuePtr & ResolveIdentifier(const wstring & id, const TextLocation & idLocation, const IConfigRecordPtr & scope)
     {
         //if (!scope)                                           // no scope or went all the way up: not found
         //    UnknownIdentifier(id, idLocation);
@@ -788,13 +788,13 @@ namespace Microsoft { namespace MSR { namespace BS {
             UnknownIdentifier(id, idLocation);
         //    return ResolveIdentifier(id, idLocation, scope->up);    // not found: try next higher scope
         // found it: resolve the value lazily (the value will hold a Thunk to compute its value upon first use)
-        p->ResolveValue();          // if this is the first access, then the value will be a Thunk; this resolves it into the real value
+        p->EnsureIsResolved();          // if this is the first access, then the value must have executed its Thunk
         // now the value is available
         return *p;
     }
 
     // look up an identifier in an expression that is a ConfigRecord
-    static ConfigValuePtr RecordLookup(ExpressionPtr recordExpr, const wstring & id, TextLocation idLocation, ConfigRecordPtr scope, const wstring & exprPath)
+    static ConfigValuePtr RecordLookup(const ExpressionPtr & recordExpr, const wstring & id, const TextLocation & idLocation, const IConfigRecordPtr & scope, const wstring & exprPath)
     {
         // Note on scope: The record itself (left of '.') must still be evaluated, and for that, we use the current scope;
         // that is, variables inside that expression--often a single variable referencing something in the current scope--
@@ -810,7 +810,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     // evaluate all elements in a dictionary expression and turn that into a ConfigRecord
     // which is meant to be passed to the constructor or Init() function of a runtime object
-    static shared_ptr<ConfigRecord> ConfigRecordFromDictExpression(ExpressionPtr recordExpr, ConfigRecordPtr scope, const wstring & exprPath)
+    static shared_ptr<ConfigRecord> ConfigRecordFromDictExpression(const ExpressionPtr & recordExpr, const IConfigRecordPtr & scope, const wstring & exprPath)
     {
         // evaluate the record expression itself
         // This will leave its members unevaluated since we do that on-demand
@@ -825,7 +825,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     // -----------------------------------------------------------------------
 
     // entry for infix-operator lookup table
-    typedef function<ConfigValuePtr(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, ConfigRecordPtr scope, const wstring & exprPath)> InfixOp /*const*/;
+    typedef function<ConfigValuePtr(const ExpressionPtr & e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)> InfixOp /*const*/;
     struct InfixOps
     {
         InfixOp NumbersOp;            // number OP number -> number
@@ -841,7 +841,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     __declspec(noreturn)
     static void InvalidInfixOpTypes(ExpressionPtr e) { Fail(L"operator " + e->op + L" cannot be applied to these operands", e->location); }
     template<typename T>
-    static ConfigValuePtr CompOp(ExpressionPtr e, const T & left, const T & right, ConfigRecordPtr, const wstring & exprPath)
+    static ConfigValuePtr CompOp(const ExpressionPtr &  e, const T & left, const T & right, const IConfigRecordPtr &, const wstring & exprPath)
     {
         if (e->op == L"==")      return MakePrimitiveConfigValuePtr(left == right, e->location, exprPath);
         else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, e->location, exprPath);
@@ -851,7 +851,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, e->location, exprPath);
         else LogicError("unexpected infix op");
     }
-    static ConfigValuePtr NumOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, ConfigRecordPtr scope, const wstring & exprPath)
+    static ConfigValuePtr NumOp(const ExpressionPtr &  e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
     {
         let left = leftVal.AsRef<Double>();
         let right = rightVal.AsRef<Double>();
@@ -863,14 +863,14 @@ namespace Microsoft { namespace MSR { namespace BS {
         else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right),  e->location, exprPath);
         else return CompOp<double>(e, left, right, scope, exprPath);
     };
-    static ConfigValuePtr StrOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, ConfigRecordPtr scope, const wstring & exprPath)
+    static ConfigValuePtr StrOp(const ExpressionPtr &  e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
     {
         let left = leftVal.AsRef<String>();
         let right = rightVal.AsRef<String>();
         if (e->op == L"+")  return ConfigValuePtr(make_shared<String>(left + right), e->location, exprPath);
         else return CompOp<wstring>(e, left, right, scope, exprPath);
     };
-    static ConfigValuePtr BoolOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, ConfigRecordPtr scope, const wstring & exprPath)
+    static ConfigValuePtr BoolOp(const ExpressionPtr &  e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
     {
         let left = leftVal.AsRef<Bool>();
         //let right = rightVal.AsRef<Bool>();   // we do this inline, as to get the same short-circuit semantics as C++ (if rightVal is thunked, it will remain so unless required for this operation)
@@ -881,7 +881,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     };
     // NodeOps handle the magic CNTK types, that is, infix operations between ComputeNode objects.
     // TODO: rename to MagicOps
-    static ConfigValuePtr NodeOp(ExpressionPtr e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, ConfigRecordPtr scope, const wstring & exprPath)
+    static ConfigValuePtr NodeOp(const ExpressionPtr &  e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
     {
         // special cases/overloads:
         //  - unary minus -> NegateNode
@@ -947,7 +947,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             valueWithName->SetName(value.GetExpressionName());
         return value;
     };
-    static ConfigValuePtr BadOp(ExpressionPtr e, ConfigValuePtr, ConfigValuePtr, ConfigRecordPtr, const wstring &) { InvalidInfixOpTypes(e); };
+    static ConfigValuePtr BadOp(const ExpressionPtr & e, ConfigValuePtr, ConfigValuePtr, const IConfigRecordPtr &, const wstring &) { InvalidInfixOpTypes(e); };
 
     // lookup table for infix operators
     // This lists all infix operators with lambdas for evaluating them.
@@ -978,7 +978,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     // create a lambda that calls Evaluate() on an expr to get or realize its value
     // Unresolved ConfigValuePtrs (i.e. containing a Thunk) may only be moved, not copied.
-    static ConfigValuePtr MakeEvaluateThunkPtr(ExpressionPtr expr, ConfigRecordPtr scope, const wstring & exprPath, const wstring & exprId)
+    static ConfigValuePtr MakeEvaluateThunkPtr(const ExpressionPtr & expr, const IConfigRecordPtr & scope, const wstring & exprPath, const wstring & exprId)
     {
         function<ConfigValuePtr()> f = [expr, scope, exprPath, exprId]()   // lambda that computes this value of 'expr'
         {
@@ -1006,7 +1006,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     //  - not all nodes get their own path, in particular nodes with only one child, e.g. "-x", that would not be useful to address
     // Note that returned values may include complex value types like dictionaries (ConfigRecord) and functions (ConfigLambda).
     // TODO: change ConfigRecordPtr to IConfigRecordPtr if possible, throughout
-    static ConfigValuePtr Evaluate(ExpressionPtr e, ConfigRecordPtr scope, wstring exprPath, const wstring & exprId)
+    static ConfigValuePtr Evaluate(const ExpressionPtr & e, const IConfigRecordPtr & scope, wstring exprPath, const wstring & exprId)
     {
         try // catch clause for this will catch error, inject this tree node's TextLocation, and rethrow
         {
@@ -1029,7 +1029,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 if (!rtInfo)
                     Fail(L"unknown runtime type " + e->id, e->location);
                 // form the config record
-                let dictExpr = e->args[0];
+                let & dictExpr = e->args[0];
                 let argsExprPath = rtInfo->isConfigRecord ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
                 let value = ConfigValuePtr(rtInfo->construct(ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath)), e->location, exprPath); // this constructs it
                 // if object has a name, we set it
@@ -1050,9 +1050,9 @@ namespace Microsoft { namespace MSR { namespace BS {
             else if (e->op == L"=>")                                                    // === lambda (all macros are stored as lambdas)
             {
                 // on scope: The lambda expression remembers the lexical scope of the '=>'; this is how it captures its context.
-                let argListExpr = e->args[0];           // [0] = argument list ("()" expression of identifiers, possibly optional args)
+                let & argListExpr = e->args[0];           // [0] = argument list ("()" expression of identifiers, possibly optional args)
                 if (argListExpr->op != L"()") LogicError("parameter list expected");
-                let fnExpr = e->args[1];                // [1] = expression of the function itself
+                let & fnExpr = e->args[1];                // [1] = expression of the function itself
                 let f = [argListExpr, fnExpr, scope, exprPath](vector<ConfigValuePtr> && args, ConfigLambda::NamedParams && namedArgs, const wstring & callerExprPath) -> ConfigValuePtr
                 {
                     // TODO: document namedArgs--does it have a parent scope? Or is it just a dictionary? Should we just use a shared_ptr<map,ConfigValuPtr>> instead for clarity?
@@ -1099,7 +1099,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 // positional args
                 vector<wstring> paramNames;
                 let & argList = argListExpr->args;
-                for (let arg : argList)
+                for (let & arg : argList)
                 {
                     if (arg->op != L"id")
                         LogicError("function parameter list must consist of identifiers");
@@ -1108,11 +1108,11 @@ namespace Microsoft { namespace MSR { namespace BS {
                 // named args
                 // The nammedArgs in the definition lists optional arguments with their default values
                 ConfigLambda::NamedParams namedParams;
-                for (let namedArg : argListExpr->namedArgs)
+                for (let & namedArg : argListExpr->namedArgs)
                 {
-                    let id = namedArg.first;
-                    let location = namedArg.second.first;   // location of identifier
-                    let expr = namedArg.second.second;      // expression to evaluate to get default value
+                    let & id = namedArg.first;
+                    //let & location = namedArg.second.first;   // location of identifier
+                    let & expr = namedArg.second.second;      // expression to evaluate to get default value
                     namedParams[id] = move(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath/*TODO??*/, id));
                     //namedParams->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
                     // the thunk is called if the default value is ever used
@@ -1121,13 +1121,13 @@ namespace Microsoft { namespace MSR { namespace BS {
             }
             else if (e->op == L"(")                                         // === apply a function to its arguments
             {
-                let lambdaExpr = e->args[0];            // [0] = function
-                let argsExpr = e->args[1];              // [1] = arguments passed to the function ("()" expression of expressions)
+                let & lambdaExpr = e->args[0];            // [0] = function
+                let & argsExpr = e->args[1];              // [1] = arguments passed to the function ("()" expression of expressions)
                 let lambda = AsPtr<ConfigLambda>(Evaluate(lambdaExpr, scope, exprPath, L""/*macros are not visible in expression names*/), lambdaExpr, L"function");
                 if (argsExpr->op != L"()") LogicError("argument list expected");
                 // put all args into a vector of values
                 // Like in an [] expression, we do not evaluate at this point, but pass in a lambda to compute on-demand.
-                let args = argsExpr->args;
+                let & args = argsExpr->args;
                 if (args.size() != lambda->GetNumParams())
                     Fail(wstrprintf(L"function expects %d parameters, %d were provided", (int)lambda->GetNumParams(), (int)args.size()), argsExpr->location);
                 vector<ConfigValuePtr> argVals(args.size());
@@ -1147,7 +1147,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 }
                 // named args are put into a ConfigRecord
                 // We could check whether the named ars are actually accepted by the lambda, but we leave that to Apply() so that the check also happens for lambda calls from CNTK C++ code.
-                let namedArgs = argsExpr->namedArgs;
+                let & namedArgs = argsExpr->namedArgs;
                 ConfigLambda::NamedParams namedArgVals;
                 // TODO: no scope here? ^^ Where does the scope come in? Maybe not needed since all values are already resolved? Document this!
                 for (let namedArg : namedArgs)
@@ -1176,8 +1176,8 @@ namespace Microsoft { namespace MSR { namespace BS {
                 // Members are evaluated on demand when they are used.
                 for (let & entry : e->namedArgs)
                 {
-                    let id = entry.first;
-                    let expr = entry.second.second;             // expression to compute the entry
+                    let & id = entry.first;
+                    let & expr = entry.second.second;             // expression to compute the entry
                     newScope->Add(id, entry.second.first/*loc of id*/, MakeEvaluateThunkPtr(expr, newScope/*scope*/, exprPath/*TODO??*/, id));
                     // Note on scope: record assignments are like a "let rec" in F#/OCAML. That is, all record members are visible to all
                     // expressions that initialize the record members. E.g. [ A = 13 ; B = A ] assigns B as 13, not to a potentially outer A.
@@ -1189,7 +1189,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             else if (e->op == L"id") return ResolveIdentifier(e->id, e->location, scope);   // === variable/macro access within current scope
             else if (e->op == L".")                                                         // === variable/macro access in given ConfigRecord element
             {
-                let recordExpr = e->args[0];
+                let & recordExpr = e->args[0];
                 return RecordLookup(recordExpr, e->id, e->location, scope/*for evaluating recordExpr*/, exprPath);
             }
             // --- arrays
@@ -1199,7 +1199,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 let arr = make_shared<ConfigArray>();       // note: we could speed this up by keeping the left arg and appending to it
                 for (size_t i = 0; i < e->args.size(); i++) // concatenate the two args
                 {
-                    let expr = e->args[i];
+                    let & expr = e->args[i];
                     let item = Evaluate(expr, scope, exprPath, wstrprintf(L"[%d]", i));           // result can be an item or a vector
                     if (item.Is<ConfigArray>())
                         arr->Append(item.AsRef<ConfigArray>());     // append all elements (this flattens it)
@@ -1210,9 +1210,9 @@ namespace Microsoft { namespace MSR { namespace BS {
             }
             else if (e->op == L"array")                                                     // === array constructor from lambda function
             {
-                let firstIndexExpr = e->args[0];    // first index
-                let lastIndexExpr  = e->args[1];    // last index
-                let initLambdaExpr = e->args[2];    // lambda to initialize the values
+                let & firstIndexExpr = e->args[0];    // first index
+                let & lastIndexExpr  = e->args[1];    // last index
+                let & initLambdaExpr = e->args[2];    // lambda to initialize the values
                 let firstIndex = ToInt(Evaluate(firstIndexExpr, scope, exprPath, L"array_first"), firstIndexExpr);
                 let lastIndex  = ToInt(Evaluate(lastIndexExpr,  scope, exprPath, L"array_last"),  lastIndexExpr);
                 let lambda = AsPtr<ConfigLambda>(Evaluate(initLambdaExpr, scope, exprPath, L"_initializer"), initLambdaExpr, L"function");
@@ -1248,7 +1248,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             else if (e->op == L"[")                                         // === access array element by index
             {
                 let arrValue = Evaluate(e->args[0], scope, exprPath, L"_vector");
-                let indexExpr = e->args[1];
+                let & indexExpr = e->args[1];
                 let arr = AsPtr<ConfigArray>(arrValue, indexExpr, L"array");
                 let index = ToInt(Evaluate(indexExpr, scope, exprPath, L"_index"), indexExpr);
                 return arr->At(index, indexExpr->location); // note: the array element may be as of now unresolved; this resolved it
@@ -1256,7 +1256,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             // --- unary operators '+' '-' and '!'
             else if (e->op == L"+(" || e->op == L"-(")                      // === unary operators + and -
             {
-                let argExpr = e->args[0];
+                let & argExpr = e->args[0];
                 let argValPtr = Evaluate(argExpr, scope, exprPath, e->op == L"+(" ? L"" : L"_negate");
                 // note on exprPath: since - has only one argument, we do not include it in the expessionPath
                 if (argValPtr.Is<Double>())
@@ -1280,8 +1280,8 @@ namespace Microsoft { namespace MSR { namespace BS {
                 if (opIter == infixOps.end())
                     LogicError("e->op " + utf8(e->op) + " not implemented");
                 let & functions = opIter->second;
-                let leftArg = e->args[0];
-                let rightArg = e->args[1];
+                let & leftArg = e->args[0];
+                let & rightArg = e->args[1];
                 let leftValPtr  = Evaluate(leftArg,  scope, exprPath, L"/*" + e->op + L"*/left");
                 let rightValPtr = Evaluate(rightArg, scope, exprPath, L"/*" + e->op + L"*/right");
                 if (leftValPtr.Is<Double>() && rightValPtr.Is<Double>())
@@ -1313,7 +1313,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     static ConfigValuePtr EvaluateParse(ExpressionPtr e)
     {
-        return Evaluate(e, nullptr/*top scope*/, L"", L"$");
+        return Evaluate(e, IConfigRecordPtr(nullptr)/*top scope*/, L"", L"$");
     }
 
     // -----------------------------------------------------------------------
