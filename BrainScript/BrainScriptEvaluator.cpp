@@ -113,6 +113,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             return msra::strfun::utf16(arg.TypeName());             // cannot print this type
     }
 
+#if 0
     // #######################################################################
     // BEGIN MOVE TO EXTERNAL CODE
     // #######################################################################
@@ -514,21 +515,6 @@ namespace Microsoft { namespace MSR { namespace BS {
         }
     };
 
-#define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
-
-    template<class C>
-    static ConfigurableRuntimeType MakeRuntimeTypeConstructor()
-    {
-        ConfigurableRuntimeType rtInfo;
-        rtInfo.construct = [](const IConfigRecordPtr config) // lambda to construct
-        {
-            return MakeRuntimeObject<C>(config);
-        };
-        rtInfo.isConfigRecord = is_base_of<IConfigRecord, C>::value;
-        return rtInfo;
-    }
-    // note: don't forget to duplicate the above when we move this out
-
 #if 0
     // get information about configurable runtime types
     const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring & typeId)
@@ -558,7 +544,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     // #######################################################################
     // END MOVE TO EXTERNAL CODE
     // #######################################################################
-
+#endif
 
     // =======================================================================
     // built-in functions (implemented as Objects that are also their value)
@@ -743,8 +729,24 @@ namespace Microsoft { namespace MSR { namespace BS {
     // configurable runtime types ("new" expression)
     // -----------------------------------------------------------------------
 
-    // get information about configurable runtime types
+    // internal types (such as string functions)
+#define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
+    template<class C>
+    static ConfigurableRuntimeType MakeRuntimeTypeConstructor()
+    {
+        ConfigurableRuntimeType rtInfo;
+        rtInfo.construct = [](const IConfigRecordPtr config) // lambda to construct
+        {
+            return MakeRuntimeObject<C>(config);
+        };
+        rtInfo.isConfigRecord = is_base_of<IConfigRecord, C>::value;
+        return rtInfo;
+    }
+
+    // external types (such as CNTK proper--that's external to BrainScript)
     const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring & typeId);
+
+    // get information about configurable runtime types
     static const ConfigurableRuntimeType * FindRuntimeTypeInfo(const wstring & typeId)
     {
         // lookup table for "new" expression
@@ -760,7 +762,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             DefineRuntimeType(AnotherAction),
         };
 
-        // first check our own
+        // first check our own internal types
         let newIter = configurableRuntimeTypes.find(typeId);
         if (newIter != configurableRuntimeTypes.end())
             return &newIter->second;

@@ -158,7 +158,7 @@ public:
         /*ConfigError::*/ const wchar_t * kind() const { return L"reading source"; }
     };
 
-    void Fail(wstring msg, TextLocation where) { throw CodeSourceError(msg, where); }
+    __declspec(noreturn) static void Fail(wstring msg, TextLocation where) { throw CodeSourceError(msg, where); }
 
     // enter a source file, at start or as a result of an include statement
     void PushSourceFile(SourceFile && sourceFile)
@@ -301,7 +301,7 @@ public:
     };
 
 private:
-    void Fail(wstring msg, Token where) { throw LexerError(msg, where.beginLocation); }
+    __declspec(noreturn) static void Fail(wstring msg, Token where) { throw LexerError(msg, where.beginLocation); }
 
     Token currentToken;
     // consume input characters to form a next token
@@ -479,7 +479,7 @@ class Parser : public Lexer
         /*ConfigError::*/ const wchar_t * kind() const { return L"parsing"; }
     };
 
-    void Fail(const wstring & msg, Token where) { throw ParseError(msg, where.beginLocation); }
+    __declspec(noreturn) static void Fail(const wstring & msg, Token where) { throw ParseError(msg, where.beginLocation); }
 
     //void Expected(const wstring & what) { Fail(strprintf("%ls expected", what.c_str()), GotToken().beginLocation); }  // I don't know why this does not work
     void Expected(const wstring & what) { Fail(what + L" expected", GotToken().beginLocation); }
