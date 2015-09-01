@@ -143,6 +143,13 @@ class Test:
   #   args - command line arguments from argparse
   # returns an instance of TestRunResult
   def run(self, flavor, device, args):
+    # measuring the time of running of the test
+    startTime = time.time()
+    result = self.runImpl(flavor, device, args)
+    result.duration = time.time() - startTime 
+    return result
+
+  def runImpl(self, flavor, device, args):
     # Locating and reading baseline file
     baselineFile = self.findBaselineFile(flavor, device)
     if baselineFile == None:
@@ -426,6 +433,7 @@ class TestRunResult:
   def __init__(self):
     self.succeeded = False;
     self.testCaseRunResults = [] # list of TestCaseRunResult
+    self.duration = -1
   
   @staticmethod
   def fatalError(name, diagnostics, logFile = None):
@@ -496,15 +504,16 @@ def runCommand(args):
         sys.stdout.flush()
         # Running the test and collecting a run results
         result = test.run(flavor, device, args)
+      
         if args.verbose:
           # writing the test name one more time (after possibly long verbose output)
           sys.stdout.write("Test finished {0} ({1} {2}) - ".format(test.fullName, flavor, device));
         if result.succeeded:
           succeededCount = succeededCount + 1
           # in no-verbose mode this will be printed in the same line as 'Running test...'
-          print "[OK]"
+          print "[OK] {0:.2f} sec".format(result.duration)
         else:
-          print "[FAILED]"
+          print "[FAILED] {0:.2f} sec".format(result.duration)
         # Showing per-test-case results:
         for testCaseRunResult in result.testCaseRunResults:
            if testCaseRunResult.succeeded:
