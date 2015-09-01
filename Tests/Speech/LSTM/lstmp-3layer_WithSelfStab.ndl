@@ -18,28 +18,28 @@ ndlMacroDefine=[
 
     LSTMPComponentWithSelfStab(inputDim, outputDim, cellDim, inputx)
     {
-        Wxo = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
-        Wxi = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
-        Wxf = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
-        Wxc = Parameter(cellDim, inputDim, init=uniform, initValueScale=1);
+        Wxo = Parameter(cellDim, inputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Wxi = Parameter(cellDim, inputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Wxf = Parameter(cellDim, inputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Wxc = Parameter(cellDim, inputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
 
         bo = Parameter(cellDim, init=fixedValue, value=0.0);
         bc = Parameter(cellDim, init=fixedValue, value=0.0);
         bi = Parameter(cellDim, init=fixedValue, value=0.0);
         bf = Parameter(cellDim, init=fixedValue, value=0.0);
 
-        Whi = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+        Whi = Parameter(cellDim, outputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
 
-        Wci = Parameter(cellDim, init=uniform, initValueScale=1);
+        Wci = Parameter(cellDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
 
 
-        Whf = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
-        Wcf = Parameter(cellDim, init=uniform, initValueScale=1);
-        Who = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
-        Wco = Parameter(cellDim, init=uniform, initValueScale=1);
-        Whc = Parameter(cellDim, outputDim, init=uniform, initValueScale=1);
+        Whf = Parameter(cellDim, outputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Wcf = Parameter(cellDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Who = Parameter(cellDim, outputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Wco = Parameter(cellDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Whc = Parameter(cellDim, outputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
         
-        Wmr = Parameter(outputDim, cellDim, init=uniform, initValueScale=1);
+        Wmr = Parameter(outputDim, cellDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
         
         #we provide a scale value for each weight
         
@@ -139,7 +139,7 @@ ndlCreateNetwork_LSTMP_c1024_p256_x3=[
     LSTMoutput3 = LSTMPComponentWithSelfStab(hiddenDim, hiddenDim, cellDim, LSTMoutput2);
 
 
-	W = Parameter(labelDim, hiddenDim, init=uniform, initValueScale=1);
+	W = Parameter(labelDim, hiddenDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
 	b = Parameter(labelDim, init=fixedvalue, value=0);
 	
 	sW = Parameter(1, 1, init=fixedValue, value=0.0);

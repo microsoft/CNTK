@@ -77,18 +77,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
 
-        // TODO: 'LearnableParameters' is now redundant in the name; rename to InitRandom()
         // TODO: also move file loading here?
-        void InitLearnableParameters(const bool uniformInit,
-                                     const unsigned long randomSeed,
-                                     const ElemType initValueScale,
-                                     bool initOnCPUOnly) // if true then always init on CPU, making initialization consistent across both (for testing)
+        void InitRandom(const bool uniformInit,
+                        const unsigned long randomSeed,
+                        const ElemType initValueScale,
+                        bool initOnCPUOnly) // if true then always init on CPU, making initialization consistent across both (for testing)
         {
             size_t inputSize = FunctionValues().GetNumCols();
 
             // the random seed offset is set via the "randomSeedOffset" parameter in config
             if (initOnCPUOnly)
-                m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE);
+                m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
             if (uniformInit)
             {
                 ElemType randRange = 0.05f * initValueScale; //initValueScale/sqrt(inputSize);
@@ -100,7 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 FunctionValues().SetGaussianRandomValue(0, randInitstd, randomSeed);
             }
             if (initOnCPUOnly)
-                m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId);
+                m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId, true);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}

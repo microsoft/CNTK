@@ -94,9 +94,7 @@ public:
         m_randomSeedOffset = 0;
         m_actMiniBSize = 0;
         if (m_deviceId == AUTOPLACEMATRIX)
-        {
             m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
-        }
         m_nbrSlicesInEachRecurrentIteration = 1;
     }
 
@@ -981,7 +979,7 @@ public:
                                  bool initOnCPUOnly = false)
     {
         auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
-        learnableParameterNode->InitLearnableParameters(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
+        learnableParameterNode->InitRandom(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
     }
 
     // -----------------------------------------------------------------------

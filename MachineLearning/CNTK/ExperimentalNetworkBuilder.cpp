@@ -387,7 +387,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 {
                     // TODO: add these options also to old NDL
                     int forcedRandomSeed = config[L"randomSeed"];   // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
-                    dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->InitLearnableParameters((initString == L"uniform"), forcedRandomSeed < 0 ? (randomSeed++ + m_randomSeedOffset) : (unsigned long) forcedRandomSeed, config[L"initValueScale"], config[L"initOnCPUOnly"]);
+                    dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->InitRandom((initString == L"uniform"), forcedRandomSeed < 0 ? (randomSeed++ + m_randomSeedOffset) : (unsigned long)forcedRandomSeed, config[L"initValueScale"], config[L"initOnCPUOnly"]);
                 }
                 else if (initString == L"fromFile")
                 {
