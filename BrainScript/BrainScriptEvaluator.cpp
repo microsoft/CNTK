@@ -681,9 +681,9 @@ namespace Microsoft { namespace MSR { namespace BS {
     // error handling
     // -----------------------------------------------------------------------
 
-    __declspec(noreturn) static void Fail(const wstring & msg, TextLocation where) { throw EvaluationError(msg, where); }
-    __declspec(noreturn) static void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type '" + what + L"'", e->location); }
-    __declspec(noreturn) static void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown identifier '" + id + L"'", where); }
+    __declspec_noreturn static void Fail(const wstring & msg, TextLocation where) { throw EvaluationError(msg, where); }
+    __declspec_noreturn static void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type '" + what + L"'", e->location); }
+    __declspec_noreturn static void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown identifier '" + id + L"'", where); }
 
     // -----------------------------------------------------------------------
     // access to ConfigValuePtr content with error messages
@@ -838,7 +838,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     };
 
     // functions that implement infix operations
-    __declspec(noreturn)
+    __declspec_noreturn
     static void InvalidInfixOpTypes(ExpressionPtr e) { Fail(L"operator " + e->op + L" cannot be applied to these operands", e->location); }
     template<typename T>
     static ConfigValuePtr CompOp(const ExpressionPtr &  e, const T & left, const T & right, const IConfigRecordPtr &, const wstring & exprPath)
