@@ -730,18 +730,20 @@ void DoTrain(const ConfigParameters& config)
     if (config.Exists("NDLNetworkBuilder"))
     {
         ConfigParameters config(config("NDLNetworkBuilder"));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(static_cast<IComputationNetBuilder<ElemType>*>(new NDLBuilder<ElemType>(config)));
+        //netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(static_cast<IComputationNetBuilder<ElemType>*>(new NDLBuilder<ElemType>(config)));
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new NDLBuilder<ElemType>(config));
     }
     else if (config.Exists("SimpleNetworkBuilder"))
     {
         ConfigParameters config(config("SimpleNetworkBuilder"));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(static_cast<IComputationNetBuilder<ElemType>*>(new SimpleNetworkBuilder<ElemType>(config)));
+        //netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(static_cast<IComputationNetBuilder<ElemType>*>(new SimpleNetworkBuilder<ElemType>(config)));
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new SimpleNetworkBuilder<ElemType>(config));
     }
     else if (config.Exists("ExperimentalNetworkBuilder"))   // for testing/early access to NDL extensions
     {
         DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-        string config(config("ExperimentalNetworkBuilder"));
-        netBuilder = make_unique<ExperimentalNetworkBuilder<ElemType>>(msra::strfun::utf16(config), deviceId);
+        string sourceCode(config("ExperimentalNetworkBuilder"));
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new ExperimentalNetworkBuilder<ElemType>(msra::strfun::utf16(sourceCode), deviceId));
     }
     else
     {
@@ -1424,7 +1426,7 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
     }
     catch (const BS::ConfigError &err)
     {
-        fprintf(stderr, "EXCEPTION occurred:\n", err.what());
+        fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
         err.PrintError();
         return EXIT_FAILURE;
     }
