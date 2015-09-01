@@ -169,6 +169,7 @@ MATH_SRC =\
 	Math/Math/MatrixQuantizerCPU.cpp \
 	Math/Math/QuantizedMatrix.cpp \
 	Math/Math/Matrix.cpp \
+	Math/Math/CUDAPageLockedMemAllocator.cpp \
 
 ifdef CUDA_PATH
 MATH_SRC +=\
@@ -176,7 +177,6 @@ MATH_SRC +=\
 	Math/Math/GPUMatrixCUDAKernels.cu \
 	Math/Math/GPUSparseMatrix.cu \
 	Math/Math/GPUWatcher.cu \
-	Math/Math/CUDAPageLockedMemAllocator.cpp \
 	Math/Math/MatrixQuantizerGPU.cu \
 
 else
