@@ -152,10 +152,6 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
       <FileType>CppCode</FileType>
     </CudaCompile>
-    <CudaCompile Include="ValueQuantizer.cu">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-      <FileType>CppCode</FileType>
-    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="GPUMatrix.cu">

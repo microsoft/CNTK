@@ -2,10 +2,17 @@
 #ifndef __VALLUE_QUANTIZER_H__
 #define __VALLUE_QUANTIZER_H__
 
+#ifndef CPUONLY
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 #include <device_launch_parameters.h>
+#endif // !CPUONLY
+
+#include <cassert>
+#include <stdexcept>
+
+#pragma warning (disable: 4127) // conditional expression is constant
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     
@@ -55,17 +62,98 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const size_t QWordNumBits = 8 * sizeof(QWord);
 
     public:
-        cudasharedcode ValueQuantizer(size_t ldNbits, ElemType lower, ElemType upper);
+        cudasharedcode ValueQuantizer(size_t ldNbits, ElemType lower, ElemType upper)
+            : ldNbits(ldNbits), Nbits(1 << ldNbits), quantimin(lower), quantimax(upper)
+        {
+            rangeend = ((QWordVal)1) << Nbits;
 
+            // post-fix for incorrect shift for no-quant hack (Nbits=32): << arg is taken mod 32!
+            // in this case, it's only used as (rangeend-1) which is now correct (before it was 0!)
+            if (Nbits >= (8 * sizeof(rangeend)))
+            {
+                rangeend = 0;
+            }
+
+            // must protect against NaN: interval is 0 -> quantization is futile, just emit 0
+            if (((quantimax - quantimin) < 1e-36f) || (rangeend == 0))
+            {
+                qfactor = ufactor = (ElemType)0.0;
+            }
+            else
+            {
+                // precompute this for quantize() (see comment there)
+                qfactor = rangeend / (quantimax - quantimin);
+                // and for unquantize()
+                ufactor = (quantimax - quantimin) / rangeend;
+            }
+
+            // set the quantization threshold for the special case of 1-bit
+            quantimid = 0.5f * (quantimax + quantimin);
+        }
+
+        // quantize one value
+        // TODO: we can optimize for 1 bit here - very simply use a template arg 'isonebit'
         template<bool ZeroThresholdFor1Bit>
-        cudasharedcode QWordVal Quantize(ElemType u) const;
+        cudasharedcode QWordVal Quantize(ElemType u) const
+        {
+            if (Nbits == QWordNumBits)
+            {
+                return QuantizeToFullQWord(u);
+            }
+            // TODO: we may need to optimize this by a template arg
+            else if (ldNbits == 0)
+            {
+                return Quantize1<ZeroThresholdFor1Bit>(u) ? 1 : 0;
+            }
+            else
+            {
+                if (u <= quantimin)
+                {
+                    return 0;
+                }
+                else if (u >= quantimax)
+                {
+                    return (rangeend - 1);
+                }
+                else
+                {
+                    return (QWordVal)((QWordValSigned)((u - quantimin) * qfactor));
+                }
+            }
+        }
 
-        cudasharedcode ElemType Unquantize(QWordVal u) const;
+        // unquantize one value
+        cudasharedcode ElemType Unquantize(QWordVal u) const
+        {
+            if (Nbits == QWordNumBits)
+            {
+                return *(ElemType*)&u;
+            }
 
+            // Note: in 1-bit case, we want 0.5 -> mean0, 1.5 -> mean1
+            return ((u + (ElemType)0.5) * ufactor) + quantimin;
+        }
+
+        // quantize one value --special version for 1 bit
         template<bool ZeroThresholdFor1Bit>
-        cudasharedcode bool Quantize1(ElemType u) const;
+        cudasharedcode bool Quantize1(ElemType u) const
+        {
+            assert(Nbits == 1);
+            if (!ZeroThresholdFor1Bit)
+            {
+                return u >= quantimid;
+            }
+            else
+            {
+                return u >= (ElemType)0.0;
+            }
+        }
 
-        static cudasharedcode ElemType Unquantize1(bool u, ElemType val0, ElemType val1);
+        // unquantize one value  --special case for 1 bit
+        static cudasharedcode ElemType Unquantize1(bool u, ElemType val0, ElemType val1)
+        {
+            return u ? val1 : val0;
+        }
 
         //how many bits we are quanatizing to
         cudasharedcode size_t NBits() const
@@ -79,10 +167,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return rangeend;
         } 
         
-        static size_t ld(size_t v);
-        
-    protected:   
-        cudasharedcode QWordVal QuantizeToFullQWord(ElemType u) const;
+        // helper: compute the binary log of a power of two (utility function to convert 'Nbits' into 'ldNbits'
+        static size_t ld(size_t v)
+        {
+            if (v == 1)
+            {
+                return 0;
+            }
+            else if (v & 1) // not a power of two
+            {
+                throw std::runtime_error("ld: 'bits' must be a power of two");
+            }
+            else
+            {
+                return 1 + ld(v >> 1);
+            }
+        }
+
+    protected:
+        // quantize for full ElemType size bits case (special case that allows to bypass quantization, for testing/debugging purposes)
+        cudasharedcode QWordVal QuantizeToFullQWord(ElemType u) const
+        {
+            assert(Nbits == QWordNumBits);
+
+            // we return the bit pattern that encodes the float value
+            return *(QWordVal*)&u;
+        }
 
     protected:
         // NBits must be power of two

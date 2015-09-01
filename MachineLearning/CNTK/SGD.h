@@ -109,7 +109,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
             {
                 /* give a warning of potential bandwidth wasting */
                 fprintf(stderr, "WARNING: %d GPUs are used in model averaging, but the number of parallel utterances are %d, a potential training speed degradation.\n",
-                    g_mpi->NumNodesInUse(), (int)nOrigParallelUtts);
+                        (int)g_mpi->NumNodesInUse(), (int)nOrigParallelUtts);
                 warned = true;
             }
             if (rank == numprocs - 1)
@@ -1990,7 +1990,7 @@ protected:
         fprintf(stderr, "\nStarting minibatch loop");
         if (useGradientAggregation)
         {
-            fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)", g_mpi->CurrentNodeRank(), g_mpi->NumNodesInUse(), m_numGradientBits);
+            fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)", (int)g_mpi->CurrentNodeRank(), (int)g_mpi->NumNodesInUse(), (int)m_numGradientBits);
         }
 
         if (useDistributedMBReading)
@@ -2006,9 +2006,9 @@ protected:
         {
             bool wasDataRead = trainSetDataReader->GetMinibatch(*inputMatrices);
 
-            if (useGradientAggregation)
+            if (useDistributedMBReading)
             {
-                // In case of data-parallel SGD, the current node needs to continue even with a minibatch size of 0 if any
+                // In case of distributed reading, the current node needs to continue even with a minibatch size of 0 if any
                 // other node in the group has a non-zero size minibatch to process. This is needed to ensure that
                 // the gradient aggregation barriers do not get stuck and also to ensure that all nodes update their weights
                 // properly using the aggregate gradients from other nodes before moving on to the next epoch even though the current
@@ -2050,63 +2050,61 @@ protected:
                 }
 
                 actualMBSize = net.GetActualMBSize();
-                if (actualMBSize == 0)
+                if (actualMBSize != 0)
                 {
-                    continue;
-                }
+                    nSamplesSinceLastModelSync += actualMBSize;
+                    net.SetActualMiniBatchSize(actualMBSize);
+                    net.SetActualNbrSlicesInEachRecIter(nSlices);
 
-                nSamplesSinceLastModelSync += actualMBSize;
-                net.SetActualMiniBatchSize(actualMBSize);
-                net.SetActualNbrSlicesInEachRecIter(nSlices);
+                    if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
+                    {
+                        net.SentenceBoundary().SetValue(sentenceBegin);
+                        net.MinibatchPackingFlags() = packingFlags;
+                    }
+                    else
+                    {
+                        trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
+                    }
 
-                if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
-                {
-                    net.SentenceBoundary().SetValue(sentenceBegin);
-                    net.MinibatchPackingFlags() = packingFlags;
-                }
-                else
-                {
-                    trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
-                }
-
-                UpdateEvalTimeStamps(FeatureNodes);
-                UpdateEvalTimeStamps(labelNodes);
+                    UpdateEvalTimeStamps(FeatureNodes);
+                    UpdateEvalTimeStamps(labelNodes);
 
 #ifndef EVALDLL
-                if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
-                {
-                    throw std::logic_error("cannot pass gradient checker");
-                }
+                    if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
+                    {
+                        throw std::logic_error("cannot pass gradient checker");
+                    }
 #endif
-                // TODO: currently only support one node regularization
-                if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
-                {
-                    refNet.SetActualMiniBatchSize(actualMBSize);
-                    refNet.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-                    refNet.Evaluate(refNode);
-                    Matrix<ElemType>::ScaleAndAdd(m_adaptationRegWeight,
-                                                  refNode->FunctionValues(),
-                                                  1 - m_adaptationRegWeight,
-                                                  labelNodes[0]->FunctionValues());
-                }
+                    // TODO: currently only support one node regularization
+                    if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
+                    {
+                        refNet.SetActualMiniBatchSize(actualMBSize);
+                        refNet.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+                        refNet.Evaluate(refNode);
+                        Matrix<ElemType>::ScaleAndAdd(m_adaptationRegWeight,
+                                                      refNode->FunctionValues(),
+                                                      1 - m_adaptationRegWeight,
+                                                      labelNodes[0]->FunctionValues());
+                    }
 
-                //compute eval node first since when gradient is computed the forward function values
-                //may be changed and need to be recomputed when gradient and function value share the same matrix
-                for (size_t i = 0; i < numEvalNodes; i++)
-                {
-                    net.Evaluate(evaluationNodes[i]);
-                }
+                    //compute eval node first since when gradient is computed the forward function values
+                    //may be changed and need to be recomputed when gradient and function value share the same matrix
+                    for (size_t i = 0; i < numEvalNodes; i++)
+                    {
+                        net.Evaluate(evaluationNodes[i]);
+                    }
 
-                // only compute gradient when learning rate is large enough
-                if (learnRatePerSample > m_minLearnRate * 0.01)
-                {
-                    // use only the first criterion. Is there any possibility to use more?
-                    net.ComputeGradient(criterionNodes[0]);
-                }
-                else
-                {
-                    // use only the first criterion. Is there any possibility to use more?
-                    net.Evaluate(criterionNodes[0]);
+                    // only compute gradient when learning rate is large enough
+                    if (learnRatePerSample > m_minLearnRate * 0.01)
+                    {
+                        // use only the first criterion. Is there any possibility to use more?
+                        net.ComputeGradient(criterionNodes[0]);
+                    }
+                    else
+                    {
+                        // use only the first criterion. Is there any possibility to use more?
+                        net.Evaluate(criterionNodes[0]);
+                    }
                 }
             }
 
@@ -2122,10 +2120,13 @@ protected:
             //distributed gradient aggregation
             if (!useGradientAggregation)
             {
-                Matrix<ElemType>::AddElementToElement(criterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
-                for (size_t i = 0; i < numEvalNodes; i++)
+                if (actualMBSize != 0)
                 {
-                    Matrix<ElemType>::AddElementToElement(evaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
+                    Matrix<ElemType>::AddElementToElement(criterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
+                    for (size_t i = 0; i < numEvalNodes; i++)
+                    {
+                        Matrix<ElemType>::AddElementToElement(evaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
+                    }
                 }
             }
             else
@@ -2154,7 +2155,7 @@ protected:
             }
 
             //update model parameters
-            if (learnRatePerSample > m_minLearnRate * 0.01)
+            if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
             {
                 auto smoothedGradientIter = smoothedGradients.begin();
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
@@ -2189,7 +2190,7 @@ protected:
                         if (nSynced % m_iMASyncStatsTrace == 0)
                         {
                             fprintf(stderr, "\t\t-----(model averaging stats) %d-th sync, %8.2f seconds since last report, %5.2f seconds on communication\n",
-                                            nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
+                                    (int)nSynced, nSecondsSinceLastMAPerfReport, nSecondsOnMASync);
                             nSecondsOnMASync = 0; 
                             nSecondsSinceLastMAPerfReport = 0; 
                         }
@@ -2827,7 +2828,8 @@ protected:
     }
 
 public:
-    #define EPSILON 1e-5
+
+#define EPSILON 1e-5
 
     bool GradientCheck(ComputationNetwork<ElemType>& net,
                        const std::vector<ComputationNodePtr> & criterionNodes,
@@ -2855,8 +2857,7 @@ public:
                 ElemType eOrg = node->FunctionValues()(irow, icol);
                 if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
                 {
-                    node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(),
-                                                                      net.GetDeviceID(), true);
+                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceID(), true);
                 }
 
                 node->UpdateEvalTimeStamp();
@@ -2875,8 +2876,7 @@ public:
                 ElemType eGradErr = node->GradientValues()(irow, icol);
                 if (node->GradientValues().GetDeviceId() != net.GetDeviceID())
                 {
-                    node->GradientValues().TransferFromDeviceToDevice(node->GradientValues().GetDeviceId(),
-                                                                      net.GetDeviceID(), true);
+                    node->GradientValues().TransferToDeviceIfNotThere(net.GetDeviceID(), true);
                 }
 
                 ElemType ePos = eOrg + ElemType(EPSILON);
@@ -2885,7 +2885,7 @@ public:
                 node->FunctionValues()(irow, icol) = ePos;
                 if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
                 {
-                    node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(),
+                    node->FunctionValues().TransferToDeviceIfNotThere(
                                                                       net.GetDeviceID(), true);
                 }
 
@@ -2898,7 +2898,7 @@ public:
                 node->FunctionValues()(irow, icol) = eNeg;
                 if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
                 {
-                    node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(),
+                    node->FunctionValues().TransferToDeviceIfNotThere(
                                                                       net.GetDeviceID(), true);
                 }
 
@@ -2912,7 +2912,7 @@ public:
                 node->FunctionValues()(irow, icol) = eOrg;
                 if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
                 {
-                    node->FunctionValues().TransferFromDeviceToDevice(node->FunctionValues().GetDeviceId(),
+                    node->FunctionValues().TransferToDeviceIfNotThere(
                                                                       net.GetDeviceID(), true);
                 }
 

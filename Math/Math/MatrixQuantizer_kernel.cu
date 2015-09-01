@@ -7,7 +7,6 @@
 #include <device_launch_parameters.h>
 
 #include "ValueQuantizer.h"
-#include "ValueQuantizer.cu"
 #include "ColumnQuantizer.h"
 #include "QuantizedMatrix.h"
 
@@ -21,8 +20,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     __host__ static void ParallelizeOverRangeDim(size_t size, dim3 & griddim, dim3 & blockdim, const size_t warpsize = 64)
     {
         // <<< griddim, blockdim, sharedmemsize, stream >>>
-        griddim = (size + warpsize - 1) / warpsize;   // 'warpsize' threads on each block (-> threadIdx.x)
-        blockdim = warpsize;                    // -> blockIdx.x
+        griddim = (unsigned int) ((size + warpsize - 1) / warpsize);    // 'warpsize' threads on each block (-> threadIdx.x)
+        blockdim = (unsigned int) warpsize;                             // -> blockIdx.x
     }
     // get the array index for the current thread
     __device__ static size_t ParallelizeOverRangeIndex()
@@ -234,7 +233,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         dim3 mvgriddim, mvblockdim;
         // using specialized CUDA code (not shared with CPU) for collated memory access
         // each thread column computes 'warpsize' elements
-        mvgriddim = nCol; //column number
+        mvgriddim = (unsigned int) nCol; //column number
         mvblockdim = REDUCTION_BLOCK_SIZE;
 
         if (zeroThresholdFor1Bit)

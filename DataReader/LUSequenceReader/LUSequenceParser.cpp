@@ -141,7 +141,7 @@ long LUBatchLUSequenceParser<NumType, LabelType>::Parse(size_t recordsRequested,
         prvat = (int)ptr->labelPos;
     }
 
-    fprintf(stderr, "LUBatchLUSequenceParser: parse %d lines\n", lineCount);
+    fprintf(stderr, "LUBatchLUSequenceParser: parse %ld lines\n", lineCount);
     return lineCount;
 }
 
