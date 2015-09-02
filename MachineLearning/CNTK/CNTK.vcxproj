@@ -147,7 +147,10 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="..\..\BrainScript\Notes.txt" />
+    <Text Include="..\..\BrainScript\Notes.txt">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </Text>
     <Text Include="DefaultMacros.txt" />
     <Text Include="modelEditor.txt" />
     <Text Include="modelEditorFromScratch.txt" />
