@@ -52,30 +52,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         copyNodeChildrenCrossNetwork=4, // allow a cross network child copy
     };
 
-    // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure
-    // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
-    // TODO: m_samplesInRecurrentStep should be subsumed here & removed from nodes
-    struct FrameRange
-    {
-        const size_t timeIdxInSeq;  // start frame
-        const size_t numFrames;     // number of frames; currently only 1 or SIZE_MAX. SIZE_MAX means entire MB, or all input assuming ot is no time sequence
-        // can construct from a single size_t -> a single-frame range
-        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), numFrames(1) { }
-        // or without arguments -> entire minibatch / no frame-range
-        FrameRange() : timeIdxInSeq(0), numFrames(SIZE_MAX) { }
-        // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
-        size_t t() const
-        {
-            if (numFrames != 1)
-                LogicError("FrameRange::t() called for a frame range > 1 frame");
-            else
-                return timeIdxInSeq;
-        }
-    private:
-        FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
-        void operator=(const FrameRange &);
-    };
-
 #pragma region base computation class
 
     // =======================================================================
