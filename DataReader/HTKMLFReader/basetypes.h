@@ -97,23 +97,24 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <locale>       // std::wstring_convert
 #include <string>
 #include <algorithm>    // for transform()
+#include <mutex>
+#include <unordered_map>
+#include <chrono>
+#include <thread>
+
 #ifdef _MSC_VER
 #include <codecvt>      // std::codecvt_utf8
 #endif
 #ifdef _WIN32
 #include <windows.h>    // for CRITICAL_SECTION and Unicode conversion functions   --TODO: is there a portable alternative?
-#include <unordered_map>
 #endif
 
 #if __unix__
 #include <strings.h>
-#include <chrono>
-#include <thread>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <sys/time.h>
-#include <unordered_map>
 
 typedef unsigned char byte;
 #endif
@@ -199,8 +200,8 @@ static inline std::string removeExtension (std::string const& filename)
 {
     //std::string::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
     //return pivot == filename.rend() ? filename: std::string(filename.begin(), pivot.base()-1);
-    size_t lastindex = filename.find_first_of(".");
-    return filename.substr(0,lastindex);
+    size_t lastindex = filename.find_last_of(".");
+    return filename.substr(0, lastindex);
 }
 static inline std::wstring basename( std::wstring const& pathname)
 {
@@ -211,9 +212,8 @@ static inline std::wstring removeExtension (std::wstring const& filename)
 {
     //std::wstring::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
     //return pivot == filename.rend() ? filename: std::wstring(filename.begin(), pivot.base()-1);
-    size_t lastindex = filename.find_first_of(L".");
-    return filename.substr(0,lastindex);
-
+    size_t lastindex = filename.find_last_of(L".");
+    return filename.substr(0, lastindex);
 }
 
 // ----------------------------------------------------------------------------
@@ -332,9 +332,7 @@ class ARRAY : public std::vector<_ElemType>
         OACR_WARNING_DISABLE(IGNOREDBYCOMMA, "Reviewd OK. Special trick below to show a message when assertion fails"
             "[rogeryu 2006/03/24]");
         OACR_WARNING_DISABLE(BOGUS_EXPRESSION_LIST, "This is intentional. [rogeryu 2006/03/24]");
-#ifdef _WIN32
         ASSERT (("ARRAY::operator[] out of bounds", false));
-#endif
         OACR_WARNING_POP;
     }
 #endif
@@ -467,23 +465,16 @@ public:
     noncopyable(){}
 };
 
-// class CCritSec and CAutoLock -- simple critical section handling
-#ifndef    _WIN32          // TODO: Currently only working under Windows; BROKEN otherwise, to be fixed
-typedef int CRITICAL_SECTION;
-static inline void InitializeCriticalSection(CRITICAL_SECTION *) {}
-static inline void DeleteCriticalSection(CRITICAL_SECTION *) {}
-static inline void EnterCriticalSection(CRITICAL_SECTION *) {}
-static inline void LeaveCriticalSection(CRITICAL_SECTION *) {}
-#endif
 class CCritSec
 {
-    CCritSec (const CCritSec &); CCritSec & operator= (const CCritSec &);
-    CRITICAL_SECTION m_CritSec;
+    CCritSec (const CCritSec &) = delete;
+    CCritSec & operator= (const CCritSec &) = delete;
+    std::mutex m_CritSec;
 public:
-    CCritSec() { InitializeCriticalSection(&m_CritSec); };
-    ~CCritSec() { DeleteCriticalSection(&m_CritSec); };
-    void Lock() { EnterCriticalSection(&m_CritSec); };
-    void Unlock() { LeaveCriticalSection(&m_CritSec); };
+    CCritSec() {};
+    ~CCritSec() {};
+    void Lock() { m_CritSec.lock(); };
+    void Unlock() { m_CritSec.unlock(); };
 };
 
 // locks a critical section, and unlocks it automatically
