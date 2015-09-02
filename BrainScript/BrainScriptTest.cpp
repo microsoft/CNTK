@@ -67,7 +67,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         try
         {
             // collecting all sorts of test cases here
-            wchar_t * parserTests[] =
+            const wchar_t * parserTests[] =
             {
                 L"do = Parameter(13,42) * Input(42) + Parameter(13,1)"
                 ,
@@ -198,7 +198,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             bool oneOnly = first > 0;
             for (size_t i = first; parserTests[i]; i++)
             {
-                fprintf(stderr, "\n### Test %d ###\n\n", i), fflush(stderr);
+                fprintf(stderr, "\n### Test %d ###\n\n", (int)i), fflush(stderr);
                 let parserTest = parserTests[i];
                 let expr = ParseConfigString(standardFunctions + computationNodes + commonMacros + parserTest);
                 //expr->Dump();

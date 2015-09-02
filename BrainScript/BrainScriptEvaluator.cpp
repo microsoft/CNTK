@@ -616,7 +616,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             else if (what == L"Length")
             {
                 if (arg.Is<String>())
-                    us = (double)((wstring)arg).size();
+                    us = (double)((wstring&)arg).size();
                 else        // otherwise expect an array
                 {
                     let arr = (ConfigArray)arg;
@@ -730,7 +730,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     // -----------------------------------------------------------------------
 
     // internal types (such as string functions)
-#define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructor<T>() }
+#define DefineRuntimeType(T) { L ## #T, MakeRuntimeTypeConstructor<T>() }
     template<class C>
     static ConfigurableRuntimeType MakeRuntimeTypeConstructor()
     {

@@ -84,9 +84,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LibSVMBinaryReader", "DataR
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Linux build files", "Linux build files", "{3ED0465D-23E7-4855-9694-F788717B6533}"
 	ProjectSection(SolutionItems) = preProject
+		configure = configure
 		Makefile = Makefile
-		Makefile_kaldi.cpu = Makefile_kaldi.cpu
-		Makefile_kaldi.gpu = Makefile_kaldi.gpu
 		README = README
 	EndProjectSection
 EndProject

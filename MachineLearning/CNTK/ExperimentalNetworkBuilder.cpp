@@ -76,10 +76,10 @@ namespace Microsoft { namespace MSR { namespace BS {
         L"ClassificationError = ErrorPrediction \n"
         L"Delay = PastValue \n" // TODO: should it allow negative offsets and an if test here?
         // standard nodes. We use macros to define these strings.
-#define UnaryStandardNode(Op,a) L#Op L"(" L#a L", tag='') = new ComputationNode [ operation = '" L#Op  L"' ; inputs = " L#a L" /*plus the function args*/ ]\n"
-#define BinaryStandardNode(Op,a,b) L#Op L"(" L#a L", " L#b L", tag='') = new ComputationNode [ operation = '" L#Op  L"' ; inputs = (" L#a L" : " L#b L") /*plus the function args*/ ]\n"
-#define TernaryStandardNode(Op,a,b,c) L#Op L"(" L#a L", " L#b L", " L#c L", tag='') = new ComputationNode [ operation = '" L#Op  L"' ; inputs = (" L#a L" : " L#b L" : " L#c L") /*plus the function args*/ ]\n"
-#define QuaternaryStandardNode(Op,a,b,c,d) L#Op L"(" L#a L", " L#b L", " L#c L", " L#d L", tag='') = new ComputationNode [ operation = '" L#Op  L"' ; inputs = (" L#a L" : " L#b L" : " L#c L" : " L#d L") /*plus the function args*/ ]\n"
+#define UnaryStandardNode(Op,a) L ## #Op L"(" L ## #a L", tag='') = new ComputationNode [ operation = '" L ## #Op  L"' ; inputs = " L ## #a L" /*plus the function args*/ ]\n"
+#define BinaryStandardNode(Op,a,b) L ## #Op L"(" L ## #a L", " L ## #b L", tag='') = new ComputationNode [ operation = '" L ## #Op  L"' ; inputs = (" L ## #a L" : " L ## #b L") /*plus the function args*/ ]\n"
+#define TernaryStandardNode(Op,a,b,c) L ## #Op L"(" L ## #a L", " L ## #b L", " L ## #c L", tag='') = new ComputationNode [ operation = '" L ## #Op  L"' ; inputs = (" L ## #a L" : " L ## #b L" : " L ## #c L") /*plus the function args*/ ]\n"
+#define QuaternaryStandardNode(Op,a,b,c,d) L ## #Op L"(" L ## #a L", " L ## #b L", " L ## #c L", " L ## #d L", tag='') = new ComputationNode [ operation = '" L ## #Op  L"' ; inputs = (" L ## #a L" : " L ## #b L" : " L ## #c L" : " L ## #d L") /*plus the function args*/ ]\n"
         TernaryStandardNode(CRF, labelVectorSequence, positionDependenScoreVectorSequence, transitionScores)    // TODO: better names
         QuaternaryStandardNode(ClassBasedCrossEntropyWithSoftmax, labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax)
         // BUGBUG: the commented-out ones are not mentioned in the CNTK book, nor are their parameters documented in the source code
@@ -829,8 +829,8 @@ namespace Microsoft { namespace MSR { namespace BS {
         return rtInfo;
     }
 
-    //#define DefineRuntimeType(T) { L#T, MakeRuntimeTypeConstructors<T>() } }
-#define DefineRuntimeTypeDualPrecision(T) { L#T, MakeRuntimeTypeConstructorDualPrecision<T<float>,T<double>>() }
+    //#define DefineRuntimeType(T) { L ## #T, MakeRuntimeTypeConstructors<T>() } }
+#define DefineRuntimeTypeDualPrecision(T) { L ## #T, MakeRuntimeTypeConstructorDualPrecision<T<float>,T<double>>() }
 
     // get information about configurable runtime types
     // This returns a ConfigurableRuntimeType structure which primarily contains a lambda to construct a runtime object from a ConfigRecord ('new' expression).
@@ -865,8 +865,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // helper that returns 'float' or 'double' depending on ElemType
     template<typename ElemType> static const wchar_t * ElemTypeName();
-    template<> static const wchar_t * ElemTypeName<float>()  { return L"float"; }
-    template<> static const wchar_t * ElemTypeName<double>() { return L"double"; }
+    template<> /*static*/ const wchar_t * ElemTypeName<float>()  { return L"float"; }
+    template<> /*static*/ const wchar_t * ElemTypeName<double>() { return L"double"; }
 
     // build a ComputationNetwork from BrainScript source code
     template<typename ElemType>
@@ -878,7 +878,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
             // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source?
             let expr = BS::ParseConfigString(BS::standardFunctions + BS::computationNodes + BS::commonMacros
-                + wstrprintf(L"deviceId = %d ; precision = '%s' ; network = new ComputationNetwork ", (int)m_deviceId, ElemTypeName<ElemType>())  // TODO: check if typeid needs postprocessing
+                + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%s' ; network = new ComputationNetwork ", (int)m_deviceId, ElemTypeName<ElemType>())  // TODO: check if typeid needs postprocessing
                 + m_sourceCode);    // source code has the form [ ... ]
             // evaluate the parse tree--specifically the top-level field 'network'--which will create the network
             let object = EvaluateField(expr, L"network");                               // this comes back as a BS::Object
