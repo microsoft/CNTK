@@ -53,30 +53,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         copyNodeChildrenCrossNetwork=4, // allow a cross network child copy
     };
 
-    // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure
-    // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
-    // TODO: m_samplesInRecurrentStep should be subsumed here & removed from nodes
-    struct FrameRange
-    {
-        const size_t timeIdxInSeq;  // start frame
-        const size_t numFrames;     // number of frames; currently only 1 or SIZE_MAX. SIZE_MAX means entire MB, or all input assuming ot is no time sequence
-        // can construct from a single size_t -> a single-frame range
-        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), numFrames(1) { }
-        // or without arguments -> entire minibatch / no frame-range
-        FrameRange() : timeIdxInSeq(0), numFrames(SIZE_MAX) { }
-        // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
-        size_t t() const
-        {
-            if (numFrames != 1)
-                LogicError("FrameRange::t() called for a frame range > 1 frame");
-            else
-                return timeIdxInSeq;
-        }
-    private:
-        FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
-        void operator=(const FrameRange &);
-    };
-
 #pragma region base computation class
 
     // =======================================================================
@@ -169,14 +145,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            FrameRange fr;
-            ComputeInputPartial(inputIndex, fr);      // nodes that do not implement this will know to understand SIZE_MAX as full batch
+            ComputeInputPartial(inputIndex, FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
         }
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) = 0;
-        
+
         virtual void EvaluateThisNode()
         {
-            EvaluateThisNode(FrameRange());      // nodes that do not implement this will know to understand SIZE_MAX as full batch
+            EvaluateThisNode(FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
         }
         // evaluate only N frames at time index timeIdxInSeq
         // Normally, N is 1 or it spans the entire minibatch.
@@ -190,9 +165,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 MaskToZeroWhenLabelAndFeatureMissing(m_functionValues);
         }
 
-        void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq)
+        void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
         {
-            EvaluateThisNode(timeIdxInSeq);
+            EvaluateThisNode(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep));
 
             if (!UseCustomizedMultiSeqHandling())
                 MaskToZeroWhenLabelAndFeatureMissing(m_functionValues, timeIdxInSeq);
@@ -229,13 +204,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, 
-            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
+                                  const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
         {
             throw std::logic_error("This operation does not support five inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/,
-            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
+                                  const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
         {
             throw std::logic_error("This operation does not support six inputs.");
         }
@@ -525,7 +500,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_loopId;
         }
 
-        // TODO: these two should disappear, the information should be in FrameRange record instead
+        // TODO: these two will disappear once the information is correctly held in a FrameRange record
         // This is called at 3 places; two are directly before ComputeGradientForChildren().
         void SetNbrSlicesInEachRecurrentIteration(size_t bsz)
         {
@@ -595,7 +570,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetReqMultiSeqHandlingTo(const bool v) { m_reqMultiSeqHandling = v; }
         bool ReqMultiSeqHandling() const { return m_reqMultiSeqHandling; }
 
-        void InitRecurrentNode()    // this says that this node is not inside a loop
+        void InitRecurrentNode()    // this initialization says that this node is not inside a loop
         {
             SetLoop(false);
         }
@@ -713,7 +688,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         (msra::strfun::utf8 (child->OperationName())).c_str(),
                         (msra::strfun::utf8 (child->NodeName())).c_str());
 #endif              
-                    ComputeInputPartial(i, timeIdxInSeq); //this computes partial wrt to the child and sums the gradient value in the child
+                    ComputeInputPartial(i, FrameRange(timeIdxInSeq, m_samplesInRecurrentStep)); //this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
                 else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, 
@@ -1226,7 +1201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Whoever invented that insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain. [fseide]
 #define UsingComputationNodeMembers    \
 protected:  \
-        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  \
+    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  \
         /* TODO: move NewThis() here  */ \
 public: \
     using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; \

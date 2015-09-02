@@ -21,7 +21,7 @@ COMMAND:     configFile=$(SolutionDir)Tests\Speech\QuickE2E\cntk.config  stderr=
 --- LSTM:
 
 WORKING DIR: $(SolutionDir)Tests\Speech\Data
-COMMAND:     configFile=$(SolutionDir)Tests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\LSTM\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\LSTM  TEST_DIR=$(SolutionDir)Tests\Speech\LSTM  DataDir=$(SolutionDir)Tests\Speech\Data  DeviceId=Auto
+COMMAND:     configFile=$(SolutionDir)Tests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\LSTM\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\LSTM  NdlDir=$(SolutionDir)Tests\Speech\LSTM  DataDir=$(SolutionDir)Tests\Speech\Data  DeviceId=Auto
 
 Simple test
 -----------
