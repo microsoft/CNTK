@@ -160,7 +160,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_sentenceSeg != nullptr);
             assert(m_minibatchPackingFlag != nullptr);
 
-            Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(frameRange.t(), 1);
+            Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.FrameSlice(FrameRange(frameRange.t(), 1)/*TODO: delete the next two parameters*/, frameRange.t(), 1);
             ComputeInputPartialSRP(frameRange, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
         }
 
@@ -372,7 +372,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
             {
                 // TODO: call the looping version below to avoid code dup
-                Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(timeIdxInSeq, 1);
+                Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.FrameSlice(FrameRange(timeIdxInSeq, 1), timeIdxInSeq, 1);
                 ComputeInputPartialSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
             }
         }
@@ -386,7 +386,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
             {
                 // TODO: call the looping version below to avoid code dup
-                Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(timeIdxInSeq, 1);
+                Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.FrameSlice(FrameRange(timeIdxInSeq, 1), timeIdxInSeq, 1);
                 EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
             }
 
@@ -404,7 +404,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.t() == 0 && m_historyAlreadySet == false)
                 m_delayedActivation = Inputs(0)->FunctionValues();
             
-            Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(frameRange.t(), 1);
+            Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.FrameSlice(FrameRange(frameRange.t(), 1)/*TODO: delete the next two parameters*/, frameRange.t(), 1);
             EvaluateThisNodeSRP(frameRange, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
         }
     };
@@ -471,7 +471,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.t() == Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep - 1)
                 m_delayedActivation = Inputs(0)->FunctionValues();
 
-            Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(frameRange.t(), 1);
+            Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), 1);
             EvaluateThisNodeSRP(frameRange, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
         }
     };
@@ -992,16 +992,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += m_samplesInRecurrentStep)
                 {
                     FrameRange frameRange(timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceOutput = FunctionValues().ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceState = m_State.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceOutput = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceState = m_State.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
 
-                    Matrix<ElemType> sliceGi = m_Gi.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceGf = m_Gf.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceGo = m_Go.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGi = m_Gi.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGf = m_Gf.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGo = m_Go.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
 
-                    Matrix<ElemType> sliceTanhState = tanhState.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceTanhInput = tanhObs.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceTanhInput = tanhObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
 
                     PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, m_sentenceSeg);
 
@@ -1091,8 +1091,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // this is in the minibatch
                 FrameRange frameRange(timeIdxInSeq, nsamples);
-                Matrix<ElemType>::Multiply(output.ColumnSlice(frameRange.t() - nsamples, nsamples), false, colSeg, false, newPrevOutput);
-                Matrix<ElemType>::Multiply(state.ColumnSlice(frameRange.t() - nsamples, nsamples), false, colSeg, false, newPrevState);
+                Matrix<ElemType>::Multiply(output.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() - nsamples, nsamples), false, colSeg, false, newPrevOutput);
+                Matrix<ElemType>::Multiply(state.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() - nsamples, nsamples), false, colSeg, false, newPrevState);
             }
 
             ComputationNode<ElemType>::SetToInitStateValueForResetSeg(sentenceBegin->ColumnSlice(utt_t, 1), nStream, initStateValue, newPrevState);

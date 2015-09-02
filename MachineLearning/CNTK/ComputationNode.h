@@ -510,7 +510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note: only used in one place, SimpleEvaluator.h PreComputeActivityAtTime().
         // The member is, however, read out at 284 places inside nodes,
         // most of the time as
-        // ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep)
+        // FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep)
         // This expression will be turned into a function call to right here, so that we compute this only at one place
         // and can also handle the full-minibatch case.
         // Let us try to get this member out of this class altogether; it belongs elsewhere.

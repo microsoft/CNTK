@@ -67,7 +67,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             // why GradientValues() but m_functionValues below and not FunctionValues()?
 
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             ComputeInputPartialV(m_gradient, sliceInputValue, sliceInputGrad, sliceOutputGrad);
         }
@@ -206,10 +206,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex != 0)
                 InvalidArgument("Sigmoid only has one input.");
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             ComputeInputPartialS(m_gradient, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -265,10 +265,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex != 0)
                 InvalidArgument("Tanh only has one input.");
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             ComputeInputPartialS(m_gradient, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -326,10 +326,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex != 0)
                 InvalidArgument("Log only has one input.");
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             ComputeInputPartialS(m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
@@ -386,10 +386,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex != 0)
                 InvalidArgument("Exp only has one input.");
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             ComputeInputPartialS(m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
@@ -445,10 +445,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex != 0)
                 InvalidArgument("Cosine only has one input.");
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             ComputeInputPartialS(m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
@@ -508,10 +508,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex != 0)
                 InvalidArgument("Softmax only has one input.");
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             ComputeInputPartialS(m_gradient, m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -616,10 +616,10 @@ private:
             if (inputIndex != 0)
                 InvalidArgument("Softmax only has one input.");
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             ComputeInputPartialS(m_gradient, m_softmax, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -725,12 +725,10 @@ virtual const std::wstring OperationName() const { return TypeName(); }
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
             //get the right slice 
-            size_t startIndex = frameRange.t() * m_samplesInRecurrentStep;
+            const size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();
 
-            size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();
-
-            Matrix<ElemType> sliceGradientValue = m_gradientValues.ColumnSlice(startIndex, m_samplesInRecurrentStep);
-            Matrix<ElemType> slicePosterior = m_posterior.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceGradientValue = m_gradientValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> slicePosterior = m_posterior.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
                 
             switch (inputIndex)
             {
@@ -740,40 +738,40 @@ virtual const std::wstring OperationName() const { return TypeName(); }
                         ComputeInputPartialUnnormedPrior(Inputs(0)->GradientValues(), sliceGradientValue, m_prior, slicePosterior, m_temp);
                     else
                     {
-                        Matrix<ElemType> sliceUnnormedPriorGradient = Inputs(0)->GradientValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
-                        Matrix<ElemType> slicePrior = m_prior.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                        Matrix<ElemType> sliceUnnormedPriorGradient = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                        Matrix<ElemType> slicePrior = m_prior.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
                         ComputeInputPartialUnnormedPrior(sliceUnnormedPriorGradient, sliceGradientValue, slicePrior, slicePosterior, m_temp);
                     }
                 }
                 break;
             case 1:
                 {
-                      Matrix<ElemType> sliceNormedDeviationVectors = m_normedDeviationVectors.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                      Matrix<ElemType> sliceNormedDeviationVectors = m_normedDeviationVectors.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
                       if (colsPrior == 1)
                         ComputeInputPartialMean(Inputs(1)->GradientValues(), sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, m_temp);
                     else
                     {
-                        Matrix<ElemType> sliceMeanGradient = Inputs(1)->GradientValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                        Matrix<ElemType> sliceMeanGradient = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
                         ComputeInputPartialMean(sliceMeanGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, m_temp);
                     }
                 }
                 break;
             case 2:
                 {
-                    Matrix<ElemType> sliceNormedDeviation = m_normedDeviation.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceNormedDeviation = m_normedDeviation.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
                     if (colsPrior == 1)
                         ComputeInputPartialLogStddev(Inputs(2)->GradientValues(), sliceGradientValue, sliceNormedDeviation, slicePosterior, m_temp);
                     else
                     {
-                        Matrix<ElemType> sliceLotStddevGradient = Inputs(2)->GradientValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                        Matrix<ElemType> sliceLotStddevGradient = Inputs(2)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
                         ComputeInputPartialLogStddev(sliceLotStddevGradient, sliceGradientValue, sliceNormedDeviation, slicePosterior, m_temp);
                     }
                 }
                 break;
             case 3:
                 {
-                    Matrix<ElemType> sliceNormedDeviationVectors = m_normedDeviationVectors.ColumnSlice(startIndex, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceFeatureGradient = Inputs(3)->GradientValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceNormedDeviationVectors = m_normedDeviationVectors.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceFeatureGradient = Inputs(3)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
                     ComputeInputPartialFeature(sliceFeatureGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, m_temp);
                 }
                 break;
@@ -890,13 +888,11 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             size_t numSamples = Inputs(3)->FunctionValues().GetNumCols();
 
             //get the right slice 
-            size_t startIndex = frameRange.t() * m_samplesInRecurrentStep;
-
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(startIndex, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceFeature = Inputs(3)->FunctionValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceNormedDeviation = m_normedDeviation.ColumnSlice(startIndex, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceNormedDeviationVectors = m_normedDeviationVectors.ColumnSlice(startIndex, m_samplesInRecurrentStep);
-            Matrix<ElemType> slicePosterior = m_posterior.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceFeature = Inputs(3)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceNormedDeviation = m_normedDeviation.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceNormedDeviationVectors = m_normedDeviationVectors.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> slicePosterior = m_posterior.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             if (colsPrior == 1)
             {
@@ -905,12 +901,12 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             }
             else if (colsPrior == numSamples)
             {
-                Matrix<ElemType> sliceUnnormedPrior = Inputs(0)->FunctionValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceMean = Inputs(1)->FunctionValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceLogstddev = Inputs(2)->FunctionValues().ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceUnnormedPrior = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceMean = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceLogstddev = Inputs(2)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
-                Matrix<ElemType> slicePrior = m_prior.ColumnSlice(startIndex, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceStddev = m_stddev.ColumnSlice(startIndex, m_samplesInRecurrentStep);
+                Matrix<ElemType> slicePrior = m_prior.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceStddev = m_stddev.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
                 EvaluateThisNodeS(sliceOutputValue, sliceUnnormedPrior, sliceMean, sliceLogstddev, sliceFeature,
                     slicePrior, sliceStddev, sliceNormedDeviationVectors, sliceNormedDeviation, slicePosterior, m_temp);
@@ -1117,13 +1113,13 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             if (inputIndex > 0)
                 InvalidArgument("Dropout operation only takes one input.");
 
-            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
             {
-                sliceMask = m_maskOfDropout.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                sliceMask = m_maskOfDropout.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             }
 
             ComputeInputPartialS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
@@ -1147,7 +1143,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
         }
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType> sliceOutputValue = Matrix <ElemType>();
 
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
@@ -1155,10 +1151,10 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             {
                 FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
                 m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-                sliceMask = m_maskOfDropout.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                sliceMask = m_maskOfDropout.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             }
 
-            sliceOutputValue = FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            sliceOutputValue = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
         }
@@ -1409,8 +1405,8 @@ private:
             }
 
             size_t outputSamplesInRecurrentStep = m_samplesInRecurrentStep * rows / m_numRows;
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep);
 
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_numRows);
         }
@@ -1453,8 +1449,8 @@ private:
 
             size_t outputSamplesInRecurrentStep = m_samplesInRecurrentStep * rows / m_numRows;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep);
 
             ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_numRows);
         }
@@ -1650,8 +1646,8 @@ private:
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_numRepeat);
         }
@@ -1677,8 +1673,8 @@ private:
             if (inputIndex != 0)
                 InvalidArgument("RowRepeat only has one input.");
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_numRepeat);
         }
