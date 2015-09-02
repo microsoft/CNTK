@@ -113,6 +113,8 @@ namespace Microsoft { namespace MSR { namespace BS {
         template<typename T> operator shared_ptr<T>() const { return AsPtr<T>(); }
         // access as a (const & to) value  --use this for primitive types (also works to get a const wstring & from a String)
         template<typename T> operator T() const { return AsRef<T>(); }
+        // Linux gcc barfs on this ^^ for 'us = (double)((wstring)arg).size();' due to some ambiguity error (while it works fine with Visual Studio).
+        // If you encounter this, instead say 'us = (double)((wstring&)arg).size();' with a &
         operator double() const { return AsRef<Double>(); }
         operator float() const { return (float) AsRef<Double>(); }
         operator bool() const { return AsRef<Bool>(); }

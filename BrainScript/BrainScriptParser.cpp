@@ -109,8 +109,8 @@ struct Issue
     if (!locations.empty())     // (be resilient to some throwers not having a TextrLocation; to be avoided)
     {
         let & firstLoc = issues.front().location;
-        fprintf(stderr, "\n%ls while %ls line %d char %d of %ls\n", errorKind, kind, firstLoc.lineNo + 1/*report 1-based*/, firstLoc.charPos + 1, firstLoc.GetSourceFile().path.c_str());
-        fprintf(stderr, "see location marked ^ and parent contexts marked 0..9, a..z, A..Z:\n\n", errorKind, kind);
+        fprintf(stderr, "\n%ls while %ls line %d char %d of %ls\n", errorKind, kind, (int)firstLoc.lineNo + 1/*report 1-based*/, (int)firstLoc.charPos + 1, firstLoc.GetSourceFile().path.c_str());
+        fprintf(stderr, "see location marked ^ and parent contexts marked 0..9, a..z, A..Z:\n\n");
         for (auto i = issues.rbegin(); i != issues.rend(); i++)
         {
             let & issue = *i;
@@ -444,7 +444,7 @@ public:
 // diagnostics helper: print the content
 void Expression::Dump(int indent) const
 {
-    fprintf(stderr, "%*s", indent, "", op.c_str());
+    fprintf(stderr, "%*s", indent, "");
     if (op == L"s") fprintf(stderr, "'%ls' ", s.c_str());
     else if (op == L"d") fprintf(stderr, "%.f ", d);
     else if (op == L"b") fprintf(stderr, "%s ", b ? "true" : "false");
