@@ -4,8 +4,10 @@
 #include "ColumnQuantizer.h"
 #include "QuantizedMatrix.h"
 #include "GPUMatrix.h"
+#ifndef CPUONLY
 #include <cuda_runtime_api.h>
 #include <cuda.h>  
+#endif // !CPUONLY
 #include <vector>
 #include <memory>
 
@@ -34,6 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Helper function to get a temporary intermediate matrix on the GPU to store quantization results
         QuantizedMatrix<ElemType>& GetTempGPUQuantizedMatrix(size_t nBits, bool& newlyAllocated);
         
+#ifndef CPUONLY
         // Record a event to flag the completion of quantization/unquantization kernel on the compute stream
         void RecordQuantizeCompleteEvent(cudaStream_t computestream) const;
 
@@ -68,7 +71,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         mutable cudaEvent_t m_quantizeCompleteEvent;
         mutable cudaEvent_t m_fetchCompleteEvent;
         mutable cudaEvent_t m_assignCompleteEvent;
+#endif // !CPUONLY
 
+    private:
         bool m_forceSync;
         bool m_quantizeOpIncludedFetch;
 

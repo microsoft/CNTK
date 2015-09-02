@@ -10,17 +10,22 @@
 #include "basetypes.h"
 
 #include "htkfeatio.h"                  // for reading HTK features
+#ifdef _WIN32
 #include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)
+#endif
 #include "simplesenonehmm.h"            // for MMI scoring
 #include "msra_mgram.h"                 // for unigram scores of ground-truth path in sequence training
 
 #include "rollingwindowsource.h"        // minibatch sources
 #include "utterancesource.h"
+#ifdef _WIN32
 #include "readaheadsource.h"
+#endif
 #include "chunkevalsource.h"
 #define DATAREADER_EXPORTS
 #include "DataReader.h"
 #include "HTKMLFReader.h"
+#include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -38,6 +43,7 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader<double>** preader)
 {
     GetReader(preader);
 }
+#ifdef _WIN32
 // Utility function, in ConfigFile.cpp, but HTKMLFReader doesn't need that code...
 
 // Trim - trim white space off the start and end of the string
@@ -56,6 +62,7 @@ void Trim(std::string& str)
     if (found != npos)
         str.erase(found+1);
 }
+#endif
 
 
 }}}

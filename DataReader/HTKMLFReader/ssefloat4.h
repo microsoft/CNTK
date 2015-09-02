@@ -8,7 +8,12 @@
 
 #pragma once
 
+#ifdef _WIN32
 #include <intrin.h>         // for intrinsics
+#endif
+#ifdef __unix__
+#include <x86intrin.h>
+#endif
 
 namespace msra { namespace math {
 

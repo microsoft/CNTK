@@ -21,7 +21,9 @@ private:
 
     msra::dbn::minibatchiterator* m_mbiter;
     msra::dbn::minibatchsource* m_frameSource;
+#ifdef _WIN32
     msra::dbn::minibatchreadaheadsource* m_readAheadSource;
+#endif
     msra::dbn::FileEvalSource* m_fileEvalSource; 
     msra::dbn::latticesource* m_lattices;
     map<wstring,msra::lattices::lattice::htkmlfwordsequence> m_latticeMap;
@@ -39,6 +41,8 @@ private:
     vector<size_t> m_switchFrame;
     bool m_noData;
     bool m_trainOrTest; // if false, in file writing mode
+    using LabelType = typename IDataReader<ElemType>::LabelType;
+    using LabelIdType = typename IDataReader<ElemType>::LabelIdType;
  
     std::map<LabelIdType, LabelType> m_idToLabelMap;
     
@@ -141,9 +145,29 @@ private:
     }
 
 public:
+    /// a matrix of n_stream x n_length
+    /// n_stream is the number of streams
+    /// n_length is the maximum lenght of each stream
+    /// for example, two sentences used in parallel in one minibatch would be
+    /// [2 x 5] if the max length of one of the sentences is 5
+    /// the elements of the matrix is 0, 1, or -1, defined as SEQUENCE_START, SEQUENCE_MIDDLE, NO_INPUT in cbasetype.h 
+    /// 0 1 1 0 1
+    /// 1 0 1 0 0 
+    /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
+    /// the second data stream has two sentences, with 0 indicating begining of sentences
+    /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
+    /// frame. 
     Matrix<ElemType> m_sentenceBegin;
+
+    /// a matrix of 1 x n_length
+    /// 1 denotes the case that there exists sentnece begin or no_labels case in this frame
+    /// 0 denotes such case is not in this frame
     vector<MinibatchPackingFlag> m_minibatchPackingFlag;
 
+    /// by default it is false
+    /// if true, reader will set to SEQUENCE_MIDDLE for time positions that are orignally correspond to SEQUENCE_START
+    /// set to true so that a current minibatch can uses state activities from the previous minibatch. 
+    /// default will have truncated BPTT, which only does BPTT inside a minibatch
     bool mIgnoreSentenceBeginTag;
     HTKMLFReader() : m_sentenceBegin(CPUDEVICE) {
     }
@@ -165,11 +189,12 @@ public:
 
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
-    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<unsigned, LabelType>& labelMapping);
+    virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
-    void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoInputs);
+    void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
+    void SetSentenceEndInBatch(vector<size_t> &/*sentenceEnd*/);
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetRandomSeed(int){ NOT_IMPLEMENTED };
 

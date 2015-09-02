@@ -13,11 +13,14 @@
 #include "simple_checked_arrays.h"  // ... for dotprod(); we can eliminate this I believe
 #include "ssefloat4.h"
 #include <stdexcept>
-#include "numahelpers.h"
+#ifndef __unix__
 #include <ppl.h>
 #include "pplhelpers.h"
+#include "numahelpers.h"
+#endif
 #include "fileutil.h"   // for saving and reading matrices
 #include <limits>       // for NaN
+#include <malloc.h>
 
 namespace msra { namespace math {
 
@@ -389,6 +392,7 @@ public:
         matprod_mtm (Mt, 0, Mt.cols(), V);
     }
 
+#ifdef _WIN32
     void parallel_matprod_mtm (const ssematrixbase & Mt, const ssematrixbase & V)
     {
         msra::parallel::foreach_index_block (Mt.cols(), Mt.cols(), 1, [&] (size_t i0, size_t i1)
@@ -396,6 +400,7 @@ public:
             matprod_mtm (Mt, i0, i1, V);
         });
     }
+#endif
 
     // swap data of i-th column and j-th column
     void swapcolumn (size_t i, size_t j)
@@ -801,6 +806,7 @@ public:
         scaleandaddmatprod_mtm (thisscale, Mt, 0, Mt.cols(), V);
     }
 
+#ifdef _WIN32
     void parallel_scaleandaddmatprod_mtm (const float thisscale, const ssematrixbase & Mt, const ssematrixbase & V)
     {
 #if 0
@@ -813,6 +819,7 @@ public:
         });
 #endif
     }
+#endif
 
     // same as matprod_mtm except result is added to result matrix instead of replacing it
     // For all comments, see matprod_mtm.
@@ -912,6 +919,7 @@ public:
     // to = this'
     void transpose (ssematrixbase & to) const { transposecolumns (to, 0, cols()); }
 
+#ifdef _WIN32
     void parallel_transpose (ssematrixbase & to) const
     {
         msra::parallel::foreach_index_block (cols(), cols(), 4/*align*/, [&] (size_t j0, size_t j1)
@@ -925,6 +933,7 @@ public:
                 throw std::logic_error ("parallel_transpose: post-condition check failed--you got it wrong, man!");
 #endif
     }
+#endif
 
     // transpose columns [j0,j1) to rows [j0,j1) of 'to'
     void transposecolumns (ssematrixbase & to, size_t j0, size_t j1) const
@@ -1149,7 +1158,7 @@ public:
         foreach_coord (i, j, us)
             if (std::isnan (us(i,j)))
             {
-                fprintf (stderr, "hasnan: NaN detected at %s (%d,%d)\n", name, i, j);
+                fprintf (stderr, "hasnan: NaN detected at %s (%d,%d)\n", name, (int)i, (int)j);
                 return true;
             }
 #endif
@@ -1200,7 +1209,7 @@ class ssematrixfrombuffer : public ssematrixbase
 {
     void operator= (const ssematrixfrombuffer &); ssematrixfrombuffer (const ssematrixfrombuffer &);  // base cannot be assigned except by move
 public:
-    ssematrixfrombuffer() { clear(); }
+    ssematrixfrombuffer() { this->clear(); }
 
     // instantiate from a float vector  --buffer must be SSE-aligned
     template<class VECTOR> ssematrixfrombuffer (VECTOR & buffer, size_t n, size_t m) : ssematrixbase (buffer, n, m) {}
@@ -1233,10 +1242,10 @@ public:
         assert (other.empty() || j0 + m <= other.cols());
         if (!other.empty() && j0 + m > other.cols())  // (runtime check to be sure--we use this all the time)
             throw std::logic_error ("ssematrixstriperef: stripe outside original matrix' dimension");
-        p = other.empty() ? NULL : &other(0,j0);
-        numrows = other.rows();
-        numcols = m;
-        colstride = other.getcolstride();
+        this->p = other.empty() ? NULL : &other(0,j0);
+        this->numrows = other.rows();
+        this->numcols = m;
+        this->colstride = other.getcolstride();
     }
 
     // only assignment is by rvalue reference
@@ -1255,13 +1264,19 @@ public:
 template<class ssematrixbase> class ssematrix : public ssematrixbase
 {
     // helpers for SSE-compatible memory allocation
-    static __declspec_noreturn void failed (size_t nbytes) { static/*not thread-safe--for diagnostics only*/ char buf[80] = { 0 }; sprintf_s (buf, "allocation of SSE vector failed (%d bytes)", nbytes); throw std::bad_exception (buf); }
-#if 1   // TODO: move to separate header file numahelpers.h
-    template<typename T> static T * new_sse (size_t nbytes) { T * pv = (T *) msra::numa::malloc (nbytes * sizeof (T), 16); if (pv) return pv; failed (nbytes * sizeof (T)); }
-    static void delete_sse (void * p) { if (p) msra::numa::free (p); }
-#else
+#ifdef _MSC_VER
+    static __declspec_noreturn void failed(size_t nbytes) { static/*not thread-safe--for diagnostics only*/ char buf[80] = { 0 }; sprintf_s(buf, "allocation of SSE vector failed (%d bytes)", nbytes); throw std::bad_exception(buf); }
+#endif
+#ifdef __unix__
+    static void failed (size_t nbytes) { static/*not thread-safe--for diagnostics only*/ char buf[80] = { 0 }; sprintf_s (buf, sizeof(buf), "allocation of SSE vector failed (%d bytes)", (int)nbytes); throw std::bad_exception (); }
+#endif
+#ifdef _WIN32
     template<typename T> static T * new_sse (size_t nbytes) { T * pv = (T *) _aligned_malloc (nbytes * sizeof (T), 16); if (pv) return pv; failed (nbytes * sizeof (T)); }
     static void delete_sse (void * p) { if (p) _aligned_free (p); }
+#endif
+#ifdef __unix__
+    template<typename T> static T * new_sse (size_t nbytes) { T * pv = (T *) _mm_malloc (nbytes * sizeof (T),16); if (pv) return pv; failed (nbytes * sizeof (T)); }
+    static void delete_sse (void * p) { if (p) _mm_free (p); }
 #endif
 
     // helper to assign a copy from another matrix
@@ -1272,18 +1287,18 @@ template<class ssematrixbase> class ssematrix : public ssematrixbase
     };
 public:
     // construction
-    ssematrix() { clear(); }
-    ssematrix (size_t n, size_t m) { clear(); resize (n, m); }
-    ssematrix (size_t n) { clear(); resize (n, 1); }  // vector
-    ssematrix (const ssematrix & other) { clear(); assign (other); }
-    ssematrix (const ssematrixbase & other) { clear(); assign (other); }
-    ssematrix (ssematrix && other) { move (other); }
-    ssematrix (const std::vector<float> & other) { clear(); resize (other.size(), 1); foreach_index (k, other) (*this)[k] = other[k]; }
+    ssematrix() { this->clear(); }
+    ssematrix (size_t n, size_t m) { this->clear(); resize (n, m); }
+    ssematrix (size_t n) { this->clear(); resize (n, 1); }  // vector
+    ssematrix (const ssematrix & other) { this->clear(); assign (other); }
+    ssematrix (const ssematrixbase & other) { this->clear(); assign (other); }
+    ssematrix (ssematrix && other) { this->move (other); }
+    ssematrix (const std::vector<float> & other) { this->clear(); resize (other.size(), 1); foreach_index (k, other) (*this)[k] = other[k]; }
 
     // construct elementwise with a function f(i,j)
     template<typename FUNCTION> ssematrix (size_t n, size_t m, const FUNCTION & f)
     {
-        clear();
+        this->clear();
         resize (n, m);
         auto & us = *this;
         foreach_coord (i, j, us)
@@ -1291,12 +1306,12 @@ public:
     }
 
     // destructor
-    ~ssematrix() { delete_sse (p); }
+    ~ssematrix() { delete_sse (this->p); }
 
     // assignment
     ssematrix & operator= (const ssematrix & other) { assign (other); return *this; }
     ssematrix & operator= (const ssematrixbase & other) { assign (other); return *this; }
-    ssematrix & operator= (ssematrix && other) { delete_sse(p); move (other); return *this; }
+    ssematrix & operator= (ssematrix && other) { delete_sse(this->p); move (other); return *this; }
 
     void swap (ssematrix & other) throw() { ssematrixbase::swap (other); }
 
@@ -1304,23 +1319,23 @@ public:
     // One or both dimensions can be 0, for special purposes.
     void resize (size_t n, size_t m)
     {
-        if (n == numrows && m == numcols)
+        if (n == this->numrows && m == this->numcols)
             return;                             // no resize needed
         const size_t newcolstride = (n + 3) & ~3;     // pad to multiples of four floats (required SSE alignment)
         const size_t totalelem = newcolstride * m;
         //fprintf (stderr, "resize (%d, %d) allocating %d elements\n", n, m, totalelem);
         float * pnew = totalelem > 0 ? new_sse<float> (totalelem) : NULL;
-        ::swap (p, pnew);
+        ::swap (this->p, pnew);
         delete_sse (pnew);    // pnew is now the old p
-        numrows = n; numcols = m;
-        colstride = newcolstride;
+        this->numrows = n; this->numcols = m;
+        this->colstride = newcolstride;
         // touch the memory to ensure the page is created
         for (size_t offset = 0; offset < totalelem; offset += 4096 / sizeof (float))
-            p[offset] = 0.0f; //nan;
+            this->p[offset] = 0.0f; //nan;
         // clear padding elements (numrows <= i < colstride) to 0.0 for SSE optimization
-        for (size_t j = 0; j < numcols; j++)
-            for (size_t i = numrows; i < colstride; i++)
-                p[j * colstride + i] = 0.0f;
+        for (size_t j = 0; j < this->numcols; j++)
+            for (size_t i = this->numrows; i < this->colstride; i++)
+                this->p[j * this->colstride + i] = 0.0f;
 #if 1   // for debugging: set all elements to 0
         // We keep this code alive because allocations are supposed to be done at the start only.
         auto & us = *this;
@@ -1335,8 +1350,8 @@ public:
     void resizeonce (size_t n, size_t m)
     {
 #if 1   // BUGBUG: at end of epoch, resizes are OK... so we log but allow them
-        if (!empty() && (n != numrows || m != numcols))
-            fprintf (stderr, "resizeonce: undesired resize from %d x %d to %d x %d\n", numrows, numcols, n, m);
+        if (!this->empty() && (n != this->numrows || m != this->numcols))
+            fprintf (stderr, "resizeonce: undesired resize from %d x %d to %d x %d\n", this->numrows, this->numcols, n, m);
         resize (n, m);
 #else
         if (empty())
@@ -1349,10 +1364,10 @@ public:
     // non-destructive resize() to a smaller size
     void shrink(size_t newrows, size_t newcols)
     {
-        if (newrows > numrows || newcols > numcols)
+        if (newrows > this->numrows || newcols > this->numcols)
             throw std::logic_error ("shrink: attempted to grow the matrix");
-        numrows = newrows;
-        numcols = newcols;
+        this->numrows = newrows;
+        this->numcols = newcols;
     }
 
     // file I/O
@@ -1360,8 +1375,8 @@ public:
     {
         fputTag (f, "BMAT");
         fputstring (f, name);
-        fputint (f, (int) numrows);
-        fputint (f, (int) numcols);
+        fputint (f, (int) this->numrows);
+        fputint (f, (int) this->numcols);
         const auto & us = *this;
         foreach_column (j, us)
         {
@@ -1375,8 +1390,8 @@ public:
     {
         fputTag(f, "BMAT");
         fputstring (f, name);
-        fputint (f, (int) numrows);
-        fputint (f, (int) numcols);
+        fputint (f, (int) this->numrows);
+        fputint (f, (int) this->numcols);
         const auto & us = *this;
         foreach_column (j, us)
         {
@@ -1426,9 +1441,9 @@ public:
     }
 
     // paging support (used in feature source)
-    void topagefile (FILE * f) const { if (!empty()) fwriteOrDie (p, sizeinpagefile(), 1, f); }
-    void frompagefile (FILE * f) { if (!empty()) freadOrDie (p, sizeinpagefile(), 1, f); }
-    size_t sizeinpagefile() const { return colstride * numcols * sizeof (*p); }
+    void topagefile (FILE * f) const { if (!this->empty()) fwriteOrDie (this->p, sizeinpagefile(), 1, f); }
+    void frompagefile (FILE * f) { if (!this->empty()) freadOrDie (this->p, sizeinpagefile(), 1, f); }
+    size_t sizeinpagefile() const { return this->colstride * this->numcols * sizeof (*(this->p)); }
 
     // getting a one-column sub-view on this
     ssematrixstriperef<ssematrixbase> col (size_t j)
@@ -1541,7 +1556,7 @@ template<class M> pair<unsigned int,unsigned int> printmatvaluedistributionf (co
     const size_t numparts = 100;
     for (size_t i=1; i<=numparts; i++)
     {
-        fprintf (stderr, "%.5f%% absolute values are under %.10f\n", i*100.0/numparts, vals[min(num-1,i*num/numparts)]);
+        fprintf (stderr, "%.5f%% absolute values are under %.10f\n", i*100.0/numparts, vals[min((size_t)num-1,i*num/numparts)]);
     }
     fprintf (stderr, "\n%.5f%% values are zero\n\n", 100.0*numzeros/num);
 #endif

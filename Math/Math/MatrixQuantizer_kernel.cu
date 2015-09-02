@@ -7,7 +7,6 @@
 #include <device_launch_parameters.h>
 
 #include "ValueQuantizer.h"
-#include "ValueQuantizer.cu"
 #include "ColumnQuantizer.h"
 #include "QuantizedMatrix.h"
 

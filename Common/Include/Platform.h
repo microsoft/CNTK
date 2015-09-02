@@ -63,10 +63,6 @@ typedef void* HANDLE;
 #define VOID void
 #define CONST const
 
-//standard library conversion
-//#define min std::min
-#define hash_map unordered_map
-
 //macro conversion
 #define __forceinline inline
 //string and io conversion

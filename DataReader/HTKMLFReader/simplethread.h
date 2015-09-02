@@ -9,7 +9,9 @@
 #pragma once
 
 #include "basetypes.h"
+#ifdef _WIN32
 #include <process.h>        // for _beginthread()
+#endif
 
 namespace msra { namespace util {
 

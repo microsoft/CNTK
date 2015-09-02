@@ -7,6 +7,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+#ifndef CPUONLY
     CUDAPageLockedMemAllocator::CUDAPageLockedMemAllocator(int deviceID)
         : m_deviceID(deviceID)
     {
@@ -14,7 +15,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     char* CUDAPageLockedMemAllocator::Malloc(size_t size)
     {
-#ifndef CPUONLY
         void* p;
         cudaSetDevice(m_deviceID);
 
@@ -22,18 +22,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaHostAlloc(&p, size, cudaHostAllocDefault) || "Malloc in CUDAPageLockedMemAllocator failed";
 
         return (char*)p;
-#else
-        return (char*) malloc(size);
-#endif
     }
 
     void CUDAPageLockedMemAllocator::Free(char* p)
     {
-#ifndef CPUONLY
         cudaSetDevice(m_deviceID);
         cudaFreeHost(p) || "Free in CUDAPageLockedMemAllocator failed";
-#else
-        free(p);
-#endif
     }
+
+    int CUDAPageLockedMemAllocator::GetDeviceID() const
+    {
+        return m_deviceID;
+    }
+#else
+    // Dummy definitions when compiling for CPUONLY
+    CUDAPageLockedMemAllocator::CUDAPageLockedMemAllocator(int)
+    {
+    }
+
+    int CUDAPageLockedMemAllocator::GetDeviceID() const
+    {
+        return -1;
+    }
+
+    char* CUDAPageLockedMemAllocator::Malloc(size_t)
+    {
+        return nullptr;
+    }
+
+    void CUDAPageLockedMemAllocator::Free(char*)
+    {
+    }
+#endif
 }}}
