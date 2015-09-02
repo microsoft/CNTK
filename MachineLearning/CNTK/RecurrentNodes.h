@@ -159,16 +159,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_minibatchPackingFlag != nullptr);
 
             Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(frameRange.t(), 1);
-            ComputeInputPartialSRP(frameRange.t(), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
+            ComputeInputPartialSRP(frameRange, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
         }
 
-        static void WINAPI ComputeInputPartialSRP(int timeIdxInSeq, int timeStep,
-                                                  Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t mNbr,
+        static void WINAPI ComputeInputPartialSRP(const FrameRange & frameRange, int timeStep,
+                                                  Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
                                                   const Matrix<ElemType>& colBoundaryFlags, MinibatchPackingFlag minibatchPackingFlag)
         {
+            size_t timeIdxInSeq = frameRange.t();
+            size_t mNbr = frameRange.NumCols();
             assert(timeIdxInSeq >= 0);
             if (timeIdxInSeq + direction * timeStep >= 0 && timeIdxInSeq + direction * timeStep < gradientValues.GetNumCols())
             {
+                // if there is a bondary in this frame, we treat each stream separately; otherwise we do all in one go
                 if (minibatchPackingFlag & (SequenceStart_or_End | MinibatchPackingFlag::NoFeature))
                 {
                     for (int i = 0; i < mNbr; i++)
@@ -198,10 +201,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this one differs in the starting condition
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) = 0;
 
-        static void WINAPI EvaluateThisNodeSRP(const size_t timeIdxInSeq, const int timeStep,
-                                                Matrix<ElemType>& functionValues, const Matrix<ElemType>& delayedActivation, const Matrix<ElemType>& inputFunctionValues, const size_t mNbr,
-                                                const ElemType & initStateValue, const Matrix<ElemType> & colBoundaryFlags, const MinibatchPackingFlag minibatchPackingFlag)
+        static void WINAPI EvaluateThisNodeSRP(const FrameRange & frameRange, const int timeStep,
+                                               Matrix<ElemType>& functionValues, const Matrix<ElemType>& delayedActivation, const Matrix<ElemType>& inputFunctionValues,
+                                               const ElemType & initStateValue, const Matrix<ElemType> & colBoundaryFlags, const MinibatchPackingFlag minibatchPackingFlag)
         {
+            size_t timeIdxInSeq = frameRange.t();
+            size_t mNbr = frameRange.NumCols();
+
             ASSERT(timeStep > 0);
 
             if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
@@ -354,9 +360,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"PastValue"; }
 
+        // TODO: can we have the scheduler drive this?
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex > 0)
+            if (inputIndex > 0) // TODO: is this check necessary? Can this be a generic check in the base class?
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
 
             int nbrSamples = GradientValues().GetNumCols() / m_samplesInRecurrentStep; 
@@ -364,7 +371,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // TODO: call the looping version below to avoid code dup
                 Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(timeIdxInSeq, 1);
-                ComputeInputPartialSRP(timeIdxInSeq, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
+                ComputeInputPartialSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
             }
         }
 
@@ -372,13 +379,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNode()  
         {
             ASSERT(m_timeStep > 0);
-            int blockSize = Inputs(0)->FunctionValues().GetNumCols();
 
-            for (int timeIdxInSeq = 0; timeIdxInSeq < blockSize / m_samplesInRecurrentStep; timeIdxInSeq++)
+            int nbrSamples = Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep;
+            for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
             {
                 // TODO: call the looping version below to avoid code dup
                 Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(timeIdxInSeq, 1);
-                EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
+                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
             }
 
             //set the past activity to be used by next minibatch
@@ -396,7 +403,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_delayedActivation = Inputs(0)->FunctionValues();
             
             Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(frameRange.t(), 1);
-            EvaluateThisNodeSRP(frameRange.t(), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
+            EvaluateThisNodeSRP(frameRange, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
         }
     };
 
@@ -435,19 +442,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // TODO: call the looping version below to avoid code dup
                 Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(timeIdxInSeq, 1);
-                ComputeInputPartialSRP(timeIdxInSeq, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), m_samplesInRecurrentStep, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
+                ComputeInputPartialSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
             }
         }
 
         virtual void EvaluateThisNode()
         {
             ASSERT(m_timeStep > 0);
-            int blockSize = Inputs(0)->FunctionValues().GetNumCols();
 
-            for (int timeIdxInSeq = blockSize / m_samplesInRecurrentStep - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
+            int nbrSamples = Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep;
+            for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
             {
                 Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(timeIdxInSeq, 1);
-                EvaluateThisNodeSRP(timeIdxInSeq, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
+                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
             }
 
             //set the future activity to be used by next minibatch
@@ -463,7 +470,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_delayedActivation = Inputs(0)->FunctionValues();
 
             Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(frameRange.t(), 1);
-            EvaluateThisNodeSRP(frameRange.t(), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_samplesInRecurrentStep, m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
+            EvaluateThisNodeSRP(frameRange, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
         }
     };
 
@@ -982,7 +989,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += m_samplesInRecurrentStep)
                 {
-                    FrameRange frameRange(timeIdxInSeq);
+                    FrameRange frameRange(timeIdxInSeq, m_samplesInRecurrentStep);
                     Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
                     Matrix<ElemType> sliceOutput = FunctionValues().ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
                     Matrix<ElemType> sliceState = m_State.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
@@ -992,14 +999,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Matrix<ElemType> sliceGo = m_Go.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
 
                     Matrix<ElemType> sliceTanhState = tanhState.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceTanhInput =
-                        tanhObs.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceTanhInput = tanhObs.ColumnSlice(frameRange.t(), m_samplesInRecurrentStep);
 
                     PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, m_sentenceSeg);
 
-                        EvaluateThisNodeS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
+                    EvaluateThisNodeS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
                             sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
-                    }
+                }
 
                 // save the hidden activities and output for the next minibatch
                 SaveLastStateActity();
@@ -1078,12 +1084,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // this is the begining of this minibatch
                 Matrix<ElemType>::Multiply(pastOutput.ColumnSlice(0, nsamples), false, colSeg, false, newPrevOutput);
                 Matrix<ElemType>::Multiply(pastState.ColumnSlice(0, nsamples), false, colSeg, false, newPrevState);
-
             }
             else
             {
                 // this is in the minibatch
-                FrameRange frameRange(timeIdxInSeq);
+                FrameRange frameRange(timeIdxInSeq, nsamples);
                 Matrix<ElemType>::Multiply(output.ColumnSlice(frameRange.t() - nsamples, nsamples), false, colSeg, false, newPrevOutput);
                 Matrix<ElemType>::Multiply(state.ColumnSlice(frameRange.t() - nsamples, nsamples), false, colSeg, false, newPrevState);
             }

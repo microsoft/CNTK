@@ -771,7 +771,7 @@ namespace Microsoft {
                     for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
                     {
                         ComputationNodePtr node = *nodeIter;
-                        node->EvaluateThisNode(atTime);
+                        node->EvaluateThisNode(FrameRange(atTime, node->GetNbrSlicesInEachRecurrentIteration()));
                         if (node->FunctionValues().GetNumCols() != node->GetNbrSlicesInEachRecurrentIteration())
                         {
                             RuntimeError("preComputeActivityAtTime: the function values has to be a single column matrix ");
