@@ -136,14 +136,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            FrameRange fr;
-            ComputeInputPartial(inputIndex, fr);      // nodes that do not implement this will know to understand SIZE_MAX as full batch
+            ComputeInputPartial(inputIndex, FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
         }
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) = 0;
 
         virtual void EvaluateThisNode()
         {
-            EvaluateThisNode(FrameRange());      // nodes that do not implement this will know to understand SIZE_MAX as full batch
+            EvaluateThisNode(FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
         }
         // evaluate only N frames at time index timeIdxInSeq
         // Normally, N is 1 or it spans the entire minibatch.
@@ -157,9 +156,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 MaskToZeroWhenLabelAndFeatureMissing(m_functionValues);
         }
 
-        void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq)
+        void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
         {
-            EvaluateThisNode(timeIdxInSeq);
+            EvaluateThisNode(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep));
 
             if (!UseCustomizedMultiSeqHandling())
                 MaskToZeroWhenLabelAndFeatureMissing(m_functionValues, timeIdxInSeq);
@@ -468,7 +467,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_loopId;
         }
 
-        // TODO: these two should disappear, the information should be in FrameRange record instead
+        // TODO: these two will disappear once the information is correctly held in a FrameRange record
         void SetNbrSlicesInEachRecurrentIteration(size_t bsz)
         {
             m_samplesInRecurrentStep = bsz;
@@ -651,7 +650,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         (msra::strfun::utf8 (child->OperationName())).c_str(),
                         (msra::strfun::utf8 (child->NodeName())).c_str());
 #endif              
-                    ComputeInputPartial(i, timeIdxInSeq); //this computes partial wrt to the child and sums the gradient value in the child
+                    ComputeInputPartial(i, FrameRange(timeIdxInSeq, m_samplesInRecurrentStep)); //this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
                 else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, 

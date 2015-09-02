@@ -24,26 +24,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const size_t timeIdxInSeq;              // start frame
         const size_t samplesInRecurrentStep;    // number of samples in this step
         // can construct from a single size_t -> a single-frame range
-        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(0)/*FIX THIS*/{}
-        //FrameRange(size_t timeIdxInSeq, size_t samplesInRecurrentStep) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(samplesInRecurrentStep){}
+        //FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(0)/*FIX THIS*/{}
+        FrameRange(size_t timeIdxInSeq, size_t samplesInRecurrentStep) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(samplesInRecurrentStep){}
         // or without arguments -> entire minibatch / no frame-range
         FrameRange() : timeIdxInSeq(0), samplesInRecurrentStep(SIZE_MAX) {}
         // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
-        size_t t() const        // TODO: this will be going away
-        {
-            ensureNotAllFrames();
-            return timeIdxInSeq;
-        }
-        // these two get startFrame and numFrames
-        size_t startColumn() const { ensureNotAllFrames(); return timeIdxInSeq * samplesInRecurrentStep; }
-        size_t numCols() const { ensureNotAllFrames(); return samplesInRecurrentStep; }
-        bool isAllFrames() const { return samplesInRecurrentStep != SIZE_MAX; }
+        // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).
+        size_t t() const { EnsureNotAllFrames(); return timeIdxInSeq; }
+        // multi-frame slice case: these two get startFrame and numFrames
+        size_t StartColumn() const { EnsureNotAllFrames(); return timeIdxInSeq * samplesInRecurrentStep; }
+        size_t NumCols() const { EnsureNotAllFrames(); return samplesInRecurrentStep; }
+        bool IsAllFrames() const { return samplesInRecurrentStep != SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
     private:
         FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
         void operator=(const FrameRange &);
-        void ensureNotAllFrames() const
+        void EnsureNotAllFrames() const
         {
-            if (isAllFrames())
+            if (IsAllFrames())
                 LogicError("FrameRange::t() called when frame range refers to whole minibatch");
         }
     };
@@ -154,10 +151,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // special convenience function to apply ColumnSlice() to getting a frame range
         // It assumes that columns are frames, and returns a sub-range.
         // TODO: decide whether this belongs here or elsewhere
-        Matrix<ElemType> FrameSlice(const FrameRange & frameRange) const
+        Matrix<ElemType> FrameSlice(const FrameRange & frameRange
+            // TODO: temporary only until this has been tested to work:
+            , size_t expectedStartColumn, size_t expectedNumCols
+            ) const
         {
-            if (frameRange.isAllFrames()) return ColumnSlice(0, GetNumCols());  // TODO: can we just return a reference to ourselves? --ownership problem
-            return ColumnSlice(frameRange.startColumn(), frameRange.numCols());
+            if (frameRange.IsAllFrames()) return ColumnSlice(0, GetNumCols());  // TODO: can we just return a reference to ourselves? --ownership problem
+            // TODO: temporary only until this has been tested to work:
+            if (expectedStartColumn != frameRange.StartColumn() || expectedNumCols != frameRange.NumCols())
+                LogicError("FrameSlice: FrameRange object gives different range than original explicit code. Logic is borked.");
+            return ColumnSlice(frameRange.StartColumn(), frameRange.NumCols());
         }
 
         // difference between AssignColumnSlice and SetColumnSlice 
