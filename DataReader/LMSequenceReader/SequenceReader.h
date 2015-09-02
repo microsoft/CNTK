@@ -76,7 +76,7 @@ public:
     double logprob(int i) const { if (uniform_sampling) return uniform_log_prob; else return m_log_prob[i]; }
 
     template <typename Engine>
-    int sample(Engine &eng) const
+    int sample(Engine &eng)
     {
         int m = unif_int(eng);
         if (uniform_sampling)

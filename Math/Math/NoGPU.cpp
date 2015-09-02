@@ -70,7 +70,7 @@ namespace Microsoft {
             // Start of new GPU Sparse Matrix code 
             //-------------------------------------------------------------------------
 
-            template<class ElemType> void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly = true, bool keepExistingValues = true) {}//matrix format will affect the size to allocate
+            template<class ElemType> void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues) {}//matrix format will affect the size to allocate
             template<class ElemType> void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues) {}
 
             template<class ElemType> GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyToDenseMatrix() const
@@ -352,7 +352,7 @@ namespace Microsoft {
             template<class ElemType> void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const {}
 
             template<class ElemType> template <class OutType, class InType>
-            static void GPUSparseMatrix<ElemType>::CopyBuffer(OutType * outBuffer, const InType * inBuffer, const size_t size){}
+            void GPUSparseMatrix<ElemType>::CopyBuffer(OutType * outBuffer, const InType * inBuffer, const size_t size){}
 
 #pragma endregion Helper Functions
 
