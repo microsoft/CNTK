@@ -1175,7 +1175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (actualmbsize[i] == m_mbSize)
                             {
                                 m_sentenceBegin.SetValue(i, actualmbsize[i]-1, (ElemType)SEQUENCE_END);
-                                m_minibatchPackingFlag[actualmbsize[i]] = m_minibatchPackingFlag[actualmbsize[i]-1] | MinibatchPackingFlag::SequenceEnd;
+                                m_minibatchPackingFlag[actualmbsize[i]-1] |= MinibatchPackingFlag::SequenceEnd;
                             }
                             startFr = m_switchFrame[i];
                             endFr = m_mbSize;
