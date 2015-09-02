@@ -27,7 +27,3 @@ MODELS_DIR=$TEST_RUN_DIR/models
 mkdir -p $MODELS_DIR || exit $?
 echo === Running $TEST_CNTK_BINARY $CNTK_ARGS
 $TEST_CNTK_BINARY $CNTK_ARGS || exit $?
-echo === Deleting last epoch data
-rm $TEST_RUN_DIR/models/*.dnn
-echo ==== Re-running from checkpoint
-$TEST_CNTK_BINARY $CNTK_ARGS || exit $?
