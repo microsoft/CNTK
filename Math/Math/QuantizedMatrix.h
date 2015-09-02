@@ -56,7 +56,7 @@ class MATH_API QuantizedMatrix
     static const size_t QWordNumBits = ValueQuantizer<ElemType>::QWordNumBits;
 
 public:       
-    QuantizedMatrix(const size_t numRows, const size_t numCols, const size_t nbits, short deviceId, MemAllocator* allocator = nullptr);
+    QuantizedMatrix(const size_t numRows, const size_t numCols, const size_t nbits, DEVICEID_TYPE deviceId, MemAllocator* allocator = nullptr);
     
     // Move constructor and assignment
     QuantizedMatrix(QuantizedMatrix<ElemType>&& moveFrom);
