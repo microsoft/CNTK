@@ -54,9 +54,14 @@ class minibatchutterancesourcemulti : public minibatchsource
         size_t numframes() const { return parsedpath.numframes(); }
         const wstring key() const                           // key used for looking up lattice (not stored to save space)
         {
+#ifdef _WIN32
             static const wstring emptywstring;
             static const wregex deleteextensionre (L"\\.[^\\.\\\\/:]*$");
             return regex_replace (logicalpath(), deleteextensionre, emptywstring);  // delete extension (or not if none)
+#endif
+#ifdef __unix__
+            return removeExtension(basename(logicalpath()));
+#endif
         }
     };
     struct utterancechunkdata       // data for a chunk of utterances
@@ -116,7 +121,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                 if (featdim == 0)
                 {
                     reader.getinfo (utteranceset[0].parsedpath, featkind, featdim, sampperiod);
-                    fprintf (stderr, "requiredata: determined feature kind as %d-dimensional '%s' with frame shift %.1f ms\n", featdim, featkind.c_str(), sampperiod / 1e4);
+                    fprintf (stderr, "requiredata: determined feature kind as %d-dimensional '%s' with frame shift %.1f ms\n", (int)featdim, featkind.c_str(), sampperiod / 1e4);
                 }
                 // read all utterances; if they are in the same archive, htkfeatreader will be efficient in not closing the file
                 frames.resize (featdim, totalframes);
@@ -134,7 +139,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                 }
                 //fprintf (stderr, "\n");
 				if (verbosity)
-                fprintf (stderr, "requiredata: %d utterances read\n", utteranceset.size());
+                fprintf (stderr, "requiredata: %d utterances read\n", (int)utteranceset.size());
             }
             catch (...)
             {
@@ -203,41 +208,30 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
     };
     std::vector<utteranceref> randomizedutterancerefs;          // [pos] randomized utterance ids
-    std::hash_map<size_t,size_t> randomizedutteranceposmap;     // [globalts] -> pos lookup table
+    std::unordered_map<size_t, size_t> randomizedutteranceposmap;     // [globalts] -> pos lookup table
     struct positionchunkwindow       // chunk window required in memory when at a certain position, for controlling paging
     {
-        std::vector<chunk>::const_iterator definingchunk;       // the chunk in randomizedchunks[] that defined the utterance position of this utterance
+        std::vector<chunk>::iterator definingchunk;       // the chunk in randomizedchunks[] that defined the utterance position of this utterance
         size_t windowbegin() const { return definingchunk->windowbegin; }
         size_t windowend() const { return definingchunk->windowend; }
         bool isvalidforthisposition (const utteranceref & utt) const
         {
             return utt.chunkindex >= windowbegin() && utt.chunkindex < windowend(); // check if 'utt' lives in is in allowed range for this position
         }
-        positionchunkwindow (std::vector<chunk>::const_iterator definingchunk) : definingchunk (definingchunk) {}
+        positionchunkwindow (std::vector<chunk>::iterator definingchunk) : definingchunk (definingchunk) {}
     };
     std::vector<positionchunkwindow> positionchunkwindows;      // [utterance position] -> [windowbegin, windowend) for controlling paging
 
     // frame-level randomization layered on top of utterance chunking (randomized, where randomization is cached)
     struct frameref
     {
-#ifdef  _WIN64  // (sadly, the compiler makes this 8 bytes, not 6)
         unsigned short chunkindex;           // lives in this chunk (index into randomizedchunks[])
         unsigned short utteranceindex;       // utterance index in that chunk
         static const size_t maxutterancesperchunk = 65535;
         unsigned short frameindex;           // frame index within the utterance
         static const size_t maxframesperutterance = 65535;
-#else   // For Win32, we care to keep it inside 32 bits. We have already encountered setups where that's not enough.
-        unsigned int chunkindex : 13;           // lives in this chunk (index into randomizedchunks[])
-        unsigned int utteranceindex : 8;        // utterance index in that chunk
-        static const size_t maxutterancesperchunk = 255;
-        unsigned int frameindex : 11;           // frame index within the utterance
-        static const size_t maxframesperutterance = 2047;
-#endif
         frameref (size_t ci, size_t ui, size_t fi) : chunkindex ((unsigned short) ci), utteranceindex ((unsigned short) ui), frameindex ((unsigned short) fi)
         {
-#ifndef  _WIN64
-            static_assert (sizeof (frameref) == 4, "frameref: bit fields too large to fit into 32-bit integer");
-#endif
             if (ci == chunkindex && ui == utteranceindex && fi == frameindex)
                 return;
             throw std::logic_error ("frameref: bit fields too small");
@@ -334,8 +328,8 @@ public:
         // first check consistency across feature streams
         // We'll go through the SCP files for each stream to make sure the duration is consistent
         // If not, we'll plan to ignore the utterance, and inform the user
-                // m indexes the feature stream
-                // i indexes the files within a stream, i.e. in the SCP file)
+        // m indexes the feature stream
+        // i indexes the files within a stream, i.e. in the SCP file)
         foreach_index(m, infiles){
             if (m == 0){
                 numutts = infiles[m].size();
@@ -353,7 +347,7 @@ public:
                     throw std::runtime_error("minibatchutterancesource: utterances < 2 frames not supported");
                 if (uttframes > frameref::maxframesperutterance)
                 {
-                            fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S\n", i, uttframes, frameref::maxframesperutterance, key.c_str());
+                            fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S\n", i, (int)uttframes, (int)frameref::maxframesperutterance, key.c_str());
                     uttduration[i] = 0;
                     uttisvalid[i] = false;
                 }
@@ -363,7 +357,7 @@ public:
                         uttisvalid[i] = true;
                     }
                     else if (uttduration[i] != uttframes){
-                                fprintf(stderr, "minibatchutterancesource: skipping %d-th file due to inconsistency in duration in different feature streams (%d vs %d frames)\n", i, uttduration[i], uttframes);
+                                fprintf(stderr, "minibatchutterancesource: skipping %d-th file due to inconsistency in duration in different feature streams (%d vs %d frames)\n", i, (int)uttduration[i], (int)uttframes);
                         uttduration[i] = 0;
                         uttisvalid[i] = false;
                     }
@@ -378,7 +372,7 @@ public:
         if (invalidutts > uttisvalid.size() / 2)
                     throw std::runtime_error("minibatchutterancesource: too many files with inconsistent durations, assuming broken configuration\n");
         else if (invalidutts>0)
-                    fprintf(stderr, "Found inconsistent durations across feature streams in %d out of %d files\n", invalidutts, uttisvalid.size());
+                    fprintf(stderr, "Found inconsistent durations across feature streams in %d out of %d files\n", (int)invalidutts, (int)uttisvalid.size());
 
 
         // now process the features and labels
@@ -459,7 +453,7 @@ public:
                                 size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size()-1].firstframe + labseq[labseq.size()-1].numframes);
                                 if (labframes != uttframes)
                                 {
-                                    fprintf (stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %S]", labframes, uttframes, key.c_str());
+                                    fprintf (stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %S]", (int)labframes, (int)uttframes, key.c_str());
                                     nomlf++;
                                     uttisvalid[i] = false;
                                     //continue;   // skip this utterance at all
@@ -484,13 +478,13 @@ public:
                                         }
                                         if (e.classid >= udim[j])
                                         {
-                                            throw std::runtime_error(msra::strfun::strprintf("minibatchutterancesource: class id %d exceeds model output dimension %d in file %S", e.classid, udim, key.c_str()));
+                                            throw std::runtime_error(msra::strfun::strprintf("minibatchutterancesource: class id %d exceeds model output dimension %d in file %S", e.classid, udim[j], key.c_str()));
                                         }
                                         if (e.classid != (CLASSIDTYPE) e.classid)
                                             throw std::runtime_error ("CLASSIDTYPE has too few bits");
                                         for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                                             classids[j]->push_back ((CLASSIDTYPE) e.classid);
-                                        numclasses[j] = max (numclasses[j], 1u + e.classid);
+                                        numclasses[j] = max (numclasses[j], (size_t)(1u + e.classid));
                                         counts[j].resize (numclasses[j], 0);
                                         counts[j][e.classid] += e.numframes;
                                     }
@@ -521,7 +515,7 @@ public:
             else 
                 assert(utteranceset.size() == utterancesetsize);
             
-            fprintf (stderr, "feature set %d: %d frames in %d out of %d utterances\n", m, _totalframes, utteranceset.size(),infiles[m].size());
+            fprintf (stderr, "feature set %d: %d frames in %d out of %d utterances\n", m, (int)_totalframes, (int)utteranceset.size(), (int)infiles[m].size());
 
             if (!labels.empty()){
                 foreach_index (j, labels){
@@ -538,11 +532,11 @@ public:
             }
             if (nomlf + nolat > 0)
             {
-                fprintf (stderr, "minibatchutterancesource: out of %d files, %d files not found in label set and %d have no lattice\n", infiles[0].size(), nomlf, nolat);
+                fprintf (stderr, "minibatchutterancesource: out of %d files, %d files not found in label set and %d have no lattice\n", (int)infiles[0].size(), (int)nomlf, (int)nolat);
                 if (nomlf + nolat > infiles[m].size() / 2)
                     throw std::runtime_error ("minibatchutterancesource: too many files not found in label set--assuming broken configuration\n");
             }
-            if (m==0) {foreach_index(j, numclasses) { fprintf(stderr,"label set %d: %d classes\n",j, numclasses[j]); } }
+            if (m==0) {foreach_index(j, numclasses) { fprintf(stderr,"label set %d: %d classes\n", j, (int)numclasses[j]); } }
             // distribute them over chunks
             // We simply count off frames until we reach the chunk size.
             // Note that we first randomize the chunks, i.e. when used, chunks are non-consecutive and thus cause the disk head to seek for each chunk.
@@ -568,7 +562,7 @@ public:
             }
             numutterances = utteranceset.size();
             fprintf (stderr, "minibatchutterancesource: %d utterances grouped into %d chunks, av. chunk size: %.1f utterances, %.1f frames\n",
-                numutterances, thisallchunks.size(), numutterances / (double) thisallchunks.size(), _totalframes / (double) thisallchunks.size());
+                (int)numutterances, (int)thisallchunks.size(), numutterances / (double) thisallchunks.size(), _totalframes / (double) thisallchunks.size());
             // Now utterances are stored exclusively in allchunks[]. They are never referred to by a sequential utterance id at this point, only by chunk/within-chunk index.
         }
         // preliminary mem allocation for frame references (if in frame mode)
@@ -657,7 +651,7 @@ private:
 
         currentsweep = sweep;
 		if (verbosity>0)
-        fprintf (stderr, "lazyrandomization: re-randomizing for sweep %d in %s mode\n", currentsweep, framemode ? "frame" : "utterance");
+        fprintf (stderr, "lazyrandomization: re-randomizing for sweep %d in %s mode\n", (int)currentsweep, framemode ? "frame" : "utterance");
 
         const size_t sweepts = sweep * _totalframes;     // first global frame index for this sweep
 
@@ -968,7 +962,7 @@ private:
             {
                 if (verbosity)
                 fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n",
-                     k, randomizedchunks[m][k].globalts, randomizedchunks[m][k].globalte()-1, chunksinram-1);
+                     (int)k, (int)randomizedchunks[m][k].globalts, (int)(randomizedchunks[m][k].globalte()-1), (int)(chunksinram-1));
                 chunkdata.releasedata();
                 numreleased++;
             }
@@ -1010,7 +1004,7 @@ private:
                 auto & chunk = randomizedchunks[m][chunkindex];
                 auto & chunkdata = chunk.getchunkdata();
 				if (verbosity)
-                fprintf (stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n", m, chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
+                fprintf (stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n", m, (int)chunkindex, (int)chunk.globalts, (int)(chunk.globalte()-1), (int)(chunksinram+1));
                 msra::util::attempt (5, [&]()   // (reading from network)
                 {
                     chunkdata.requiredata (featkind[m], featdim[m], sampperiod[m], this->lattices, verbosity);
@@ -1154,7 +1148,7 @@ public:
             }
             // return these utterances
             if (verbosity > 0)
-                fprintf(stderr, "getbatch: getting utterances %d..%d (%d subset of %d frames out of %d requested) in sweep %d\n", spos, epos - 1, tspos, mbframes, framesrequested, sweep);
+                fprintf(stderr, "getbatch: getting utterances %d..%d (%d subset of %d frames out of %d requested) in sweep %d\n", (int)spos, (int)(epos - 1), (int)tspos, (int)mbframes, (int)framesrequested, (int)sweep);
             tspos = 0;   // relative start of utterance 'pos' within the returned minibatch
             for (size_t pos = spos; pos < epos; pos++)
             {
@@ -1239,9 +1233,9 @@ public:
             const size_t lastchunk = chunkforframepos (globalte-1);
             const size_t windowbegin = randomizedchunks[0][firstchunk].windowbegin;
             const size_t windowend = randomizedchunks[0][lastchunk].windowend;
-			if (verbosity)
+			if (verbosity > 0)
             fprintf (stderr, "getbatch: getting randomized frames [%d..%d] (%d frames out of %d requested) in sweep %d; chunks [%d..%d] -> chunk window [%d..%d)\n",
-                     globalts, globalte, mbframes, framesrequested, sweep, firstchunk, lastchunk, windowbegin, windowend);
+                     (int)globalts, (int)globalte, (int)mbframes, (int)framesrequested, (int)sweep, (int)firstchunk, (int)lastchunk, (int)windowbegin, (int)windowend);
             // release all data outside, and page in all data inside
             for (size_t k = 0; k < windowbegin; k++)
                 releaserandomizedchunk (k);

@@ -11,6 +11,7 @@
 
 #include "GPUMatrix.h"
 #include "GPUSparseMatrix.h"
+#include "MatrixQuantizerGPU.h"
 
 #pragma warning (disable: 4100) // unreferenced formal parameter, which is OK since all functions in here are dummies; disabling this allows to copy-paste prototypes here when we add new functions
 #pragma warning (disable: 4702) // unreachable code, which we get from the NOT_IMPLEMENTED macro which is OK
@@ -354,6 +355,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma endregion Helper Functions
 
+    template class GPUSparseMatrix<char>;
     template class GPUSparseMatrix<float>;
     template class GPUSparseMatrix<double>;
 
@@ -475,8 +477,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols) { return *this; }
-    template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols) { return *this; }
 
+    template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols) { return *this; }
 
     //for each column of a, we assign numRows starting from startIndex to this
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
@@ -1082,10 +1084,50 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
     }
 #pragma endregion Static BLAS Functions
 
+#pragma region MatrixQuantizerGPU functions
+    template<class ElemType>
+    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(const Matrix<ElemType>& inMatrix, bool forceSync)
+        : MatrixQuantizer<ElemType>(inMatrix)
+    {
+    }
+
+    template<class ElemType>
+    MatrixQuantizerGPU<ElemType>::~MatrixQuantizerGPU()
+    {
+    }
+
+    template<class ElemType>
+    void MatrixQuantizerGPU<ElemType>::QuantizeAsync(QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit)
+    {
+    }
+
+    template<class ElemType>
+    void MatrixQuantizerGPU<ElemType>::WaitQuantizeAsyncDone()
+    {
+    }
+
+    template<class ElemType>
+    void MatrixQuantizerGPU<ElemType>::UnquantizeAsync(QuantizedMatrix<ElemType>& inQMatrix, Matrix<ElemType>& outMatrix, bool add /*= false*/)
+    {
+    }
+
+    template<class ElemType>
+    void MatrixQuantizerGPU<ElemType>::WaitUnquantizeAsyncDone()
+    {
+    }
+#pragma endregion MatrixQuantizerGPU functions
+
+    template class GPUMatrix<char>;
     template class GPUMatrix<float>;
     template class GPUMatrix<double>;
     template class DeviceBoundNumber<float>;
     template class DeviceBoundNumber<double>;
+    template MatrixQuantizerGPU<float>::MatrixQuantizerGPU(const Matrix<float>&, bool forceSync);
+    template MatrixQuantizerGPU<double>::MatrixQuantizerGPU(const Matrix<double>&, bool forceSync);
+    template MatrixQuantizerGPU<float>::~MatrixQuantizerGPU();
+    template MatrixQuantizerGPU<double>::~MatrixQuantizerGPU();
+    template void MatrixQuantizerGPU<float>::QuantizeAsync(QuantizedMatrix<float>&, bool);
+    template void MatrixQuantizerGPU<double>::QuantizeAsync(QuantizedMatrix<double>&, bool);
 
     template<class ElemType> cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = { 0 };
 

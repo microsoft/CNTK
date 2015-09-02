@@ -8,8 +8,9 @@
 
 #pragma once
 
+#ifndef __unix__
 #include <ppl.h>
-
+#endif
 namespace msra { namespace parallel {
 
 // ===========================================================================
