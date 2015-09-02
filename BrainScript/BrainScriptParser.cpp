@@ -202,7 +202,7 @@ public:
     {
         let ch = GotChar();
         if (!ch) LogicError("Consume: cannot run beyond end of source file");
-        if (ch == '\n')
+        if (ch == '\n' && chars > 0)
         {
             if (chars != 1) LogicError("Consume: cannot run beyond end of line");
             cursor.lineNo++;

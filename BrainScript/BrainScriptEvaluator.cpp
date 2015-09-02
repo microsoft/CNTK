@@ -904,7 +904,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         {
             if (e->op == L"+")       operationName = L"Plus";
             else if (e->op == L"-")  operationName = L"Minus";
-            else if (e->op == L".*") operationName = L"DiagTimes";
+            else if (e->op == L".*") operationName = L"ElementTimes";
             else LogicError("unexpected infix op");
         }
         // directly instantiate a ComputationNode for the magic operators * + and - that are automatically translated.
