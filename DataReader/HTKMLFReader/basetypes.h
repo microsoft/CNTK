@@ -1288,7 +1288,9 @@ public:
 		soName = soName + ".so";
 		void *handle = dlopen(soName.c_str(), RTLD_LAZY);
 		if (handle == NULL)
-            RuntimeError("Plugin not found: %s", soName.c_str());
+		{
+            RuntimeError("Plugin not found: %s (error: %s)", soName.c_str(), dlerror());
+		}
 		return dlsym(handle, proc.c_str());
     }
 
