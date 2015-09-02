@@ -210,10 +210,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t timeIdxInSeq = frameRange.t();
             size_t mNbr = frameRange.NumCols();
             assert(timeStep > 0);
-            if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() ||
-                functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
-                functionValues.Resize(inputFunctionValues.GetNumRows(),
-                inputFunctionValues.GetNumCols());
+            if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() || functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
+            {
+                // TODO: do we need this test^^ ? Resize() should test by itself
+                functionValues.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
+            }
 
             int delayedIndex = (int)(timeIdxInSeq + direction * timeStep) * mNbr;
             int d = delayedIndex;

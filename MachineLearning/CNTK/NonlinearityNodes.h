@@ -63,8 +63,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //       We should also unify these two functions into one that decides 1 frame or all frames at runtime... through the slice-extractor function itself.
             //       For now we could define ALL_SAMPLES e.g. as SIZE_MAX.
             //       GetGradientSlice(), GetInputSlice() or something.
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             // why GradientValues() but m_functionValues below and not FunctionValues()?
 
             Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
@@ -81,8 +81,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeV(sliceOutputValue, sliceInputValue);
         }
