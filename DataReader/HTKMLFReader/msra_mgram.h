@@ -12,7 +12,7 @@
 #include "fileutil.h"       // for opening/reading the ARPA file
 #include <vector>
 #include <string>
-#include <hash_map>
+#include <unordered_map>
 #include <algorithm>    // for various sort() calls
 #include <math.h>
 
@@ -85,7 +85,7 @@ static inline double invertlogprob (double logP) { return logclip (1.0 - exp (lo
 // CSymbolSet -- a simple symbol table
 // ===========================================================================
 
-// compare function to allow char* as keys (without, hash_map will correctly
+// compare function to allow char* as keys (without, unordered_map will correctly
 // compute a hash key from the actual strings, but then compare the pointers
 // -- duh!)
 struct less_strcmp : public binary_function<const char *, const char *, bool>
@@ -94,7 +94,7 @@ struct less_strcmp : public binary_function<const char *, const char *, bool>
     { return strcmp (_Left, _Right) < 0; }
 };
 
-class CSymbolSet : public stdext::hash_map<const char *, int, stdext::hash_compare<const char*,less_strcmp>>
+class CSymbolSet : public std::unordered_map<const char *, int, std::hash<const char*>, less_strcmp>
 {
     vector<const char *> symbols;   // the symbols
 
@@ -106,14 +106,14 @@ public:
     void clear()
     {
         foreach_index (i, symbols) free ((void*) symbols[i]);
-        hash_map::clear();
+        unordered_map::clear();
     }
 
     // operator[key] on a 'const' object
     // get id for an existing word, returns -1 if not existing
     int operator[] (const char * key) const
     {
-        hash_map<const char *,int>::const_iterator iter = find (key);
+        unordered_map<const char *, int>::const_iterator iter = find(key);
         return (iter != end()) ? iter->second : -1;
     }
 
@@ -121,7 +121,7 @@ public:
     // determine unique id for a word ('key')
     int operator[] (const char * key)
     {
-        hash_map<const char *,int>::const_iterator iter = find (key);
+        unordered_map<const char *, int>::const_iterator iter = find(key);
         if (iter != end())
             return iter->second;
 

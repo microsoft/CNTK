@@ -208,7 +208,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
     };
     std::vector<utteranceref> randomizedutterancerefs;          // [pos] randomized utterance ids
-    std::hash_map<size_t,size_t> randomizedutteranceposmap;     // [globalts] -> pos lookup table
+    std::unordered_map<size_t, size_t> randomizedutteranceposmap;     // [globalts] -> pos lookup table
     struct positionchunkwindow       // chunk window required in memory when at a certain position, for controlling paging
     {
         std::vector<chunk>::iterator definingchunk;       // the chunk in randomizedchunks[] that defined the utterance position of this utterance
