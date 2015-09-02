@@ -14,9 +14,7 @@
 #include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)
 #endif
 #include "simplesenonehmm.h"            // for MMI scoring
-#ifdef _WIN32
 #include "msra_mgram.h"                 // for unigram scores of ground-truth path in sequence training
-#endif
 
 #include "rollingwindowsource.h"        // minibatch sources
 #include "utterancesource.h"

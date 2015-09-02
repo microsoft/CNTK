@@ -15,9 +15,7 @@
 #include "htkfeatio.h"                  // for reading HTK features
 #include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)
 #include "simplesenonehmm.h"            // for MMI scoring
-#ifdef _WIN32
 #include "msra_mgram.h"                 // for unigram scores of ground-truth path in sequence training
-#endif
 
 #include "rollingwindowsource.h"        // minibatch sources
 #include "utterancesourcemulti.h"
@@ -47,6 +45,10 @@ typedef unsigned int UNINT32;
 #ifdef _WIN32
 int msra::numa::node_override = -1;     // for numahelpers.h
 #endif
+
+namespace msra { namespace lm {
+/*static*/ const mgram_map::index_t mgram_map::nindex = (mgram_map::index_t) -1; // invalid index
+}}
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -337,9 +339,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 infilesmulti.push_back(filelist);
             }
 
-#ifdef _WIN32
             if (readerConfig.Exists("unigram"))
-                unigrampath = readerConfig("unigram");
+                unigrampath = (wstring)readerConfig("unigram");
 
             // load a unigram if needed (this is used for MMI training)
             msra::lm::CSymbolSet unigramsymbols;
@@ -358,7 +359,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (!unigram)
                 fprintf (stderr, "trainlayer: OOV-exclusion code enabled, but no unigram specified to derive the word set from, so you won't get OOV exclusion\n");
-#endif
 
             // currently assumes all mlfs will have same root name (key)
             set<wstring> restrictmlftokeys;     // restrict MLF reader to these files--will make stuff much faster without having to use shortened input files
@@ -382,11 +382,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //std::vector<std::wstring> pagepath;
             foreach_index(i, mlfpathsmulti)
             {
-#ifdef WIN32
                 const msra::lm::CSymbolSet* wordmap = unigram ? &unigramsymbols : NULL;
-#else
-                const map<string, size_t>* wordmap = NULL;
-#endif
                 msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>  
                 labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordmap, (map<string,size_t>*) NULL, htktimetoframe);      // label MLF
                 // get the temp file name for the page file
