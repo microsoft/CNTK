@@ -22,7 +22,6 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
-#include <hash_map>
 #include <unordered_map>
 #include <algorithm>        // for find()
 #include "simplesenonehmm.h"
@@ -1079,7 +1078,7 @@ class archive
 
     mutable size_t currentarchiveindex;             // which archive is open
     mutable auto_file_ptr f;                        // cached archive file handle of currentarchiveindex
-    hash_map<std::wstring,latticeref> toc;          // [key] -> (file, offset)  --table of content (.toc file)
+    unordered_map<std::wstring, latticeref> toc;          // [key] -> (file, offset)  --table of content (.toc file)
 public:
     // construct = open the archive
     //archive() : currentarchiveindex (SIZE_MAX) {}

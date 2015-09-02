@@ -14,7 +14,7 @@
 #include <string>
 #include <regex>
 #include <set>
-#include <hash_map>
+#include <unordered_map>
 #include <stdint.h>
 #include <limits.h>
 #include <wchar.h>
@@ -659,7 +659,7 @@ private:
 public:
 
     // parse format with original HTK state align MLF format and state list
-    void parsewithstatelist (const vector<char*> & toks, const hash_map<std::string, size_t> & statelisthash, const double htkTimeToFrame)
+    void parsewithstatelist (const vector<char*> & toks, const unordered_map<std::string, size_t> & statelisthash, const double htkTimeToFrame)
     {
         size_t ts, te;
         parseframerange (toks, ts, te, htkTimeToFrame);
@@ -686,7 +686,7 @@ template<class ENTRY, class WORDSEQUENCE>
 class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
 {
     wstring curpath;                                    // for error messages
-    hash_map<std::string, size_t> statelistmap;   // for state <=> index
+    unordered_map<std::string, size_t> statelistmap;   // for state <=> index
     map<wstring,WORDSEQUENCE> wordsequences;            // [key] word sequences (if we are building word entries as well, for MMI)
 
     void strtok (char * s, const char * delim, vector<char*> & toks)
