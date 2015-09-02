@@ -34,7 +34,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // multi-frame slice case: these two get startFrame and numFrames
         size_t StartColumn() const { EnsureNotAllFrames(); return timeIdxInSeq * samplesInRecurrentStep; }
         size_t NumCols() const { EnsureNotAllFrames(); return samplesInRecurrentStep; }
-        bool IsAllFrames() const { return samplesInRecurrentStep != SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
+        bool IsAllFrames() const { return samplesInRecurrentStep == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
     private:
         FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
         void operator=(const FrameRange &);
