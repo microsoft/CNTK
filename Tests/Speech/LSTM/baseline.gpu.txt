@@ -1,0 +1,1941 @@
+=== Running /home/mluser/src/cplx_master/build/release/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/LSTM/cntk.config RunDir=/tmp/cntk-test-20150902130005.428598/Speech_LSTM@release_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data DeviceId=0 NDLDir=/home/mluser/src/cplx_master/Tests/Speech/LSTM
+running on localhost at 2015/09/02 13:00:05
+command line options: 
+configFile=/home/mluser/src/cplx_master/Tests/Speech/LSTM/cntk.config RunDir=/tmp/cntk-test-20150902130005.428598/Speech_LSTM@release_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data DeviceId=0 NDLDir=/home/mluser/src/cplx_master/Tests/Speech/LSTM 
+
+>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+precision=float
+command=speechTrain
+deviceId=$DeviceId$
+parallelTrain=false
+frameMode=false
+Truncated=true
+speechTrain=[
+    action=train
+    modelPath=$RunDir$/models/cntkSpeech.dnn
+    deviceId=$DeviceId$
+    traceLevel=1
+    NDLNetworkBuilder=[
+		networkDescription=$NDLDir$/lstmp-3layer_WithSelfStab.ndl
+    ]    
+    SGD=[
+        epochSize=20480
+        minibatchSize=20
+        learningRatesPerMB=0.5
+        numMBsToShowResult=10
+        momentumPerMB=0:0.9
+        maxEpochs=4
+        keepCheckPointFiles=true       
+    ]
+    reader=[
+      readerType=HTKMLFReader
+      readMethod=blockRandomize
+      miniBatchMode=Partial
+      nbruttsineachrecurrentiter=32
+      randomize=Auto
+      verbosity=0
+      features=[
+          dim=363
+          type=Real
+          scpFile=$DataDir$/glob_0000.scp
+      ]
+      labels=[
+          mlfFile=$DataDir$/glob_0000.mlf
+          labelMappingFile=$DataDir$/state.list
+          labelDim=132
+          labelType=Category
+      ]
+    ]
+]
+RunDir=/tmp/cntk-test-20150902130005.428598/Speech_LSTM@release_gpu
+DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
+DeviceId=0
+NDLDir=/home/mluser/src/cplx_master/Tests/Speech/LSTM
+
+<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+precision=float
+command=speechTrain
+deviceId=0
+parallelTrain=false
+frameMode=false
+Truncated=true
+speechTrain=[
+    action=train
+    modelPath=/tmp/cntk-test-20150902130005.428598/Speech_LSTM@release_gpu/models/cntkSpeech.dnn
+    deviceId=0
+    traceLevel=1
+    NDLNetworkBuilder=[
+		networkDescription=/home/mluser/src/cplx_master/Tests/Speech/LSTM/lstmp-3layer_WithSelfStab.ndl
+    ]    
+    SGD=[
+        epochSize=20480
+        minibatchSize=20
+        learningRatesPerMB=0.5
+        numMBsToShowResult=10
+        momentumPerMB=0:0.9
+        maxEpochs=4
+        keepCheckPointFiles=true       
+    ]
+    reader=[
+      readerType=HTKMLFReader
+      readMethod=blockRandomize
+      miniBatchMode=Partial
+      nbruttsineachrecurrentiter=32
+      randomize=Auto
+      verbosity=0
+      features=[
+          dim=363
+          type=Real
+          scpFile=/home/mluser/src/cplx_master/Tests/Speech/Data/glob_0000.scp
+      ]
+      labels=[
+          mlfFile=/home/mluser/src/cplx_master/Tests/Speech/Data/glob_0000.mlf
+          labelMappingFile=/home/mluser/src/cplx_master/Tests/Speech/Data/state.list
+          labelDim=132
+          labelType=Category
+      ]
+    ]
+]
+RunDir=/tmp/cntk-test-20150902130005.428598/Speech_LSTM@release_gpu
+DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
+DeviceId=0
+NDLDir=/home/mluser/src/cplx_master/Tests/Speech/LSTM
+
+<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: cntk.config:command=speechTrain
+configparameters: cntk.config:DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
+configparameters: cntk.config:deviceId=0
+configparameters: cntk.config:frameMode=false
+configparameters: cntk.config:NDLDir=/home/mluser/src/cplx_master/Tests/Speech/LSTM
+configparameters: cntk.config:parallelTrain=false
+configparameters: cntk.config:precision=float
+configparameters: cntk.config:RunDir=/tmp/cntk-test-20150902130005.428598/Speech_LSTM@release_gpu
+configparameters: cntk.config:speechTrain=[
+    action=train
+    modelPath=/tmp/cntk-test-20150902130005.428598/Speech_LSTM@release_gpu/models/cntkSpeech.dnn
+    deviceId=0
+    traceLevel=1
+    NDLNetworkBuilder=[
+		networkDescription=/home/mluser/src/cplx_master/Tests/Speech/LSTM/lstmp-3layer_WithSelfStab.ndl
+    ]    
+    SGD=[
+        epochSize=20480
+        minibatchSize=20
+        learningRatesPerMB=0.5
+        numMBsToShowResult=10
+        momentumPerMB=0:0.9
+        maxEpochs=4
+        keepCheckPointFiles=true       
+    ]
+    reader=[
+      readerType=HTKMLFReader
+      readMethod=blockRandomize
+      miniBatchMode=Partial
+      nbruttsineachrecurrentiter=32
+      randomize=Auto
+      verbosity=0
+      features=[
+          dim=363
+          type=Real
+          scpFile=/home/mluser/src/cplx_master/Tests/Speech/Data/glob_0000.scp
+      ]
+      labels=[
+          mlfFile=/home/mluser/src/cplx_master/Tests/Speech/Data/glob_0000.mlf
+          labelMappingFile=/home/mluser/src/cplx_master/Tests/Speech/Data/state.list
+          labelDim=132
+          labelType=Category
+      ]
+    ]
+]
+
+configparameters: cntk.config:Truncated=true
+<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+command: speechTrain 
+precision = float
+NDLBuilder Using GPU 0
+reading script file /home/mluser/src/cplx_master/Tests/Speech/Data/glob_0000.scp ... 948 entries
+trainlayer: OOV-exclusion code enabled, but no unigram specified to derive the word set from, so you won't get OOV exclusion
+total 132 state names in state list /home/mluser/src/cplx_master/Tests/Speech/Data/state.list
+htkmlfreader: reading MLF file /home/mluser/src/cplx_master/Tests/Speech/Data/glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+ nodes in the recurrent loops : 
+LSTMoutput1.unnamed174	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.bit	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.unnamed224	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.bit	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.unnamed274	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.bit	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	 nodes in the recurrent loops : 
+LSTMoutput1.unnamed174	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.bit	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.unnamed224	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.bit	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.unnamed274	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.bit	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	
+
+Printing Gradient Computation Node Order ... 
+
+cr[0, 0] = CrossEntropyWithSoftmax(labels[132, 1], LSTMoutputW[0, 0])
+LSTMoutputW[0, 0] = Plus(unnamed283[0, 0], b[132, 1])
+b[132, 1] = LearnableParameter
+unnamed283[0, 0] = Times(W[132, 256], unnamed284[0, 0])
+unnamed284[0, 0] = Scale(expsW[0, 0], LSTMoutput3.output[0, 0])
+LSTMoutput3.output[0, 0] = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[0, 0])
+LSTMoutput3.unnamed275[0, 0] = Scale(LSTMoutput3.expsWmr[0, 0], LSTMoutput3.mt[0, 0])
+LSTMoutput3.mt[0, 0] = ElementTimes(LSTMoutput3.ot[0, 0], LSTMoutput3.unnamed274[0, 0])
+LSTMoutput3.unnamed274[0, 0] = Tanh(LSTMoutput3.ct[0, 0])
+LSTMoutput3.ot[0, 0] = Sigmoid(LSTMoutput3.unnamed271[0, 0])
+LSTMoutput3.unnamed271[0, 0] = Plus(LSTMoutput3.unnamed272[0, 0], LSTMoutput3.Wcoct[0, 0])
+LSTMoutput3.Wcoct[0, 0] = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[0, 0])
+LSTMoutput3.unnamed270[0, 0] = Scale(LSTMoutput3.expsWco[0, 0], LSTMoutput3.ct[0, 0])
+LSTMoutput3.ct[0, 0] = Plus(LSTMoutput3.bft[0, 0], LSTMoutput3.bit[0, 0])
+LSTMoutput3.bit[0, 0] = ElementTimes(LSTMoutput3.it[0, 0], LSTMoutput3.unnamed259[0, 0])
+LSTMoutput3.unnamed259[0, 0] = Tanh(LSTMoutput3.unnamed260[0, 0])
+LSTMoutput3.unnamed260[0, 0] = Plus(LSTMoutput3.Wxcx[0, 0], LSTMoutput3.unnamed261[0, 0])
+LSTMoutput3.unnamed261[0, 0] = Plus(LSTMoutput3.Whcdh[0, 0], LSTMoutput3.bc[1024, 1])
+LSTMoutput3.Whcdh[0, 0] = Times(LSTMoutput3.Whc[1024, 256], LSTMoutput3.unnamed258[0, 0])
+LSTMoutput3.unnamed258[0, 0] = Scale(LSTMoutput3.expsWhc[0, 0], LSTMoutput3.dh[256, 1])
+LSTMoutput3.it[0, 0] = Sigmoid(LSTMoutput3.unnamed254[0, 0])
+LSTMoutput3.unnamed254[0, 0] = Plus(LSTMoutput3.unnamed255[0, 0], LSTMoutput3.Wcidc[0, 0])
+LSTMoutput3.Wcidc[0, 0] = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[0, 0])
+LSTMoutput3.unnamed253[0, 0] = Scale(LSTMoutput3.expsWci[0, 0], LSTMoutput3.dc[1024, 1])
+LSTMoutput3.unnamed255[0, 0] = Plus(LSTMoutput3.unnamed256[0, 0], LSTMoutput3.Whidh[0, 0])
+LSTMoutput3.Whidh[0, 0] = Times(LSTMoutput3.Whi[1024, 256], LSTMoutput3.unnamed252[0, 0])
+LSTMoutput3.unnamed252[0, 0] = Scale(LSTMoutput3.expsWhi[0, 0], LSTMoutput3.dh[256, 1])
+LSTMoutput3.bft[0, 0] = ElementTimes(LSTMoutput3.ft[0, 0], LSTMoutput3.dc[1024, 1])
+LSTMoutput3.ft[0, 0] = Sigmoid(LSTMoutput3.unnamed265[0, 0])
+LSTMoutput3.unnamed265[0, 0] = Plus(LSTMoutput3.unnamed266[0, 0], LSTMoutput3.Wcfdc[0, 0])
+LSTMoutput3.Wcfdc[0, 0] = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[0, 0])
+LSTMoutput3.unnamed264[0, 0] = Scale(LSTMoutput3.expsWcf[0, 0], LSTMoutput3.dc[1024, 1])
+LSTMoutput3.dc[1024, 1] = PastValue(LSTMoutput3.ct[0, 0])
+LSTMoutput3.unnamed266[0, 0] = Plus(LSTMoutput3.unnamed267[0, 0], LSTMoutput3.Whfdh[0, 0])
+LSTMoutput3.Whfdh[0, 0] = Times(LSTMoutput3.Whf[1024, 256], LSTMoutput3.unnamed263[0, 0])
+LSTMoutput3.unnamed263[0, 0] = Scale(LSTMoutput3.expsWhf[0, 0], LSTMoutput3.dh[256, 1])
+LSTMoutput3.unnamed272[0, 0] = Plus(LSTMoutput3.unnamed273[0, 0], LSTMoutput3.Whodh[0, 0])
+LSTMoutput3.Whodh[0, 0] = Times(LSTMoutput3.Who[1024, 256], LSTMoutput3.unnamed269[0, 0])
+LSTMoutput3.unnamed269[0, 0] = Scale(LSTMoutput3.expsWho[0, 0], LSTMoutput3.dh[256, 1])
+LSTMoutput3.dh[256, 1] = PastValue(LSTMoutput3.output[0, 0])
+LSTMoutput3.bc[1024, 1] = LearnableParameter
+LSTMoutput3.expsWhc[0, 0] = Exp(LSTMoutput3.sWhc[1, 1])
+LSTMoutput3.sWhc[1, 1] = LearnableParameter
+LSTMoutput3.Whc[1024, 256] = LearnableParameter
+LSTMoutput3.Wxcx[0, 0] = Times(LSTMoutput3.Wxc[1024, 256], LSTMoutput3.unnamed257[0, 0])
+LSTMoutput3.unnamed257[0, 0] = Scale(LSTMoutput3.expsWxc[0, 0], LSTMoutput2.output[0, 0])
+LSTMoutput3.expsWxc[0, 0] = Exp(LSTMoutput3.sWxc[1, 1])
+LSTMoutput3.sWxc[1, 1] = LearnableParameter
+LSTMoutput3.Wxc[1024, 256] = LearnableParameter
+LSTMoutput3.expsWci[0, 0] = Exp(LSTMoutput3.sWci[1, 1])
+LSTMoutput3.sWci[1, 1] = LearnableParameter
+LSTMoutput3.Wci[1024, 1] = LearnableParameter
+LSTMoutput3.expsWhi[0, 0] = Exp(LSTMoutput3.sWhi[1, 1])
+LSTMoutput3.sWhi[1, 1] = LearnableParameter
+LSTMoutput3.Whi[1024, 256] = LearnableParameter
+LSTMoutput3.unnamed256[0, 0] = Plus(LSTMoutput3.Wxix[0, 0], LSTMoutput3.bi[1024, 1])
+LSTMoutput3.bi[1024, 1] = LearnableParameter
+LSTMoutput3.Wxix[0, 0] = Times(LSTMoutput3.Wxi[1024, 256], LSTMoutput3.unnamed251[0, 0])
+LSTMoutput3.unnamed251[0, 0] = Scale(LSTMoutput3.expsWxi[0, 0], LSTMoutput2.output[0, 0])
+LSTMoutput3.expsWxi[0, 0] = Exp(LSTMoutput3.sWxi[1, 1])
+LSTMoutput3.sWxi[1, 1] = LearnableParameter
+LSTMoutput3.Wxi[1024, 256] = LearnableParameter
+LSTMoutput3.expsWcf[0, 0] = Exp(LSTMoutput3.sWcf[1, 1])
+LSTMoutput3.sWcf[1, 1] = LearnableParameter
+LSTMoutput3.Wcf[1024, 1] = LearnableParameter
+LSTMoutput3.expsWhf[0, 0] = Exp(LSTMoutput3.sWhf[1, 1])
+LSTMoutput3.sWhf[1, 1] = LearnableParameter
+LSTMoutput3.Whf[1024, 256] = LearnableParameter
+LSTMoutput3.unnamed267[0, 0] = Plus(LSTMoutput3.Wxfx[0, 0], LSTMoutput3.bf[1024, 1])
+LSTMoutput3.bf[1024, 1] = LearnableParameter
+LSTMoutput3.Wxfx[0, 0] = Times(LSTMoutput3.Wxf[1024, 256], LSTMoutput3.unnamed262[0, 0])
+LSTMoutput3.unnamed262[0, 0] = Scale(LSTMoutput3.expsWxf[0, 0], LSTMoutput2.output[0, 0])
+LSTMoutput3.expsWxf[0, 0] = Exp(LSTMoutput3.sWxf[1, 1])
+LSTMoutput3.sWxf[1, 1] = LearnableParameter
+LSTMoutput3.Wxf[1024, 256] = LearnableParameter
+LSTMoutput3.expsWco[0, 0] = Exp(LSTMoutput3.sWco[1, 1])
+LSTMoutput3.sWco[1, 1] = LearnableParameter
+LSTMoutput3.Wco[1024, 1] = LearnableParameter
+LSTMoutput3.expsWho[0, 0] = Exp(LSTMoutput3.sWho[1, 1])
+LSTMoutput3.sWho[1, 1] = LearnableParameter
+LSTMoutput3.Who[1024, 256] = LearnableParameter
+LSTMoutput3.unnamed273[0, 0] = Plus(LSTMoutput3.Wxox[0, 0], LSTMoutput3.bo[1024, 1])
+LSTMoutput3.bo[1024, 1] = LearnableParameter
+LSTMoutput3.Wxox[0, 0] = Times(LSTMoutput3.Wxo[1024, 256], LSTMoutput3.unnamed268[0, 0])
+LSTMoutput3.unnamed268[0, 0] = Scale(LSTMoutput3.expsWxo[0, 0], LSTMoutput2.output[0, 0])
+LSTMoutput2.output[0, 0] = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[0, 0])
+LSTMoutput2.unnamed225[0, 0] = Scale(LSTMoutput2.expsWmr[0, 0], LSTMoutput2.mt[0, 0])
+LSTMoutput2.mt[0, 0] = ElementTimes(LSTMoutput2.ot[0, 0], LSTMoutput2.unnamed224[0, 0])
+LSTMoutput2.unnamed224[0, 0] = Tanh(LSTMoutput2.ct[0, 0])
+LSTMoutput2.ot[0, 0] = Sigmoid(LSTMoutput2.unnamed221[0, 0])
+LSTMoutput2.unnamed221[0, 0] = Plus(LSTMoutput2.unnamed222[0, 0], LSTMoutput2.Wcoct[0, 0])
+LSTMoutput2.Wcoct[0, 0] = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[0, 0])
+LSTMoutput2.unnamed220[0, 0] = Scale(LSTMoutput2.expsWco[0, 0], LSTMoutput2.ct[0, 0])
+LSTMoutput2.ct[0, 0] = Plus(LSTMoutput2.bft[0, 0], LSTMoutput2.bit[0, 0])
+LSTMoutput2.bit[0, 0] = ElementTimes(LSTMoutput2.it[0, 0], LSTMoutput2.unnamed209[0, 0])
+LSTMoutput2.unnamed209[0, 0] = Tanh(LSTMoutput2.unnamed210[0, 0])
+LSTMoutput2.unnamed210[0, 0] = Plus(LSTMoutput2.Wxcx[0, 0], LSTMoutput2.unnamed211[0, 0])
+LSTMoutput2.unnamed211[0, 0] = Plus(LSTMoutput2.Whcdh[0, 0], LSTMoutput2.bc[1024, 1])
+LSTMoutput2.Whcdh[0, 0] = Times(LSTMoutput2.Whc[1024, 256], LSTMoutput2.unnamed208[0, 0])
+LSTMoutput2.unnamed208[0, 0] = Scale(LSTMoutput2.expsWhc[0, 0], LSTMoutput2.dh[256, 1])
+LSTMoutput2.it[0, 0] = Sigmoid(LSTMoutput2.unnamed204[0, 0])
+LSTMoutput2.unnamed204[0, 0] = Plus(LSTMoutput2.unnamed205[0, 0], LSTMoutput2.Wcidc[0, 0])
+LSTMoutput2.Wcidc[0, 0] = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[0, 0])
+LSTMoutput2.unnamed203[0, 0] = Scale(LSTMoutput2.expsWci[0, 0], LSTMoutput2.dc[1024, 1])
+LSTMoutput2.unnamed205[0, 0] = Plus(LSTMoutput2.unnamed206[0, 0], LSTMoutput2.Whidh[0, 0])
+LSTMoutput2.Whidh[0, 0] = Times(LSTMoutput2.Whi[1024, 256], LSTMoutput2.unnamed202[0, 0])
+LSTMoutput2.unnamed202[0, 0] = Scale(LSTMoutput2.expsWhi[0, 0], LSTMoutput2.dh[256, 1])
+LSTMoutput2.bft[0, 0] = ElementTimes(LSTMoutput2.ft[0, 0], LSTMoutput2.dc[1024, 1])
+LSTMoutput2.ft[0, 0] = Sigmoid(LSTMoutput2.unnamed215[0, 0])
+LSTMoutput2.unnamed215[0, 0] = Plus(LSTMoutput2.unnamed216[0, 0], LSTMoutput2.Wcfdc[0, 0])
+LSTMoutput2.Wcfdc[0, 0] = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[0, 0])
+LSTMoutput2.unnamed214[0, 0] = Scale(LSTMoutput2.expsWcf[0, 0], LSTMoutput2.dc[1024, 1])
+LSTMoutput2.dc[1024, 1] = PastValue(LSTMoutput2.ct[0, 0])
+LSTMoutput2.unnamed216[0, 0] = Plus(LSTMoutput2.unnamed217[0, 0], LSTMoutput2.Whfdh[0, 0])
+LSTMoutput2.Whfdh[0, 0] = Times(LSTMoutput2.Whf[1024, 256], LSTMoutput2.unnamed213[0, 0])
+LSTMoutput2.unnamed213[0, 0] = Scale(LSTMoutput2.expsWhf[0, 0], LSTMoutput2.dh[256, 1])
+LSTMoutput2.unnamed222[0, 0] = Plus(LSTMoutput2.unnamed223[0, 0], LSTMoutput2.Whodh[0, 0])
+LSTMoutput2.Whodh[0, 0] = Times(LSTMoutput2.Who[1024, 256], LSTMoutput2.unnamed219[0, 0])
+LSTMoutput2.unnamed219[0, 0] = Scale(LSTMoutput2.expsWho[0, 0], LSTMoutput2.dh[256, 1])
+LSTMoutput2.dh[256, 1] = PastValue(LSTMoutput2.output[0, 0])
+LSTMoutput2.bc[1024, 1] = LearnableParameter
+LSTMoutput2.expsWhc[0, 0] = Exp(LSTMoutput2.sWhc[1, 1])
+LSTMoutput2.sWhc[1, 1] = LearnableParameter
+LSTMoutput2.Whc[1024, 256] = LearnableParameter
+LSTMoutput2.Wxcx[0, 0] = Times(LSTMoutput2.Wxc[1024, 256], LSTMoutput2.unnamed207[0, 0])
+LSTMoutput2.unnamed207[0, 0] = Scale(LSTMoutput2.expsWxc[0, 0], LSTMoutput1.output[0, 0])
+LSTMoutput2.expsWxc[0, 0] = Exp(LSTMoutput2.sWxc[1, 1])
+LSTMoutput2.sWxc[1, 1] = LearnableParameter
+LSTMoutput2.Wxc[1024, 256] = LearnableParameter
+LSTMoutput2.expsWci[0, 0] = Exp(LSTMoutput2.sWci[1, 1])
+LSTMoutput2.sWci[1, 1] = LearnableParameter
+LSTMoutput2.Wci[1024, 1] = LearnableParameter
+LSTMoutput2.expsWhi[0, 0] = Exp(LSTMoutput2.sWhi[1, 1])
+LSTMoutput2.sWhi[1, 1] = LearnableParameter
+LSTMoutput2.Whi[1024, 256] = LearnableParameter
+LSTMoutput2.unnamed206[0, 0] = Plus(LSTMoutput2.Wxix[0, 0], LSTMoutput2.bi[1024, 1])
+LSTMoutput2.bi[1024, 1] = LearnableParameter
+LSTMoutput2.Wxix[0, 0] = Times(LSTMoutput2.Wxi[1024, 256], LSTMoutput2.unnamed201[0, 0])
+LSTMoutput2.unnamed201[0, 0] = Scale(LSTMoutput2.expsWxi[0, 0], LSTMoutput1.output[0, 0])
+LSTMoutput2.expsWxi[0, 0] = Exp(LSTMoutput2.sWxi[1, 1])
+LSTMoutput2.sWxi[1, 1] = LearnableParameter
+LSTMoutput2.Wxi[1024, 256] = LearnableParameter
+LSTMoutput2.expsWcf[0, 0] = Exp(LSTMoutput2.sWcf[1, 1])
+LSTMoutput2.sWcf[1, 1] = LearnableParameter
+LSTMoutput2.Wcf[1024, 1] = LearnableParameter
+LSTMoutput2.expsWhf[0, 0] = Exp(LSTMoutput2.sWhf[1, 1])
+LSTMoutput2.sWhf[1, 1] = LearnableParameter
+LSTMoutput2.Whf[1024, 256] = LearnableParameter
+LSTMoutput2.unnamed217[0, 0] = Plus(LSTMoutput2.Wxfx[0, 0], LSTMoutput2.bf[1024, 1])
+LSTMoutput2.bf[1024, 1] = LearnableParameter
+LSTMoutput2.Wxfx[0, 0] = Times(LSTMoutput2.Wxf[1024, 256], LSTMoutput2.unnamed212[0, 0])
+LSTMoutput2.unnamed212[0, 0] = Scale(LSTMoutput2.expsWxf[0, 0], LSTMoutput1.output[0, 0])
+LSTMoutput2.expsWxf[0, 0] = Exp(LSTMoutput2.sWxf[1, 1])
+LSTMoutput2.sWxf[1, 1] = LearnableParameter
+LSTMoutput2.Wxf[1024, 256] = LearnableParameter
+LSTMoutput2.expsWco[0, 0] = Exp(LSTMoutput2.sWco[1, 1])
+LSTMoutput2.sWco[1, 1] = LearnableParameter
+LSTMoutput2.Wco[1024, 1] = LearnableParameter
+LSTMoutput2.expsWho[0, 0] = Exp(LSTMoutput2.sWho[1, 1])
+LSTMoutput2.sWho[1, 1] = LearnableParameter
+LSTMoutput2.Who[1024, 256] = LearnableParameter
+LSTMoutput2.unnamed223[0, 0] = Plus(LSTMoutput2.Wxox[0, 0], LSTMoutput2.bo[1024, 1])
+LSTMoutput2.bo[1024, 1] = LearnableParameter
+LSTMoutput2.Wxox[0, 0] = Times(LSTMoutput2.Wxo[1024, 256], LSTMoutput2.unnamed218[0, 0])
+LSTMoutput2.unnamed218[0, 0] = Scale(LSTMoutput2.expsWxo[0, 0], LSTMoutput1.output[0, 0])
+LSTMoutput1.output[0, 0] = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[0, 0])
+LSTMoutput1.unnamed175[0, 0] = Scale(LSTMoutput1.expsWmr[0, 0], LSTMoutput1.mt[0, 0])
+LSTMoutput1.mt[0, 0] = ElementTimes(LSTMoutput1.ot[0, 0], LSTMoutput1.unnamed174[0, 0])
+LSTMoutput1.unnamed174[0, 0] = Tanh(LSTMoutput1.ct[0, 0])
+LSTMoutput1.ot[0, 0] = Sigmoid(LSTMoutput1.unnamed171[0, 0])
+LSTMoutput1.unnamed171[0, 0] = Plus(LSTMoutput1.unnamed172[0, 0], LSTMoutput1.Wcoct[0, 0])
+LSTMoutput1.Wcoct[0, 0] = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[0, 0])
+LSTMoutput1.unnamed170[0, 0] = Scale(LSTMoutput1.expsWco[0, 0], LSTMoutput1.ct[0, 0])
+LSTMoutput1.ct[0, 0] = Plus(LSTMoutput1.bft[0, 0], LSTMoutput1.bit[0, 0])
+LSTMoutput1.bit[0, 0] = ElementTimes(LSTMoutput1.it[0, 0], LSTMoutput1.unnamed159[0, 0])
+LSTMoutput1.unnamed159[0, 0] = Tanh(LSTMoutput1.unnamed160[0, 0])
+LSTMoutput1.unnamed160[0, 0] = Plus(LSTMoutput1.Wxcx[0, 0], LSTMoutput1.unnamed161[0, 0])
+LSTMoutput1.unnamed161[0, 0] = Plus(LSTMoutput1.Whcdh[0, 0], LSTMoutput1.bc[1024, 1])
+LSTMoutput1.Whcdh[0, 0] = Times(LSTMoutput1.Whc[1024, 256], LSTMoutput1.unnamed158[0, 0])
+LSTMoutput1.unnamed158[0, 0] = Scale(LSTMoutput1.expsWhc[0, 0], LSTMoutput1.dh[256, 1])
+LSTMoutput1.it[0, 0] = Sigmoid(LSTMoutput1.unnamed154[0, 0])
+LSTMoutput1.unnamed154[0, 0] = Plus(LSTMoutput1.unnamed155[0, 0], LSTMoutput1.Wcidc[0, 0])
+LSTMoutput1.Wcidc[0, 0] = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[0, 0])
+LSTMoutput1.unnamed153[0, 0] = Scale(LSTMoutput1.expsWci[0, 0], LSTMoutput1.dc[1024, 1])
+LSTMoutput1.unnamed155[0, 0] = Plus(LSTMoutput1.unnamed156[0, 0], LSTMoutput1.Whidh[0, 0])
+LSTMoutput1.Whidh[0, 0] = Times(LSTMoutput1.Whi[1024, 256], LSTMoutput1.unnamed152[0, 0])
+LSTMoutput1.unnamed152[0, 0] = Scale(LSTMoutput1.expsWhi[0, 0], LSTMoutput1.dh[256, 1])
+LSTMoutput1.bft[0, 0] = ElementTimes(LSTMoutput1.ft[0, 0], LSTMoutput1.dc[1024, 1])
+LSTMoutput1.ft[0, 0] = Sigmoid(LSTMoutput1.unnamed165[0, 0])
+LSTMoutput1.unnamed165[0, 0] = Plus(LSTMoutput1.unnamed166[0, 0], LSTMoutput1.Wcfdc[0, 0])
+LSTMoutput1.Wcfdc[0, 0] = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[0, 0])
+LSTMoutput1.unnamed164[0, 0] = Scale(LSTMoutput1.expsWcf[0, 0], LSTMoutput1.dc[1024, 1])
+LSTMoutput1.dc[1024, 1] = PastValue(LSTMoutput1.ct[0, 0])
+LSTMoutput1.unnamed166[0, 0] = Plus(LSTMoutput1.unnamed167[0, 0], LSTMoutput1.Whfdh[0, 0])
+LSTMoutput1.Whfdh[0, 0] = Times(LSTMoutput1.Whf[1024, 256], LSTMoutput1.unnamed163[0, 0])
+LSTMoutput1.unnamed163[0, 0] = Scale(LSTMoutput1.expsWhf[0, 0], LSTMoutput1.dh[256, 1])
+LSTMoutput1.unnamed172[0, 0] = Plus(LSTMoutput1.unnamed173[0, 0], LSTMoutput1.Whodh[0, 0])
+LSTMoutput1.Whodh[0, 0] = Times(LSTMoutput1.Who[1024, 256], LSTMoutput1.unnamed169[0, 0])
+LSTMoutput1.unnamed169[0, 0] = Scale(LSTMoutput1.expsWho[0, 0], LSTMoutput1.dh[256, 1])
+LSTMoutput1.dh[256, 1] = PastValue(LSTMoutput1.output[0, 0])
+LSTMoutput1.bc[1024, 1] = LearnableParameter
+LSTMoutput1.expsWhc[0, 0] = Exp(LSTMoutput1.sWhc[1, 1])
+LSTMoutput1.sWhc[1, 1] = LearnableParameter
+LSTMoutput1.Whc[1024, 256] = LearnableParameter
+LSTMoutput1.Wxcx[0, 0] = Times(LSTMoutput1.Wxc[1024, 33], LSTMoutput1.unnamed157[0, 0])
+LSTMoutput1.unnamed157[0, 0] = Scale(LSTMoutput1.expsWxc[0, 0], featNorm.xNorm[0, 0])
+LSTMoutput1.expsWxc[0, 0] = Exp(LSTMoutput1.sWxc[1, 1])
+LSTMoutput1.sWxc[1, 1] = LearnableParameter
+LSTMoutput1.Wxc[1024, 33] = LearnableParameter
+LSTMoutput1.expsWci[0, 0] = Exp(LSTMoutput1.sWci[1, 1])
+LSTMoutput1.sWci[1, 1] = LearnableParameter
+LSTMoutput1.Wci[1024, 1] = LearnableParameter
+LSTMoutput1.expsWhi[0, 0] = Exp(LSTMoutput1.sWhi[1, 1])
+LSTMoutput1.sWhi[1, 1] = LearnableParameter
+LSTMoutput1.Whi[1024, 256] = LearnableParameter
+LSTMoutput1.unnamed156[0, 0] = Plus(LSTMoutput1.Wxix[0, 0], LSTMoutput1.bi[1024, 1])
+LSTMoutput1.bi[1024, 1] = LearnableParameter
+LSTMoutput1.Wxix[0, 0] = Times(LSTMoutput1.Wxi[1024, 33], LSTMoutput1.unnamed151[0, 0])
+LSTMoutput1.unnamed151[0, 0] = Scale(LSTMoutput1.expsWxi[0, 0], featNorm.xNorm[0, 0])
+LSTMoutput1.expsWxi[0, 0] = Exp(LSTMoutput1.sWxi[1, 1])
+LSTMoutput1.sWxi[1, 1] = LearnableParameter
+LSTMoutput1.Wxi[1024, 33] = LearnableParameter
+LSTMoutput1.expsWcf[0, 0] = Exp(LSTMoutput1.sWcf[1, 1])
+LSTMoutput1.sWcf[1, 1] = LearnableParameter
+LSTMoutput1.Wcf[1024, 1] = LearnableParameter
+LSTMoutput1.expsWhf[0, 0] = Exp(LSTMoutput1.sWhf[1, 1])
+LSTMoutput1.sWhf[1, 1] = LearnableParameter
+LSTMoutput1.Whf[1024, 256] = LearnableParameter
+LSTMoutput1.unnamed167[0, 0] = Plus(LSTMoutput1.Wxfx[0, 0], LSTMoutput1.bf[1024, 1])
+LSTMoutput1.bf[1024, 1] = LearnableParameter
+LSTMoutput1.Wxfx[0, 0] = Times(LSTMoutput1.Wxf[1024, 33], LSTMoutput1.unnamed162[0, 0])
+LSTMoutput1.unnamed162[0, 0] = Scale(LSTMoutput1.expsWxf[0, 0], featNorm.xNorm[0, 0])
+LSTMoutput1.expsWxf[0, 0] = Exp(LSTMoutput1.sWxf[1, 1])
+LSTMoutput1.sWxf[1, 1] = LearnableParameter
+LSTMoutput1.Wxf[1024, 33] = LearnableParameter
+LSTMoutput1.expsWco[0, 0] = Exp(LSTMoutput1.sWco[1, 1])
+LSTMoutput1.sWco[1, 1] = LearnableParameter
+LSTMoutput1.Wco[1024, 1] = LearnableParameter
+LSTMoutput1.expsWho[0, 0] = Exp(LSTMoutput1.sWho[1, 1])
+LSTMoutput1.sWho[1, 1] = LearnableParameter
+LSTMoutput1.Who[1024, 256] = LearnableParameter
+LSTMoutput1.unnamed173[0, 0] = Plus(LSTMoutput1.Wxox[0, 0], LSTMoutput1.bo[1024, 1])
+LSTMoutput1.bo[1024, 1] = LearnableParameter
+LSTMoutput1.Wxox[0, 0] = Times(LSTMoutput1.Wxo[1024, 33], LSTMoutput1.unnamed168[0, 0])
+LSTMoutput1.unnamed168[0, 0] = Scale(LSTMoutput1.expsWxo[0, 0], featNorm.xNorm[0, 0])
+featNorm.xNorm[0, 0] = PerDimMeanVarNormalization(feashift[0, 0], featNorm.xMean[0, 0], featNorm.xStdDev[0, 0])
+featNorm.xStdDev[0, 0] = InvStdDev(feashift[0, 0])
+featNorm.xMean[0, 0] = Mean(feashift[0, 0])
+feashift[0, 0] = RowSlice(features[363, 1])
+features[363, 1] = InputValue
+LSTMoutput1.expsWxo[0, 0] = Exp(LSTMoutput1.sWxo[1, 1])
+LSTMoutput1.sWxo[1, 1] = LearnableParameter
+LSTMoutput1.Wxo[1024, 33] = LearnableParameter
+LSTMoutput1.expsWmr[0, 0] = Exp(LSTMoutput1.sWmr[1, 1])
+LSTMoutput1.sWmr[1, 1] = LearnableParameter
+LSTMoutput1.Wmr[256, 1024] = LearnableParameter
+LSTMoutput2.expsWxo[0, 0] = Exp(LSTMoutput2.sWxo[1, 1])
+LSTMoutput2.sWxo[1, 1] = LearnableParameter
+LSTMoutput2.Wxo[1024, 256] = LearnableParameter
+LSTMoutput2.expsWmr[0, 0] = Exp(LSTMoutput2.sWmr[1, 1])
+LSTMoutput2.sWmr[1, 1] = LearnableParameter
+LSTMoutput2.Wmr[256, 1024] = LearnableParameter
+LSTMoutput3.expsWxo[0, 0] = Exp(LSTMoutput3.sWxo[1, 1])
+LSTMoutput3.sWxo[1, 1] = LearnableParameter
+LSTMoutput3.Wxo[1024, 256] = LearnableParameter
+LSTMoutput3.expsWmr[0, 0] = Exp(LSTMoutput3.sWmr[1, 1])
+LSTMoutput3.sWmr[1, 1] = LearnableParameter
+LSTMoutput3.Wmr[256, 1024] = LearnableParameter
+expsW[0, 0] = Exp(sW[1, 1])
+sW[1, 1] = LearnableParameter
+W[132, 256] = LearnableParameter
+labels[132, 1] = InputValue
+
+Validating node cr 
+
+Validating --> labels = InputValue
+Validating --> W = LearnableParameter
+Validating --> sW = LearnableParameter
+Validating --> expsW = Exp(sW[1, 1])
+Validating --> LSTMoutput3.Wmr = LearnableParameter
+Validating --> LSTMoutput3.sWmr = LearnableParameter
+Validating --> LSTMoutput3.expsWmr = Exp(LSTMoutput3.sWmr[1, 1])
+Validating --> LSTMoutput3.Wxo = LearnableParameter
+Validating --> LSTMoutput3.sWxo = LearnableParameter
+Validating --> LSTMoutput3.expsWxo = Exp(LSTMoutput3.sWxo[1, 1])
+Validating --> LSTMoutput2.Wmr = LearnableParameter
+Validating --> LSTMoutput2.sWmr = LearnableParameter
+Validating --> LSTMoutput2.expsWmr = Exp(LSTMoutput2.sWmr[1, 1])
+Validating --> LSTMoutput2.Wxo = LearnableParameter
+Validating --> LSTMoutput2.sWxo = LearnableParameter
+Validating --> LSTMoutput2.expsWxo = Exp(LSTMoutput2.sWxo[1, 1])
+Validating --> LSTMoutput1.Wmr = LearnableParameter
+Validating --> LSTMoutput1.sWmr = LearnableParameter
+Validating --> LSTMoutput1.expsWmr = Exp(LSTMoutput1.sWmr[1, 1])
+Validating --> LSTMoutput1.Wxo = LearnableParameter
+Validating --> LSTMoutput1.sWxo = LearnableParameter
+Validating --> LSTMoutput1.expsWxo = Exp(LSTMoutput1.sWxo[1, 1])
+Validating --> features = InputValue
+Validating --> feashift = RowSlice(features[363, 1])
+Validating --> featNorm.xMean = Mean(feashift[33, 1])
+Validating --> featNorm.xStdDev = InvStdDev(feashift[33, 1])
+Validating --> featNorm.xNorm = PerDimMeanVarNormalization(feashift[33, 1], featNorm.xMean[33, 1], featNorm.xStdDev[33, 1])
+Validating --> LSTMoutput1.unnamed168 = Scale(LSTMoutput1.expsWxo[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxox = Times(LSTMoutput1.Wxo[1024, 33], LSTMoutput1.unnamed168[33, 1])
+Validating --> LSTMoutput1.bo = LearnableParameter
+Validating --> LSTMoutput1.unnamed173 = Plus(LSTMoutput1.Wxox[1024, 1], LSTMoutput1.bo[1024, 1])
+Validating --> LSTMoutput1.Who = LearnableParameter
+Validating --> LSTMoutput1.sWho = LearnableParameter
+Validating --> LSTMoutput1.expsWho = Exp(LSTMoutput1.sWho[1, 1])
+Validating --> LSTMoutput1.Wco = LearnableParameter
+Validating --> LSTMoutput1.sWco = LearnableParameter
+Validating --> LSTMoutput1.expsWco = Exp(LSTMoutput1.sWco[1, 1])
+Validating --> LSTMoutput1.Wxf = LearnableParameter
+Validating --> LSTMoutput1.sWxf = LearnableParameter
+Validating --> LSTMoutput1.expsWxf = Exp(LSTMoutput1.sWxf[1, 1])
+Validating --> LSTMoutput1.unnamed162 = Scale(LSTMoutput1.expsWxf[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxfx = Times(LSTMoutput1.Wxf[1024, 33], LSTMoutput1.unnamed162[33, 1])
+Validating --> LSTMoutput1.bf = LearnableParameter
+Validating --> LSTMoutput1.unnamed167 = Plus(LSTMoutput1.Wxfx[1024, 1], LSTMoutput1.bf[1024, 1])
+Validating --> LSTMoutput1.Whf = LearnableParameter
+Validating --> LSTMoutput1.sWhf = LearnableParameter
+Validating --> LSTMoutput1.expsWhf = Exp(LSTMoutput1.sWhf[1, 1])
+Validating --> LSTMoutput1.Wcf = LearnableParameter
+Validating --> LSTMoutput1.sWcf = LearnableParameter
+Validating --> LSTMoutput1.expsWcf = Exp(LSTMoutput1.sWcf[1, 1])
+Validating --> LSTMoutput1.Wxi = LearnableParameter
+Validating --> LSTMoutput1.sWxi = LearnableParameter
+Validating --> LSTMoutput1.expsWxi = Exp(LSTMoutput1.sWxi[1, 1])
+Validating --> LSTMoutput1.unnamed151 = Scale(LSTMoutput1.expsWxi[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxix = Times(LSTMoutput1.Wxi[1024, 33], LSTMoutput1.unnamed151[33, 1])
+Validating --> LSTMoutput1.bi = LearnableParameter
+Validating --> LSTMoutput1.unnamed156 = Plus(LSTMoutput1.Wxix[1024, 1], LSTMoutput1.bi[1024, 1])
+Validating --> LSTMoutput1.Whi = LearnableParameter
+Validating --> LSTMoutput1.sWhi = LearnableParameter
+Validating --> LSTMoutput1.expsWhi = Exp(LSTMoutput1.sWhi[1, 1])
+Validating --> LSTMoutput1.Wci = LearnableParameter
+Validating --> LSTMoutput1.sWci = LearnableParameter
+Validating --> LSTMoutput1.expsWci = Exp(LSTMoutput1.sWci[1, 1])
+Validating --> LSTMoutput1.Wxc = LearnableParameter
+Validating --> LSTMoutput1.sWxc = LearnableParameter
+Validating --> LSTMoutput1.expsWxc = Exp(LSTMoutput1.sWxc[1, 1])
+Validating --> LSTMoutput1.unnamed157 = Scale(LSTMoutput1.expsWxc[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxcx = Times(LSTMoutput1.Wxc[1024, 33], LSTMoutput1.unnamed157[33, 1])
+Validating --> LSTMoutput1.Whc = LearnableParameter
+Validating --> LSTMoutput1.sWhc = LearnableParameter
+Validating --> LSTMoutput1.expsWhc = Exp(LSTMoutput1.sWhc[1, 1])
+Validating --> LSTMoutput1.bc = LearnableParameter
+Validating --> LSTMoutput1.dh = PastValue(LSTMoutput1.output[0 {W=489626271855, H=416611827821, C=450971566188}, 0])
+Validating --> LSTMoutput1.unnamed169 = Scale(LSTMoutput1.expsWho[1, 1], LSTMoutput1.dh[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Whodh = Times(LSTMoutput1.Who[1024, 256], LSTMoutput1.unnamed169[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed172 = Plus(LSTMoutput1.unnamed173[1024, 1], LSTMoutput1.Whodh[1024, 1])
+Validating --> LSTMoutput1.unnamed163 = Scale(LSTMoutput1.expsWhf[1, 1], LSTMoutput1.dh[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Whfdh = Times(LSTMoutput1.Whf[1024, 256], LSTMoutput1.unnamed163[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed166 = Plus(LSTMoutput1.unnamed167[1024, 1], LSTMoutput1.Whfdh[1024, 1])
+Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[0 {W=489626271855, H=416611827821, C=450971566188}, 0])
+Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 1], LSTMoutput1.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed152 = Scale(LSTMoutput1.expsWhi[1, 1], LSTMoutput1.dh[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Whidh = Times(LSTMoutput1.Whi[1024, 256], LSTMoutput1.unnamed152[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed155 = Plus(LSTMoutput1.unnamed156[1024, 1], LSTMoutput1.Whidh[1024, 1])
+Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 1], LSTMoutput1.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed158 = Scale(LSTMoutput1.expsWhc[1, 1], LSTMoutput1.dh[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Whcdh = Times(LSTMoutput1.Whc[1024, 256], LSTMoutput1.unnamed158[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed161 = Plus(LSTMoutput1.Whcdh[1024, 1], LSTMoutput1.bc[1024, 1])
+Validating --> LSTMoutput1.unnamed160 = Plus(LSTMoutput1.Wxcx[1024, 1], LSTMoutput1.unnamed161[1024, 1])
+Validating --> LSTMoutput1.unnamed159 = Tanh(LSTMoutput1.unnamed160[1024, 1])
+Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed159[1024, 1])
+Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 1], LSTMoutput1.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed174[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed218 = Scale(LSTMoutput2.expsWxo[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxox = Times(LSTMoutput2.Wxo[1024, 256], LSTMoutput2.unnamed218[256, 1])
+Validating --> LSTMoutput2.bo = LearnableParameter
+Validating --> LSTMoutput2.unnamed223 = Plus(LSTMoutput2.Wxox[1024, 1], LSTMoutput2.bo[1024, 1])
+Validating --> LSTMoutput2.Who = LearnableParameter
+Validating --> LSTMoutput2.sWho = LearnableParameter
+Validating --> LSTMoutput2.expsWho = Exp(LSTMoutput2.sWho[1, 1])
+Validating --> LSTMoutput2.Wco = LearnableParameter
+Validating --> LSTMoutput2.sWco = LearnableParameter
+Validating --> LSTMoutput2.expsWco = Exp(LSTMoutput2.sWco[1, 1])
+Validating --> LSTMoutput2.Wxf = LearnableParameter
+Validating --> LSTMoutput2.sWxf = LearnableParameter
+Validating --> LSTMoutput2.expsWxf = Exp(LSTMoutput2.sWxf[1, 1])
+Validating --> LSTMoutput2.unnamed212 = Scale(LSTMoutput2.expsWxf[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxfx = Times(LSTMoutput2.Wxf[1024, 256], LSTMoutput2.unnamed212[256, 1])
+Validating --> LSTMoutput2.bf = LearnableParameter
+Validating --> LSTMoutput2.unnamed217 = Plus(LSTMoutput2.Wxfx[1024, 1], LSTMoutput2.bf[1024, 1])
+Validating --> LSTMoutput2.Whf = LearnableParameter
+Validating --> LSTMoutput2.sWhf = LearnableParameter
+Validating --> LSTMoutput2.expsWhf = Exp(LSTMoutput2.sWhf[1, 1])
+Validating --> LSTMoutput2.Wcf = LearnableParameter
+Validating --> LSTMoutput2.sWcf = LearnableParameter
+Validating --> LSTMoutput2.expsWcf = Exp(LSTMoutput2.sWcf[1, 1])
+Validating --> LSTMoutput2.Wxi = LearnableParameter
+Validating --> LSTMoutput2.sWxi = LearnableParameter
+Validating --> LSTMoutput2.expsWxi = Exp(LSTMoutput2.sWxi[1, 1])
+Validating --> LSTMoutput2.unnamed201 = Scale(LSTMoutput2.expsWxi[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxix = Times(LSTMoutput2.Wxi[1024, 256], LSTMoutput2.unnamed201[256, 1])
+Validating --> LSTMoutput2.bi = LearnableParameter
+Validating --> LSTMoutput2.unnamed206 = Plus(LSTMoutput2.Wxix[1024, 1], LSTMoutput2.bi[1024, 1])
+Validating --> LSTMoutput2.Whi = LearnableParameter
+Validating --> LSTMoutput2.sWhi = LearnableParameter
+Validating --> LSTMoutput2.expsWhi = Exp(LSTMoutput2.sWhi[1, 1])
+Validating --> LSTMoutput2.Wci = LearnableParameter
+Validating --> LSTMoutput2.sWci = LearnableParameter
+Validating --> LSTMoutput2.expsWci = Exp(LSTMoutput2.sWci[1, 1])
+Validating --> LSTMoutput2.Wxc = LearnableParameter
+Validating --> LSTMoutput2.sWxc = LearnableParameter
+Validating --> LSTMoutput2.expsWxc = Exp(LSTMoutput2.sWxc[1, 1])
+Validating --> LSTMoutput2.unnamed207 = Scale(LSTMoutput2.expsWxc[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxcx = Times(LSTMoutput2.Wxc[1024, 256], LSTMoutput2.unnamed207[256, 1])
+Validating --> LSTMoutput2.Whc = LearnableParameter
+Validating --> LSTMoutput2.sWhc = LearnableParameter
+Validating --> LSTMoutput2.expsWhc = Exp(LSTMoutput2.sWhc[1, 1])
+Validating --> LSTMoutput2.bc = LearnableParameter
+Validating --> LSTMoutput2.dh = PastValue(LSTMoutput2.output[0 {W=489626271855, H=416611827821, C=450971566188}, 0])
+Validating --> LSTMoutput2.unnamed219 = Scale(LSTMoutput2.expsWho[1, 1], LSTMoutput2.dh[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Whodh = Times(LSTMoutput2.Who[1024, 256], LSTMoutput2.unnamed219[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed222 = Plus(LSTMoutput2.unnamed223[1024, 1], LSTMoutput2.Whodh[1024, 1])
+Validating --> LSTMoutput2.unnamed213 = Scale(LSTMoutput2.expsWhf[1, 1], LSTMoutput2.dh[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Whfdh = Times(LSTMoutput2.Whf[1024, 256], LSTMoutput2.unnamed213[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed216 = Plus(LSTMoutput2.unnamed217[1024, 1], LSTMoutput2.Whfdh[1024, 1])
+Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[0 {W=489626271855, H=416611827821, C=450971566188}, 0])
+Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 1], LSTMoutput2.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed202 = Scale(LSTMoutput2.expsWhi[1, 1], LSTMoutput2.dh[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Whidh = Times(LSTMoutput2.Whi[1024, 256], LSTMoutput2.unnamed202[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed205 = Plus(LSTMoutput2.unnamed206[1024, 1], LSTMoutput2.Whidh[1024, 1])
+Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 1], LSTMoutput2.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed208 = Scale(LSTMoutput2.expsWhc[1, 1], LSTMoutput2.dh[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Whcdh = Times(LSTMoutput2.Whc[1024, 256], LSTMoutput2.unnamed208[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed211 = Plus(LSTMoutput2.Whcdh[1024, 1], LSTMoutput2.bc[1024, 1])
+Validating --> LSTMoutput2.unnamed210 = Plus(LSTMoutput2.Wxcx[1024, 1], LSTMoutput2.unnamed211[1024, 1])
+Validating --> LSTMoutput2.unnamed209 = Tanh(LSTMoutput2.unnamed210[1024, 1])
+Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed209[1024, 1])
+Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 1], LSTMoutput2.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed224[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.unnamed268 = Scale(LSTMoutput3.expsWxo[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxox = Times(LSTMoutput3.Wxo[1024, 256], LSTMoutput3.unnamed268[256, 1])
+Validating --> LSTMoutput3.bo = LearnableParameter
+Validating --> LSTMoutput3.unnamed273 = Plus(LSTMoutput3.Wxox[1024, 1], LSTMoutput3.bo[1024, 1])
+Validating --> LSTMoutput3.Who = LearnableParameter
+Validating --> LSTMoutput3.sWho = LearnableParameter
+Validating --> LSTMoutput3.expsWho = Exp(LSTMoutput3.sWho[1, 1])
+Validating --> LSTMoutput3.Wco = LearnableParameter
+Validating --> LSTMoutput3.sWco = LearnableParameter
+Validating --> LSTMoutput3.expsWco = Exp(LSTMoutput3.sWco[1, 1])
+Validating --> LSTMoutput3.Wxf = LearnableParameter
+Validating --> LSTMoutput3.sWxf = LearnableParameter
+Validating --> LSTMoutput3.expsWxf = Exp(LSTMoutput3.sWxf[1, 1])
+Validating --> LSTMoutput3.unnamed262 = Scale(LSTMoutput3.expsWxf[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxfx = Times(LSTMoutput3.Wxf[1024, 256], LSTMoutput3.unnamed262[256, 1])
+Validating --> LSTMoutput3.bf = LearnableParameter
+Validating --> LSTMoutput3.unnamed267 = Plus(LSTMoutput3.Wxfx[1024, 1], LSTMoutput3.bf[1024, 1])
+Validating --> LSTMoutput3.Whf = LearnableParameter
+Validating --> LSTMoutput3.sWhf = LearnableParameter
+Validating --> LSTMoutput3.expsWhf = Exp(LSTMoutput3.sWhf[1, 1])
+Validating --> LSTMoutput3.Wcf = LearnableParameter
+Validating --> LSTMoutput3.sWcf = LearnableParameter
+Validating --> LSTMoutput3.expsWcf = Exp(LSTMoutput3.sWcf[1, 1])
+Validating --> LSTMoutput3.Wxi = LearnableParameter
+Validating --> LSTMoutput3.sWxi = LearnableParameter
+Validating --> LSTMoutput3.expsWxi = Exp(LSTMoutput3.sWxi[1, 1])
+Validating --> LSTMoutput3.unnamed251 = Scale(LSTMoutput3.expsWxi[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxix = Times(LSTMoutput3.Wxi[1024, 256], LSTMoutput3.unnamed251[256, 1])
+Validating --> LSTMoutput3.bi = LearnableParameter
+Validating --> LSTMoutput3.unnamed256 = Plus(LSTMoutput3.Wxix[1024, 1], LSTMoutput3.bi[1024, 1])
+Validating --> LSTMoutput3.Whi = LearnableParameter
+Validating --> LSTMoutput3.sWhi = LearnableParameter
+Validating --> LSTMoutput3.expsWhi = Exp(LSTMoutput3.sWhi[1, 1])
+Validating --> LSTMoutput3.Wci = LearnableParameter
+Validating --> LSTMoutput3.sWci = LearnableParameter
+Validating --> LSTMoutput3.expsWci = Exp(LSTMoutput3.sWci[1, 1])
+Validating --> LSTMoutput3.Wxc = LearnableParameter
+Validating --> LSTMoutput3.sWxc = LearnableParameter
+Validating --> LSTMoutput3.expsWxc = Exp(LSTMoutput3.sWxc[1, 1])
+Validating --> LSTMoutput3.unnamed257 = Scale(LSTMoutput3.expsWxc[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxcx = Times(LSTMoutput3.Wxc[1024, 256], LSTMoutput3.unnamed257[256, 1])
+Validating --> LSTMoutput3.Whc = LearnableParameter
+Validating --> LSTMoutput3.sWhc = LearnableParameter
+Validating --> LSTMoutput3.expsWhc = Exp(LSTMoutput3.sWhc[1, 1])
+Validating --> LSTMoutput3.bc = LearnableParameter
+Validating --> LSTMoutput3.dh = PastValue(LSTMoutput3.output[0 {W=498216206446, H=476741369970, C=519691042928}, 0])
+Validating --> LSTMoutput3.unnamed269 = Scale(LSTMoutput3.expsWho[1, 1], LSTMoutput3.dh[256 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Whodh = Times(LSTMoutput3.Who[1024, 256], LSTMoutput3.unnamed269[256 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed272 = Plus(LSTMoutput3.unnamed273[1024, 1], LSTMoutput3.Whodh[1024, 1])
+Validating --> LSTMoutput3.unnamed263 = Scale(LSTMoutput3.expsWhf[1, 1], LSTMoutput3.dh[256 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Whfdh = Times(LSTMoutput3.Whf[1024, 256], LSTMoutput3.unnamed263[256 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed266 = Plus(LSTMoutput3.unnamed267[1024, 1], LSTMoutput3.Whfdh[1024, 1])
+Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[0 {W=498216206446, H=476741369970, C=519691042928}, 0])
+Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 1], LSTMoutput3.Wcfdc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed252 = Scale(LSTMoutput3.expsWhi[1, 1], LSTMoutput3.dh[256 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Whidh = Times(LSTMoutput3.Whi[1024, 256], LSTMoutput3.unnamed252[256 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed255 = Plus(LSTMoutput3.unnamed256[1024, 1], LSTMoutput3.Whidh[1024, 1])
+Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 1], LSTMoutput3.Wcidc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed258 = Scale(LSTMoutput3.expsWhc[1, 1], LSTMoutput3.dh[256 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Whcdh = Times(LSTMoutput3.Whc[1024, 256], LSTMoutput3.unnamed258[256 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed261 = Plus(LSTMoutput3.Whcdh[1024, 1], LSTMoutput3.bc[1024, 1])
+Validating --> LSTMoutput3.unnamed260 = Plus(LSTMoutput3.Wxcx[1024, 1], LSTMoutput3.unnamed261[1024, 1])
+Validating --> LSTMoutput3.unnamed259 = Tanh(LSTMoutput3.unnamed260[1024, 1])
+Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.unnamed259[1024, 1])
+Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.bit[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 1], LSTMoutput3.Wcoct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.unnamed274[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> unnamed284 = Scale(expsW[1, 1], LSTMoutput3.output[256, 1])
+Validating --> unnamed283 = Times(W[132, 256], unnamed284[256, 1])
+Validating --> b = LearnableParameter
+Validating --> LSTMoutputW = Plus(unnamed283[132, 1], b[132, 1])
+Validating --> cr = CrossEntropyWithSoftmax(labels[132, 1], LSTMoutputW[132, 1])
+
+ nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	 nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	
+
+Validating node ScaledLogLikelihood 
+
+Validating --> W = LearnableParameter
+Validating --> sW = LearnableParameter
+Validating --> expsW = Exp(sW[1, 1])
+Validating --> LSTMoutput3.Wmr = LearnableParameter
+Validating --> LSTMoutput3.sWmr = LearnableParameter
+Validating --> LSTMoutput3.expsWmr = Exp(LSTMoutput3.sWmr[1, 1])
+Validating --> LSTMoutput3.Wxo = LearnableParameter
+Validating --> LSTMoutput3.sWxo = LearnableParameter
+Validating --> LSTMoutput3.expsWxo = Exp(LSTMoutput3.sWxo[1, 1])
+Validating --> LSTMoutput2.Wmr = LearnableParameter
+Validating --> LSTMoutput2.sWmr = LearnableParameter
+Validating --> LSTMoutput2.expsWmr = Exp(LSTMoutput2.sWmr[1, 1])
+Validating --> LSTMoutput2.Wxo = LearnableParameter
+Validating --> LSTMoutput2.sWxo = LearnableParameter
+Validating --> LSTMoutput2.expsWxo = Exp(LSTMoutput2.sWxo[1, 1])
+Validating --> LSTMoutput1.Wmr = LearnableParameter
+Validating --> LSTMoutput1.sWmr = LearnableParameter
+Validating --> LSTMoutput1.expsWmr = Exp(LSTMoutput1.sWmr[1, 1])
+Validating --> LSTMoutput1.Wxo = LearnableParameter
+Validating --> LSTMoutput1.sWxo = LearnableParameter
+Validating --> LSTMoutput1.expsWxo = Exp(LSTMoutput1.sWxo[1, 1])
+Validating --> features = InputValue
+Validating --> feashift = RowSlice(features[363, 1])
+Validating --> featNorm.xMean = Mean(feashift[33, 1])
+Validating --> featNorm.xStdDev = InvStdDev(feashift[33, 1])
+Validating --> featNorm.xNorm = PerDimMeanVarNormalization(feashift[33, 1], featNorm.xMean[33, 1], featNorm.xStdDev[33, 1])
+Validating --> LSTMoutput1.unnamed168 = Scale(LSTMoutput1.expsWxo[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxox = Times(LSTMoutput1.Wxo[1024, 33], LSTMoutput1.unnamed168[33, 1])
+Validating --> LSTMoutput1.bo = LearnableParameter
+Validating --> LSTMoutput1.unnamed173 = Plus(LSTMoutput1.Wxox[1024, 1], LSTMoutput1.bo[1024, 1])
+Validating --> LSTMoutput1.Who = LearnableParameter
+Validating --> LSTMoutput1.sWho = LearnableParameter
+Validating --> LSTMoutput1.expsWho = Exp(LSTMoutput1.sWho[1, 1])
+Validating --> LSTMoutput1.Wco = LearnableParameter
+Validating --> LSTMoutput1.sWco = LearnableParameter
+Validating --> LSTMoutput1.expsWco = Exp(LSTMoutput1.sWco[1, 1])
+Validating --> LSTMoutput1.Wxf = LearnableParameter
+Validating --> LSTMoutput1.sWxf = LearnableParameter
+Validating --> LSTMoutput1.expsWxf = Exp(LSTMoutput1.sWxf[1, 1])
+Validating --> LSTMoutput1.unnamed162 = Scale(LSTMoutput1.expsWxf[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxfx = Times(LSTMoutput1.Wxf[1024, 33], LSTMoutput1.unnamed162[33, 1])
+Validating --> LSTMoutput1.bf = LearnableParameter
+Validating --> LSTMoutput1.unnamed167 = Plus(LSTMoutput1.Wxfx[1024, 1], LSTMoutput1.bf[1024, 1])
+Validating --> LSTMoutput1.Whf = LearnableParameter
+Validating --> LSTMoutput1.sWhf = LearnableParameter
+Validating --> LSTMoutput1.expsWhf = Exp(LSTMoutput1.sWhf[1, 1])
+Validating --> LSTMoutput1.Wcf = LearnableParameter
+Validating --> LSTMoutput1.sWcf = LearnableParameter
+Validating --> LSTMoutput1.expsWcf = Exp(LSTMoutput1.sWcf[1, 1])
+Validating --> LSTMoutput1.Wxi = LearnableParameter
+Validating --> LSTMoutput1.sWxi = LearnableParameter
+Validating --> LSTMoutput1.expsWxi = Exp(LSTMoutput1.sWxi[1, 1])
+Validating --> LSTMoutput1.unnamed151 = Scale(LSTMoutput1.expsWxi[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxix = Times(LSTMoutput1.Wxi[1024, 33], LSTMoutput1.unnamed151[33, 1])
+Validating --> LSTMoutput1.bi = LearnableParameter
+Validating --> LSTMoutput1.unnamed156 = Plus(LSTMoutput1.Wxix[1024, 1], LSTMoutput1.bi[1024, 1])
+Validating --> LSTMoutput1.Whi = LearnableParameter
+Validating --> LSTMoutput1.sWhi = LearnableParameter
+Validating --> LSTMoutput1.expsWhi = Exp(LSTMoutput1.sWhi[1, 1])
+Validating --> LSTMoutput1.Wci = LearnableParameter
+Validating --> LSTMoutput1.sWci = LearnableParameter
+Validating --> LSTMoutput1.expsWci = Exp(LSTMoutput1.sWci[1, 1])
+Validating --> LSTMoutput1.Wxc = LearnableParameter
+Validating --> LSTMoutput1.sWxc = LearnableParameter
+Validating --> LSTMoutput1.expsWxc = Exp(LSTMoutput1.sWxc[1, 1])
+Validating --> LSTMoutput1.unnamed157 = Scale(LSTMoutput1.expsWxc[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxcx = Times(LSTMoutput1.Wxc[1024, 33], LSTMoutput1.unnamed157[33, 1])
+Validating --> LSTMoutput1.Whc = LearnableParameter
+Validating --> LSTMoutput1.sWhc = LearnableParameter
+Validating --> LSTMoutput1.expsWhc = Exp(LSTMoutput1.sWhc[1, 1])
+Validating --> LSTMoutput1.bc = LearnableParameter
+Validating --> LSTMoutput1.dh = PastValue(LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput1.unnamed169 = Scale(LSTMoutput1.expsWho[1, 1], LSTMoutput1.dh[256, 1])
+Validating --> LSTMoutput1.Whodh = Times(LSTMoutput1.Who[1024, 256], LSTMoutput1.unnamed169[256, 1])
+Validating --> LSTMoutput1.unnamed172 = Plus(LSTMoutput1.unnamed173[1024, 1], LSTMoutput1.Whodh[1024, 1])
+Validating --> LSTMoutput1.unnamed163 = Scale(LSTMoutput1.expsWhf[1, 1], LSTMoutput1.dh[256, 1])
+Validating --> LSTMoutput1.Whfdh = Times(LSTMoutput1.Whf[1024, 256], LSTMoutput1.unnamed163[256, 1])
+Validating --> LSTMoutput1.unnamed166 = Plus(LSTMoutput1.unnamed167[1024, 1], LSTMoutput1.Whfdh[1024, 1])
+Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 1], LSTMoutput1.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed152 = Scale(LSTMoutput1.expsWhi[1, 1], LSTMoutput1.dh[256, 1])
+Validating --> LSTMoutput1.Whidh = Times(LSTMoutput1.Whi[1024, 256], LSTMoutput1.unnamed152[256, 1])
+Validating --> LSTMoutput1.unnamed155 = Plus(LSTMoutput1.unnamed156[1024, 1], LSTMoutput1.Whidh[1024, 1])
+Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 1], LSTMoutput1.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed158 = Scale(LSTMoutput1.expsWhc[1, 1], LSTMoutput1.dh[256, 1])
+Validating --> LSTMoutput1.Whcdh = Times(LSTMoutput1.Whc[1024, 256], LSTMoutput1.unnamed158[256, 1])
+Validating --> LSTMoutput1.unnamed161 = Plus(LSTMoutput1.Whcdh[1024, 1], LSTMoutput1.bc[1024, 1])
+Validating --> LSTMoutput1.unnamed160 = Plus(LSTMoutput1.Wxcx[1024, 1], LSTMoutput1.unnamed161[1024, 1])
+Validating --> LSTMoutput1.unnamed159 = Tanh(LSTMoutput1.unnamed160[1024, 1])
+Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed159[1024, 1])
+Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 1], LSTMoutput1.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed174[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed218 = Scale(LSTMoutput2.expsWxo[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxox = Times(LSTMoutput2.Wxo[1024, 256], LSTMoutput2.unnamed218[256, 1])
+Validating --> LSTMoutput2.bo = LearnableParameter
+Validating --> LSTMoutput2.unnamed223 = Plus(LSTMoutput2.Wxox[1024, 1], LSTMoutput2.bo[1024, 1])
+Validating --> LSTMoutput2.Who = LearnableParameter
+Validating --> LSTMoutput2.sWho = LearnableParameter
+Validating --> LSTMoutput2.expsWho = Exp(LSTMoutput2.sWho[1, 1])
+Validating --> LSTMoutput2.Wco = LearnableParameter
+Validating --> LSTMoutput2.sWco = LearnableParameter
+Validating --> LSTMoutput2.expsWco = Exp(LSTMoutput2.sWco[1, 1])
+Validating --> LSTMoutput2.Wxf = LearnableParameter
+Validating --> LSTMoutput2.sWxf = LearnableParameter
+Validating --> LSTMoutput2.expsWxf = Exp(LSTMoutput2.sWxf[1, 1])
+Validating --> LSTMoutput2.unnamed212 = Scale(LSTMoutput2.expsWxf[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxfx = Times(LSTMoutput2.Wxf[1024, 256], LSTMoutput2.unnamed212[256, 1])
+Validating --> LSTMoutput2.bf = LearnableParameter
+Validating --> LSTMoutput2.unnamed217 = Plus(LSTMoutput2.Wxfx[1024, 1], LSTMoutput2.bf[1024, 1])
+Validating --> LSTMoutput2.Whf = LearnableParameter
+Validating --> LSTMoutput2.sWhf = LearnableParameter
+Validating --> LSTMoutput2.expsWhf = Exp(LSTMoutput2.sWhf[1, 1])
+Validating --> LSTMoutput2.Wcf = LearnableParameter
+Validating --> LSTMoutput2.sWcf = LearnableParameter
+Validating --> LSTMoutput2.expsWcf = Exp(LSTMoutput2.sWcf[1, 1])
+Validating --> LSTMoutput2.Wxi = LearnableParameter
+Validating --> LSTMoutput2.sWxi = LearnableParameter
+Validating --> LSTMoutput2.expsWxi = Exp(LSTMoutput2.sWxi[1, 1])
+Validating --> LSTMoutput2.unnamed201 = Scale(LSTMoutput2.expsWxi[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxix = Times(LSTMoutput2.Wxi[1024, 256], LSTMoutput2.unnamed201[256, 1])
+Validating --> LSTMoutput2.bi = LearnableParameter
+Validating --> LSTMoutput2.unnamed206 = Plus(LSTMoutput2.Wxix[1024, 1], LSTMoutput2.bi[1024, 1])
+Validating --> LSTMoutput2.Whi = LearnableParameter
+Validating --> LSTMoutput2.sWhi = LearnableParameter
+Validating --> LSTMoutput2.expsWhi = Exp(LSTMoutput2.sWhi[1, 1])
+Validating --> LSTMoutput2.Wci = LearnableParameter
+Validating --> LSTMoutput2.sWci = LearnableParameter
+Validating --> LSTMoutput2.expsWci = Exp(LSTMoutput2.sWci[1, 1])
+Validating --> LSTMoutput2.Wxc = LearnableParameter
+Validating --> LSTMoutput2.sWxc = LearnableParameter
+Validating --> LSTMoutput2.expsWxc = Exp(LSTMoutput2.sWxc[1, 1])
+Validating --> LSTMoutput2.unnamed207 = Scale(LSTMoutput2.expsWxc[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxcx = Times(LSTMoutput2.Wxc[1024, 256], LSTMoutput2.unnamed207[256, 1])
+Validating --> LSTMoutput2.Whc = LearnableParameter
+Validating --> LSTMoutput2.sWhc = LearnableParameter
+Validating --> LSTMoutput2.expsWhc = Exp(LSTMoutput2.sWhc[1, 1])
+Validating --> LSTMoutput2.bc = LearnableParameter
+Validating --> LSTMoutput2.dh = PastValue(LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput2.unnamed219 = Scale(LSTMoutput2.expsWho[1, 1], LSTMoutput2.dh[256, 1])
+Validating --> LSTMoutput2.Whodh = Times(LSTMoutput2.Who[1024, 256], LSTMoutput2.unnamed219[256, 1])
+Validating --> LSTMoutput2.unnamed222 = Plus(LSTMoutput2.unnamed223[1024, 1], LSTMoutput2.Whodh[1024, 1])
+Validating --> LSTMoutput2.unnamed213 = Scale(LSTMoutput2.expsWhf[1, 1], LSTMoutput2.dh[256, 1])
+Validating --> LSTMoutput2.Whfdh = Times(LSTMoutput2.Whf[1024, 256], LSTMoutput2.unnamed213[256, 1])
+Validating --> LSTMoutput2.unnamed216 = Plus(LSTMoutput2.unnamed217[1024, 1], LSTMoutput2.Whfdh[1024, 1])
+Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 1], LSTMoutput2.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed202 = Scale(LSTMoutput2.expsWhi[1, 1], LSTMoutput2.dh[256, 1])
+Validating --> LSTMoutput2.Whidh = Times(LSTMoutput2.Whi[1024, 256], LSTMoutput2.unnamed202[256, 1])
+Validating --> LSTMoutput2.unnamed205 = Plus(LSTMoutput2.unnamed206[1024, 1], LSTMoutput2.Whidh[1024, 1])
+Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 1], LSTMoutput2.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed208 = Scale(LSTMoutput2.expsWhc[1, 1], LSTMoutput2.dh[256, 1])
+Validating --> LSTMoutput2.Whcdh = Times(LSTMoutput2.Whc[1024, 256], LSTMoutput2.unnamed208[256, 1])
+Validating --> LSTMoutput2.unnamed211 = Plus(LSTMoutput2.Whcdh[1024, 1], LSTMoutput2.bc[1024, 1])
+Validating --> LSTMoutput2.unnamed210 = Plus(LSTMoutput2.Wxcx[1024, 1], LSTMoutput2.unnamed211[1024, 1])
+Validating --> LSTMoutput2.unnamed209 = Tanh(LSTMoutput2.unnamed210[1024, 1])
+Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed209[1024, 1])
+Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 1], LSTMoutput2.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed224[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.unnamed268 = Scale(LSTMoutput3.expsWxo[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxox = Times(LSTMoutput3.Wxo[1024, 256], LSTMoutput3.unnamed268[256, 1])
+Validating --> LSTMoutput3.bo = LearnableParameter
+Validating --> LSTMoutput3.unnamed273 = Plus(LSTMoutput3.Wxox[1024, 1], LSTMoutput3.bo[1024, 1])
+Validating --> LSTMoutput3.Who = LearnableParameter
+Validating --> LSTMoutput3.sWho = LearnableParameter
+Validating --> LSTMoutput3.expsWho = Exp(LSTMoutput3.sWho[1, 1])
+Validating --> LSTMoutput3.Wco = LearnableParameter
+Validating --> LSTMoutput3.sWco = LearnableParameter
+Validating --> LSTMoutput3.expsWco = Exp(LSTMoutput3.sWco[1, 1])
+Validating --> LSTMoutput3.Wxf = LearnableParameter
+Validating --> LSTMoutput3.sWxf = LearnableParameter
+Validating --> LSTMoutput3.expsWxf = Exp(LSTMoutput3.sWxf[1, 1])
+Validating --> LSTMoutput3.unnamed262 = Scale(LSTMoutput3.expsWxf[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxfx = Times(LSTMoutput3.Wxf[1024, 256], LSTMoutput3.unnamed262[256, 1])
+Validating --> LSTMoutput3.bf = LearnableParameter
+Validating --> LSTMoutput3.unnamed267 = Plus(LSTMoutput3.Wxfx[1024, 1], LSTMoutput3.bf[1024, 1])
+Validating --> LSTMoutput3.Whf = LearnableParameter
+Validating --> LSTMoutput3.sWhf = LearnableParameter
+Validating --> LSTMoutput3.expsWhf = Exp(LSTMoutput3.sWhf[1, 1])
+Validating --> LSTMoutput3.Wcf = LearnableParameter
+Validating --> LSTMoutput3.sWcf = LearnableParameter
+Validating --> LSTMoutput3.expsWcf = Exp(LSTMoutput3.sWcf[1, 1])
+Validating --> LSTMoutput3.Wxi = LearnableParameter
+Validating --> LSTMoutput3.sWxi = LearnableParameter
+Validating --> LSTMoutput3.expsWxi = Exp(LSTMoutput3.sWxi[1, 1])
+Validating --> LSTMoutput3.unnamed251 = Scale(LSTMoutput3.expsWxi[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxix = Times(LSTMoutput3.Wxi[1024, 256], LSTMoutput3.unnamed251[256, 1])
+Validating --> LSTMoutput3.bi = LearnableParameter
+Validating --> LSTMoutput3.unnamed256 = Plus(LSTMoutput3.Wxix[1024, 1], LSTMoutput3.bi[1024, 1])
+Validating --> LSTMoutput3.Whi = LearnableParameter
+Validating --> LSTMoutput3.sWhi = LearnableParameter
+Validating --> LSTMoutput3.expsWhi = Exp(LSTMoutput3.sWhi[1, 1])
+Validating --> LSTMoutput3.Wci = LearnableParameter
+Validating --> LSTMoutput3.sWci = LearnableParameter
+Validating --> LSTMoutput3.expsWci = Exp(LSTMoutput3.sWci[1, 1])
+Validating --> LSTMoutput3.Wxc = LearnableParameter
+Validating --> LSTMoutput3.sWxc = LearnableParameter
+Validating --> LSTMoutput3.expsWxc = Exp(LSTMoutput3.sWxc[1, 1])
+Validating --> LSTMoutput3.unnamed257 = Scale(LSTMoutput3.expsWxc[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxcx = Times(LSTMoutput3.Wxc[1024, 256], LSTMoutput3.unnamed257[256, 1])
+Validating --> LSTMoutput3.Whc = LearnableParameter
+Validating --> LSTMoutput3.sWhc = LearnableParameter
+Validating --> LSTMoutput3.expsWhc = Exp(LSTMoutput3.sWhc[1, 1])
+Validating --> LSTMoutput3.bc = LearnableParameter
+Validating --> LSTMoutput3.dh = PastValue(LSTMoutput3.output[256, 1])
+Validating --> LSTMoutput3.unnamed269 = Scale(LSTMoutput3.expsWho[1, 1], LSTMoutput3.dh[256, 1])
+Validating --> LSTMoutput3.Whodh = Times(LSTMoutput3.Who[1024, 256], LSTMoutput3.unnamed269[256, 1])
+Validating --> LSTMoutput3.unnamed272 = Plus(LSTMoutput3.unnamed273[1024, 1], LSTMoutput3.Whodh[1024, 1])
+Validating --> LSTMoutput3.unnamed263 = Scale(LSTMoutput3.expsWhf[1, 1], LSTMoutput3.dh[256, 1])
+Validating --> LSTMoutput3.Whfdh = Times(LSTMoutput3.Whf[1024, 256], LSTMoutput3.unnamed263[256, 1])
+Validating --> LSTMoutput3.unnamed266 = Plus(LSTMoutput3.unnamed267[1024, 1], LSTMoutput3.Whfdh[1024, 1])
+Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 1], LSTMoutput3.Wcfdc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed252 = Scale(LSTMoutput3.expsWhi[1, 1], LSTMoutput3.dh[256, 1])
+Validating --> LSTMoutput3.Whidh = Times(LSTMoutput3.Whi[1024, 256], LSTMoutput3.unnamed252[256, 1])
+Validating --> LSTMoutput3.unnamed255 = Plus(LSTMoutput3.unnamed256[1024, 1], LSTMoutput3.Whidh[1024, 1])
+Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 1], LSTMoutput3.Wcidc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed258 = Scale(LSTMoutput3.expsWhc[1, 1], LSTMoutput3.dh[256, 1])
+Validating --> LSTMoutput3.Whcdh = Times(LSTMoutput3.Whc[1024, 256], LSTMoutput3.unnamed258[256, 1])
+Validating --> LSTMoutput3.unnamed261 = Plus(LSTMoutput3.Whcdh[1024, 1], LSTMoutput3.bc[1024, 1])
+Validating --> LSTMoutput3.unnamed260 = Plus(LSTMoutput3.Wxcx[1024, 1], LSTMoutput3.unnamed261[1024, 1])
+Validating --> LSTMoutput3.unnamed259 = Tanh(LSTMoutput3.unnamed260[1024, 1])
+Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.unnamed259[1024, 1])
+Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.bit[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 1], LSTMoutput3.Wcoct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.unnamed274[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> unnamed284 = Scale(expsW[1, 1], LSTMoutput3.output[256, 1])
+Validating --> unnamed283 = Times(W[132, 256], unnamed284[256, 1])
+Validating --> b = LearnableParameter
+Validating --> LSTMoutputW = Plus(unnamed283[132, 1], b[132, 1])
+Validating --> labels = InputValue
+Validating --> logPrior.Prior = Mean(labels[132, 1])
+Validating --> logPrior.LogPrior = Log(logPrior.Prior[132, 1])
+Validating --> ScaledLogLikelihood = Minus(LSTMoutputW[132, 1], logPrior.LogPrior[132, 1])
+
+ nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	 nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	
+
+Validating node Err 
+
+Validating --> labels = InputValue
+Validating --> W = LearnableParameter
+Validating --> sW = LearnableParameter
+Validating --> expsW = Exp(sW[1, 1])
+Validating --> LSTMoutput3.Wmr = LearnableParameter
+Validating --> LSTMoutput3.sWmr = LearnableParameter
+Validating --> LSTMoutput3.expsWmr = Exp(LSTMoutput3.sWmr[1, 1])
+Validating --> LSTMoutput3.Wxo = LearnableParameter
+Validating --> LSTMoutput3.sWxo = LearnableParameter
+Validating --> LSTMoutput3.expsWxo = Exp(LSTMoutput3.sWxo[1, 1])
+Validating --> LSTMoutput2.Wmr = LearnableParameter
+Validating --> LSTMoutput2.sWmr = LearnableParameter
+Validating --> LSTMoutput2.expsWmr = Exp(LSTMoutput2.sWmr[1, 1])
+Validating --> LSTMoutput2.Wxo = LearnableParameter
+Validating --> LSTMoutput2.sWxo = LearnableParameter
+Validating --> LSTMoutput2.expsWxo = Exp(LSTMoutput2.sWxo[1, 1])
+Validating --> LSTMoutput1.Wmr = LearnableParameter
+Validating --> LSTMoutput1.sWmr = LearnableParameter
+Validating --> LSTMoutput1.expsWmr = Exp(LSTMoutput1.sWmr[1, 1])
+Validating --> LSTMoutput1.Wxo = LearnableParameter
+Validating --> LSTMoutput1.sWxo = LearnableParameter
+Validating --> LSTMoutput1.expsWxo = Exp(LSTMoutput1.sWxo[1, 1])
+Validating --> features = InputValue
+Validating --> feashift = RowSlice(features[363, 1])
+Validating --> featNorm.xMean = Mean(feashift[33, 1])
+Validating --> featNorm.xStdDev = InvStdDev(feashift[33, 1])
+Validating --> featNorm.xNorm = PerDimMeanVarNormalization(feashift[33, 1], featNorm.xMean[33, 1], featNorm.xStdDev[33, 1])
+Validating --> LSTMoutput1.unnamed168 = Scale(LSTMoutput1.expsWxo[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxox = Times(LSTMoutput1.Wxo[1024, 33], LSTMoutput1.unnamed168[33, 1])
+Validating --> LSTMoutput1.bo = LearnableParameter
+Validating --> LSTMoutput1.unnamed173 = Plus(LSTMoutput1.Wxox[1024, 1], LSTMoutput1.bo[1024, 1])
+Validating --> LSTMoutput1.Who = LearnableParameter
+Validating --> LSTMoutput1.sWho = LearnableParameter
+Validating --> LSTMoutput1.expsWho = Exp(LSTMoutput1.sWho[1, 1])
+Validating --> LSTMoutput1.Wco = LearnableParameter
+Validating --> LSTMoutput1.sWco = LearnableParameter
+Validating --> LSTMoutput1.expsWco = Exp(LSTMoutput1.sWco[1, 1])
+Validating --> LSTMoutput1.Wxf = LearnableParameter
+Validating --> LSTMoutput1.sWxf = LearnableParameter
+Validating --> LSTMoutput1.expsWxf = Exp(LSTMoutput1.sWxf[1, 1])
+Validating --> LSTMoutput1.unnamed162 = Scale(LSTMoutput1.expsWxf[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxfx = Times(LSTMoutput1.Wxf[1024, 33], LSTMoutput1.unnamed162[33, 1])
+Validating --> LSTMoutput1.bf = LearnableParameter
+Validating --> LSTMoutput1.unnamed167 = Plus(LSTMoutput1.Wxfx[1024, 1], LSTMoutput1.bf[1024, 1])
+Validating --> LSTMoutput1.Whf = LearnableParameter
+Validating --> LSTMoutput1.sWhf = LearnableParameter
+Validating --> LSTMoutput1.expsWhf = Exp(LSTMoutput1.sWhf[1, 1])
+Validating --> LSTMoutput1.Wcf = LearnableParameter
+Validating --> LSTMoutput1.sWcf = LearnableParameter
+Validating --> LSTMoutput1.expsWcf = Exp(LSTMoutput1.sWcf[1, 1])
+Validating --> LSTMoutput1.Wxi = LearnableParameter
+Validating --> LSTMoutput1.sWxi = LearnableParameter
+Validating --> LSTMoutput1.expsWxi = Exp(LSTMoutput1.sWxi[1, 1])
+Validating --> LSTMoutput1.unnamed151 = Scale(LSTMoutput1.expsWxi[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxix = Times(LSTMoutput1.Wxi[1024, 33], LSTMoutput1.unnamed151[33, 1])
+Validating --> LSTMoutput1.bi = LearnableParameter
+Validating --> LSTMoutput1.unnamed156 = Plus(LSTMoutput1.Wxix[1024, 1], LSTMoutput1.bi[1024, 1])
+Validating --> LSTMoutput1.Whi = LearnableParameter
+Validating --> LSTMoutput1.sWhi = LearnableParameter
+Validating --> LSTMoutput1.expsWhi = Exp(LSTMoutput1.sWhi[1, 1])
+Validating --> LSTMoutput1.Wci = LearnableParameter
+Validating --> LSTMoutput1.sWci = LearnableParameter
+Validating --> LSTMoutput1.expsWci = Exp(LSTMoutput1.sWci[1, 1])
+Validating --> LSTMoutput1.Wxc = LearnableParameter
+Validating --> LSTMoutput1.sWxc = LearnableParameter
+Validating --> LSTMoutput1.expsWxc = Exp(LSTMoutput1.sWxc[1, 1])
+Validating --> LSTMoutput1.unnamed157 = Scale(LSTMoutput1.expsWxc[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxcx = Times(LSTMoutput1.Wxc[1024, 33], LSTMoutput1.unnamed157[33, 1])
+Validating --> LSTMoutput1.Whc = LearnableParameter
+Validating --> LSTMoutput1.sWhc = LearnableParameter
+Validating --> LSTMoutput1.expsWhc = Exp(LSTMoutput1.sWhc[1, 1])
+Validating --> LSTMoutput1.bc = LearnableParameter
+Validating --> LSTMoutput1.dh = PastValue(LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput1.unnamed169 = Scale(LSTMoutput1.expsWho[1, 1], LSTMoutput1.dh[256, 1])
+Validating --> LSTMoutput1.Whodh = Times(LSTMoutput1.Who[1024, 256], LSTMoutput1.unnamed169[256, 1])
+Validating --> LSTMoutput1.unnamed172 = Plus(LSTMoutput1.unnamed173[1024, 1], LSTMoutput1.Whodh[1024, 1])
+Validating --> LSTMoutput1.unnamed163 = Scale(LSTMoutput1.expsWhf[1, 1], LSTMoutput1.dh[256, 1])
+Validating --> LSTMoutput1.Whfdh = Times(LSTMoutput1.Whf[1024, 256], LSTMoutput1.unnamed163[256, 1])
+Validating --> LSTMoutput1.unnamed166 = Plus(LSTMoutput1.unnamed167[1024, 1], LSTMoutput1.Whfdh[1024, 1])
+Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 1], LSTMoutput1.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed152 = Scale(LSTMoutput1.expsWhi[1, 1], LSTMoutput1.dh[256, 1])
+Validating --> LSTMoutput1.Whidh = Times(LSTMoutput1.Whi[1024, 256], LSTMoutput1.unnamed152[256, 1])
+Validating --> LSTMoutput1.unnamed155 = Plus(LSTMoutput1.unnamed156[1024, 1], LSTMoutput1.Whidh[1024, 1])
+Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 1], LSTMoutput1.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed158 = Scale(LSTMoutput1.expsWhc[1, 1], LSTMoutput1.dh[256, 1])
+Validating --> LSTMoutput1.Whcdh = Times(LSTMoutput1.Whc[1024, 256], LSTMoutput1.unnamed158[256, 1])
+Validating --> LSTMoutput1.unnamed161 = Plus(LSTMoutput1.Whcdh[1024, 1], LSTMoutput1.bc[1024, 1])
+Validating --> LSTMoutput1.unnamed160 = Plus(LSTMoutput1.Wxcx[1024, 1], LSTMoutput1.unnamed161[1024, 1])
+Validating --> LSTMoutput1.unnamed159 = Tanh(LSTMoutput1.unnamed160[1024, 1])
+Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed159[1024, 1])
+Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 1], LSTMoutput1.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed174[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed218 = Scale(LSTMoutput2.expsWxo[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxox = Times(LSTMoutput2.Wxo[1024, 256], LSTMoutput2.unnamed218[256, 1])
+Validating --> LSTMoutput2.bo = LearnableParameter
+Validating --> LSTMoutput2.unnamed223 = Plus(LSTMoutput2.Wxox[1024, 1], LSTMoutput2.bo[1024, 1])
+Validating --> LSTMoutput2.Who = LearnableParameter
+Validating --> LSTMoutput2.sWho = LearnableParameter
+Validating --> LSTMoutput2.expsWho = Exp(LSTMoutput2.sWho[1, 1])
+Validating --> LSTMoutput2.Wco = LearnableParameter
+Validating --> LSTMoutput2.sWco = LearnableParameter
+Validating --> LSTMoutput2.expsWco = Exp(LSTMoutput2.sWco[1, 1])
+Validating --> LSTMoutput2.Wxf = LearnableParameter
+Validating --> LSTMoutput2.sWxf = LearnableParameter
+Validating --> LSTMoutput2.expsWxf = Exp(LSTMoutput2.sWxf[1, 1])
+Validating --> LSTMoutput2.unnamed212 = Scale(LSTMoutput2.expsWxf[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxfx = Times(LSTMoutput2.Wxf[1024, 256], LSTMoutput2.unnamed212[256, 1])
+Validating --> LSTMoutput2.bf = LearnableParameter
+Validating --> LSTMoutput2.unnamed217 = Plus(LSTMoutput2.Wxfx[1024, 1], LSTMoutput2.bf[1024, 1])
+Validating --> LSTMoutput2.Whf = LearnableParameter
+Validating --> LSTMoutput2.sWhf = LearnableParameter
+Validating --> LSTMoutput2.expsWhf = Exp(LSTMoutput2.sWhf[1, 1])
+Validating --> LSTMoutput2.Wcf = LearnableParameter
+Validating --> LSTMoutput2.sWcf = LearnableParameter
+Validating --> LSTMoutput2.expsWcf = Exp(LSTMoutput2.sWcf[1, 1])
+Validating --> LSTMoutput2.Wxi = LearnableParameter
+Validating --> LSTMoutput2.sWxi = LearnableParameter
+Validating --> LSTMoutput2.expsWxi = Exp(LSTMoutput2.sWxi[1, 1])
+Validating --> LSTMoutput2.unnamed201 = Scale(LSTMoutput2.expsWxi[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxix = Times(LSTMoutput2.Wxi[1024, 256], LSTMoutput2.unnamed201[256, 1])
+Validating --> LSTMoutput2.bi = LearnableParameter
+Validating --> LSTMoutput2.unnamed206 = Plus(LSTMoutput2.Wxix[1024, 1], LSTMoutput2.bi[1024, 1])
+Validating --> LSTMoutput2.Whi = LearnableParameter
+Validating --> LSTMoutput2.sWhi = LearnableParameter
+Validating --> LSTMoutput2.expsWhi = Exp(LSTMoutput2.sWhi[1, 1])
+Validating --> LSTMoutput2.Wci = LearnableParameter
+Validating --> LSTMoutput2.sWci = LearnableParameter
+Validating --> LSTMoutput2.expsWci = Exp(LSTMoutput2.sWci[1, 1])
+Validating --> LSTMoutput2.Wxc = LearnableParameter
+Validating --> LSTMoutput2.sWxc = LearnableParameter
+Validating --> LSTMoutput2.expsWxc = Exp(LSTMoutput2.sWxc[1, 1])
+Validating --> LSTMoutput2.unnamed207 = Scale(LSTMoutput2.expsWxc[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxcx = Times(LSTMoutput2.Wxc[1024, 256], LSTMoutput2.unnamed207[256, 1])
+Validating --> LSTMoutput2.Whc = LearnableParameter
+Validating --> LSTMoutput2.sWhc = LearnableParameter
+Validating --> LSTMoutput2.expsWhc = Exp(LSTMoutput2.sWhc[1, 1])
+Validating --> LSTMoutput2.bc = LearnableParameter
+Validating --> LSTMoutput2.dh = PastValue(LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput2.unnamed219 = Scale(LSTMoutput2.expsWho[1, 1], LSTMoutput2.dh[256, 1])
+Validating --> LSTMoutput2.Whodh = Times(LSTMoutput2.Who[1024, 256], LSTMoutput2.unnamed219[256, 1])
+Validating --> LSTMoutput2.unnamed222 = Plus(LSTMoutput2.unnamed223[1024, 1], LSTMoutput2.Whodh[1024, 1])
+Validating --> LSTMoutput2.unnamed213 = Scale(LSTMoutput2.expsWhf[1, 1], LSTMoutput2.dh[256, 1])
+Validating --> LSTMoutput2.Whfdh = Times(LSTMoutput2.Whf[1024, 256], LSTMoutput2.unnamed213[256, 1])
+Validating --> LSTMoutput2.unnamed216 = Plus(LSTMoutput2.unnamed217[1024, 1], LSTMoutput2.Whfdh[1024, 1])
+Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 1], LSTMoutput2.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed202 = Scale(LSTMoutput2.expsWhi[1, 1], LSTMoutput2.dh[256, 1])
+Validating --> LSTMoutput2.Whidh = Times(LSTMoutput2.Whi[1024, 256], LSTMoutput2.unnamed202[256, 1])
+Validating --> LSTMoutput2.unnamed205 = Plus(LSTMoutput2.unnamed206[1024, 1], LSTMoutput2.Whidh[1024, 1])
+Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 1], LSTMoutput2.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed208 = Scale(LSTMoutput2.expsWhc[1, 1], LSTMoutput2.dh[256, 1])
+Validating --> LSTMoutput2.Whcdh = Times(LSTMoutput2.Whc[1024, 256], LSTMoutput2.unnamed208[256, 1])
+Validating --> LSTMoutput2.unnamed211 = Plus(LSTMoutput2.Whcdh[1024, 1], LSTMoutput2.bc[1024, 1])
+Validating --> LSTMoutput2.unnamed210 = Plus(LSTMoutput2.Wxcx[1024, 1], LSTMoutput2.unnamed211[1024, 1])
+Validating --> LSTMoutput2.unnamed209 = Tanh(LSTMoutput2.unnamed210[1024, 1])
+Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed209[1024, 1])
+Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 1], LSTMoutput2.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed224[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.unnamed268 = Scale(LSTMoutput3.expsWxo[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxox = Times(LSTMoutput3.Wxo[1024, 256], LSTMoutput3.unnamed268[256, 1])
+Validating --> LSTMoutput3.bo = LearnableParameter
+Validating --> LSTMoutput3.unnamed273 = Plus(LSTMoutput3.Wxox[1024, 1], LSTMoutput3.bo[1024, 1])
+Validating --> LSTMoutput3.Who = LearnableParameter
+Validating --> LSTMoutput3.sWho = LearnableParameter
+Validating --> LSTMoutput3.expsWho = Exp(LSTMoutput3.sWho[1, 1])
+Validating --> LSTMoutput3.Wco = LearnableParameter
+Validating --> LSTMoutput3.sWco = LearnableParameter
+Validating --> LSTMoutput3.expsWco = Exp(LSTMoutput3.sWco[1, 1])
+Validating --> LSTMoutput3.Wxf = LearnableParameter
+Validating --> LSTMoutput3.sWxf = LearnableParameter
+Validating --> LSTMoutput3.expsWxf = Exp(LSTMoutput3.sWxf[1, 1])
+Validating --> LSTMoutput3.unnamed262 = Scale(LSTMoutput3.expsWxf[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxfx = Times(LSTMoutput3.Wxf[1024, 256], LSTMoutput3.unnamed262[256, 1])
+Validating --> LSTMoutput3.bf = LearnableParameter
+Validating --> LSTMoutput3.unnamed267 = Plus(LSTMoutput3.Wxfx[1024, 1], LSTMoutput3.bf[1024, 1])
+Validating --> LSTMoutput3.Whf = LearnableParameter
+Validating --> LSTMoutput3.sWhf = LearnableParameter
+Validating --> LSTMoutput3.expsWhf = Exp(LSTMoutput3.sWhf[1, 1])
+Validating --> LSTMoutput3.Wcf = LearnableParameter
+Validating --> LSTMoutput3.sWcf = LearnableParameter
+Validating --> LSTMoutput3.expsWcf = Exp(LSTMoutput3.sWcf[1, 1])
+Validating --> LSTMoutput3.Wxi = LearnableParameter
+Validating --> LSTMoutput3.sWxi = LearnableParameter
+Validating --> LSTMoutput3.expsWxi = Exp(LSTMoutput3.sWxi[1, 1])
+Validating --> LSTMoutput3.unnamed251 = Scale(LSTMoutput3.expsWxi[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxix = Times(LSTMoutput3.Wxi[1024, 256], LSTMoutput3.unnamed251[256, 1])
+Validating --> LSTMoutput3.bi = LearnableParameter
+Validating --> LSTMoutput3.unnamed256 = Plus(LSTMoutput3.Wxix[1024, 1], LSTMoutput3.bi[1024, 1])
+Validating --> LSTMoutput3.Whi = LearnableParameter
+Validating --> LSTMoutput3.sWhi = LearnableParameter
+Validating --> LSTMoutput3.expsWhi = Exp(LSTMoutput3.sWhi[1, 1])
+Validating --> LSTMoutput3.Wci = LearnableParameter
+Validating --> LSTMoutput3.sWci = LearnableParameter
+Validating --> LSTMoutput3.expsWci = Exp(LSTMoutput3.sWci[1, 1])
+Validating --> LSTMoutput3.Wxc = LearnableParameter
+Validating --> LSTMoutput3.sWxc = LearnableParameter
+Validating --> LSTMoutput3.expsWxc = Exp(LSTMoutput3.sWxc[1, 1])
+Validating --> LSTMoutput3.unnamed257 = Scale(LSTMoutput3.expsWxc[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxcx = Times(LSTMoutput3.Wxc[1024, 256], LSTMoutput3.unnamed257[256, 1])
+Validating --> LSTMoutput3.Whc = LearnableParameter
+Validating --> LSTMoutput3.sWhc = LearnableParameter
+Validating --> LSTMoutput3.expsWhc = Exp(LSTMoutput3.sWhc[1, 1])
+Validating --> LSTMoutput3.bc = LearnableParameter
+Validating --> LSTMoutput3.dh = PastValue(LSTMoutput3.output[256, 1])
+Validating --> LSTMoutput3.unnamed269 = Scale(LSTMoutput3.expsWho[1, 1], LSTMoutput3.dh[256, 1])
+Validating --> LSTMoutput3.Whodh = Times(LSTMoutput3.Who[1024, 256], LSTMoutput3.unnamed269[256, 1])
+Validating --> LSTMoutput3.unnamed272 = Plus(LSTMoutput3.unnamed273[1024, 1], LSTMoutput3.Whodh[1024, 1])
+Validating --> LSTMoutput3.unnamed263 = Scale(LSTMoutput3.expsWhf[1, 1], LSTMoutput3.dh[256, 1])
+Validating --> LSTMoutput3.Whfdh = Times(LSTMoutput3.Whf[1024, 256], LSTMoutput3.unnamed263[256, 1])
+Validating --> LSTMoutput3.unnamed266 = Plus(LSTMoutput3.unnamed267[1024, 1], LSTMoutput3.Whfdh[1024, 1])
+Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 1], LSTMoutput3.Wcfdc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed252 = Scale(LSTMoutput3.expsWhi[1, 1], LSTMoutput3.dh[256, 1])
+Validating --> LSTMoutput3.Whidh = Times(LSTMoutput3.Whi[1024, 256], LSTMoutput3.unnamed252[256, 1])
+Validating --> LSTMoutput3.unnamed255 = Plus(LSTMoutput3.unnamed256[1024, 1], LSTMoutput3.Whidh[1024, 1])
+Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 1], LSTMoutput3.Wcidc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed258 = Scale(LSTMoutput3.expsWhc[1, 1], LSTMoutput3.dh[256, 1])
+Validating --> LSTMoutput3.Whcdh = Times(LSTMoutput3.Whc[1024, 256], LSTMoutput3.unnamed258[256, 1])
+Validating --> LSTMoutput3.unnamed261 = Plus(LSTMoutput3.Whcdh[1024, 1], LSTMoutput3.bc[1024, 1])
+Validating --> LSTMoutput3.unnamed260 = Plus(LSTMoutput3.Wxcx[1024, 1], LSTMoutput3.unnamed261[1024, 1])
+Validating --> LSTMoutput3.unnamed259 = Tanh(LSTMoutput3.unnamed260[1024, 1])
+Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.unnamed259[1024, 1])
+Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.bit[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 1], LSTMoutput3.Wcoct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.unnamed274[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> unnamed284 = Scale(expsW[1, 1], LSTMoutput3.output[256, 1])
+Validating --> unnamed283 = Times(W[132, 256], unnamed284[256, 1])
+Validating --> b = LearnableParameter
+Validating --> LSTMoutputW = Plus(unnamed283[132, 1], b[132, 1])
+Validating --> Err = ErrorPrediction(labels[132, 1], LSTMoutputW[132, 1])
+
+GetTrainCriterionNodes  ...
+GetEvalCriterionNodes  ...
+ nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	 nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	
+
+Validating node cr 
+
+Validating --> labels = InputValue
+Validating --> W = LearnableParameter
+Validating --> sW = LearnableParameter
+Validating --> expsW = Exp(sW[1, 1])
+Validating --> LSTMoutput3.Wmr = LearnableParameter
+Validating --> LSTMoutput3.sWmr = LearnableParameter
+Validating --> LSTMoutput3.expsWmr = Exp(LSTMoutput3.sWmr[1, 1])
+Validating --> LSTMoutput3.Wxo = LearnableParameter
+Validating --> LSTMoutput3.sWxo = LearnableParameter
+Validating --> LSTMoutput3.expsWxo = Exp(LSTMoutput3.sWxo[1, 1])
+Validating --> LSTMoutput2.Wmr = LearnableParameter
+Validating --> LSTMoutput2.sWmr = LearnableParameter
+Validating --> LSTMoutput2.expsWmr = Exp(LSTMoutput2.sWmr[1, 1])
+Validating --> LSTMoutput2.Wxo = LearnableParameter
+Validating --> LSTMoutput2.sWxo = LearnableParameter
+Validating --> LSTMoutput2.expsWxo = Exp(LSTMoutput2.sWxo[1, 1])
+Validating --> LSTMoutput1.Wmr = LearnableParameter
+Validating --> LSTMoutput1.sWmr = LearnableParameter
+Validating --> LSTMoutput1.expsWmr = Exp(LSTMoutput1.sWmr[1, 1])
+Validating --> LSTMoutput1.Wxo = LearnableParameter
+Validating --> LSTMoutput1.sWxo = LearnableParameter
+Validating --> LSTMoutput1.expsWxo = Exp(LSTMoutput1.sWxo[1, 1])
+Validating --> features = InputValue
+Validating --> feashift = RowSlice(features[363, 1])
+Validating --> featNorm.xMean = Mean(feashift[33, 1])
+Validating --> featNorm.xStdDev = InvStdDev(feashift[33, 1])
+Validating --> featNorm.xNorm = PerDimMeanVarNormalization(feashift[33, 1], featNorm.xMean[33, 1], featNorm.xStdDev[33, 1])
+Validating --> LSTMoutput1.unnamed168 = Scale(LSTMoutput1.expsWxo[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxox = Times(LSTMoutput1.Wxo[1024, 33], LSTMoutput1.unnamed168[33, 1])
+Validating --> LSTMoutput1.bo = LearnableParameter
+Validating --> LSTMoutput1.unnamed173 = Plus(LSTMoutput1.Wxox[1024, 1], LSTMoutput1.bo[1024, 1])
+Validating --> LSTMoutput1.Who = LearnableParameter
+Validating --> LSTMoutput1.sWho = LearnableParameter
+Validating --> LSTMoutput1.expsWho = Exp(LSTMoutput1.sWho[1, 1])
+Validating --> LSTMoutput1.Wco = LearnableParameter
+Validating --> LSTMoutput1.sWco = LearnableParameter
+Validating --> LSTMoutput1.expsWco = Exp(LSTMoutput1.sWco[1, 1])
+Validating --> LSTMoutput1.Wxf = LearnableParameter
+Validating --> LSTMoutput1.sWxf = LearnableParameter
+Validating --> LSTMoutput1.expsWxf = Exp(LSTMoutput1.sWxf[1, 1])
+Validating --> LSTMoutput1.unnamed162 = Scale(LSTMoutput1.expsWxf[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxfx = Times(LSTMoutput1.Wxf[1024, 33], LSTMoutput1.unnamed162[33, 1])
+Validating --> LSTMoutput1.bf = LearnableParameter
+Validating --> LSTMoutput1.unnamed167 = Plus(LSTMoutput1.Wxfx[1024, 1], LSTMoutput1.bf[1024, 1])
+Validating --> LSTMoutput1.Whf = LearnableParameter
+Validating --> LSTMoutput1.sWhf = LearnableParameter
+Validating --> LSTMoutput1.expsWhf = Exp(LSTMoutput1.sWhf[1, 1])
+Validating --> LSTMoutput1.Wcf = LearnableParameter
+Validating --> LSTMoutput1.sWcf = LearnableParameter
+Validating --> LSTMoutput1.expsWcf = Exp(LSTMoutput1.sWcf[1, 1])
+Validating --> LSTMoutput1.Wxi = LearnableParameter
+Validating --> LSTMoutput1.sWxi = LearnableParameter
+Validating --> LSTMoutput1.expsWxi = Exp(LSTMoutput1.sWxi[1, 1])
+Validating --> LSTMoutput1.unnamed151 = Scale(LSTMoutput1.expsWxi[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxix = Times(LSTMoutput1.Wxi[1024, 33], LSTMoutput1.unnamed151[33, 1])
+Validating --> LSTMoutput1.bi = LearnableParameter
+Validating --> LSTMoutput1.unnamed156 = Plus(LSTMoutput1.Wxix[1024, 1], LSTMoutput1.bi[1024, 1])
+Validating --> LSTMoutput1.Whi = LearnableParameter
+Validating --> LSTMoutput1.sWhi = LearnableParameter
+Validating --> LSTMoutput1.expsWhi = Exp(LSTMoutput1.sWhi[1, 1])
+Validating --> LSTMoutput1.Wci = LearnableParameter
+Validating --> LSTMoutput1.sWci = LearnableParameter
+Validating --> LSTMoutput1.expsWci = Exp(LSTMoutput1.sWci[1, 1])
+Validating --> LSTMoutput1.Wxc = LearnableParameter
+Validating --> LSTMoutput1.sWxc = LearnableParameter
+Validating --> LSTMoutput1.expsWxc = Exp(LSTMoutput1.sWxc[1, 1])
+Validating --> LSTMoutput1.unnamed157 = Scale(LSTMoutput1.expsWxc[1, 1], featNorm.xNorm[33, 1])
+Validating --> LSTMoutput1.Wxcx = Times(LSTMoutput1.Wxc[1024, 33], LSTMoutput1.unnamed157[33, 1])
+Validating --> LSTMoutput1.Whc = LearnableParameter
+Validating --> LSTMoutput1.sWhc = LearnableParameter
+Validating --> LSTMoutput1.expsWhc = Exp(LSTMoutput1.sWhc[1, 1])
+Validating --> LSTMoutput1.bc = LearnableParameter
+Validating --> LSTMoutput1.dh = PastValue(LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput1.unnamed169 = Scale(LSTMoutput1.expsWho[1, 1], LSTMoutput1.dh[256, 1])
+Validating --> LSTMoutput1.Whodh = Times(LSTMoutput1.Who[1024, 256], LSTMoutput1.unnamed169[256, 1])
+Validating --> LSTMoutput1.unnamed172 = Plus(LSTMoutput1.unnamed173[1024, 1], LSTMoutput1.Whodh[1024, 1])
+Validating --> LSTMoutput1.unnamed163 = Scale(LSTMoutput1.expsWhf[1, 1], LSTMoutput1.dh[256, 1])
+Validating --> LSTMoutput1.Whfdh = Times(LSTMoutput1.Whf[1024, 256], LSTMoutput1.unnamed163[256, 1])
+Validating --> LSTMoutput1.unnamed166 = Plus(LSTMoutput1.unnamed167[1024, 1], LSTMoutput1.Whfdh[1024, 1])
+Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 1], LSTMoutput1.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed152 = Scale(LSTMoutput1.expsWhi[1, 1], LSTMoutput1.dh[256, 1])
+Validating --> LSTMoutput1.Whidh = Times(LSTMoutput1.Whi[1024, 256], LSTMoutput1.unnamed152[256, 1])
+Validating --> LSTMoutput1.unnamed155 = Plus(LSTMoutput1.unnamed156[1024, 1], LSTMoutput1.Whidh[1024, 1])
+Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 1], LSTMoutput1.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed158 = Scale(LSTMoutput1.expsWhc[1, 1], LSTMoutput1.dh[256, 1])
+Validating --> LSTMoutput1.Whcdh = Times(LSTMoutput1.Whc[1024, 256], LSTMoutput1.unnamed158[256, 1])
+Validating --> LSTMoutput1.unnamed161 = Plus(LSTMoutput1.Whcdh[1024, 1], LSTMoutput1.bc[1024, 1])
+Validating --> LSTMoutput1.unnamed160 = Plus(LSTMoutput1.Wxcx[1024, 1], LSTMoutput1.unnamed161[1024, 1])
+Validating --> LSTMoutput1.unnamed159 = Tanh(LSTMoutput1.unnamed160[1024, 1])
+Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed159[1024, 1])
+Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 1], LSTMoutput1.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed174[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed218 = Scale(LSTMoutput2.expsWxo[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxox = Times(LSTMoutput2.Wxo[1024, 256], LSTMoutput2.unnamed218[256, 1])
+Validating --> LSTMoutput2.bo = LearnableParameter
+Validating --> LSTMoutput2.unnamed223 = Plus(LSTMoutput2.Wxox[1024, 1], LSTMoutput2.bo[1024, 1])
+Validating --> LSTMoutput2.Who = LearnableParameter
+Validating --> LSTMoutput2.sWho = LearnableParameter
+Validating --> LSTMoutput2.expsWho = Exp(LSTMoutput2.sWho[1, 1])
+Validating --> LSTMoutput2.Wco = LearnableParameter
+Validating --> LSTMoutput2.sWco = LearnableParameter
+Validating --> LSTMoutput2.expsWco = Exp(LSTMoutput2.sWco[1, 1])
+Validating --> LSTMoutput2.Wxf = LearnableParameter
+Validating --> LSTMoutput2.sWxf = LearnableParameter
+Validating --> LSTMoutput2.expsWxf = Exp(LSTMoutput2.sWxf[1, 1])
+Validating --> LSTMoutput2.unnamed212 = Scale(LSTMoutput2.expsWxf[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxfx = Times(LSTMoutput2.Wxf[1024, 256], LSTMoutput2.unnamed212[256, 1])
+Validating --> LSTMoutput2.bf = LearnableParameter
+Validating --> LSTMoutput2.unnamed217 = Plus(LSTMoutput2.Wxfx[1024, 1], LSTMoutput2.bf[1024, 1])
+Validating --> LSTMoutput2.Whf = LearnableParameter
+Validating --> LSTMoutput2.sWhf = LearnableParameter
+Validating --> LSTMoutput2.expsWhf = Exp(LSTMoutput2.sWhf[1, 1])
+Validating --> LSTMoutput2.Wcf = LearnableParameter
+Validating --> LSTMoutput2.sWcf = LearnableParameter
+Validating --> LSTMoutput2.expsWcf = Exp(LSTMoutput2.sWcf[1, 1])
+Validating --> LSTMoutput2.Wxi = LearnableParameter
+Validating --> LSTMoutput2.sWxi = LearnableParameter
+Validating --> LSTMoutput2.expsWxi = Exp(LSTMoutput2.sWxi[1, 1])
+Validating --> LSTMoutput2.unnamed201 = Scale(LSTMoutput2.expsWxi[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxix = Times(LSTMoutput2.Wxi[1024, 256], LSTMoutput2.unnamed201[256, 1])
+Validating --> LSTMoutput2.bi = LearnableParameter
+Validating --> LSTMoutput2.unnamed206 = Plus(LSTMoutput2.Wxix[1024, 1], LSTMoutput2.bi[1024, 1])
+Validating --> LSTMoutput2.Whi = LearnableParameter
+Validating --> LSTMoutput2.sWhi = LearnableParameter
+Validating --> LSTMoutput2.expsWhi = Exp(LSTMoutput2.sWhi[1, 1])
+Validating --> LSTMoutput2.Wci = LearnableParameter
+Validating --> LSTMoutput2.sWci = LearnableParameter
+Validating --> LSTMoutput2.expsWci = Exp(LSTMoutput2.sWci[1, 1])
+Validating --> LSTMoutput2.Wxc = LearnableParameter
+Validating --> LSTMoutput2.sWxc = LearnableParameter
+Validating --> LSTMoutput2.expsWxc = Exp(LSTMoutput2.sWxc[1, 1])
+Validating --> LSTMoutput2.unnamed207 = Scale(LSTMoutput2.expsWxc[1, 1], LSTMoutput1.output[256, 1])
+Validating --> LSTMoutput2.Wxcx = Times(LSTMoutput2.Wxc[1024, 256], LSTMoutput2.unnamed207[256, 1])
+Validating --> LSTMoutput2.Whc = LearnableParameter
+Validating --> LSTMoutput2.sWhc = LearnableParameter
+Validating --> LSTMoutput2.expsWhc = Exp(LSTMoutput2.sWhc[1, 1])
+Validating --> LSTMoutput2.bc = LearnableParameter
+Validating --> LSTMoutput2.dh = PastValue(LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput2.unnamed219 = Scale(LSTMoutput2.expsWho[1, 1], LSTMoutput2.dh[256, 1])
+Validating --> LSTMoutput2.Whodh = Times(LSTMoutput2.Who[1024, 256], LSTMoutput2.unnamed219[256, 1])
+Validating --> LSTMoutput2.unnamed222 = Plus(LSTMoutput2.unnamed223[1024, 1], LSTMoutput2.Whodh[1024, 1])
+Validating --> LSTMoutput2.unnamed213 = Scale(LSTMoutput2.expsWhf[1, 1], LSTMoutput2.dh[256, 1])
+Validating --> LSTMoutput2.Whfdh = Times(LSTMoutput2.Whf[1024, 256], LSTMoutput2.unnamed213[256, 1])
+Validating --> LSTMoutput2.unnamed216 = Plus(LSTMoutput2.unnamed217[1024, 1], LSTMoutput2.Whfdh[1024, 1])
+Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 1], LSTMoutput2.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed202 = Scale(LSTMoutput2.expsWhi[1, 1], LSTMoutput2.dh[256, 1])
+Validating --> LSTMoutput2.Whidh = Times(LSTMoutput2.Whi[1024, 256], LSTMoutput2.unnamed202[256, 1])
+Validating --> LSTMoutput2.unnamed205 = Plus(LSTMoutput2.unnamed206[1024, 1], LSTMoutput2.Whidh[1024, 1])
+Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 1], LSTMoutput2.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed208 = Scale(LSTMoutput2.expsWhc[1, 1], LSTMoutput2.dh[256, 1])
+Validating --> LSTMoutput2.Whcdh = Times(LSTMoutput2.Whc[1024, 256], LSTMoutput2.unnamed208[256, 1])
+Validating --> LSTMoutput2.unnamed211 = Plus(LSTMoutput2.Whcdh[1024, 1], LSTMoutput2.bc[1024, 1])
+Validating --> LSTMoutput2.unnamed210 = Plus(LSTMoutput2.Wxcx[1024, 1], LSTMoutput2.unnamed211[1024, 1])
+Validating --> LSTMoutput2.unnamed209 = Tanh(LSTMoutput2.unnamed210[1024, 1])
+Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed209[1024, 1])
+Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 1], LSTMoutput2.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed224[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.unnamed268 = Scale(LSTMoutput3.expsWxo[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxox = Times(LSTMoutput3.Wxo[1024, 256], LSTMoutput3.unnamed268[256, 1])
+Validating --> LSTMoutput3.bo = LearnableParameter
+Validating --> LSTMoutput3.unnamed273 = Plus(LSTMoutput3.Wxox[1024, 1], LSTMoutput3.bo[1024, 1])
+Validating --> LSTMoutput3.Who = LearnableParameter
+Validating --> LSTMoutput3.sWho = LearnableParameter
+Validating --> LSTMoutput3.expsWho = Exp(LSTMoutput3.sWho[1, 1])
+Validating --> LSTMoutput3.Wco = LearnableParameter
+Validating --> LSTMoutput3.sWco = LearnableParameter
+Validating --> LSTMoutput3.expsWco = Exp(LSTMoutput3.sWco[1, 1])
+Validating --> LSTMoutput3.Wxf = LearnableParameter
+Validating --> LSTMoutput3.sWxf = LearnableParameter
+Validating --> LSTMoutput3.expsWxf = Exp(LSTMoutput3.sWxf[1, 1])
+Validating --> LSTMoutput3.unnamed262 = Scale(LSTMoutput3.expsWxf[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxfx = Times(LSTMoutput3.Wxf[1024, 256], LSTMoutput3.unnamed262[256, 1])
+Validating --> LSTMoutput3.bf = LearnableParameter
+Validating --> LSTMoutput3.unnamed267 = Plus(LSTMoutput3.Wxfx[1024, 1], LSTMoutput3.bf[1024, 1])
+Validating --> LSTMoutput3.Whf = LearnableParameter
+Validating --> LSTMoutput3.sWhf = LearnableParameter
+Validating --> LSTMoutput3.expsWhf = Exp(LSTMoutput3.sWhf[1, 1])
+Validating --> LSTMoutput3.Wcf = LearnableParameter
+Validating --> LSTMoutput3.sWcf = LearnableParameter
+Validating --> LSTMoutput3.expsWcf = Exp(LSTMoutput3.sWcf[1, 1])
+Validating --> LSTMoutput3.Wxi = LearnableParameter
+Validating --> LSTMoutput3.sWxi = LearnableParameter
+Validating --> LSTMoutput3.expsWxi = Exp(LSTMoutput3.sWxi[1, 1])
+Validating --> LSTMoutput3.unnamed251 = Scale(LSTMoutput3.expsWxi[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxix = Times(LSTMoutput3.Wxi[1024, 256], LSTMoutput3.unnamed251[256, 1])
+Validating --> LSTMoutput3.bi = LearnableParameter
+Validating --> LSTMoutput3.unnamed256 = Plus(LSTMoutput3.Wxix[1024, 1], LSTMoutput3.bi[1024, 1])
+Validating --> LSTMoutput3.Whi = LearnableParameter
+Validating --> LSTMoutput3.sWhi = LearnableParameter
+Validating --> LSTMoutput3.expsWhi = Exp(LSTMoutput3.sWhi[1, 1])
+Validating --> LSTMoutput3.Wci = LearnableParameter
+Validating --> LSTMoutput3.sWci = LearnableParameter
+Validating --> LSTMoutput3.expsWci = Exp(LSTMoutput3.sWci[1, 1])
+Validating --> LSTMoutput3.Wxc = LearnableParameter
+Validating --> LSTMoutput3.sWxc = LearnableParameter
+Validating --> LSTMoutput3.expsWxc = Exp(LSTMoutput3.sWxc[1, 1])
+Validating --> LSTMoutput3.unnamed257 = Scale(LSTMoutput3.expsWxc[1, 1], LSTMoutput2.output[256, 1])
+Validating --> LSTMoutput3.Wxcx = Times(LSTMoutput3.Wxc[1024, 256], LSTMoutput3.unnamed257[256, 1])
+Validating --> LSTMoutput3.Whc = LearnableParameter
+Validating --> LSTMoutput3.sWhc = LearnableParameter
+Validating --> LSTMoutput3.expsWhc = Exp(LSTMoutput3.sWhc[1, 1])
+Validating --> LSTMoutput3.bc = LearnableParameter
+Validating --> LSTMoutput3.dh = PastValue(LSTMoutput3.output[256, 1])
+Validating --> LSTMoutput3.unnamed269 = Scale(LSTMoutput3.expsWho[1, 1], LSTMoutput3.dh[256, 1])
+Validating --> LSTMoutput3.Whodh = Times(LSTMoutput3.Who[1024, 256], LSTMoutput3.unnamed269[256, 1])
+Validating --> LSTMoutput3.unnamed272 = Plus(LSTMoutput3.unnamed273[1024, 1], LSTMoutput3.Whodh[1024, 1])
+Validating --> LSTMoutput3.unnamed263 = Scale(LSTMoutput3.expsWhf[1, 1], LSTMoutput3.dh[256, 1])
+Validating --> LSTMoutput3.Whfdh = Times(LSTMoutput3.Whf[1024, 256], LSTMoutput3.unnamed263[256, 1])
+Validating --> LSTMoutput3.unnamed266 = Plus(LSTMoutput3.unnamed267[1024, 1], LSTMoutput3.Whfdh[1024, 1])
+Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 1], LSTMoutput3.Wcfdc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed252 = Scale(LSTMoutput3.expsWhi[1, 1], LSTMoutput3.dh[256, 1])
+Validating --> LSTMoutput3.Whidh = Times(LSTMoutput3.Whi[1024, 256], LSTMoutput3.unnamed252[256, 1])
+Validating --> LSTMoutput3.unnamed255 = Plus(LSTMoutput3.unnamed256[1024, 1], LSTMoutput3.Whidh[1024, 1])
+Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 1], LSTMoutput3.Wcidc[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed258 = Scale(LSTMoutput3.expsWhc[1, 1], LSTMoutput3.dh[256, 1])
+Validating --> LSTMoutput3.Whcdh = Times(LSTMoutput3.Whc[1024, 256], LSTMoutput3.unnamed258[256, 1])
+Validating --> LSTMoutput3.unnamed261 = Plus(LSTMoutput3.Whcdh[1024, 1], LSTMoutput3.bc[1024, 1])
+Validating --> LSTMoutput3.unnamed260 = Plus(LSTMoutput3.Wxcx[1024, 1], LSTMoutput3.unnamed261[1024, 1])
+Validating --> LSTMoutput3.unnamed259 = Tanh(LSTMoutput3.unnamed260[1024, 1])
+Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.unnamed259[1024, 1])
+Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.bit[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 1], LSTMoutput3.Wcoct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=498216206446, H=476741369970, C=519691042928}, 1], LSTMoutput3.unnamed274[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=498216206446, H=476741369970, C=519691042928}, 1])
+Validating --> unnamed284 = Scale(expsW[1, 1], LSTMoutput3.output[256, 1])
+Validating --> unnamed283 = Times(W[132, 256], unnamed284[256, 1])
+Validating --> b = LearnableParameter
+Validating --> LSTMoutputW = Plus(unnamed283[132, 1], b[132, 1])
+Validating --> cr = CrossEntropyWithSoftmax(labels[132, 1], LSTMoutputW[132, 1])
+
+Found 3 PreCompute nodes
+	NodeName: featNorm.xMean
+	NodeName: featNorm.xStdDev
+	NodeName: logPrior.Prior
+minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+ nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	 nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	
+
+Validating node featNorm.xMean 
+
+Validating --> features = InputValue
+Validating --> feashift = RowSlice(features[363, 640])
+Validating --> featNorm.xMean = Mean(feashift[33, 640])
+
+ nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	 nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	
+
+Validating node featNorm.xStdDev 
+
+Validating --> features = InputValue
+Validating --> feashift = RowSlice(features[363, 640])
+Validating --> featNorm.xStdDev = InvStdDev(feashift[33, 640])
+
+ nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	 nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	
+
+Validating node logPrior.Prior 
+
+Validating --> labels = InputValue
+Validating --> logPrior.Prior = Mean(labels[132, 640])
+
+Set Max Temp Mem Size For Convolution Nodes to 0 samples.
+Starting Epoch 1: learning rate per sample = 0.000781  momentum = 0.000000 
+minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+
+Starting minibatch loop.
+ nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	 nodes in the recurrent loops : 
+LSTMoutput1.dh	LSTMoutput1.unnamed169	LSTMoutput1.Whodh	LSTMoutput1.unnamed172	LSTMoutput1.unnamed163	LSTMoutput1.Whfdh	LSTMoutput1.unnamed166	LSTMoutput1.dc	LSTMoutput1.unnamed164	LSTMoutput1.Wcfdc	LSTMoutput1.unnamed165	LSTMoutput1.ft	LSTMoutput1.bft	LSTMoutput1.unnamed152	LSTMoutput1.Whidh	LSTMoutput1.unnamed155	LSTMoutput1.unnamed153	LSTMoutput1.Wcidc	LSTMoutput1.unnamed154	LSTMoutput1.it	LSTMoutput1.unnamed158	LSTMoutput1.Whcdh	LSTMoutput1.unnamed161	LSTMoutput1.unnamed160	LSTMoutput1.unnamed159	LSTMoutput1.bit	LSTMoutput1.ct	LSTMoutput1.unnamed170	LSTMoutput1.Wcoct	LSTMoutput1.unnamed171	LSTMoutput1.ot	LSTMoutput1.unnamed174	LSTMoutput1.mt	LSTMoutput1.unnamed175	LSTMoutput1.output	 nodes in the recurrent loops : 
+LSTMoutput2.dh	LSTMoutput2.unnamed219	LSTMoutput2.Whodh	LSTMoutput2.unnamed222	LSTMoutput2.unnamed213	LSTMoutput2.Whfdh	LSTMoutput2.unnamed216	LSTMoutput2.dc	LSTMoutput2.unnamed214	LSTMoutput2.Wcfdc	LSTMoutput2.unnamed215	LSTMoutput2.ft	LSTMoutput2.bft	LSTMoutput2.unnamed202	LSTMoutput2.Whidh	LSTMoutput2.unnamed205	LSTMoutput2.unnamed203	LSTMoutput2.Wcidc	LSTMoutput2.unnamed204	LSTMoutput2.it	LSTMoutput2.unnamed208	LSTMoutput2.Whcdh	LSTMoutput2.unnamed211	LSTMoutput2.unnamed210	LSTMoutput2.unnamed209	LSTMoutput2.bit	LSTMoutput2.ct	LSTMoutput2.unnamed220	LSTMoutput2.Wcoct	LSTMoutput2.unnamed221	LSTMoutput2.ot	LSTMoutput2.unnamed224	LSTMoutput2.mt	LSTMoutput2.unnamed225	LSTMoutput2.output	 nodes in the recurrent loops : 
+LSTMoutput3.dh	LSTMoutput3.unnamed269	LSTMoutput3.Whodh	LSTMoutput3.unnamed272	LSTMoutput3.unnamed263	LSTMoutput3.Whfdh	LSTMoutput3.unnamed266	LSTMoutput3.dc	LSTMoutput3.unnamed264	LSTMoutput3.Wcfdc	LSTMoutput3.unnamed265	LSTMoutput3.ft	LSTMoutput3.bft	LSTMoutput3.unnamed252	LSTMoutput3.Whidh	LSTMoutput3.unnamed255	LSTMoutput3.unnamed253	LSTMoutput3.Wcidc	LSTMoutput3.unnamed254	LSTMoutput3.it	LSTMoutput3.unnamed258	LSTMoutput3.Whcdh	LSTMoutput3.unnamed261	LSTMoutput3.unnamed260	LSTMoutput3.unnamed259	LSTMoutput3.bit	LSTMoutput3.ct	LSTMoutput3.unnamed270	LSTMoutput3.Wcoct	LSTMoutput3.unnamed271	LSTMoutput3.ot	LSTMoutput3.unnamed274	LSTMoutput3.mt	LSTMoutput3.unnamed275	LSTMoutput3.output	
+
+Validating node Err 
+
+Validating --> labels = InputValue
+Validating --> W = LearnableParameter
+Validating --> sW = LearnableParameter
+Validating --> expsW = Exp(sW[1, 1])
+Validating --> LSTMoutput3.Wmr = LearnableParameter
+Validating --> LSTMoutput3.sWmr = LearnableParameter
+Validating --> LSTMoutput3.expsWmr = Exp(LSTMoutput3.sWmr[1, 1])
+Validating --> LSTMoutput3.Wxo = LearnableParameter
+Validating --> LSTMoutput3.sWxo = LearnableParameter
+Validating --> LSTMoutput3.expsWxo = Exp(LSTMoutput3.sWxo[1, 1])
+Validating --> LSTMoutput2.Wmr = LearnableParameter
+Validating --> LSTMoutput2.sWmr = LearnableParameter
+Validating --> LSTMoutput2.expsWmr = Exp(LSTMoutput2.sWmr[1, 1])
+Validating --> LSTMoutput2.Wxo = LearnableParameter
+Validating --> LSTMoutput2.sWxo = LearnableParameter
+Validating --> LSTMoutput2.expsWxo = Exp(LSTMoutput2.sWxo[1, 1])
+Validating --> LSTMoutput1.Wmr = LearnableParameter
+Validating --> LSTMoutput1.sWmr = LearnableParameter
+Validating --> LSTMoutput1.expsWmr = Exp(LSTMoutput1.sWmr[1, 1])
+Validating --> LSTMoutput1.Wxo = LearnableParameter
+Validating --> LSTMoutput1.sWxo = LearnableParameter
+Validating --> LSTMoutput1.expsWxo = Exp(LSTMoutput1.sWxo[1, 1])
+Validating --> features = InputValue
+Validating --> feashift = RowSlice(features[363, 640])
+Validating --> featNorm.xMean = Mean(feashift[33, 640])
+Validating --> featNorm.xStdDev = InvStdDev(feashift[33, 640])
+Validating --> featNorm.xNorm = PerDimMeanVarNormalization(feashift[33, 640], featNorm.xMean[33, 1], featNorm.xStdDev[33, 1])
+Validating --> LSTMoutput1.unnamed168 = Scale(LSTMoutput1.expsWxo[1, 1], featNorm.xNorm[33, 640])
+Validating --> LSTMoutput1.Wxox = Times(LSTMoutput1.Wxo[1024, 33], LSTMoutput1.unnamed168[33, 640])
+Validating --> LSTMoutput1.bo = LearnableParameter
+Validating --> LSTMoutput1.unnamed173 = Plus(LSTMoutput1.Wxox[1024, 640], LSTMoutput1.bo[1024, 1])
+Validating --> LSTMoutput1.Who = LearnableParameter
+Validating --> LSTMoutput1.sWho = LearnableParameter
+Validating --> LSTMoutput1.expsWho = Exp(LSTMoutput1.sWho[1, 1])
+Validating --> LSTMoutput1.Wco = LearnableParameter
+Validating --> LSTMoutput1.sWco = LearnableParameter
+Validating --> LSTMoutput1.expsWco = Exp(LSTMoutput1.sWco[1, 1])
+Validating --> LSTMoutput1.Wxf = LearnableParameter
+Validating --> LSTMoutput1.sWxf = LearnableParameter
+Validating --> LSTMoutput1.expsWxf = Exp(LSTMoutput1.sWxf[1, 1])
+Validating --> LSTMoutput1.unnamed162 = Scale(LSTMoutput1.expsWxf[1, 1], featNorm.xNorm[33, 640])
+Validating --> LSTMoutput1.Wxfx = Times(LSTMoutput1.Wxf[1024, 33], LSTMoutput1.unnamed162[33, 640])
+Validating --> LSTMoutput1.bf = LearnableParameter
+Validating --> LSTMoutput1.unnamed167 = Plus(LSTMoutput1.Wxfx[1024, 640], LSTMoutput1.bf[1024, 1])
+Validating --> LSTMoutput1.Whf = LearnableParameter
+Validating --> LSTMoutput1.sWhf = LearnableParameter
+Validating --> LSTMoutput1.expsWhf = Exp(LSTMoutput1.sWhf[1, 1])
+Validating --> LSTMoutput1.Wcf = LearnableParameter
+Validating --> LSTMoutput1.sWcf = LearnableParameter
+Validating --> LSTMoutput1.expsWcf = Exp(LSTMoutput1.sWcf[1, 1])
+Validating --> LSTMoutput1.Wxi = LearnableParameter
+Validating --> LSTMoutput1.sWxi = LearnableParameter
+Validating --> LSTMoutput1.expsWxi = Exp(LSTMoutput1.sWxi[1, 1])
+Validating --> LSTMoutput1.unnamed151 = Scale(LSTMoutput1.expsWxi[1, 1], featNorm.xNorm[33, 640])
+Validating --> LSTMoutput1.Wxix = Times(LSTMoutput1.Wxi[1024, 33], LSTMoutput1.unnamed151[33, 640])
+Validating --> LSTMoutput1.bi = LearnableParameter
+Validating --> LSTMoutput1.unnamed156 = Plus(LSTMoutput1.Wxix[1024, 640], LSTMoutput1.bi[1024, 1])
+Validating --> LSTMoutput1.Whi = LearnableParameter
+Validating --> LSTMoutput1.sWhi = LearnableParameter
+Validating --> LSTMoutput1.expsWhi = Exp(LSTMoutput1.sWhi[1, 1])
+Validating --> LSTMoutput1.Wci = LearnableParameter
+Validating --> LSTMoutput1.sWci = LearnableParameter
+Validating --> LSTMoutput1.expsWci = Exp(LSTMoutput1.sWci[1, 1])
+Validating --> LSTMoutput1.Wxc = LearnableParameter
+Validating --> LSTMoutput1.sWxc = LearnableParameter
+Validating --> LSTMoutput1.expsWxc = Exp(LSTMoutput1.sWxc[1, 1])
+Validating --> LSTMoutput1.unnamed157 = Scale(LSTMoutput1.expsWxc[1, 1], featNorm.xNorm[33, 640])
+Validating --> LSTMoutput1.Wxcx = Times(LSTMoutput1.Wxc[1024, 33], LSTMoutput1.unnamed157[33, 640])
+Validating --> LSTMoutput1.Whc = LearnableParameter
+Validating --> LSTMoutput1.sWhc = LearnableParameter
+Validating --> LSTMoutput1.expsWhc = Exp(LSTMoutput1.sWhc[1, 1])
+Validating --> LSTMoutput1.bc = LearnableParameter
+Validating --> LSTMoutput1.dh = PastValue(LSTMoutput1.output[256, 640])
+Validating --> LSTMoutput1.unnamed169 = Scale(LSTMoutput1.expsWho[1, 1], LSTMoutput1.dh[256, 640])
+Validating --> LSTMoutput1.Whodh = Times(LSTMoutput1.Who[1024, 256], LSTMoutput1.unnamed169[256, 640])
+Validating --> LSTMoutput1.unnamed172 = Plus(LSTMoutput1.unnamed173[1024, 640], LSTMoutput1.Whodh[1024, 640])
+Validating --> LSTMoutput1.unnamed163 = Scale(LSTMoutput1.expsWhf[1, 1], LSTMoutput1.dh[256, 640])
+Validating --> LSTMoutput1.Whfdh = Times(LSTMoutput1.Whf[1024, 256], LSTMoutput1.unnamed163[256, 640])
+Validating --> LSTMoutput1.unnamed166 = Plus(LSTMoutput1.unnamed167[1024, 640], LSTMoutput1.Whfdh[1024, 640])
+Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 640], LSTMoutput1.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.unnamed152 = Scale(LSTMoutput1.expsWhi[1, 1], LSTMoutput1.dh[256, 640])
+Validating --> LSTMoutput1.Whidh = Times(LSTMoutput1.Whi[1024, 256], LSTMoutput1.unnamed152[256, 640])
+Validating --> LSTMoutput1.unnamed155 = Plus(LSTMoutput1.unnamed156[1024, 640], LSTMoutput1.Whidh[1024, 640])
+Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 640], LSTMoutput1.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.unnamed158 = Scale(LSTMoutput1.expsWhc[1, 1], LSTMoutput1.dh[256, 640])
+Validating --> LSTMoutput1.Whcdh = Times(LSTMoutput1.Whc[1024, 256], LSTMoutput1.unnamed158[256, 640])
+Validating --> LSTMoutput1.unnamed161 = Plus(LSTMoutput1.Whcdh[1024, 640], LSTMoutput1.bc[1024, 1])
+Validating --> LSTMoutput1.unnamed160 = Plus(LSTMoutput1.Wxcx[1024, 640], LSTMoutput1.unnamed161[1024, 640])
+Validating --> LSTMoutput1.unnamed159 = Tanh(LSTMoutput1.unnamed160[1024, 640])
+Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput1.unnamed159[1024, 640])
+Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput1.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 640], LSTMoutput1.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput1.unnamed174[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.unnamed218 = Scale(LSTMoutput2.expsWxo[1, 1], LSTMoutput1.output[256, 640])
+Validating --> LSTMoutput2.Wxox = Times(LSTMoutput2.Wxo[1024, 256], LSTMoutput2.unnamed218[256, 640])
+Validating --> LSTMoutput2.bo = LearnableParameter
+Validating --> LSTMoutput2.unnamed223 = Plus(LSTMoutput2.Wxox[1024, 640], LSTMoutput2.bo[1024, 1])
+Validating --> LSTMoutput2.Who = LearnableParameter
+Validating --> LSTMoutput2.sWho = LearnableParameter
+Validating --> LSTMoutput2.expsWho = Exp(LSTMoutput2.sWho[1, 1])
+Validating --> LSTMoutput2.Wco = LearnableParameter
+Validating --> LSTMoutput2.sWco = LearnableParameter
+Validating --> LSTMoutput2.expsWco = Exp(LSTMoutput2.sWco[1, 1])
+Validating --> LSTMoutput2.Wxf = LearnableParameter
+Validating --> LSTMoutput2.sWxf = LearnableParameter
+Validating --> LSTMoutput2.expsWxf = Exp(LSTMoutput2.sWxf[1, 1])
+Validating --> LSTMoutput2.unnamed212 = Scale(LSTMoutput2.expsWxf[1, 1], LSTMoutput1.output[256, 640])
+Validating --> LSTMoutput2.Wxfx = Times(LSTMoutput2.Wxf[1024, 256], LSTMoutput2.unnamed212[256, 640])
+Validating --> LSTMoutput2.bf = LearnableParameter
+Validating --> LSTMoutput2.unnamed217 = Plus(LSTMoutput2.Wxfx[1024, 640], LSTMoutput2.bf[1024, 1])
+Validating --> LSTMoutput2.Whf = LearnableParameter
+Validating --> LSTMoutput2.sWhf = LearnableParameter
+Validating --> LSTMoutput2.expsWhf = Exp(LSTMoutput2.sWhf[1, 1])
+Validating --> LSTMoutput2.Wcf = LearnableParameter
+Validating --> LSTMoutput2.sWcf = LearnableParameter
+Validating --> LSTMoutput2.expsWcf = Exp(LSTMoutput2.sWcf[1, 1])
+Validating --> LSTMoutput2.Wxi = LearnableParameter
+Validating --> LSTMoutput2.sWxi = LearnableParameter
+Validating --> LSTMoutput2.expsWxi = Exp(LSTMoutput2.sWxi[1, 1])
+Validating --> LSTMoutput2.unnamed201 = Scale(LSTMoutput2.expsWxi[1, 1], LSTMoutput1.output[256, 640])
+Validating --> LSTMoutput2.Wxix = Times(LSTMoutput2.Wxi[1024, 256], LSTMoutput2.unnamed201[256, 640])
+Validating --> LSTMoutput2.bi = LearnableParameter
+Validating --> LSTMoutput2.unnamed206 = Plus(LSTMoutput2.Wxix[1024, 640], LSTMoutput2.bi[1024, 1])
+Validating --> LSTMoutput2.Whi = LearnableParameter
+Validating --> LSTMoutput2.sWhi = LearnableParameter
+Validating --> LSTMoutput2.expsWhi = Exp(LSTMoutput2.sWhi[1, 1])
+Validating --> LSTMoutput2.Wci = LearnableParameter
+Validating --> LSTMoutput2.sWci = LearnableParameter
+Validating --> LSTMoutput2.expsWci = Exp(LSTMoutput2.sWci[1, 1])
+Validating --> LSTMoutput2.Wxc = LearnableParameter
+Validating --> LSTMoutput2.sWxc = LearnableParameter
+Validating --> LSTMoutput2.expsWxc = Exp(LSTMoutput2.sWxc[1, 1])
+Validating --> LSTMoutput2.unnamed207 = Scale(LSTMoutput2.expsWxc[1, 1], LSTMoutput1.output[256, 640])
+Validating --> LSTMoutput2.Wxcx = Times(LSTMoutput2.Wxc[1024, 256], LSTMoutput2.unnamed207[256, 640])
+Validating --> LSTMoutput2.Whc = LearnableParameter
+Validating --> LSTMoutput2.sWhc = LearnableParameter
+Validating --> LSTMoutput2.expsWhc = Exp(LSTMoutput2.sWhc[1, 1])
+Validating --> LSTMoutput2.bc = LearnableParameter
+Validating --> LSTMoutput2.dh = PastValue(LSTMoutput2.output[256, 640])
+Validating --> LSTMoutput2.unnamed219 = Scale(LSTMoutput2.expsWho[1, 1], LSTMoutput2.dh[256, 640])
+Validating --> LSTMoutput2.Whodh = Times(LSTMoutput2.Who[1024, 256], LSTMoutput2.unnamed219[256, 640])
+Validating --> LSTMoutput2.unnamed222 = Plus(LSTMoutput2.unnamed223[1024, 640], LSTMoutput2.Whodh[1024, 640])
+Validating --> LSTMoutput2.unnamed213 = Scale(LSTMoutput2.expsWhf[1, 1], LSTMoutput2.dh[256, 640])
+Validating --> LSTMoutput2.Whfdh = Times(LSTMoutput2.Whf[1024, 256], LSTMoutput2.unnamed213[256, 640])
+Validating --> LSTMoutput2.unnamed216 = Plus(LSTMoutput2.unnamed217[1024, 640], LSTMoutput2.Whfdh[1024, 640])
+Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 640], LSTMoutput2.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.unnamed202 = Scale(LSTMoutput2.expsWhi[1, 1], LSTMoutput2.dh[256, 640])
+Validating --> LSTMoutput2.Whidh = Times(LSTMoutput2.Whi[1024, 256], LSTMoutput2.unnamed202[256, 640])
+Validating --> LSTMoutput2.unnamed205 = Plus(LSTMoutput2.unnamed206[1024, 640], LSTMoutput2.Whidh[1024, 640])
+Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 640], LSTMoutput2.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.unnamed208 = Scale(LSTMoutput2.expsWhc[1, 1], LSTMoutput2.dh[256, 640])
+Validating --> LSTMoutput2.Whcdh = Times(LSTMoutput2.Whc[1024, 256], LSTMoutput2.unnamed208[256, 640])
+Validating --> LSTMoutput2.unnamed211 = Plus(LSTMoutput2.Whcdh[1024, 640], LSTMoutput2.bc[1024, 1])
+Validating --> LSTMoutput2.unnamed210 = Plus(LSTMoutput2.Wxcx[1024, 640], LSTMoutput2.unnamed211[1024, 640])
+Validating --> LSTMoutput2.unnamed209 = Tanh(LSTMoutput2.unnamed210[1024, 640])
+Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput2.unnamed209[1024, 640])
+Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput2.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 640], LSTMoutput2.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput2.unnamed224[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput3.unnamed268 = Scale(LSTMoutput3.expsWxo[1, 1], LSTMoutput2.output[256, 640])
+Validating --> LSTMoutput3.Wxox = Times(LSTMoutput3.Wxo[1024, 256], LSTMoutput3.unnamed268[256, 640])
+Validating --> LSTMoutput3.bo = LearnableParameter
+Validating --> LSTMoutput3.unnamed273 = Plus(LSTMoutput3.Wxox[1024, 640], LSTMoutput3.bo[1024, 1])
+Validating --> LSTMoutput3.Who = LearnableParameter
+Validating --> LSTMoutput3.sWho = LearnableParameter
+Validating --> LSTMoutput3.expsWho = Exp(LSTMoutput3.sWho[1, 1])
+Validating --> LSTMoutput3.Wco = LearnableParameter
+Validating --> LSTMoutput3.sWco = LearnableParameter
+Validating --> LSTMoutput3.expsWco = Exp(LSTMoutput3.sWco[1, 1])
+Validating --> LSTMoutput3.Wxf = LearnableParameter
+Validating --> LSTMoutput3.sWxf = LearnableParameter
+Validating --> LSTMoutput3.expsWxf = Exp(LSTMoutput3.sWxf[1, 1])
+Validating --> LSTMoutput3.unnamed262 = Scale(LSTMoutput3.expsWxf[1, 1], LSTMoutput2.output[256, 640])
+Validating --> LSTMoutput3.Wxfx = Times(LSTMoutput3.Wxf[1024, 256], LSTMoutput3.unnamed262[256, 640])
+Validating --> LSTMoutput3.bf = LearnableParameter
+Validating --> LSTMoutput3.unnamed267 = Plus(LSTMoutput3.Wxfx[1024, 640], LSTMoutput3.bf[1024, 1])
+Validating --> LSTMoutput3.Whf = LearnableParameter
+Validating --> LSTMoutput3.sWhf = LearnableParameter
+Validating --> LSTMoutput3.expsWhf = Exp(LSTMoutput3.sWhf[1, 1])
+Validating --> LSTMoutput3.Wcf = LearnableParameter
+Validating --> LSTMoutput3.sWcf = LearnableParameter
+Validating --> LSTMoutput3.expsWcf = Exp(LSTMoutput3.sWcf[1, 1])
+Validating --> LSTMoutput3.Wxi = LearnableParameter
+Validating --> LSTMoutput3.sWxi = LearnableParameter
+Validating --> LSTMoutput3.expsWxi = Exp(LSTMoutput3.sWxi[1, 1])
+Validating --> LSTMoutput3.unnamed251 = Scale(LSTMoutput3.expsWxi[1, 1], LSTMoutput2.output[256, 640])
+Validating --> LSTMoutput3.Wxix = Times(LSTMoutput3.Wxi[1024, 256], LSTMoutput3.unnamed251[256, 640])
+Validating --> LSTMoutput3.bi = LearnableParameter
+Validating --> LSTMoutput3.unnamed256 = Plus(LSTMoutput3.Wxix[1024, 640], LSTMoutput3.bi[1024, 1])
+Validating --> LSTMoutput3.Whi = LearnableParameter
+Validating --> LSTMoutput3.sWhi = LearnableParameter
+Validating --> LSTMoutput3.expsWhi = Exp(LSTMoutput3.sWhi[1, 1])
+Validating --> LSTMoutput3.Wci = LearnableParameter
+Validating --> LSTMoutput3.sWci = LearnableParameter
+Validating --> LSTMoutput3.expsWci = Exp(LSTMoutput3.sWci[1, 1])
+Validating --> LSTMoutput3.Wxc = LearnableParameter
+Validating --> LSTMoutput3.sWxc = LearnableParameter
+Validating --> LSTMoutput3.expsWxc = Exp(LSTMoutput3.sWxc[1, 1])
+Validating --> LSTMoutput3.unnamed257 = Scale(LSTMoutput3.expsWxc[1, 1], LSTMoutput2.output[256, 640])
+Validating --> LSTMoutput3.Wxcx = Times(LSTMoutput3.Wxc[1024, 256], LSTMoutput3.unnamed257[256, 640])
+Validating --> LSTMoutput3.Whc = LearnableParameter
+Validating --> LSTMoutput3.sWhc = LearnableParameter
+Validating --> LSTMoutput3.expsWhc = Exp(LSTMoutput3.sWhc[1, 1])
+Validating --> LSTMoutput3.bc = LearnableParameter
+Validating --> LSTMoutput3.dh = PastValue(LSTMoutput3.output[256, 640])
+Validating --> LSTMoutput3.unnamed269 = Scale(LSTMoutput3.expsWho[1, 1], LSTMoutput3.dh[256, 640])
+Validating --> LSTMoutput3.Whodh = Times(LSTMoutput3.Who[1024, 256], LSTMoutput3.unnamed269[256, 640])
+Validating --> LSTMoutput3.unnamed272 = Plus(LSTMoutput3.unnamed273[1024, 640], LSTMoutput3.Whodh[1024, 640])
+Validating --> LSTMoutput3.unnamed263 = Scale(LSTMoutput3.expsWhf[1, 1], LSTMoutput3.dh[256, 640])
+Validating --> LSTMoutput3.Whfdh = Times(LSTMoutput3.Whf[1024, 256], LSTMoutput3.unnamed263[256, 640])
+Validating --> LSTMoutput3.unnamed266 = Plus(LSTMoutput3.unnamed267[1024, 640], LSTMoutput3.Whfdh[1024, 640])
+Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 640], LSTMoutput3.Wcfdc[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=498216206446, H=476741369970, C=519691042928}, 640], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.unnamed252 = Scale(LSTMoutput3.expsWhi[1, 1], LSTMoutput3.dh[256, 640])
+Validating --> LSTMoutput3.Whidh = Times(LSTMoutput3.Whi[1024, 256], LSTMoutput3.unnamed252[256, 640])
+Validating --> LSTMoutput3.unnamed255 = Plus(LSTMoutput3.unnamed256[1024, 640], LSTMoutput3.Whidh[1024, 640])
+Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 640], LSTMoutput3.Wcidc[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.unnamed258 = Scale(LSTMoutput3.expsWhc[1, 1], LSTMoutput3.dh[256, 640])
+Validating --> LSTMoutput3.Whcdh = Times(LSTMoutput3.Whc[1024, 256], LSTMoutput3.unnamed258[256, 640])
+Validating --> LSTMoutput3.unnamed261 = Plus(LSTMoutput3.Whcdh[1024, 640], LSTMoutput3.bc[1024, 1])
+Validating --> LSTMoutput3.unnamed260 = Plus(LSTMoutput3.Wxcx[1024, 640], LSTMoutput3.unnamed261[1024, 640])
+Validating --> LSTMoutput3.unnamed259 = Tanh(LSTMoutput3.unnamed260[1024, 640])
+Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=498216206446, H=476741369970, C=519691042928}, 640], LSTMoutput3.unnamed259[1024, 640])
+Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=498216206446, H=476741369970, C=519691042928}, 640], LSTMoutput3.bit[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 640], LSTMoutput3.Wcoct[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=498216206446, H=476741369970, C=519691042928}, 640], LSTMoutput3.unnamed274[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=498216206446, H=476741369970, C=519691042928}, 640])
+Validating --> unnamed284 = Scale(expsW[1, 1], LSTMoutput3.output[256, 640])
+Validating --> unnamed283 = Times(W[132, 256], unnamed284[256, 640])
+Validating --> b = LearnableParameter
+Validating --> LSTMoutputW = Plus(unnamed283[132, 640], b[132, 1])
+Validating --> Err = ErrorPrediction(labels[132, 640], LSTMoutputW[132, 640])
+
+ Epoch[ 1 of 4]-Minibatch[   1-  10 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.80556154; EvalErr[0]PerSample = 0.90499997; TotalTime = 2.69377s; TotalTimePerSample = 0.42090ms; SamplesPerSecond = 2375
+ Epoch[ 1 of 4]-Minibatch[  11-  20 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.59131718; EvalErr[0]PerSample = 0.85390627; TotalTime = 2.69577s; TotalTimePerSample = 0.42121ms; SamplesPerSecond = 2374
+ Epoch[ 1 of 4]-Minibatch[  21-  30 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.65138292; EvalErr[0]PerSample = 0.85171872; TotalTime = 2.68877s; TotalTimePerSample = 0.42012ms; SamplesPerSecond = 2380
+Finished Epoch[1]: [Training Set] TrainLossPerSample = 4.6468272; EvalErrPerSample = 0.859375; Ave LearnRatePerSample = 0.0007812500116; EpochTime=8.629841
+Starting Epoch 2: learning rate per sample = 0.000781  momentum = 0.899991 
+minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20546), data subset 0 of 1, with 1 datapasses
+
+Starting minibatch loop.
+ Epoch[ 2 of 4]-Minibatch[   1-  10 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.38700247; EvalErr[0]PerSample = 0.85187501; TotalTime = 2.66416s; TotalTimePerSample = 0.41628ms; SamplesPerSecond = 2402
+ Epoch[ 2 of 4]-Minibatch[  11-  20 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.25403118; EvalErr[0]PerSample = 0.84484375; TotalTime = 2.68480s; TotalTimePerSample = 0.41950ms; SamplesPerSecond = 2383
+ Epoch[ 2 of 4]-Minibatch[  21-  30 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  3.78655028; EvalErr[0]PerSample = 0.74578124; TotalTime = 2.69173s; TotalTimePerSample = 0.42058ms; SamplesPerSecond = 2377
+Finished Epoch[2]: [Training Set] TrainLossPerSample = 4.0748787; EvalErrPerSample = 0.79853517; Ave LearnRatePerSample = 0.0007812500116; EpochTime=8.587094
+Starting Epoch 3: learning rate per sample = 0.000781  momentum = 0.899991 
+minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40980), data subset 0 of 1, with 1 datapasses
+
+Starting minibatch loop.
+ Epoch[ 3 of 4]-Minibatch[   1-  10 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.12038708; EvalErr[0]PerSample = 0.83671874; TotalTime = 2.67057s; TotalTimePerSample = 0.41728ms; SamplesPerSecond = 2396
+ Epoch[ 3 of 4]-Minibatch[  11-  20 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.18581486; EvalErr[0]PerSample = 0.86468750; TotalTime = 2.68291s; TotalTimePerSample = 0.41920ms; SamplesPerSecond = 2385
+ Epoch[ 3 of 4]-Minibatch[  21-  30 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  3.90233088; EvalErr[0]PerSample = 0.83328128; TotalTime = 2.68867s; TotalTimePerSample = 0.42010ms; SamplesPerSecond = 2380
+Finished Epoch[3]: [Training Set] TrainLossPerSample = 4.0109062; EvalErrPerSample = 0.83603519; Ave LearnRatePerSample = 0.0007812500116; EpochTime=8.590276
+Starting Epoch 4: learning rate per sample = 0.000781  momentum = 0.899991 
+minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61662), data subset 0 of 1, with 1 datapasses
+
+Starting minibatch loop.
+ Epoch[ 4 of 4]-Minibatch[   1-  10 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.06653357; EvalErr[0]PerSample = 0.85124999; TotalTime = 2.66504s; TotalTimePerSample = 0.41641ms; SamplesPerSecond = 2401
+ Epoch[ 4 of 4]-Minibatch[  11-  20 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.13874531; EvalErr[0]PerSample = 0.87437499; TotalTime = 2.68065s; TotalTimePerSample = 0.41885ms; SamplesPerSecond = 2387
+ Epoch[ 4 of 4]-Minibatch[  21-  30 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  3.94622993; EvalErr[0]PerSample = 0.81968749; TotalTime = 2.69063s; TotalTimePerSample = 0.42041ms; SamplesPerSecond = 2378
+Finished Epoch[4]: [Training Set] TrainLossPerSample = 3.9960537; EvalErrPerSample = 0.83603519; Ave LearnRatePerSample = 0.0007812500116; EpochTime=8.589762
+COMPLETED
