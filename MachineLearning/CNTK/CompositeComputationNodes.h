@@ -547,9 +547,9 @@ public:
     virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
     {
         //only feature (input0) and output needs to be sliced
-        Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep,
+        Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep,
                                                                                     m_samplesInRecurrentStep);
-        Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep,
+        Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep,
                                                                          m_samplesInRecurrentStep);
 
         EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
@@ -702,8 +702,8 @@ public:
     virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
     {
         //only feature (input0) and output needs to be sliced
-        Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-        Matrix<ElemType> sliceOutputValue = m_functionValues.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+        Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+        Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
         EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
     }
@@ -853,7 +853,7 @@ public:
         FunctionValues().Resize(m_memory.GetNumRows(), m_samplesInRecurrentStep);
         if (frameRange.t() == 0)
             assert(FunctionValues().ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm() == m_memory.ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm());
-        FunctionValues().SetValue(m_memory.ColumnSlice(frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
+        FunctionValues().SetValue(m_memory.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
         assert(FunctionValues().GetNumCols() == m_samplesInRecurrentStep);
     }
 
