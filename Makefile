@@ -65,14 +65,8 @@ SRC:=
 # this early in the file, so let buildall do the work.
 all : buildall
 
-# Set up nvcc target architectures (will generate code to support them all, i.e. fat-binary)
-GENCODE_SM20 := -gencode arch=compute_20,code=\"sm_20,compute_20\"
-GENCODE_SM30 := -gencode arch=compute_30,code=\"sm_30,compute_30\"
-GENCODE_SM35 := -gencode arch=compute_35,code=\"sm_35,compute_35\"
-GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35)
-
 # Set up basic nvcc options and add CUDA targets from above
-CUFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -m 64 $(GENCODE_FLAGS)
+CUFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -m 64
 
 ifdef CUDA_PATH
   ifndef GDK_PATH
@@ -126,14 +120,22 @@ ifdef KALDI_PATH
   KALDI_LIBS += -lkaldi-util -lkaldi-matrix -lkaldi-base -lkaldi-hmm -lkaldi-cudamatrix -lkaldi-nnet -lkaldi-lat
 endif
 
+# Set up nvcc target architectures (will generate code to support them all, i.e. fat-binary, in release mode)
+# In debug mode we will rely on JIT to create code "on the fly" for the underlying architecture
+GENCODE_SM20 := -gencode arch=compute_20,code=\"sm_20,compute_20\"
+GENCODE_SM30 := -gencode arch=compute_30,code=\"sm_30,compute_30\"
+GENCODE_SM35 := -gencode arch=compute_35,code=\"sm_35,compute_35\"
+GENCODE_SM50 := -gencode arch=compute_50,code=\"sm_50,compute_50\"
+GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50)
+
 ifeq ("$(BUILDTYPE)","debug")
   CXXFLAGS += -g
-  CUFLAGS += -O0 -G -lineinfo
+  CUFLAGS += -O0 -G -lineinfo -gencode arch=compute_20,code=\"compute_20\"
 endif
 
 ifeq ("$(BUILDTYPE)","release")
   CXXFLAGS += -O4
-  CUFLAGS += -O3 -use_fast_math -lineinfo
+  CUFLAGS += -O3 -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif
 
 #######
@@ -394,7 +396,7 @@ $(OBJDIR)/%.o : %.cu Makefile
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
 	@mkdir -p $(dir $@)
-	$(NVCC) -c $< -o $@  $(CUFLAGS) $(INCLUDEPATH:%=-I%) -Xcompiler -fPIC
+	$(NVCC) -c $< -o $@  $(CUFLAGS) $(INCLUDEPATH:%=-I%) -Xcompiler "-fPIC -Werror"
 
 $(OBJDIR)/%.o : %.cpp Makefile
 	@echo $(SEPARATOR)
