@@ -1983,10 +1983,11 @@ public:
         //// set prune value to 0 3 3
         //setMinObs (iMinObs);
 
-        for (size_t i = 0; i < minObs.size(); i++)
-        {
-            MESSAGE("minObs %d: %d.", i, minObs[i]);
-        }
+        // TODO: Re-enable when MESSAGE definition is provided (printf?)
+        // for (size_t i = 0; i < minObs.size(); i++)
+        // {
+        //     MESSAGE("minObs %d: %d.", i, minObs[i]);
+        // }
 
         estimate (startId, minObs, dropWord);
 

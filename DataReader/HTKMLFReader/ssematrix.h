@@ -278,7 +278,7 @@ public:
                          bool addtoresult, const float thisscale, const float weight)
     {
         assert (a.size() == b.size());
-        assert ((15 & (int) &a[0]) == 0); assert ((15 & (int) &b[0]) == 0);   // enforce SSE alignment
+        assert ((15 & reinterpret_cast<uintptr_t>(&a[0])) == 0); assert ((15 & reinterpret_cast<uintptr_t>(&b[0])) == 0);   // enforce SSE alignment
 
         size_t nlong = (a.size() + 3) / 4; // number of SSE elements
         const msra::math::float4 * pa = (const msra::math::float4 *) &a[0];
@@ -313,9 +313,9 @@ public:
         // for (size_t k = 0; k < 4; k++)
         //     dotprod (row, const_array_ref<float> (&cols4[k * cols4stride], cols4stride), usij[k * usijstride]);
 
-        assert ((15 & (int) &row[0]) == 0);
-        assert ((15 & (int) &cols4[0]) == 0);
-        assert ((15 & (int) &cols4[cols4stride]) == 0);
+        assert ((15 & reinterpret_cast<uintptr_t>(&row[0])) == 0);
+        assert ((15 & reinterpret_cast<uintptr_t>(&cols4[0])) == 0);
+        assert ((15 & reinterpret_cast<uintptr_t>(&cols4[cols4stride])) == 0);
         //assert (cols4stride * 4 == cols4.size());     // (passed in one vector with 4 columns stacked on top of each other)
         //assert (row.size() * 4 == cols4.size());  // this assert is no longer appropriate because of further breaking into blocks
 
