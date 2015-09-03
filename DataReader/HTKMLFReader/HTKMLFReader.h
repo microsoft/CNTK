@@ -157,7 +157,7 @@ public:
     /// the second data stream has two sentences, with 0 indicating begining of sentences
     /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
     /// frame. 
-    Matrix<ElemType> m_sentenceBegin;
+    Matrix<float> m_sentenceBegin;
 
     /// a matrix of 1 x n_length
     /// 1 denotes the case that there exists sentnece begin or no_labels case in this frame
