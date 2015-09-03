@@ -819,7 +819,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual void AttachInputs(const ComputationNodeBasePtr singleInput) { AttachInputs(UpCast(singleInput)); }
-        virtual void AttachInputs(const ComputationNodeBasePtr leftInput, const ComputationNodeBasePtr rightInput) { AttachInputs(UpCast(leftInput)); AttachInputs(UpCast(rightInput)); }
+        virtual void AttachInputs(const ComputationNodeBasePtr leftInput, const ComputationNodeBasePtr rightInput) { AttachInputs(UpCast(leftInput), UpCast(rightInput)); }
         virtual void AttachInputs(const ComputationNodeBasePtr leftInput, const ComputationNodeBasePtr middleInput, const ComputationNodeBasePtr rightInput) { AttachInputs(UpCast(leftInput), UpCast(middleInput), UpCast(rightInput)); }
         virtual void AttachInputs(const ComputationNodeBasePtr firstInput, const ComputationNodeBasePtr secondInput, const ComputationNodeBasePtr thirdInput, const ComputationNodeBasePtr fourthInput) { AttachInputs(UpCast(firstInput), UpCast(secondInput), UpCast(thirdInput), UpCast(fourthInput)); }
         virtual void AttachInputs(const ComputationNodeBasePtr firstInput, const ComputationNodeBasePtr secondInput, const ComputationNodeBasePtr thirdInput, const ComputationNodeBasePtr fourthInput, const ComputationNodeBasePtr fifthInput) { AttachInputs(UpCast(firstInput), UpCast(secondInput), UpCast(thirdInput), UpCast(fourthInput), UpCast(fifthInput)); }
