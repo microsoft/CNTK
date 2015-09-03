@@ -353,7 +353,7 @@ private:
     bool   mSentenceEnd; 
     bool   mSentenceBegin; 
 
-    Matrix<ElemType> mtSentenceBegin; 
+    Matrix<float> mtSentenceBegin; 
     vector<MinibatchPackingFlag> m_minibatchPackingFlag;
 
 public:
