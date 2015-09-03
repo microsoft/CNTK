@@ -84,7 +84,7 @@ public:
     virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
     virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
     virtual bool DataEnd(EndDataType) { NOT_IMPLEMENTED; };
-    virtual void SetSentenceSegBatch(Matrix<ElemType>&, vector<MinibatchPackingFlag>& ) { NOT_IMPLEMENTED; };
+    virtual void SetSentenceSegBatch(Matrix<float>&, vector<MinibatchPackingFlag>& ) { NOT_IMPLEMENTED; };
     virtual void SetRandomSeed(unsigned seed = 0) { m_seed = seed; };
     virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&) { return false; }
     virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>*) { }
@@ -103,7 +103,7 @@ public:
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
         std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/,
-        Matrix<ElemType>& /*sentenceBegin*/,
+        Matrix<float>& /*sentenceBegin*/,
         std::vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
     {
         return false;
@@ -114,7 +114,7 @@ public:
     virtual bool SetNetOutput(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
         const Matrix<ElemType>& /*outputs*/,
-        const Matrix<ElemType>& /*sentenceBegin*/,
+        const Matrix<float>& /*sentenceBegin*/,
         const std::vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
     {
         return false;
@@ -225,7 +225,7 @@ public:
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         std::map<std::wstring, Matrix<ElemType>*>& matrices,
-        Matrix<ElemType>& sentenceBegin,
+        Matrix<float>& sentenceBegin,
         std::vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
     // Sets the neural network output to the reader. This can be useful if some
@@ -233,10 +233,10 @@ public:
     virtual bool SetNetOutput(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& outputs,
-        const Matrix<ElemType>& sentenceBegin,
+        const Matrix<float>& sentenceBegin,
         const std::vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
-    void SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
+    void SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
     void SetRandomSeed(int);
 

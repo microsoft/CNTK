@@ -22,6 +22,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // Note: while ComputationNode and CompuationNetwork are (supposed to be) independent of ElemType, it is OK to keep this class dependent.
     template<class ElemType>
     ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildSimpleRNN(size_t mbSize)
     {
@@ -400,14 +401,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     int offset = m_lookupTableOrder > 0 ? 1 : 0;
 
                     /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
-                    std::vector<ComputationNodePtr>& encoderPairNodes = encoderNet->PairNodes();
+                    std::vector<ComputationNodeBasePtr>& encoderPairNodes = encoderNet->PairNodes();
                     if (encoderPairNodes.size() != 1)
                         LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one pairoutput node as source node for the decoder network: ");
 
-                    encoderOutput = m_net->PairNetwork(encoderPairNodes[0], L"pairNetwork");
+                    encoderOutput = m_net->PairNetwork(dynamic_pointer_cast<ComputationNode<ElemType>>(encoderPairNodes[0]), L"pairNetwork");
 
                     /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
-                    std::vector<ComputationNodePtr>& encoderEvaluationNodes = encoderNet->OutputNodes();
+                    std::vector<ComputationNodeBasePtr>& encoderEvaluationNodes = encoderNet->OutputNodes();
                     if (encoderEvaluationNodes.size() != 1)
                         LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one output node as source node for the decoder network: ");
 
@@ -529,14 +530,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     int offset = m_lookupTableOrder > 0 ? 1 : 0;
 
                     /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
-                    std::vector<ComputationNodePtr>& encoderPairNodes = encoderNet->PairNodes();
+                    std::vector<ComputationNodeBasePtr>& encoderPairNodes = encoderNet->PairNodes();
                     if (encoderPairNodes.size() != 1)
                         LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one pairoutput node as source node for the decoder network: ");
 
-                    encoderOutput = m_net->PairNetwork(encoderPairNodes[0], L"pairNetwork");
+                    encoderOutput = m_net->PairNetwork(dynamic_pointer_cast<ComputationNode<ElemType>>(encoderPairNodes[0]), L"pairNetwork");
 
                     /// the source network side output dimension needs to match the 1st layer dimension in the decoder network
-                    std::vector<ComputationNodePtr>& encoderEvaluationNodes = encoderNet->OutputNodes();
+                    std::vector<ComputationNodeBasePtr>& encoderEvaluationNodes = encoderNet->OutputNodes();
                     if (encoderEvaluationNodes.size() != 1)
                         LogicError("BuildAlignmentDecoderNetworkFromDescription: encoder network should have only one output node as source node for the decoder network: ");
 
@@ -846,7 +847,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         w = m_net->CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-                        std::list<ComputationNodePtr> recurrent_loop;
+                        std::list<ComputationNodeBasePtr> recurrent_loop;
                         pastValue = m_net->PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
                         output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(m_net->Plus(m_net->Times(u, input), m_net->Times(w, pastValue)), i);
                         pastValue->AttachInputs(output);
@@ -1581,10 +1582,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto p = m_net->FeatureNodes().begin(); p != m_net->FeatureNodes().end(); p++, idx++)
             {
                 layerIdx = 0;  /// reset layer id because each input stream starts from layer 0
-                input = *p;
+                input = dynamic_pointer_cast<ComputationNode<ElemType>>(*p);
                 if (m_applyMeanVarNorm)
                 {
-                    input = *p;
+                    input = dynamic_pointer_cast<ComputationNode<ElemType>>(*p);
                     w = m_net->Mean(input);
                     b = m_net->InvStdDev(input);
                     output = m_net->PerDimMeanVarNormalization(input, w, b);
@@ -1900,10 +1901,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto p = m_net->FeatureNodes().begin(); p != m_net->FeatureNodes().end(); p++, idx++)
             {
                 layerIdx = 0;  /// reset layer id because each input stream starts from layer 0
-                input = *p;
+                input = dynamic_pointer_cast<ComputationNode<ElemType>>(*p);
                 if (m_applyMeanVarNorm)
                 {
-                    input = *p;
+                    input = dynamic_pointer_cast<ComputationNode<ElemType>>(*p);
                     w = m_net->Mean(input);
                     b = m_net->InvStdDev(input);
                     output = m_net->PerDimMeanVarNormalization(input, w, b);

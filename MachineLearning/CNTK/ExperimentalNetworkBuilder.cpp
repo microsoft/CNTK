@@ -47,7 +47,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         L"LogPrior(labels) = Log(Mean(labels)) \n"
         ;
 
-    // TODO: must be moved to ComputationNode.h
+    // TODO: must be moved to ComputationNodeBase.h
     // a ComputationNode that derives from MustFinalizeInit does not resolve some args immediately (just keeps ConfigValuePtrs),
     // assuming they are not ready during construction.
     // This is specifically meant to be used by DelayNode, see comments there.
@@ -180,7 +180,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             // note on optional parameters
             // Instead of defining optional parameters here in code, they are defined as optional args to the creating macro.
 
-            ComputationNodePtr node;
+            ComputationNodeBasePtr node;
 
 #define OpIs(op) (operationName == msra::strfun::utf16(op<ElemType>::TypeName()))
 
@@ -382,7 +382,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 static int randomSeed = 1;
                 wstring initString = config[L"init"];
                 if (initString == L"fixedValue")
-                    node->FunctionValues().SetValue((ElemType)config[L"value"]);
+                    dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->FunctionValues().SetValue((ElemType)config[L"value"]);
                 else if (initString == L"uniform" || initString == L"gaussian")
                 {
                     // TODO: add these options also to old NDL
@@ -394,7 +394,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     wstring initFromFilePath = config[L"initFromFilePath"];
                     if (initFromFilePath.empty())
                         RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
-                    ComputationNetwork<ElemType>::InitLearnableParametersFromFile(node, initFromFilePath, node->GetDeviceId());
+                    ComputationNetwork<ElemType>::InitLearnableParametersFromFile(dynamic_pointer_cast<LearnableParameter<ElemType>>(node), initFromFilePath, node->GetDeviceId());
                 }
                 else
                     RuntimeError("init must be one of the values of [uniform|gaussian|fixedValue|fromFile]");
@@ -698,11 +698,11 @@ namespace Microsoft { namespace MSR { namespace BS {
         }
     private:
         // helper for the factory function for ComputationNodes
-        static vector<ComputationNodePtr> GetInputs(const IConfigRecord & config)
+        static vector<ComputationNodeBasePtr> GetInputs(const IConfigRecord & config)
         {
-            vector<ComputationNodePtr> inputs;
+            vector<ComputationNodeBasePtr> inputs;
             let inputsArg = config[L"inputs"];
-            if (inputsArg.Is<ComputationNode<ElemType>>())          // single arg
+            if (inputsArg.Is<ComputationNodeBase>())          // single arg
                 inputs.push_back(inputsArg);
             else                                                    // a whole vector
             {
@@ -730,7 +730,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
             auto & m_nameToNodeMap = net->GetNameToNodeMap();
 
-            deque<ComputationNodePtr> workList;
+            deque<ComputationNodeBasePtr> workList;
             // flatten the set of all nodes
             // we collect all root ComputationNodes from the config record, and then expand into all their children by work-list processing
             // TODO: This currently only collects nodes of the same ElemType. We could allow conversion operators.

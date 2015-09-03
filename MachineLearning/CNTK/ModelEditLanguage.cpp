@@ -73,7 +73,7 @@ enum MELProperty
 // propArray - Array which contains all nodes that are associated with a particular property
 // set - true if property is to be added, false if property is deleted
 template <typename ElemType>
-void MELScript<ElemType>::SetProperty(ComputationNodePtr nodeProp, vector<ComputationNodePtr>& propArray, bool set)
+void MELScript<ElemType>::SetProperty(ComputationNodeBasePtr nodeProp, vector<ComputationNodeBasePtr>& propArray, bool set)
 {
     auto found = propArray.begin();
     for (;found != propArray.end() && *found != nodeProp; ++found)
@@ -277,7 +277,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::wstring fileName = params[1];
 
         NetNdl<ElemType>* netNdl;
-        vector<ComputationNodePtr> nodes = FindSymbols(params[0], netNdl);
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
         ProcessNDLScript(netNdl, ndlPassAll);
         netNdl->cn->DumpNodeInfoToFile(nodes, includeData, fileName);
     }
@@ -339,8 +339,8 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         // get the nodes
         NetNdl<ElemType>* netNdlTo;
         NetNdl<ElemType>* netNdlFrom;
-        vector<ComputationNodePtr> nodeTo = FindSymbols(params[0], netNdlTo);
-        vector<ComputationNodePtr> nodeFrom = FindSymbols(params[2], netNdlFrom);
+        vector<ComputationNodeBasePtr> nodeTo = FindSymbols(params[0], netNdlTo);
+        vector<ComputationNodeBasePtr> nodeFrom = FindSymbols(params[2], netNdlFrom);
         int inputNum = params[1];
 
         if (netNdlTo != netNdlFrom)
@@ -365,11 +365,11 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // get the nodes
         NetNdl<ElemType>* netNdlTo;
-        vector<ComputationNodePtr> nodeTo = FindSymbols(params[0], netNdlTo);
+        vector<ComputationNodeBasePtr> nodeTo = FindSymbols(params[0], netNdlTo);
         if (nodeTo.size() != 1)
             RuntimeError("SetNodeInputs() must have exactly one target, %s doesn't represent any node.",params[0].c_str());
         
-        vector<ComputationNodePtr> inputNodes;
+        vector<ComputationNodeBasePtr> inputNodes;
         inputNodes.resize(params.size()-1);
 
         // process outstanding NDL scripts ensuring that the inputs have all been resolved
@@ -378,7 +378,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         for (int i=1; i<params.size(); i++)
         {
             NetNdl<ElemType>* netNdlFrom;
-            vector<ComputationNodePtr> nodeFrom = FindSymbols(params[i], netNdlFrom);
+            vector<ComputationNodeBasePtr> nodeFrom = FindSymbols(params[i], netNdlFrom);
 
             if (netNdlTo != netNdlFrom)
                 RuntimeError("SetNodeInputs() requires all symbols from the same network, %s and %s belong to different networks", params[0].c_str(), params[i].c_str());
@@ -444,7 +444,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // get the nodes
         NetNdl<ElemType>* netNdl;
-        vector<ComputationNodePtr> nodes = FindSymbols(params[0], netNdl);
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
 
         // this probabably won't do anything, but make sure all NDL has been created
         ProcessNDLScript(netNdl, ndlPassInitial, false);
@@ -527,7 +527,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // get the nodes
         NetNdl<ElemType>* netNdl;
-        vector<ComputationNodePtr> nodes = FindSymbols(params[0], netNdl);
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
 
         // make sure all NDL links have been resolved
         ProcessNDLScript(netNdl, ndlPassResolve);
@@ -558,7 +558,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             // get the nodes
             NetNdl<ElemType>* netNdl;
-            vector<ComputationNodePtr> nodes = FindSymbols(params[i], netNdl);
+            vector<ComputationNodeBasePtr> nodes = FindSymbols(params[i], netNdl);
 
             // make sure all NDL has been processed in case we are removing some of them...
             // only process each network once, because validates will start failing after first delete

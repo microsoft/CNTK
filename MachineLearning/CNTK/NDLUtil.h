@@ -119,7 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // CheckOutputNodes - check output nodes
         // symbolName - name of the computation nodes we are collecting
         // compNodes - array of computation nodes
-        void CheckOutputNodes(NDLScript<ElemType>* script, std::string symbolName, std::vector<ComputationNodePtr> & compNodes)
+        void CheckOutputNodes(NDLScript<ElemType>* script, std::string symbolName, std::vector<ComputationNodeBasePtr> & compNodes)
         {
             NDLNode<ElemType>* nodeArray = script->FindSymbol(symbolName);
             bool valid = m_net->FeatureNodes().size() > 0; // see if it's already valid
@@ -152,7 +152,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     // see if it's already in the collection
                     bool found = false;
-                    for (ComputationNodePtr compNode : compNodes)
+                    for (const auto & compNode : compNodes)
                     {
                         if (cnNode == compNode)
                         {

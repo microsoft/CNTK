@@ -81,7 +81,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         wstring m_encoderModelPath;
 
         list<pair<wstring, wstring>> m_lst_pair_encoder_decode_node_names;
-        list<pair<ComputationNodePtr, ComputationNodePtr>> m_lst_pair_encoder_decoder_nodes;
+        list<pair<ComputationNodeBasePtr, ComputationNodeBasePtr>> m_lst_pair_encoder_decoder_nodes;
 
     public:
         MultiNetworksSGD(const ConfigParameters& configSGD) : SGDBase(configSGD)
@@ -227,13 +227,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             IDataReader<ElemType>* encoderValidationSetDataReader,
             IDataReader<ElemType>* decoderValidationSetDataReader)
         {
-            std::vector<ComputationNodePtr>& encoderFeatureNodes = encoderNet->FeatureNodes();
-            std::vector<ComputationNodePtr>& encoderEvaluationNodes = encoderNet->OutputNodes();
+            std::vector<ComputationNodeBasePtr>& encoderFeatureNodes = encoderNet->FeatureNodes();
+            std::vector<ComputationNodeBasePtr>& encoderEvaluationNodes = encoderNet->OutputNodes();
 
-            std::vector<ComputationNodePtr>& decoderFeatureNodes = decoderNet->FeatureNodes();
-            std::vector<ComputationNodePtr>& decoderLabelNodes = decoderNet->LabelNodes();
-            std::vector<ComputationNodePtr>& decoderCriterionNodes = GetTrainCriterionNodes(*decoderNet);
-            std::vector<ComputationNodePtr>& decoderEvaluationNodes = GetEvalCriterionNodes(*decoderNet);
+            std::vector<ComputationNodeBasePtr>& decoderFeatureNodes = decoderNet->FeatureNodes();
+            std::vector<ComputationNodeBasePtr>& decoderLabelNodes = decoderNet->LabelNodes();
+            std::vector<ComputationNodeBasePtr>& decoderCriterionNodes = GetTrainCriterionNodes(*decoderNet);
+            std::vector<ComputationNodeBasePtr>& decoderEvaluationNodes = GetEvalCriterionNodes(*decoderNet);
 
             std::map<std::wstring, Matrix<ElemType>*> encoderInputMatrices, decoderInputMatrices;
             for (size_t i = 0; i<encoderFeatureNodes.size(); i++)
@@ -252,24 +252,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             //initializing weights and gradient holder
-            std::list<ComputationNodePtr> & encoderLearnableNodes = encoderNet->LearnableNodes(encoderEvaluationNodes[0]);  //only one criterion so far TODO: support multiple ones?
-            std::list<ComputationNodePtr> & decoderLearnableNodes = decoderNet->LearnableNodes(decoderCriterionNodes[0]);
-            std::list<ComputationNodePtr> learnableNodes;
+            std::list<ComputationNodeBasePtr> & encoderLearnableNodes = encoderNet->LearnableNodes(encoderEvaluationNodes[0]);  //only one criterion so far TODO: support multiple ones?
+            std::list<ComputationNodeBasePtr> & decoderLearnableNodes = decoderNet->LearnableNodes(decoderCriterionNodes[0]);
+            std::list<ComputationNodeBasePtr> learnableNodes;
             for (auto nodeIter = encoderLearnableNodes.begin(); nodeIter != encoderLearnableNodes.end(); nodeIter++)
-            {
-                ComputationNodePtr node = *nodeIter;
-                learnableNodes.push_back(node);
-            }
+                learnableNodes.push_back(*nodeIter);
             for (auto nodeIter = decoderLearnableNodes.begin(); nodeIter != decoderLearnableNodes.end(); nodeIter++)
-            {
-                ComputationNodePtr node = *nodeIter;
-                learnableNodes.push_back(node);
-            }
+                learnableNodes.push_back(*nodeIter);
 
             std::list<Matrix<ElemType>> smoothedGradients;
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
-                ComputationNodePtr node = *nodeIter;
+                ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
                 smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(), node->FunctionValues().GetNumCols(), node->FunctionValues().GetDeviceId()));
             }
 
@@ -307,9 +301,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             bool learnRateInitialized = false;
             if (startEpoch > 0)
-            {
                 learnRateInitialized = this->LoadCheckPointInfo(startEpoch - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, m_prevChosenMinibatchSize);
-            }
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
                 throw std::invalid_argument("When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, or an explicit learning rate must be specified in config for the starting epoch.");
@@ -497,12 +489,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<IDataReader<ElemType>*> validationDataReader)
         {
             size_t iNumNetworks = nets.size();
-            vector<std::vector<ComputationNodePtr>*> featureNodes;
-            vector<std::vector<ComputationNodePtr>*> outputNodes;
-            vector<std::vector<ComputationNodePtr>*> pairNodes;
-            vector<std::vector<ComputationNodePtr>*> labelNodes;
-            vector<std::vector<ComputationNodePtr>*>   criterionNodes;
-            vector<std::vector<ComputationNodePtr>*>   evaluationNodes;
+            vector<std::vector<ComputationNodeBasePtr>*> featureNodes;
+            vector<std::vector<ComputationNodeBasePtr>*> outputNodes;
+            vector<std::vector<ComputationNodeBasePtr>*> pairNodes;
+            vector<std::vector<ComputationNodeBasePtr>*> labelNodes;
+            vector<std::vector<ComputationNodeBasePtr>*>   criterionNodes;
+            vector<std::vector<ComputationNodeBasePtr>*>   evaluationNodes;
             vector<std::map<std::wstring, Matrix<ElemType>*>*> inputMatrices;
 
             for (size_t i = 0; i < iNumNetworks; i++)
@@ -523,31 +515,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t j = 0; j < featPtr->size(); j++)
                 {
                     (*matrices)[(*featPtr)[j]->NodeName()] =
-                        &((*featPtr)[j]->FunctionValues());
+                        &(dynamic_pointer_cast<ComputationNode<ElemType>>((*featPtr)[j])->FunctionValues());
                 }
                         
                 for (size_t j = 0; j<lablPtr->size(); j++)
                 {
                     (*matrices)[(*lablPtr)[j]->NodeName()] = 
-                        &((*lablPtr)[j]->FunctionValues());
+                        &(dynamic_pointer_cast<ComputationNode<ElemType>>((*lablPtr)[j])->FunctionValues());
                 }
                 inputMatrices.push_back(matrices);
             }
 
             //initializing weights and gradient holder
-            std::list<ComputationNodePtr> learnableNodes;
+            std::list<ComputationNodeBasePtr> learnableNodes;
             for (size_t i = 0; i < iNumNetworks; i++)
             {
                 if (criterionNodes[i]->size() == 0)
                 {
                     for (auto ptr = evaluationNodes[i]->begin(); ptr != evaluationNodes[i]->end(); ptr++)
                     {
-                        ComputationNodePtr pptr = *ptr;
+                        ComputationNodeBasePtr pptr = *ptr;
 
-                        std::list<ComputationNodePtr> & eachLearnableNodes = nets[i]->LearnableNodes(pptr);  //only one criterion so far TODO: support multiple ones?
+                        std::list<ComputationNodeBasePtr> & eachLearnableNodes = nets[i]->LearnableNodes(pptr);  //only one criterion so far TODO: support multiple ones?
                         for (auto nodeIter = eachLearnableNodes.begin(); nodeIter != eachLearnableNodes.end(); nodeIter++)
                         {
-                            ComputationNodePtr node = *nodeIter;
+                            ComputationNodeBasePtr node = *nodeIter;
                             learnableNodes.push_back(node);
                         }
                     }
@@ -556,12 +548,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     for (auto ptr = criterionNodes[i]->begin(); ptr != criterionNodes[i]->end(); ptr++)
                     {
-                        ComputationNodePtr pptr = *ptr;
+                        ComputationNodeBasePtr pptr = *ptr;
 
-                        std::list<ComputationNodePtr> & eachLearnableNodes = nets[i]->LearnableNodes(pptr);  //only one criterion so far TODO: support multiple ones?
+                        std::list<ComputationNodeBasePtr> & eachLearnableNodes = nets[i]->LearnableNodes(pptr);  //only one criterion so far TODO: support multiple ones?
                         for (auto nodeIter = eachLearnableNodes.begin(); nodeIter != eachLearnableNodes.end(); nodeIter++)
                         {
-                            ComputationNodePtr node = *nodeIter;
+                            ComputationNodeBasePtr node = *nodeIter;
                             learnableNodes.push_back(node);
                         }
                     }
@@ -575,7 +567,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::list<Matrix<ElemType>> smoothedGradients;
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
-                ComputationNodePtr node = *nodeIter;
+                ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
                 smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(), node->FunctionValues().GetNumCols(), node->FunctionValues().GetDeviceId()));
             }
 
@@ -826,13 +818,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const size_t epochSize,
             vector<ComputationNetwork<ElemType>*> nets,  /// encoder network
             vector<IDataReader<ElemType>*> dataReader,
-            vector<std::vector<ComputationNodePtr>*> featureNodes,
-            vector<std::vector<ComputationNodePtr>*> pairNodes,
-            vector<std::vector<ComputationNodePtr>*> evaluationNodes,
+            vector<std::vector<ComputationNodeBasePtr>*> featureNodes,
+            vector<std::vector<ComputationNodeBasePtr>*> pairNodes,
+            vector<std::vector<ComputationNodeBasePtr>*> evaluationNodes,
             vector<std::map<std::wstring, Matrix<ElemType>*>*> inputMatrices,
-            vector<std::vector<ComputationNodePtr>*> labelNodes,
-            vector<std::vector<ComputationNodePtr>*> criterionNodes,
-            const std::list<ComputationNodePtr>& learnableNodes,
+            vector<std::vector<ComputationNodeBasePtr>*> labelNodes,
+            vector<std::vector<ComputationNodeBasePtr>*> criterionNodes,
+            const std::list<ComputationNodeBasePtr>& learnableNodes,
             const ElemType learnRatePerSample,
             std::list<Matrix<ElemType>>& smoothedGradients,
             ElemType& epochCriterion, std::vector<ElemType>& epochEvalErrors, size_t& totalSamplesSeen)
@@ -946,7 +938,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     auto smoothedGradientIter = smoothedGradients.begin();
                     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
                     {
-                        ComputationNodePtr node = *nodeIter;
+                        ComputationNodeBasePtr node = *nodeIter;
                         Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
 
                         UpdateWeights(node, smoothedGradient, learnRatePerSample, m_momentumPerSample[epochNumber], actualMBSize, m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
@@ -1023,10 +1015,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool EncoderDecoderGradientCheck(
             vector<ComputationNetwork<ElemType>*> nets,  /// encoder network
             vector<IDataReader<ElemType>*> dataReader,
-            vector<std::vector<ComputationNodePtr>*> evaluationNodes,
-            vector<std::vector<ComputationNodePtr>*> pairNodes,
-            vector<std::vector<ComputationNodePtr>*> featureNodes,
-            vector<std::vector<ComputationNodePtr>*> criterionNodes,
+            vector<std::vector<ComputationNodeBasePtr>*> evaluationNodes,
+            vector<std::vector<ComputationNodeBasePtr>*> pairNodes,
+            vector<std::vector<ComputationNodeBasePtr>*> featureNodes,
+            vector<std::vector<ComputationNodeBasePtr>*> criterionNodes,
             Matrix<ElemType>& localEpochCriterion,
             Matrix<ElemType>& localEpochEvalErrors
             )
@@ -1038,14 +1030,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int i = iNumNetworks - 1; i >= 0; i--)
             {
                 /// check decoder learnable parameters
-                std::list<ComputationNodePtr> & learnableNodes =
+                std::list<ComputationNodeBasePtr> & learnableNodes =
                     (evaluationNodes[i]->size() == 0 && pairNodes[i]->size() > 0) ?
                         nets[i]->LearnableNodes((*pairNodes[i])[0])
                         : nets[i]->LearnableNodes((*evaluationNodes[i])[0]);
 
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                 {
-                    ComputationNodePtr node = *nodeIter;
+                    ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
 
                     for (size_t itry = 0; itry < min((size_t)10, node->FunctionValues().GetNumElements()); itry++)
                     {
@@ -1137,10 +1129,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void EncoderDecoderWithHiddenStatesForwardPass(
             vector<ComputationNetwork<ElemType>*> & nets, // TODO: should these vectors all be refs?
             vector<IDataReader<ElemType>*> & dataReader,
-            vector<vector<ComputationNodePtr>*> & pairNodes,
-            vector<vector<ComputationNodePtr>*> & evaluationNodes,
-            vector<vector<ComputationNodePtr>*> & /*featureNodes*/,
-            vector<vector<ComputationNodePtr>*> & criterionNodes,
+            vector<vector<ComputationNodeBasePtr>*> & pairNodes,
+            vector<vector<ComputationNodeBasePtr>*> & evaluationNodes,
+            vector<vector<ComputationNodeBasePtr>*> & /*featureNodes*/,
+            vector<vector<ComputationNodeBasePtr>*> & criterionNodes,
             Matrix<ElemType>& localEpochCriterion,
             Matrix<ElemType>& localEpochEvalErrors
             )
@@ -1166,10 +1158,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNetwork<ElemType>* decoderNet,
             IDataReader<ElemType>* encoderTrainSetDataReader,
             IDataReader<ElemType>* decoderTrainSetDataReader,
-            vector<ComputationNodePtr>& encoderEvaluationNodes,
-            vector<ComputationNodePtr>& decoderCriterionNodes,
-            vector<ComputationNodePtr>& decoderEvaluationNodes,
-            vector<ComputationNodePtr>& decoderPairNodes,
+            vector<ComputationNodeBasePtr>& encoderEvaluationNodes,
+            vector<ComputationNodeBasePtr>& decoderCriterionNodes,
+            vector<ComputationNodeBasePtr>& decoderEvaluationNodes,
+            vector<ComputationNodeBasePtr>& decoderPairNodes,
             Matrix<ElemType>& localEpochCriterion,
             Matrix<ElemType>& localEpochEvalErrors
             )
@@ -1198,7 +1190,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 decoderNet->Evaluate(decoderCriterionNodes[0]);
 
-                Matrix<ElemType>::AddElementToElement(decoderCriterionNodes[0]->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
+                Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderCriterionNodes[0])->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
 
                 size_t numEvalNodes = decoderEvaluationNodes.size();
                 std::vector<ElemType>mbEvalErrors(numEvalNodes, 0);
@@ -1206,7 +1198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < numEvalNodes; i++)
                 {
                     decoderNet->Evaluate(decoderEvaluationNodes[i]);
-                    Matrix<ElemType>::AddElementToElement(decoderEvaluationNodes[i]->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
+                    Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderEvaluationNodes[i])->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
                 }
 #ifdef DEBUG_DECODER
                 fprintf(stderr, "ForwardPass score = %.8e\n", localEpochCriterion.Get00Element());
@@ -1216,8 +1208,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void EncoderDecoderWithHiddenStatesErrorProp(
             vector<ComputationNetwork<ElemType>*> networks,  /// encoder network
-            vector<std::vector<ComputationNodePtr>*> pairNodes,
-            vector<std::vector<ComputationNodePtr>*> criterionNodes)
+            vector<std::vector<ComputationNodeBasePtr>*> pairNodes,
+            vector<std::vector<ComputationNodeBasePtr>*> criterionNodes)
         {
             /**
             the networks are organized in the forward pass

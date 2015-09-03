@@ -38,7 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             
             //specify output nodes and files
-            std::vector<ComputationNodePtr> outputNodes;
+            std::vector<ComputationNodeBasePtr> outputNodes;
             if (outputNodeNames.size() == 0)
             {
                 if (m_verbosity > 0)
@@ -55,17 +55,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             //specify feature value nodes
-            std::vector<ComputationNodePtr>& featureNodes = m_net.FeatureNodes();
-            std::vector<ComputationNodePtr>& labelNodes = m_net.LabelNodes();
+            std::vector<ComputationNodeBasePtr>& featureNodes = m_net.FeatureNodes();
+            std::vector<ComputationNodeBasePtr>& labelNodes = m_net.LabelNodes();
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i=0; i<featureNodes.size(); i++)
-            {
-                inputMatrices[featureNodes[i]->NodeName()] = &featureNodes[i]->FunctionValues();
-            }
+                inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
             for (size_t i=0; i<labelNodes.size(); i++)
-            {
-                inputMatrices[labelNodes[i]->NodeName()] = &labelNodes[i]->FunctionValues();                
-            }
+                inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->FunctionValues();
             //Matrix<ElemType> endOfFile =  Matrix<ElemType>((size_t)1,(size_t)1);
             //endOfFile(0,0)=0;
 
@@ -89,29 +85,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int i=0; i<outputNodes.size(); i++)
                 {
                     m_net.Evaluate(outputNodes[i]);
-                    outputMatrices[outputNodes[i]->NodeName()] = (void *)(&outputNodes[i]->FunctionValues());
+                    outputMatrices[outputNodes[i]->NodeName()] = (void *)(&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->FunctionValues());
                 }
 
                 if (doUnitTest) 
                 {
                     std::map<std::wstring, void *, nocase_compare> inputMatricesUnitTest;
                     for (auto iter = inputMatrices.begin(); iter!= inputMatrices.end(); iter++)
-                    {
                         inputMatricesUnitTest[iter->first] = (void *)(iter->second);
-                    }
                     dataWriter.SaveData(0, inputMatricesUnitTest, actualMBSize, actualMBSize, 0);
                 }
                 else 
-                {
                     dataWriter.SaveData(0, outputMatrices, actualMBSize, actualMBSize, 0);
-                }
 
                 totalEpochSamples += actualMBSize;
             
                 /// call DataEnd function in dataReader to do
                 /// reader specific process if sentence ending is reached
                 dataReader.DataEnd(endDataSentence);
-
             }           
 
             if (m_verbosity > 0)
@@ -127,7 +118,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             msra::files::make_intermediate_dirs (outputPath);
 
             //specify output nodes and files
-            std::vector<ComputationNodePtr> outputNodes;
+            std::vector<ComputationNodeBasePtr> outputNodes;
             if (outputNodeNames.size() == 0)
             {
                 fprintf (stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
@@ -154,9 +145,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto & featureNodes = m_net.FeatureNodes();
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i=0; i<featureNodes.size(); i++)
-            {
-                inputMatrices[featureNodes[i]->NodeName()] = &featureNodes[i]->FunctionValues();
-            }
+                inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
                         
             //evaluate with minibatches
             dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
@@ -178,7 +167,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     m_net.Evaluate(outputNodes[i]);
                     
-                    Matrix<ElemType> & outputValues = outputNodes[i]->FunctionValues();
+                    Matrix<ElemType> & outputValues = dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->FunctionValues();
                     ofstream & outputStream = *outputStreams[i];
                     outputValues.CopyToArray(tempArray, tempArraySize);
                     ElemType * pCurValue = tempArray;

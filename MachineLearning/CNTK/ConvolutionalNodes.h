@@ -222,19 +222,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
+        // note: this also infers dimensions from chilren
         virtual void Validate()
         {
             PrintSelfBeforeValidation();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("ConvolutionNode requires two inputs.");
+                LogicError("ConvolutionNode requires two inputs.");
 
             //we may want to remove this check in the future if we want to support the case that the weight itself is result of some computation 
             //if (Inputs(0)->OperationName() != LearnableParameter<ElemType>::TypeName())
             //    throw std::logic_error("ConvolutionNode requires the first input to be LearnableParameter type.");
 
             if (m_horizontalSubsample > m_kernelWidth || m_verticalSubsample > m_kernelHeight)
-                throw std::invalid_argument("In ConvolutionNode horizontalSubsample must <= kernelWidth and verticalSubsample must <= kernelHeight.");
+                InvalidArgument("In ConvolutionNode horizontalSubsample must <= kernelWidth and verticalSubsample must <= kernelHeight.");
 
             InferImageDimsFromInputs();
 
@@ -245,11 +246,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(0)->FunctionValues().Resize(m_outputChannels, weightCols);
             }
 
-            if (m_children[0]->FunctionValues().GetNumCols() != weightCols || m_children[0]->FunctionValues().GetNumRows() != m_outputChannels)
+            if (Inputs(0)->FunctionValues().GetNumCols() != weightCols || Inputs(0)->FunctionValues().GetNumRows() != m_outputChannels)
             {
                 msra::strfun::strprintf msg("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", 
-                    m_children[0]->NodeName().c_str(), m_outputChannels, weightCols);
-                throw std::logic_error(msg.c_str());            
+                                            m_children[0]->NodeName().c_str(), m_outputChannels, weightCols);
+                LogicError(msg.c_str());
             }
 
             size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;
@@ -258,18 +259,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(1)->FunctionValues().Resize(inputDim, Inputs(1)->FunctionValues().GetNumCols());
             }
 
-            if (m_children[1]->FunctionValues().GetNumRows() != inputDim)
+            if (Inputs(1)->FunctionValues().GetNumRows() != inputDim)
             {
                 msra::strfun::strprintf msg("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", 
-                    NodeName().c_str(), inputDim);
-                throw std::logic_error(msg.c_str());            
+                                            NodeName().c_str(), inputDim);
+                LogicError(msg.c_str());
             }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements() )
-                throw std::logic_error("Convolution operation: one of the operants has 0 element.");
+                LogicError("Convolution operation: one of the operants has 0 element.");
             
             size_t outputDim = m_outputWidth * m_outputHeight * m_outputChannels;
-            FunctionValues().Resize(outputDim, m_children[1]->FunctionValues().GetNumCols());
+            FunctionValues().Resize(outputDim, Inputs(1)->FunctionValues().GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
@@ -604,7 +605,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(0)->FunctionValues().Resize(m_inputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
             }
 
-            if (m_children[0]->FunctionValues().GetNumRows() != m_inputSizePerSample)
+            if (Inputs(0)->FunctionValues().GetNumRows() != m_inputSizePerSample)
             {
                 msra::strfun::strprintf msg("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", 
                     NodeName().c_str(), m_inputSizePerSample);
@@ -614,7 +615,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(0)->FunctionValues().HasNoElements())
                 throw std::logic_error("MaxPoolingNode operation: the input node has 0 element.");
 
-            m_functionValues.Resize(m_outputSizePerSample, m_children[0]->FunctionValues().GetNumCols());
+            m_functionValues.Resize(m_outputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
@@ -816,7 +817,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(0)->FunctionValues().Resize(m_inputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
             }
 
-            if (m_children[0]->FunctionValues().GetNumRows() != m_inputSizePerSample)
+            if (Inputs(0)->FunctionValues().GetNumRows() != m_inputSizePerSample)
             {
                 msra::strfun::strprintf msg("each column of input to the AveragePooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", 
                     NodeName().c_str(), m_inputSizePerSample);
@@ -826,7 +827,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(0)->FunctionValues().HasNoElements())
                 throw std::logic_error("AveragePoolingNode operation: the input node has 0 element.");
 
-            FunctionValues().Resize(m_outputSizePerSample, m_children[0]->FunctionValues().GetNumCols());
+            FunctionValues().Resize(m_outputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
