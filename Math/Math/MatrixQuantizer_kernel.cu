@@ -24,7 +24,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         blockdim = (unsigned int) warpsize;                             // -> blockIdx.x
     }
     // get the array index for the current thread
-    __device__ static size_t ParallelizeOverRangeIndex()
+    __device__ __inline__ static size_t ParallelizeOverRangeIndex()
     {
         return threadIdx.x + (blockIdx.x * blockDim.x);
     }
