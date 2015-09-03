@@ -76,7 +76,8 @@ namespace Microsoft { namespace MSR { namespace BS {
     typedef BoxOf<wstring> String;
 
     // -----------------------------------------------------------------------
-    // ComputationNodeObject -- ths 'magic' class that our parser understands for infix operations
+    // ComputationNodeObject -- the 'magic' class that our parser understands for infix operations
+    // TODO: unify with ComputationNodeBase
     // -----------------------------------------------------------------------
 
     class ComputationNodeObject : public BS::Object { };   // a base class for all nodes (that has no template parameter)

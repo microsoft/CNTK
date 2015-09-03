@@ -622,7 +622,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
                     PrepareThisErrorsBeforeBackProp(timeIdxInSeq, nT, error, stateError, grdToPrevOutput, grdToPrevState,
-                        m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, m_samplesInRecurrentStep, m_sentenceSeg);
+                                                    m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, m_samplesInRecurrentStep, m_sentenceSeg);
 
 #ifdef DEBUG_DECODER
                     fprintf(stderr, "output error [%ld] norm = %.8e\n", timeIdxInSeq, error.FrobeniusNorm());
@@ -920,7 +920,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", t, nT);
 
             int utt_t = (int)t / m_samplesInRecurrentStep;
-            Matrix<ElemType> thisCol = m_sentenceSeg->ColumnSlice(utt_t, 1);
+            Matrix<float> thisCol = m_sentenceSeg->ColumnSlice(utt_t, 1);
             thisCol.Reshape(1, m_samplesInRecurrentStep);
             return (int) thisCol.ColumnSlice(streamid, 1).Get00Element();
         }
@@ -1053,7 +1053,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Matrix<ElemType> & state,
             const Matrix<ElemType> & pastOutput,
             const Matrix<ElemType> & pastState,
-            size_t nsamples, const ElemType & initStateValue, Matrix<ElemType>* sentenceBegin)
+            size_t nsamples, const ElemType & initStateValue, Matrix<float>* sentenceBegin)
         {
             size_t nRow = pastOutput.GetNumRows();
             size_t nStream = sentenceBegin->GetNumRows();
@@ -1069,14 +1069,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (sentenceBegin->GetNumRows() != nsamples)
                 LogicError("Number of rows should be the same as the number of data streams");
 
-            Matrix<ElemType> colBegin(sentenceBegin->GetDeviceId());
+            Matrix<float> colBegin(sentenceBegin->GetDeviceId());
             colBegin.SetValue(sentenceBegin->ColumnSlice(utt_t, 1));
-            Matrix<ElemType> colSeg(colBegin.GetDeviceId()); 
+            Matrix<ElemType> colSeg(colBegin.GetDeviceId());
             colSeg.Resize(nStream, nStream);
-            // will reset to 0 if sentence begining at a posiiton is 0
+            // will reset to 0 if sentence begining at a position is 0
             // will keep the output if it is not the sentence begining
             colBegin.InplaceTruncateBottom(SEQUENCE_START);
             colBegin.InplaceTruncateTop(SEQUENCE_MIDDLE);
+#if 1
+            initStateValue; pastState; pastOutput; state; output;
+            LogicError("PrepareHistory: finish this");
+#else
+            // BUGBUG: we need to upcast float to double here
             colSeg.SetDiagonalValue(colBegin);
 
             Matrix<ElemType> newPrevOutput(colBegin.GetDeviceId());
@@ -1099,6 +1104,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             slicePrevOutput.ColumnSlice(0, nsamples).SetValue(newPrevOutput);
             slicePrevState.ColumnSlice(0, nsamples).SetValue(newPrevState);
+#endif
         }
 
         // prepare prevstate and prevoutput
@@ -1111,7 +1117,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Matrix<ElemType>& grdToPrevState,
             const Matrix<ElemType>& obs_error_from_future_minibatch,
             const Matrix<ElemType>& state_error_from_future_minibatch,
-            size_t nsamples, Matrix<ElemType>* sentenceBegin)
+            size_t nsamples, Matrix<float>* sentenceBegin)
         {
             int utt_t = (int)floor(timeIdxInSeq / nsamples);
             int total_utt_t = (int)floor(nT / nsamples);
@@ -1135,6 +1141,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
 
+#if 1
+            sentenceBegin;
+            LogicError("PrepareThisErrorsBeforeBackProp: finish this");
+#else
             Matrix<ElemType> colBegin(sentenceBegin->GetDeviceId());
             colBegin.SetValue(sentenceBegin->ColumnSlice(utt_t, 1));
             colBegin.InplaceTruncateBottom(NO_INPUT);
@@ -1153,6 +1163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
             error.ColumnSlice(0, nsamples).SetValue(newOutputError);
             stateError.ColumnSlice(0, nsamples).SetValue(newStateError);
+#endif
         }
 
         // prepare prevstate and prevoutput
@@ -1160,10 +1171,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t timeIdxInSeq,
             Matrix<ElemType> & errors,
             Matrix<ElemType> & stateError,
-            size_t nsamples, Matrix<ElemType>* sentenceBegin)
+            size_t nsamples, Matrix<float>* sentenceBegin)
         {
             int utt_t = (int)floor(timeIdxInSeq / nsamples);
             Matrix<ElemType> colBegin(sentenceBegin->GetDeviceId());
+#if 1
+            errors; stateError; utt_t;
+            LogicError("PrepareErrors: finish this");
+#else
             colBegin.SetValue(sentenceBegin->ColumnSlice(utt_t, 1));
             // will reset to 0 if sentence begining at a posiiton is 0
             // will keep the output if it is not the sentence begining
@@ -1183,6 +1198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             errors.ColumnSlice(0, nsamples).SetValue(newOutputError);
             stateError.ColumnSlice(0, nsamples).SetValue(newStateError);
+#endif
         }
 
         static void WINAPI EvaluateThisNodeS(
@@ -1325,7 +1341,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> target(m_deviceId);
                 Matrix<ElemType> giWeight, ghWeight, goWeight;
                 ElemType initStateValue = m_DefaultState;
-                Matrix<ElemType> boundary(m_deviceId);
+                Matrix<float> boundary(m_deviceId);
                 boundary.Resize(1, nT);
                 boundary.SetValue(SEQUENCE_MIDDLE);
                 boundary.ColumnSlice(0, 1).SetValue(SEQUENCE_START);

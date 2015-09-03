@@ -60,7 +60,7 @@ public:
             nodePtr = ComputationNode<ElemType>::FromVoidPtr(node->GetEvalValue());
             if (!nodePtr)
             {
-                nodePtr = m_net.GetNodeFromName(name);
+                nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net.GetNodeFromName(name));
                 node->SetEvalValue(nodePtr.get());
             }
         }
@@ -79,7 +79,7 @@ public:
 
                 // first look for this node already existing in the network
                 if (m_net.NodeNameExist(name))
-                    nodePtr = m_net.GetNodeFromName(name);
+                    nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net.GetNodeFromName(name));
                 else
                     nodePtr = m_net.CreateInputNode(name, rows, cols);
             }
@@ -98,7 +98,7 @@ public:
 
                 // first look for this node already existing in the network
                 if (m_net.NodeNameExist(name))
-                    nodePtr = m_net.GetNodeFromName(name);
+                    nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net.GetNodeFromName(name));
                 else
                     nodePtr = m_net.CreateSparseInputNode(name, rows, cols);
             }
@@ -469,7 +469,7 @@ public:
 
             if (cnNodeType == RowStackNode<ElemType>::TypeName()) //support variable length inputs
             {
-                std::vector<ComputationNodePtr> inputNodes;
+                std::vector<ComputationNodeBasePtr> inputNodes;
                 inputNodes.resize(inputs.size());
                 for (int i = 0; i < inputs.size(); i++)
                     inputNodes[i] = ComputationNode<ElemType>::FromVoidPtr(inputs[i]);
@@ -789,9 +789,9 @@ public:
     // nodeGroup - group vector to add to
     // compNode - computation node to add
     // TODO: It seems that this is also applied to other tyoes of nodes, so the name of this function is wrong.
-    static void SetOutputNode(std::vector<ComputationNodePtr> & nodeGroup, ComputationNodePtr compNode)
+    static void SetOutputNode(std::vector<ComputationNodeBasePtr> & nodeGroup, ComputationNodePtr compNode)
     {
-        for (ComputationNodePtr node : nodeGroup)
+        for (const auto & node : nodeGroup)
         {
             if (node == compNode)
                 return;

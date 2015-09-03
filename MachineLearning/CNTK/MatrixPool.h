@@ -18,32 +18,37 @@ namespace Microsoft {
     namespace MSR {
         namespace CNTK {
 
-            template<class ElemType>
             class MatrixPool
             {
-            protected:
-                typedef shared_ptr<Matrix<ElemType>> MatrixPtr;
-
+                vector<shared_ptr<Matrix<float>>> m_releasedFloatMatrices;
+                vector<shared_ptr<Matrix<double>>> m_releasedDoubleMatrices;
+                void GetReleasedMatrices(vector<shared_ptr<Matrix<float>>>  * releasedMatrices) { releasedMatrices = &m_releasedFloatMatrices; }
+                void GetReleasedMatrices(vector<shared_ptr<Matrix<double>>> * releasedMatrices) { releasedMatrices = &m_releasedDoubleMatrices; }
             public:
-                void Release(const MatrixPtr& freeMatrix)
+                template<typename ElemType>
+                void Release(const shared_ptr<Matrix<ElemType>> & freeMatrix)
                 {
+                    vector<shared_ptr<Matrix<float>>> * releasedMatrices;
+                    GetReleasedMatrices(releasedMatrices);
                     if (freeMatrix == nullptr)
                         RuntimeError("MatrixPool::Release: freeMatrix should not be null.");
-
-                    m_releasedMatrices.push_back(freeMatrix);
+                    releasedMatrices->push_back(freeMatrix);
                 }
 
-                MatrixPtr Request(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+                template<typename ElemType>
+                shared_ptr<Matrix<ElemType>> Request(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
                 {
-                    MatrixPtr matrixPtr = nullptr;
-                    if (m_releasedMatrices.empty())
+                    vector<shared_ptr<Matrix<float>>> * releasedMatrices;
+                    GetReleasedMatrices(releasedMatrices);
+                    shared_ptr<Matrix<ElemType>> matrixPtr = nullptr;
+                    if (releasedMatrices->empty())
                     {
                         matrixPtr = make_shared<Matrix<ElemType>>(deviceId);
                     }
                     else
                     {
-                        matrixPtr = m_releasedMatrices.back();
-                        m_releasedMatrices.pop_back();
+                        matrixPtr = releasedMatrices->back();
+                        releasedMatrices->pop_back();
                     }
 
                     if (matrixPtr == nullptr)
@@ -51,14 +56,7 @@ namespace Microsoft {
 
                     return matrixPtr;
                 }
-
-            protected:
-
-                vector<MatrixPtr> m_releasedMatrices;
             };
-
-            template class MatrixPool<float>;
-            template class MatrixPool<double>;
         }
     }
 }
