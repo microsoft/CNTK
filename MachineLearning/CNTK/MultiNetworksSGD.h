@@ -237,19 +237,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             std::map<std::wstring, Matrix<ElemType>*> encoderInputMatrices, decoderInputMatrices;
             for (size_t i = 0; i<encoderFeatureNodes.size(); i++)
-            {
-                encoderInputMatrices[encoderFeatureNodes[i]->NodeName()] =
-                    &encoderFeatureNodes[i]->FunctionValues();
-            }
+                encoderInputMatrices[encoderFeatureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(encoderFeatureNodes[i])->FunctionValues();
             for (size_t i = 0; i<decoderFeatureNodes.size(); i++)
-            {
-                decoderInputMatrices[decoderFeatureNodes[i]->NodeName()] =
-                    &decoderFeatureNodes[i]->FunctionValues();
-            }
+                decoderInputMatrices[decoderFeatureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(decoderFeatureNodes[i])->FunctionValues();
             for (size_t i = 0; i<decoderLabelNodes.size(); i++)
-            {
-                decoderInputMatrices[decoderLabelNodes[i]->NodeName()] = &decoderLabelNodes[i]->FunctionValues();
-            }
+                decoderInputMatrices[decoderLabelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(decoderLabelNodes[i])->FunctionValues();
 
             //initializing weights and gradient holder
             std::list<ComputationNodeBasePtr> & encoderLearnableNodes = encoderNet->LearnableNodes(encoderEvaluationNodes[0]);  //only one criterion so far TODO: support multiple ones?
