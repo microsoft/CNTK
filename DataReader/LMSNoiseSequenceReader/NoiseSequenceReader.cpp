@@ -9,7 +9,7 @@
 
 #include "stdafx.h"
 #define DATAREADER_EXPORTS  // creating the exports here
-#include "HTXSequenceReader.h"
+#include "NoiseSequenceReader.h"
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
@@ -81,13 +81,12 @@ void BatchSequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, int& 
 }
 
 template<class ElemType>
-bool BatchSequenceReader<ElemType>::refreshCacheSeq(int seq_id)
+bool BatchSequenceReader<ElemType>::getDataSeq(list<int> &list)
 {
-    if (sequence_cache[seq_id]->size() > 0)
-        return true;
-    bool res = false;
     if (!fin.is_open())
         return false;
+    list.clear();
+    bool res = false;
     string word;
     int wordRead = 0;
     int last_word_id = -1;
@@ -102,17 +101,44 @@ bool BatchSequenceReader<ElemType>::refreshCacheSeq(int seq_id)
         int word_id = word4idx[word];
         wordRead++;
         last_word_id = -1;
-        if (sequence_cache[seq_id]->size() >= 1)
-            last_word_id = sequence_cache[seq_id]->back();
-        sequence_cache[seq_id]->push_back(word_id);
+        if (list.size() >= 1)
+            last_word_id = list.back();
+        list.push_back(word_id);
         res = true;
-        if (word_id == sentenceEndId && sequence_cache[seq_id]->size() > 1 && last_word_id != sentenceEndId) { //Meet a sentence End
-            if (!randomize)
-                break;
-            if ((rand() % 10) < 5) {
-                break;
-            }// else
-            //    fprintf(stderr, "debughtx random:goto anoter sentence\n");
+        if (word_id == sentenceEndId && list.size() > 1 && last_word_id != sentenceEndId) { //Meet a sentence End
+            break;
+        }
+    }
+    return res;
+}
+
+template<class ElemType>
+bool BatchSequenceReader<ElemType>::getNoiseSeq(list<pair<int, float>> &list)
+{
+    if (!fin_noise.is_open())
+        return false;
+    list.clear();
+    bool res = false;
+    string word;
+    int wordRead = 0;
+    int last_word_id = -1;
+    for (;;) {
+        if (!(fin_noise >> word)) {
+            fin_noise.close();
+            if (wordRead == 0)
+                return false;
+            else
+                return true;
+        }
+        int word_id = word4idx[word];
+        wordRead++;
+        last_word_id = -1;
+        if (list.size() >= 1)
+            last_word_id = list.back().first;
+        list.push_back(pair<int, float>(word_id, (float)0));
+        res = true;
+        if (word_id == sentenceEndId && list.size() > 1 && last_word_id != sentenceEndId) { //Meet a sentence End
+            break;
         }
     }
     return res;
@@ -136,7 +162,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     if (wClassFile.compare(L"") == 0) {
         RuntimeError("[LMHTXSequenceReader] wordclass option not set.");
     }
-    oneSentenceInMB = (int)readerConfig("oneSentenceInMB", "0");
+    //oneSentenceInMB = (int)readerConfig("oneSentenceInMB", "0"); //In this reader we assume one sentence in a MB
     string outputLabelType_str;
     outputLabelType_str = std::string(readerConfig("outputLabelType", "compressed"));
     if (strcmp(outputLabelType_str.c_str(), "compressed") == 0)
@@ -150,14 +176,19 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     std::wstring temp_s = readerConfig("file");
     fileName = std::string(temp_s.begin(), temp_s.end());
 
+    temp_s = readerConfig("noisefile");
+    fileName_noise = std::string(temp_s.begin(), temp_s.end());
+
     debughtx = readerConfig("debughtx", "0");
     if (debughtx == 1)
         fprintf(stderr, "debughtx set to one, will give a lot of debug output....\n");
 
-    if ((int)(readerConfig("randomize", "1")) == 1)
-        randomize = true;
+    if ((int)(readerConfig("loopnoisefile", "1")) == 1)
+        loopNoiseFile = true;
     else
-        randomize = false;
+        loopNoiseFile = false;
+
+    noiseRatio = (int)(readerConfig("noiseratio", "1"));
 
     ReadClassInfo(wClassFile, class_size,
         word4idx,
@@ -190,18 +221,21 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     m_mbSize = mbSize; //Size of minibatch requested
     fprintf(stderr, "debughtx StartMinibatchLoop MBSize is %d\n", m_mbSize);
     fprintf(stderr, "debughtx StartMinibatchLoop sequenceSize is %d\n", mBlgSize);
-    fprintf(stderr, "debughtx StartMinibatchLoop randomize is %d\n", randomize);
-    fprintf(stderr, "debughtx StartMinibatchLoop oneSentenceInMB is %d\n", oneSentenceInMB);
+    fprintf(stderr, "debughtx StartMinibatchLoop loopNoiseFile is %d\n", loopNoiseFile);
     DEBUG_HTX fprintf(stderr, "fileName:%s\n", fileName.c_str());
+    if (fin.is_open()) {
+        LogicError("NoiseSequenceReader::StartMinibatchLoop fin should not be opened now.\n");
+    }
     fin.open(fileName);
-
-    sequence_cache.clear();
-    for (int i = 0; i < mBlgSize; i++)
-        sequence_cache.push_back(new list<int>());
+    DEBUG_HTX fprintf(stderr, "noisefilename:%s\n", fileName_noise.c_str());
+    if (!loopNoiseFile) {
+        if (fin_noise.is_open())
+            fin_noise.close();
+        fin_noise.open(fileName_noise);
+    }
+    //fin_noise will be processed in a loop, in order to get different noise samples for each epoch
 
     minibatchFlag.TransferFromDeviceToDevice(minibatchFlag.GetDeviceId(), CPUDEVICE, false, true, false); //This matrix lies in CPU, because I want to use SetValue(i,j)
-
-    //EnsureDataAvailable(0); //debughtx, just for debug!
 
     DEBUG_HTX fprintf(stderr, "debughtx ---void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop ended---\n");
 }
@@ -223,6 +257,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     Matrix<ElemType>* feature_m = matrices[L"features"];
     Matrix<ElemType>* label_m = matrices[L"labels"];
     size_t wordNumber = mBlgSize * m_mbSize;
+    bool res = false; //Got something new?
 
     DEVICEID_TYPE featureDeviceId = feature_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
     DEVICEID_TYPE labelDeviceId = label_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
@@ -247,11 +282,11 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     label_m->SetValue(0);
     //label_m->Reset(); //Can't do this 
 
-    bool res = false; //Got something new?
     minibatchFlag.Resize(mBlgSize, m_mbSize);
 
     int *temp_feature =  new int[wordNumber];
 
+    /*
     for (int i = 0; i < mBlgSize; i++) {
         bool end = false;
         for (int j = 0; j < m_mbSize; j++) {
@@ -286,6 +321,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             }
         }
     }
+
+    */
 
     for (int i = 0; i < wordNumber; i++)
         feature_m->SetValue(temp_feature[i], i, (ElemType)1); //The assigning to a sparse matrix need to follow a strict order!!!

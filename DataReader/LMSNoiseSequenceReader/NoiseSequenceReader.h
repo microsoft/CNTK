@@ -47,15 +47,16 @@ public:
     map<int, size_t> idx4cnt;
     string mUnk;
 	int mBlgSize; //sequence Number
-    bool randomize;
 
     size_t m_mbSize;
 
     string fileName; 
+    string fileName_noise;
     ifstream fin;
-    vector<list<int>*> sequence_cache;
+    ifstream fin_noise;
+    int noiseRatio; //How many noise sentence after one data sentence
+    bool loopNoiseFile; //Whether to loop the noise file(re-open the file for each epoch), enable more randomness
     int debughtx; //used in the DEBUG_HTX macro, control the debug output
-    int oneSentenceInMB; //Only allow at most one sentence in a MB, should be turned on for bi-directional training, so we will have sentence end in MB
     LMSLabelType outputLabelType; //"compressed", "onehot"
     int labelDim;
 
@@ -70,7 +71,8 @@ public:
         int nwords,
         string mUnk,
         bool flatten);
-    bool refreshCacheSeq(int seq_id); //Refresh sequence_cache
+    bool getDataSeq(list<int> &list); //Get a new sentence from fin
+    bool getNoiseSeq(list<pair<int, float>> &list); //Get a new sentence from fin
     void PrintMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     void Destroy() {
     }
