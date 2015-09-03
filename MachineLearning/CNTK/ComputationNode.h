@@ -731,7 +731,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
         ComputationNode() { }
     public:
-        typedef float OurElemType;
+        typedef ElemType OurElemType;
     protected:
         // TODO: this should be protected and only accessible to the New method; maybe just move it in here?
         // TODO: Once we switch to VS 2015, we shall use inheriting constructors, i.e. we can delete all those redundant constructor forwards in each ComputationNode derivate

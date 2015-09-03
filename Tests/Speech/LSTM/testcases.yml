@@ -22,6 +22,6 @@ testCases:
     patterns:
       - ^ Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}} of {{integer}}]
       - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=2%}}
-      - EvalErr[0]PerSample = {{float,tolerance=2%}}
+      - TrainLossPerSample = {{float,tolerance=%}}
+      - EvalErr[0]PerSample = {{float,tolerance=3%}}
 
