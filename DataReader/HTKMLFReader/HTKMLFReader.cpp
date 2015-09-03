@@ -1637,7 +1637,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     template<class ElemType>
-        void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+        void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<float> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
         {
             if (!m_framemode)
             {

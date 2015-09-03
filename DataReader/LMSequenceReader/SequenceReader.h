@@ -396,7 +396,7 @@ public:
     size_t NumberSlicesInEachRecurrentIter();
 
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
-    void SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
+    void SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
     int GetSentenceEndIdFromOutputLabel();
 
