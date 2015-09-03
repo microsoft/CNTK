@@ -133,42 +133,50 @@ namespace Microsoft { namespace MSR { namespace BS {
         //BinaryStandardNode(TransposeTimesNode)
     ;
 
-    template<typename ElemType>
+    // The following class(es) implement the MakeRuntimeObject() function for different types. Sorry for the strange template dance.
+
+    // -------------------------------------------------------------------
+    // basic function template, for classes that can instantiate themselves from IConfigRecordPtr  TODO: do we even have any?
+    // -------------------------------------------------------------------
+
+    template<typename ElemType, class C>
     struct DualPrecisionHelpers
     {
-        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
-        // basic function template, for classes that can instantiate themselves from IConfigRecordPtr  TODO: do we even have any?
-        template<class C> static shared_ptr<Object> MakeRuntimeObject(const IConfigRecordPtr config) { return make_shared<C>(config); }
+        static shared_ptr<Object> MakeRuntimeObject(const IConfigRecordPtr config) { return make_shared<C>(config); }
+    };
 
-        // -------------------------------------------------------------------
-        // ComputationNode -- covers all standard nodes
-        // -------------------------------------------------------------------
+    // -------------------------------------------------------------------
+    // ComputationNode -- covers all standard nodes
+    // -------------------------------------------------------------------
 
-        // helper wrapper class for ComputationNodes that must AttachInputs() late due to circular references
-        // Instantiate with LateAttachingNode<node type>(lambda, args for node constructor).
-        // To resolve, call AttachInputs()
-        // TODO: This is a bit indirect. Can it be done more nicely?
-        struct ILateAttachingNode { virtual void LateAttachInputs() = 0; };
-        template<class N>
-        class LateAttachingNode : public N, public ILateAttachingNode
+    // helper wrapper class for ComputationNodes that must AttachInputs() late due to circular references
+    // Instantiate with LateAttachingNode<node type>(lambda, args for node constructor).
+    // To resolve, call AttachInputs()
+    // TODO: This is a bit indirect. Can it be done more nicely?
+    struct ILateAttachingNode { virtual void LateAttachInputs() = 0; };
+    template<class N>
+    class LateAttachingNode : public N, public ILateAttachingNode
+    {
+        typedef typename N::OurElemType ElemType;
+        function<void(ComputationNode<ElemType>*)> attachInputs;
+    public:
+        // constructor
+        template<class... _Types>
+        LateAttachingNode(DEVICEID_TYPE deviceId, const wstring & name, const function<void(ComputationNode<ElemType>*)> & attachInputs, _Types&&... _Args) : attachInputs(attachInputs), N(deviceId, name, forward<_Types>(_Args)...) {}
+        // the one member that does the work
+        void /*ILateAttachingNode::*/LateAttachInputs()
         {
-            function<void(ComputationNode<ElemType>*)> attachInputs;
-        public:
-            // constructor
-            template<class... _Types>
-            LateAttachingNode(DEVICEID_TYPE deviceId, const wstring & name, const function<void(ComputationNode<ElemType>*)> & attachInputs, _Types&&... _Args) : attachInputs(attachInputs), N(deviceId, name, forward<_Types>(_Args)...) {}
-            // the one member that does the work
-            void /*ILateAttachingNode::*/LateAttachInputs()
-            {
-                attachInputs(dynamic_cast<N*>(this));
-                attachInputs = [](ComputationNode<ElemType>*){ LogicError("LateAttachingNode::AttachInputs: must only be called once"); };
-            }
-        };
+            attachInputs(dynamic_cast<N*>(this));
+            attachInputs = [](ComputationNode<ElemType>*){ LogicError("LateAttachingNode::AttachInputs: must only be called once"); };
+        }
+    };
 
+    template<typename ElemType>
+    struct DualPrecisionHelpers<ElemType, ComputationNode<ElemType>>
+    {
         // create ComputationNode
         // This is the equivalent of the old SynchronousNodeEvaluator::Evaluate(), and we duplicate code from there.
-        template<>
-        static shared_ptr<Object> MakeRuntimeObject<ComputationNode<ElemType>>(const IConfigRecordPtr configp)
+        static shared_ptr<Object> MakeRuntimeObject(const IConfigRecordPtr configp)
         {
             let & config = *configp;
             wstring operationName = config[L"operation"];
@@ -702,26 +710,30 @@ namespace Microsoft { namespace MSR { namespace BS {
         {
             vector<ComputationNodeBasePtr> inputs;
             let inputsArg = config[L"inputs"];
-            if (inputsArg.Is<ComputationNodeBase>())          // single arg
+            if (inputsArg.Is<ComputationNodeBase>())                // single arg
                 inputs.push_back(inputsArg);
             else                                                    // a whole vector
             {
-                let inputsArray = (ConfigArrayPtr)inputsArg;
+                ConfigArrayPtr inputsArray = (ConfigArrayPtr&)inputsArg;
                 let range = inputsArray->GetIndexRange();
                 for (int i = range.first; i <= range.second; i++)   // pull them. This will resolve all of them.
                     inputs.push_back(inputsArray->At(i, inputsArg.GetLocation()));
             }
             return inputs;
         }
-    public:
+    };
 
-        // -------------------------------------------------------------------
-        // ComputationNetwork
-        // -------------------------------------------------------------------
+    // -------------------------------------------------------------------
+    // ComputationNetwork
+    // -------------------------------------------------------------------
+
+    template<typename ElemType>
+    struct DualPrecisionHelpers<ElemType, ComputationNetwork<ElemType>>
+    {
+        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
         // initialize a ComputationNetwork<ElemType> from a ConfigRecord
-        template<>
-        static shared_ptr<Object> MakeRuntimeObject<ComputationNetwork<ElemType>>(const IConfigRecordPtr configp)
+        static shared_ptr<Object> MakeRuntimeObject(const IConfigRecordPtr configp)
         {
             let & config = *configp;
 
@@ -739,7 +751,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             {
                 let & value = config[id];
                 if (value.Is<ComputationNode<ElemType>>())
-                    workList.push_back((ComputationNodePtr)value);
+                    workList.push_back((ComputationNodePtr&)value);
             }
             // process work list
             // Also call FinalizeInit where we must.
@@ -818,9 +830,9 @@ namespace Microsoft { namespace MSR { namespace BS {
         {
             wstring precision = (*config)[L"precision"];            // dispatch on ElemType
             if (precision == L"float")
-                return DualPrecisionHelpers<float>::MakeRuntimeObject<Cfloat>(config);
+                return DualPrecisionHelpers<float, Cfloat>::MakeRuntimeObject(config);
             else if (precision == L"double")
-                return DualPrecisionHelpers<double>::MakeRuntimeObject<Cdouble>(config);
+                return DualPrecisionHelpers<double, Cdouble>::MakeRuntimeObject(config);
             else
                 RuntimeError("invalid value for 'precision', must be 'float' or 'double'");
         };
