@@ -17,7 +17,8 @@
 #include "DataWriter.h"
 #include "ComputationNetwork.h"
 #include "ComputationNetworkHelper.h"
-#include "TrainingCriterionNodes.h"
+#include "TrainingCriterionNodes.h" // TODO: we should move the functions that depend on these to the .cpp
+#include "CompositeComputationNodes.h"
 
 using namespace std;
 
