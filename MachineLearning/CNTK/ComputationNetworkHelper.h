@@ -14,6 +14,7 @@
 #include "fileutil.h"
 
 #include "ComputationNetwork.h"
+#include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
 #include "DataReader.h"
 
@@ -32,9 +33,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes)
         {
             for (size_t i=0; i<nodes.size(); i++)
-            {
                 nodes[i]->UpdateEvalTimeStamp();
-            }
         }
 
         void SetDropoutRate(ComputationNetwork<ElemType>& net, const ComputationNodeBasePtr criterionNode, const ElemType dropoutRate, ElemType & prevDropoutRate, unsigned long & dropOutSeed)

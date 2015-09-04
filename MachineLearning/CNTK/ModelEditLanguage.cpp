@@ -24,15 +24,11 @@ bool EqualInsensitive(std::string& string1, const char* string2, const char* alt
 
     // don't allow partial matches that are less than half the string
     if (equal && string1.size() < strlen(string2)/2)
-    {
         equal = false;
-    }
 
     // if we have a (partial) match replace with the full name
     if (equal && strcmp(string1.c_str(), string2))
-    {
         string1 = string2;
-    }
 
     if (!equal && alternate != NULL)
     {
@@ -40,15 +36,11 @@ bool EqualInsensitive(std::string& string1, const char* string2, const char* alt
 
         // don't allow partial matches that are less than half the string
         if (equal && string1.size() < strlen(alternate)/2)
-        {
             equal = false;
-        }
 
         // if we have a match of the alternate string replace with the full name
         if (equal)
-        {
             string1 = string2;
-        }
     }
 
     return equal;
@@ -539,7 +531,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 case melPropComputeGradient:
                 {
                     bool needGradient = params[2];
-                    netNdl->cn->SetLeanableNodesBelowNeedGradient(needGradient, node);
+                    netNdl->cn->SetLearnableNodesBelowNeedGradient(needGradient, node);
                     break;
                 }
                 default:

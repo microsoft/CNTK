@@ -25,8 +25,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // node creation
         // -----------------------------------------------------------------------
 
-        static ComputationNodePtr ComputationNetworkBuilder<ElemType>::NewStandardNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name);
-        static ComputationNodePtr ComputationNetworkBuilder<ElemType>::NewNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name);
+        static ComputationNodePtr NewStandardNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name);
+        static ComputationNodePtr NewNode(const std::wstring & nodeType, DEVICEID_TYPE deviceId, const wstring & name);
 
         // The following functions create nodes and add them to the net, but don't attach inputs (some don't have inputs).
         // There are special versions for nodes with custom constructors, and a catch-all, CreateComputationNode(), for all others.

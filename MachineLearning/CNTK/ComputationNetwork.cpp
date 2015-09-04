@@ -237,6 +237,72 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return pNode;
     }
 
+    template<typename ElemType>
+    void ComputationNetwork<ElemType>::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr rootNode = nullptr)
+    {
+        //find nodes from all available nodes
+        if (rootNode == nullptr)
+        {
+            for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+            {
+                ComputationNodeBasePtr node = nodeIter->second;
+                if (node->OperationName() == LearnableParameter<float>::TypeName())
+                    node->NeedGradient() = needGradient;
+            }
+        }
+        else
+        {
+            //for calculating a specific node
+            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            {
+                ComputationNodeBasePtr node = (*nodeIter);
+                if (node->OperationName() == LearnableParameter<float>::TypeName())
+                    node->NeedGradient() = needGradient;
+            }
+        }
+    }
+
+    // non-static version needed because it accesses m_randomSeedOffset
+    // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
+    template<typename ElemType>
+    void ComputationNetwork<ElemType>::InitLearnableParameters(const ComputationNodeBasePtr node,
+                                                               const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale,
+                                                               bool initOnCPUOnly = false)
+    {
+        auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
+        learnableParameterNode->InitRandom(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
+    }
+
+    // FixupInputMinibatchSize - go through all the inputs and make sure they have a consistent minibatch size (after creation)
+    template<typename ElemType>
+    void ComputationNetwork<ElemType>::FixupInputMinibatchSize()
+    {
+        std::list<ComputationNodeBasePtr> inputs = GetNodesWithType(InputValue<ElemType>::TypeName());
+        int minibatchMax = 0;
+        bool minibatchDifferent = false; // flag to see if all the values are already the same
+        for (ComputationNodeBasePtr node : inputs)
+        {
+            size_t cols = node->GetNumCols();
+            if (cols != minibatchMax)
+            {
+                if (minibatchMax != 0)
+                    minibatchDifferent = true;
+                if (minibatchMax < cols)
+                    minibatchMax = cols;
+            }
+        }
+        if (minibatchDifferent)
+        {
+            for (ComputationNodeBasePtr node : inputs)
+            {
+                size_t cols = node->GetNumCols();
+                if (cols != minibatchMax)
+                    node->Resize(node->GetNumRows(), minibatchMax);
+            }
+        }
+    }
+
     // -----------------------------------------------------------------------
     // evaluation
     // -----------------------------------------------------------------------
