@@ -211,7 +211,7 @@ public:
     virtual bool HasComputed() const = 0;
     virtual void MarkComputed(const bool hasComputed) = 0;
 
-    virtual bool RequirePreCompute() const { return true;}
+    virtual bool RequiresPreCompute() const { return true;}
 
     virtual void SaveToFile(File& fstream)  const
     {
@@ -288,7 +288,7 @@ public:
             m_numSamples = 0;
     }
 
-    virtual bool RequirePreCompute() const { return true; }
+    virtual bool RequiresPreCompute() const { return true; }
 
     virtual const std::wstring OperationName() const { return TypeName(); }
     static const std::wstring TypeName() { return L"Mean"; }
@@ -411,7 +411,7 @@ public:
         }
     }
 
-    virtual bool RequirePreCompute() const { return true; }
+    virtual bool RequiresPreCompute() const { return true; }
 
     virtual const std::wstring OperationName() const { return TypeName(); }
     static const std::wstring TypeName() { return L"InvStdDev"; }
@@ -588,7 +588,7 @@ public:
             LogicError("PerDimMeanVarNormalizationNode criterion requires three inputs.");
         }
 
-        if (Inputs(0)->RequirePreCompute())
+        if (Inputs(0)->RequiresPreCompute())
         {
             LogicError(
                 "PerDimMeanVarNormalizationNode criterion forbids first input from being a pre-compute node. "
@@ -748,7 +748,8 @@ public:
             throw std::logic_error("PerDimMeanVarDeNormalizationNode criterion requires three inputs.");
         }
 
-        if (Inputs(0)->RequirePreCompute()) {
+        if (Inputs(0)->RequiresPreCompute())
+        {
             throw std::logic_error(
                 "PerDimMeanVarDeNormalizationNode criterion forbids first input from being a pre-compute node. "
                 "The first input should be the node whose output should be de-normalized, and the second and third inputs "
@@ -844,7 +845,7 @@ public:
     virtual bool HasComputed() const = 0;
     virtual void MarkComputed(const bool hasComputed) = 0;
 
-    virtual bool RequireBatchMode() const { return true; }
+    virtual bool RequiresBatchMode() const { return true; }
 
     virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
     {
@@ -896,7 +897,7 @@ protected:
     protected:  \
         typedef BatchModeNode<ElemType>* BatchModeNodePtr;  \
     public: \
-        using Base::HasComputed; using Base::MarkComputed; using Base::RequireBatchMode; \
+        using Base::HasComputed; using Base::MarkComputed; using Base::RequiresBatchMode; \
     protected:  \
         using Base::m_memory; using Base::m_hasComputed; \
     public:

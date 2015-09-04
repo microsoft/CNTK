@@ -92,8 +92,8 @@ void DumpNodeInfo(const ConfigParameters& config)
     wstring outputFile = config("outputFile", WCharToString(defOutFilePath.c_str()).c_str());
     bool printValues = config("printValues", "true");
 
-    ComputationNetwork<ElemType> net(-1);  //always use CPU
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(-1);  //always use CPU
+    net.LoadFromFile<ElemType>(modelPath);
     net.DumpNodeInfoToFile(nodeName, printValues, outputFile);
 }
 
@@ -120,8 +120,8 @@ void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& reader)
         evalNodeNamesVector.push_back(evalNodeNames[i]);
     }
 
-    ComputationNetwork<ElemType> net(deviceId);
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(deviceId);
+    net.LoadFromFile<ElemType>(modelPath);
     net.ResetEvalTimeStamp();
 
     SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
@@ -160,8 +160,8 @@ void DoEvalUnroll(const ConfigParameters& config)
     intargvector mbSize = minibatchSize;
     wstring path2EvalResults = config("path2EvalResults", L"");
 
-    ComputationNetwork<ElemType> net(deviceId);
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(deviceId);
+    net.LoadFromFile<ElemType>(modelPath);
     net.ResetEvalTimeStamp();
 
     SimpleEvaluator<ElemType> eval(net);
@@ -224,8 +224,8 @@ void DoCrossValidate(const ConfigParameters& config)
         }
 
         cvModels.push_back(cvModelPath);
-        ComputationNetwork<ElemType> net(deviceId);
-        net.LoadFromFile(cvModelPath);
+        ComputationNetwork net(deviceId);
+        net.LoadFromFile<ElemType>(cvModelPath);
         net.ResetEvalTimeStamp();
 
         SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
@@ -299,8 +299,8 @@ void DoWriteOutput(const ConfigParameters& config)
         outputNodeNamesVector.push_back(outputNodeNames[i]);
     }
 
-    ComputationNetwork<ElemType> net(deviceId);
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(deviceId);
+    net.LoadFromFile<ElemType>(modelPath);
     net.ResetEvalTimeStamp();
 
     SimpleOutputWriter<ElemType> writer(net, 1);
@@ -507,10 +507,10 @@ void  DoParameterSVD(const ConfigParameters& config)
     }
 
 
-    ComputationNetwork<ElemType> net(deviceID);
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(deviceID);
+    net.LoadFromFile<ElemType>(modelPath);
 
-    net.PerformSVDecomposition(svdconfig);
+    net.PerformSVDecomposition<ElemType>(svdconfig);
     if (!outputmodelPath.empty())
         net.SaveToFile(outputmodelPath);
 
@@ -988,13 +988,13 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     int traceLevel = config("traceLevel", "0");
     size_t numMBsToShowResult = config("numMBsToShowResult", "100");
 
-    vector<ComputationNetwork<ElemType>*> nets;
-    ComputationNetwork<ElemType> encoderNet(deviceId);
-    encoderNet.LoadFromFile(encoderModelPath, FileOptions::fileOptionsBinary, true);
+    vector<ComputationNetwork*> nets;
+    ComputationNetwork encoderNet(deviceId);
+    encoderNet.LoadFromFile<ElemType>(encoderModelPath, FileOptions::fileOptionsBinary, true);
     encoderNet.ResetEvalTimeStamp();
 
-    ComputationNetwork<ElemType> decoderNet(deviceId);
-    decoderNet.LoadFromFile(decoderModelPath, FileOptions::fileOptionsBinary, false, &encoderNet);
+    ComputationNetwork decoderNet(deviceId);
+    decoderNet.LoadFromFile<ElemType>(decoderModelPath, FileOptions::fileOptionsBinary, false, &encoderNet);
     decoderNet.ResetEvalTimeStamp();
 
     nets.push_back(&encoderNet);
@@ -1063,8 +1063,8 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
     int traceLevel = config("traceLevel", "0");
     size_t numMBsToShowResult = config("numMBsToShowResult", "100");
 
-    ComputationNetwork<ElemType> net(deviceId);
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(deviceId);
+    net.LoadFromFile<ElemType>(modelPath);
     net.ResetEvalTimeStamp();
 
     ConfigArray evalNodeNames = config("evalNodeNames");
@@ -1159,7 +1159,7 @@ void DoConvertFromDbn(const ConfigParameters& config)
     wstring dbnModelPath = config("dbnModelPath");
 
     IComputationNetBuilder<ElemType>* netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(config);
-    ComputationNetwork<ElemType>* net = netBuilder->LoadNetworkFromFile(dbnModelPath);
+    ComputationNetwork* net = netBuilder->LoadNetworkFromFile(dbnModelPath);
     net->SaveToFile(modelPath);
     delete (netBuilder);
 }
@@ -1196,8 +1196,8 @@ void DoTopologyPlot(const ConfigParameters& config)
     }
 
 
-    ComputationNetwork<ElemType> net(-1);
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(-1);
+    net.LoadFromFile<ElemType>(modelPath);
     net.PlotNetworkTopology(outdot);
     fprintf(stderr, "Output network description in dot language to %S\n", outdot.c_str());
 

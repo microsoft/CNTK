@@ -409,7 +409,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     wstring initFromFilePath = config[L"initFromFilePath"];
                     if (initFromFilePath.empty())
                         RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
-                    ComputationNetwork<ElemType>::InitLearnableParametersFromFile(dynamic_pointer_cast<LearnableParameter<ElemType>>(node), initFromFilePath, node->GetDeviceId());
+                    ComputationNetwork::InitLearnableParametersFromFile(dynamic_pointer_cast<ComputationNode<ElemType>>(node), initFromFilePath, node->GetDeviceId());
                 }
                 else
                     RuntimeError("init must be one of the values of [uniform|gaussian|fixedValue|fromFile]");
@@ -734,98 +734,85 @@ namespace Microsoft { namespace MSR { namespace BS {
     // ComputationNetwork
     // -------------------------------------------------------------------
 
-    template<typename ElemType>
-    struct DualPrecisionHelpers<ElemType, ComputationNetwork<ElemType>>
+    // initialize a ComputationNetwork from a ConfigRecord
+    template<>
+    /*static*/ shared_ptr<Object> MakeRuntimeObject<ComputationNetwork>(const IConfigRecordPtr configp)
     {
-        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
+        let & config = *configp;
 
-        // initialize a ComputationNetwork<ElemType> from a ConfigRecord
-        static shared_ptr<Object> MakeRuntimeObject(const IConfigRecordPtr configp)
+        DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
+        auto net = make_shared<ComputationNetwork>(deviceId);
+
+        auto & m_nameToNodeMap = net->GetNameToNodeMap();
+
+        deque<ComputationNodeBasePtr> workList;
+        // flatten the set of all nodes
+        // we collect all root ComputationNodes from the config record, and then expand into all their children by work-list processing
+        // TODO: This currently only collects nodes of the same ElemType. We could allow conversion operators.
+        // TODO: Can we even make the ComputationNetwork independent of ElemType?? As long as the nodes themselves are hooked up properly that should be OK!
+        for (let & id : config.GetMemberIds())
         {
-            let & config = *configp;
+            let & value = config[id];
+            if (value.Is<ComputationNodeBase>())
+                workList.push_back((ComputationNodeBasePtr&)value);
+        }
+        // process work list
+        // Also call FinalizeInit where we must.
+        while (!workList.empty())
+        {
+            let node = workList.front();
+            workList.pop_front();
 
-            DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
-            auto net = make_shared<ComputationNetwork<ElemType>>(deviceId);
+            // add to set
+            let res = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
+            if (!res.second)        // not inserted: we already got this one
+                if (res.first->second == node)
+                    continue;       // the same
+                else                // oops, a different node with the same name
+                    LogicError("ComputationNetwork: multiple nodes with the same NodeName() '%ls'", node->NodeName().c_str());
 
-            auto & m_nameToNodeMap = net->GetNameToNodeMap();
+            // If node derives from MustFinalizeInit() then it has unresolved inputs. Resolve them now.
+            // This may generate a whole new load of nodes, including nodes which in turn have late init.
+            // TODO: think this through whether it may generate circular references nevertheless
+            let lateAttachingNode = dynamic_pointer_cast<ILateAttachingNode>(node);
+            if (lateAttachingNode)
+                lateAttachingNode->LateAttachInputs();
 
-            deque<ComputationNodeBasePtr> workList;
-            // flatten the set of all nodes
-            // we collect all root ComputationNodes from the config record, and then expand into all their children by work-list processing
-            // TODO: This currently only collects nodes of the same ElemType. We could allow conversion operators.
-            // TODO: Can we even make the ComputationNetwork independent of ElemType?? As long as the nodes themselves are hooked up properly that should be OK!
-            for (let & id : config.GetMemberIds())
+            // add it to the respective node group based on the tag
+            let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
+            if (nodeWithTag)
             {
-                let & value = config[id];
-                if (value.Is<ComputationNode<ElemType>>())
-                    workList.push_back((ComputationNodePtr&)value);
-            }
-            // process work list
-            // Also call FinalizeInit where we must.
-            while (!workList.empty())
-            {
-                let node = workList.front();
-                workList.pop_front();
-
-                // add to set
-                let res = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
-                if (!res.second)        // not inserted: we already got this one
-                    if (res.first->second == node)
-                        continue;       // the same
-                    else                // oops, a different node with the same name
-                        LogicError("ComputationNetwork: multiple nodes with the same NodeName() '%ls'", node->NodeName().c_str());
-
-                // If node derives from MustFinalizeInit() then it has unresolved inputs. Resolve them now.
-                // This may generate a whole new load of nodes, including nodes which in turn have late init.
-                // TODO: think this through whether it may generate circular references nevertheless
-                let lateAttachingNode = dynamic_pointer_cast<ILateAttachingNode>(node);
-                if (lateAttachingNode)
-                    lateAttachingNode->LateAttachInputs();
-
-                // add it to the respective node group based on the tag
-                let nodeWithTag = dynamic_pointer_cast<WithTag>(node);
-                if (nodeWithTag)
-                {
-                    wstring tag = nodeWithTag->GetTag();
-                    if (tag == L"feature")                              net->FeatureNodes().push_back(node);
-                    else if (tag == L"label")                           net->LabelNodes().push_back(node);
-                    else if (tag == L"criterion" || tag == L"criteria") net->FinalCriterionNodes().push_back(node); // 'criteria' is wrong (plural); we keep it for compat
-                    else if (!_wcsnicmp(tag.c_str(), L"eval", 4))       net->EvaluationNodes().push_back(node);     // eval*
-                    else if (tag == L"output")                          net->OutputNodes().push_back(node);
-                    else if (tag == L"pair")                            net->PairNodes().push_back(node);           // TODO: I made this up; the original code in SynchronousExecutionEngine did not have this
-                    else if (tag == L"multiseq")                        net->NodesReqMultiSeqHandling().push_back(node);
-                    else if (!tag.empty())
-                        RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
-                    // TODO: are there nodes without tag? Where do they go?
-                }
-
-                // TODO: ...can we do stuff like propagating dimensions here? Or still too early?
-
-                // traverse children: append them to the end of the work list
-                let children = node->GetChildren();
-                for (auto child : children)
-                    workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
+                wstring tag = nodeWithTag->GetTag();
+                if (tag == L"feature")                              net->FeatureNodes().push_back(node);
+                else if (tag == L"label")                           net->LabelNodes().push_back(node);
+                else if (tag == L"criterion" || tag == L"criteria") net->FinalCriterionNodes().push_back(node); // 'criteria' is wrong (plural); we keep it for compat
+                else if (!_wcsnicmp(tag.c_str(), L"eval", 4))       net->EvaluationNodes().push_back(node);     // eval*
+                else if (tag == L"output")                          net->OutputNodes().push_back(node);
+                else if (tag == L"pair")                            net->PairNodes().push_back(node);           // TODO: I made this up; the original code in SynchronousExecutionEngine did not have this
+                else if (tag == L"multiseq")                        net->NodesReqMultiSeqHandling().push_back(node);
+                else if (!tag.empty())
+                    RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
+                // TODO: are there nodes without tag? Where do they go?
             }
 
-            // TODO: what is missing is the dimensions
-#if 1
-            wstring args = net->ToString();
-            fprintf(stderr, "%ls\n", args.c_str());
-#endif
-            // these post-processing steps are done by the other network builders, but I don't know why they are necessary
-            net->FixupInputMinibatchSize();         // make sure dimensions are set up correctly
-            net->ResetEvalTimeStamp();              // (should not really be needed)
-            return net;
+            // TODO: ...can we do stuff like propagating dimensions here? Or still too early?
+
+            // traverse children: append them to the end of the work list
+            let children = node->GetChildren();
+            for (auto child : children)
+                workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
         }
 
-        // -------------------------------------------------------------------
-        // ... more specialized node types that have extra constructor parameters
-        // -------------------------------------------------------------------
-
-        // fragment from original NDL--optional params are evaluated afterwards, such as initvalue
-        // node->EvaluateMacro(nodeEval, baseName, pass);
-        // nodeEval.ProcessOptionalParameters(node);
-    };
+        // TODO: what is missing is the dimensions
+#if 1
+        wstring args = net->ToString();
+        fprintf(stderr, "%ls\n", args.c_str());
+#endif
+        // these post-processing steps are done by the other network builders, but I don't know why they are necessary
+        net->FixupInputMinibatchSize();         // make sure dimensions are set up correctly
+        net->ResetEvalTimeStamp();              // (should not really be needed)
+        return net;
+    }
 
     // creates the lambda for creating an object that can exist as 'float' or 'double'
     // Pass both types as the two template args.
@@ -848,7 +835,20 @@ namespace Microsoft { namespace MSR { namespace BS {
         return rtInfo;
     }
 
-    //#define DefineRuntimeType(T) { L ## #T, MakeRuntimeTypeConstructors<T>() } }
+    // and the regular one without ElemType dependency
+    template<class C>
+    static ConfigurableRuntimeType MakeRuntimeTypeConstructor()
+    {
+        ConfigurableRuntimeType rtInfo;
+        rtInfo.construct = [](const IConfigRecordPtr config)        // lambda to construct--this lambda can construct both the <float> and the <double> variant based on config parameter 'precision'
+        {
+            return MakeRuntimeObject<C>(config);
+        };
+        rtInfo.isConfigRecord = is_base_of<IConfigRecord, C>::value;
+        return rtInfo;
+    }
+
+#define DefineRuntimeType(T) { L ## #T, MakeRuntimeTypeConstructor<T>() }
 #define DefineRuntimeTypeDualPrecision(T) { L ## #T, MakeRuntimeTypeConstructorDualPrecision<T<float>,T<double>>() }
 
     // get information about configurable runtime types
@@ -861,7 +861,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         {
             // ComputationNodes
             DefineRuntimeTypeDualPrecision(ComputationNode),
-            DefineRuntimeTypeDualPrecision(ComputationNetwork),
+            DefineRuntimeType(ComputationNetwork),
 #if 0
             DefineRuntimeType(RecurrentComputationNode),
             // In this experimental state, we only have Node and Network.
@@ -889,7 +889,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // build a ComputationNetwork from BrainScript source code
     template<typename ElemType>
-    /*virtual*/ /*IComputationNetBuilder::*/ComputationNetwork<ElemType>* ExperimentalNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork<ElemType>*)
+    /*virtual*/ /*IComputationNetBuilder::*/ComputationNetwork* ExperimentalNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork*)
     {
         if (!m_net || m_net->GetTotalNumberOfNodes() < 1) //not built yet
         {
@@ -901,7 +901,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 + m_sourceCode);    // source code has the form [ ... ]
             // evaluate the parse tree--specifically the top-level field 'network'--which will create the network
             let object = EvaluateField(expr, L"network");                               // this comes back as a BS::Object
-            let network = dynamic_pointer_cast<ComputationNetwork<ElemType>>(object);   // cast it
+            let network = dynamic_pointer_cast<ComputationNetwork>(object);   // cast it
             // This should not really fail since we constructed the source code above such that this is the right type.
             // However, it is possible (though currently not meaningful) to locally declare a different 'precision' value.
             // In that case, the network might come back with a different element type. We need a runtime check for that.

@@ -14,12 +14,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class ComputationNetworkBuilder
     {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
-        ComputationNetwork<ElemType> & net; // template parameter will be gone soon!!
+        ComputationNetwork & net;
         ComputationNetworkBuilder();
         ComputationNetworkBuilder(const ComputationNetworkBuilder&);
         void operator=(const ComputationNetworkBuilder&);
     public:
-        ComputationNetworkBuilder(ComputationNetwork<ElemType> & net) : net(net) {}
+        ComputationNetworkBuilder(ComputationNetwork & net) : net(net) {}
 
         // -----------------------------------------------------------------------
         // node creation

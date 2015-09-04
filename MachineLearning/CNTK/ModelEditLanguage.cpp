@@ -105,7 +105,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
             RuntimeError("Invalid number of parameters. Valid parameters: CreateModel(). newly created model always becomes the new default.");
 
-        ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
+        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
         OverrideModelNameAndSetDefaultModel(cn);
     }
     if (EqualInsensitive(name, "CreateModelWithName"))  //create a blank model
@@ -114,7 +114,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
             RuntimeError("Invalid number of parameters. Valid parameters: CreateModelWithName(modelName). newly created model always becomes the new default.");
 
-        ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
+        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
         OverrideModelNameAndSetDefaultModel(cn, params[0]);
     }
     else if (EqualInsensitive(name, "LoadModel"))
@@ -125,8 +125,8 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
-        ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
-        cn->LoadFromFile(params[0]);
+        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
+        cn->LoadFromFile<ElemType>(params[0]);
         OverrideModelNameAndSetDefaultModel(cn);
     }
     else if (EqualInsensitive(name, "LoadModelWithName"))
@@ -137,8 +137,8 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
-        ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
-        cn->LoadFromFile(params[1]);
+        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
+        cn->LoadFromFile<ElemType>(params[1]);
         OverrideModelNameAndSetDefaultModel(cn, params[0]);
     }
     else if (EqualInsensitive(name, "LoadNDLSnippet"))
@@ -149,7 +149,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         string modelName = params[0];
         wstring ndlSnippetFileName = params[1];
-        ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
+        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
         NDLScript<ElemType> script;
         ConfigParameters ndlScript (script.ReadConfigFile(ndlSnippetFileName));
 
@@ -182,7 +182,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::wstring fileName = params[0];
 
-        ComputationNetwork<ElemType>* cn = m_netNdlDefault->cn;
+        ComputationNetwork* cn = m_netNdlDefault->cn;
         if (cn == NULL)
             RuntimeError("SaveDefaultModel can only be called after a default name exists (i.e., at least one model is loaded.)");
 
@@ -441,7 +441,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         // this probabably won't do anything, but make sure all NDL has been created
         ProcessNDLScript(netNdl, ndlPassInitial, false);
 
-        ComputationNetwork<ElemType>* cn = netNdl->cn;
+        ComputationNetwork* cn = netNdl->cn;
         for (auto node : nodes)
         {
             switch(prop)

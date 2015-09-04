@@ -69,8 +69,8 @@ void CNTKEval<ElemType>::LoadModel(const std::wstring& modelFileName)
     fprintf(stderr, "DeviceID=%d\n", (int)deviceId);
     if (m_net != NULL)
         delete m_net;
-    m_net = new ComputationNetwork<ElemType>(deviceId);
-    m_net->LoadFromFile(modelFileName);
+    m_net = new ComputationNetwork(deviceId);
+    m_net->LoadFromFile<ElemType>(modelFileName);
     m_net->ResetEvalTimeStamp();
 }
 
@@ -84,9 +84,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
     if (m_net == NULL)
     {
         for (auto iter = dimensions.begin(); iter != dimensions.end(); iter++)
-        {
             iter->second = 0;
-        }
         return;
     }
 
