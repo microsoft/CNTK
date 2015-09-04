@@ -2484,7 +2484,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //layer is 0 based
     template<class ElemType>
-    shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName = L"")
+    shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName)
     {
         ComputationNetworkBuilder<ElemType> builder(*m_net);
 
@@ -2509,7 +2509,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"", ComputationNodePtr clspostprob = nullptr, ComputationNodePtr trans = nullptr)
+    shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix, const std::wstring trainNodeName, const std::wstring evalNodeName, ComputationNodePtr clspostprob, ComputationNodePtr trans)
     {
         ComputationNetworkBuilder<ElemType> builder(*m_net);
 

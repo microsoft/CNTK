@@ -14,7 +14,7 @@
 #include "fileutil.h"
 
 #include "ComputationNetwork.h"
-#include "NonlinearityNodes.h"
+#include "NonlinearityNodes.h"  // TODO: move functions that depend on this to a .cpp file
 #include "ConvolutionalNodes.h"
 #include "DataReader.h"
 
