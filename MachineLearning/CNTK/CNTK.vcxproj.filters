@@ -229,7 +229,7 @@
       <Filter>Misc</Filter>
     </Text>
     <Text Include="..\..\BrainScript\Notes.txt">
-      <Filter>Experimental</Filter>
+      <Filter>Experimental\Doc</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>
@@ -263,10 +263,16 @@
     <Filter Include="Evaluation">
       <UniqueIdentifier>{3ddfc109-3a90-45f5-91e8-1930759cfe9d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Experimental\Doc">
+      <UniqueIdentifier>{23e7cd74-fd60-4fb4-a925-c3dea584f176}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="prebuild.bat">
       <Filter>Misc</Filter>
+    </None>
+    <None Include="..\..\BrainScript\BrainScript--extending the CNTK config language, Frank Seide August 2015.pptx">
+      <Filter>Experimental\Doc</Filter>
     </None>
   </ItemGroup>
 </Project>
