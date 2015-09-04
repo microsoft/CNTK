@@ -132,10 +132,16 @@ bool BatchSequenceReader<ElemType>::getNoiseSeq(list<pair<int, float>> &list)
     for (;;) {
         if (!(fin_noise >> word)) {
             fin_noise.close();
-            if (wordRead == 0)
-                return false;
-            else
-                return true;
+            if (loopNoiseFile) {
+                fin_noise.open(fileName_noise);
+                DEBUG_HTX fprintf(stderr, "BatchSequenceReader<ElemType>::getNoiseSeq looping noise data file...\n");
+            }
+            else {
+                if (wordRead == 0)
+                    return false;
+                else
+                    return true;
+            }
         }
         fin_noise >> probNow;
         int word_id = word4idx[word];
@@ -300,13 +306,15 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     int *temp_feature =  new int[wordNumber];
     list<pair<int, float>> temp_l; //temp list
-    bool res = false; //Got something new?
+    bool res = true; //Got something new(we can always get new noise data)
 
     //senCount % noiseRatio == 0 means DataFeed, otherwise NoiseFeed
     for (int i = 0; i < mBlgSize; i++) {
         temp_l.clear();
-        if (noiseRatio == 0 || senCount % (noiseRatio + 1) == 0)
-            getDataSeq(temp_l); //word_id, -1
+        if (noiseRatio == 0 || senCount % (noiseRatio + 1) == 0) {
+            if (!getDataSeq(temp_l)) //word_id, -1
+                res = false; //data ends, stop epoch
+        }
         else {
             if (!getNoiseSeq(temp_l)) //word_id, word_prob
                 LogicError("BatchSequenceReader<ElemType>::GetMinibatch did not get noise sentence.\n");
@@ -328,7 +336,6 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             temp_feature[idx] = temp_l.front().first; //feature_m->SetValue(sequence_cache[i]->front(), idx, (ElemType)1);
             if (temp_l.front().first == sentenceEndId) //Beginning of a sentence
                 minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceStart);
-            res = true; //Got some word new
             temp_l.pop_front();
             if (outputLabelType == LMSLabelType::compressed)
                 label_m->SetValue(0, idx, (ElemType)temp_l.front().first);
