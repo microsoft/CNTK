@@ -1111,6 +1111,36 @@ __global__ void _adagrad4BlockSparse(
 }
 
 template<class ElemType>
+__global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul)
+{
+    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+    CUDA_LONG stride = blockDim.x * gridDim.x;
+    for (; idx < size; idx += stride)
+    {
+        ElemType g = grad[idx];
+        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+        smoothAda[idx] = adaSqr;
+        if (adaSqr != 0.0f)
+        {
+            ElemType w = adaMul * rsqrtf(adaSqr);
+            if (w > 10.0f)
+                w = 10.0f;
+            g *= w;
+        }
+
+        if (mom > 0.0f)
+        {
+            g = mom * smoothMom[idx] + (1.0f - mom) * g;
+            smoothMom[idx] = g;
+        }
+
+        g *= lr;
+        val[idx] -= g;
+    }
+}
+
+template<class ElemType>
 __global__ void _rmsprop_init(
     ElemType* avars, ElemType* signs, ElemType* steps,
     ElemType* curr_grad,

@@ -1278,6 +1278,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, 
+        ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul)
+    {
+        size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+        if (IsEmpty() || GetNumCols() < numColsNeeded)
+        {
+            Resize(gradients.GetNumRows(), numColsNeeded);
+            SetValue(0.0);
+        }
+
+        assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == numColsNeeded);
+
+        size_t n = gradients.GetNumElements();
+        int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
+        _fsadagrad<ElemType><<<blocksPerGrid, threadsPerBlock>>>(n, gradients.m_pArray, m_pArray, m_pArray + n, functionValues.m_pArray,
+            learnRatePerSample, momentum, adaWeight, adaMul);
+    }
+
+    template<class ElemType>
     ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
         ElemType RMS_GAMMA,
         ElemType RMS_WGT_INC,
