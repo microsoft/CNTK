@@ -21,6 +21,7 @@
 #include "Basics.h"
 #include "Matrix.h"
 #include "ComputationNode.h"
+#include "InputAndParamNodes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

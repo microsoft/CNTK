@@ -8,7 +8,14 @@
 #include "BrainScriptEvaluator.h"
 
 #include "ComputationNode.h"
+#include "InputAndParamNodes.h"
+#include "RecurrentNodes.h"
+#include "NonlinearityNodes.h"
+#include "LinearAlgebraNodes.h"
+#include "ConvolutionalNodes.h"
+
 #include "ComputationNetwork.h"
+#include "ComputationNetworkBuilder.h"
 
 #include <memory>
 #include <deque>
@@ -693,7 +700,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 // last group: standard nodes that only take 'inputs'
                 else
                 {
-                    node = ComputationNetwork<ElemType>::NewStandardNode(operationName, deviceId, nodeName);
+                    node = ComputationNetworkBuilder<ElemType>::NewStandardNode(operationName, deviceId, nodeName);
                 }
                 node->AttachInputs(inputs); // TODO: where to check the number of inputs? Should be a template parameter to ComputationNode!
             }

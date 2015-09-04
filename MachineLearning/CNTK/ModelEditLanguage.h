@@ -9,6 +9,7 @@
 
 #include "commandArgUtil.h"
 #include "ComputationNetwork.h"
+#include "ComputationNetworkBuilder.h"
 #include "NetworkDescriptionLanguage.h"
 #include "SynchronousExecutionEngine.h"
 #include "NDLUtil.h"
@@ -152,6 +153,7 @@ public:
         // didn't find the name in the current symbols, try NDL
         if (nodes.empty() && netNdl->ndl != nullptr)
         {
+            ComputationNetworkBuilder<ElemType> builder(*cn);
             NDLNode<ElemType>* ndlNode = netNdl->ndl->FindSymbol(search);
             if (ndlNode != nullptr)
             {
@@ -165,7 +167,7 @@ public:
                     if (ndlNode->GetType() != ndlTypeConstant)
                         RuntimeError("Matching NDL name found for %s, but no corresponding computation node found\n", symbol.c_str());
                     // probably a constant node, so make the ComputationNode that is equivalent
-                    auto nodePtr = cn->CreateLearnableParameter(name, 1, 1);
+                    auto nodePtr = builder.CreateLearnableParameter(name, 1, 1);
                     ndlNode->SetEvalValue(nodePtr.get());
                     ElemType val = ndlNode->GetScalar();
                     nodePtr->FunctionValues().SetValue(val);

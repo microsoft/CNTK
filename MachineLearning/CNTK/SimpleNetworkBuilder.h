@@ -17,6 +17,9 @@
 #include "IComputationNetBuilder.h"
 #include "commandArgUtil.h"
 
+// TODO: giving up moving stuff for now, running out of time. The following #includes should not be necessary once the hard-working code in here gets moved to .cpp
+#include "InputAndParamNodes.h"
+
 #pragma warning (disable: 4661)
 
 using namespace std;
@@ -242,8 +245,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             delete m_net;
         }
 
+        static bool CheckDbnTag(File &fstream, const std::string expectedTag)
+        {
+            char tag[5];
+            for (int i = 0; i<4; i++)
+                fstream >> tag[i];
+            tag[4] = 0;
+            return std::string(tag) == expectedTag;
+        }
+
         virtual ComputationNetwork<ElemType>* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-            bool bAllowNoCriterion = false, ComputationNetwork<ElemType>* anotherNetwork = nullptr)
+                                                                  bool bAllowNoCriterion = false, ComputationNetwork<ElemType>* anotherNetwork = nullptr)
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
             {
@@ -255,147 +267,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 if (isDBN)
-                {
                     BuildNetworkFromDbnFile(modelFileName);
-                }
                 else
-                {
                     m_net->LoadFromFile(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterion, anotherNetwork);
-                }
             }
 
             m_net->ResetEvalTimeStamp();
             return m_net;
         }
 
-        ComputationNetwork<ElemType>* BuildNetworkFromDescription(ComputationNetwork<ElemType>* encoderNet)
-        {
-            size_t mbSize = 1;
-
-            if (m_rnnType == SIMPLERNN)
-                return BuildSimpleRNN(mbSize);
-            if (m_rnnType == LSTM)
-                return BuildLSTMNetworkFromDescription(mbSize);
-            if (m_rnnType == CLASSLSTM)
-                return BuildCLASSLSTMNetworkFromDescription(mbSize);
-            if (m_rnnType == NCELSTM)
-                return BuildNCELSTMNetworkFromDescription(mbSize);
-            if (m_rnnType == CLASSLM)
-                return BuildClassEntropyNetwork(mbSize);
-            if (m_rnnType == LBLM)
-                return BuildLogBilinearNetworkFromDescription(mbSize);
-            if (m_rnnType == NPLM)
-                return BuildNeuralProbNetworkFromDescription(mbSize);
-            if (m_rnnType == CLSTM)
-                return BuildConditionalLSTMNetworkFromDescription(mbSize);
-            if (m_rnnType == RCRF)
-                return BuildSeqTrnLSTMNetworkFromDescription(mbSize);
-            if (m_rnnType == LSTMENCODER)
-                return BuildLSTMEncoderNetworkFromDescription(mbSize);
-            if (m_rnnType == UNIDIRECTIONALLSTM)
-                return BuildUnidirectionalLSTMNetworksFromDescription(mbSize);
-            if (m_rnnType == BIDIRECTIONALLSTM)
-                return BuildBiDirectionalLSTMNetworksFromDescription(mbSize);
-            if (m_rnnType == ALIGNMENTSIMILARITYGENERATOR)
-                return BuildAlignmentDecoderNetworkFromDescription(encoderNet, mbSize);
-            if (m_rnnType == ALIGNMENTSIMILARITYGFORWARDDECODER)
-                return BuildAlignmentForwardDecoderNetworkFromDescription(encoderNet, mbSize);
-
-            if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
-            {
-                unsigned long randomSeed = 1;
-
-                size_t mbSize = 3; //this is not the actual minibatch size. only used in the validataion process
-
-                size_t numHiddenLayers = m_layerSizes.size() - 2;
-                ComputationNodePtr input, w, b, output, label, prior, scaledLogLikelihood;
-
-                input = m_net->Input(m_layerSizes[0], mbSize, L"features");
-                m_net->FeatureNodes().push_back(input);
-
-                if (m_applyMeanVarNorm)
-                {
-                    w = m_net->Mean(input, L"MeanOfFeatures");
-                    b = m_net->InvStdDev(input, L"InvStdOfFeatures");
-                    output = m_net->PerDimMeanVarNormalization(input, w, b, L"MVNormalizedFeatures");
-
-                    input = output;
-                }
-
-                if (numHiddenLayers > 0)
-                {
-                    w = m_net->Parameter(m_layerSizes[1], m_layerSizes[0], L"W0");
-                    m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-                    b = m_net->Parameter(m_layerSizes[1], 1, L"B0");
-                    output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(w, input, L"W0*features"), b, L"W0*features+B0"), 0, L"H1");
-
-                    if (m_addDropoutNodes)
-                        input = m_net->Dropout(output, L"DropH1");
-                    else
-                        input = output;
-
-                    for (int i = 1; i<numHiddenLayers; i++)
-                    {
-                        wstring nameOfW = msra::strfun::wstrprintf(L"W%d", i);
-                        wstring nameOfB = msra::strfun::wstrprintf(L"B%d", i);
-                        wstring nameOfPrevH = msra::strfun::wstrprintf(L"H%d", i);
-                        wstring nameOfTimes = nameOfW + L"*" + nameOfPrevH;
-                        wstring nameOfPlus = nameOfTimes + L"+" + nameOfB;
-                        wstring nameOfH = msra::strfun::wstrprintf(L"H%d", i + 1);
-
-                        w = m_net->Parameter(m_layerSizes[i + 1], m_layerSizes[i], nameOfW);
-                        m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-                        b = m_net->Parameter(m_layerSizes[i + 1], 1, nameOfB);
-                        output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus), i, nameOfH);
-
-                        if (m_addDropoutNodes)
-                            input = m_net->Dropout(output, L"Drop" + nameOfH);
-                        else
-                            input = output;
-                    }
-                }
-
-                wstring nameOfW = msra::strfun::wstrprintf(L"W%d", numHiddenLayers);
-                wstring nameOfB = msra::strfun::wstrprintf(L"B%d", numHiddenLayers);
-                wstring nameOfPrevH = msra::strfun::wstrprintf(L"H%d", numHiddenLayers - 1);
-                wstring nameOfTimes = nameOfW + L"*" + nameOfPrevH;
-                wstring nameOfPlus = nameOfTimes + L"+" + nameOfB;
-
-                w = m_net->Parameter(m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers], nameOfW);
-                m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-                b = m_net->Parameter(m_layerSizes[numHiddenLayers + 1], 1, nameOfB);
-                output = m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus);
-                m_net->RenameNode(output, L"HLast");
-
-                label = m_net->Input(m_layerSizes[numHiddenLayers + 1], mbSize, L"labels");
-
-                AddTrainAndEvalCriterionNodes(output, label);
-
-                if (m_needPrior)
-                {
-                    prior = m_net->Mean(label, L"Prior");
-                    input = m_net->Log(prior, L"LogOfPrior");
-
-                    //following two lines are needed only if true probability is needed
-                    //output = m_net->Softmax(output);
-                    //output = m_net->Log(output);
-
-                    scaledLogLikelihood = m_net->Minus(output, input, L"ScaledLogLikelihood");
-                    m_net->OutputNodes().push_back(scaledLogLikelihood);
-                }
-                else
-                {
-                    m_net->OutputNodes().push_back(output);
-                }
-
-                //add softmax layer (if prob is needed or KL reg adaptation is needed)
-                output = m_net->Softmax(output, L"PosteriorProb");
-                //m_net->OutputNodes().push_back(output);
-            }
-
-            m_net->ResetEvalTimeStamp();
-            return m_net;
-        }
+        ComputationNetwork<ElemType>* BuildNetworkFromDescription(ComputationNetwork<ElemType>* encoderNet);
 
         RNNTYPE RnnType(){ return m_rnnType; }
 
@@ -437,307 +318,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNetwork<ElemType>* BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork<ElemType>* encoderNet, size_t mbSize = 1);
 
-        ComputationNetwork<ElemType>* BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName)
-        {
-
-            std::string hdr, comment, name;
-            int version;
-            int numLayers, i;
-            std::string layerType;
-
-            unsigned long randomSeed = 1;
-
-            ComputationNodePtr input, w, b, output, label, prior, scaledLogLikelihood;
-            shared_ptr<PreComputedNode<ElemType>> pcNodePtr;
-            size_t mbSize = 3; //this is not the actual minibatch size. only used in the validataion process
-
-            File fstream(dbnModelFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
-
-            if (!CheckDbnTag(fstream, "DBN\n"))
-                throw std::runtime_error("Error reading DBN file - did not find expected tag DBN\n");
-            fstream >> comment;
-            if (!CheckDbnTag(fstream, "BDBN"))
-                throw std::runtime_error("Error reading DBN file - did not find expected tag BDBN\n");
-            fstream >> version >> numLayers;
-
-            Matrix<ElemType> globalMean = ReadMatrixFromDbnFile(fstream, std::string("gmean"));
-            Matrix<ElemType> globalStdDev = ReadMatrixFromDbnFile(fstream, std::string("gstddev"));
-            assert(globalMean.GetNumCols() == 1);
-            assert(globalStdDev.GetNumCols() == 1);
-
-            //move to CPU since element-wise operation is expensive and can go wrong in GPU
-            int curDevId = globalStdDev.GetDeviceId();
-            globalStdDev.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-            for (int i = 0; i<globalStdDev.GetNumRows(); i++)
-                globalStdDev(i, 0) = (ElemType)1.0 / (const ElemType)globalStdDev(i, 0);
-            globalStdDev.TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
-
-            if (!CheckDbnTag(fstream, "BNET"))
-                throw std::runtime_error("Error reading DBN file - did not find expected tag BNET\n");
-
-            for (i = 0; i<numLayers; i++) //0th index is for input layer, 
-            {
-                fstream >> layerType;
-
-                Matrix<ElemType> wts = ReadMatrixFromDbnFile(fstream, std::string("W"));
-                Matrix<ElemType> bias = ReadMatrixFromDbnFile(fstream, std::string("a")); // remnant from pretraining, not needed
-                Matrix<ElemType> A = ReadMatrixFromDbnFile(fstream, std::string("b"));
-                if (i == 0)
-                {
-                    input = m_net->Input(wts.GetNumCols(), mbSize, L"features");
-                    m_net->FeatureNodes().push_back(input);
-
-                    size_t frameDim = globalMean.GetNumRows();
-                    size_t numContextFrames = wts.GetNumCols() / frameDim;
-                    size_t contextDim = numContextFrames*frameDim;
-                    Matrix<ElemType> contextMean(contextDim, 1, m_deviceId);
-                    Matrix<ElemType> contextStdDev(contextDim, 1, m_deviceId);
-
-                    //move to CPU since element-wise operation is expensive and can go wrong in GPU
-                    contextMean.TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
-                    contextStdDev.TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true, false, false);
-                    for (size_t j = 0; j<frameDim; j++)
-                    {
-                        for (size_t k = 0; k<numContextFrames; k++)
-                        {
-                            contextMean(j + k*frameDim, 0) = (const ElemType)globalMean(j, 0);
-                            contextStdDev(j + k*frameDim, 0) = (const ElemType)globalStdDev(j, 0);
-                        }
-                    }
-                    contextMean.TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true, false, false);
-                    contextStdDev.TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true, false, false);
-
-                    w = m_net->Mean(input, L"MeanOfFeatures");
-                    w->FunctionValues().SetValue(contextMean);
-                    w->NeedGradient() = false;
-                    pcNodePtr = static_pointer_cast<PreComputedNode<ElemType>>(w);
-                    pcNodePtr->MarkComputed(true);
-
-                    b = m_net->InvStdDev(input, L"InvStdOfFeatures");
-                    b->FunctionValues().SetValue(contextStdDev);
-                    b->NeedGradient() = false;
-                    pcNodePtr = static_pointer_cast<PreComputedNode<ElemType>>(b);
-                    pcNodePtr->MarkComputed(true);
-
-                    output = m_net->PerDimMeanVarNormalization(input, w, b, L"MVNormalizedFeatures");
-                    input = output;
-                }
-                if (i == numLayers - 1)
-                {
-                    m_outputLayerSize = wts.GetNumRows();
-                }
-                wstring nameOfW = msra::strfun::wstrprintf(L"W%d", i);
-                wstring nameOfB = msra::strfun::wstrprintf(L"B%d", i);
-                wstring nameOfPrevH = msra::strfun::wstrprintf(L"H%d", i);
-                wstring nameOfTimes = nameOfW + L"*" + nameOfPrevH;
-                wstring nameOfPlus = nameOfTimes + L"+" + nameOfB;
-                wstring nameOfH = msra::strfun::wstrprintf(L"H%d", i + 1);
-
-                w = m_net->Parameter(wts.GetNumRows(), wts.GetNumCols(), nameOfW);
-                w->FunctionValues().SetValue(wts);
-
-                b = m_net->Parameter(bias.GetNumRows(), 1, nameOfB);
-                b->FunctionValues().SetValue(bias);
-
-                if (layerType == "perceptron")
-                {
-                    fprintf(stderr, "DBN: Reading (%lu x %lu) perceptron\n", (unsigned long)wts.GetNumRows(), (unsigned long)wts.GetNumCols());
-                    output = m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus);
-                }
-                else if (layerType == "rbmisalinearbernoulli")
-                {
-                    fprintf(stderr, "DBN: Reading (%lu x %lu) linear layer\n", (unsigned long)wts.GetNumRows(), (unsigned long)wts.GetNumCols());
-                    output = m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus);
-                }
-                else // assume rbmbernoullibernoulli
-                {
-                    fprintf(stderr, "DBN: Reading (%lu x %lu) non-linear layer\n", (unsigned long)wts.GetNumRows(), (unsigned long)wts.GetNumCols());
-                    output = ApplyNonlinearFunction(m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus), i, nameOfH);
-                    if (m_addDropoutNodes)
-                        input = m_net->Dropout(output, L"Drop" + nameOfH);
-                }
-
-                input = output;
-            }
-
-            if (!CheckDbnTag(fstream, "ENET"))
-                throw std::runtime_error("Error reading DBN file - did not find expected tag ENET\n");
-            //size_t outputLayerSize =  m_layerSizes[m_layerSizes.size()-1];
-
-            label = m_net->Input(m_outputLayerSize, mbSize, L"labels");
-
-            if (layerType == "perceptron") // complete network
-            {
-                m_net->RenameNode(output, L"HLast");
-#if 0
-                assert(numLayers + 1 == m_layerSizes.size());
-#endif
-                Matrix<ElemType> priorVals = ReadMatrixFromDbnFile(fstream, std::string("Pu"));
-                assert(priorVals.GetNumCols() == 1 && priorVals.GetNumRows() == m_outputLayerSize);
-
-                w = m_net->Mean(label, L"Prior");
-                w->FunctionValues().SetValue(priorVals);
-                w->NeedGradient() = false;
-                pcNodePtr = static_pointer_cast<PreComputedNode<ElemType>>(w);
-                pcNodePtr->MarkComputed(true);
-            }
-            else // pretrained network - need to add output layer, initalize
-            {
-                size_t outputLayerSize = 0;
-                if (this->m_outputLayerSize >= 0)
-                    outputLayerSize = this->m_outputLayerSize;
-                else if (m_layerSizes.size() > 0)
-                    m_layerSizes[m_layerSizes.size() - 1];
-                else
-                    std::runtime_error("Output layer size must be specified when converting pretrained network, use outputLayerSize=");
-
-                size_t penultimateSize = input->FunctionValues().GetNumRows();
-
-                wstring nameOfW = msra::strfun::wstrprintf(L"W%d", i);
-                wstring nameOfB = msra::strfun::wstrprintf(L"B%d", i);
-                wstring nameOfPrevH = msra::strfun::wstrprintf(L"H%d", i);
-                wstring nameOfTimes = nameOfW + L"*" + nameOfPrevH;
-                wstring nameOfPlus = nameOfTimes + L"+" + nameOfB;
-                wstring nameOfH = msra::strfun::wstrprintf(L"H%d", i + 1);
-
-                w = m_net->Parameter(outputLayerSize, penultimateSize, nameOfW);
-                m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-                b = m_net->Parameter(outputLayerSize, 1, nameOfB);
-                output = m_net->Plus(m_net->Times(w, input, nameOfTimes), b, nameOfPlus);
-                m_net->RenameNode(output, L"HLast");
-
-                if (m_needPrior)
-                {
-                    Matrix<ElemType> zeros = Matrix<ElemType>::Zeros(outputLayerSize, 1, m_deviceId);
-                    prior = m_net->Mean(label, L"Prior");
-                    prior->FunctionValues().SetValue(zeros);
-                    pcNodePtr = static_pointer_cast<PreComputedNode<ElemType>>(prior);
-                    pcNodePtr->MarkComputed(false);
-                }
-            }
-
-            AddTrainAndEvalCriterionNodes(output, label);
-
-            if (layerType == "perceptron" || m_needPrior)
-            {
-                input = m_net->Log(pcNodePtr, L"LogOfPrior");
-
-                //following two lines is needed only if true probability is needed
-                //output = m_net->Softmax(output);
-                //output = m_net->Log(output);
-
-                scaledLogLikelihood = m_net->CreateComputationNode(MinusNode<ElemType>::TypeName(), L"ScaledLogLikelihood");
-                scaledLogLikelihood->AttachInputs(output, input);
-                m_net->OutputNodes().push_back(scaledLogLikelihood);
-            }
-            else
-            {
-                m_net->OutputNodes().push_back(output);
-            }
-
-            if (!CheckDbnTag(fstream, "EDBN"))
-                throw std::runtime_error("Error reading DBN file - did not find expected tag ENET\n");
-            return m_net;
-        }
+        ComputationNetwork<ElemType>* BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName);
 
         //layer is 0 based
-        ComputationNodePtr ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName = L"")
-        {
-            ComputationNodePtr output;
-            wstring nonLinearFunction = m_nonLinearFunctions[layer];
-            if (nonLinearFunction == SigmoidNode<ElemType>::TypeName())
-                output = m_net->Sigmoid(input, nodeName);
-            else if (nonLinearFunction == RectifiedLinearNode<ElemType>::TypeName())
-                output = m_net->RectifiedLinear(input, nodeName);
-            else if (nonLinearFunction == TanhNode<ElemType>::TypeName())
-                output = m_net->Tanh(input, nodeName);
-            else if (nonLinearFunction == L"None" || nonLinearFunction == L"none" || nonLinearFunction == L"")
-            {
-                output = input;  //linear layer
-                if (nodeName != L"")
-                    m_net->RenameNode(output, nodeName);
-            }
-            else
-                throw std::logic_error("Unsupported nonlinear function.");
-
-            return output;
-        }
-
-        ComputationNodePtr AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"", ComputationNodePtr clspostprob = nullptr, ComputationNodePtr trans = nullptr)
-        {
-            m_net->LabelNodes().push_back(label);
-
-            ComputationNodePtr output;
-            ComputationNodePtr tinput = input;
-            if (matrix != nullptr)
-            {
-                tinput = m_net->Times(matrix, input);
-            }
-
-            switch (m_trainCriterion)
-            {
-            case TrainingCriterion::CrossEntropyWithSoftmax:
-                output = m_net->CrossEntropyWithSoftmax(label, tinput, (trainNodeName == L"") ? L"CrossEntropyWithSoftmax" : trainNodeName);
-                break;
-            case TrainingCriterion::SquareError:
-                output = m_net->SquareError(label, tinput, (trainNodeName == L"") ? L"SquareError" : trainNodeName);
-                break;
-            case TrainingCriterion::CRF:
-                assert(trans != nullptr);
-                output = m_net->CRF(label, input, trans, (trainNodeName == L"") ? L"CRF" : trainNodeName);
-                break;
-            case TrainingCriterion::ClassCrossEntropyWithSoftmax:
-                output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"ClassCrossEntropyWithSoftmax" : trainNodeName);
-                break;
-            case TrainingCriterion::NCECrossEntropyWithSoftmax:
-                output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
-                //output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
-                break;
-            default:
-                throw std::logic_error("Unsupported training criterion.");
-            }
-            m_net->FinalCriterionNodes().push_back(output);
-
-            if (!((m_evalCriterion == EvalCriterion::CrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::CrossEntropyWithSoftmax) ||
-                (m_evalCriterion == EvalCriterion::SquareError && m_trainCriterion == TrainingCriterion::SquareError) ||
-                (m_evalCriterion == EvalCriterion::CRF && m_trainCriterion == TrainingCriterion::CRF) ||
-                (m_evalCriterion == EvalCriterion::ClassCrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::ClassCrossEntropyWithSoftmax) ||
-                (m_evalCriterion == EvalCriterion::NCECrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::NCECrossEntropyWithSoftmax)))
-            {
-                switch (m_evalCriterion)
-                {
-                case EvalCriterion::CrossEntropyWithSoftmax:
-                    //output = m_net->CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"")?L"EvalCrossEntropyWithSoftmax":evalNodeName);
-                    output = m_net->CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"") ? L"CrossEntropyWithSoftmax" : evalNodeName);
-                    break;
-                case EvalCriterion::ClassCrossEntropyWithSoftmax:
-                    //output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"EvalClassCrossEntropyWithSoftmax" : evalNodeName);
-                    output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"ClassCrossEntropyWithSoftmax" : evalNodeName);
-                    break;
-                case EvalCriterion::NCECrossEntropyWithSoftmax:
-                    output = m_net->NoiseContrastiveEstimation(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"NoiseContrastiveEstimationNode" : evalNodeName);
-                    break;
-                case EvalCriterion::SquareError:
-                    //output = m_net->SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
-                    output = m_net->SquareError(label, tinput, (evalNodeName == L"") ? L"SquareError" : evalNodeName);
-                    break;
-                case EvalCriterion::ErrorPrediction:
-                    output = m_net->ErrorPrediction(label, tinput, (evalNodeName == L"") ? L"EvalErrorPrediction" : evalNodeName);
-                    break;
-                case EvalCriterion::CRF:
-                    assert(trans != nullptr);
-                    output = m_net->CRF(label, tinput, trans, (evalNodeName == L"") ? L"EvalCRF" : evalNodeName);
-                    break;
-                default:
-                    throw std::logic_error("Unsupported training criterion.");
-                }
-                output->NeedGradient() = false;
-            }
-
-            m_net->EvaluationNodes().push_back(output);
-
-            return output;
-        }
+        ComputationNodePtr ApplyNonlinearFunction(ComputationNodePtr input, const size_t layer, const std::wstring nodeName = L"");
+        ComputationNodePtr AddTrainAndEvalCriterionNodes(ComputationNodePtr input, ComputationNodePtr label, ComputationNodePtr matrix = nullptr, const std::wstring trainNodeName = L"", const std::wstring evalNodeName = L"", ComputationNodePtr clspostprob = nullptr, ComputationNodePtr trans = nullptr);
 
         Matrix<ElemType> ReadMatrixFromDbnFile(File &fstream, const std::string expectedName)
         {
@@ -759,7 +344,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 numCols = origRows;
             }
 
-
             Matrix<ElemType> mat(numRows, numCols, m_deviceId);
 
             // dbn operates on row vectors not column vectors. x*W + b, so need to read in as W'
@@ -780,21 +364,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-        bool CheckDbnTag(File &fstream, const std::string expectedTag)
-        {
-            char tag[5];
-            for (int i = 0; i<4; i++)
-                fstream >> tag[i];
-            tag[4] = 0;
-
-            if (std::string(tag) != expectedTag)
-            {
-                return false;
-            }
-
-            return true;
-        }
     protected:
+
         ComputationNetwork<ElemType>* m_net;
 
         int m_outputLayerSize;

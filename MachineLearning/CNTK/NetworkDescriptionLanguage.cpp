@@ -10,6 +10,15 @@
 
 #include "NetworkDescriptionLanguage.h"
 #include "SynchronousExecutionEngine.h"
+#include "InputAndParamNodes.h"
+#include "LinearAlgebraNodes.h"
+#include "NonlinearityNodes.h"
+#include "ConvolutionalNodes.h"
+#include "RecurrentNodes.h"
+#include "DecoderNode.h"
+#include "TrainingCriterionNodes.h"
+#include "CompositeComputationNodes.h"
+#include "EvaluationCriterionNodes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
