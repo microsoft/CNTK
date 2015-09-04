@@ -162,8 +162,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<typename ElemType>
-    void ComputationNetwork<ElemType>::LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation = true,
-                                           const FileOptions fileFormat = FileOptions::fileOptionsBinary)
+    void ComputationNetwork<ElemType>::LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation,
+                                           const FileOptions fileFormat)
     {
         File fstream(fileName, fileFormat | FileOptions::fileOptionsRead);
 
@@ -238,7 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<typename ElemType>
-    void ComputationNetwork<ElemType>::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr rootNode = nullptr)
+    void ComputationNetwork<ElemType>::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr rootNode)
     {
         //find nodes from all available nodes
         if (rootNode == nullptr)
@@ -268,7 +268,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<typename ElemType>
     void ComputationNetwork<ElemType>::InitLearnableParameters(const ComputationNodeBasePtr node,
                                                                const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale,
-                                                               bool initOnCPUOnly = false)
+                                                               bool initOnCPUOnly)
     {
         auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
         learnableParameterNode->InitRandom(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
@@ -368,7 +368,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //return list of nodes that require precomputation and not precomputed yet.
     // TODO: name has a grammar error, fix
     template<typename ElemType>
-    std::list<ComputationNodeBasePtr> ComputationNetwork<ElemType>::GetNodesRequirePreComputation(const ComputationNodeBasePtr rootNode = nullptr, bool checkComputed = true)
+    std::list<ComputationNodeBasePtr> ComputationNetwork<ElemType>::GetNodesRequirePreComputation(const ComputationNodeBasePtr rootNode, bool checkComputed)
     {
         std::list<ComputationNodeBasePtr> nodesRequirePreComputation;
 
@@ -411,7 +411,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //return list of nodes that require precomputation and not precomputed yet.
     // TODO: name has grammar error, fix
     template<typename ElemType>
-    std::list<ComputationNodeBasePtr> ComputationNetwork<ElemType>::GetNodesRequireBatchMode(const ComputationNodeBasePtr rootNode = nullptr, bool checkComputed = true)
+    std::list<ComputationNodeBasePtr> ComputationNetwork<ElemType>::GetNodesRequireBatchMode(const ComputationNodeBasePtr rootNode, bool checkComputed)
     {
         std::list<ComputationNodeBasePtr> nodesRequirePreComputation;
 
