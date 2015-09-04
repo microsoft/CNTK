@@ -14,6 +14,7 @@
 #include "fileutil.h"
 
 #include "ComputationNetwork.h"
+#include "ConvolutionalNodes.h"
 #include "DataReader.h"
 
 using namespace std;

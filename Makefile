@@ -359,7 +359,9 @@ CNTK_SRC =\
 	MachineLearning/CNTK/ModelEditLanguage.cpp \
 	MachineLearning/CNTK/NetworkDescriptionLanguage.cpp \
 	MachineLearning/CNTK/Profiler.cpp \
+	MachineLearning/CNTK/ComputationNetworkBuilder.cpp \
 	MachineLearning/CNTK/SimpleNetworkBuilder.cpp \
+	MachineLearning/CNTK/SynchronousExecutionEngine.cpp \
 	MachineLearning/CNTK/tests.cpp \
 	MachineLearning/CNTKEval/CNTKEval.cpp \
 	BrainScript/BrainScriptEvaluator.cpp \

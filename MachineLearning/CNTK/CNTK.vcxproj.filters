@@ -56,6 +56,15 @@
     <ClCompile Include="..\..\BrainScript\BrainScriptTest.cpp">
       <Filter>Experimental</Filter>
     </ClCompile>
+    <ClCompile Include="ComputationNetworkBuilder.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="ComputationNetwork.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="SynchronousExecutionEngine.cpp">
+      <Filter>Evaluation</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
@@ -204,6 +213,9 @@
     </ClInclude>
     <ClInclude Include="..\..\BrainScript\BrainScriptParser.h">
       <Filter>Experimental</Filter>
+    </ClInclude>
+    <ClInclude Include="ComputationNetworkBuilder.h">
+      <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

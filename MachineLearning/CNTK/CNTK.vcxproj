@@ -176,6 +176,7 @@
     <ClInclude Include="CompositeComputationNodes.h" />
     <ClInclude Include="AllReduceDistGradAggregator.h" />
     <ClInclude Include="ComputationNetwork.h" />
+    <ClInclude Include="ComputationNetworkBuilder.h" />
     <ClInclude Include="ComputationNetworkHelper.h" />
     <ClInclude Include="ComputationNode.h" />
     <ClInclude Include="ConvolutionalNodes.h" />
@@ -222,6 +223,8 @@
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
     <ClCompile Include="CNTK.cpp" />
+    <ClCompile Include="ComputationNetwork.cpp" />
+    <ClCompile Include="ComputationNetworkBuilder.cpp" />
     <ClCompile Include="ComputationNode.cpp" />
     <ClCompile Include="ExperimentalNetworkBuilder.cpp" />
     <ClCompile Include="ModelEditLanguage.cpp" />
@@ -229,6 +232,7 @@
     <ClCompile Include="SimpleNetworkBuilder.cpp" />
     <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="SynchronousExecutionEngine.cpp" />
     <ClCompile Include="tests.cpp" />
   </ItemGroup>
   <ItemGroup>

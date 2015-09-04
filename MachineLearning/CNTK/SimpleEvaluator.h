@@ -17,6 +17,7 @@
 #include "DataWriter.h"
 #include "ComputationNetwork.h"
 #include "ComputationNetworkHelper.h"
+#include "TrainingCriterionNodes.h"
 
 using namespace std;
 

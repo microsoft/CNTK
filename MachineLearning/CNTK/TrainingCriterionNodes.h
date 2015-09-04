@@ -12,6 +12,7 @@
 #include <list>
 #include <memory>
 #include "ComputationNode.h"
+#include "InputAndParamNodes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     //note: to save computation the gradient may be scaled by an constant. 
