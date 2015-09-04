@@ -229,40 +229,12 @@ public:
     void LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation = true,
                                            const FileOptions fileFormat = FileOptions::fileOptionsBinary);
     //template<ElemType>
-    void ComputationNetwork<ElemType>::LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
-                                                    const bool bAllowNoCriterionNode = false, ComputationNetwork<ElemType>* anotherNetwork = nullptr);
+    void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
+                      const bool bAllowNoCriterionNode = false, ComputationNetwork<ElemType>* anotherNetwork = nullptr);
 
 #pragma region Network Modification
 
-    // TODO: spelling
-    void SetLeanableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr rootNode = nullptr)
-    {
-        //find nodes from all available nodes
-        if (rootNode == nullptr)
-        {
-            for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-            {
-                ComputationNodeBasePtr node = nodeIter->second;
-                if (node->OperationName() == LearnableParameter<float>::TypeName())
-                {
-                    node->NeedGradient() = needGradient;
-                }
-            }
-        }
-        else
-        {
-            //for calculating a specific node
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-            {
-                ComputationNodeBasePtr node = (*nodeIter);
-                if (node->OperationName() == LearnableParameter<float>::TypeName())
-                {
-                    node->NeedGradient() = needGradient;
-                }
-            }
-        }
-    }
+    void SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr rootNode = nullptr);
 
     // -----------------------------------------------------------------------
     // evaluation
@@ -399,11 +371,7 @@ public:
                                  const bool uniformInit,
                                  const unsigned long randomSeed,
                                  const ElemType initValueScale,
-                                 bool initOnCPUOnly = false)
-    {
-        auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
-        learnableParameterNode->InitRandom(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
-    }
+                                 bool initOnCPUOnly = false);
 
     // -----------------------------------------------------------------------
     // network editing
@@ -1610,32 +1578,7 @@ protected:
 public:
 
     // FixupInputMinibatchSize - go through all the inputs and make sure they have a consistent minibatch size (after creation)
-    void FixupInputMinibatchSize()
-    {
-        std::list<ComputationNodeBasePtr> inputs = GetNodesWithType(InputValue<ElemType>::TypeName());
-        int minibatchMax = 0;
-        bool minibatchDifferent = false; // flag to see if all the values are already the same
-        for (ComputationNodeBasePtr node : inputs)
-        {
-            size_t cols = node->GetNumCols();
-            if (cols != minibatchMax)
-            {
-                if (minibatchMax != 0)
-                    minibatchDifferent = true;
-                if (minibatchMax < cols)
-                    minibatchMax = cols;
-            }
-        }
-        if (minibatchDifferent)
-        {
-            for (ComputationNodeBasePtr node : inputs)
-            {
-                size_t cols = node->GetNumCols();
-                if (cols != minibatchMax)
-                    node->Resize(node->GetNumRows(), minibatchMax);
-            }
-        }
-    }
+    void FixupInputMinibatchSize();
 
     // -----------------------------------------------------------------------
     // BS integration
