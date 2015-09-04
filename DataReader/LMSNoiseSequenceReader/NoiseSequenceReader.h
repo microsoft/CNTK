@@ -59,6 +59,7 @@ public:
     int debughtx; //used in the DEBUG_HTX macro, control the debug output
     LMSLabelType outputLabelType; //"compressed", "onehot"
     int labelDim;
+    int senCount;
 
     int sentenceEndId;
     Matrix<ElemType> minibatchFlag; //A place to set minibatchFlag in the getMinibatch function
@@ -71,7 +72,7 @@ public:
         int nwords,
         string mUnk,
         bool flatten);
-    bool getDataSeq(list<int> &list); //Get a new sentence from fin
+    bool getDataSeq(list<pair<int, float>> &list); //Get a new sentence from fin
     bool getNoiseSeq(list<pair<int, float>> &list); //Get a new sentence from fin
     void PrintMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     void Destroy() {

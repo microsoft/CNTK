@@ -81,7 +81,7 @@ void BatchSequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, int& 
 }
 
 template<class ElemType>
-bool BatchSequenceReader<ElemType>::getDataSeq(list<int> &list)
+bool BatchSequenceReader<ElemType>::getDataSeq(list<pair<int, float>> &list)
 {
     if (!fin.is_open())
         return false;
@@ -102,8 +102,8 @@ bool BatchSequenceReader<ElemType>::getDataSeq(list<int> &list)
         wordRead++;
         last_word_id = -1;
         if (list.size() >= 1)
-            last_word_id = list.back();
-        list.push_back(word_id);
+            last_word_id = list.back().first;
+        list.push_back(pair<int, float>(word_id, (float)-1));
         res = true;
         if (word_id == sentenceEndId && list.size() > 1 && last_word_id != sentenceEndId) { //Meet a sentence End
             break;
@@ -115,11 +115,18 @@ bool BatchSequenceReader<ElemType>::getDataSeq(list<int> &list)
 template<class ElemType>
 bool BatchSequenceReader<ElemType>::getNoiseSeq(list<pair<int, float>> &list)
 {
-    if (!fin_noise.is_open())
-        return false;
+    if (!fin_noise.is_open()) {
+        if (!loopNoiseFile)
+            return false;
+        else {
+            fin_noise.open(fileName_noise);
+            DEBUG_HTX fprintf(stderr, "BatchSequenceReader<ElemType>::getNoiseSeq looping noise data file...\n");
+        }
+    }
     list.clear();
     bool res = false;
     string word;
+    float probNow;
     int wordRead = 0;
     int last_word_id = -1;
     for (;;) {
@@ -130,12 +137,13 @@ bool BatchSequenceReader<ElemType>::getNoiseSeq(list<pair<int, float>> &list)
             else
                 return true;
         }
+        fin_noise >> probNow;
         int word_id = word4idx[word];
         wordRead++;
         last_word_id = -1;
         if (list.size() >= 1)
             last_word_id = list.back().first;
-        list.push_back(pair<int, float>(word_id, (float)0));
+        list.push_back(pair<int, float>(word_id, (float)probNow));
         res = true;
         if (word_id == sentenceEndId && list.size() > 1 && last_word_id != sentenceEndId) { //Meet a sentence End
             break;
@@ -228,13 +236,15 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     }
     fin.open(fileName);
     DEBUG_HTX fprintf(stderr, "noisefilename:%s\n", fileName_noise.c_str());
+
     if (!loopNoiseFile) {
         if (fin_noise.is_open())
             fin_noise.close();
-        fin_noise.open(fileName_noise);
+        fin_noise.open(fileName_noise); //Noise file maybe not readed to the end, it could be very big
     }
     //fin_noise will be processed in a loop, in order to get different noise samples for each epoch
 
+    senCount = 0;
     minibatchFlag.TransferFromDeviceToDevice(minibatchFlag.GetDeviceId(), CPUDEVICE, false, true, false); //This matrix lies in CPU, because I want to use SetValue(i,j)
 
     DEBUG_HTX fprintf(stderr, "debughtx ---void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop ended---\n");
@@ -256,13 +266,15 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     //features idx2cls labels
     Matrix<ElemType>* feature_m = matrices[L"features"];
     Matrix<ElemType>* label_m = matrices[L"labels"];
+    Matrix<ElemType>* prob_m = matrices[L"probs"];
     size_t wordNumber = mBlgSize * m_mbSize;
-    bool res = false; //Got something new?
 
     DEVICEID_TYPE featureDeviceId = feature_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
     DEVICEID_TYPE labelDeviceId = label_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
+    DEVICEID_TYPE probDeviceId = prob_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
     feature_m->TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, true); 
     label_m->TransferFromDeviceToDevice(labelDeviceId, CPUDEVICE, true);
+    prob_m->TransferFromDeviceToDevice(probDeviceId, CPUDEVICE, true);
 
     if (feature_m->GetMatrixType() == MatrixType::DENSE)
     {
@@ -285,44 +297,48 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     minibatchFlag.Resize(mBlgSize, m_mbSize);
 
     int *temp_feature =  new int[wordNumber];
+    list<pair<int, float>> temp_l; //temp list
+    bool res = false; //Got something new?
 
-    /*
+    //senCount % noiseRatio == 0 means DataFeed, otherwise NoiseFeed
     for (int i = 0; i < mBlgSize; i++) {
-        bool end = false;
+        temp_l.clear();
+        if (noiseRatio == 0 || senCount % noiseRatio == 0)
+            getDataSeq(temp_l); //word_id, -1
+        else {
+            if (!getNoiseSeq(temp_l)) //word_id, word_prob
+                LogicError("BatchSequenceReader<ElemType>::GetMinibatch did not get noise sentence.\n");
+        }
+
         for (int j = 0; j < m_mbSize; j++) {
             minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::None);
             int idx = j * (int)mBlgSize + i;
-            if (!refreshCacheSeq(i))  //can we have new words in the cache for stream i?
-                end = true;
-            if (end) {
+            if (temp_l.size() == 0) {
                 temp_feature[idx] = 0; //feature_m->SetValue(0, idx, (ElemType)1); //The rubbish will be filtered out by ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing
                 label_m->SetValue(0, idx, (ElemType)1); //The rubbish will be filtered out by ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing
                 minibatchFlag.SetValue(i, j, (ElemType)(MinibatchPackingFlag::NoInput)); //Rubbish here
                 continue;
             }
-            if (sequence_cache[i]->size() < 2) {
-                LogicError("Error in BatchSequenceReader<ElemType>::GetMinibatch, sequence_cache[%d]->size() < 2, it should be always >= 2.", i);
+            if (temp_l.size() < 2) {
+                LogicError("Error in BatchSequenceReader<ElemType>::GetMinibatch, temp_l.size() < 2, it should be always >= 2.");
             }
-            //fprintf(stderr, "debughtx feature_m->SetValue seq i:%d mbCol j:%d row:%d col:%d matrixrow:%d matrixcol:%d\n", i, j, sequence_cache[i]->front(), idx, feature_m->GetNumRows(), feature_m->GetNumCols()); //added when meet a bug crash
-            temp_feature[idx] = sequence_cache[i]->front(); //feature_m->SetValue(sequence_cache[i]->front(), idx, (ElemType)1);
-            if (sequence_cache[i]->front() == sentenceEndId) //Beginning of a sentence
+            temp_feature[idx] = temp_l.front().first; //feature_m->SetValue(sequence_cache[i]->front(), idx, (ElemType)1);
+            if (temp_l.front().first == sentenceEndId) //Beginning of a sentence
                 minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceStart);
             res = true; //Got some word new
-            sequence_cache[i]->pop_front();
+            temp_l.pop_front();
             if (outputLabelType == LMSLabelType::compressed)
-                label_m->SetValue(0, idx, (ElemType)sequence_cache[i]->front());
+                label_m->SetValue(0, idx, (ElemType)temp_l.front().first);
             else
-                label_m->SetValue(sequence_cache[i]->front(), idx, (ElemType)1);
-            if (sequence_cache[i]->front() == sentenceEndId) { //End of a sentence, pop it out for a new one.
-                sequence_cache[i]->pop_front();
+                label_m->SetValue(temp_l.front().first, idx, (ElemType)1);
+            prob_m->SetValue(0, idx, temp_l.front().second);
+            if (temp_l.front().first == sentenceEndId) { //End of a sentence, this minibatch ends
+                temp_l.pop_front();
                 minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceEnd);
-                if (oneSentenceInMB)
-                    end = true; //When commented, the reader will get multiple sentence in a MB, which also means more random(random through boundary)
             }
         }
+        senCount++;
     }
-
-    */
 
     for (int i = 0; i < wordNumber; i++)
         feature_m->SetValue(temp_feature[i], i, (ElemType)1); //The assigning to a sparse matrix need to follow a strict order!!!
@@ -330,6 +346,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     feature_m->TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false); //Done, move it back to GPU if necessary
     label_m->TransferFromDeviceToDevice(CPUDEVICE, labelDeviceId, false, false, false); //Done, move it back to GPU if necessary
+    prob_m->TransferFromDeviceToDevice(CPUDEVICE, probDeviceId, false, false, false); //Done, move it back to GPU if necessary
 
     DEBUG_HTX PrintMinibatch(matrices); //Just for debughtx
 
@@ -345,6 +362,7 @@ void BatchSequenceReader<ElemType>::PrintMinibatch(std::map<std::wstring, Matrix
     for (int i = 0; i < matrices.find(L"labels")->second->GetNumCols(); i++) {
         for (int j = 0; j < 4; j++) {
             fprintf(stderr, " %.2lf", (*(matrices.find(L"labels")->second))(j, i));
+            fprintf(stderr, "p%.2lf", (*(matrices.find(L"probs")->second))(j, i));
             if (j == 0)
                 fprintf(stderr, "[%s] ", idx4word[int((*(matrices.find(L"labels")->second))(j, i))].c_str());
             if ((j == 3) && ((i + 1) % sequence_number == 0))

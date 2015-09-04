@@ -51,9 +51,10 @@ public:
 
     size_t m_mbSize;
 
+    int senCount; //Count of current sentence readed, used to determine whether feed data or noise
+    vector<list<int>*> sequence_cache;
     string fileName; 
     ifstream fin;
-    vector<list<int>*> sequence_cache;
     int debughtx; //used in the DEBUG_HTX macro, control the debug output
     int oneSentenceInMB; //Only allow at most one sentence in a MB, should be turned on for bi-directional training, so we will have sentence end in MB
     LMSLabelType outputLabelType; //"compressed", "onehot"
