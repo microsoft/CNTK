@@ -23,10 +23,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     private:
-        ComputationNetwork<ElemType>* m_net;
+        ComputationNetwork* m_net;
 
     public:
-        NDLUtil(ComputationNetwork<ElemType>* net) : m_net(net)
+        NDLUtil(ComputationNetwork * net) : m_net(net)
         {
         }
 

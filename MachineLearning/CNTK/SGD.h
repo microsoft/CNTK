@@ -712,27 +712,27 @@ public:
             return;
         }
 
-        ComputationNetwork<ElemType> net(deviceID);
+        ComputationNetwork net(deviceID);
         if (startEpoch >= 0)
         {
             wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
             fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
-            net.LoadFromFile(modelFileName);
+            net.LoadFromFile<ElemType>(modelFileName);
         }
         else
         {
             fprintf(stderr, "Load Network From the original model file %ls.\n", origModelFileName.c_str());
-            net.LoadFromFile(origModelFileName);
+            net.LoadFromFile<ElemType>(origModelFileName);
         }
 
         startEpoch = max(startEpoch, 0);
 
-        ComputationNetwork<ElemType> refNet(deviceID);
+        ComputationNetwork refNet(deviceID);
         m_needAdaptRegularization = m_adaptationRegType != AdaptationRegType::None && m_adaptationRegWeight > 0;
         if (m_needAdaptRegularization)
         {
             fprintf(stderr, "Load reference Network From the original model file %ls.\n", origModelFileName.c_str());
-            refNet.LoadFromFile(origModelFileName);
+            refNet.LoadFromFile<ElemType>(origModelFileName);
         }
 
         ComputationNodeBasePtr refNode;
@@ -767,15 +767,15 @@ public:
         }
 
         // Initializes the model from original model.
-        ComputationNetwork<ElemType> origNet(deviceID);
-        ComputationNetwork<ElemType>* sequenceNet = 
+        ComputationNetwork origNet(deviceID);
+        ComputationNetwork* sequenceNet = 
             (startEpoch < 0) ? netBuilder->BuildNetworkFromDescription() : &origNet;
         std::vector<ComputationNodeBasePtr> addedFeatureNodes;
         std::vector<ComputationNodeBasePtr> replacedCriterionNodes;
         if (startEpoch < 0)
         {
             // Loads models.
-            origNet.LoadFromFile(origModelFileName);
+            origNet.LoadFromFile<ElemType>(origModelFileName);
 
             // Processes feature nodes.
             std::vector<ComputationNodeBasePtr> & sequenceFeatureNodes = sequenceNet->FeatureNodes();
@@ -809,7 +809,7 @@ public:
         {
             fprintf(stderr, "Load Network From the original model file %ls.\n", origModelFileName.c_str());
         }
-        ComputationNetwork<ElemType> *net =
+        ComputationNetwork *net =
             (startEpoch < 0) ? &origNet : netBuilder->LoadNetworkFromFile(modelFileName);
 
         startEpoch = max(startEpoch, 0);
@@ -850,7 +850,7 @@ public:
             fprintf(stderr, "Starting from checkpoint. Load Network From File %ls.\n", modelFileName.c_str());
         }
 
-        ComputationNetwork<ElemType>* net = startEpoch < 0 ? netBuilder->BuildNetworkFromDescription() :
+        ComputationNetwork* net = startEpoch < 0 ? netBuilder->BuildNetworkFromDescription() :
                                                              netBuilder->LoadNetworkFromFile(modelFileName);
         // TODO: BUGBUG: if not starting from checkpoint, need to synchronize initial model
         // strategy should be to run the initializer above on mpiRank==0, and then broadcast parameters.
@@ -870,7 +870,7 @@ public:
     }
 
 protected:
-    std::vector<ComputationNodeBasePtr> & GetTrainCriterionNodes(ComputationNetwork<ElemType>& net)
+    std::vector<ComputationNodeBasePtr> & GetTrainCriterionNodes(ComputationNetwork& net)
     {
         fprintf(stderr, "GetTrainCriterionNodes %ls ...\n", m_trainCriterionNodeName.c_str());
         if (!m_trainCriterionNodeName.empty())
@@ -883,7 +883,7 @@ protected:
         }
     }
 
-    std::vector<ComputationNodeBasePtr> & GetEvalCriterionNodes(ComputationNetwork<ElemType>& net)
+    std::vector<ComputationNodeBasePtr> & GetEvalCriterionNodes(ComputationNetwork& net)
     {
         fprintf(stderr, "GetEvalCriterionNodes %ls ...\n", m_evalCriterionNodeName.c_str());
         if (!m_evalCriterionNodeName.empty())
@@ -896,8 +896,8 @@ protected:
         }
     }
 
-    void TrainOrAdaptModel(int startEpoch, ComputationNetwork<ElemType>& net,
-                           ComputationNetwork<ElemType>& refNet,
+    void TrainOrAdaptModel(int startEpoch, ComputationNetwork& net,
+                           ComputationNetwork& refNet,
                            ComputationNodeBasePtr refNode,
                            IDataReader<ElemType>* trainSetDataReader,
                            IDataReader<ElemType>* validationSetDataReader)
@@ -1365,13 +1365,13 @@ protected:
 
 protected:
     // return true if precomputation is executed.
-    bool PreCompute(ComputationNetwork<ElemType>& net,
+    bool PreCompute(ComputationNetwork& net,
                     IDataReader<ElemType>* trainSetDataReader,
                     std::vector<ComputationNodeBasePtr> & featureNodes,
                     std::vector<ComputationNodeBasePtr> & labelNodes,
                     std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
     {
-        std::list<ComputationNodeBasePtr> nodes = net.GetNodesRequirePreComputation();
+        std::list<ComputationNodeBasePtr> nodes = net.GetNodesRequiringPreComputation();
 
         if (nodes.size() == 0)
         {
@@ -1428,8 +1428,8 @@ protected:
     }
 
     // return a reasonable initial learning rate based on the initial mbsize
-    ElemType SearchForBestLearnRate(ComputationNetwork<ElemType>& net,
-                                    ComputationNetwork<ElemType>& refNet,
+    ElemType SearchForBestLearnRate(ComputationNetwork& net,
+                                    ComputationNetwork& refNet,
                                     const ComputationNodeBasePtr refNode, const int epochNumber,
                                     const ElemType curLearnRate,
                                     IDataReader<ElemType>* trainSetDataReader,
@@ -1593,8 +1593,8 @@ protected:
         return bestLearnRatePerSample;
     }
 
-    void TrainOneMiniEpochAndReloadModel(ComputationNetwork<ElemType>& net,
-                                         ComputationNetwork<ElemType>& refNet,
+    void TrainOneMiniEpochAndReloadModel(ComputationNetwork& net,
+                                         ComputationNetwork& refNet,
                                          const ComputationNodeBasePtr refNode, const int epochNumber,
                                          const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
                                          const ElemType learnRatePerSample,
@@ -1652,8 +1652,8 @@ protected:
                            /*out*/ dummyMinibatchSize);
     }
 
-    size_t AdaptiveMinibatchSizing(ComputationNetwork<ElemType>& net,
-                                   ComputationNetwork<ElemType>& refNet,
+    size_t AdaptiveMinibatchSizing(ComputationNetwork& net,
+                                   ComputationNetwork& refNet,
                                    const ComputationNodeBasePtr refNode,
                                    const int epochNumber,
                                    const size_t numFramesToUseInSearch,
@@ -1755,8 +1755,8 @@ protected:
 
     // uses a small percentage of training data of minibatch to
     // speculatively train with various MB sizes; then picks the best
-    size_t SearchForBestMinibatchSize(ComputationNetwork<ElemType>& net,
-                                      ComputationNetwork<ElemType>& refNet,
+    size_t SearchForBestMinibatchSize(ComputationNetwork& net,
+                                      ComputationNetwork& refNet,
                                       const ComputationNodeBasePtr refNode,
                                       const int epochNumber,
                                       const size_t numFramesToUseInSearch,
@@ -1855,7 +1855,7 @@ protected:
 
     // Tries to compute derivatives for the whole utterances, which will be
     // fed to the neural network as features.
-    void AttemptUtteranceDerivativeFeatures(ComputationNetwork<ElemType>& net,
+    void AttemptUtteranceDerivativeFeatures(ComputationNetwork& net,
                                             IDataReader<ElemType>* trainSetDataReader,
                                             const std::vector<ComputationNodeBasePtr> & featureNodes,
                                             std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
@@ -1910,8 +1910,8 @@ protected:
         return format;
     }
 
-    size_t TrainOneEpoch(ComputationNetwork<ElemType>& net,
-                         ComputationNetwork<ElemType>& refNet,
+    size_t TrainOneEpoch(ComputationNetwork& net,
+                         ComputationNetwork& refNet,
                          const ComputationNodeBasePtr refNode,
                          const int epochNumber,
                          const size_t epochSize,
@@ -2102,7 +2102,7 @@ protected:
                     if (learnRatePerSample > m_minLearnRate * 0.01)
                     {
                         // use only the first criterion. Is there any possibility to use more?
-                        net.ComputeGradient(dynamic_pointer_cast<ComputationNode<ElemType>>(criterionNodes[0]));
+                        net.ComputeGradient<ElemType>(criterionNodes[0]);
                     }
                     else
                     {
@@ -2829,7 +2829,7 @@ public:
 
 #define EPSILON 1e-5
 
-    bool GradientCheck(ComputationNetwork<ElemType>& net,
+    bool GradientCheck(ComputationNetwork& net,
                        const std::vector<ComputationNodeBasePtr> & criterionNodes,
                        const std::list<ComputationNodeBasePtr> & learnableNodes,
                        int npos)
@@ -2861,7 +2861,7 @@ public:
                 node->UpdateEvalTimeStamp();
 
                 // use only the first criterion. Is
-                net.ComputeGradient(criterionNodes[npos]);
+                net.ComputeGradient<ElemType>(criterionNodes[npos]);
 
                 if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
                 {

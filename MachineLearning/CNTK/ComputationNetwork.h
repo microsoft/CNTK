@@ -33,12 +33,9 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// TODO: make this completely independent of ElemType. Some ElemType-dependent code in here are mere helpers and can be moved out into a static class.
-template<class ElemType>
 class ComputationNetwork : public BS::Object, public BS::HasToString, public BS::IConfigRecord
 {
 protected:
-    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
 
     typedef struct stRecurrentInfo
@@ -85,8 +82,8 @@ public:
     {
         m_randomSeedOffset = 0;
         m_actMiniBSize = 0;
-        if (m_deviceId == AUTOPLACEMATRIX)
-            m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
+        if (m_deviceId == AUTOPLACEMATRIX)  // TODO: code dup with SetDeviceId()
+            m_deviceId = Matrix<float>::GetBestGPUDeviceId();
         m_nbrSlicesInEachRecurrentIteration = 1;
     }
 
@@ -192,7 +189,7 @@ public:
     {
         m_deviceId = deviceId;
         if (m_deviceId == AUTOPLACEMATRIX)
-            m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
+            m_deviceId = Matrix<float>::GetBestGPUDeviceId();
     }
 
     DEVICEID_TYPE GetDeviceID() { return m_deviceId; }
@@ -225,12 +222,11 @@ private:
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
 public:
 
-    //template<ElemType>
     void LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation = true,
                                            const FileOptions fileFormat = FileOptions::fileOptionsBinary);
-    //template<ElemType>
+    template<typename ElemType>
     void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
-                      const bool bAllowNoCriterionNode = false, ComputationNetwork<ElemType>* anotherNetwork = nullptr);
+                      const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
 
 #pragma region Network Modification
 
@@ -286,6 +282,7 @@ public:
     // NOTE: caller is responsible for deleting the returned buffer once it is finished using it.
     // TODO: change to return a std::vector<ElemType>; solves the ownership issue
     // TODO: move this elsewhere, this is a general utility function that does not belong into the ComputationNetwork class
+    template<class ElemType>
     static ElemType* LoadArrayFromTextFile(const std::string filePath, size_t& numRows, size_t& numCols)
     {
         size_t r = 0;
@@ -346,17 +343,19 @@ public:
     }
 
     // TODO: why is this here? Move to LearnableParameter class?
-    static void InitLearnableParametersFromFile(const ComputationNodePtr node,
+    template<class ElemType>
+    static void InitLearnableParametersFromFile(const shared_ptr<ComputationNode<ElemType>> node,
                                                 const std::wstring & initFromFilePath,
                                                 DEVICEID_TYPE deviceId)    // TODO: why not just use node->m_deviceId?
     {
         size_t numRows = 0;
         size_t numCols = 0;
-        ElemType *pArray = LoadArrayFromTextFile(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
+        ElemType *pArray = LoadArrayFromTextFile<ElemType>(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
         node->FunctionValues().SetValue(numRows, numCols, pArray, matrixFlagNormal, deviceId);
         delete[] pArray;    // TODO: use std::vector to avoid mem leak on error
     }
-    void InitLearnableParametersFromFile(const ComputationNodePtr node, const std::string & initFromFilePath)   // TODO: remove this method or change pathname to wstring
+    template<class ElemType>
+    void InitLearnableParametersFromFile(const shared_ptr<ComputationNode<ElemType>> node, const std::string & initFromFilePath)   // TODO: remove this method or change pathname to wstring
     {
         InitLearnableParametersFromFile(node, msra::strfun::utf16(initFromFilePath), this->GetDeviceID());
     }
@@ -367,6 +366,7 @@ public:
 
     // non-static version needed because it accesses m_randomSeedOffset
     // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
+    template<typename ElemType>
     void InitLearnableParameters(const ComputationNodeBasePtr node,
                                  const bool uniformInit,
                                  const unsigned long randomSeed,
@@ -461,7 +461,7 @@ public:
     // network editing
     // -----------------------------------------------------------------------
 
-    ComputationNodeBasePtr CopyNode(const ComputationNetwork<ElemType> & fromNet,
+    ComputationNodeBasePtr CopyNode(const ComputationNetwork & fromNet,
                                 const std::wstring fromName,
                                 std::wstring toName = L"",
                                 const CopyNodeFlags flags = CopyNodeFlags::copyNodeAll)
@@ -502,7 +502,7 @@ public:
 
     //only copy a complete independent tree
     //when node name exists
-    void CopySubTree(const ComputationNetwork<ElemType> & fromNet,
+    void CopySubTree(const ComputationNetwork & fromNet,
                      const std::wstring fromName, std::wstring toNamePrefix = L"",
                      const CopyNodeFlags flags = copyNodeAll)
     {
@@ -549,7 +549,7 @@ public:
         return (iter != m_nameToNodeMap.end());
     }
 
-    ComputationNodeBasePtr GetNodeFromName(const std::wstring& name, ComputationNetwork<ElemType>* anotherNetwork = nullptr, bool bPanic = true) const
+    ComputationNodeBasePtr GetNodeFromName(const std::wstring& name, ComputationNetwork* anotherNetwork = nullptr, bool bPanic = true) const
     {
         auto iter = m_nameToNodeMap.find(name);
         if (iter != m_nameToNodeMap.end())
@@ -793,11 +793,12 @@ public:
         }
     }
 
-    virtual void ComputeGradient(const ComputationNodeBasePtr rootNode, 
-                                 bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
-                                 const Matrix<ElemType>* rootGradientInitValue = nullptr,
-                                 bool bClearGradient = true,
-                                 bool resetTimeStampAfterComputation = false
+    template<typename ElemType>
+    void ComputeGradient(const ComputationNodeBasePtr rootNode, 
+                         bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
+                         const Matrix<ElemType>* rootGradientInitValue = nullptr,
+                         bool bClearGradient = true,
+                         bool resetTimeStampAfterComputation = false
                     )
     {
         if (bResetToOne && (rootNode->GetNumRows() != 1 || rootNode->GetNumCols() != 1))
@@ -1143,12 +1144,15 @@ public:
         return nodesWithType;
     }
 
+private:
+    template<class N> void GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequirePreComputation, const ComputationNodeBasePtr rootNode, bool checkComputed);
+public:
     //return list of nodes that require precomputation and not precomputed yet.
     // TODO: name has a grammar error, fix
-    std::list<ComputationNodeBasePtr> GetNodesRequirePreComputation(const ComputationNodeBasePtr rootNode = nullptr, bool checkComputed = true);
+    std::list<ComputationNodeBasePtr> GetNodesRequiringPreComputation(const ComputationNodeBasePtr rootNode = nullptr, bool checkComputed = true);
     //return list of nodes that require precomputation and not precomputed yet.
     // TODO: name has grammar error, fix
-    std::list<ComputationNodeBasePtr> GetNodesRequireBatchMode(const ComputationNodeBasePtr rootNode = nullptr, bool checkComputed = true);
+    std::list<ComputationNodeBasePtr> GetNodesRequiringBatchMode(const ComputationNodeBasePtr rootNode = nullptr, bool checkComputed = true);
 
     // -----------------------------------------------------------------------
     // evaluation
@@ -1385,6 +1389,7 @@ public:
     // B and C are two learnable parameters
     //========================================
     // BUGBUG: this only currently works for one ElemType, not both
+    template<typename ElemType>
     void PerformSVDecomposition(const map<wstring, float>& SVDConfig);
 
 public:
@@ -1393,24 +1398,26 @@ public:
     // -----------------------------------------------------------------------
 
     // TODO: make these templated on <ElemType> locally
-    virtual void GetHistory(map<wstring, Matrix<ElemType>>& history, bool bLastTime = false)
+    template<typename ElemType>
+    void GetHistory(map<wstring, Matrix<ElemType>>& history, bool bLastTime = false)
     {
         //put all node info first
         Matrix<ElemType> hist;
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
-            ComputationNodePtr nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(nodeIter->second);
+            shared_ptr<ComputationNode<ElemType>> nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(nodeIter->second);
             if (nodePtr && nodePtr->GetHistory(hist, bLastTime))
                 history[nodeIter->first] = hist;
         }
     };
 
+    template<typename ElemType>
     void SetHistory(map<wstring, Matrix<ElemType>>& history)
     {
         //put all node info first
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
         {
-            ComputationNodePtr nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(nodeIter->second);
+            shared_ptr<ComputationNode<ElemType>> nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(nodeIter->second);
             if (nodePtr && history.find(nodeIter->first) != history.end())
                 nodePtr->SetHistory(history[nodeIter->first]);
         }
@@ -1428,18 +1435,18 @@ protected:
     // Copy constructor, should never be called.
 #pragma warning (push)
 #pragma warning (disable: 4702) // this function is flagged but unclear why
-    ComputationNetwork<ElemType>(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)
+    ComputationNetwork(const ComputationNetwork& /*deepCopyFrom*/)
     {
         // TODO: can we just define it as private without implementation?
-        LogicError("'ComputationNetwork(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
+        LogicError("'ComputationNetwork(const ComputationNetwork& deepCopyFrom)' should never be called.");
     }
 #pragma warning (pop)
 
     // Assignment operator, should never be called.
-    ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& /*deepCopyFrom*/)
+    ComputationNetwork& operator=(const ComputationNetwork& /*deepCopyFrom*/)
     {
         // TODO: can we just define it as private without implementation?
-        LogicError("'ComputationNetwork<ElemType>& operator=(const ComputationNetwork<ElemType>& deepCopyFrom)' should never be called.");
+        LogicError("'ComputationNetwork& operator=(const ComputationNetwork& deepCopyFrom)' should never be called.");
     }
 
     // -----------------------------------------------------------------------
@@ -1482,17 +1489,18 @@ public:
         return nodePtr; // allows e.g. return AddNodeToNet(New...);
     }
     // TODO: not very nice--need to fix way more outside to get this right
-    ComputationNodePtr AddNodeToNetWithElemType(const ComputationNodePtr nodePtr)
+    template<class N>
+    shared_ptr<N> AddNodeToNetWithElemType(const shared_ptr<N> nodePtr)
     {
-        return dynamic_pointer_cast<ComputationNode<ElemType>>(AddNodeToNet(nodePtr));
+        return dynamic_pointer_cast<N>(AddNodeToNet(nodePtr));
     }
 
-    template<class... _Types>
-    ComputationNodePtr AddNodeToNetAndAttachInputs(const ComputationNodePtr nodePtr, _Types&&... _Args)
+    template<class N, class... _Types>
+    shared_ptr<N> AddNodeToNetAndAttachInputs(const shared_ptr<N> nodePtr, _Types&&... _Args)
     {
         nodePtr->AttachInputs(std::forward<_Types>(_Args)...);
-        AddNodeToNetWithElemType(nodePtr);
-        return nodePtr; // allows e.g. return AddNodeToNetAndAttachInputs(New..., inputs);
+        return AddNodeToNetWithElemType(nodePtr);
+        //return nodePtr; // allows e.g. return AddNodeToNetAndAttachInputs(New..., inputs);
     }
 
 public:
@@ -1524,7 +1532,7 @@ public:
     }
 
     std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr rootNode,
-                                                std::vector<ComputationNodeBasePtr>& recurrentNodes)
+                                                    std::vector<ComputationNodeBasePtr>& recurrentNodes)
     {
         if (!rootNode)
             LogicError("rootNode is pointing to a nullptr.");
@@ -1542,9 +1550,9 @@ public:
 
 protected:
 
-    std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
-                                                std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                const bool forwardCompute)
+    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
+                                                           std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
+                                                           const bool forwardCompute)
     {
         const ComputationNodeBasePtr key = rootNode;
 
@@ -1555,10 +1563,10 @@ protected:
         return orderMap[key];
     }
 
-    std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
-                                                std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                const bool forwardCompute,
-                                                std::vector<ComputationNodeBasePtr> & rootRecurrentNodes)
+    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
+                                                           std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
+                                                           const bool forwardCompute,
+                                                           std::vector<ComputationNodeBasePtr> & rootRecurrentNodes)
     {
         const ComputationNodeBasePtr key = rootNode;
         std::list<ComputationNodeBasePtr> listNodes;

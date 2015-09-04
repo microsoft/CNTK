@@ -24,7 +24,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
-    ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork<ElemType>* encoderNet)
+    ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork* encoderNet)
     {
         size_t mbSize = 1;
 
@@ -156,7 +156,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Note: while ComputationNode and CompuationNetwork are (supposed to be) independent of ElemType, it is OK to keep this class dependent.
     template<class ElemType>
-    ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildSimpleRNN(size_t mbSize)
+    ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildSimpleRNN(size_t mbSize)
     {
         ComputationNetworkBuilder<ElemType> builder(*m_net);
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
@@ -266,7 +266,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetwork(size_t mbSize)
+    ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildClassEntropyNetwork(size_t mbSize)
     {
             ComputationNetworkBuilder<ElemType> builder(*m_net);
 
@@ -387,7 +387,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-            ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetworkFromDescription(size_t mbSize)
+            ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildConditionalLSTMNetworkFromDescription(size_t mbSize)
     {
         ComputationNetworkBuilder<ElemType> builder(*m_net);
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
@@ -495,7 +495,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             the aligment node takes a variable length input and relates each element to a variable length output
             */
             template<class ElemType>
-            ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork<ElemType>* encoderNet,
+            ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildAlignmentForwardDecoderNetworkFromDescription(ComputationNetwork* encoderNet,
                 size_t mbSize)
             {
                 ComputationNetworkBuilder<ElemType> builder(*m_net);
@@ -625,7 +625,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             template<class ElemType>
-            ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork<ElemType>* encoderNet,
+            ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildAlignmentDecoderNetworkFromDescription(ComputationNetwork* encoderNet,
                 size_t mbSize)
             {
                 ComputationNetworkBuilder<ElemType> builder(*m_net);
@@ -758,9 +758,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFromDescription(size_t mbSize)
+    ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildLogBilinearNetworkFromDescription(size_t mbSize)
     {
-            ComputationNetworkBuilder<ElemType> builder(*m_net);
+        ComputationNetworkBuilder<ElemType> builder(*m_net);
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
                 unsigned long randomSeed = 1;
@@ -879,7 +879,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildNeuralProbNetworkFromDescription(size_t mbSize)
+    ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildNeuralProbNetworkFromDescription(size_t mbSize)
     {
         ComputationNetworkBuilder<ElemType> builder(*m_net);
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
@@ -1229,7 +1229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-            ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildSeqTrnLSTMNetworkFromDescription(size_t mbSize)
+            ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildSeqTrnLSTMNetworkFromDescription(size_t mbSize)
     {
         ComputationNetworkBuilder<ElemType> builder(*m_net);
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
@@ -1331,7 +1331,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildCLASSLSTMNetworkFromDescription(size_t mbSize)
+    ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildCLASSLSTMNetworkFromDescription(size_t mbSize)
     {
         ComputationNetworkBuilder<ElemType> builder(*m_net);
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
@@ -1467,7 +1467,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-            ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescription(size_t mbSize)
+            ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildLSTMNetworkFromDescription(size_t mbSize)
     {
         ComputationNetworkBuilder<ElemType> builder(*m_net);
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
@@ -1602,7 +1602,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion, submitted to Interspeech 2015
     */
     template<class ElemType>
-            ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildLSTMEncoderNetworkFromDescription(size_t mbSize)
+            ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildLSTMEncoderNetworkFromDescription(size_t mbSize)
     {
 
         ComputationNetworkBuilder<ElemType> builder(*m_net);
@@ -1693,7 +1693,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion" submitted to Interspeech 2015
     */
     template<class ElemType>
-            ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildUnidirectionalLSTMNetworksFromDescription(size_t mbSize)
+            ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildUnidirectionalLSTMNetworksFromDescription(size_t mbSize)
     {
         ComputationNetworkBuilder<ElemType> builder(*m_net);
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
@@ -2013,7 +2013,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     K. Yao, G. Zweig, "Sequence-to-sequence neural net models for grapheme-to-phoneme conversion, submitted to Interspeech 2015
     */
     template<class ElemType>
-            ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildBiDirectionalLSTMNetworksFromDescription(size_t mbSize)
+            ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildBiDirectionalLSTMNetworksFromDescription(size_t mbSize)
     {
         ComputationNetworkBuilder<ElemType> builder(*m_net);
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
@@ -2163,7 +2163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDescription(size_t mbSize)
+    ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildNCELSTMNetworkFromDescription(size_t mbSize)
     {
         ComputationNetworkBuilder<ElemType> builder(*m_net);
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
@@ -2278,7 +2278,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    ComputationNetwork<ElemType>* SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName)
+    ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(const std::wstring& dbnModelFileName)
     {
         ComputationNetworkBuilder<ElemType> builder(*m_net);
 

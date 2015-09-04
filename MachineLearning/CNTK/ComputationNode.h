@@ -145,10 +145,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) = 0;
 
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
-        virtual bool RequirePreCompute() const { return false; }
+        virtual bool RequiresPreCompute() const { return false; }
 
         // return true if the node's value should be computed in batch mode only, e.g., time-reverse node
-        virtual bool RequireBatchMode() const { return false; }
+        virtual bool RequiresBatchMode() const { return false; }
 
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const = 0;
 
@@ -1294,7 +1294,7 @@ public: \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
     using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
     using Base::OperationName; using Base::PrintNodeValuesToFile; using Base::PrintSelf; using Base::PrintSelfBeforeValidation; \
-    using Base::RequirePreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
+    using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
     using Base::SaveToFile; using Base::SetFunctionAndGradientSize; using Base::SetInput; using Base::Validate; \
 protected:  \
     using Base::m_loopId; using Base::m_samplesInRecurrentStep; \

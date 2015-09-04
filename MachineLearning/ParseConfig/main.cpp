@@ -24,7 +24,7 @@ else if (config.Exists("ExperimentalNetworkBuilder"))
     netBuilder = (IComputationNetBuilder<ElemType>*)new ExperimentalNetworkBuilder<ElemType>(sourceCode);
 }
 // netBuilder is a wrapper with these methods to create a ComputationNetwork:; see NDLNetworkBuilder.h
-ComputationNetwork<ElemType>* net = startEpoch < 0 ? netBuilder->BuildNetworkFromDescription() :
+ComputationNetwork* net = startEpoch < 0 ? netBuilder->BuildNetworkFromDescription() :
     netBuilder->LoadNetworkFromFile(modelFileName);
 // LoadNetworkFromFile() -> NDLNetworkBuilder.h LoadFromConfig() 
 // -> NDLUtil.h NDLUtil::ProcessNDLScript()

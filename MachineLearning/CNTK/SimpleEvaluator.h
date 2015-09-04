@@ -58,7 +58,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
 
-        SimpleEvaluator(ComputationNetwork<ElemType>& net, const size_t numMBsToShowResult = 100, const int traceLevel = 0)
+        SimpleEvaluator(ComputationNetwork& net, const size_t numMBsToShowResult = 100, const int traceLevel = 0)
             : m_net(net), m_numMBsToShowResult(numMBsToShowResult), m_traceLevel(traceLevel)
         {
         }
@@ -351,7 +351,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
-        ComputationNetwork<ElemType>& m_net;
+        ComputationNetwork& m_net;
         size_t m_numMBsToShowResult;
         int m_traceLevel;
         void operator=(const SimpleEvaluator&); // (not assignable)
@@ -373,14 +373,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         only beam search decoding is applied to the last network
         */
         ElemType EvaluateEncoderDecoderWithHiddenStates(
-            vector<ComputationNetwork<ElemType>*> nets,
+            vector<ComputationNetwork*> nets,
             vector<IDataReader<ElemType>*> dataReaders,
             const size_t mbSize,
             const size_t testSize = requestDataSize)
         {
             size_t iNumNets = nets.size();
 
-            ComputationNetwork<ElemType>* decoderNet = nullptr;
+            ComputationNetwork* decoderNet = nullptr;
             IDataReader<ElemType>* decoderDataReader = dataReaders[iNumNets - 1];
             decoderNet = nets[iNumNets - 1];
 
@@ -570,7 +570,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void EncodingEvaluateDecodingBeamSearch(
-            vector<ComputationNetwork<ElemType>*> nets,
+            vector<ComputationNetwork*> nets,
             vector<IDataReader<ElemType>*> readers,
             IDataWriter<ElemType>& dataWriter,
             const vector<wstring>& evalNodeNames,
@@ -583,7 +583,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("Has to have at least two networks");
             }
 
-            ComputationNetwork<ElemType>* decoderNet = nets[iNumNets - 1];
+            ComputationNetwork* decoderNet = nets[iNumNets - 1];
             IDataReader<ElemType>* encoderDataReader = readers[iNumNets - 2];
             IDataReader<ElemType>* decoderDataReader = readers[iNumNets - 1];
             vector<ComputationNodeBasePtr> & decoderFeatureNodes = decoderNet->FeatureNodes();
@@ -760,10 +760,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //return true if precomputation is executed.
-        bool PreCompute(ComputationNetwork<ElemType>& net,
+        bool PreCompute(ComputationNetwork& net,
                         const std::vector<ComputationNodeBasePtr>& featureNodes)
         {
-            batchComputeNodes = net.GetNodesRequireBatchMode();
+            batchComputeNodes = net.GetNodesRequiringBatchMode();
 
             if (batchComputeNodes.size() == 0)
             {
@@ -881,7 +881,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "done decoding\n");
         }
 
-        void FindBestPath(ComputationNetwork<ElemType>* evalnet,
+        void FindBestPath(ComputationNetwork* evalnet,
                           IDataReader<ElemType>* dataReader, IDataWriter<ElemType>& dataWriter,
                           const std::vector<ComputationNodeBasePtr>& evalNodes,
                           const std::vector<ComputationNodeBasePtr>& outputNodes,
@@ -1036,7 +1036,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
             beam search decoder
             */
-        ElemType FindBestPathWithVariableLength(ComputationNetwork<ElemType>* evalnet,
+        ElemType FindBestPathWithVariableLength(ComputationNetwork* evalnet,
             size_t inputLength,
             IDataReader<ElemType>* dataReader,
             IDataWriter<ElemType>& dataWriter,

@@ -150,8 +150,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             size_t iNumNetworks = netBuilder.size();
-            vector<ComputationNetwork<ElemType>*> nets;
-            ComputationNetwork<ElemType>* eachNet = nullptr;
+            vector<ComputationNetwork*> nets;
+            ComputationNetwork* eachNet = nullptr;
             for (size_t k = 0; k < iNumNetworks; k++)
             {
                 wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1, false, msra::strfun::wstrprintf(L".%d", k));
@@ -220,8 +220,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return msra::strfun::wstrprintf(L"%s%s.%d", m_modelPath.c_str(), ext.c_str(), (int)epoch1Base);
         }
 
-        void TrainEncoderDecoderModel(int startEpoch, ComputationNetwork<ElemType>* encoderNet,
-            ComputationNetwork<ElemType>* decoderNet,
+        void TrainEncoderDecoderModel(int startEpoch, ComputationNetwork* encoderNet,
+            ComputationNetwork* decoderNet,
             IDataReader<ElemType>* encoderTrainSetDataReader,
             IDataReader<ElemType>* decoderTrainSetDataReader,
             IDataReader<ElemType>* encoderValidationSetDataReader,
@@ -476,7 +476,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void TrainEncoderDecoderModel(int startEpoch, vector<ComputationNetwork<ElemType>*> nets,
+        void TrainEncoderDecoderModel(int startEpoch, vector<ComputationNetwork*> nets,
             vector<IDataReader<ElemType>*> trainDataReader,
             vector<IDataReader<ElemType>*> validationDataReader)
         {
@@ -678,7 +678,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t decoderIdx = iNumNetworks - 1;
                 IDataReader<ElemType>* decoderValidationSetDataReader = validationDataReader[decoderIdx];
                 IDataReader<ElemType>* decoderTrainSetDataReader = trainDataReader[decoderIdx];
-                ComputationNetwork<ElemType>* decoderNet = nets[decoderIdx];
+                ComputationNetwork* decoderNet = nets[decoderIdx];
 
                 fprintf(stderr, "Finished Epoch[%d]: [Training Set] Decoder Train Loss Per Sample = %.8g    ", i + 1, epochCriterion);
                 if (epochEvalErrors.size() == 1)
@@ -808,7 +808,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void TrainOneEpochEncoderDecoderWithHiddenStates(
             const int epochNumber,
             const size_t epochSize,
-            vector<ComputationNetwork<ElemType>*> nets,  /// encoder network
+            vector<ComputationNetwork*> nets,  /// encoder network
             vector<IDataReader<ElemType>*> dataReader,
             vector<std::vector<ComputationNodeBasePtr>*> featureNodes,
             vector<std::vector<ComputationNodeBasePtr>*> pairNodes,
@@ -821,8 +821,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::list<Matrix<ElemType>>& smoothedGradients,
             ElemType& epochCriterion, std::vector<ElemType>& epochEvalErrors, size_t& totalSamplesSeen)
         {
-            ComputationNetwork<ElemType>* encoderNet = nets[0];
-            ComputationNetwork<ElemType>* decoderNet = nets[1];
+            ComputationNetwork* encoderNet = nets[0];
+            ComputationNetwork* decoderNet = nets[1];
             DEVICEID_TYPE device = encoderNet->GetDeviceID();
             Matrix<ElemType> historyMat(device);
 
@@ -1005,7 +1005,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         bool EncoderDecoderGradientCheck(
-            vector<ComputationNetwork<ElemType>*> nets,  /// encoder network
+            vector<ComputationNetwork*> nets,  /// encoder network
             vector<IDataReader<ElemType>*> dataReader,
             vector<std::vector<ComputationNodeBasePtr>*> evaluationNodes,
             vector<std::vector<ComputationNodeBasePtr>*> pairNodes,
@@ -1119,7 +1119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void EncoderDecoderWithHiddenStatesForwardPass(
-            vector<ComputationNetwork<ElemType>*> & nets, // TODO: should these vectors all be refs?
+            vector<ComputationNetwork*> & nets, // TODO: should these vectors all be refs?
             vector<IDataReader<ElemType>*> & dataReader,
             vector<vector<ComputationNodeBasePtr>*> & pairNodes,
             vector<vector<ComputationNodeBasePtr>*> & evaluationNodes,
@@ -1146,8 +1146,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void EncoderDecoderWithHiddenStatesForwardPass(
-            ComputationNetwork<ElemType>* encoderNet,  /// encoder network
-            ComputationNetwork<ElemType>* decoderNet,
+            ComputationNetwork* encoderNet,  /// encoder network
+            ComputationNetwork* decoderNet,
             IDataReader<ElemType>* encoderTrainSetDataReader,
             IDataReader<ElemType>* decoderTrainSetDataReader,
             vector<ComputationNodeBasePtr>& encoderEvaluationNodes,
@@ -1199,7 +1199,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void EncoderDecoderWithHiddenStatesErrorProp(
-            vector<ComputationNetwork<ElemType>*> networks,  /// encoder network
+            vector<ComputationNetwork*> networks,  /// encoder network
             vector<std::vector<ComputationNodeBasePtr>*> pairNodes,
             vector<std::vector<ComputationNodeBasePtr>*> criterionNodes)
         {
@@ -1225,9 +1225,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto ptr = criterionNodes[inetworks - 1]->begin(); ptr != criterionNodes[inetworks - 1]->end(); ptr++)
             {
                 if (ptr == criterionNodes[inetworks - 1]->begin())
-                    networks[inetworks - 1]->ComputeGradient(*ptr); 
+                    networks[inetworks - 1]->ComputeGradient<ElemType>(*ptr); 
                 else
-                    networks[inetworks - 1]->ComputeGradient(*ptr, false, nullptr, false);
+                    networks[inetworks - 1]->ComputeGradient<ElemType>(*ptr, false, nullptr, false);
             }
 
             for (int i = inetworks - 2; i >= 0; i--)
@@ -1238,7 +1238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     /// no need to compute gradients from pairnodes, because the gradients are added from pair nodes already
                     for (auto ptr = criterionNodes[i]->begin(); ptr != criterionNodes[i]->end(); ptr++)
                     {
-                        networks[i]->ComputeGradient(*ptr, true, nullptr, false);
+                        networks[i]->ComputeGradient<ElemType>(*ptr, true, nullptr, false);
                     }
                 }
                 else if (pairNodes[i]->size() > 0)
@@ -1246,7 +1246,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     /// no criterion, so use pair-node gradients
                     for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
                     {
-                        networks[i]->ComputeGradient(*ptr, false, nullptr, false);
+                        networks[i]->ComputeGradient<ElemType>(*ptr, false, nullptr, false);
                     }
                 }
             }

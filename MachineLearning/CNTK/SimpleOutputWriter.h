@@ -28,7 +28,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
 
-        SimpleOutputWriter(ComputationNetwork<ElemType>& net, int verbosity=0)
+        SimpleOutputWriter(ComputationNetwork & net, int verbosity=0)
             : m_net(net), m_verbosity(verbosity)
         {
 
@@ -198,7 +198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             delete [] tempArray;
         }
     private:
-        ComputationNetwork<ElemType>& m_net;
+        ComputationNetwork& m_net;
         int m_verbosity;
         void operator=(const SimpleOutputWriter&); // (not assignable)
     };

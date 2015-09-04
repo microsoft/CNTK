@@ -22,7 +22,7 @@ class SynchronousNodeEvaluator : public NDLNodeEvaluator<ElemType>
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 public:
     // Constructor - create evaluator
-    SynchronousNodeEvaluator(ComputationNetwork<ElemType>& cn) : m_net(cn)
+    SynchronousNodeEvaluator(ComputationNetwork& cn) : m_net(cn)
     { }
 
     // Evaluate - evaluate a node and translate into underlying 
@@ -331,7 +331,7 @@ public:
     }
 
 private:
-    ComputationNetwork<ElemType>& m_net;
+    ComputationNetwork& m_net;
     void operator=(const SynchronousNodeEvaluator&);
 };
 
@@ -343,13 +343,13 @@ class SynchronousExecutionEngine : public IExecutionEngine<ElemType>
 public:
     SynchronousExecutionEngine(DEVICEID_TYPE deviceId=AUTOPLACEMATRIX, unsigned long randomSeedOffset=0)
     {
-        m_computationNetwork = new ComputationNetwork<ElemType>(deviceId);
+        m_computationNetwork = new ComputationNetwork(deviceId);
         m_computationNetwork->SetRandomSeedOffset(randomSeedOffset);
         m_ownNetwork = true;
         m_nodeEvaluator = new SynchronousNodeEvaluator<ElemType>(*m_computationNetwork);
     }
 
-    SynchronousExecutionEngine(ComputationNetwork<ElemType>* computationNetwork)
+    SynchronousExecutionEngine(ComputationNetwork* computationNetwork)
     {
         m_computationNetwork = computationNetwork;
         m_ownNetwork = false;
@@ -363,7 +363,7 @@ public:
         delete m_nodeEvaluator;
     }
 
-    ComputationNetwork<ElemType>& GetComputationNetwork()
+    ComputationNetwork& GetComputationNetwork()
     {
         return *m_computationNetwork;
     }
@@ -375,7 +375,7 @@ public:
 
 private:
     bool m_ownNetwork;
-    ComputationNetwork<ElemType>* m_computationNetwork;
+    ComputationNetwork* m_computationNetwork;
     SynchronousNodeEvaluator<ElemType>* m_nodeEvaluator;
 protected:
     // Copy constructor, should never be called.

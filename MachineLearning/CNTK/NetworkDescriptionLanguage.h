@@ -108,12 +108,12 @@ template <typename ElemType>
 class NetNdl // class to associate a network with an NDLScript
 {
 public:
-    ComputationNetwork<ElemType>* cn;
+    ComputationNetwork* cn;
     NDLScript<ElemType>* ndl;  // NDLScript we are using for this network. NOTE: the actual script used 
     NDLNode<ElemType>* lastNode[ndlPassMax]; // last node we evaluated for each pass
     NetNdl(): cn(nullptr), ndl(nullptr) {ClearLastNodes();}
-    NetNdl(ComputationNetwork<ElemType>*p_cn): cn(p_cn), ndl(nullptr) {ClearLastNodes();}
-    NetNdl(ComputationNetwork<ElemType>*p_cn, NDLScript<ElemType>* p_ndl): cn(p_cn), ndl(p_ndl) {ClearLastNodes();}
+    NetNdl(ComputationNetwork*p_cn): cn(p_cn), ndl(nullptr) {ClearLastNodes();}
+    NetNdl(ComputationNetwork*p_cn, NDLScript<ElemType>* p_ndl): cn(p_cn), ndl(p_ndl) {ClearLastNodes();}
     ~NetNdl()
     {}
 
@@ -385,7 +385,7 @@ private:
     bool m_noDefinitions; // no definitions can be made in this script, interpret all macro/function names as calls
     static NDLScript<ElemType> s_global; //("global"); // global script for storing macros and global nodes
     std::vector<NDLNode<ElemType>*> m_children; // child nodes. Note that m_script nodes may not be children of this object, they include macro nodes
-    ComputationNetwork<ElemType>* m_cn; // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
+    ComputationNetwork* m_cn; // computation network to use for backup symbol lookup. Used for MEL where NDL and network nodes are mixed
     bool m_definingMacro; // currently defining a macro, flag to determine if we are defining or interpretting a macro call
 
 public:
@@ -518,7 +518,7 @@ public:
     }
 
     // SetComputationNetwork - set the computation network this NDL is associated with
-    void SetComputationNetwork(ComputationNetwork<ElemType>* cn)
+    void SetComputationNetwork(ComputationNetwork* cn)
     {
         m_cn = cn;
     }

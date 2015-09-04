@@ -36,7 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 nodes[i]->UpdateEvalTimeStamp();
         }
 
-        void SetDropoutRate(ComputationNetwork<ElemType>& net, const ComputationNodeBasePtr criterionNode, const ElemType dropoutRate, ElemType & prevDropoutRate, unsigned long & dropOutSeed)
+        void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ElemType dropoutRate, ElemType & prevDropoutRate, unsigned long & dropOutSeed)
         {
             if (dropoutRate != prevDropoutRate)
             {
@@ -60,7 +60,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void SetMaxTempMemSizeForCNN(ComputationNetwork<ElemType>& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples)
+        void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples)
         {
             fprintf(stderr,"Set Max Temp Mem Size For Convolution Nodes to %lu samples.\n", maxTempMemSizeInSamples);
             std::list<ComputationNodeBasePtr> convolutionNodes = net.GetNodesWithType(ConvolutionNode<ElemType>::TypeName(), criterionNode);
