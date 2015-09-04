@@ -21,6 +21,8 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="..\CNTK\ComputationNode.cpp" />
+    <ClCompile Include="..\CNTK\ComputationNetwork.cpp" />
+    <ClCompile Include="..\CNTK\ComputationNetworkBuilder.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EvalReader.h" />

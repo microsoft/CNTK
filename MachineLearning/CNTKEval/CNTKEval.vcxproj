@@ -142,6 +142,8 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
+    <ClCompile Include="..\CNTK\ComputationNetwork.cpp" />
+    <ClCompile Include="..\CNTK\ComputationNetworkBuilder.cpp" />
     <ClCompile Include="..\CNTK\ComputationNode.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
