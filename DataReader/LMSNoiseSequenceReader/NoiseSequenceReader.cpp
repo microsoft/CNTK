@@ -230,6 +230,7 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     fprintf(stderr, "debughtx StartMinibatchLoop MBSize is %d\n", m_mbSize);
     fprintf(stderr, "debughtx StartMinibatchLoop sequenceSize is %d\n", mBlgSize);
     fprintf(stderr, "debughtx StartMinibatchLoop loopNoiseFile is %d\n", loopNoiseFile);
+    fprintf(stderr, "debughtx StartMinibatchLoop noiseRatio is %d\n", noiseRatio);
     DEBUG_HTX fprintf(stderr, "fileName:%s\n", fileName.c_str());
     if (fin.is_open()) {
         LogicError("NoiseSequenceReader::StartMinibatchLoop fin should not be opened now.\n");
@@ -262,7 +263,7 @@ size_t BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 template<class ElemType>
 bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-    DEBUG_HTX fprintf(stderr, "debughtx ---LMHTXSequenceReader::GetMinibatch called---\n");
+    DEBUG_HTX fprintf(stderr, "debughtx ---LMSNoiseSequenceReader::GetMinibatch called---\n");
     //features idx2cls labels
     Matrix<ElemType>* feature_m = matrices[L"features"];
     Matrix<ElemType>* label_m = matrices[L"labels"];
@@ -292,6 +293,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     else
         label_m->Resize(nwords, wordNumber);
     label_m->SetValue(0);
+    prob_m->Resize(1, wordNumber);
     //label_m->Reset(); //Can't do this 
 
     minibatchFlag.Resize(mBlgSize, m_mbSize);
@@ -303,13 +305,14 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     //senCount % noiseRatio == 0 means DataFeed, otherwise NoiseFeed
     for (int i = 0; i < mBlgSize; i++) {
         temp_l.clear();
-        if (noiseRatio == 0 || senCount % noiseRatio == 0)
+        if (noiseRatio == 0 || senCount % (noiseRatio + 1) == 0)
             getDataSeq(temp_l); //word_id, -1
         else {
             if (!getNoiseSeq(temp_l)) //word_id, word_prob
                 LogicError("BatchSequenceReader<ElemType>::GetMinibatch did not get noise sentence.\n");
         }
-
+        if (temp_l.size() > m_mbSize)
+            RuntimeError("BatchSequenceReader<ElemType>::GetMinibatch sentence length larger than minibatch size.\n");
         for (int j = 0; j < m_mbSize; j++) {
             minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::None);
             int idx = j * (int)mBlgSize + i;
@@ -350,7 +353,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
 
     DEBUG_HTX PrintMinibatch(matrices); //Just for debughtx
 
-    DEBUG_HTX fprintf(stderr, "debughtx ---LMHTXSequenceReader::GetMinibatch ended, returning res is %d---\n", res);
+    DEBUG_HTX fprintf(stderr, "debughtx ---LMSNoiseSequenceReader::GetMinibatch ended, returning res is %d---\n", res);
     DEBUG_HTX system("sleep 0.5");
     return res;
 }
@@ -360,11 +363,12 @@ void BatchSequenceReader<ElemType>::PrintMinibatch(std::map<std::wstring, Matrix
     fprintf(stderr, "debughtx LMHTXSequenceReader::PrintMinibatch matrix(label) row:%d col:%d\n", matrices.find(L"labels")->second->GetNumRows(), matrices.find(L"labels")->second->GetNumCols());
     int sequence_number = (int)NumberSlicesInEachRecurrentIter();
     for (int i = 0; i < matrices.find(L"labels")->second->GetNumCols(); i++) {
-        for (int j = 0; j < 4; j++) {
+        for (int j = 0; j < 4; j++) { //assume compressed label type
             fprintf(stderr, " %.2lf", (*(matrices.find(L"labels")->second))(j, i));
-            fprintf(stderr, "p%.2lf", (*(matrices.find(L"probs")->second))(j, i));
-            if (j == 0)
+            if (j == 0) {
+                fprintf(stderr, "p(%.5lf)", (*(matrices.find(L"probs")->second))(j, i));
                 fprintf(stderr, "[%s] ", idx4word[int((*(matrices.find(L"labels")->second))(j, i))].c_str());
+            }
             if ((j == 3) && ((i + 1) % sequence_number == 0))
                 fprintf(stderr, "\n");
         }
