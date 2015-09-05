@@ -35,12 +35,6 @@
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="CNTK.cpp" />
-    <ClCompile Include="..\..\Common\BestGpu.cpp">
-      <Filter>GPU Interfacing</Filter>
-    </ClCompile>
-    <ClCompile Include="ExperimentalNetworkBuilder.cpp">
-      <Filter>Experimental</Filter>
-    </ClCompile>
     <ClCompile Include="Profiler.cpp">
       <Filter>GPU Interfacing</Filter>
     </ClCompile>
@@ -133,9 +127,6 @@
     <ClInclude Include="..\..\Common\Include\Basics.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\nvml.h">
-      <Filter>GPU Interfacing</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -192,9 +183,6 @@
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\Platform.h">
       <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="MatrixPool.h">
-      <Filter>Evaluation</Filter>
     </ClInclude>
     <ClInclude Include="..\..\BrainScript\BrainScriptEvaluator.h">
       <Filter>Experimental</Filter>
