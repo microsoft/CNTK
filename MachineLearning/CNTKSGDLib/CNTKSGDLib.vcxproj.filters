@@ -138,6 +138,9 @@
     <ClInclude Include="SimpleNetworkBuilder.h">
       <Filter>Eval</Filter>
     </ClInclude>
+    <ClInclude Include="IComputationNetBuilder.h">
+      <Filter>SGD</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

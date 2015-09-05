@@ -4,7 +4,7 @@
 
 #include "Basics.h"
 #include "SGD.h"
-#include "MultiNetworksSGD.h"
+//#include "MultiNetworksSGD.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
