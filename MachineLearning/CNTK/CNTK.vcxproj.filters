@@ -53,6 +53,9 @@
     <ClCompile Include="SynchronousExecutionEngine.cpp">
       <Filter>Evaluation</Filter>
     </ClCompile>
+    <ClCompile Include="ExperimentalNetworkBuilder.cpp">
+      <Filter>Experimental</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">

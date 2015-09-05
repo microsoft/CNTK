@@ -167,7 +167,6 @@
     <ClInclude Include="..\CNTK\ConvolutionalNodes.h" />
     <ClInclude Include="..\CNTK\DecoderNode.h" />
     <ClInclude Include="..\CNTK\EvaluationCriterionNodes.h" />
-    <ClInclude Include="..\CNTK\ExperimentalNetworkBuilder.h" />
     <ClInclude Include="..\CNTK\IComputationNetBuilder.h" />
     <ClInclude Include="..\CNTK\InputAndParamNodes.h" />
     <ClInclude Include="..\CNTK\LinearAlgebraNodes.h" />
@@ -190,7 +189,7 @@
     <ClCompile Include="..\CNTK\ComputationNetwork.cpp" />
     <ClCompile Include="..\CNTK\ComputationNetworkBuilder.cpp" />
     <ClCompile Include="..\CNTK\ComputationNode.cpp" />
-    <ClCompile Include="..\CNTK\ExperimentalNetworkBuilder.cpp" />
+    <ClCompile Include="..\CNTK\NetworkBuilderFromConfig.cpp" />
     <ClCompile Include="..\CNTK\stdafx.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

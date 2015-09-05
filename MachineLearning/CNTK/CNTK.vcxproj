@@ -220,6 +220,7 @@
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
     <ClCompile Include="CNTK.cpp" />
     <ClCompile Include="ComputationNetworkBuilder.cpp" />
+    <ClCompile Include="ExperimentalNetworkBuilder.cpp" />
     <ClCompile Include="ModelEditLanguage.cpp" />
     <ClCompile Include="NetworkDescriptionLanguage.cpp" />
     <ClCompile Include="SimpleNetworkBuilder.cpp" />
