@@ -160,22 +160,21 @@
     <ClInclude Include="..\..\Common\Include\nvml.h" />
     <ClInclude Include="..\..\Common\Include\Platform.h" />
     <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
-    <ClInclude Include="..\CNTK\CompositeComputationNodes.h" />
-    <ClInclude Include="..\CNTK\ComputationNetwork.h" />
-    <ClInclude Include="..\CNTK\ComputationNetworkBuilder.h" />
-    <ClInclude Include="..\CNTK\ComputationNode.h" />
-    <ClInclude Include="..\CNTK\ConvolutionalNodes.h" />
-    <ClInclude Include="..\CNTK\DecoderNode.h" />
-    <ClInclude Include="..\CNTK\EvaluationCriterionNodes.h" />
-    <ClInclude Include="..\CNTK\IComputationNetBuilder.h" />
-    <ClInclude Include="..\CNTK\InputAndParamNodes.h" />
-    <ClInclude Include="..\CNTK\LinearAlgebraNodes.h" />
-    <ClInclude Include="..\CNTK\MatrixPool.h" />
-    <ClInclude Include="..\CNTK\NonlinearityNodes.h" />
-    <ClInclude Include="..\CNTK\RecurrentNodes.h" />
-    <ClInclude Include="..\CNTK\stdafx.h" />
-    <ClInclude Include="..\CNTK\targetver.h" />
-    <ClInclude Include="..\CNTK\TrainingCriterionNodes.h" />
+    <ClInclude Include="CompositeComputationNodes.h" />
+    <ClInclude Include="ComputationNetwork.h" />
+    <ClInclude Include="ComputationNetworkBuilder.h" />
+    <ClInclude Include="ComputationNode.h" />
+    <ClInclude Include="ConvolutionalNodes.h" />
+    <ClInclude Include="DecoderNode.h" />
+    <ClInclude Include="EvaluationCriterionNodes.h" />
+    <ClInclude Include="InputAndParamNodes.h" />
+    <ClInclude Include="LinearAlgebraNodes.h" />
+    <ClInclude Include="MatrixPool.h" />
+    <ClInclude Include="NonlinearityNodes.h" />
+    <ClInclude Include="RecurrentNodes.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="TrainingCriterionNodes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Common\BestGpu.cpp" />
@@ -186,11 +185,11 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
-    <ClCompile Include="..\CNTK\ComputationNetwork.cpp" />
-    <ClCompile Include="..\CNTK\ComputationNetworkBuilder.cpp" />
-    <ClCompile Include="..\CNTK\ComputationNode.cpp" />
-    <ClCompile Include="..\CNTK\NetworkBuilderFromConfig.cpp" />
-    <ClCompile Include="..\CNTK\stdafx.cpp" />
+    <ClCompile Include="ComputationNetwork.cpp" />
+    <ClCompile Include="ComputationNetworkBuilder.cpp" />
+    <ClCompile Include="ComputationNode.cpp" />
+    <ClCompile Include="NetworkBuilderFromConfig.cpp" />
+    <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

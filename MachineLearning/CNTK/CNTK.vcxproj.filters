@@ -76,7 +76,7 @@
     <ClInclude Include="..\..\Common\Include\DataWriter.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="ComputationNetwork.h">
+    <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetwork.h">
       <Filter>Network</Filter>
     </ClInclude>
     <ClInclude Include="IComputationNetBuilder.h">
@@ -88,7 +88,7 @@
     <ClInclude Include="ModelEditLanguage.h">
       <Filter>Model Editing</Filter>
     </ClInclude>
-    <ClInclude Include="ComputationNode.h">
+    <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNode.h">
       <Filter>Nodes</Filter>
     </ClInclude>
     <ClInclude Include="NDLNetworkBuilder.h">
@@ -136,31 +136,31 @@
     <ClInclude Include="..\..\Common\Include\BestGpu.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="CompositeComputationNodes.h">
+    <ClInclude Include="..\CNTKComputationNetworkLib\CompositeComputationNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="EvaluationCriterionNodes.h">
+    <ClInclude Include="..\CNTKComputationNetworkLib\EvaluationCriterionNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="TrainingCriterionNodes.h">
+    <ClInclude Include="..\CNTKComputationNetworkLib\TrainingCriterionNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="NonlinearityNodes.h">
+    <ClInclude Include="..\CNTKComputationNetworkLib\NonlinearityNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="LinearAlgebraNodes.h">
+    <ClInclude Include="..\CNTKComputationNetworkLib\LinearAlgebraNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="ConvolutionalNodes.h">
+    <ClInclude Include="..\CNTKComputationNetworkLib\ConvolutionalNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="RecurrentNodes.h">
+    <ClInclude Include="..\CNTKComputationNetworkLib\RecurrentNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="InputAndParamNodes.h">
+    <ClInclude Include="..\CNTKComputationNetworkLib\InputAndParamNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="DecoderNode.h">
+    <ClInclude Include="..\CNTKComputationNetworkLib\DecoderNode.h">
       <Filter>Nodes</Filter>
     </ClInclude>
     <ClInclude Include="MultiNetworksSGD.h">
@@ -196,7 +196,7 @@
     <ClInclude Include="..\..\BrainScript\BrainScriptParser.h">
       <Filter>Experimental</Filter>
     </ClInclude>
-    <ClInclude Include="ComputationNetworkBuilder.h">
+    <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetworkBuilder.h">
       <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>
