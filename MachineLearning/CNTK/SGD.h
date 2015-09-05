@@ -2591,6 +2591,8 @@ protected:
                             const ElemType prevCriterion,
                             const size_t minibatchSize)
     {
+        // if control-c interrupt occurs during the lifetime of this object, program will ignore it and the object will throw a RuntimeError() on destruction.
+        CtrlHandler ch;
         wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch));
         // Saving into temporary file and then renaming it to the checkPointFileName
         // This is a standard trick to avoid havign corrupted checkpoints files if process dies during writing

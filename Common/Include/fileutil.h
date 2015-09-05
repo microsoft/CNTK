@@ -634,4 +634,17 @@ wstring s2ws(const string& str);
 
 string ws2s(const wstring& wstr);
 
+class CtrlHandler
+{
+    volatile static bool s_ignore_control_c;
+    volatile static bool s_control_c_recieved;
+    volatile static bool s_enabled;
+    static BOOL WINAPI Handler(_In_ DWORD fdwCtrlType);
+    static void Enable();
+
+public:
+    CtrlHandler();
+    ~CtrlHandler();
+};
+
 #endif    // _FILEUTIL_
