@@ -6,14 +6,12 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
-#include <random>
-
-#include <opencv2/opencv.hpp>
+#include <locale>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>
-ImageReader<ElemType>::ImageReader() : m_seed(0)
+ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed), m_rndUniInt(0, INT_MAX)
 {
 }
 
@@ -42,6 +40,12 @@ void ImageReader<ElemType>::Init(const ConfigParameters& config)
     m_imgHeight = featSect.second("height");
     m_imgChannels = featSect.second("channels");
     m_featDim = m_imgWidth * m_imgHeight * m_imgChannels;
+    m_meanFile = featSect.second(L"meanFile", L"");
+
+    m_cropType = ParseCropType(featSect.second("cropType", ""));
+    m_cropRatio = std::stof(featSect.second("cropRatio", "1"));
+    if (!(0 < m_cropRatio && m_cropRatio <= 1.0f))
+        RuntimeError("Invalid cropRatio value: %f.", m_cropRatio);
 
     SectionT labSect{ gettter("labelDim") };
     m_labName = msra::strfun::utf16(labSect.first);
@@ -63,8 +67,7 @@ void ImageReader<ElemType>::Init(const ConfigParameters& config)
         files.push_back({ imgPath, std::stoi(clsId) });
     }
 
-    std::default_random_engine rng(m_seed);
-    std::shuffle(files.begin(), files.end(), rng);
+    std::shuffle(files.begin(), files.end(), m_rng);
 
     m_epochStart = 0;
     m_mbStart = 0;
@@ -116,20 +119,22 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
 
     std::fill(m_labBuf.begin(), m_labBuf.end(), static_cast<ElemType>(0));
     
-#pragma omp parallel for ordered schedule(dynamic)
+//#pragma omp parallel for ordered schedule(dynamic)
     for (long long i = 0; i < static_cast<long long>(mbLim - m_mbStart); i++)
     {
         const auto& p = files[i + m_mbStart];
         auto img = cv::imread(p.first, cv::IMREAD_COLOR);
         // Crop
-        int w = img.cols;
-        int h = img.rows;
-        int cropSize = std::min(w, h);
-        int xOff = (w - cropSize) / 2;
-        int yOff = (h - cropSize) / 2;
-        cv::Mat cropped{ img(cv::Rect(xOff, yOff, cropSize, cropSize)) };
-        cropped.convertTo(img, CV_32F);
+        cv::Mat cropped;
+        CropTransform(img, cropped);
+        //int w = img.cols;
+        //int h = img.rows;
+        //int cropSize = std::min(w, h);
+        //int xOff = (w - cropSize) / 2;
+        //int yOff = (h - cropSize) / 2;
+        //cv::Mat cropped{ img(cv::Rect(xOff, yOff, cropSize, cropSize)) };
         
+        cropped.convertTo(img, CV_32F);
         // Scale
         cv::resize(img, img, cv::Size(static_cast<int>(m_imgWidth), static_cast<int>(m_imgHeight)), 0, 0, cv::INTER_LINEAR);
 
@@ -173,6 +178,65 @@ template<class ElemType>
 void ImageReader<ElemType>::SetRandomSeed(unsigned int seed)
 {
     m_seed = seed;
+    m_rng.seed(m_seed);
+}
+
+template<class ElemType>
+typename ImageReader<ElemType>::CropType ImageReader<ElemType>::ParseCropType(const std::string& src)
+{
+    auto AreEqual = [](const std::string& s1, const std::string& s2) -> bool
+    {
+        return std::equal(s1.begin(), s1.end(), s2.begin(), [](const char& a, const char& b) { return std::tolower(a) == std::tolower(b); });
+    };
+
+    if (src.empty() || AreEqual(src, "center"))
+        return CropType::Center;
+    if (AreEqual(src, "random"))
+        return CropType::Random;
+
+    RuntimeError("Invalid crop type: %s.", src.c_str());
+}
+
+template<class ElemType>
+cv::Rect ImageReader<ElemType>::GetCropRect(CropType type, int crow, int ccol, float cropRatio)
+{
+    assert(crow > 0);
+    assert(ccol > 0);
+    assert(0 < cropRatio && cropRatio <= 1.0f);
+
+    int cropSize = static_cast<int>(std::min(crow, ccol) * cropRatio);
+    int xOff = -1;
+    int yOff = -1;
+
+    switch (type)
+    {
+    case CropType::Center:
+        xOff = (ccol - cropSize) / 2;
+        yOff = (crow - cropSize) / 2;
+        break;
+    case CropType::Random:
+        xOff = m_rndUniInt(m_rng) % (ccol - cropSize);
+        yOff = m_rndUniInt(m_rng) % (crow - cropSize);
+        break;
+    default:
+        assert(false);
+    }
+
+    assert(0 <= xOff && xOff <= ccol - cropSize);
+    assert(0 <= yOff && yOff <= crow - cropSize);
+    return cv::Rect(xOff, yOff, cropSize, cropSize);
+}
+
+template<class ElemType>
+void ImageReader<ElemType>::CropTransform(const cv::Mat& src, cv::Mat& dst)
+{
+    // REVIEW alexeyk: optimize resizing?
+    dst = src(GetCropRect(m_cropType, src.rows, src.cols, m_cropRatio)).clone();
+}
+
+template<class ElemType>
+void ImageReader<ElemType>::SubMeanTransform(const cv::Mat& , cv::Mat& )
+{
 }
 
 template class ImageReader<double>;

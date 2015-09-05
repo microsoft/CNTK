@@ -6,6 +6,8 @@
 // ImageReader.h - Include file for the image reader 
 
 #pragma once
+#include <random>
+#include <opencv2/opencv.hpp>
 #include "DataReader.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -29,17 +31,23 @@ public:
     bool DataEnd(EndDataType endDataType) override;
 
     size_t NumberSlicesInEachRecurrentIter() override { return 0; }
-    void SetSentenceSegBatch(Matrix<ElemType> &, vector<MinibatchPackingFlag>&) override { };
+    void SetSentenceSegBatch(Matrix<float>&, vector<MinibatchPackingFlag>&) override { };
 
     void SetRandomSeed(unsigned int seed) override;
 
-    //virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
-    //virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
-    //virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
-    //void SetSentenceSegBatch(Matrix<ElemType>&, Matrix<ElemType>&) { };
-    //void SetNbrSlicesEachRecurrentIter(const size_t sz);
+private:
+    enum class CropType { Center = 0, Random = 1 };
+
+    CropType ParseCropType(const std::string& src);
+    cv::Rect GetCropRect(CropType type, int crow, int ccol, float cropRatio);
+    void CropTransform(const cv::Mat& src, cv::Mat& dst);
+
+    void SubMeanTransform(const cv::Mat& src, cv::Mat& dst);
 
 private:
+    std::default_random_engine m_rng;
+    std::uniform_int_distribution<int> m_rndUniInt;
+
     std::wstring m_featName;
     std::wstring m_labName;
 
@@ -62,5 +70,10 @@ private:
     std::vector<ElemType> m_labBuf;
 
     unsigned int m_seed;
+
+    CropType m_cropType;
+    float m_cropRatio;
+
+    std::wstring m_meanFile;
 };
 }}}
