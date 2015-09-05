@@ -77,7 +77,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("SquareError operation requires two inputs.");
 
             size_t index = 0;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -85,7 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -245,7 +245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //we may release the constraint that the first operant is an inputValue later so the following code should be kept
             size_t index = 0;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -253,7 +253,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -396,7 +396,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //we may release the constraint that the first operant is an inputValue later so the following code should be kept
             size_t index = 0;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -404,7 +404,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -783,7 +783,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_children.size() != 4)
                 LogicError("NoiseContrastiveEstimationNode criterion requires four inputs.");
-            if (Inputs(0)->OperationName() != InputValue<ElemType>::TypeName())
+            if (Inputs(0)->OperationName() != InputValue<float>::TypeName())
                 LogicError("NoiseContrastiveEstimationNode criterion requires the first input to be the label.");
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
                 LogicError("The Matrix<ElemType>  dimension for observation and weight in the NoiseContrastiveEstimationNode operation does not match.");
@@ -1134,7 +1134,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_children.size() != 4)
                 LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires four inputs.");
-            if (Inputs(0)->OperationName() != InputValue<ElemType>::TypeName())
+            if (Inputs(0)->OperationName() != InputValue<float>::TypeName())
                 LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
                 LogicError("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");

@@ -823,12 +823,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<typename ElemType>
-    /*static*/void ComputationNetwork::SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ElemType dropoutRate, ElemType & prevDropoutRate, unsigned long & dropOutSeed)
+    /*static*/void ComputationNetwork::SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed)
     {
         if (dropoutRate != prevDropoutRate)
         {
             fprintf(stderr, "Switching dropout rate to %.8g.\n", dropoutRate);
-            std::list<ComputationNodeBasePtr> dropoutNodes = net.GetNodesWithType(DropoutNode<ElemType>::TypeName(), criterionNode);
+            std::list<ComputationNodeBasePtr> dropoutNodes = net.GetNodesWithType(DropoutNode<float>::TypeName(), criterionNode);
             if (dropoutNodes.size() == 0 && dropoutRate > 0)
                 fprintf(stderr, "WARNING: there is no dropout node.\n");
             else for (auto nodeIter = dropoutNodes.begin(); nodeIter != dropoutNodes.end(); nodeIter++)
@@ -1430,7 +1430,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<float>(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig);
-    template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const float dropoutRate, float & prevDropoutRate, unsigned long & dropOutSeed);
+    template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
 
     template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<double>(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);

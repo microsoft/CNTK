@@ -596,24 +596,24 @@ public:
                 "should be LearnableParameter type or (Mean, InvStdDev) so that the values will be saved.");
         }
 
-        if (!(Inputs(1)->OperationName() == LearnableParameter<ElemType>::TypeName() &&
-              Inputs(2)->OperationName() == LearnableParameter<ElemType>::TypeName()) &&
-            !(Inputs(1)->OperationName() == MeanNode<ElemType>::TypeName() &&
-              Inputs(2)->OperationName() == InvStdDevNode<ElemType>::TypeName()))
+        if (!(Inputs(1)->OperationName() == LearnableParameter<float>::TypeName() &&
+              Inputs(2)->OperationName() == LearnableParameter<float>::TypeName()) &&
+            !(Inputs(1)->OperationName() == MeanNode<float>::TypeName() &&
+              Inputs(2)->OperationName() == InvStdDevNode<float>::TypeName()))
         {
             LogicError(
                 "PerDimMeanVarNormalizationNode criterion requires the last two inputs to be LearnableParameter "
                 "type or (Mean, InvStdDev) so that the values will be saved.");
         }
 
-        if (Inputs(1)->OperationName() == LearnableParameter<ElemType>::TypeName())
+        if (Inputs(1)->OperationName() == LearnableParameter<float>::TypeName())
         {
             size_t rows = (Inputs(1)->FunctionValues().GetNumRows() == 0) ? Inputs(0)->FunctionValues().GetNumRows() :
                                                                             Inputs(1)->FunctionValues().GetNumRows();
             Inputs(1)->FunctionValues().Resize(rows, 1);
         }
 
-        if (Inputs(2)->OperationName() == LearnableParameter<ElemType>::TypeName())
+        if (Inputs(2)->OperationName() == LearnableParameter<float>::TypeName())
         {
             size_t rows = (Inputs(2)->FunctionValues().GetNumRows() == 0) ? Inputs(0)->FunctionValues().GetNumRows() :
                                                                             Inputs(2)->FunctionValues().GetNumRows();
@@ -756,24 +756,24 @@ public:
                 "should be LearnableParameter type or (Mean, InvStdDev) so that the values will be saved.");
         }
 
-        if (!(Inputs(1)->OperationName() == LearnableParameter<ElemType>::TypeName() &&
-              Inputs(2)->OperationName() == LearnableParameter<ElemType>::TypeName()) &&
-            !(Inputs(1)->OperationName() == MeanNode<ElemType>::TypeName() &&
-              Inputs(2)->OperationName() == InvStdDevNode<ElemType>::TypeName()))
+        if (!(Inputs(1)->OperationName() == LearnableParameter<float>::TypeName() &&
+              Inputs(2)->OperationName() == LearnableParameter<float>::TypeName()) &&
+            !(Inputs(1)->OperationName() == MeanNode<float>::TypeName() &&
+              Inputs(2)->OperationName() == InvStdDevNode<float>::TypeName()))
         {
             throw std::logic_error(
                 "PerDimMeanVarDeNormalizationNode criterion requires the last two inputs to be "
                 "LearnableParameter type or (Mean, InvStdDev) so that the values will be saved.");
         }
 
-        if (Inputs(1)->OperationName() == LearnableParameter<ElemType>::TypeName())
+        if (Inputs(1)->OperationName() == LearnableParameter<float>::TypeName())
         {
             size_t rows = Inputs(1)->FunctionValues().GetNumRows() == 0 ? Inputs(0)->FunctionValues().GetNumRows() :
                                                                           Inputs(1)->FunctionValues().GetNumRows();
             Inputs(1)->FunctionValues().Resize(rows, 1);
         }
 
-        if (Inputs(2)->OperationName() == LearnableParameter<ElemType>::TypeName())
+        if (Inputs(2)->OperationName() == LearnableParameter<float>::TypeName())
         {
             size_t rows = Inputs(2)->FunctionValues().GetNumRows() == 0? Inputs(0)->FunctionValues().GetNumRows() :
                                                                                     Inputs(2)->FunctionValues().GetNumRows();

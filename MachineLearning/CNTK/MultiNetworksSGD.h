@@ -32,7 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MultiNetworksSGD : SGD<ElemType>
     {
-        ElemType  m_default_activity;
+        ElemType m_default_activity;
 
         using SGDBase = SGD<ElemType>;
 
@@ -256,28 +256,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(), node->FunctionValues().GetNumCols(), node->FunctionValues().GetDeviceId()));
             }
 
-            vector<ElemType> epochCriterion;
-            ElemType avgCriterion, prevCriterion;
+            vector<double> epochCriterion;
+            double avgCriterion, prevCriterion;
             for (size_t i = 0; i < 2; i++)
-                epochCriterion.push_back(std::numeric_limits<ElemType>::infinity());
-            avgCriterion = prevCriterion = std::numeric_limits<ElemType>::infinity();
+                epochCriterion.push_back(std::numeric_limits<double>::infinity());
+            avgCriterion = prevCriterion = std::numeric_limits<double>::infinity();
 
             size_t epochsNotCountedInAvgCriterion = startEpoch % m_learnRateAdjustInterval;
 
-            std::vector<ElemType> epochEvalErrors(decoderEvaluationNodes.size(), std::numeric_limits<ElemType>::infinity());
+            std::vector<double> epochEvalErrors(decoderEvaluationNodes.size(), std::numeric_limits<double>::infinity());
 
             std::vector<wstring> evalNodeNames;
             for (size_t i = 0; i<decoderEvaluationNodes.size(); i++)
                 evalNodeNames.push_back(decoderEvaluationNodes[i]->NodeName());
 
             size_t totalSamplesSeen = 0;
-            ElemType learnRatePerSample = 0.5f / m_mbSize[startEpoch];
+            double learnRatePerSample = 0.5f / m_mbSize[startEpoch];
 
             int m_numPrevLearnRates = 5; //used to control the upper learnining rate in LR search to reduce computation
-            vector<ElemType> prevLearnRates;
+            vector<double> prevLearnRates;
             prevLearnRates.resize(m_numPrevLearnRates);
             for (int i = 0; i<m_numPrevLearnRates; i++)
-                prevLearnRates[i] = std::numeric_limits<ElemType>::infinity();
+                prevLearnRates[i] = std::numeric_limits<double>::infinity();
 
             //precompute mean and invStdDev nodes and save initial model
             if (/// to-do doesn't support pre-compute such as MVN here 
@@ -296,7 +296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::invalid_argument("When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, or an explicit learning rate must be specified in config for the starting epoch.");
 
             ULONG dropOutSeed = 1;
-            ElemType prevDropoutRate = 0;
+            double prevDropoutRate = 0;
 
             bool learnRateReduced = false;
 
@@ -336,7 +336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
                 auto t_end_epoch = clock();
-                ElemType epochTime = ElemType(1.0)*(t_end_epoch - t_start_epoch) / (CLOCKS_PER_SEC);
+                double epochTime = 1.0*(t_end_epoch - t_start_epoch) / (CLOCKS_PER_SEC);
 
                 //                    fprintf(stderr, "Finished Epoch[%lu]: [Training Set] Train Loss Per Sample = %.8g    ", i + 1, epochCriterion);
                 fprintf(stderr, "Finished Epoch[%lu]: [Training Set] Decoder Train Loss Per Sample = %.8g    ", i + 1, epochCriterion[0]);
@@ -366,7 +366,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     cvDecoderSetTrainAndEvalNodes.push_back(decoderCriterionNodes[0]->NodeName());
                     cvDecoderSetTrainAndEvalNodes.push_back(decoderEvaluationNodes[0]->NodeName());
 
-                    vector<ElemType> vScore = evalforvalidation.EvaluateEncoderDecoderWithHiddenStates(
+                    vector<double> vScore = evalforvalidation.EvaluateEncoderDecoderWithHiddenStates(
                         encoderNet, decoderNet,
                         encoderValidationSetDataReader,
                         decoderValidationSetDataReader, cvEncoderSetTrainAndEvalNodes,
@@ -379,14 +379,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 bool loadedPrevModel = false;
                 size_t epochsSinceLastLearnRateAdjust = i % m_learnRateAdjustInterval + 1;
-                if (avgCriterion == std::numeric_limits<ElemType>::infinity())
+                if (avgCriterion == std::numeric_limits<double>::infinity())
                     avgCriterion = epochCriterion[0];
                 else
                     avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion)* avgCriterion + epochCriterion[0]) / (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
 
                 if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_learningRatesPerSample.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
                 {
-                    if (prevCriterion - avgCriterion < 0 && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                    if (prevCriterion - avgCriterion < 0 && prevCriterion != std::numeric_limits<double>::infinity())
                     {
                         if (m_loadBestModel)
                         {
@@ -411,7 +411,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if (m_continueReduce)
                     {
-                        if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                        if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<double>::infinity())
                         {
                             if (learnRateReduced == false)
                             {
@@ -433,13 +433,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     else
                     {
-                        if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                        if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<double>::infinity())
                         {
 
                             learnRatePerSample *= m_learnRateDecreaseFactor;
                             fprintf(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
                         }
-                        else if (prevCriterion - avgCriterion > m_increaseLearnRateIfImproveMoreThan*prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                        else if (prevCriterion - avgCriterion > m_increaseLearnRateIfImproveMoreThan*prevCriterion && prevCriterion != std::numeric_limits<double>::infinity())
                         {
                             learnRatePerSample *= m_learnRateIncreaseFactor;
                             fprintf(stderr, "learnRatePerSample increased to %.8g\n", learnRatePerSample);
@@ -560,9 +560,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(), node->FunctionValues().GetNumCols(), node->FunctionValues().GetDeviceId()));
             }
 
-            ElemType epochCriterion, avgCriterion, prevCriterion;
-            epochCriterion = std::numeric_limits<ElemType>::infinity();
-            avgCriterion = prevCriterion = std::numeric_limits<ElemType>::infinity();
+            double epochCriterion, avgCriterion, prevCriterion;
+            epochCriterion = std::numeric_limits<double>::infinity();
+            avgCriterion = prevCriterion = std::numeric_limits<double>::infinity();
 
             size_t epochsNotCountedInAvgCriterion = startEpoch % m_learnRateAdjustInterval;
 
@@ -571,7 +571,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 iNumEvaluations += evaluationNodes[i]->size();
             }
-            std::vector<ElemType> epochEvalErrors(iNumEvaluations, std::numeric_limits<ElemType>::infinity());
+            std::vector<double> epochEvalErrors(iNumEvaluations, std::numeric_limits<double>::infinity());
 
             std::vector<wstring> evalNodeNames;
             for (size_t k = 0; k < iNumNetworks; k++)
@@ -581,13 +581,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             size_t totalSamplesSeen = 0;
-            ElemType learnRatePerSample = 0.5f / m_mbSize[startEpoch];
+            double learnRatePerSample = 0.5f / m_mbSize[startEpoch];
 
             int m_numPrevLearnRates = 5; //used to control the upper learnining rate in LR search to reduce computation
-            vector<ElemType> prevLearnRates;
+            vector<double> prevLearnRates;
             prevLearnRates.resize(m_numPrevLearnRates);
             for (int i = 0; i<m_numPrevLearnRates; i++)
-                prevLearnRates[i] = std::numeric_limits<ElemType>::infinity();
+                prevLearnRates[i] = std::numeric_limits<double>::infinity();
 
             //precompute mean and invStdDev nodes and save initial model
             if (/// to-do doesn't support pre-compute such as MVN here 
@@ -617,7 +617,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::invalid_argument("When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, or an explicit learning rate must be specified in config for the starting epoch.");
 
             ULONG dropOutSeed = 1;
-            ElemType prevDropoutRate = 0;
+            double prevDropoutRate = 0;
 
             bool learnRateReduced = false;
 
@@ -667,7 +667,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
                 auto t_end_epoch = clock();
-                ElemType epochTime = ElemType(1.0)*(t_end_epoch - t_start_epoch) / (CLOCKS_PER_SEC);
+                double epochTime = 1.0*(t_end_epoch - t_start_epoch) / (CLOCKS_PER_SEC);
 
                 /**
                 this is hacky. Only allow evaluatio on the first encoder->decoder pair
@@ -697,7 +697,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     SimpleEvaluator<ElemType> evalforvalidation(*decoderNet);
 
-                    ElemType vScore = evalforvalidation.EvaluateEncoderDecoderWithHiddenStates(
+                    double vScore = evalforvalidation.EvaluateEncoderDecoderWithHiddenStates(
                         nets,
                         validationDataReader,
                         m_mbSize[i]);
@@ -709,14 +709,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 bool loadedPrevModel = false;
                 size_t epochsSinceLastLearnRateAdjust = i % m_learnRateAdjustInterval + 1;
-                if (avgCriterion == std::numeric_limits<ElemType>::infinity())
+                if (avgCriterion == std::numeric_limits<double>::infinity())
                     avgCriterion = epochCriterion;
                 else
                     avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion)* avgCriterion + epochCriterion) / (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
 
                 if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_learningRatesPerSample.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
                 {
-                    if (prevCriterion - avgCriterion < 0 && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                    if (prevCriterion - avgCriterion < 0 && prevCriterion != std::numeric_limits<double>::infinity())
                     {
                         if (m_loadBestModel)
                         {
@@ -736,7 +736,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if (m_continueReduce)
                     {
-                        if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                        if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<double>::infinity())
                         {
                             if (learnRateReduced == false)
                             {
@@ -761,13 +761,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     else
                     {
-                        if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                        if (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion && prevCriterion != std::numeric_limits<double>::infinity())
                         {
 
                             learnRatePerSample *= m_learnRateDecreaseFactor;
                             fprintf(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
                         }
-                        else if (prevCriterion - avgCriterion > m_increaseLearnRateIfImproveMoreThan*prevCriterion && prevCriterion != std::numeric_limits<ElemType>::infinity())
+                        else if (prevCriterion - avgCriterion > m_increaseLearnRateIfImproveMoreThan*prevCriterion && prevCriterion != std::numeric_limits<double>::infinity())
                         {
                             learnRatePerSample *= m_learnRateIncreaseFactor;
                             fprintf(stderr, "learnRatePerSample increased to %.8g\n", learnRatePerSample);
@@ -814,20 +814,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<std::vector<ComputationNodeBasePtr>*> labelNodes,
             vector<std::vector<ComputationNodeBasePtr>*> criterionNodes,
             const std::list<ComputationNodeBasePtr>& learnableNodes,
-            const ElemType learnRatePerSample,
+            const double learnRatePerSample,
             std::list<Matrix<ElemType>>& smoothedGradients,
-            ElemType& epochCriterion, std::vector<ElemType>& epochEvalErrors, size_t& totalSamplesSeen)
+            double& epochCriterion, std::vector<double>& epochEvalErrors, size_t& totalSamplesSeen)
         {
             ComputationNetwork* encoderNet = nets[0];
             ComputationNetwork* decoderNet = nets[1];
             DEVICEID_TYPE device = encoderNet->GetDeviceID();
             Matrix<ElemType> historyMat(device);
 
-            ElemType readTimeInMBs = 0, ComputeTimeInMBs = 0;
-            ElemType epochCriterionLastMBs = 0;
+            double readTimeInMBs = 0, ComputeTimeInMBs = 0;
+            double epochCriterionLastMBs = 0;
 
             int numSamplesLastMBs = 0;
-            std::vector<ElemType> epochEvalErrorsLastMBs(epochEvalErrors.size(), 0);
+            std::vector<double> epochEvalErrorsLastMBs(epochEvalErrors.size(), 0);
 
             clock_t startReadMBTime = 0, startComputeMBTime = 0;
             clock_t endReadMBTime = 0, endComputeMBTime = 0;
@@ -939,8 +939,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 numMBsRun++;
                 if (m_traceLevel > 0)
                 {
-                    ElemType MBReadTime = (ElemType)(endReadMBTime - startReadMBTime) / (CLOCKS_PER_SEC);
-                    ElemType MBComputeTime = (ElemType)(endComputeMBTime - startComputeMBTime) / CLOCKS_PER_SEC;
+                    double MBReadTime = (double)(endReadMBTime - startReadMBTime) / (CLOCKS_PER_SEC);
+                    double MBComputeTime = (double)(endComputeMBTime - startComputeMBTime) / CLOCKS_PER_SEC;
 
                     readTimeInMBs += MBReadTime;
                     ComputeTimeInMBs += MBComputeTime;
@@ -951,10 +951,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         epochCriterion = localEpochCriterion.Get00Element();
                         for (size_t i = 0; i< numEvalNodes; i++)
-                            epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0, i);
+                            epochEvalErrors[i] = (const double)localEpochEvalErrors(0, i);
 
-                        ElemType llk = (epochCriterion - epochCriterionLastMBs) / numSamplesLastMBs;
-                        ElemType ppl = exp(llk);
+                        double llk = (epochCriterion - epochCriterionLastMBs) / numSamplesLastMBs;
+                        double ppl = exp(llk);
                         fprintf(stderr, "Epoch[%d]-Minibatch[%d-%d]: Samples Seen = %d   Decoder Train Loss Per Sample = %.8g PPL = %.4e ", epochNumber + 1, numMBsRun - m_numMBsToShowResult + 1, numMBsRun, numSamplesLastMBs,
                             llk, ppl);
                         for (size_t i = 0; i<numEvalNodes; i++){
@@ -996,7 +996,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             epochCriterion = localEpochCriterion.Get00Element();
             for (size_t i = 0; i < numEvalNodes; i++)
             {
-                epochEvalErrors[i] = (const ElemType)localEpochEvalErrors(0, i);
+                epochEvalErrors[i] = localEpochEvalErrors(0, i);
             }
             fprintf(stderr, "total samples in epoch[%d] = %zd\n", epochNumber, totalEpochSamples);
         }
@@ -1040,14 +1040,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         deviceId = node->FunctionValues().GetDeviceId();  // original device id
 
                         node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        ElemType eOrg = node->FunctionValues()(irow, icol);  /// warning :: this function will put matrix into CPU
-                        node->FunctionValues().TransferToDeviceIfNotThere( deviceId, true);
+                        double eOrg = node->FunctionValues()(irow, icol);  /// warning :: this function will put matrix into CPU
+                        node->FunctionValues().TransferToDeviceIfNotThere(deviceId, true);
 
                         /// perturb parameter
-                        ElemType ePos = eOrg + (ElemType)EPSILON;
+                        double ePos = eOrg + EPSILON;
                         node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        node->FunctionValues().SetValue(irow, icol, ePos);
-                        node->FunctionValues().TransferToDeviceIfNotThere( deviceId, true);
+                        node->FunctionValues().SetValue(irow, icol, (ElemType)ePos);
+                        node->FunctionValues().TransferToDeviceIfNotThere(deviceId, true);
 
                         node->UpdateEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
@@ -1058,11 +1058,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             featureNodes, criterionNodes, 
                             localEpochCriterion, localEpochEvalErrors);
 
-                        ElemType score1 = localEpochCriterion.Get00Element();
+                        double score1 = localEpochCriterion.Get00Element();
 
-                        ElemType eNeg = eOrg - (ElemType)EPSILON;
+                        double eNeg = eOrg - EPSILON;
                         node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        node->FunctionValues().SetValue(irow, icol, eNeg);
+                        node->FunctionValues().SetValue(irow, icol, (ElemType)eNeg);
                         node->FunctionValues().TransferToDeviceIfNotThere(deviceId, true);
                         node->UpdateEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
@@ -1073,12 +1073,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             featureNodes, criterionNodes, 
                             localEpochCriterion, localEpochEvalErrors);
 
-                        ElemType score1r = localEpochCriterion.Get00Element();
+                        double score1r = localEpochCriterion.Get00Element();
 
-                        ElemType grdNum = (score1r - score1) / (eNeg - ePos);
+                        double grdNum = (score1r - score1) / (eNeg - ePos);
 
                         node->FunctionValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        node->FunctionValues().SetValue(irow, icol, eOrg);
+                        node->FunctionValues().SetValue(irow, icol, (ElemType)eOrg);
                         node->FunctionValues().TransferToDeviceIfNotThere(deviceId, true);
                         node->UpdateEvalTimeStamp();
                         localEpochCriterion.SetValue(0);
@@ -1092,12 +1092,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         EncoderDecoderWithHiddenStatesErrorProp(nets, pairNodes, criterionNodes);
 
                         node->GradientValues().TransferFromDeviceToDevice(deviceId, CPUDEVICE, true, false, false);
-                        ElemType grdErr = node->GradientValues()(irow, icol);
+                        double grdErr = node->GradientValues()(irow, icol);
                         node->GradientValues().TransferToDeviceIfNotThere(deviceId, true);
 
                         // check if they are consistent
-                        ElemType threshold = (ElemType)pow((ElemType)10.0, max((ElemType)0.0, ceil(log10(min(fabs(grdErr), fabs(grdNum))))) - (int)m_gradientCheckSigDigit);
-                        ElemType diff = (ElemType)fabs(grdErr - grdNum);
+                        double threshold = pow(10.0, max(0.0, ceil(log10(min(fabs(grdErr), fabs(grdNum))))) - (int)m_gradientCheckSigDigit);
+                        double diff = fabs(grdErr - grdNum);
                         bool wrong = (std::isnan(diff) || diff > threshold);
                         if (wrong)
                         {
@@ -1182,7 +1182,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(decoderCriterionNodes[0])->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
 
                 size_t numEvalNodes = decoderEvaluationNodes.size();
-                std::vector<ElemType>mbEvalErrors(numEvalNodes, 0);
+                std::vector<double>mbEvalErrors(numEvalNodes, 0);
 
                 for (size_t i = 0; i < numEvalNodes; i++)
                 {

@@ -881,7 +881,7 @@ public:
     // a few more helpers
     static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes);
     template<typename ElemType> // TODO: dropoutRate change to double
-    static void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ElemType dropoutRate, ElemType & prevDropoutRate, unsigned long & dropOutSeed);
+    static void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     static void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------

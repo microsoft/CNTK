@@ -147,13 +147,13 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     bool ret = false;
     if (allowUndeterminedVariable)
         *allowUndeterminedVariable = true; // be default we allow undetermined variables
-    if (EqualInsensitive(nodeType, InputValue<ElemType>::TypeName(), L"Input"))
+    if (EqualInsensitive(nodeType, InputValue<float>::TypeName(), L"Input"))
         ret = true;   
     else if (EqualInsensitive(nodeType, InputValue<ElemType>::SparseTypeName(), L"SparseInput"))
         ret = true; 
-    else if (EqualInsensitive(nodeType, LearnableParameter<ElemType>::TypeName(), L"Parameter"))
+    else if (EqualInsensitive(nodeType, LearnableParameter<float>::TypeName(), L"Parameter"))
         ret = true;   
-    //else if (EqualInsensitive(nodeType, SparseLearnableParameter<ElemType>::TypeName(), L"SparseParameter"))
+    //else if (EqualInsensitive(nodeType, SparseLearnableParameter<float>::TypeName(), L"SparseParameter"))
     //    ret = true;  
     else if (EqualInsensitive(nodeType, L"Constant", L"Const"))
         ret = true;   
@@ -161,115 +161,115 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;   
     else if (EqualInsensitive(nodeType, L"SparseImageInput", L"SparseImage"))
         ret = true;   
-    else if (EqualInsensitive(nodeType, SumElementsNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, SumElementsNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, SumColumnElementsNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, SumColumnElementsNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, ScaleNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, ScaleNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, TransposeNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, TransposeNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, TimesNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, TimesNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, TransposeTimesNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, TransposeTimesNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, StrideTimesNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, StrideTimesNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, ElementTimesNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, ElementTimesNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, RowElementTimesNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, RowElementTimesNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, ColumnElementTimesNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, ColumnElementTimesNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, DiagTimesNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, DiagTimesNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, CosDistanceNode<ElemType>::TypeName(), L"CosDist"))
+    else if (EqualInsensitive(nodeType, CosDistanceNode<float>::TypeName(), L"CosDist"))
         ret = true;
-    else if (EqualInsensitive(nodeType, KhatriRaoProductNode<ElemType>::TypeName(), L"ColumnwiseCrossProduct"))
+    else if (EqualInsensitive(nodeType, KhatriRaoProductNode<float>::TypeName(), L"ColumnwiseCrossProduct"))
         ret = true;
-    else if (EqualInsensitive(nodeType, PlusNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, PlusNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, MinusNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, MinusNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, NegateNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, NegateNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, RectifiedLinearNode<ElemType>::TypeName(), L"ReLU"))
+    else if (EqualInsensitive(nodeType, RectifiedLinearNode<float>::TypeName(), L"ReLU"))
         ret = true;
-    else if (EqualInsensitive(nodeType, SigmoidNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, SigmoidNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, TanhNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, TanhNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, ExpNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, ExpNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, LogNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, LogNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, CosineNode<ElemType>::TypeName(), L"Cos"))
+    else if (EqualInsensitive(nodeType, CosineNode<float>::TypeName(), L"Cos"))
         ret = true;
-    else if (EqualInsensitive(nodeType, SoftmaxNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, SoftmaxNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, LogSoftmaxNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, LogSoftmaxNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, SquareErrorNode<ElemType>::TypeName(), L"SE"))
+    else if (EqualInsensitive(nodeType, SquareErrorNode<float>::TypeName(), L"SE"))
         ret = true;
-    else if (EqualInsensitive(nodeType, CrossEntropyWithSoftmaxNode<ElemType>::TypeName(), L"CEWithSM"))
+    else if (EqualInsensitive(nodeType, CrossEntropyWithSoftmaxNode<float>::TypeName(), L"CEWithSM"))
         ret = true;
-    else if (EqualInsensitive(nodeType, CrossEntropyNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, CrossEntropyNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName(), L"CBCEWithSM"))
+    else if (EqualInsensitive(nodeType, ClassBasedCrossEntropyWithSoftmaxNode<float>::TypeName(), L"CBCEWithSM"))
         ret = true;
-    else if (EqualInsensitive(nodeType, MatrixL1RegNode<ElemType>::TypeName(), L"L1Reg"))
+    else if (EqualInsensitive(nodeType, MatrixL1RegNode<float>::TypeName(), L"L1Reg"))
         ret = true;
-    else if (EqualInsensitive(nodeType, MatrixL2RegNode<ElemType>::TypeName(), L"L2Reg"))
+    else if (EqualInsensitive(nodeType, MatrixL2RegNode<float>::TypeName(), L"L2Reg"))
         ret = true;
-    else if (EqualInsensitive(nodeType, PerDimMeanVarNormalizationNode<ElemType>::TypeName(),L"PerDimMVNorm"))
+    else if (EqualInsensitive(nodeType, PerDimMeanVarNormalizationNode<float>::TypeName(),L"PerDimMVNorm"))
         ret = true;            
-    else if (EqualInsensitive(nodeType, PerDimMeanVarDeNormalizationNode<ElemType>::TypeName(),L"PerDimMVDeNorm"))
+    else if (EqualInsensitive(nodeType, PerDimMeanVarDeNormalizationNode<float>::TypeName(),L"PerDimMVDeNorm"))
         ret = true;            
-    else if (EqualInsensitive(nodeType, ErrorPredictionNode<ElemType>::TypeName(), L"ClassificationError"))
+    else if (EqualInsensitive(nodeType, ErrorPredictionNode<float>::TypeName(), L"ClassificationError"))
         ret = true;    
-    else if (EqualInsensitive(nodeType, DropoutNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, DropoutNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, ReshapeNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, ReshapeNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, RowRepeatNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, RowRepeatNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, MeanNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, MeanNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, InvStdDevNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, InvStdDevNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, ConvolutionNode<ElemType>::TypeName(), L"Convolve"))
+    else if (EqualInsensitive(nodeType, ConvolutionNode<float>::TypeName(), L"Convolve"))
         ret = true;   
-    else if (EqualInsensitive(nodeType, MaxPoolingNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, MaxPoolingNode<float>::TypeName()))
         ret = true;   
-    else if (EqualInsensitive(nodeType, AveragePoolingNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, AveragePoolingNode<float>::TypeName()))
         ret = true;   
-    else if (EqualInsensitive(nodeType, PastValueNode<ElemType>::TypeName(), L"Delay"))
+    else if (EqualInsensitive(nodeType, PastValueNode<float>::TypeName(), L"Delay"))
         ret = true;
-    else if (EqualInsensitive(nodeType, FutureValueNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, FutureValueNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, RowSliceNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, RowSliceNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, RowStackNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, RowStackNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, LookupTableNode<ElemType>::TypeName()))
+    else if (EqualInsensitive(nodeType, LookupTableNode<float>::TypeName()))
         ret = true;
-    else if (EqualInsensitive(nodeType, GMMLogLikelihoodNode<ElemType>::TypeName(), L"GMMLL"))
+    else if (EqualInsensitive(nodeType, GMMLogLikelihoodNode<float>::TypeName(), L"GMMLL"))
         ret = true;
-    else if (EqualInsensitive(nodeType, CosDistanceWithNegativeSamplesNode<ElemType>::TypeName(), L"CosWithNegSamples"))
+    else if (EqualInsensitive(nodeType, CosDistanceWithNegativeSamplesNode<float>::TypeName(), L"CosWithNegSamples"))
         ret = true;
-    else if (EqualInsensitive(nodeType, TimeReverseNode<ElemType>::TypeName(), L"TimeReverse"))
+    else if (EqualInsensitive(nodeType, TimeReverseNode<float>::TypeName(), L"TimeReverse"))
         ret = true;
-    else if (EqualInsensitive(nodeType, CRFNode<ElemType>::TypeName(), L"CRF"))
+    else if (EqualInsensitive(nodeType, CRFNode<float>::TypeName(), L"CRF"))
         ret = true;
-    else if (EqualInsensitive(nodeType, DummyCriterionNode<ElemType>::TypeName(), L"DummyCriterion"))
+    else if (EqualInsensitive(nodeType, DummyCriterionNode<float>::TypeName(), L"DummyCriterion"))
         ret = true;
-    else if (EqualInsensitive(nodeType, ParallelNode<ElemType>::TypeName(), L"Parallel"))
+    else if (EqualInsensitive(nodeType, ParallelNode<float>::TypeName(), L"Parallel"))
         ret = true;
-    else if (EqualInsensitive(nodeType, LSTMNode<ElemType>::TypeName(), L"LSTM"))
+    else if (EqualInsensitive(nodeType, LSTMNode<float>::TypeName(), L"LSTM"))
         ret = true;
-    else if (EqualInsensitive(nodeType, PairNetworkNode<ElemType>::TypeName(), L"PairNetwork"))
+    else if (EqualInsensitive(nodeType, PairNetworkNode<float>::TypeName(), L"PairNetwork"))
         ret = true;
-    else if (EqualInsensitive(nodeType, StrideTimesNode<ElemType>::TypeName(), L"StrideTimes"))
+    else if (EqualInsensitive(nodeType, StrideTimesNode<float>::TypeName(), L"StrideTimes"))
         ret = true;
 
     // return the actual node name in the parameter if we found something

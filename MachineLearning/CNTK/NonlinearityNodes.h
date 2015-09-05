@@ -1125,7 +1125,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             ComputeInputPartialS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
         }
 
-        static void WINAPI ComputeInputPartialS(const ElemType dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
+        static void WINAPI ComputeInputPartialS(const double dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
         {
             if (dropoutRate > 0)
             {
@@ -1159,13 +1159,13 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             EvaluateThisNodeS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
         }
 
-        static void WINAPI EvaluateThisNodeS(const ElemType dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
+        static void WINAPI EvaluateThisNodeS(const double dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
         {
             if (dropoutRate > 0)
             {
                 maskOfDropout.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
 
-                maskOfDropout.SetUniformRandomMask(dropoutRate, ElemType(1.0) / (ElemType(1) - dropoutRate), randomSeed);
+                maskOfDropout.SetUniformRandomMask((ElemType)dropoutRate, (ElemType)(1.0 / (1.0 - dropoutRate)), randomSeed);
                 randomSeed += 1073807359;  //1073807359 is a very large prime number to avoid collision with other dropout nodes
 
                 functionValues.AssignElementProductOf(maskOfDropout, inputFunctionValues);
@@ -1217,7 +1217,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             m_children[0] = inputNode;
         }
 
-        void SetDropoutRate(const ElemType val)
+        void SetDropoutRate(const double val)
         {
             if (val < 0 || val >= 1)
                 throw std::logic_error("DropoutRate must be >= 0 and < 1.");
@@ -1249,7 +1249,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             }
         }
 private:
-        ElemType m_dropoutRate;
+        double m_dropoutRate;
         unsigned long m_randomSeed;
 
         Matrix<ElemType> m_maskOfDropout;
