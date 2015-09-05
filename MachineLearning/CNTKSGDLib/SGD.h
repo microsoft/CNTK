@@ -265,6 +265,7 @@ enum class ParallelizationMethod : int
 }/* GradientUpdateInfo*/;
 
 // TODO: make this independent of ElemType. Then these repeated dynamic_pointer_casts will go away
+// TODO: why is this a class, and not just a procedure? Then we wouldn't have to include the massive header
 template<class ElemType>
 class SGD
 {

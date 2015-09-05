@@ -30,25 +30,25 @@
     </ClCompile>
     <ClCompile Include="CNTK.cpp" />
     <ClCompile Include="..\..\BrainScript\BrainScriptEvaluator.cpp">
-      <Filter>Experimental</Filter>
+      <Filter>Model Building, experimental extensions</Filter>
     </ClCompile>
     <ClCompile Include="..\..\BrainScript\BrainScriptParser.cpp">
-      <Filter>Experimental</Filter>
+      <Filter>Model Building, experimental extensions</Filter>
     </ClCompile>
     <ClCompile Include="..\..\BrainScript\BrainScriptTest.cpp">
-      <Filter>Experimental</Filter>
+      <Filter>Model Building, experimental extensions</Filter>
     </ClCompile>
     <ClCompile Include="SynchronousExecutionEngine.cpp">
-      <Filter>Model Description &amp; Creation</Filter>
+      <Filter>Model Building, from old NDL</Filter>
     </ClCompile>
     <ClCompile Include="ExperimentalNetworkBuilder.cpp">
-      <Filter>Experimental</Filter>
+      <Filter>Model Building, experimental extensions</Filter>
     </ClCompile>
     <ClCompile Include="NetworkDescriptionLanguage.cpp">
-      <Filter>Model Description &amp; Creation</Filter>
+      <Filter>Model Building, from old NDL</Filter>
     </ClCompile>
     <ClCompile Include="SimpleNetworkBuilder.cpp">
-      <Filter>Model Description &amp; Creation</Filter>
+      <Filter>Model Building, Standard Models</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -74,7 +74,7 @@
       <Filter>from CNTKComputationNetworkLib\Network</Filter>
     </ClInclude>
     <ClInclude Include="IExecutionEngine.h">
-      <Filter>Model Description &amp; Creation</Filter>
+      <Filter>Model Building, from old NDL</Filter>
     </ClInclude>
     <ClInclude Include="ModelEditLanguage.h">
       <Filter>Model Editing</Filter>
@@ -83,7 +83,7 @@
       <Filter>from CNTKComputationNetworkLib\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="SynchronousExecutionEngine.h">
-      <Filter>Model Description &amp; Creation</Filter>
+      <Filter>Model Building, from old NDL</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>Misc</Filter>
@@ -137,7 +137,7 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="ExperimentalNetworkBuilder.h">
-      <Filter>Experimental</Filter>
+      <Filter>Model Building, experimental extensions</Filter>
     </ClInclude>
     <ClInclude Include="AllReduceDistGradAggregator.h">
       <Filter>from CNTKSGDLib\SGD Parallelization</Filter>
@@ -155,34 +155,31 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\BrainScript\BrainScriptEvaluator.h">
-      <Filter>Experimental</Filter>
+      <Filter>Model Building, experimental extensions</Filter>
     </ClInclude>
     <ClInclude Include="..\..\BrainScript\BrainScriptObjects.h">
-      <Filter>Experimental</Filter>
+      <Filter>Model Building, experimental extensions</Filter>
     </ClInclude>
     <ClInclude Include="..\..\BrainScript\BrainScriptParser.h">
-      <Filter>Experimental</Filter>
+      <Filter>Model Building, experimental extensions</Filter>
     </ClInclude>
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetworkBuilder.h">
       <Filter>from CNTKComputationNetworkLib\Network</Filter>
     </ClInclude>
     <ClInclude Include="NDLNetworkBuilder.h">
-      <Filter>Model Description &amp; Creation</Filter>
+      <Filter>Model Building, from old NDL</Filter>
     </ClInclude>
     <ClInclude Include="NDLUtil.h">
-      <Filter>Model Description &amp; Creation</Filter>
+      <Filter>Model Building, from old NDL</Filter>
     </ClInclude>
     <ClInclude Include="NetworkDescriptionLanguage.h">
-      <Filter>Model Description &amp; Creation</Filter>
+      <Filter>Model Building, from old NDL</Filter>
     </ClInclude>
     <ClInclude Include="SGD.h">
       <Filter>from CNTKSGDLib\SGD</Filter>
     </ClInclude>
     <ClInclude Include="MultiNetworksSGD.h">
       <Filter>from CNTKSGDLib\SGD</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleNetworkBuilder.h">
-      <Filter>Model Description &amp; Creation</Filter>
     </ClInclude>
     <ClInclude Include="SimpleEvaluator.h">
       <Filter>from CNTKSGDLib\SGD</Filter>
@@ -196,6 +193,9 @@
     <ClInclude Include="..\CNTKSGDLib\IComputationNetBuilder.h">
       <Filter>from CNTKSGDLib\SGD</Filter>
     </ClInclude>
+    <ClInclude Include="SimpleNetworkBuilder.h">
+      <Filter>Model Building, Standard Models</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">
@@ -208,7 +208,7 @@
       <Filter>Misc</Filter>
     </Text>
     <Text Include="..\..\BrainScript\Notes.txt">
-      <Filter>Experimental\Doc</Filter>
+      <Filter>Model Building, experimental extensions\Doc</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>
@@ -223,12 +223,6 @@
     </Filter>
     <Filter Include="Misc">
       <UniqueIdentifier>{3c119a92-ffb2-4850-adae-01778324974d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Experimental">
-      <UniqueIdentifier>{fe2443a1-6323-449f-96be-cbd0f608f382}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Experimental\Doc">
-      <UniqueIdentifier>{23e7cd74-fd60-4fb4-a925-c3dea584f176}</UniqueIdentifier>
     </Filter>
     <Filter Include="from CNTKComputationNetworkLib">
       <UniqueIdentifier>{7b4cb3e8-272f-413d-badd-d437779b1aeb}</UniqueIdentifier>
@@ -248,8 +242,17 @@
     <Filter Include="from CNTKSGDLib\SGD">
       <UniqueIdentifier>{4f06ac18-7b30-490c-b801-128bdaa99450}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Model Description &amp; Creation">
+    <Filter Include="Model Building, from old NDL">
       <UniqueIdentifier>{3ddfc109-3a90-45f5-91e8-1930759cfe9d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Model Building, Standard Models">
+      <UniqueIdentifier>{f474b73c-05f9-43e6-997f-3ec83805c655}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Model Building, experimental extensions">
+      <UniqueIdentifier>{fe2443a1-6323-449f-96be-cbd0f608f382}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Model Building, experimental extensions\Doc">
+      <UniqueIdentifier>{23e7cd74-fd60-4fb4-a925-c3dea584f176}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -257,7 +260,7 @@
       <Filter>Misc</Filter>
     </None>
     <None Include="..\..\BrainScript\BrainScript--extending the CNTK config language, Frank Seide August 2015.pptx">
-      <Filter>Experimental\Doc</Filter>
+      <Filter>Model Building, experimental extensions\Doc</Filter>
     </None>
   </ItemGroup>
 </Project>

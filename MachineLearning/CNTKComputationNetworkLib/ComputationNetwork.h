@@ -216,7 +216,6 @@ public:
     // serialization
     // -----------------------------------------------------------------------
 
-    // TODO: how does the file distinguish float vs double nodes?
     void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
 private:
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
@@ -224,6 +223,8 @@ public:
 
     void LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation = true,
                                            const FileOptions fileFormat = FileOptions::fileOptionsBinary);
+    // design BUGBUG: binary files do not know whether they are float or double.
+    // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
     template<typename ElemType>
     void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
                       const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
