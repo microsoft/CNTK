@@ -163,7 +163,6 @@
     <ClInclude Include="..\CNTK\CompositeComputationNodes.h" />
     <ClInclude Include="..\CNTK\ComputationNetwork.h" />
     <ClInclude Include="..\CNTK\ComputationNetworkBuilder.h" />
-    <ClInclude Include="..\CNTK\ComputationNetworkHelper.h" />
     <ClInclude Include="..\CNTK\ComputationNode.h" />
     <ClInclude Include="..\CNTK\ConvolutionalNodes.h" />
     <ClInclude Include="..\CNTK\DecoderNode.h" />
