@@ -19,14 +19,14 @@
     <ClCompile Include="..\..\Common\BestGpu.cpp">
       <Filter>GPU Interfacing</Filter>
     </ClCompile>
-    <ClCompile Include="..\CNTK\ExperimentalNetworkBuilder.cpp">
-      <Filter>Experimental</Filter>
-    </ClCompile>
     <ClCompile Include="..\CNTK\ComputationNetworkBuilder.cpp">
       <Filter>Network</Filter>
     </ClCompile>
     <ClCompile Include="..\CNTK\ComputationNetwork.cpp">
       <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\CNTK\NetworkBuilderFromConfig.cpp">
+      <Filter>Experimental</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -95,9 +95,6 @@
     </ClInclude>
     <ClInclude Include="..\..\Common\CrossProcessMutex.h">
       <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\CNTK\ExperimentalNetworkBuilder.h">
-      <Filter>Experimental</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\Platform.h">
       <Filter>Common\Include</Filter>
