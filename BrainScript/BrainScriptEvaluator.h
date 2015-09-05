@@ -53,6 +53,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     //     - ConfigArrays elements
     //     - ConfigLambdas (default values of named arguments)
 
+    // TODO: separate this out from BrainScript to an interface that still does type casts--possible?
     class ConfigValuePtr : public shared_ptr<Object>
     {
         TextLocation location;      // in source code
