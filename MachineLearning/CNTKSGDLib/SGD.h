@@ -2911,7 +2911,5 @@ protected:
     double m_L1RegWeight;
 
 };
-template class SGD<float>;
-template class SGD<double>;
 
 }}}
