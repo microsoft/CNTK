@@ -174,6 +174,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ShiftBy(int numShift);
 
+        // TODO: all these scalars should be passed as doubles and cast down inside
         void NormalGrad(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
         ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
         ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);

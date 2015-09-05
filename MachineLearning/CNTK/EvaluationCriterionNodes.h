@@ -67,7 +67,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("ErrorPrediction operation requires two inputs.");
 
             size_t index = 0;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            // TODO: use dynamic_pointer_cast instead
+            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -75,7 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
