@@ -116,9 +116,6 @@
     <Filter Include="Common\Include">
       <UniqueIdentifier>{85226dda-87ba-4da6-af04-563d0ce23b94}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Network">
-      <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Nodes">
       <UniqueIdentifier>{0b366814-48b2-4619-bf92-85ee24e3cbc1}</UniqueIdentifier>
     </Filter>
@@ -130,6 +127,9 @@
     </Filter>
     <Filter Include="Experimental">
       <UniqueIdentifier>{fe2443a1-6323-449f-96be-cbd0f608f382}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Network">
+      <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
