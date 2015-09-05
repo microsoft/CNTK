@@ -11,6 +11,7 @@
 #include "CompositeComputationNodes.h"  // for PrecomputeNode
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
+#include "..\CNTK\IComputationNetBuilder.h" // TODO: separate out the building part, leave to an outer level
 #include <vector>
 #include <string>
 #include <stdexcept>

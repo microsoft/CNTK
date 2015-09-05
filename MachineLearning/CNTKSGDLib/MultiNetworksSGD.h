@@ -7,7 +7,7 @@
 
 #include "basetypes.h"
 #include "ComputationNetwork.h"
-#include "IComputationNetBuilder.h"
+#include "..\CNTK\IComputationNetBuilder.h"
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
 #include <vector>
@@ -305,8 +305,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 auto t_start_epoch = clock();
 
                 //set dropout rate
-                SetDropoutRate(*encoderNet, encoderEvaluationNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
-                SetDropoutRate(*decoderNet, decoderCriterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
+                ComputationNetwork::SetDropoutRate<ElemType>(*encoderNet, encoderEvaluationNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
+                ComputationNetwork::SetDropoutRate<ElemType>(*decoderNet, decoderCriterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
                 //learning rate adjustment
                 if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
