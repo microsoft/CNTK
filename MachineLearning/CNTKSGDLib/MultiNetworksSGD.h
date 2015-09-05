@@ -7,7 +7,7 @@
 
 #include "basetypes.h"
 #include "ComputationNetwork.h"
-#include "..\CNTK\IComputationNetBuilder.h"
+#include "IComputationNetBuilder.h"
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
 #include <vector>

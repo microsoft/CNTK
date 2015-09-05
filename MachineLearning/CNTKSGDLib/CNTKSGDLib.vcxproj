@@ -171,6 +171,7 @@
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNode.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ConvolutionalNodes.h" />
     <ClInclude Include="DistGradHeader.h" />
+    <ClInclude Include="IComputationNetBuilder.h" />
     <ClInclude Include="IDistGradAggregator.h" />
     <ClInclude Include="MPIWrapper.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\DecoderNode.h" />

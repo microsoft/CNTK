@@ -175,9 +175,6 @@
     <ClInclude Include="NetworkDescriptionLanguage.h">
       <Filter>Model Description &amp; Creation</Filter>
     </ClInclude>
-    <ClInclude Include="IComputationNetBuilder.h">
-      <Filter>Model Description &amp; Creation</Filter>
-    </ClInclude>
     <ClInclude Include="SGD.h">
       <Filter>from CNTKSGDLib\SGD</Filter>
     </ClInclude>
@@ -195,6 +192,9 @@
     </ClInclude>
     <ClInclude Include="..\CNTKComputationNetworkLib\MatrixPool.h">
       <Filter>from CNTKComputationNetworkLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\CNTKSGDLib\IComputationNetBuilder.h">
+      <Filter>from CNTKSGDLib\SGD</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

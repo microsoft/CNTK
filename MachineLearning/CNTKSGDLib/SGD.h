@@ -11,7 +11,7 @@
 #include "CompositeComputationNodes.h"  // for PrecomputeNode
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
-#include "..\CNTK\IComputationNetBuilder.h" // TODO: separate out the building part, leave to an outer level
+#include "IComputationNetBuilder.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -985,6 +985,8 @@ protected:
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
             ComputationNetwork::SetMaxTempMemSizeForCNN(refNet, refNode, m_maxTempMemSizeInSamplesForCNN);
 
+        // --- MAIN EPOCH LOOP
+
         for (int i = startEpoch; i < (int)m_maxEpochs; i++)
         {
             // Synchronize all ranks before proceeding to ensure that 
@@ -1268,6 +1270,8 @@ protected:
                         learnRatePerSample);
             }
         }
+
+        // --- END OF MAIN EPOCH LOOP
 
         // since we linked feature nodes. we need to remove it from the deletion
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
@@ -1913,6 +1917,8 @@ protected:
         Timer timer;
         timer.Start();
 
+        // --- MAIN MINIBATCH LOOP
+
         for (;;)
         {
             bool wasDataRead = trainSetDataReader->GetMinibatch(*inputMatrices);
@@ -2175,6 +2181,8 @@ protected:
 
             profiler.NextSample();
         }
+
+        // --- END MAIN MINIBATCH LOOP
 
         if (useGradientAggregation)
         {
