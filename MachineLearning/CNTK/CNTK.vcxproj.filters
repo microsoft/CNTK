@@ -56,9 +56,6 @@
     <ClCompile Include="ComputationNetworkBuilder.cpp">
       <Filter>Network</Filter>
     </ClCompile>
-    <ClCompile Include="ComputationNetwork.cpp">
-      <Filter>Network</Filter>
-    </ClCompile>
     <ClCompile Include="SynchronousExecutionEngine.cpp">
       <Filter>Evaluation</Filter>
     </ClCompile>
