@@ -8,7 +8,6 @@
 #include "basetypes.h"
 #include "ComputationNetwork.h"
 #include "IComputationNetBuilder.h"
-#include "ComputationNetworkHelper.h"
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
 #include <vector>

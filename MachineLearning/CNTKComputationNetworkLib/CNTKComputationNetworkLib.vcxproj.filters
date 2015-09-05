@@ -42,9 +42,6 @@
     <ClInclude Include="..\CNTK\ComputationNetwork.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\ComputationNetworkHelper.h">
-      <Filter>Network</Filter>
-    </ClInclude>
     <ClInclude Include="..\CNTK\IComputationNetBuilder.h">
       <Filter>Network</Filter>
     </ClInclude>

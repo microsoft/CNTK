@@ -6,7 +6,6 @@
 #pragma once
 
 #include "ComputationNetwork.h"
-#include "ComputationNetworkHelper.h"
 #include "DataReader.h"
 #include <vector>
 #include <string>

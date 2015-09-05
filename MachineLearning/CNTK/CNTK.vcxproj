@@ -177,7 +177,6 @@
     <ClInclude Include="AllReduceDistGradAggregator.h" />
     <ClInclude Include="ComputationNetwork.h" />
     <ClInclude Include="ComputationNetworkBuilder.h" />
-    <ClInclude Include="ComputationNetworkHelper.h" />
     <ClInclude Include="ComputationNode.h" />
     <ClInclude Include="ConvolutionalNodes.h" />
     <ClInclude Include="DistGradHeader.h" />

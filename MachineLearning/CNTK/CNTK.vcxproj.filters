@@ -82,9 +82,6 @@
     <ClInclude Include="ComputationNetwork.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="ComputationNetworkHelper.h">
-      <Filter>Network</Filter>
-    </ClInclude>
     <ClInclude Include="IComputationNetBuilder.h">
       <Filter>Network</Filter>
     </ClInclude>
