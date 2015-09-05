@@ -1081,6 +1081,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
+
+    public: //A hack to make my stuff easier, I want computation node to be able to access it.
         Matrix<ElemType> * m_sentenceSeg;
         /// conditionally point to either a pointer to that provided by network, or point to 
         /// an indiviaul sentence boundary info, which happens if timeStep > 1 is required for PastValue node

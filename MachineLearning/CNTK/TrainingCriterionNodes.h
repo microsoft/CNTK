@@ -514,6 +514,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             curNode->MaskToZeroWhenLabelAndFeatureMissing(logSoftmaxOfRight); //we are fine here since it will be called only with full minibatch
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logSoftmaxOfRight);
             functionValues *= (-1);
+
+            fprintf(stderr, "debughtx m_sentenceSeg check row:%d col:%d norm:%f\n", curNode->m_sentenceSeg->GetNumRows(), curNode->m_sentenceSeg->GetNumCols(), curNode->m_sentenceSeg->MatrixNormInf());
+            //Use m_sentenceSeg
 #if NANCHECK
             functionValues.HasNan("CrossEntropyWithSoftmax");
 #endif

@@ -333,6 +333,8 @@ namespace Microsoft {
                 msra::strfun::tolower_ascii(s);
                 if (s == L"crossentropywithsoftmax")
                     return TrainingCriterion::CrossEntropyWithSoftmax;
+                if (s == L"lmncecrossentropywithsoftmax")
+                    return TrainingCriterion::LMNCECrossEntropyWithSoftmax;
                 else if (s == L"squareerror")
                     return TrainingCriterion::SquareError;
                 else if (s == L"noisecontrastiveestimationnode")
@@ -349,6 +351,8 @@ namespace Microsoft {
                     return EvalCriterion::ErrorPrediction;
                 else if (s == L"crossentropywithsoftmax")
                     return EvalCriterion::CrossEntropyWithSoftmax;
+                else if (s == L"lmncecrossentropywithsoftmax")
+                    return EvalCriterion::LMNCECrossEntropyWithSoftmax;
                 else if (s == L"classcrossentropywithsoftmax")
                     return EvalCriterion::ClassCrossEntropyWithSoftmax;
                 else if (s == L"noisecontrastiveestimationnode")
