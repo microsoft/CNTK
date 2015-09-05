@@ -1,76 +1,36 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\..\Common\ConfigFile.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\DataReader.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\DataWriter.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Common\File.cpp">
       <Filter>Common</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="ModelEditLanguage.cpp">
-      <Filter>Model Editing</Filter>
-    </ClCompile>
-    <ClCompile Include="ComputationNode.cpp">
+    <ClCompile Include="..\CNTK\ComputationNode.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>
-    <ClCompile Include="SimpleNetworkBuilder.cpp">
-      <Filter>Network</Filter>
-    </ClCompile>
-    <ClCompile Include="stdafx.cpp">
+    <ClCompile Include="..\CNTK\stdafx.cpp">
       <Filter>Misc</Filter>
-    </ClCompile>
-    <ClCompile Include="tests.cpp">
-      <Filter>Misc</Filter>
-    </ClCompile>
-    <ClCompile Include="NetworkDescriptionLanguage.cpp">
-      <Filter>Network</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="CNTK.cpp" />
     <ClCompile Include="..\..\Common\BestGpu.cpp">
       <Filter>GPU Interfacing</Filter>
     </ClCompile>
-    <ClCompile Include="ExperimentalNetworkBuilder.cpp">
+    <ClCompile Include="..\CNTK\ExperimentalNetworkBuilder.cpp">
       <Filter>Experimental</Filter>
     </ClCompile>
-    <ClCompile Include="Profiler.cpp">
-      <Filter>GPU Interfacing</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\BrainScript\BrainScriptEvaluator.cpp">
-      <Filter>Experimental</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\BrainScript\BrainScriptParser.cpp">
-      <Filter>Experimental</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\BrainScript\BrainScriptTest.cpp">
-      <Filter>Experimental</Filter>
-    </ClCompile>
-    <ClCompile Include="ComputationNetworkBuilder.cpp">
+    <ClCompile Include="..\CNTK\ComputationNetworkBuilder.cpp">
       <Filter>Network</Filter>
     </ClCompile>
-    <ClCompile Include="ComputationNetwork.cpp">
+    <ClCompile Include="..\CNTK\ComputationNetwork.cpp">
       <Filter>Network</Filter>
-    </ClCompile>
-    <ClCompile Include="SynchronousExecutionEngine.cpp">
-      <Filter>Evaluation</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\commandArgUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\fileutil.h">
@@ -79,62 +39,23 @@
     <ClInclude Include="..\..\Common\Include\File.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DataReader.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\DataWriter.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="ComputationNetwork.h">
+    <ClInclude Include="..\CNTK\ComputationNetwork.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="ComputationNetworkHelper.h">
+    <ClInclude Include="..\CNTK\ComputationNetworkHelper.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="IComputationNetBuilder.h">
+    <ClInclude Include="..\CNTK\IComputationNetBuilder.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="IExecutionEngine.h">
-      <Filter>Evaluation</Filter>
-    </ClInclude>
-    <ClInclude Include="ModelEditLanguage.h">
-      <Filter>Model Editing</Filter>
-    </ClInclude>
-    <ClInclude Include="ComputationNode.h">
+    <ClInclude Include="..\CNTK\ComputationNode.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="NDLNetworkBuilder.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="NDLUtil.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="NetworkDescriptionLanguage.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleEvaluator.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleNetworkBuilder.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleOutputWriter.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="SGD.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="SynchronousExecutionEngine.h">
-      <Filter>Evaluation</Filter>
-    </ClInclude>
-    <ClInclude Include="stdafx.h">
+    <ClInclude Include="..\CNTK\stdafx.h">
       <Filter>Misc</Filter>
     </ClInclude>
-    <ClInclude Include="targetver.h">
+    <ClInclude Include="..\CNTK\targetver.h">
       <Filter>Misc</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Common\Include\hostname.h">
-      <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\TimerUtility.h">
       <Filter>Common\Include</Filter>
@@ -145,92 +66,51 @@
     <ClInclude Include="..\..\Common\Include\nvml.h">
       <Filter>GPU Interfacing</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h">
-      <Filter>Common\Include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\Include\BestGpu.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="CompositeComputationNodes.h">
+    <ClInclude Include="..\CNTK\CompositeComputationNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="EvaluationCriterionNodes.h">
+    <ClInclude Include="..\CNTK\EvaluationCriterionNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="TrainingCriterionNodes.h">
+    <ClInclude Include="..\CNTK\TrainingCriterionNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="NonlinearityNodes.h">
+    <ClInclude Include="..\CNTK\NonlinearityNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="LinearAlgebraNodes.h">
+    <ClInclude Include="..\CNTK\LinearAlgebraNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="ConvolutionalNodes.h">
+    <ClInclude Include="..\CNTK\ConvolutionalNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="RecurrentNodes.h">
+    <ClInclude Include="..\CNTK\RecurrentNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="InputAndParamNodes.h">
+    <ClInclude Include="..\CNTK\InputAndParamNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="DecoderNode.h">
+    <ClInclude Include="..\CNTK\DecoderNode.h">
       <Filter>Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="MultiNetworksSGD.h">
-      <Filter>Network</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\CrossProcessMutex.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="ExperimentalNetworkBuilder.h">
+    <ClInclude Include="..\CNTK\ExperimentalNetworkBuilder.h">
       <Filter>Experimental</Filter>
-    </ClInclude>
-    <ClInclude Include="AllReduceDistGradAggregator.h">
-      <Filter>Parallelization</Filter>
-    </ClInclude>
-    <ClInclude Include="DistGradHeader.h">
-      <Filter>Parallelization</Filter>
-    </ClInclude>
-    <ClInclude Include="IDistGradAggregator.h">
-      <Filter>Parallelization</Filter>
-    </ClInclude>
-    <ClInclude Include="MPIWrapper.h">
-      <Filter>Parallelization</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\Platform.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="MatrixPool.h">
-      <Filter>Evaluation</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\BrainScript\BrainScriptEvaluator.h">
-      <Filter>Experimental</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\BrainScript\BrainScriptObjects.h">
-      <Filter>Experimental</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\BrainScript\BrainScriptParser.h">
-      <Filter>Experimental</Filter>
-    </ClInclude>
-    <ClInclude Include="ComputationNetworkBuilder.h">
+    <ClInclude Include="..\CNTK\ComputationNetworkBuilder.h">
       <Filter>Network</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="modelEditor.txt">
-      <Filter>Model Editing</Filter>
-    </Text>
-    <Text Include="modelEditorFromScratch.txt">
-      <Filter>Model Editing</Filter>
-    </Text>
-    <Text Include="DefaultMacros.txt">
-      <Filter>Misc</Filter>
-    </Text>
-    <Text Include="..\..\BrainScript\Notes.txt">
-      <Filter>Experimental\Doc</Filter>
-    </Text>
+    <ClInclude Include="..\CNTK\MatrixPool.h">
+      <Filter>Network</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -241,9 +121,6 @@
     </Filter>
     <Filter Include="Network">
       <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Model Editing">
-      <UniqueIdentifier>{53c3735f-1374-4044-ab58-8a646c95a5e8}</UniqueIdentifier>
     </Filter>
     <Filter Include="Nodes">
       <UniqueIdentifier>{0b366814-48b2-4619-bf92-85ee24e3cbc1}</UniqueIdentifier>
@@ -257,22 +134,5 @@
     <Filter Include="Experimental">
       <UniqueIdentifier>{fe2443a1-6323-449f-96be-cbd0f608f382}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Parallelization">
-      <UniqueIdentifier>{8531d7fb-a673-491a-988a-012c92fafbfd}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Evaluation">
-      <UniqueIdentifier>{3ddfc109-3a90-45f5-91e8-1930759cfe9d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Experimental\Doc">
-      <UniqueIdentifier>{23e7cd74-fd60-4fb4-a925-c3dea584f176}</UniqueIdentifier>
-    </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="prebuild.bat">
-      <Filter>Misc</Filter>
-    </None>
-    <None Include="..\..\BrainScript\BrainScript--extending the CNTK config language, Frank Seide August 2015.pptx">
-      <Filter>Experimental\Doc</Filter>
-    </None>
   </ItemGroup>
 </Project>
