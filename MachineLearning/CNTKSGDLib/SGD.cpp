@@ -11,7 +11,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template class SGD<float>;
 template class SGD<double>;
 
-template class MultiNetworksSGD<float>;
-template class MultiNetworksSGD<double>;
+// TODO: does not build--does this mean it is not used?
+//template class MultiNetworksSGD<float>;
+//template class MultiNetworksSGD<double>;
 
 }}}

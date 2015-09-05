@@ -80,7 +80,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>CNTKSGDLib.lib; CNTKComputationNetworkLib.lib; CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>CNTKMath.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>CNTKMath.dll; msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
     <PostBuildEvent>
@@ -122,7 +122,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>CNTKSGDLib.lib; CNTKComputationNetworkLib.lib; CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>CNTKMath.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>CNTKMath.dll; msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
       <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>

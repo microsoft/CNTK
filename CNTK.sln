@@ -199,6 +199,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{5F733BBA-F
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{19EE975B-232D-49F0-94C7-6F1C6424FB53}"
 	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\LSTM\baseline.cpu.txt = Tests\Speech\LSTM\baseline.cpu.txt
+		Tests\Speech\LSTM\baseline.gpu.txt = Tests\Speech\LSTM\baseline.gpu.txt
+		Tests\Speech\LSTM\baseline.windows.cpu.txt = Tests\Speech\LSTM\baseline.windows.cpu.txt
+		Tests\Speech\LSTM\baseline.windows.gpu.txt = Tests\Speech\LSTM\baseline.windows.gpu.txt
 		Tests\Speech\LSTM\cntk.config = Tests\Speech\LSTM\cntk.config
 		Tests\Speech\LSTM\lstmp-3layer_WithSelfStab.ndl = Tests\Speech\LSTM\lstmp-3layer_WithSelfStab.ndl
 		Tests\Speech\LSTM\run-test = Tests\Speech\LSTM\run-test
