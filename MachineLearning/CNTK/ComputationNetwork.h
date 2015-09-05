@@ -679,6 +679,9 @@ public:
 
     void SetNodesReqMultiSeqHandling();
 
+    // MAIN ENTRY POINT for evaluation (forward prop)
+    // TODO: pass a set of nodes instead of only one
+    // TODO: rename to ForwardProp()? To make it very clear?
     void Evaluate(const ComputationNodeBasePtr rootNode)
     {
         BuildAndValidateNetwork(rootNode);
@@ -793,6 +796,8 @@ public:
         }
     }
 
+    // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
+    // TODO: pass a set of nodes instead of only one
     template<typename ElemType>
     void ComputeGradient(const ComputationNodeBasePtr rootNode, 
                          bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
@@ -807,12 +812,13 @@ public:
         //run forward pass first
         Evaluate(rootNode);
 
+        // TODO: comment what the purpose of this is
         if (bClearGradient)
             ClearGradientForAllNodes(rootNode);
 
         //run backward pass
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
-            
+
         // TODO: do a runtime check for float vs. double. Also use the Is/AsPtr macros
         if (bResetToOne)
         {
