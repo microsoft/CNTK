@@ -275,74 +275,6 @@ public:
     // serialization
     // -----------------------------------------------------------------------
 
-    // Read a matrix stored in text format from 'filePath' (whitespace-separated columns, newline-separated rows),
-    // and return a flat array containing the contents of this file in column-major format.
-    // filePath: path to file containing matrix in text format.
-    // numRows/numCols: after this function is called, these parameters contain the number of rows/columns in the matrix.
-    // returns: a flat array containing the contents of this file in column-major format
-    // NOTE: caller is responsible for deleting the returned buffer once it is finished using it.
-    // TODO: change to return a std::vector<ElemType>; solves the ownership issue
-    // TODO: move this elsewhere, this is a general utility function that does not belong into the ComputationNetwork class
-    template<class ElemType>
-    static ElemType* LoadArrayFromTextFile(const std::string filePath, size_t& numRows, size_t& numCols)
-    {
-        size_t r = 0;
-        size_t numColsInFirstRow = 0;
-
-        // NOTE: Not using the Microsoft.MSR.CNTK.File API here because it
-        // uses a buffer of fixed size, which doesn't allow very long rows.
-        // See fileutil.cpp fgetline method (std::string fgetline (FILE * f) { fixed_vector<char> buf (1000000); ... })
-        std::ifstream myfile(filePath);
-
-        // load matrix into vector of vectors (since we don't know the size in advance).
-        std::vector<std::vector<ElemType>> elements;
-        if (myfile.is_open())
-        {
-            std::string line;
-            while (std::getline(myfile, line))
-            {
-                // Break on empty line.  This allows there to be an empty line at the end of the file.
-                if (line == "")
-                    break;
-
-                istringstream iss(line);
-                ElemType element;
-                int numElementsInRow = 0;
-                elements.push_back(std::vector<ElemType>());
-                while (iss >> element)
-                {
-                    elements[r].push_back(element);
-                    numElementsInRow++;
-                }
-
-                if (r == 0)
-                    numColsInFirstRow = numElementsInRow;
-                else if (numElementsInRow != numColsInFirstRow)
-                    RuntimeError("The rows in the provided file do not all have the same number of columns: " + filePath);
-
-                r++;
-            }
-            myfile.close();
-        }
-        else
-            RuntimeError("Unable to open file");
-
-        numRows = r;
-        numCols = numColsInFirstRow;
-
-        ElemType* pArray = new ElemType[numRows * numCols];
-
-        // Perform transpose when copying elements from vectors to ElemType[],
-        // in order to store in column-major format.
-        for (int i = 0; i < numCols; i++)
-        {
-            for (int j = 0; j < numRows; j++)
-                pArray[i * numRows + j] = elements[j][i];
-            }
-
-        return pArray;
-    }
-
     // TODO: why is this here? Move to LearnableParameter class?
     template<class ElemType>
     static void InitLearnableParametersFromFile(const shared_ptr<ComputationNode<ElemType>> node,
@@ -351,9 +283,8 @@ public:
     {
         size_t numRows = 0;
         size_t numCols = 0;
-        ElemType *pArray = LoadArrayFromTextFile<ElemType>(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
-        node->FunctionValues().SetValue(numRows, numCols, pArray, matrixFlagNormal, deviceId);
-        delete[] pArray;    // TODO: use std::vector to avoid mem leak on error
+        auto array = File::LoadArrayFromTextFile<ElemType>(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
+        node->FunctionValues().SetValue(numRows, numCols, array.data(), matrixFlagNormal, deviceId);
     }
     template<class ElemType>
     void InitLearnableParametersFromFile(const shared_ptr<ComputationNode<ElemType>> node, const std::string & initFromFilePath)   // TODO: remove this method or change pathname to wstring
