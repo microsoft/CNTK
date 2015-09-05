@@ -68,8 +68,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using SGDBase::m_prevChosenMinibatchSize;
         using SGDBase::GetTrainCriterionNodes;
         using SGDBase::GetEvalCriterionNodes;
-        using SGDBase::SetDropoutRate;
-        using SGDBase::UpdateEvalTimeStamps;
         using SGDBase::UpdateWeights;
         using SGDBase::GetCheckPointFileNameForEpoch;
 
@@ -632,9 +630,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t k = 0; k < iNumNetworks; k++)
                 {
                     if (evaluationNodes[k]->size() > 0)
-                        SetDropoutRate(*nets[k], (*evaluationNodes[k])[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
+                        ComputationNetwork::SetDropoutRate<ElemType>(*nets[k], (*evaluationNodes[k])[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
                     if (criterionNodes[k]->size() > 0)
-                        SetDropoutRate(*nets[k], (*criterionNodes[k])[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
+                        ComputationNetwork::SetDropoutRate<ElemType>(*nets[k], (*criterionNodes[k])[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
                 }
 
                 //learning rate adjustment
@@ -888,9 +886,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t i = 0; i < iNumNetworks; i++)
                 {
-                    UpdateEvalTimeStamps(*featureNodes[i]);
+                    ComputationNetwork::UpdateEvalTimeStamps(*featureNodes[i]);
                     if (labelNodes[i]->size() > 0)
-                        UpdateEvalTimeStamps(*labelNodes[i]);
+                        ComputationNetwork::UpdateEvalTimeStamps(*labelNodes[i]);
                 }
 
                 endReadMBTime = clock();

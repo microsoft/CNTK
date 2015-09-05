@@ -11,8 +11,8 @@
 #include "ComputationNetworkBuilder.h"  // used for load & save
 //#include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
-//#include "NonlinearityNodes.h"
-//#include "ConvolutionalNodes.h"
+#include "NonlinearityNodes.h"
+#include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
 //#include "DecoderNode.h"
 #include "TrainingCriterionNodes.h"
@@ -816,6 +816,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    /*static*/void ComputationNetwork::UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes)
+    {
+        for (size_t i = 0; i<nodes.size(); i++)
+            nodes[i]->UpdateEvalTimeStamp();
+    }
+
+    template<typename ElemType>
+    /*static*/void ComputationNetwork::SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ElemType dropoutRate, ElemType & prevDropoutRate, unsigned long & dropOutSeed)
+    {
+        if (dropoutRate != prevDropoutRate)
+        {
+            fprintf(stderr, "Switching dropout rate to %.8g.\n", dropoutRate);
+            std::list<ComputationNodeBasePtr> dropoutNodes = net.GetNodesWithType(DropoutNode<ElemType>::TypeName(), criterionNode);
+            if (dropoutNodes.size() == 0 && dropoutRate > 0)
+                fprintf(stderr, "WARNING: there is no dropout node.\n");
+            else for (auto nodeIter = dropoutNodes.begin(); nodeIter != dropoutNodes.end(); nodeIter++)
+            {
+                auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(*nodeIter);
+                node->SetDropoutRate(dropoutRate);
+                node->SetRandomSeed(dropOutSeed++);
+            }
+
+            prevDropoutRate = dropoutRate;
+        }
+    }
+
+    /*static*/void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples)
+    {
+        fprintf(stderr, "Set Max Temp Mem Size For Convolution Nodes to %lu samples.\n", maxTempMemSizeInSamples);
+        std::list<ComputationNodeBasePtr> convolutionNodes = net.GetNodesWithType(ConvolutionNode<float>::TypeName(), criterionNode);
+        if (convolutionNodes.size() == 0 && maxTempMemSizeInSamples != 0)
+        {
+            fprintf(stderr, "WARNING: there is no convolution node.\n");
+        }
+        else
+        {
+            for (auto nodeIter = convolutionNodes.begin(); nodeIter != convolutionNodes.end(); nodeIter++)
+            {
+                auto node = dynamic_pointer_cast<ConvolutionNode<float>>(*nodeIter);
+                node->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
+            }
+        }
+    }
+
     // -----------------------------------------------------------------------
     // serialization
     // -----------------------------------------------------------------------
@@ -1386,9 +1430,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<float>(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig);
+    template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const float dropoutRate, float & prevDropoutRate, unsigned long & dropOutSeed);
 
     template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<double>(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig);
+    template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
 
 }}}

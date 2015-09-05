@@ -44,10 +44,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // TODO: get rid of dependency on ElemType
     template<class ElemType>
-    class SimpleEvaluator : ComputationNetworkHelper<ElemType>
+    class SimpleEvaluator
     {
-        typedef ComputationNetworkHelper<ElemType> B;
-        using B::UpdateEvalTimeStamps;
     protected:
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
         typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
@@ -125,8 +123,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             while (dataReader->GetMinibatch(inputMatrices))
             {
-                UpdateEvalTimeStamps(featureNodes);
-                UpdateEvalTimeStamps(labelNodes);
+                ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+                ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
                 actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
@@ -440,7 +438,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto ptr = nets.begin(); ptr != nets.end(); ptr++)
                 {
                     const auto & featNodes = (*ptr)->FeatureNodes();
-                    UpdateEvalTimeStamps(featNodes);
+                    ComputationNetwork::UpdateEvalTimeStamps(featNodes);
                 }
 
                 auto preader = dataReaders.begin();
@@ -655,7 +653,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     /// only on the encoder part of the networks
                     const auto & featNodes = (*ptr)->FeatureNodes();
-                    UpdateEvalTimeStamps(featNodes);
+                    ComputationNetwork::UpdateEvalTimeStamps(featNodes);
                 }
 
 
@@ -770,7 +768,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return false;
             }
 
-            UpdateEvalTimeStamps(featureNodes);
+            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
             size_t actualMBSize = net.GetActualMBSize();
             net.SetActualMiniBatchSize(actualMBSize);
@@ -845,7 +843,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ElemType ComputeTimeInMBs = 0;
             while (dataReader->GetMinibatch(inputMatrices))
             {
-                UpdateEvalTimeStamps(featureNodes);
+                ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
                 actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
@@ -954,7 +952,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     vector<size_t> history = from_token.sequence;
 
                     /// update feature nodes once, as the observation is the same for all propsoals in labels
-                    UpdateEvalTimeStamps(featureNodes);
+                    ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
                     /// history is updated in the getproposalobs function
                     dataReader->GetProposalObs(inputMatrices, itdx, history);
@@ -1116,7 +1114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     vector<size_t> history = from_token.sequence;
 
                     /// update feature nodes once, as the observation is the same for all propsoals in labels
-                    UpdateEvalTimeStamps(featureNodes);
+                    ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
                     /// history is updated in the getproposalobs function
                     dataReader->GetProposalObs(inputMatrices, itdx, history);

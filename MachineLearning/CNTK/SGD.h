@@ -266,13 +266,9 @@ enum class ParallelizationMethod : int
 
 // TODO: make this independent of ElemType. Then these repeated dynamic_pointer_casts will go away
 template<class ElemType>
-class SGD : ComputationNetworkHelper<ElemType>
+class SGD
 {
 protected:
-    typedef ComputationNetworkHelper<ElemType> B;
-    using B::SetMaxTempMemSizeForCNN;
-    using B::SetDropoutRate;
-    using B::UpdateEvalTimeStamps;
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
 
@@ -1037,11 +1033,9 @@ protected:
 
         bool learnRateReduced = false;
 
-        SetMaxTempMemSizeForCNN(net, criterionNodes[0], m_maxTempMemSizeInSamplesForCNN);
+        ComputationNetwork::SetMaxTempMemSizeForCNN(net, criterionNodes[0], m_maxTempMemSizeInSamplesForCNN);
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
-        {
-            SetMaxTempMemSizeForCNN(refNet, refNode, m_maxTempMemSizeInSamplesForCNN);
-        }
+            ComputationNetwork::SetMaxTempMemSizeForCNN(refNet, refNode, m_maxTempMemSizeInSamplesForCNN);
 
         for (int i = startEpoch; i < (int)m_maxEpochs; i++)
         {
@@ -1056,7 +1050,7 @@ protected:
             timer.Start();
 
             // set dropout rate
-            SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
+            ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
             // learning rate adjustment
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None ||
@@ -1406,8 +1400,8 @@ protected:
 
         while (trainSetDataReader->GetMinibatch(*inputMatrices))
         {
-            UpdateEvalTimeStamps(featureNodes);
-            UpdateEvalTimeStamps(labelNodes);
+            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+            ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
             size_t actualMBSize = net.GetActualMBSize();
             net.SetActualMiniBatchSize(actualMBSize);
@@ -1431,6 +1425,7 @@ protected:
     }
 
     // return a reasonable initial learning rate based on the initial mbsize
+    // TODO: return a double, not an ElemType
     ElemType SearchForBestLearnRate(ComputationNetwork& net,
                                     ComputationNetwork& refNet,
                                     const ComputationNodeBasePtr refNode, const int epochNumber,
@@ -1873,7 +1868,7 @@ protected:
                                                     sentenceBoundary,
                                                     minibatchPackingFlag))
         {
-            UpdateEvalTimeStamps(featureNodes);
+            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
             auto & outputNodes = net.OutputNodes();
             if (outputNodes.size() < 1)
@@ -2073,14 +2068,12 @@ protected:
                         trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
                     }
 
-                    UpdateEvalTimeStamps(featureNodes);
-                    UpdateEvalTimeStamps(labelNodes);
+                    ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+                    ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
 #ifndef EVALDLL
                     if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
-                    {
-                        throw std::logic_error("cannot pass gradient checker");
-                    }
+                        LogicError("cannot pass gradient checker");
 #endif
                     // TODO: currently only support one node regularization
                     if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
