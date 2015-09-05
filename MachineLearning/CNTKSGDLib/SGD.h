@@ -62,7 +62,6 @@ enum class ParallelizationMethod : int
 };
 
 // configuration parameters associated with RMSProp learning algorithm
-// TODO: what's the st- prefix? Why not define a struct proper? struct RMSPropInfo?
 struct RMSPropInfo
 {
     double gamma;
@@ -81,7 +80,6 @@ struct RMSPropInfo
     }
 };
 
-// TODO: what's the st- prefix? Why not define a struct proper? struct GradientUpdateInfo?
 struct GradientUpdateInfo
 {
     GradientsUpdateType mType;
