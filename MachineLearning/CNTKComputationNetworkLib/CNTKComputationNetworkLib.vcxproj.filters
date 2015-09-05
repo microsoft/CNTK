@@ -7,10 +7,10 @@
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\CNTK\ComputationNode.cpp">
+    <ClCompile Include="ComputationNode.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>
-    <ClCompile Include="..\CNTK\stdafx.cpp">
+    <ClCompile Include="stdafx.cpp">
       <Filter>Misc</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp">
@@ -19,13 +19,13 @@
     <ClCompile Include="..\..\Common\BestGpu.cpp">
       <Filter>GPU Interfacing</Filter>
     </ClCompile>
-    <ClCompile Include="..\CNTK\ComputationNetworkBuilder.cpp">
+    <ClCompile Include="ComputationNetworkBuilder.cpp">
       <Filter>Network</Filter>
     </ClCompile>
-    <ClCompile Include="..\CNTK\ComputationNetwork.cpp">
+    <ClCompile Include="ComputationNetwork.cpp">
       <Filter>Network</Filter>
     </ClCompile>
-    <ClCompile Include="..\CNTK\NetworkBuilderFromConfig.cpp">
+    <ClCompile Include="NetworkBuilderFromConfig.cpp">
       <Filter>Experimental</Filter>
     </ClCompile>
   </ItemGroup>
@@ -39,19 +39,16 @@
     <ClInclude Include="..\..\Common\Include\File.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\ComputationNetwork.h">
+    <ClInclude Include="ComputationNetwork.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\IComputationNetBuilder.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="..\CNTK\ComputationNode.h">
+    <ClInclude Include="ComputationNode.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\stdafx.h">
+    <ClInclude Include="stdafx.h">
       <Filter>Misc</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\targetver.h">
+    <ClInclude Include="targetver.h">
       <Filter>Misc</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\TimerUtility.h">
@@ -66,31 +63,31 @@
     <ClInclude Include="..\..\Common\Include\BestGpu.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\CompositeComputationNodes.h">
+    <ClInclude Include="CompositeComputationNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\EvaluationCriterionNodes.h">
+    <ClInclude Include="EvaluationCriterionNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\TrainingCriterionNodes.h">
+    <ClInclude Include="TrainingCriterionNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\NonlinearityNodes.h">
+    <ClInclude Include="NonlinearityNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\LinearAlgebraNodes.h">
+    <ClInclude Include="LinearAlgebraNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\ConvolutionalNodes.h">
+    <ClInclude Include="ConvolutionalNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\RecurrentNodes.h">
+    <ClInclude Include="RecurrentNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\InputAndParamNodes.h">
+    <ClInclude Include="InputAndParamNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\DecoderNode.h">
+    <ClInclude Include="DecoderNode.h">
       <Filter>Nodes</Filter>
     </ClInclude>
     <ClInclude Include="..\..\Common\CrossProcessMutex.h">
@@ -99,10 +96,10 @@
     <ClInclude Include="..\..\Common\Include\Platform.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\ComputationNetworkBuilder.h">
+    <ClInclude Include="ComputationNetworkBuilder.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\MatrixPool.h">
+    <ClInclude Include="MatrixPool.h">
       <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>
