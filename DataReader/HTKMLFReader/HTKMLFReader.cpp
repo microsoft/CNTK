@@ -221,7 +221,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_labelNameToIdMap[labelNames[i]]=iLabel;
                 m_labelNameToDimMap[labelNames[i]]=m_labelDims[i];
                 mlfpaths.clear();
-                mlfpaths.push_back(thisLabel("mlfFile"));
+                if (thisLabel.ExistsCurrent("mlfFile"))
+                {
+                    mlfpaths.push_back(thisLabel("mlfFile"));
+                }
+                else
+                {
+                    if (!thisLabel.ExistsCurrent("mlfFileList"))
+                    {
+                        RuntimeError("Either mlfFile or mlfFileList must exist in HTKMLFReder");
+                    }
+                    wstring list = thisLabel("mlfFileList");
+                    for (msra::files::textreader r(list); r;)
+                    {
+                        mlfpaths.push_back(r.wgetline());
+                    }
+                }
                 mlfpathsmulti.push_back(mlfpaths);
 
                 m_labelsBufferMultiIO.push_back(nullptr);
@@ -1662,7 +1677,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     features.push_back(msra::strfun::utf16(iter->first));
                 }
-                else if (temp.ExistsCurrent("mlfFile"))
+                else if (temp.ExistsCurrent("mlfFile")|| temp.ExistsCurrent("mlfFileList"))
                 {
                     labels.push_back(msra::strfun::utf16(iter->first));
                 }
