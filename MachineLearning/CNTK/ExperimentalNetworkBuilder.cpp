@@ -197,13 +197,13 @@ namespace Microsoft { namespace MSR { namespace BS {
 
             ComputationNodeBasePtr node;
 
-#define OpIs(op) (operationName == msra::strfun::utf16(op<float>::TypeName()))
+#define OpIs(op) (operationName == msra::strfun::utf16(OperationNameOf(op)))
 
             // TODO: in the code below, for reference, each block is preceded by an #if-0'ed out copy of the respective code from SynchronousNodeEvaluator::Evaluate()--remove these when this all works
 
             // first group: nodes without inputs
 #if 0
-            if (InputValue<float>::TypeName() == cnNodeType)
+            if (OperationNameOf(InputValue) == cnNodeType)
             {
                 if (parameter.size() < 1 || parameter.size() > 2)
                     RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]].", cnNodeType.c_str());
@@ -286,7 +286,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     node = New<InputValue<ElemType>>(deviceId, nodeName, (size_t)config[L"imageWidth"], (size_t)config[L"imageHeight"], (size_t)config[L"imageChannels"], (size_t)config[L"numImages"], isSparse);
             }
 #if 0
-            else if (LearnableParameter<float>::TypeName() == cnNodeType)
+            else if (OperationNameOf(LearnableParameter) == cnNodeType)
             {
                 if (parameter.size() < 1 || parameter.size() > 2)
                     RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
@@ -334,7 +334,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                         RuntimeError("init must be one of the values of [uniform|gaussian|fixedvalue]");
                 }
             }
-            else if (SparseLearnableParameter<float>::TypeName() == cnNodeType)
+            else if (OperationNameOf(SparseLearnableParameter) == cnNodeType)
             {
                 if (parameter.size() < 1 || parameter.size() > 2)
                     RuntimeError("%ls should have 1 or 2 parameters[rows, [cols=1]] plus other optional parameters (needGradient=[true|false], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
@@ -437,8 +437,8 @@ namespace Microsoft { namespace MSR { namespace BS {
 #endif
             // Constant is implemented as a LearnableParameter with initializion as fixedValue with needGradient false, on script level
 #if 0
-            else if (cnNodeType == PastValueNode<float>::TypeName() ||
-                cnNodeType == FutureValueNode<float>::TypeName())
+            else if (cnNodeType == OperationNameOf(PastValueNode) ||
+                cnNodeType == OperationNameOf(FutureValueNode))
             {
                 if (parameter.size() <2 || parameter.size() >3)
                     RuntimeError("PastValue or FutureValue should have two to three fixed parameters. Usage: PastValue(rows, [cols], m, [timeStep=1, defaultPastValue=0.1]).");
@@ -464,7 +464,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                         timeStep = node->GetOptionalParameter("delayTime", "1");
                     }
 
-                    if (cnNodeType == PastValueNode<float>::TypeName())
+                    if (cnNodeType == OperationNameOf(PastValueNode))
                     {
                         nodePtr = m_net.PastValue(NULL, defaultHiddenActivity, rows, cols, name);
                         static_pointer_cast<PastValueNode<ElemType>>(nodePtr)->SetTimeStep(timeStep);
@@ -500,7 +500,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 let inputs = GetInputs(config);
                 // second group: nodes with special initializers
 #if 0
-                /*else*/ if (cnNodeType == RowSliceNode<float>::TypeName())
+                /*else*/ if (cnNodeType == OperationNameOf(RowSliceNode))
                 {
                     if (parameter.size() != 3)
                         RuntimeError("RowSlice should have three parameters. Usage: RowSlice(startRowIndex, numRows, origNodeName.");
@@ -528,7 +528,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     node->NeedGradient() = config[L"needGradient"];
                 }
 #if 0
-                else if (cnNodeType == RowRepeatNode<float>::TypeName())
+                else if (cnNodeType == OperationNameOf(RowRepeatNode))
                 {
                     if (parameter.size() != 2)
                         RuntimeError("RowRepeat should have two parameters. Usage: RowRepeat(origNodeName, numRepeats.");
@@ -555,7 +555,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     node->NeedGradient() = config[L"needGradient"];
                 }
 #if 0
-                else if (cnNodeType == ReshapeNode<float>::TypeName())
+                else if (cnNodeType == OperationNameOf(ReshapeNode))
                 {
                     if (parameter.size() < 2 || parameter.size() > 5)
                         RuntimeError("Reshape should have two to five parameters. Usage: Reshape(origNodeName, numRows, [imageWidth=], [imageHeight=], [imageChannels=].");
@@ -588,7 +588,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     LogicError("ReshapeNode not working with BS because init code needs access to network which we don't haveyet--to be fixed elsewhere");
                 }
 #if 0
-                else if (cnNodeType == ConvolutionNode<float>::TypeName())
+                else if (cnNodeType == OperationNameOf(ConvolutionNode))
                 {
                     if (parameter.size() != 7)
                         RuntimeError("%ls should have 7 fixed parameters[weightNodeName, inputValueNodeName, kernelWidth, kernelHeight, outputChannels,horizontalSubsample, verticalSubsample] and two optional parameters [zeroPadding = [false|yourvalue], maxTempMemSizeInSamples = [0|yourvalue]].", cnNodeType.c_str());
@@ -630,7 +630,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                                                                               (bool)config[L"zeroPadding"], (size_t)config[L"maxTempMemSizeInSamples"]);
                 }
 #if 0
-                else if (cnNodeType == MaxPoolingNode<float>::TypeName())
+                else if (cnNodeType == OperationNameOf(MaxPoolingNode))
                 {
                     if (parameter.size() != 5)
                         RuntimeError("%ls should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType.c_str());
@@ -664,7 +664,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     node = New<MaxPoolingNode<ElemType>>(deviceId, nodeName, (size_t)config[L"windowWidth"], (size_t)config[L"windowHeight"], (size_t)config[L"horizontalSubsample"], (size_t)config[L"verticalSubsample"]);
                 }
 #if 0
-                else if (cnNodeType == AveragePoolingNode<float>::TypeName())
+                else if (cnNodeType == OperationNameOf(AveragePoolingNode))
                 {
                     if (parameter.size() != 5)
                         RuntimeError("%ls should have 5 parameters[inputValueNodeName, windowWidth, windowHeight, horizontalSubsample, verticalSubsample].", cnNodeType.c_str());

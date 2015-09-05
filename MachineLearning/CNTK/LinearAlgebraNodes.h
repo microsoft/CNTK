@@ -810,10 +810,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // TODO: use dynamic_pointer_cast
             // TODO: why should these nodes even care whether their inputs are LearnableParmaeters? If needed, can the base class do this?
-            if ((Inputs(0)->OperationName() == LearnableParameter<float>::TypeName() && cols0 == 0 && rows1 != 0) && this->LoopId() < 0)
+            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && this->LoopId() < 0)
                 Inputs(0)->FunctionValues().Resize(rows0, rows1);
 
-            if (Inputs(1)->OperationName() == LearnableParameter<float>::TypeName() && cols0 != 0 && rows1 == 0)
+            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
                 Inputs(1)->FunctionValues().Resize(cols0, cols1);
 
             if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())&& this->LoopId() < 0)
@@ -972,10 +972,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if ((rows0 == 0 || cols1 == 0) && this->LoopId() < 0)
                 throw logic_error("TransposeTimes operation: Inputs(0)->FunctionValues().GetNumRows() and Inputs(1)->FunctionValues().GetNumCols() should not be 0 since it cannot be automatically inferred");
 
-            if ((Inputs(0)->OperationName() == LearnableParameter<float>::TypeName() && cols0 == 0 && rows1 != 0) && this->LoopId() < 0)
+            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && this->LoopId() < 0)
                 Inputs(0)->FunctionValues().Resize(rows0, rows1);
 
-            if (Inputs(1)->OperationName() == LearnableParameter<float>::TypeName() && cols0 != 0 && rows1 == 0)
+            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
                 Inputs(1)->FunctionValues().Resize(cols0, cols1);
 
             if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->LoopId() < 0)
@@ -1091,7 +1091,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
             {
-                if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
+                if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
                 {
                     size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                     size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -1386,7 +1386,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
             {
-                if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
+                if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
                 {
                     size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                     size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -1617,7 +1617,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //if dimention not specified we assume two operants' dimentions should be the same
             size_t index = 0;
-            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -1625,7 +1625,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -1901,7 +1901,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //if dimention is missing make the two operatants to have same size
             size_t index = 0;
-            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -1909,7 +1909,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -2048,12 +2048,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 throw std::logic_error("DiagTimes operation requires two inputs.");
 
             //if dimention not specified we assume two operants' dimentions should match
-            if (Inputs(0)->OperationName() == LearnableParameter<float>::TypeName() && Inputs(0)->FunctionValues().GetNumRows() == 0 && Inputs(1)->FunctionValues().GetNumRows() != 0)
+            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0 && Inputs(1)->FunctionValues().GetNumRows() != 0)
             {
                 Inputs(0)->FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), 1);
             }
 
-            if (Inputs(1)->OperationName() == LearnableParameter<float>::TypeName() && Inputs(0)->FunctionValues().GetNumRows() != 0 && Inputs(1)->FunctionValues().GetNumRows() == 0)
+            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() != 0 && Inputs(1)->FunctionValues().GetNumRows() == 0)
             {
                 Inputs(1)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             }
@@ -2251,7 +2251,7 @@ private:
 
             //if dimention is missing make the two operatants to have same size
             size_t index = 0;
-            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -2259,7 +2259,7 @@ private:
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -2428,10 +2428,10 @@ private:
             if (rows0 == 0 || rows1 == 0)
                 throw logic_error("KhatriRaoProduct operation: The number of rows in the input should not be 0.");
 
-            if (Inputs(0)->OperationName() == LearnableParameter<float>::TypeName() && cols0 == 0 && cols1 != 0)
+            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && cols1 != 0)
                 Inputs(0)->FunctionValues().Resize(rows0, cols1);
 
-            if (Inputs(1)->OperationName() == LearnableParameter<float>::TypeName() && cols0 != 0 && cols1 == 0)
+            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && cols1 == 0)
                 Inputs(1)->FunctionValues().Resize(rows1, cols0);
 
             //cols may be changed before this line and so cannot use cached cols values below
@@ -2657,7 +2657,7 @@ private:
 
             //if dimention is missing make the two operatants to have same size
             size_t index = 0;
-            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -2665,7 +2665,7 @@ private:
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();

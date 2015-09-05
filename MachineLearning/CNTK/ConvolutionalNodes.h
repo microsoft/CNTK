@@ -232,7 +232,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("ConvolutionNode requires two inputs.");
 
             //we may want to remove this check in the future if we want to support the case that the weight itself is result of some computation 
-            //if (Inputs(0)->OperationName() != LearnableParameter<float>::TypeName())
+            //if (Inputs(0)->OperationName() != OperationNameOf(LearnableParameter))
             //    throw std::logic_error("ConvolutionNode requires the first input to be LearnableParameter type.");
 
             if (m_horizontalSubsample > m_kernelWidth || m_verticalSubsample > m_kernelHeight)
@@ -242,7 +242,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputChannels;
 
-            if (Inputs(0)->OperationName() == LearnableParameter<float>::TypeName() && Inputs(0)->FunctionValues().HasNoElements())
+            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().HasNoElements())
             {
                 Inputs(0)->FunctionValues().Resize(m_outputChannels, weightCols);
             }
@@ -255,7 +255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;
-            if (Inputs(1)->OperationName() == LearnableParameter<float>::TypeName() && Inputs(1)->FunctionValues().GetNumRows() == 0)
+            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(1)->FunctionValues().GetNumRows() == 0)
             {
                 Inputs(1)->FunctionValues().Resize(inputDim, Inputs(1)->FunctionValues().GetNumCols());
             }
@@ -601,7 +601,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inputSizePerSample = m_inputWidth * m_inputHeight * m_inputChannels;
             m_outputSizePerSample = m_outputWidth * m_outputHeight * m_outputChannels;
 
-            if (Inputs(0)->OperationName() == LearnableParameter<float>::TypeName() && Inputs(0)->FunctionValues().GetNumRows() == 0)
+            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0)
             {
                 Inputs(0)->FunctionValues().Resize(m_inputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
             }
@@ -813,7 +813,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inputSizePerSample = m_inputWidth * m_inputHeight * m_inputChannels;
             m_outputSizePerSample = m_outputWidth * m_outputHeight * m_outputChannels;
 
-            if (Inputs(0)->OperationName() == LearnableParameter<float>::TypeName() && Inputs(0)->FunctionValues().GetNumRows() == 0)
+            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0)
             {
                 Inputs(0)->FunctionValues().Resize(m_inputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
             }

@@ -2468,7 +2468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //output = builder.Softmax(output);
             //output = builder.Log(output);
 
-            scaledLogLikelihood = builder.CreateComputationNode(MinusNode<float>::TypeName(), L"ScaledLogLikelihood");
+            scaledLogLikelihood = builder.CreateComputationNode(OperationNameOf(MinusNode), L"ScaledLogLikelihood");
             scaledLogLikelihood->AttachInputs(output, input);
             m_net->OutputNodes().push_back(scaledLogLikelihood);
         }
@@ -2490,11 +2490,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodePtr output;
         wstring nonLinearFunction = m_nonLinearFunctions[layer];
-        if (nonLinearFunction == SigmoidNode<float>::TypeName())
+        if (nonLinearFunction == OperationNameOf(SigmoidNode))
             output = builder.Sigmoid(input, nodeName);
-        else if (nonLinearFunction == RectifiedLinearNode<float>::TypeName())
+        else if (nonLinearFunction == OperationNameOf(RectifiedLinearNode))
             output = builder.RectifiedLinear(input, nodeName);
-        else if (nonLinearFunction == TanhNode<float>::TypeName())
+        else if (nonLinearFunction == OperationNameOf(TanhNode))
             output = builder.Tanh(input, nodeName);
         else if (nonLinearFunction == L"None" || nonLinearFunction == L"none" || nonLinearFunction == L"")
         {
