@@ -15,6 +15,7 @@
 #include <unistd.h>
 #endif
 #include "fileutil.h"   // for f{ge,pu}t{,Text}()
+#include <fstream>      // for LoadMatrixFromTextFile() --TODO: change to using this File class
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
 
@@ -249,7 +250,7 @@ public:
     // TODO: change to return a std::vector<ElemType>; solves the ownership issue
     // This function does not quite fit here, but it fits elsewhere even worse. TODO: change to use File class!
     template<class ElemType>
-    static vector<ElemType> LoadArrayFromTextFile(const std::string filePath, size_t& numRows, size_t& numCols)
+    static vector<ElemType> LoadMatrixFromTextFile(const std::string filePath, size_t& numRows, size_t& numCols)
     {
         size_t r = 0;
         size_t numColsInFirstRow = 0;

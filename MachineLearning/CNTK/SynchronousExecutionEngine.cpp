@@ -171,7 +171,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size()-2);
                     if(!fexists(initFromFilePath))
                         RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
-                    m_net.InitLearnableParametersFromFile(nodePtr, initFromFilePath);
+                    dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(msra::strfun::utf16(initFromFilePath));
                 }
                 else
                     RuntimeError("init must be one of the values of [uniform|gaussian|fixedvalue]");
@@ -219,7 +219,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size()-2);
                     if(!fexists(initFromFilePath))
                         RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
-                    m_net.InitLearnableParametersFromFile(nodePtr, initFromFilePath);
+                    dynamic_pointer_cast<SparseLearnableParameter<ElemType>>(nodePtr)->InitFromFile(msra::strfun::utf16(initFromFilePath));
                 }
                 else
                     RuntimeError("init must be one of the values of [uniform|gaussian|fixedvalue]");

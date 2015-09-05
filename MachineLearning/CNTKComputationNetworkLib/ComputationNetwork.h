@@ -269,27 +269,6 @@ public:
         }
         else
             return numAllSamples;
-        }
-
-    // -----------------------------------------------------------------------
-    // serialization
-    // -----------------------------------------------------------------------
-
-    // TODO: why is this here? Move to LearnableParameter class?
-    template<class ElemType>
-    static void InitLearnableParametersFromFile(const shared_ptr<ComputationNode<ElemType>> node,
-                                                const std::wstring & initFromFilePath,
-                                                DEVICEID_TYPE deviceId)    // TODO: why not just use node->m_deviceId?
-    {
-        size_t numRows = 0;
-        size_t numCols = 0;
-        auto array = File::LoadArrayFromTextFile<ElemType>(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
-        node->FunctionValues().SetValue(numRows, numCols, array.data(), matrixFlagNormal, deviceId);
-    }
-    template<class ElemType>
-    void InitLearnableParametersFromFile(const shared_ptr<ComputationNode<ElemType>> node, const std::string & initFromFilePath)   // TODO: remove this method or change pathname to wstring
-    {
-        InitLearnableParametersFromFile(node, msra::strfun::utf16(initFromFilePath), this->GetDeviceID());
     }
 
     // -----------------------------------------------------------------------
