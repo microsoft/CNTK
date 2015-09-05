@@ -2178,7 +2178,7 @@ protected:
                 if (ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, processedSamples,
                                              secondsSinceLastSyncFinished, secondsSpentOnSync))
                 {
-                    aggregateNumSamplesWithLabel = processedSamples; 
+                    // if a sync happens, do some extra work
                     nSamplesSinceLastModelSync = 0; 
                     nSynced++;
 
@@ -2196,6 +2196,7 @@ protected:
                         }
                     }
                 }
+                aggregateNumSamplesWithLabel = processedSamples;
             }
 
             timer.Stop();
@@ -2281,6 +2282,18 @@ protected:
             profiler.NextSample();
         }
 
+        if (useModelAveraging && (g_mpi->NumNodesInUse() > 1) && nSamplesSinceLastModelSync)
+        {
+            // may not be synced after epoch finished, so do the sync here 
+            int residualSampels = (int)nSamplesSinceLastModelSync;
+            g_mpi->AllReduce(&residualSampels, 1);
+            totalSamplesSeen += residualSampels; 
+            totalEpochSamples += residualSampels;
+            ModelAveragingSync(nSamplesSinceLastModelSync, learnableNodes);
+            nSynced++;
+            nSamplesSinceLastModelSync = 0;
+        }
+
         if (useGradientAggregation)
         {
             epochCriterion /= float(totalEpochSamples);
@@ -2303,11 +2316,12 @@ protected:
 
         UninitDistGradAgg();
 
-        if (useModelAveraging && (g_mpi->NumNodesInUse() > 1) && nSamplesSinceLastModelSync)
+
+        if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
         {
-            // may not be synced after epoch finished, so do the sync here 
-            ModelAveragingSync(nSamplesSinceLastModelSync, learnableNodes);
-            nSynced++;
+            // merge epochCriterion and epochEvalErrors over nodes 
+            g_mpi->AllReduce(&epochCriterion, 1);
+            g_mpi->AllReduce(epochEvalErrors);
         }
         return totalEpochSamples;
     }
