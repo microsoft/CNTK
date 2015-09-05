@@ -6,6 +6,8 @@
 // cn.cpp : Defines the entry point for the console application.
 //
 
+// TODO: should we split all these DoXXX() up into separate commands? Mainly to separate common vs. non-standard/special ones?
+
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 
 #include "stdafx.h"
