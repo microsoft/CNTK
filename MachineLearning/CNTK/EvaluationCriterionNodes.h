@@ -68,7 +68,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t index = 0;
             // TODO: use dynamic_pointer_cast instead
-            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -76,7 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == LearnableParameter<float>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();

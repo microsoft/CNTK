@@ -238,7 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = nodeIter->second;
-                if (node->OperationName() == LearnableParameter<float>::TypeName())
+                if (node->OperationName() == OperationNameOf(LearnableParameter))
                     node->NeedGradient() = needGradient;
             }
         }
@@ -249,7 +249,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = (*nodeIter);
-                if (node->OperationName() == LearnableParameter<float>::TypeName())
+                if (node->OperationName() == OperationNameOf(LearnableParameter))
                     node->NeedGradient() = needGradient;
             }
         }
@@ -266,7 +266,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // FixupInputMinibatchSize - go through all the inputs and make sure they have a consistent minibatch size (after creation)
     void ComputationNetwork::FixupInputMinibatchSize()
     {
-        std::list<ComputationNodeBasePtr> inputs = GetNodesWithType(InputValue<float>::TypeName());
+        std::list<ComputationNodeBasePtr> inputs = GetNodesWithType(OperationNameOf(InputValue));
         int minibatchMax = 0;
         bool minibatchDifferent = false; // flag to see if all the values are already the same
         for (ComputationNodeBasePtr node : inputs)
@@ -300,8 +300,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto ptr = recurrentNodes.begin(); ptr != recurrentNodes.end(); ptr++)
         {
             if ((*ptr)->IsFuncValueOlderThanInputs() && 
-                (*ptr)->OperationName() != PastValueNode<float>::TypeName() &&
-                (*ptr)->OperationName() != FutureValueNode<float>::TypeName())
+                (*ptr)->OperationName() != OperationNameOf(PastValueNode) &&
+                (*ptr)->OperationName() != OperationNameOf(FutureValueNode))
             {
                 return true;
             }
@@ -311,13 +311,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
     {
-        if (nodePtr->OperationName() == SquareErrorNode<float>::TypeName() ||
-            nodePtr->OperationName() == CrossEntropyWithSoftmaxNode<float>::TypeName() ||
-            nodePtr->OperationName() == CrossEntropyNode<float>::TypeName() ||
-            nodePtr->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<float>::TypeName() ||
-            nodePtr->OperationName() == ErrorPredictionNode<float>::TypeName() ||               
-            nodePtr->OperationName() == CRFNode<float>::TypeName() ||
-            nodePtr->OperationName() == DummyCriterionNode<float>::TypeName())
+        if (nodePtr->OperationName() == OperationNameOf(SquareErrorNode) ||
+            nodePtr->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
+            nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
+            nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
+            nodePtr->OperationName() == OperationNameOf(ErrorPredictionNode) ||               
+            nodePtr->OperationName() == OperationNameOf(CRFNode) ||
+            nodePtr->OperationName() == OperationNameOf(DummyCriterionNode))
             return true;
 
         return false;
@@ -330,10 +330,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //SumElements node will generate a scalar value and so it should never require special handling
             //TransposeNode will change the size of columns and so it should also not included for special handling
             //their child node should instead
-            if (node->OperationName() != SumElementsNode<float>::TypeName() &&
-                node->OperationName() != TransposeNode<float>::TypeName() &&
-                node->OperationName() != MeanNode<float>::TypeName() &&
-                node->OperationName() != InvStdDevNode<float>::TypeName() 
+            if (node->OperationName() != OperationNameOf(SumElementsNode) &&
+                node->OperationName() != OperationNameOf(TransposeNode) &&
+                node->OperationName() != OperationNameOf(MeanNode) &&
+                node->OperationName() != OperationNameOf(InvStdDevNode) 
                 )
                 node->SetReqMultiSeqHandlingTo(true);
         }
@@ -540,8 +540,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             visited.insert(cur);
             recStack.insert(cur);
 
-            if (cur->OperationName() != PastValueNode<float>::TypeName() && 
-                cur->OperationName() != FutureValueNode<float>::TypeName())
+            if (cur->OperationName() != OperationNameOf(PastValueNode) && 
+                cur->OperationName() != OperationNameOf(FutureValueNode))
             {
                 for (size_t i = 0; i < cur->ChildrenSize(); i++)
                     if (cur->GetChildren()[i]->LoopId() == cur->LoopId())
@@ -617,8 +617,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (size_t i = 0; i < nodeRecIter->ChildrenSize(); i++)
                     {
                         if (nodeRecIter->GetChildren()[i]->LoopId() == nodeRecIter->LoopId() && 
-                            nodeRecIter->OperationName() != PastValueNode<float>::TypeName() &&
-                            nodeRecIter->OperationName() != FutureValueNode<float>::TypeName())     // TODO: test for type RecurrentNode instead?
+                            nodeRecIter->OperationName() != OperationNameOf(PastValueNode) &&
+                            nodeRecIter->OperationName() != OperationNameOf(FutureValueNode))     // TODO: test for type RecurrentNode instead?
                         {
                             nodeRecIter->GetChildren()[i]->SetIndexInLoop(nodeRecIter->GetChildren()[i]->GetIndexInLoop() + 1);
                         }
@@ -690,11 +690,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     ComputationNodeBasePtr nodeRecIter = recurrentInfo->m_recurrentNodes[j];
 
-                    if (nodeRecIter->OperationName() == PastValueNode<float>::TypeName())
+                    if (nodeRecIter->OperationName() == OperationNameOf(PastValueNode))
                     {
                         hasPastValueNode = true;
                     }
-                    else if (nodeRecIter->OperationName() == FutureValueNode<float>::TypeName())
+                    else if (nodeRecIter->OperationName() == OperationNameOf(FutureValueNode))
                     {
                         hasFutureValueNode = true;
                     }
@@ -778,7 +778,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     nodeIter++)
             {
                 ComputationNodeBasePtr node = (*nodeIter);
-                if (node->OperationName() == InputValue<float>::TypeName() /*L"InputValue"*/ ||
+                if (node->OperationName() == OperationNameOf(InputValue) /*L"InputValue"*/ ||
                     node->OperationName() == InputValue<float>::SparseTypeName())
                 {
                     inputs.push_back(node);
@@ -798,8 +798,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = (*nodeIter);
-                if ((node->OperationName() == LearnableParameter<float>::TypeName() && node->NeedGradient()) ||
-                    (node->OperationName() == SparseLearnableParameter<float>::TypeName() && node->NeedGradient()))
+                if ((node->OperationName() == OperationNameOf(LearnableParameter) && node->NeedGradient()) ||
+                    (node->OperationName() == OperationNameOf(SparseLearnableParameter) && node->NeedGradient()))
                 {
                     learnableParameterNames.push_back(node->NodeName());
                 }
@@ -828,7 +828,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (dropoutRate != prevDropoutRate)
         {
             fprintf(stderr, "Switching dropout rate to %.8g.\n", dropoutRate);
-            std::list<ComputationNodeBasePtr> dropoutNodes = net.GetNodesWithType(DropoutNode<float>::TypeName(), criterionNode);
+            std::list<ComputationNodeBasePtr> dropoutNodes = net.GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
             if (dropoutNodes.size() == 0 && dropoutRate > 0)
                 fprintf(stderr, "WARNING: there is no dropout node.\n");
             else for (auto nodeIter = dropoutNodes.begin(); nodeIter != dropoutNodes.end(); nodeIter++)
@@ -845,7 +845,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /*static*/void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples)
     {
         fprintf(stderr, "Set Max Temp Mem Size For Convolution Nodes to %lu samples.\n", maxTempMemSizeInSamples);
-        std::list<ComputationNodeBasePtr> convolutionNodes = net.GetNodesWithType(ConvolutionNode<float>::TypeName(), criterionNode);
+        std::list<ComputationNodeBasePtr> convolutionNodes = net.GetNodesWithType(OperationNameOf(ConvolutionNode), criterionNode);
         if (convolutionNodes.size() == 0 && maxTempMemSizeInSamples != 0)
         {
             fprintf(stderr, "WARNING: there is no convolution node.\n");
@@ -924,7 +924,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int j = 0; j < numChildren; j++)
                     childrenNodes[j] = GetNodeFromName(childrenNames[j], anotherNetwork);
 
-                if (nodePtr->OperationName() == RowStackNode<float>::TypeName()) {
+                if (nodePtr->OperationName() == OperationNameOf(RowStackNode)) {
                     //allow for variable input nodes
                     nodePtr->AttachInputs(childrenNodes);
                 }
@@ -1114,7 +1114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<ComputationNodeBasePtr> pastValueNodes;
         for (auto n : allnodes)
         {
-            if (n->OperationName() == PastValueNode<float>::TypeName() || n->OperationName() == L"Delay")
+            if (n->OperationName() == OperationNameOf(PastValueNode) || n->OperationName() == L"Delay")
                 pastValueNodes.push_back(n);
         }
 
@@ -1122,14 +1122,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<ComputationNodeBasePtr> futureValueNodes;
         for (auto n : allnodes)
         {
-            if (n->OperationName() == FutureValueNode<float>::TypeName())
+            if (n->OperationName() == OperationNameOf(FutureValueNode))
                 futureValueNodes.push_back(n);
         }
         // get learnableParameters
         std::vector<ComputationNodeBasePtr> learnableParameters;
         for (auto n : allnodes)
         {
-            if (n->OperationName() == LearnableParameter<float>::TypeName())
+            if (n->OperationName() == OperationNameOf(LearnableParameter))
                 learnableParameters.push_back(n);
         }
 
@@ -1217,7 +1217,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::wstring srcname = src->GetName();
             std::wstring desname = des->GetName();
 
-            if (des->OperationName() == PastValueNode<float>::TypeName() || des->OperationName() == L"Delay")
+            if (des->OperationName() == OperationNameOf(PastValueNode) || des->OperationName() == L"Delay")
             {
                 // special treament for arc with PastValue node as the children
                 // create a dummy node
@@ -1229,7 +1229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 line = out;
                 line += msra::strfun::wstrprintf(L"\"%ls\" -> \"%ls\" ; \n", dummyName.c_str(), srcname.c_str());
             }
-            else if (des->OperationName() == FutureValueNode<float>::TypeName())
+            else if (des->OperationName() == OperationNameOf(FutureValueNode))
             {
                 // special treament for arc with FutureValue node as the children
                 // create a dummy node

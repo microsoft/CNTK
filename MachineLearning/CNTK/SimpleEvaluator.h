@@ -336,10 +336,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (displayConvertedValue)
                 {
                     //display Perplexity as well for crossEntropy values
-                    if (evalNodes[i]->OperationName() == CrossEntropyWithSoftmaxNode<float>::TypeName() ||
-                        evalNodes[i]->OperationName() == CrossEntropyNode<float>::TypeName() ||
-                        evalNodes[i]->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<float>::TypeName() ||
-                        evalNodes[i]->OperationName() == NoiseContrastiveEstimationNode<float>::TypeName())
+                    if (evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
+                        evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyNode) ||
+                        evalNodes[i]->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
+                        evalNodes[i]->OperationName() == OperationNameOf(NoiseContrastiveEstimationNode))
                         fprintf(stderr, "Perplexity = %.8g    ", std::exp(eresult));
                 }
             }
