@@ -297,7 +297,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     wstring initFromFilePath = config[L"initFromFilePath"];
                     if (initFromFilePath.empty())
                         RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
-                    ComputationNetwork::InitLearnableParametersFromFile(dynamic_pointer_cast<ComputationNode<ElemType>>(node), initFromFilePath, node->GetDeviceId());
+                    dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->InitFromFile(initFromFilePath);
                 }
                 else
                     RuntimeError("init must be one of the values of [uniform|gaussian|fixedValue|fromFile]");
