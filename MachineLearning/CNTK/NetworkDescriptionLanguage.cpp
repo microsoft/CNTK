@@ -206,6 +206,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, CrossEntropyWithSoftmaxNode<ElemType>::TypeName(), L"CEWithSM"))
         ret = true;
+    else if (EqualInsensitive(nodeType, LMNCECrossEntropyWithSoftmaxNode<ElemType>::TypeName()))
+        ret = true;
     else if (EqualInsensitive(nodeType, CrossEntropyNode<ElemType>::TypeName()))
         ret = true;
     else if (EqualInsensitive(nodeType, ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName(), L"CBCEWithSM"))

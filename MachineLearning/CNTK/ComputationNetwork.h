@@ -1368,6 +1368,10 @@ public:
         {
             newNode = new CrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId,nodeName);
         } 
+        else if (nodeType == LMNCECrossEntropyWithSoftmaxNode<ElemType>::TypeName())
+        {
+            newNode = new LMNCECrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
+        }
         else if (nodeType == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName())
         {
             newNode = new ClassBasedCrossEntropyWithSoftmaxNode<ElemType>(fstream, modelVersion, m_deviceId, nodeName);
@@ -1718,6 +1722,10 @@ public:
         {
             newNode = new CrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName);
         }
+        else if (nodeType == LMNCECrossEntropyWithSoftmaxNode<ElemType>::TypeName())
+        {
+            newNode = new LMNCECrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName);
+        }
         else if (nodeType == CrossEntropyNode<ElemType>::TypeName())
         {
             newNode = new CrossEntropyNode<ElemType>(m_deviceId, nodeName);
@@ -1956,6 +1964,17 @@ public:
 
     {
         ComputationNodePtr newNode(new CrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
+        newNode->AttachInputs(label, prediction);
+        AddNodeToNet(newNode);
+        return newNode;
+    }
+
+    ComputationNodePtr LMNCECrossEntropyWithSoftmax(const ComputationNodePtr label,
+        const ComputationNodePtr prediction,
+        const std::wstring nodeName = L"")
+
+    {
+        ComputationNodePtr newNode(new LMNCECrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
         newNode->AttachInputs(label, prediction);
         AddNodeToNet(newNode);
         return newNode;
@@ -2554,6 +2573,7 @@ public:
     {
         if (nodePtr->OperationName() == SquareErrorNode<ElemType>::TypeName() ||
             nodePtr->OperationName() == CrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
+            nodePtr->OperationName() == LMNCECrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
             nodePtr->OperationName() == CrossEntropyNode<ElemType>::TypeName() ||
             nodePtr->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
             nodePtr->OperationName() == ErrorPredictionNode<ElemType>::TypeName() ||               

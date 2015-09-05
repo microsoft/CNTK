@@ -415,6 +415,229 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class CrossEntropyWithSoftmaxNode<float>; 
     template class CrossEntropyWithSoftmaxNode<double>;
 
+    //calculates: -sum(left_i * log(softmax_i(right)))
+    template<class ElemType>
+    class LMNCECrossEntropyWithSoftmaxNode : public ComputationNode<ElemType>
+    {
+        UsingComputationNodeMembers;
+    public:
+        LMNCECrossEntropyWithSoftmaxNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                m_deviceId = deviceId;
+                MoveMatricesToDevice(deviceId);
+                InitRecurrentNode();
+            }
+
+        LMNCECrossEntropyWithSoftmaxNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+            : ComputationNode<ElemType>(deviceId), m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
+        {
+                m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+                LoadFromFile(fstream, modelVersion, deviceId);
+            }
+
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"LMNCECrossEntropyWithSoftmax"; }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 1)
+                throw std::invalid_argument("CrossEntropyWithSoftmaxNode criterion only takes two inputs.");
+
+            //left Node must be a scalar
+            if (inputIndex == 0)  //left derivative
+            {
+                ComputeInputPartialLeft(m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
+            }
+            else
+            {
+                ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
+                ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(inputIndex)->GradientValues());
+            }
+        }
+
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
+        {
+            throw std::logic_error("CrossEntropyWithSoftmax node should never be in a loop.");
+        }
+
+        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
+            const Matrix<ElemType>& gradientValues)
+        {
+#if DUMPOUTPUT
+            logSoftmaxOfRight.Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
+            gradientValues.Print("CrossEntropyWithSoftmax Partial-gradientValues");
+            inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
+#endif
+
+            Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
+#if DUMPOUTPUT
+            inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
+#endif
+
+        }
+
+        static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        {
+#if DUMPOUTPUT
+            softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
+            inputFunctionValues.Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
+            gradientValues.Print("CrossEntropyWithSoftmax Partial-gradientValues");
+            inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
+#endif
+
+            Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, inputFunctionValues, inputGradientValues);
+#if DUMPOUTPUT
+            inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Right");
+#endif
+        }
+
+
+        virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
+        {
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, this);
+        }
+
+        virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
+        {
+            throw std::logic_error("CrossEntropyWithSoftmax node should never be in a loop.");
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1,
+            Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight, ComputationNodePtr curNode)
+        {
+            logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
+            softmaxOfRight.SetValue(logSoftmaxOfRight);
+            softmaxOfRight.InplaceExp();
+            curNode->MaskToZeroWhenLabelAndFeatureMissing(logSoftmaxOfRight); //we are fine here since it will be called only with full minibatch
+            functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logSoftmaxOfRight);
+            functionValues *= (-1);
+#if NANCHECK
+            functionValues.HasNan("CrossEntropyWithSoftmax");
+#endif
+#if DUMPOUTPUT
+            functionValues.Print("CrossEntropyWithSoftmaxNode");
+#endif
+        }
+
+        virtual void Validate()
+        {
+            PrintSelfBeforeValidation();
+
+            if (m_children.size() != 2)
+                throw std::logic_error("CrossEntropyWithSoftmaxNode criterion requires two inputs.");
+
+            // This breaks re-shaping of the label matrix
+            /*if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
+            throw std::logic_error("CrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");*/
+
+            //we may release the constraint that the first operant is an inputValue later so the following code should be kept
+            size_t index = 0;
+            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            {
+                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
+                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
+                Inputs(index)->FunctionValues().Resize(rows, cols);
+            }
+
+            index = 1;
+            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            {
+                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
+                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
+                Inputs(index)->FunctionValues().Resize(rows, cols);
+            }
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("CrossEntropyWithSoftmaxNode operation: one of the operants has 0 element.");
+
+            if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&  //match size
+                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()))
+            {
+                throw std::logic_error("The Matrix<ElemType>  dimension in the CrossEntropyWithSoftmaxNode operation does not match.");
+            }
+
+            FunctionValues().Resize(1, 1);
+            InferImageDimsFromInputs();
+
+            m_logSoftmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_softmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+        }
+
+        virtual void InferImageDimsFromInputs()
+        {
+            InferImageDimsFromInput(0, false);
+
+            m_outputChannels = 1;
+            m_outputWidth = 1;
+            m_outputHeight = 1;
+        }
+
+        //leftNode should be the empirical
+        virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction)
+        {
+            m_children.resize(2);
+            m_children[0] = label;
+            m_children[1] = prediction;
+        }
+
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+            if (deviceId != AUTOPLACEMATRIX)
+            {
+                if (m_logSoftmaxOfRight.GetDeviceId() != deviceId)
+                {
+                    m_logSoftmaxOfRight.TransferFromDeviceToDevice(m_logSoftmaxOfRight.GetDeviceId(), deviceId, true);
+                }
+                if (m_softmaxOfRight.GetDeviceId() != deviceId)
+                {
+                    m_softmaxOfRight.TransferFromDeviceToDevice(m_softmaxOfRight.GetDeviceId(), deviceId, true);
+                }
+            }
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+            LMNCECrossEntropyWithSoftmaxNode<ElemType>* node = (LMNCECrossEntropyWithSoftmaxNode<ElemType>*) nodeP;
+
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_logSoftmaxOfRight = m_logSoftmaxOfRight;
+                node->m_softmaxOfRight = m_softmaxOfRight;
+            }
+        }
+
+        // copy constructor
+        LMNCECrossEntropyWithSoftmaxNode(const LMNCECrossEntropyWithSoftmaxNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+            : ComputationNode<ElemType>(node->m_deviceId), m_logSoftmaxOfRight(node->m_deviceId), m_softmaxOfRight(node->m_deviceId)
+        {
+                node->CopyTo(this, newName, flags);
+            }
+
+        virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+            ComputationNodePtr node = new LMNCECrossEntropyWithSoftmaxNode<ElemType>(this, name, flags);
+            return node;
+        }
+
+    protected:
+        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
+    protected:
+        Matrix<ElemType> m_logSoftmaxOfRight;
+        Matrix<ElemType> m_softmaxOfRight;
+    };
+
+    template class LMNCECrossEntropyWithSoftmaxNode<float>;
+    template class LMNCECrossEntropyWithSoftmaxNode<double>;
+
     //calculates: -sum(left_i * log(right_i))
     //assume softmax is already done
     template<class ElemType>
