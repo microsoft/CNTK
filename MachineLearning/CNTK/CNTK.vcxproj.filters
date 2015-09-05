@@ -19,9 +19,6 @@
     <ClCompile Include="ModelEditLanguage.cpp">
       <Filter>Model Editing</Filter>
     </ClCompile>
-    <ClCompile Include="ComputationNode.cpp">
-      <Filter>Nodes</Filter>
-    </ClCompile>
     <ClCompile Include="SimpleNetworkBuilder.cpp">
       <Filter>Network</Filter>
     </ClCompile>

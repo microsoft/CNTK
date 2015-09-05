@@ -24,19 +24,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //utility class used by SGD, outputWriter and Evaluator
     // TODO: make independent of ElemType
+    // These can be static methods on ComputationNetwork
     template<class ElemType>
     class ComputationNetworkHelper
     {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
     protected:
-        void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes)
+        // TODO: make all static?
+        static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes)
         {
             for (size_t i=0; i<nodes.size(); i++)
                 nodes[i]->UpdateEvalTimeStamp();
         }
 
-        void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ElemType dropoutRate, ElemType & prevDropoutRate, unsigned long & dropOutSeed)
+        // TODO: why is dropoutRate an ElemType and not a double?
+        // TODO: just call twice, once for float and once for double
+        static void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ElemType dropoutRate, ElemType & prevDropoutRate, unsigned long & dropOutSeed)
         {
             if (dropoutRate != prevDropoutRate)
             {
@@ -60,7 +64,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples)
+        static void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples)
         {
             fprintf(stderr,"Set Max Temp Mem Size For Convolution Nodes to %lu samples.\n", maxTempMemSizeInSamples);
             std::list<ComputationNodeBasePtr> convolutionNodes = net.GetNodesWithType(ConvolutionNode<ElemType>::TypeName(), criterionNode);

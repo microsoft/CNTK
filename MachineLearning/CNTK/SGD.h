@@ -30,6 +30,7 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// TODO: can this be moved out from here? Or into the class? Seems not to belong anywhere. Seems used for parallel training.
 template<class ElemType>
 void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb, int numProcessor, int myID)
 {
@@ -231,7 +232,8 @@ enum class ParallelizationMethod : int
 };
 
 // configuration parameters associated with RMSProp learning algorithm
-typedef struct stRMSPropInfo
+// TODO: what's the st- prefix? Why not define a struct proper? struct RMSPropInfo?
+/*typedef*/ struct /*st*/RMSPropInfo
 {
     double gamma;
     double inc;
@@ -239,7 +241,7 @@ typedef struct stRMSPropInfo
     double max;
     double min;
 
-    stRMSPropInfo()
+    /*st*/RMSPropInfo()
     {
         gamma = 0.99;
         inc = 1.2;
@@ -247,19 +249,20 @@ typedef struct stRMSPropInfo
         max = 10.0;
         min = 0.1;
     }
-} RMSPropInfo;
+}/* RMSPropInfo*/;
 
-typedef struct stGradientUpdateInfo
+// TODO: what's the st- prefix? Why not define a struct proper? struct GradientUpdateInfo?
+/*typedef*/ struct /*st*/GradientUpdateInfo
 {
     GradientsUpdateType mType;
     float mGaussianNoiseInjectStd;
 
-    stGradientUpdateInfo()
+    /*st*/GradientUpdateInfo()
     {
         mType = GradientsUpdateType::AdaGrad;
         mGaussianNoiseInjectStd = 0.0075f;
     }
-} GradientUpdateInfo;
+}/* GradientUpdateInfo*/;
 
 // TODO: make this independent of ElemType. Then these repeated dynamic_pointer_casts will go away
 template<class ElemType>
