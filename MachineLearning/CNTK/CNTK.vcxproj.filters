@@ -199,6 +199,9 @@
     <ClInclude Include="..\..\Math\Math\Matrix.h">
       <Filter>from CNTKMath</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Math\Math\CPUMatrix.h">
+      <Filter>from CNTKMath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">

@@ -181,7 +181,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
     return rv; 
 }
 
-    template<typename ElemType>
+    template<class ElemType>
     SGD<ElemType>::SGD(const ConfigParameters& configSGD)
     {
         ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB", "");
@@ -387,7 +387,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
     }
 
     //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
-    template<typename ElemType>
+    template<class ElemType>
     void SGD<ElemType>::Init(const floatargvector& learningRatesPerMB,
               const floatargvector& learningRatesPerSample,
               const intargvector& mbSize,
@@ -590,7 +590,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         msra::files::make_intermediate_dirs(m_modelPath);
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader<ElemType>* trainSetDataReader,
                IDataReader<ElemType>* validationSetDataReader,
@@ -641,7 +641,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         TrainOrAdaptModel(startEpoch, net, refNet, refNode, trainSetDataReader, validationSetDataReader);
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     void SGD<ElemType>::SequenceTrain(IComputationNetBuilder<ElemType>* netBuilder, wstring origModelFileName,
                        IDataReader<ElemType>* trainSetDataReader, IDataReader<ElemType>* validationSetDataReader,
                        const DEVICEID_TYPE deviceID, const bool makeMode = true)
@@ -711,7 +711,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         }
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     void SGD<ElemType>::Train(IComputationNetBuilder<ElemType>* netBuilder,
                IDataReader<ElemType>* trainSetDataReader,
                IDataReader<ElemType>* validationSetDataReader,
@@ -751,7 +751,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
 
 // protected:
 
-    template<typename ElemType>
+    template<class ElemType>
     std::vector<ComputationNodeBasePtr> & SGD<ElemType>::GetTrainCriterionNodes(ComputationNetwork& net)
     {
         fprintf(stderr, "GetTrainCriterionNodes %ls ...\n", m_trainCriterionNodeName.c_str());
@@ -761,7 +761,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
             return net.FinalCriterionNodes();
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     std::vector<ComputationNodeBasePtr> & SGD<ElemType>::GetEvalCriterionNodes(ComputationNetwork& net)
     {
         fprintf(stderr, "GetEvalCriterionNodes %ls ...\n", m_evalCriterionNodeName.c_str());
@@ -771,7 +771,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
             return net.EvaluationNodes();
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetwork& net,
                            ComputationNetwork& refNet,
                            ComputationNodeBasePtr refNode,
@@ -1206,7 +1206,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
 // protected:
 
     // return true if precomputation is executed.
-    template<typename ElemType>
+    template<class ElemType>
     bool SGD<ElemType>::PreCompute(ComputationNetwork& net,
                     IDataReader<ElemType>* trainSetDataReader,
                     std::vector<ComputationNodeBasePtr> & featureNodes,
@@ -1270,7 +1270,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
     }
 
     // return a reasonable initial learning rate based on the initial mbsize
-    template<typename ElemType>
+    template<class ElemType>
     double SGD<ElemType>::SearchForBestLearnRate(ComputationNetwork& net,
                                   ComputationNetwork& refNet,
                                   const ComputationNodeBasePtr refNode, const int epochNumber,
@@ -1432,7 +1432,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         return bestLearnRatePerSample;
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetwork& net,
                                          ComputationNetwork& refNet,
                                          const ComputationNodeBasePtr refNode, const int epochNumber,
@@ -1485,7 +1485,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
                            /*out*/ dummyMinibatchSize);
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetwork& net,
                                    ComputationNetwork& refNet,
                                    const ComputationNodeBasePtr refNode,
@@ -1589,7 +1589,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
 
     // uses a small percentage of training data of minibatch to
     // speculatively train with various MB sizes; then picks the best
-    template<typename ElemType>
+    template<class ElemType>
     size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetwork& net,
                                       ComputationNetwork& refNet,
                                       const ComputationNodeBasePtr refNode,
@@ -1690,7 +1690,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
 
     // Tries to compute derivatives for the whole utterances, which will be
     // fed to the neural network as features.
-    template<typename ElemType>
+    template<class ElemType>
     void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetwork& net,
                                             IDataReader<ElemType>* trainSetDataReader,
                                             const std::vector<ComputationNodeBasePtr> & featureNodes,
@@ -1744,7 +1744,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         return format;
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     size_t SGD<ElemType>::TrainOneEpoch(ComputationNetwork& net,
                          ComputationNetwork& refNet,
                          const ComputationNodeBasePtr refNode,
@@ -2135,7 +2135,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         return totalEpochSamples;
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     void SGD<ElemType>::LazyInitDistGradAgg(const std::list<ComputationNodeBasePtr>& learnableNodes, int numEvalNodes)
     {
         if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
@@ -2160,7 +2160,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         }
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     void SGD<ElemType>::UninitDistGradAgg()
     {
         if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
@@ -2179,7 +2179,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         }
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     bool SGD<ElemType>::ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes, size_t& nProcessedFrames,
                                   float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync)
     {
@@ -2225,7 +2225,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         return true; 
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     size_t SGD<ElemType>::ModelAveragingSync(int nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes)
     {
         if (g_mpi->NumNodesInUse() <= 1)
@@ -2285,7 +2285,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
 // public:
     // UpdateWeightsS - static version of UpdateWeights()
     // not static since it wants to access protected methods on the SGD object
-    template<typename ElemType>
+    template<class ElemType>
     /*static*/ void SGD<ElemType>::UpdateWeightsS(const SGD<ElemType>* sgd, Matrix<ElemType>& functionValues,
                                Matrix<ElemType>& gradientValues,
                                Matrix<ElemType>& smoothedGradient,
@@ -2373,7 +2373,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
 // protected:
 
     // UpdateWeights - update the weights in
-    template<typename ElemType>
+    template<class ElemType>
     void SGD<ElemType>::UpdateWeights(const ComputationNodeBasePtr node,
                        Matrix<ElemType>& smoothedGradient,
                        const double learnRatePerSample,
@@ -2392,7 +2392,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         node->UpdateEvalTimeStamp();
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     void SGD<ElemType>::ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const
     {
         if (m_clippingThresholdPerSample != std::numeric_limits<double>::infinity())
@@ -2413,7 +2413,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         }
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen,
                             const double learnRatePerSample,
                             const std::list<Matrix<ElemType>>& smoothedGradients,
@@ -2457,7 +2457,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         renameOrDie(tempFileName, checkPointFileName);
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     bool SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
                             /*out*/ size_t& totalSamplesSeen,
                             /*out*/ double& learnRatePerSample,
@@ -2504,13 +2504,13 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         return true;
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     wstring SGD<ElemType>::GetCheckPointFileNameForEpoch(const int epoch)
     {
         return GetModelNameForEpoch(epoch) + L".ckp";
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel = false)
     {
         int epoch1Base = epoch + 1;
@@ -2527,7 +2527,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
     }
 
     // return -1 if nothing exists
-    template<typename ElemType> // TODO: needed?
+    template<class ElemType> // TODO: needed?
     int SGD<ElemType>::DetermineStartEpoch(const bool makeMode)
     {
         if (!makeMode)
@@ -2661,7 +2661,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
 
 #define EPSILON 1e-5
 
-    template<typename ElemType>
+    template<class ElemType>
     bool SGD<ElemType>::GradientCheck(ComputationNetwork& net,
                        const std::vector<ComputationNodeBasePtr> & criterionNodes,
                        const std::list<ComputationNodeBasePtr> & learnableNodes,

@@ -225,7 +225,7 @@ public:
                                            const FileOptions fileFormat = FileOptions::fileOptionsBinary);
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
-    template<typename ElemType>
+    template<class ElemType>
     void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
                       const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
 
@@ -277,7 +277,7 @@ public:
 
     // non-static version needed because it accesses m_randomSeedOffset
     // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
-    template<typename ElemType>
+    template<class ElemType>
     void InitLearnableParameters(const ComputationNodeBasePtr node,
                                  const bool uniformInit,
                                  const unsigned long randomSeed,
@@ -709,7 +709,7 @@ public:
 
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
     // TODO: pass a set of nodes instead of only one
-    template<typename ElemType>
+    template<class ElemType>
     void ComputeGradient(const ComputationNodeBasePtr rootNode, 
                          bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
                          const Matrix<ElemType>* rootGradientInitValue = nullptr,
@@ -791,7 +791,7 @@ public:
 
     // a few more helpers
     static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes);
-    template<typename ElemType> // TODO: dropoutRate change to double
+    template<class ElemType> // TODO: dropoutRate change to double
     static void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     static void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples);
 
@@ -1312,7 +1312,7 @@ public:
     // B and C are two learnable parameters
     //========================================
     // BUGBUG: this only currently works for one ElemType, not both
-    template<typename ElemType>
+    template<class ElemType>
     void PerformSVDecomposition(const map<wstring, float>& SVDConfig);
 
 public:
@@ -1321,7 +1321,7 @@ public:
     // -----------------------------------------------------------------------
 
     // TODO: make these templated on <ElemType> locally
-    template<typename ElemType>
+    template<class ElemType>
     void GetHistory(map<wstring, Matrix<ElemType>>& history, bool bLastTime = false)
     {
         //put all node info first
@@ -1334,7 +1334,7 @@ public:
         }
     };
 
-    template<typename ElemType>
+    template<class ElemType>
     void SetHistory(map<wstring, Matrix<ElemType>>& history)
     {
         //put all node info first

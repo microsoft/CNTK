@@ -15,7 +15,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    template<typename ElemType>
+    template<class ElemType>
     void SynchronousNodeEvaluator<ElemType>::Evaluate(NDLNode<ElemType>* node, const wstring& baseName, const NDLPass pass)
     {
         ComputationNetworkBuilder<ElemType> builder(m_net);

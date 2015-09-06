@@ -66,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         }
     };
 
-    template<typename ElemType>
+    template<class ElemType>
     struct DualPrecisionHelpers<ElemType, ComputationNode<ElemType>>
     {
         // create ComputationNode

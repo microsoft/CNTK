@@ -92,7 +92,7 @@ public:
 // ---------------------------------------------------------------------------
 // biggrowablevector -- big vector we can push_back to
 // ---------------------------------------------------------------------------
-template<typename ELEMTYPE> class biggrowablevector : public growablevectorbase<std::vector<ELEMTYPE>>
+template<class ELEMTYPE> class biggrowablevector : public growablevectorbase<std::vector<ELEMTYPE>>
 {
 public:
     biggrowablevector() : growablevectorbase<std::vector<ELEMTYPE>>::growablevectorbase (65536) { }

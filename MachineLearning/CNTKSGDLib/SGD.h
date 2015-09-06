@@ -17,7 +17,6 @@
 #include <stdexcept>
 #include "fileutil.h"
 #include "commandArgUtil.h"
-#include "IDistGradAggregator.h"    // only for declaring IDistGradAggregator<ElemType>*; TODO: remove this header dependency
 #include <chrono> 
 #include <random>
 #include "TimerUtility.h"
@@ -88,6 +87,8 @@ struct GradientUpdateInfo
         mGaussianNoiseInjectStd = 0.0075f;
     }
 };
+
+template<class ElemType> class IDistGradAggregator;
 
 // TODO: make this independent of ElemType. Then these repeated dynamic_pointer_casts will go away
 // TODO: why is this a class, and not just a procedure? Then we wouldn't have to include the massive header
@@ -420,7 +421,7 @@ protected:
     // Parallel training
     ParallelizationMethod m_parallelizationMethod;
     IDistGradAggregator<ElemType>* m_distGradAgg;
-    DistGradHeader* m_gradHeader;
+    struct DistGradHeader* m_gradHeader;
     int m_numGradientBits;
     bool m_zeroThresholdFor1Bit;
     bool m_enableDistributedMBReading;

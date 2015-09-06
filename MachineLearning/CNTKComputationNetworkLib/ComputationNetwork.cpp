@@ -257,7 +257,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // non-static version needed because it accesses m_randomSeedOffset
     // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
-    template<typename ElemType> void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr node, const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly)
+    template<class ElemType> void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr node, const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly)
     {
         auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
         learnableParameterNode->InitRandom(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
@@ -822,7 +822,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             nodes[i]->UpdateEvalTimeStamp();
     }
 
-    template<typename ElemType>
+    template<class ElemType>
     /*static*/void ComputationNetwork::SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed)
     {
         if (dropoutRate != prevDropoutRate)
@@ -864,7 +864,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // serialization
     // -----------------------------------------------------------------------
 
-    template<typename ElemType> void ComputationNetwork::LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork)
+    template<class ElemType> void ComputationNetwork::LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork)
     {
         ClearNet();
 
@@ -1281,7 +1281,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // This function performs SVD decomposition for different groups of learnable  parameters
-    template<typename ElemType> void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDConfig)
+    template<class ElemType> void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDConfig)
     {
         vector<pair<vector<wstring>, float>> nodeGroups;
         wregex NameFilter;
