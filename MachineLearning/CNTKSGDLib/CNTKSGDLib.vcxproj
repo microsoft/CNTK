@@ -164,6 +164,10 @@
     <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h" />
     <ClInclude Include="..\..\Common\Include\Platform.h" />
     <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
+    <ClInclude Include="..\..\Math\Math\CUDAPageLockedMemAllocator.h" />
+    <ClInclude Include="..\..\Math\Math\Matrix.h" />
+    <ClInclude Include="..\..\Math\Math\MatrixQuantizer.h" />
+    <ClInclude Include="..\..\Math\Math\QuantizedMatrix.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\CompositeComputationNodes.h" />
     <ClInclude Include="..\CNTK\Profiler.h" />
     <ClInclude Include="AllReduceDistGradAggregator.h" />

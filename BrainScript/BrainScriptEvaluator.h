@@ -1,5 +1,14 @@
 // BrainScriptEvaluator.h -- execute what's given in a config file
 
+// TODO: abstract this out from BrainScript --> ConfigurableObjects.h, merged with BrainScriptObjects.h
+// This is to allow alternate parsers and glue languages such as Python or .Net.
+// The only interdependency with BrainScript currently is through TextLocation.
+// -> replace TextLocation with a lambda fail() that is called to report errors.
+// That lambda would be set by BrainScript, but in a different way by different glue integrations.
+// Consumers of this should, instad of calling GetLocation(), call Fail() on that object.
+// Where we now pass a location to a derived expression, we'd now instead pass on that lambda itself.
+// This is only needed for our magic understanding of ComputationNode.
+
 #pragma once
 
 #include "Basics.h"
@@ -325,15 +334,13 @@ namespace Microsoft { namespace MSR { namespace BS {
         // We pass rvalue references because that allows to pass Thunks.
         vector<wstring> paramNames;             // #parameters and parameter names (names are used for naming expressions only)
         NamedParams namedParams;   // lists named parameters with their default values. Named parameters are optional and thus always must have a default.
-        // TODO: are these defaults already resolved? Or Thunked and resolved upon first use?
-        // TODO: Change namedParams to a shared_ptr<map<wstring,ConfigValuePtr>>
     public:
         template<typename F>
         ConfigLambda(vector<wstring> && paramNames, NamedParams && namedParams, const F & f) : paramNames(move(paramNames)), namedParams(move(namedParams)), f(f) { }
         size_t GetNumParams() const { return paramNames.size(); }
         const vector<wstring> & GetParamNames() const { return paramNames; }    // used for expression naming
         // what this function does is call f() held in this object with the given arguments except optional arguments are verified and fall back to their defaults if not given
-        // The arguments are rvalue references, which allows us to pass Thunks, which is important to allow stuff with circular references like CBTK;s DelayedNode.
+        // The arguments are rvalue references, which allows us to pass Thunks, which is important to allow stuff with circular references like CNTK's DelayedNode.
         ConfigValuePtr Apply(vector<ConfigValuePtr> && args, NamedParams && namedArgs, const wstring & exprName)
         {
             NamedParams actualNamedArgs;
@@ -367,6 +374,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     // -----------------------------------------------------------------------
     // functions exposed by this module
+    // TODO: This is the only thing that should stay in an actual BrainScriptEvaluator.h.
     // -----------------------------------------------------------------------
 
     // understand and execute from the syntactic expression tree

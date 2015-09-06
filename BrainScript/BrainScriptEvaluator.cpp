@@ -595,6 +595,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             else if (what == L"Replace")
                 us = Replace(arg, config[L"replacewhat"], config[L"withwhat"]);
             else
+                // TODO: this should become whatArg.Fail(...)
                 throw EvaluationError(L"unknown 'what' value to StringFunction: " + what, whatArg.GetLocation());
         }
     };
