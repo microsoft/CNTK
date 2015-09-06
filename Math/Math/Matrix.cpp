@@ -6,8 +6,12 @@
 //
 #include "stdafx.h"
 #include "Basics.h"
-#include "fileutil.h"
 #include "Matrix.h"
+#include "CPUMatrix.h"
+#include "CPUSparseMatrix.h"
+#include "GPUMatrix.h"
+#include "GPUSparseMatrix.h"
+#include "fileutil.h"
 #include <assert.h>
 #include <math.h>
 #include "GPUWatcher.h"     // bring in this class as well so that it gets exported from this DLL
@@ -163,7 +167,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region Constructors, destructors and other static matrix builders
-
 
     //This function will only initialize default bland matrix. The actual matrices need to allocated
     //after calling this function and flags need to set correctly by calling SetDataLocation.
@@ -563,6 +566,65 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return c;
     }
 
+    template<class ElemType>
+    void Matrix<ElemType>::Read(File& stream)
+    {
+        Matrix<ElemType>& M = *this;
+        char type;
+        stream >> type;
+        if (type == 'd')
+        {
+            if (M.GetDeviceId()<0)
+            {
+                if (M.m_CPUMatrix == NULL) M.m_CPUMatrix = new CPUMatrix<ElemType>();
+                stream >> (*M.m_CPUMatrix);
+                M.SetDataLocation(CPU, DENSE);
+            }
+            else
+            {
+                if (M.m_GPUMatrix == NULL) M.m_GPUMatrix = new GPUMatrix<ElemType>();
+                stream >> (*M.m_GPUMatrix);
+                M.SetDataLocation(GPU, DENSE);
+            }
+        }
+        else if (type == 's')
+        {
+            if (M.GetDeviceId()<0)
+            {
+                NOT_IMPLEMENTED;//You might want to tranfer your matrix to GPU
+            }
+            else
+            {
+                if (M.m_GPUSparseMatrix == NULL) M.m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>();
+                stream >> (*M.m_GPUSparseMatrix);
+                M.SetDataLocation(GPU, SPARSE);
+            }
+        }
+        else
+            LogicError("wrong matrix type!");
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::Write(File& stream) const
+    {
+        const Matrix<ElemType>& M = *this;
+        if (M.GetMatrixType() == MatrixType::DENSE)
+        {
+            stream << 'd';
+            if (M.GetDeviceId() < 0)
+                stream << (*M.m_CPUMatrix);
+            else
+                stream << (*M.m_GPUMatrix);
+        }
+        else
+        {
+            stream << 's';
+            if (M.GetDeviceId() < 0)
+                NOT_IMPLEMENTED //stream<<(*M.m_CPUMatrix);
+            else
+                stream << (*M.m_GPUSparseMatrix);
+        }
+    }
 
 #pragma endregion Constructors, destructors and other static matrix builders
 
@@ -4740,7 +4802,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class Matrix<double>;    
 
     // We use Matrix<char> as the backing store for QuantizedMatrix
-    // Let's explciitly instantiate the methods we need for that purpose
+    // Let's explicitly instantiate the methods we need for that purpose
     template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat);
     template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char *pArray, const size_t matrixFlags, DEVICEID_TYPE deviceId, const size_t nnz);
     template Matrix<char>::~Matrix();

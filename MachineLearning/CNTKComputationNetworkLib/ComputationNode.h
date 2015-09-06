@@ -1256,7 +1256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
 
     // This will provide default implementations for those two functions that will fail at runtime with a meaningful error.
-    template<typename ElemType>
+    template<class ElemType>
     class ComputationNodeNonLooping : public ComputationNode<ElemType>
     {
     public:

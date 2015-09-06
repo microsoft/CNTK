@@ -142,12 +142,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ;
 
     // helper that returns 'float' or 'double' depending on ElemType
-    template<typename ElemType> static const wchar_t * ElemTypeName();
+    template<class ElemType> static const wchar_t * ElemTypeName();
     template<> /*static*/ const wchar_t * ElemTypeName<float>()  { return L"float"; }
     template<> /*static*/ const wchar_t * ElemTypeName<double>() { return L"double"; }
 
     // build a ComputationNetwork from BrainScript source code
-    template<typename ElemType>
+    template<class ElemType>
     /*virtual*/ /*IComputationNetBuilder::*/ComputationNetwork* ExperimentalNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork*)
     {
         if (!m_net || m_net->GetTotalNumberOfNodes() < 1) //not built yet

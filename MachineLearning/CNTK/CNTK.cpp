@@ -38,7 +38,9 @@
 #include "ExperimentalNetworkBuilder.h"
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
+#include "CPUMatrix.h"  // used for SetNumThreads()
 #include "SGD.h"
+#include "MPIWrapper.h"
 #include "commandArgUtil.h"
 #include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
@@ -475,7 +477,7 @@ void SVDConfigFileUsage()
 
 
 }
-template<typename ElemType>
+template<class ElemType>
 void  DoParameterSVD(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceID = -1;        // use CPU for SVD 

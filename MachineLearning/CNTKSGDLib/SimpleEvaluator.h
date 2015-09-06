@@ -24,11 +24,12 @@ using namespace std;
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
-    struct NN_state {
+    struct NN_state
+    {
         map<wstring, Matrix<ElemType>> hidden_activity;
     };
 
-    template<typename ElemType>
+    template<class ElemType>
     struct Token
     {
         Token(const double score, const std::vector<size_t> &sequence, const NN_state<ElemType> & state) :
