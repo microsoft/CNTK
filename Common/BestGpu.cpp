@@ -23,6 +23,8 @@
 #include <nvml.h>                   // note: expected at "c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include" (Windows) and /the path you installed deployment kit/usr/include/nvidia/gdk (Linux)
 #pragma comment (lib, "nvml.lib")   // note: expected at "c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib" (Windows) and /the path you installed deployment kit/usr/include/nvidia/gdk (Linux)
 #include <vector>
+#else
+int bestGPUDummy = 42;              // put something into this CPP, as to avoid a linker warning
 #endif
 #include "CommonMatrix.h" // for CPUDEVICE and AUTOPLACEMATRIX
 
