@@ -12,6 +12,7 @@
 #include <fstream>
 #include <queue>
 #include "Basics.h"
+#include "Helpers.h"    // for foreach_column() macro
 #include "fileutil.h"
 #include "DataReader.h"
 #include "DataWriter.h"

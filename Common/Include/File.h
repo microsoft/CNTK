@@ -4,6 +4,8 @@
 // </copyright>
 //
 #pragma once
+
+#include "Basics.h"
 #include <stdio.h>
 #include <string>
 #include <vector>
@@ -16,6 +18,7 @@
 #endif
 #include "fileutil.h"   // for f{ge,pu}t{,Text}()
 #include <fstream>      // for LoadMatrixFromTextFile() --TODO: change to using this File class
+#include <sstream>
 
 namespace Microsoft{ namespace MSR { namespace CNTK {
 

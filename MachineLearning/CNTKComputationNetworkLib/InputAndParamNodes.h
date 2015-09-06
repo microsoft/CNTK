@@ -109,7 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numRows = 0;
             size_t numCols = 0;
             auto array = File::LoadMatrixFromTextFile<ElemType>(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
-            FunctionValues().SetValue(numRows, numCols, array.data(), matrixFlagNormal, GetDeviceId());
+            FunctionValues().SetValue(numRows, numCols, array.data(), matrixFlagNormal, m_deviceId);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}

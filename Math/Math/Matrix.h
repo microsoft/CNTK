@@ -19,6 +19,7 @@
 #include "Basics.h"
 #include "File.h"
 #include "CommonMatrix.h"
+#include <limits.h>
 
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
