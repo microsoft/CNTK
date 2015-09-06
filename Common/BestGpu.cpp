@@ -122,6 +122,9 @@ private:
 // 0:2:3- an array of ids to use, (PTask will only use the specified IDs)
 // *3   - a count of GPUs to use (PTask)
 // All  - Use all the GPUs (PTask) 
+#ifdef MATH_EXPORTS
+__declspec(dllexport)
+#endif
 DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 {
     static BestGpu* g_bestGpu = NULL;

@@ -16,6 +16,9 @@ Command lines for debugging
 WORKING DIR: $(SolutionDir)Tests\Speech\Data
 COMMAND:     configFile=$(SolutionDir)Tests\Speech\QuickE2E\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\QuickE2E\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\QuickE2E  DataDir=$(SolutionDir)Tests\Speech\Data  DeviceId=Auto
 
+Linux:
+bin/cntk configFile=Tests/Speech/QuickE2E/cntk.config RunDir=Tests/Speech/RunDirL/QuickE2E DataDir=Tests/Speech/Data DeviceId=0
+
 # TODO: can stderr refer to RunDir?
 
 --- LSTM:
