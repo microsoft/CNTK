@@ -221,6 +221,37 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKSGDLib", "MachineLearni
 		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelTraining", "ParallelTraining", "{5E666C53-2D82-49C9-9127-3FDDC321C741}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\ParallelTraining\SimpleMultiGPU.config = Tests\ParallelTraining\SimpleMultiGPU.config
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{6D1353D6-F196-466F-B886-F16D48759B20}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\ParallelTraining\Data\SimpleDataTrain.txt = Tests\ParallelTraining\Data\SimpleDataTrain.txt
+		Tests\ParallelTraining\Data\SimpleMapping.txt = Tests\ParallelTraining\Data\SimpleMapping.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NoQuantization", "NoQuantization", "{B6725C9F-A6D2-4269-9B74-7888A90F7884}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SinglePrecision", "SinglePrecision", "{B27DD434-EECD-4EE0-A03B-1150EB87258E}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt
+		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt
+		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt
+		Tests\ParallelTraining\NoQuantization\SinglePrecision\run-test = Tests\ParallelTraining\NoQuantization\SinglePrecision\run-test
+		Tests\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml = Tests\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DoublePrecision", "DoublePrecision", "{A4884465-CFBB-4A64-A9DE-690E1A63EF7E}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt
+		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt
+		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt
+		Tests\ParallelTraining\NoQuantization\DoublePrecision\run-test = Tests\ParallelTraining\NoQuantization\DoublePrecision\run-test
+		Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml = Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -314,6 +345,7 @@ Global
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{DBB3C106-B0B4-4059-8477-C89528CEC1B0} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8} = {D45DF403-6781-444E-B654-A96868C5BE68}
+		{5E666C53-2D82-49C9-9127-3FDDC321C741} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{1D5787D4-52E4-45DB-951B-82F220EE0C6A} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6} = {33EBFE78-A1A8-4961-8938-92A271941F94}
@@ -333,5 +365,9 @@ Global
 		{4BBF2950-3DBD-469A-AD57-6CACBEBAF541} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
 		{5F733BBA-FE83-4668-8F83-8B0E78A36619} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
 		{19EE975B-232D-49F0-94C7-6F1C6424FB53} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
+		{6D1353D6-F196-466F-B886-F16D48759B20} = {5E666C53-2D82-49C9-9127-3FDDC321C741}
+		{B6725C9F-A6D2-4269-9B74-7888A90F7884} = {5E666C53-2D82-49C9-9127-3FDDC321C741}
+		{B27DD434-EECD-4EE0-A03B-1150EB87258E} = {B6725C9F-A6D2-4269-9B74-7888A90F7884}
+		{A4884465-CFBB-4A64-A9DE-690E1A63EF7E} = {B6725C9F-A6D2-4269-9B74-7888A90F7884}
 	EndGlobalSection
 EndGlobal
