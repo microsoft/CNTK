@@ -683,9 +683,9 @@ namespace Microsoft {
                     case TrainingCriterion::CrossEntropyWithSoftmax:
                         output = m_net->CrossEntropyWithSoftmax(label, tinput, (trainNodeName == L"") ? L"CrossEntropyWithSoftmax" : trainNodeName);
                         break;
-                    case TrainingCriterion::LMNCECrossEntropyWithSoftmax:
-                        output = m_net->LMNCECrossEntropyWithSoftmax(label, tinput, (trainNodeName == L"") ? L"LMNCECrossEntropyWithSoftmax" : trainNodeName);
-                        break;
+                    //case TrainingCriterion::LMNCECrossEntropyWithSoftmax:
+                    //    output = m_net->LMNCECrossEntropyWithSoftmax(label, tinput, clspostprob, trans, (trainNodeName == L"") ? L"LMNCECrossEntropyWithSoftmax" : trainNodeName);
+ //                       break;
                     case TrainingCriterion::SquareError:
                         output = m_net->SquareError(label, tinput, (trainNodeName == L"") ? L"SquareError" : trainNodeName);
                         break;
@@ -717,10 +717,10 @@ namespace Microsoft {
                             //output = m_net->CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"")?L"EvalCrossEntropyWithSoftmax":evalNodeName);
                             output = m_net->CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"") ? L"CrossEntropyWithSoftmax" : evalNodeName);
                             break;
-                        case EvalCriterion::LMNCECrossEntropyWithSoftmax:
+                        //case EvalCriterion::LMNCECrossEntropyWithSoftmax:
                             //output = m_net->CrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"")?L"EvalCrossEntropyWithSoftmax":evalNodeName);
-                            output = m_net->LMNCECrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"") ? L"CrossEntropyWithSoftmax" : evalNodeName);
-                            break;
+                        //    output = m_net->LMNCECrossEntropyWithSoftmax(label, tinput, (evalNodeName == L"") ? L"CrossEntropyWithSoftmax" : evalNodeName);
+                        //    break;
                         case EvalCriterion::ClassCrossEntropyWithSoftmax:
                             //output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"EvalClassCrossEntropyWithSoftmax" : evalNodeName);
                             output = m_net->ClassCrossEntropyWithSoftmax(label, input, matrix, clspostprob, (evalNodeName == L"") ? L"ClassCrossEntropyWithSoftmax" : evalNodeName);

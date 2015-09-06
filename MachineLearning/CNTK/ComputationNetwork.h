@@ -1970,12 +1970,12 @@ public:
     }
 
     ComputationNodePtr LMNCECrossEntropyWithSoftmax(const ComputationNodePtr label,
-        const ComputationNodePtr prediction,
+        const ComputationNodePtr prediction, const ComputationNodePtr clabel, const ComputationNodePtr probs,
         const std::wstring nodeName = L"")
 
     {
         ComputationNodePtr newNode(new LMNCECrossEntropyWithSoftmaxNode<ElemType>(m_deviceId, nodeName));
-        newNode->AttachInputs(label, prediction);
+        newNode->AttachInputs(label, prediction, clabel, probs);
         AddNodeToNet(newNode);
         return newNode;
     }

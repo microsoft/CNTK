@@ -497,6 +497,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
+            fprintf(stderr, "debughtx m_prob check row:%d col:%d norm1:%f\n", Inputs(3)->FunctionValues().GetNumRows(), Inputs(3)->FunctionValues().GetNumCols(), Inputs(3)->FunctionValues().MatrixNorm1());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, this);
         }
 
@@ -515,8 +516,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logSoftmaxOfRight);
             functionValues *= (-1);
 
-            fprintf(stderr, "debughtx m_sentenceSeg check row:%d col:%d norm:%f\n", curNode->m_sentenceSeg->GetNumRows(), curNode->m_sentenceSeg->GetNumCols(), curNode->m_sentenceSeg->MatrixNormInf());
-            //Use m_sentenceSeg
+            //fprintf(stderr, "debughtx m_sentenceSeg check row:%d col:%d norm:%f\n", curNode->m_sentenceSeg->GetNumRows(), curNode->m_sentenceSeg->GetNumCols(), curNode->m_sentenceSeg->MatrixNormInf());
+
+            //TODO::Use m_sentenceSeg and prob
 #if NANCHECK
             functionValues.HasNan("CrossEntropyWithSoftmax");
 #endif
@@ -529,8 +531,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             PrintSelfBeforeValidation();
 
-            if (m_children.size() != 2)
-                throw std::logic_error("CrossEntropyWithSoftmaxNode criterion requires two inputs.");
+            if (m_children.size() != 4)
+                throw std::logic_error("LMNCECrossEntropyWithSoftmaxNode criterion requires four inputs.");
 
             // This breaks re-shaping of the label matrix
             /*if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
@@ -579,11 +581,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //leftNode should be the empirical
-        virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction)
+        virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr clabel, const ComputationNodePtr probs)
         {
-            m_children.resize(2);
+            fprintf(stderr, "debughtx LMNCE Node AttachINputs called\n");
+            m_children.resize(4);
             m_children[0] = label;
             m_children[1] = prediction;
+            m_children[2] = clabel;
+            m_children[3] = probs;
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)

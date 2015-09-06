@@ -161,7 +161,7 @@ bool BatchSequenceReader<ElemType>::getNoiseSeq(list<pair<int, float>> &list)
 template<class ElemType>
 void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
-    fprintf(stderr, "debughtx ---LMHTXSequenceReader Init---\n");
+    fprintf(stderr, "debughtx ---LMSNoiseSequenceReader Init---\n");
     system("sleep 0.1");
 
     mBlgSize = readerConfig("nbruttsineachrecurrentiter", "1");
@@ -216,7 +216,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     sentenceEndId = word4idx["</s>"];
     fprintf(stderr, "debughtx sentenceEndId is %d\n", sentenceEndId);
 
-    fprintf(stderr, "debughtx ---LMHTXSequenceReader end---\n");
+    fprintf(stderr, "debughtx ---LMSNoiseSequenceReader end---\n");
 }
 
 template<class ElemType>
@@ -230,7 +230,7 @@ void BatchSequenceReader<ElemType>::Reset()
 template<class ElemType>
 void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
-    DEBUG_HTX fprintf(stderr, "debughtx --void HTXBatchSequenceReader<ElemType>::StartMinibatchLoop called---\n");
+    DEBUG_HTX fprintf(stderr, "debughtx --void LMSNoise BatchSequenceReader<ElemType>::StartMinibatchLoop called---\n");
     DEBUG_HTX fprintf(stderr, "mbSize:%d epoch:%d requestedEpochSamples:%d\n", mbSize, epoch, requestedEpochSamples); //requestedEpochSamples will be -1 when epochSize=0
     m_mbSize = mbSize; //Size of minibatch requested
     fprintf(stderr, "debughtx StartMinibatchLoop MBSize is %d\n", m_mbSize);
