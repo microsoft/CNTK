@@ -17,14 +17,11 @@
 #include <stdexcept>
 #include "fileutil.h"
 #include "commandArgUtil.h"
-#include "AllReduceDistGradAggregator.h"
-#include "MPIWrapper.h"
+#include "IDistGradAggregator.h"    // only for declaring IDistGradAggregator<ElemType>*; TODO: remove this header dependency
 #include <chrono> 
 #include <random>
 #include "TimerUtility.h"
 #include "Profiler.h"
-
-extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 using namespace std;
 

@@ -6,6 +6,7 @@
 
 #pragma once
 
+// TODO: eliminate dependence on these 4 headers, this should be hidden inside Matrix.cpp
 #include "CPUMatrix.h"
 #include "CPUSparseMatrix.h"
 #include "GPUMatrix.h"
@@ -55,12 +56,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
        UNDETERMINED, DENSE, SPARSE
     };
 
+    // TODO: create an <ElemType>-agnostic base class, then move generic functions such as getting dims, resizing, and getting/setting as scalars
+    class MATH_API MatrixBase
+    {
+    protected:
+        //virtual ~MatrixBase() { };
+        // TODO: currently this causes link errors when building DLLs
+    };
+
     //To compy with BLAS libraries matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor
     //convertion is need when passing data between Matrix and C++ matrices
     //For the best performance compile CNTKMath project with NO_SYNC preprocessor directive
     //!!!WARNING!!! This class is NOT THREAD SAFE. Test and add necessary modifications if using in multi-threaded environment    
     template<class ElemType>
-    class MATH_API Matrix 
+    class MATH_API Matrix : public MatrixBase
     {
     private:
         mutable BaseMatrix<ElemType> *m_baseMatrix;

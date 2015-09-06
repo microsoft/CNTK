@@ -196,6 +196,9 @@
     <ClInclude Include="SimpleNetworkBuilder.h">
       <Filter>Model Building, Standard Models</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Math\Math\Matrix.h">
+      <Filter>from CNTKMath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">
@@ -253,6 +256,9 @@
     </Filter>
     <Filter Include="Model Building, experimental extensions\Doc">
       <UniqueIdentifier>{23e7cd74-fd60-4fb4-a925-c3dea584f176}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="from CNTKMath">
+      <UniqueIdentifier>{ebc74fe7-4a25-46e7-87a8-121881ef9124}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

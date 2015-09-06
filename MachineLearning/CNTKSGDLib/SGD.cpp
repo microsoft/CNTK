@@ -5,6 +5,10 @@
 #include "Basics.h"
 #include "SGD.h"
 //#include "MultiNetworksSGD.h"
+#include "AllReduceDistGradAggregator.h"
+#include "MPIWrapper.h"
+
+extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
