@@ -2267,6 +2267,8 @@ protected:
             totalEpochSamples += aggregateNumSamplesWithLabel;
             totalSamplesSeen += aggregateNumSamplesWithLabel;
 
+
+
             if (totalEpochSamples >= epochSize)
             {
                 break;
@@ -2282,7 +2284,7 @@ protected:
             profiler.NextSample();
         }
 
-        if (useModelAveraging && (g_mpi->NumNodesInUse() > 1) && nSamplesSinceLastModelSync)
+        if (useModelAveraging && (g_mpi->NumNodesInUse() > 1) )
         {
             // may not be synced after epoch finished, so do the sync here 
             int residualSampels = (int)nSamplesSinceLastModelSync;
