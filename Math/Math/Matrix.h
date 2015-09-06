@@ -464,11 +464,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
 
     public:
-        //friend File& operator>>(File& stream, Matrix<ElemType>& M);
-        //friend File& operator<<(File& stream, const Matrix<ElemType>& M);
-        // TODO: can't figure out how to define friend functions in the CPP, so we use a workaround
-
-    public:
         void Read(File& stream);
         void Write(File& stream) const;
 
