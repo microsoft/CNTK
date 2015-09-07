@@ -90,6 +90,7 @@ bool BatchSequenceReader<ElemType>::getDataSeq(list<pair<int, float>> &list)
     string word;
     int wordRead = 0;
     int last_word_id = -1;
+    float prob;
     for (;;) {
         if (!(fin >> word)) {
             fin.close();
@@ -98,12 +99,13 @@ bool BatchSequenceReader<ElemType>::getDataSeq(list<pair<int, float>> &list)
             else
                 return true;
         }
+        fin >> prob;
         int word_id = word4idx[word];
         wordRead++;
         last_word_id = -1;
         if (list.size() >= 1)
             last_word_id = list.back().first;
-        list.push_back(pair<int, float>(word_id, (float)-1));
+        list.push_back(pair<int, float>(word_id, prob));
         res = true;
         if (word_id == sentenceEndId && list.size() > 1 && last_word_id != sentenceEndId) { //Meet a sentence End
             break;
@@ -174,7 +176,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     mUnk = readerConfig("unk", "<unk>");
     std::wstring wClassFile = readerConfig("wordclass", "");
     if (wClassFile.compare(L"") == 0) {
-        RuntimeError("[LMHTXSequenceReader] wordclass option not set.");
+        RuntimeError("[LMSNoiseSequenceReader] wordclass option not set.");
     }
     //oneSentenceInMB = (int)readerConfig("oneSentenceInMB", "0"); //In this reader we assume one sentence in a MB
     string outputLabelType_str;
@@ -182,8 +184,10 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     if (strcmp(outputLabelType_str.c_str(), "compressed") == 0)
         outputLabelType = LMSLabelType::compressed;
     else
-    if (strcmp(outputLabelType_str.c_str(), "onehot") == 0)
+    if (strcmp(outputLabelType_str.c_str(), "onehot") == 0) {
         outputLabelType = LMSLabelType::onehot;
+        RuntimeError("[LMSNoiseSequenceReader]BatchSequenceReader<ElemType>::Init for the current implementation, only 'compressed' outputLabelType should be used.");
+    }
     else
         RuntimeError("[LMHTXSequenceReader] outputLabelType not right, can be 'compressed' or 'onehot'.");
 
@@ -337,8 +341,13 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             if (temp_l.front().first == sentenceEndId) //Beginning of a sentence
                 minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceStart);
             temp_l.pop_front();
-            if (outputLabelType == LMSLabelType::compressed)
+            if (outputLabelType == LMSLabelType::compressed) {
                 label_m->SetValue(0, idx, (ElemType)temp_l.front().first);
+                if (noiseRatio == 0 || senCount % (noiseRatio + 1) == 0)
+                    label_m->SetValue(1, idx, (ElemType)1); //This is a data sample
+                else
+                    label_m->SetValue(1, idx, (ElemType)-1);
+            }
             else
                 label_m->SetValue(temp_l.front().first, idx, (ElemType)1);
             prob_m->SetValue(0, idx, temp_l.front().second);

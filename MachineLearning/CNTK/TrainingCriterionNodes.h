@@ -497,8 +497,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
-            fprintf(stderr, "debughtx m_prob check row:%d col:%d norm1:%f\n", Inputs(3)->FunctionValues().GetNumRows(), Inputs(3)->FunctionValues().GetNumCols(), Inputs(3)->FunctionValues().MatrixNorm1());
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, this);
+            //fprintf(stderr, "debughtx m_prob check row:%d col:%d norm1:%f\n", Inputs(3)->FunctionValues().GetNumRows(), Inputs(3)->FunctionValues().GetNumCols(), Inputs(3)->FunctionValues().MatrixNorm1());
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, this);
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
@@ -507,8 +507,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1,
+            const Matrix<ElemType>& inputFunctionValues2, const Matrix<ElemType>& inputFunctionValues3,
             Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight, ComputationNodePtr curNode)
         {
+            fprintf(stderr, "debughtx %d %d\n", inputFunctionValues2.GetNumRows(), inputFunctionValues3.GetNumRows());
             logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
             softmaxOfRight.SetValue(logSoftmaxOfRight);
             softmaxOfRight.InplaceExp();
