@@ -341,12 +341,13 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             if (temp_l.front().first == sentenceEndId) //Beginning of a sentence
                 minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceStart);
             temp_l.pop_front();
-            if (outputLabelType == LMSLabelType::compressed) {
+            if (outputLabelType == LMSLabelType::compressed) { //In the current implementation we only use compressed laybelType
                 label_m->SetValue(0, idx, (ElemType)temp_l.front().first);
                 if (noiseRatio == 0 || senCount % (noiseRatio + 1) == 0)
                     label_m->SetValue(1, idx, (ElemType)1); //This is a data sample
                 else
                     label_m->SetValue(1, idx, (ElemType)-1);
+                label_m->SetValue(2, idx, (ElemType)noiseRatio); //Get the noise ratio here
             }
             else
                 label_m->SetValue(temp_l.front().first, idx, (ElemType)1);

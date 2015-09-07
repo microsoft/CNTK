@@ -421,6 +421,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         UsingComputationNodeMembers;
     public:
+        
+        vector<double> p_model, p_noise; //calculate relative prob of data and noise
+        ElemType noiseRatio; //Get from clabel dim 2
+
         LMNCECrossEntropyWithSoftmaxNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
         {
@@ -428,7 +432,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_deviceId = deviceId;
                 MoveMatricesToDevice(deviceId);
                 InitRecurrentNode();
-            }
+        }
 
         LMNCECrossEntropyWithSoftmaxNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
             : ComputationNode<ElemType>(deviceId), m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
@@ -442,9 +446,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
+            //fprintf(stderr, "debughtx LMNCESoftmax ComputeInputPartial called id:%d\n", inputIndex);
             if (inputIndex > 1)
                 throw std::invalid_argument("CrossEntropyWithSoftmaxNode criterion only takes two inputs.");
-
+            //fprintf(stderr, "debughtx GradientValue(0,0):%lf\n", GradientValues()(0, 0)); //It's just 1
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
@@ -489,6 +494,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
             Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, inputFunctionValues, inputGradientValues);
+
 #if DUMPOUTPUT
             inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
@@ -498,30 +504,64 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
             //fprintf(stderr, "debughtx m_prob check row:%d col:%d norm1:%f\n", Inputs(3)->FunctionValues().GetNumRows(), Inputs(3)->FunctionValues().GetNumCols(), Inputs(3)->FunctionValues().MatrixNorm1());
-            fprintf(stderr, "debughtx LMNCE EvaluateThisNode called\n");
+            //fprintf(stderr, "debughtx LMNCESoftmax EvaluateThisNode called\n");
             Matrix<ElemType> &m_clabel = Inputs(2)->FunctionValues();
             Matrix<ElemType> &m_prob_noise = Inputs(3)->FunctionValues();
 
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, this);
+            
             //fprintf(stderr, "debughtx m_sentenceSeg check row:%d col:%d norm:%f\n", m_sentenceSeg->GetNumRows(), m_sentenceSeg->GetNumCols(), curNode->m_sentenceSeg->MatrixNormInf());
             int seq_size = m_sentenceSeg->GetNumRows(), mb_size = m_sentenceSeg->GetNumCols();
+            p_model.resize(seq_size); p_noise.resize(seq_size); //resize
+            ElemType criterion = 0; //NCE criterion for this MB
             for (int i = 0; i < seq_size; i++) {
+                if ((((*m_sentenceSeg)(i, 0))) == (float)MinibatchPackingFlag::NoInput)
+                    continue;
+                p_model[i] = 1; p_noise[i] = 1; noiseRatio = m_clabel(2, i); //noiseRatio should be the same for the epoch
+                for (int j = 0; j < mb_size; j++) {
+                    int idx = j * seq_size + i;
+                    int w_id = (int)(m_clabel(0, idx));
+                    p_noise[i] = p_noise[i] * m_prob_noise(0, idx);
+                    p_model[i] = p_model[i] * m_softmaxOfRight(w_id, idx);
+                    while (p_noise[i] < 0.01 || p_model[i] < 0.01) //they could be too small
+                    {
+                        p_noise[i] *= 10;
+                        p_model[i] *= 10;
+                        if (p_noise[i] <= 0 || p_model[i] <= 0)
+                            RuntimeError("LMNCE Evaluate this node, got prob <=0 p_noise:%lf p_model:%lf\n", p_noise[i], p_model[i]);
+                    }
+                    if (((*m_sentenceSeg)(i, j)) == (float)MinibatchPackingFlag::SequenceEnd)
+                        break;
+                }
+                if ((int)(m_clabel(1, i)) == 1) //DATA
+                    criterion += (ElemType)log(p_model[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [DATA_SEQ]");
+                else
+                    criterion += (ElemType)log(noiseRatio * p_noise[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [NOISE_SEQ]");
+            }
+            DEVICEID_TYPE FunctionValues_deviceId = FunctionValues().GetDeviceId();
+            FunctionValues().TransferFromDeviceToDevice(FunctionValues_deviceId, CPUDEVICE, true);
+            FunctionValues().SetValue(0, 0, (-1) * criterion);
+            FunctionValues().TransferFromDeviceToDevice(CPUDEVICE, FunctionValues_deviceId, true);
+
+            /*
+            for (int i = 0; i < seq_size; i++) { //debughtx block
                 if ((((*m_sentenceSeg)(i, 0))) == (float)MinibatchPackingFlag::NoInput)
                     continue;
                 if ((int)(m_clabel(1, i)) == 1)
                     fprintf(stderr, "debughtx [DATA_SEQ]");
                 else
                     fprintf(stderr, "debughtx [NOISE_SEQ]");
+                fprintf(stderr, "modelp:%lf noisep:%lf noiseRatio:%f ", p_model[i], p_noise[i], noiseRatio);
                 for (int j = 0; j < mb_size; j++) {
                     int idx = j * seq_size + i;
                     int w_id = (int)(m_clabel(0, idx));
-                    fprintf(stderr, "(wid)%d(n_P)%.5f(d_P)%.5f ", w_id, m_prob_noise(0, idx), m_softmaxOfRight(w_id, idx));
+                    fprintf(stderr, "(wid)%d(n_P)%.6f(m_P)%.6f ", w_id, m_prob_noise(0, idx), m_softmaxOfRight(w_id, idx));
                     if (((*m_sentenceSeg)(i, j)) == (float)MinibatchPackingFlag::SequenceEnd)
                         break;
                 }
                 fprintf(stderr, "\n");
                 system("sleep 0.4");
-            }
+            } */
         }
 
         virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
