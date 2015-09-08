@@ -423,6 +423,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         
         vector<double> p_model, p_noise; //calculate relative prob of data and noise
+        vector<bool> isFromData; //Whether this sentence is from data, get from clabel dim1
         ElemType noiseRatio; //Get from clabel dim 2
 
         LMNCECrossEntropyWithSoftmaxNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
@@ -483,8 +484,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         }
 
-        static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) //debughtx hack:changed from static to non-static function
         {
 #if DUMPOUTPUT
             softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
@@ -492,9 +493,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gradientValues.Print("CrossEntropyWithSoftmax Partial-gradientValues");
             inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
 #endif
-
             Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, inputFunctionValues, inputGradientValues);
-
+            //fprintf(stderr, "debughtx gradientValues size : %d %d\n", inputGradientValues.GetNumRows(), inputGradientValues.GetNumCols());  //Vocabsize * miniBatchSize
+            DEVICEID_TYPE gradientValues_deviceId = inputGradientValues.GetDeviceId();
+            inputGradientValues.TransferFromDeviceToDevice(gradientValues_deviceId, CPUDEVICE);
+            for (int i = 0;i < inputGradientValues.GetNumCols();i++) {
+                int sen_id = i % isFromData.size();
+                double scaling;
+                if (isFromData[sen_id]) {
+                    scaling = p_noise[sen_id] * noiseRatio / (p_model[sen_id] + p_noise[sen_id] * noiseRatio);
+                } else {
+                    scaling = - p_model[sen_id] / (p_model[sen_id] + p_noise[sen_id] * noiseRatio);
+                }
+                for (int j = 0; j < inputGradientValues.GetNumRows(); j++) {
+                    ElemType ele_ori = inputGradientValues(j, i);
+                    inputGradientValues.SetValue(j, i, (ElemType)scaling * ele_ori);
+                }
+            }
+            inputGradientValues.TransferFromDeviceToDevice(CPUDEVICE, gradientValues_deviceId);
 #if DUMPOUTPUT
             inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
@@ -512,7 +528,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
             //fprintf(stderr, "debughtx m_sentenceSeg check row:%d col:%d norm:%f\n", m_sentenceSeg->GetNumRows(), m_sentenceSeg->GetNumCols(), curNode->m_sentenceSeg->MatrixNormInf());
             int seq_size = m_sentenceSeg->GetNumRows(), mb_size = m_sentenceSeg->GetNumCols();
-            p_model.resize(seq_size); p_noise.resize(seq_size); //resize
+            p_model.resize(seq_size); p_noise.resize(seq_size); isFromData.resize(seq_size); //resize
             ElemType criterion = 0; //NCE criterion for this MB
             for (int i = 0; i < seq_size; i++) {
                 if ((((*m_sentenceSeg)(i, 0))) == (float)MinibatchPackingFlag::NoInput)
@@ -533,15 +549,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (((*m_sentenceSeg)(i, j)) == (float)MinibatchPackingFlag::SequenceEnd)
                         break;
                 }
-                if ((int)(m_clabel(1, i)) == 1) //DATA
+                if ((int)(m_clabel(1, i)) == 1) {//DATA 
+                    isFromData[i] = true;
                     criterion += (ElemType)log(p_model[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [DATA_SEQ]");
-                else
+                }
+                else {
+                    isFromData[i] = false;
                     criterion += (ElemType)log(noiseRatio * p_noise[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [NOISE_SEQ]");
+                }
             }
             DEVICEID_TYPE FunctionValues_deviceId = FunctionValues().GetDeviceId();
-            FunctionValues().TransferFromDeviceToDevice(FunctionValues_deviceId, CPUDEVICE, true);
+            FunctionValues().TransferFromDeviceToDevice(FunctionValues_deviceId, CPUDEVICE);
             FunctionValues().SetValue(0, 0, (-1) * criterion);
-            FunctionValues().TransferFromDeviceToDevice(CPUDEVICE, FunctionValues_deviceId, true);
+            FunctionValues().TransferFromDeviceToDevice(CPUDEVICE, FunctionValues_deviceId);
 
             /*
             for (int i = 0; i < seq_size; i++) { //debughtx block
