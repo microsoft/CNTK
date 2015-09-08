@@ -520,9 +520,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static double helperLogDivCal(double la, double lb) { //ln(exp(la)/(exp(la)+exp(lb)))
             if (la > lb)
-                return la - log(1 + exp(lb - la));
+                return - log(1 + exp(lb - la));
             else
-                return la - log(1 + exp(la - lb));
+                return la - lb - log(1 + exp(la - lb));
         }
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
