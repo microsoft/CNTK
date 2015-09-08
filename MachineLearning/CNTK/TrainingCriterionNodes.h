@@ -501,9 +501,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int sen_id = i % isFromData.size();
                 double scaling;
                 if (isFromData[sen_id]) {
-                    scaling = exp(helperLogDivCal(log(noiseRatio) + lp_noise[i], lp_model[i])); //p_noise[sen_id] * noiseRatio / (p_model[sen_id] + p_noise[sen_id] * noiseRatio);
+                    scaling = exp(helperLogDivCal(log(noiseRatio) + lp_noise[sen_id], lp_model[sen_id])); //p_noise[sen_id] * noiseRatio / (p_model[sen_id] + p_noise[sen_id] * noiseRatio);
                 } else {
-                    scaling = - exp(helperLogDivCal(lp_model[i], log(noiseRatio) + lp_noise[i])); //- p_model[sen_id] / (p_model[sen_id] + p_noise[sen_id] * noiseRatio);
+                    scaling = - exp(helperLogDivCal(lp_model[sen_id], log(noiseRatio) + lp_noise[sen_id])); //- p_model[sen_id] / (p_model[sen_id] + p_noise[sen_id] * noiseRatio);
                 }
                 if (isnan(scaling) || scaling < -1 || scaling > 1)
                     RuntimeError("LMNCENode ComputeInputPartialRight error, scaling not in normal range:%lf\n", scaling);
