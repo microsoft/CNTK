@@ -729,15 +729,15 @@ void DoTrain(const ConfigParameters& config)
 
     if (config.Exists("NDLNetworkBuilder"))
     {
-        ConfigParameters config(config("NDLNetworkBuilder"));
+        ConfigParameters ndlNetworkBuilderConfig(config("NDLNetworkBuilder"));
         //netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(static_cast<IComputationNetBuilder<ElemType>*>(new NDLBuilder<ElemType>(config)));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new NDLBuilder<ElemType>(config));
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new NDLBuilder<ElemType>(ndlNetworkBuilderConfig));
     }
     else if (config.Exists("SimpleNetworkBuilder"))
     {
-        ConfigParameters config(config("SimpleNetworkBuilder"));
+        ConfigParameters simpleNetworkBuilderConfig(config("SimpleNetworkBuilder"));
         //netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(static_cast<IComputationNetBuilder<ElemType>*>(new SimpleNetworkBuilder<ElemType>(config)));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new SimpleNetworkBuilder<ElemType>(config));
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new SimpleNetworkBuilder<ElemType>(simpleNetworkBuilderConfig));
     }
     else if (config.Exists("ExperimentalNetworkBuilder"))   // for testing/early access to NDL extensions
     {
