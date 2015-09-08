@@ -422,7 +422,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UsingComputationNodeMembers;
     public:
         
-        vector<double> p_model, p_noise; //calculate relative prob of data and noise
+        vector<double> lp_model, lp_noise; //calculate relative prob of data and noise
         vector<bool> isFromData; //Whether this sentence is from data, get from clabel dim1
         ElemType noiseRatio; //Get from clabel dim 2
 
@@ -501,9 +501,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int sen_id = i % isFromData.size();
                 double scaling;
                 if (isFromData[sen_id]) {
-                    scaling = p_noise[sen_id] * noiseRatio / (p_model[sen_id] + p_noise[sen_id] * noiseRatio);
+                    scaling = exp(helperLogDivCal(log(noiseRatio) + lp_noise[i], lp_model[i])); //p_noise[sen_id] * noiseRatio / (p_model[sen_id] + p_noise[sen_id] * noiseRatio);
                 } else {
-                    scaling = - p_model[sen_id] / (p_model[sen_id] + p_noise[sen_id] * noiseRatio);
+                    scaling = - exp(helperLogDivCal(lp_model[i], log(noiseRatio) + lp_noise[i])); //- p_model[sen_id] / (p_model[sen_id] + p_noise[sen_id] * noiseRatio);
                 }
                 if (isnan(scaling) || scaling < -1 || scaling > 1)
                     RuntimeError("LMNCENode ComputeInputPartialRight error, scaling not in normal range:%lf\n", scaling);
@@ -518,6 +518,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
+        static double helperLogDivCal(double la, double lb) { //ln(exp(la)/(exp(la)+exp(lb)))
+            if (la > lb)
+                return la - log(1 + exp(lb - la));
+            else
+                return la - log(1 + exp(la - lb));
+        }
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
@@ -525,29 +531,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //fprintf(stderr, "debughtx LMNCESoftmax EvaluateThisNode called\n");
             Matrix<ElemType> &m_clabel = Inputs(2)->FunctionValues();
             Matrix<ElemType> &m_prob_noise = Inputs(3)->FunctionValues();
+            //fprintf(stderr, "debughtx m_clabel DeviceId %d m_prob_noise DeviceId %d\n", m_clabel.GetDeviceId(), m_prob_noise.GetDeviceId());
 
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, this);
             
             //fprintf(stderr, "debughtx m_sentenceSeg check row:%d col:%d norm:%f\n", m_sentenceSeg->GetNumRows(), m_sentenceSeg->GetNumCols(), curNode->m_sentenceSeg->MatrixNormInf());
             int seq_size = m_sentenceSeg->GetNumRows(), mb_size = m_sentenceSeg->GetNumCols();
-            p_model.resize(seq_size); p_noise.resize(seq_size); isFromData.resize(seq_size); //resize
+            lp_model.resize(seq_size); lp_noise.resize(seq_size); isFromData.resize(seq_size); //resize
             ElemType criterion = 0; //NCE criterion for this MB
             for (int i = 0; i < seq_size; i++) {
                 if ((((*m_sentenceSeg)(i, 0))) == (float)MinibatchPackingFlag::NoInput)
                     continue;
-                p_model[i] = 1; p_noise[i] = 1; noiseRatio = m_clabel(2, i); //noiseRatio should be the same for the epoch
+                lp_model[i] = 0; lp_noise[i] = 0; noiseRatio = m_clabel(2, i); //noiseRatio should be the same for the epoch
                 for (int j = 0; j < mb_size; j++) {
                     int idx = j * seq_size + i;
                     int w_id = (int)(m_clabel(0, idx));
-                    p_noise[i] = p_noise[i] * m_prob_noise(0, idx);
-                    p_model[i] = p_model[i] * m_softmaxOfRight(w_id, idx);
+                    lp_noise[i] += log(m_prob_noise(0, idx));
+                    lp_model[i] += log(m_softmaxOfRight(w_id, idx));
+                    /*
                     while (p_noise[i] < 0.01 || p_model[i] < 0.01) //they could be too small
                     {
                         p_noise[i] *= 10;
                         p_model[i] *= 10;
+                        if (isinf(p_noise[i])) {
+                            fprintf(stderr, "debughtx WARNING: p_noise[i] got to inf, restrict it to 1e10\n");
+                            p_noise[i] = 1e10;
+                        }
+                        if (isinf(p_model[i])) {
+                            fprintf(stderr, "debughtx WARNING: p_model[i] got to inf, restrict it to 1e10\n");
+                            p_model[i] = 1e10;
+                        }
                         if (p_noise[i] <= 0 || p_model[i] <= 0)
                             RuntimeError("LMNCE Evaluate this node, got prob <=0 p_noise:%lf p_model:%lf\n", p_noise[i], p_model[i]);
                     }
+                    */
                     //while (p_noise[i] > p_model[i] * 1000000) p_noise[i] /= 10;
                     //while (p_model[i] > p_noise[i] * 1000000) p_model[i] /= 10; //Don't know whether it could get to NAN because of this
                     if (((*m_sentenceSeg)(i, j)) == (float)MinibatchPackingFlag::SequenceEnd)
@@ -556,14 +573,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ElemType cNow;
                 if ((int)(m_clabel(1, i)) == 1) {//DATA 
                     isFromData[i] = true;
-                    cNow = (ElemType)log(p_model[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [DATA_SEQ]");
+                    cNow = (ElemType)helperLogDivCal(lp_model[i], log(noiseRatio) + lp_noise[i]); //log(p_model[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [DATA_SEQ]");
                 }
                 else {
                     isFromData[i] = false;
-                    cNow = (ElemType)log(noiseRatio * p_noise[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [NOISE_SEQ]");
+                    cNow = (ElemType)helperLogDivCal(log(noiseRatio) + lp_noise[i], lp_model[i]); //log(noiseRatio * p_noise[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [NOISE_SEQ]");
                 }
                 if (isnan(cNow)) {
-                    RuntimeError("LMNCENode error: got a NaN criterion p_model:%lf p_noise:%lf\n", p_model[i], p_noise[i]);
+                    RuntimeError("LMNCENode error: got a NaN criterion lp_model:%lf lp_noise:%lf\n", lp_model[i], lp_noise[i]);
                 }
                 criterion += cNow;
             }
