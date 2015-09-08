@@ -505,6 +505,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 } else {
                     scaling = - p_model[sen_id] / (p_model[sen_id] + p_noise[sen_id] * noiseRatio);
                 }
+                if (isnan(scaling) || scaling < -1 || scaling > 1)
+                    RuntimeError("LMNCENode ComputeInputPartialRight error, scaling not in normal range:%lf\n", scaling);
                 for (int j = 0; j < inputGradientValues.GetNumRows(); j++) {
                     ElemType ele_ori = inputGradientValues(j, i);
                     inputGradientValues.SetValue(j, i, (ElemType)scaling * ele_ori);
@@ -546,17 +548,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (p_noise[i] <= 0 || p_model[i] <= 0)
                             RuntimeError("LMNCE Evaluate this node, got prob <=0 p_noise:%lf p_model:%lf\n", p_noise[i], p_model[i]);
                     }
+                    //while (p_noise[i] > p_model[i] * 1000000) p_noise[i] /= 10;
+                    //while (p_model[i] > p_noise[i] * 1000000) p_model[i] /= 10; //Don't know whether it could get to NAN because of this
                     if (((*m_sentenceSeg)(i, j)) == (float)MinibatchPackingFlag::SequenceEnd)
                         break;
                 }
+                ElemType cNow;
                 if ((int)(m_clabel(1, i)) == 1) {//DATA 
                     isFromData[i] = true;
-                    criterion += (ElemType)log(p_model[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [DATA_SEQ]");
+                    cNow = (ElemType)log(p_model[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [DATA_SEQ]");
                 }
                 else {
                     isFromData[i] = false;
-                    criterion += (ElemType)log(noiseRatio * p_noise[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [NOISE_SEQ]");
+                    cNow = (ElemType)log(noiseRatio * p_noise[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [NOISE_SEQ]");
                 }
+                if (isnan(cNow)) {
+                    RuntimeError("LMNCENode error: got a NaN criterion p_model:%lf p_noise:%lf\n", p_model[i], p_noise[i]);
+                }
+                criterion += cNow;
             }
             DEVICEID_TYPE FunctionValues_deviceId = FunctionValues().GetDeviceId();
             FunctionValues().TransferFromDeviceToDevice(FunctionValues_deviceId, CPUDEVICE);

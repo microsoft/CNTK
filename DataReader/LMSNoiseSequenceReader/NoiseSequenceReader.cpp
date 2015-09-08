@@ -122,7 +122,7 @@ bool BatchSequenceReader<ElemType>::getNoiseSeq(list<pair<int, float>> &list)
             return false;
         else {
             fin_noise.open(fileName_noise);
-            DEBUG_HTX fprintf(stderr, "BatchSequenceReader<ElemType>::getNoiseSeq looping noise data file...\n");
+            fprintf(stderr, "LMSNoiseReader BatchSequenceReader<ElemType>::getNoiseSeq looping noise data file...\n");
         }
     }
     list.clear();
@@ -136,7 +136,7 @@ bool BatchSequenceReader<ElemType>::getNoiseSeq(list<pair<int, float>> &list)
             fin_noise.close();
             if (loopNoiseFile) {
                 fin_noise.open(fileName_noise);
-                DEBUG_HTX fprintf(stderr, "BatchSequenceReader<ElemType>::getNoiseSeq looping noise data file...\n");
+                fprintf(stderr, "LMSNoiseReader BatchSequenceReader<ElemType>::getNoiseSeq looping noise data file...\n");
                 fin_noise >> word;
             }
             else {
