@@ -496,7 +496,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, inputFunctionValues, inputGradientValues);
             //fprintf(stderr, "debughtx gradientValues size : %d %d\n", inputGradientValues.GetNumRows(), inputGradientValues.GetNumCols());  //Vocabsize * miniBatchSize
             //DEVICEID_TYPE gradientValues_deviceId = inputGradientValues.GetDeviceId();
-            inputGradientValues.TransferFromDeviceToDevice(m_deviceId, CPUDEVICE);
+            //inputGradientValues.TransferFromDeviceToDevice(m_deviceId, CPUDEVICE);
             for (int i = 0;i < inputGradientValues.GetNumCols();i++) {
                 int sen_id = i % isFromData.size();
                 double scaling;
@@ -508,12 +508,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //fprintf(stderr, "scaling : %lf\n", scaling); //At the beginning of the training, it should 
                 if (isnan(scaling) || scaling < -1 || scaling > 1)
                     RuntimeError("LMNCENode ComputeInputPartialRight error, scaling not in normal range:%lf\n", scaling);
+                inputGradientValues.ColumnSlice(i, 1) *= (ElemType)scaling; //Fast implementation
+                /*
                 for (int j = 0; j < inputGradientValues.GetNumRows(); j++) {
                     ElemType ele_ori = inputGradientValues(j, i);
                     inputGradientValues.SetValue(j, i, (ElemType)scaling * ele_ori);
                 }
+                */
             }
-            inputGradientValues.TransferFromDeviceToDevice(CPUDEVICE, m_deviceId);
+            //inputGradientValues.TransferFromDeviceToDevice(CPUDEVICE, m_deviceId);
 #if DUMPOUTPUT
             inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
