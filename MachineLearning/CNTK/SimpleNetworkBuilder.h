@@ -254,8 +254,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return std::string(tag) == expectedTag;
         }
 
+        // this load function allows an alternative file format of an early internal predecessor of CNTK, internally called DBN.exe
         virtual ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-                                                                  bool bAllowNoCriterion = false, ComputationNetwork* anotherNetwork = nullptr)
+                                                        bool bAllowNoCriterion = false, ComputationNetwork* anotherNetwork = nullptr)
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
             {

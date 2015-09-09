@@ -20,6 +20,7 @@
 
 #include "Basics.h"
 #include "Matrix.h"
+#include "File.h"   // for LoadMatrixFromTextFile()
 #include "ComputationNode.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -77,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
 
-        // TODO: also move file loading here?
+        // initialize with random numbers
         void InitRandom(const bool uniformInit,
                         const unsigned long randomSeed,
                         const ElemType initValueScale,
@@ -100,6 +101,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             if (initOnCPUOnly)
                 m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId, true);
+        }
+
+        // initialize by reading a matrix from a text file
+        void InitFromFile(const std::wstring & initFromFilePath)
+        {
+            size_t numRows = 0;
+            size_t numCols = 0;
+            auto array = File::LoadMatrixFromTextFile<ElemType>(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
+            FunctionValues().SetValue(numRows, numCols, array.data(), matrixFlagNormal, m_deviceId);
         }
 
         virtual const std::wstring OperationName() const {return TypeName();}

@@ -10,7 +10,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    template<typename ElemType>
+    template<class ElemType>
     class ComputationNetworkBuilder
     {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;

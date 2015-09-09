@@ -216,7 +216,6 @@ public:
     // serialization
     // -----------------------------------------------------------------------
 
-    // TODO: how does the file distinguish float vs double nodes?
     void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
 private:
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
@@ -224,7 +223,9 @@ public:
 
     void LoadPersistableParametersFromFile(const std::wstring& fileName, const bool requireValidation = true,
                                            const FileOptions fileFormat = FileOptions::fileOptionsBinary);
-    template<typename ElemType>
+    // design BUGBUG: binary files do not know whether they are float or double.
+    // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
+    template<class ElemType>
     void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
                       const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
 
@@ -268,96 +269,6 @@ public:
         }
         else
             return numAllSamples;
-        }
-
-    // -----------------------------------------------------------------------
-    // serialization
-    // -----------------------------------------------------------------------
-
-    // Read a matrix stored in text format from 'filePath' (whitespace-separated columns, newline-separated rows),
-    // and return a flat array containing the contents of this file in column-major format.
-    // filePath: path to file containing matrix in text format.
-    // numRows/numCols: after this function is called, these parameters contain the number of rows/columns in the matrix.
-    // returns: a flat array containing the contents of this file in column-major format
-    // NOTE: caller is responsible for deleting the returned buffer once it is finished using it.
-    // TODO: change to return a std::vector<ElemType>; solves the ownership issue
-    // TODO: move this elsewhere, this is a general utility function that does not belong into the ComputationNetwork class
-    template<class ElemType>
-    static ElemType* LoadArrayFromTextFile(const std::string filePath, size_t& numRows, size_t& numCols)
-    {
-        size_t r = 0;
-        size_t numColsInFirstRow = 0;
-
-        // NOTE: Not using the Microsoft.MSR.CNTK.File API here because it
-        // uses a buffer of fixed size, which doesn't allow very long rows.
-        // See fileutil.cpp fgetline method (std::string fgetline (FILE * f) { fixed_vector<char> buf (1000000); ... })
-        std::ifstream myfile(filePath);
-
-        // load matrix into vector of vectors (since we don't know the size in advance).
-        std::vector<std::vector<ElemType>> elements;
-        if (myfile.is_open())
-        {
-            std::string line;
-            while (std::getline(myfile, line))
-            {
-                // Break on empty line.  This allows there to be an empty line at the end of the file.
-                if (line == "")
-                    break;
-
-                istringstream iss(line);
-                ElemType element;
-                int numElementsInRow = 0;
-                elements.push_back(std::vector<ElemType>());
-                while (iss >> element)
-                {
-                    elements[r].push_back(element);
-                    numElementsInRow++;
-                }
-
-                if (r == 0)
-                    numColsInFirstRow = numElementsInRow;
-                else if (numElementsInRow != numColsInFirstRow)
-                    RuntimeError("The rows in the provided file do not all have the same number of columns: " + filePath);
-
-                r++;
-            }
-            myfile.close();
-        }
-        else
-            RuntimeError("Unable to open file");
-
-        numRows = r;
-        numCols = numColsInFirstRow;
-
-        ElemType* pArray = new ElemType[numRows * numCols];
-
-        // Perform transpose when copying elements from vectors to ElemType[],
-        // in order to store in column-major format.
-        for (int i = 0; i < numCols; i++)
-        {
-            for (int j = 0; j < numRows; j++)
-                pArray[i * numRows + j] = elements[j][i];
-            }
-
-        return pArray;
-    }
-
-    // TODO: why is this here? Move to LearnableParameter class?
-    template<class ElemType>
-    static void InitLearnableParametersFromFile(const shared_ptr<ComputationNode<ElemType>> node,
-                                                const std::wstring & initFromFilePath,
-                                                DEVICEID_TYPE deviceId)    // TODO: why not just use node->m_deviceId?
-    {
-        size_t numRows = 0;
-        size_t numCols = 0;
-        ElemType *pArray = LoadArrayFromTextFile<ElemType>(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
-        node->FunctionValues().SetValue(numRows, numCols, pArray, matrixFlagNormal, deviceId);
-        delete[] pArray;    // TODO: use std::vector to avoid mem leak on error
-    }
-    template<class ElemType>
-    void InitLearnableParametersFromFile(const shared_ptr<ComputationNode<ElemType>> node, const std::string & initFromFilePath)   // TODO: remove this method or change pathname to wstring
-    {
-        InitLearnableParametersFromFile(node, msra::strfun::utf16(initFromFilePath), this->GetDeviceID());
     }
 
     // -----------------------------------------------------------------------
@@ -366,7 +277,7 @@ public:
 
     // non-static version needed because it accesses m_randomSeedOffset
     // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
-    template<typename ElemType>
+    template<class ElemType>
     void InitLearnableParameters(const ComputationNodeBasePtr node,
                                  const bool uniformInit,
                                  const unsigned long randomSeed,
@@ -679,6 +590,9 @@ public:
 
     void SetNodesReqMultiSeqHandling();
 
+    // MAIN ENTRY POINT for evaluation (forward prop)
+    // TODO: pass a set of nodes instead of only one
+    // TODO: rename to ForwardProp()? To make it very clear?
     void Evaluate(const ComputationNodeBasePtr rootNode)
     {
         BuildAndValidateNetwork(rootNode);
@@ -793,7 +707,9 @@ public:
         }
     }
 
-    template<typename ElemType>
+    // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
+    // TODO: pass a set of nodes instead of only one
+    template<class ElemType>
     void ComputeGradient(const ComputationNodeBasePtr rootNode, 
                          bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
                          const Matrix<ElemType>* rootGradientInitValue = nullptr,
@@ -807,12 +723,13 @@ public:
         //run forward pass first
         Evaluate(rootNode);
 
+        // TODO: comment what the purpose of this is
         if (bClearGradient)
             ClearGradientForAllNodes(rootNode);
 
         //run backward pass
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
-            
+
         // TODO: do a runtime check for float vs. double. Also use the Is/AsPtr macros
         if (bResetToOne)
         {
@@ -871,6 +788,12 @@ public:
             node->PrintSelf(printMatrices);
         }
     }
+
+    // a few more helpers
+    static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes);
+    template<class ElemType> // TODO: dropoutRate change to double
+    static void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
+    static void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------
     // network editing
@@ -1389,7 +1312,7 @@ public:
     // B and C are two learnable parameters
     //========================================
     // BUGBUG: this only currently works for one ElemType, not both
-    template<typename ElemType>
+    template<class ElemType>
     void PerformSVDecomposition(const map<wstring, float>& SVDConfig);
 
 public:
@@ -1398,7 +1321,7 @@ public:
     // -----------------------------------------------------------------------
 
     // TODO: make these templated on <ElemType> locally
-    template<typename ElemType>
+    template<class ElemType>
     void GetHistory(map<wstring, Matrix<ElemType>>& history, bool bLastTime = false)
     {
         //put all node info first
@@ -1411,7 +1334,7 @@ public:
         }
     };
 
-    template<typename ElemType>
+    template<class ElemType>
     void SetHistory(map<wstring, Matrix<ElemType>>& history)
     {
         //put all node info first

@@ -90,6 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // TODO: OperationName calls static TypeName which does not match the actual type names in that the 'Node' is missing.
         virtual const std::wstring OperationName() const = 0;
+#define OperationNameOf(T) (T<float>::TypeName())    // we are templated, but for this the type param matters not. So we just pick one, and hide that fact.
 
         // TODO: make sure this does not get implemented in any of the base classes
         DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }    // TODO: remove, only used from copy constructor which will go away
@@ -1255,7 +1256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
 
     // This will provide default implementations for those two functions that will fail at runtime with a meaningful error.
-    template<typename ElemType>
+    template<class ElemType>
     class ComputationNodeNonLooping : public ComputationNode<ElemType>
     {
     public:

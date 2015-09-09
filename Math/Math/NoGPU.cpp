@@ -359,7 +359,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class GPUSparseMatrix<float>;
     template class GPUSparseMatrix<double>;
 
-    template <class ElemType>
+    template <typename ElemType>
     MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
     {
         return stream;
@@ -368,7 +368,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template MATH_API File& operator>>(File& stream, GPUSparseMatrix<float>& us);
     template MATH_API File& operator>>(File& stream, GPUSparseMatrix<double>& us);
 
-    template <class ElemType>
+    template <typename ElemType>
     MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
     {
         return stream;

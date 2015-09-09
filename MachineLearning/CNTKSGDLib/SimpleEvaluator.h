@@ -12,11 +12,11 @@
 #include <fstream>
 #include <queue>
 #include "Basics.h"
+#include "Helpers.h"    // for foreach_column() macro
 #include "fileutil.h"
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "ComputationNetwork.h"
-#include "ComputationNetworkHelper.h"
 #include "TrainingCriterionNodes.h" // TODO: we should move the functions that depend on these to the .cpp
 #include "CompositeComputationNodes.h"
 
@@ -25,29 +25,30 @@ using namespace std;
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
-    struct NN_state {
+    struct NN_state
+    {
         map<wstring, Matrix<ElemType>> hidden_activity;
     };
 
     template<class ElemType>
-    struct Token{
-        Token(const ElemType score, const std::vector<size_t> &sequence, const NN_state<ElemType> & state)
-        : score(score), sequence(sequence), state(state) {
-        }
-        bool operator<(const Token &t) const {
+    struct Token
+    {
+        Token(const double score, const std::vector<size_t> &sequence, const NN_state<ElemType> & state) :
+            score(score), sequence(sequence), state(state)
+        { }
+        bool operator<(const Token<ElemType> &t) const
+        {
             return score < t.score;
         }
-        ElemType score;
+        double score;
         vector<size_t> sequence;
         NN_state<ElemType> state;
     };
 
     // TODO: get rid of dependency on ElemType
     template<class ElemType>
-    class SimpleEvaluator : ComputationNetworkHelper<ElemType>
+    class SimpleEvaluator
     {
-        typedef ComputationNetworkHelper<ElemType> B;
-        using B::UpdateEvalTimeStamps;
     protected:
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
         typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
@@ -64,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
-        vector<ElemType> Evaluate(IDataReader<ElemType>* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
+        vector<double> Evaluate(IDataReader<ElemType>* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
         {
             //specify evaluation nodes
             std::vector<ComputationNodeBasePtr> evalNodes;
@@ -94,11 +95,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             //initialize eval results
-            std::vector<ElemType> evalResults;
+            std::vector<double> evalResults;
             for (int i = 0; i < evalNodes.size(); i++)
-            {
-                evalResults.push_back((ElemType)0);
-            }
+                evalResults.push_back((double)0);
 
             //prepare features and labels
             auto & featureNodes = m_net.FeatureNodes();
@@ -117,7 +116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numSamplesLastMBs = 0;
             size_t lastMBsRun = 0; //MBs run before this display
 
-            std::vector<ElemType> evalResultsLastMBs;
+            std::vector<double> evalResultsLastMBs;
             for (int i = 0; i < evalResults.size(); i++)
                 evalResultsLastMBs.push_back((ElemType)0);
 
@@ -125,8 +124,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             while (dataReader->GetMinibatch(inputMatrices))
             {
-                UpdateEvalTimeStamps(featureNodes);
-                UpdateEvalTimeStamps(labelNodes);
+                ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+                ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
                 actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
@@ -140,7 +139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int i = 0; i<evalNodes.size(); i++)
                 {
                     m_net.Evaluate(evalNodes[i]);
-                    evalResults[i] += (ElemType)evalNodes[i]->Get00Element(); //criterionNode should be a scalar
+                    evalResults[i] += (double)evalNodes[i]->Get00Element(); //criterionNode should be a scalar
                 }
 
                 totalEpochSamples += numSamplesWithLabel;
@@ -192,7 +191,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //returns error rate
-        ElemType EvaluateUnroll(IDataReader<ElemType>* dataReader, const size_t mbSize, ElemType &evalSetCrossEntropy, const wchar_t* output = nullptr, const size_t testSize = requestDataSize)
+        double EvaluateUnroll(IDataReader<ElemType>* dataReader, const size_t mbSize, double &evalSetCrossEntropy, const wchar_t* output = nullptr, const size_t testSize = requestDataSize)
         {
             std::vector<ComputationNodeBasePtr> & featureNodes = m_net.FeatureNodes();
             std::vector<ComputationNodeBasePtr> & labelNodes = m_net.LabelNodes();
@@ -213,16 +212,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             dataReader->StartMinibatchLoop(mbSize, 0, testSize);
 
-            ElemType epochEvalError = 0;
-            ElemType epochCrossEntropy = 0;
+            double epochEvalError = 0;
+            double epochCrossEntropy = 0;
             size_t totalEpochSamples = 0;
-            ElemType prevEpochEvalError = 0;
-            ElemType prevEpochCrossEntropy = 0;
+            double prevEpochEvalError = 0;
+            double prevEpochCrossEntropy = 0;
             size_t prevTotalEpochSamples = 0;
             size_t prevStart = 1;
             size_t numSamples = 0;
-            ElemType crossEntropy = 0;
-            ElemType evalError = 0;
+            double crossEntropy = 0;
+            double evalError = 0;
 
             ofstream outputStream;
             if (output)
@@ -250,10 +249,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     m_net.Evaluate(evaluationNodes[npos]);
 
-                    ElemType mbCrossEntropy = (ElemType)criterionNodes[npos]->Get00Element(); // criterionNode should be a scalar
+                    double mbCrossEntropy = (double)criterionNodes[npos]->Get00Element(); // criterionNode should be a scalar
                     epochCrossEntropy += mbCrossEntropy;
 
-                    ElemType mbEvalError = (ElemType)evaluationNodes[npos]->Get00Element(); //criterionNode should be a scalar
+                    double mbEvalError = (double)evaluationNodes[npos]->Get00Element(); //criterionNode should be a scalar
 
                     epochEvalError += mbEvalError;
                 }
@@ -301,8 +300,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             //final statistics
-            epochEvalError /= (ElemType)totalEpochSamples;
-            epochCrossEntropy /= (ElemType)totalEpochSamples;
+            epochEvalError /= (double)totalEpochSamples;
+            epochCrossEntropy /= (double)totalEpochSamples;
             fprintf(stderr, "Overall: Samples Evaluated = %lu   EvalErr Per Sample = %.8g   Loss Per Sample = %.8g\n", totalEpochSamples, epochEvalError, epochCrossEntropy);
             if (outputStream.is_open())
             {
@@ -315,11 +314,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs,
             const vector<ComputationNodeBasePtr>& evalNodes,
-            const ElemType evalResults, const ElemType evalResultsLastMBs, bool displayConvertedValue = false)
+            const double evalResults, const double evalResultsLastMBs, bool displayConvertedValue = false)
         {
-            vector<ElemType> evaR;
+            vector<double> evaR;
             evaR.push_back(evalResults);
-            vector<ElemType> evaLast;
+            vector<double> evaLast;
             evaLast.push_back(evalResultsLastMBs);
 
             DisplayEvalStatistics(startMBNum, endMBNum, numSamplesLastMBs, evalNodes, evaR, evaLast, displayConvertedValue);
@@ -327,22 +326,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, const vector<ComputationNodeBasePtr>& evalNodes,
-                                    const vector<ElemType> & evalResults, const vector<ElemType> & evalResultsLastMBs, bool displayConvertedValue = false)
+                                    const vector<double> & evalResults, const vector<double> & evalResultsLastMBs, bool displayConvertedValue = false)
         {
             fprintf(stderr, "Minibatch[%lu-%lu]: Samples Seen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
 
             for (size_t i = 0; i < evalResults.size(); i++)
             {
-                ElemType eresult = (evalResults[i] - evalResultsLastMBs[i]) / numSamplesLastMBs;
+                double eresult = (evalResults[i] - evalResultsLastMBs[i]) / numSamplesLastMBs;
                 fprintf(stderr, "%ls: %ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), evalNodes[i]->OperationName().c_str(), eresult);
 
                 if (displayConvertedValue)
                 {
                     //display Perplexity as well for crossEntropy values
-                    if (evalNodes[i]->OperationName() == CrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
-                        evalNodes[i]->OperationName() == CrossEntropyNode<ElemType>::TypeName() ||
-                        evalNodes[i]->OperationName() == ClassBasedCrossEntropyWithSoftmaxNode<ElemType>::TypeName() ||
-                        evalNodes[i]->OperationName() == NoiseContrastiveEstimationNode<ElemType>::TypeName())
+                    if (evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
+                        evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyNode) ||
+                        evalNodes[i]->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
+                        evalNodes[i]->OperationName() == OperationNameOf(NoiseContrastiveEstimationNode))
                         fprintf(stderr, "Perplexity = %.8g    ", std::exp(eresult));
                 }
             }
@@ -372,7 +371,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         this evaluates encoder network and decoder framework
         only beam search decoding is applied to the last network
         */
-        ElemType EvaluateEncoderDecoderWithHiddenStates(
+        double EvaluateEncoderDecoderWithHiddenStates(
             vector<ComputationNetwork*> nets,
             vector<IDataReader<ElemType>*> dataReaders,
             const size_t mbSize,
@@ -386,7 +385,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             const auto & decoderEvaluationNodes = decoderNet->EvaluationNodes();
 
-            ElemType evalResults = 0;
+            double evalResults = 0;
 
             vector<std::map<std::wstring, Matrix<ElemType>*>*> inputMatrices;
             for (auto ptr = nets.begin(); ptr != nets.end(); ptr++)
@@ -412,7 +411,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numSamplesLastMBs = 0;
             size_t lastMBsRun = 0; //MBs run before this display
 
-            ElemType evalResultsLastMBs = (ElemType)0;
+            double evalResultsLastMBs = (double)0;
 
             for (auto ptr = dataReaders.begin(); ptr != dataReaders.end(); ptr++)
             {
@@ -440,7 +439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto ptr = nets.begin(); ptr != nets.end(); ptr++)
                 {
                     const auto & featNodes = (*ptr)->FeatureNodes();
-                    UpdateEvalTimeStamps(featNodes);
+                    ComputationNetwork::UpdateEvalTimeStamps(featNodes);
                 }
 
                 auto preader = dataReaders.begin();
@@ -481,7 +480,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if ((*ptr)->GetNumRows() != 1 || (*ptr)->GetNumCols() != 1)
                         LogicError("EvaluateEncoderDecoderWithHiddenStates: decoder evaluation should return a scalar value");
 
-                    evalResults += (ElemType)(*ptr)->Get00Element();
+                    evalResults += (double)(*ptr)->Get00Element();
                 }
 
                 totalEpochSamples += actualMBSize;
@@ -575,7 +574,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             IDataWriter<ElemType>& dataWriter,
             const vector<wstring>& evalNodeNames,
             const vector<wstring>& writeNodeNames,
-            const size_t mbSize, const ElemType beam, const size_t testSize)
+            const size_t mbSize, const double beam, const size_t testSize)
         {
             size_t iNumNets = nets.size();
             if (iNumNets < 2)
@@ -655,7 +654,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     /// only on the encoder part of the networks
                     const auto & featNodes = (*ptr)->FeatureNodes();
-                    UpdateEvalTimeStamps(featNodes);
+                    ComputationNetwork::UpdateEvalTimeStamps(featNodes);
                 }
 
 
@@ -695,30 +694,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         bool GetCandidatesAtOneTimeInstance(const Matrix<ElemType>& score,
-                                            const ElemType & preScore, const ElemType & threshold,
-                                            const ElemType& best_score_so_far,
-                                            vector<pair<int, ElemType>>& rCandidate)
+                                            const double & preScore, const double & threshold,
+                                            const double& best_score_so_far,
+                                            vector<pair<int, double>>& rCandidate)
         {
             Matrix<ElemType> ptrScore(CPUDEVICE);
             ptrScore = score;
 
             ElemType *pPointer = ptrScore.BufferPointer();
-            vector<pair<int, ElemType>> tPairs;
+            vector<pair<int, double>> tPairs;
             for (int i = 0; i < ptrScore.GetNumElements(); i++)
             {
                 tPairs.push_back(make_pair(i, pPointer[i]));
                 //                    assert(pPointer[i] <= 1.0); /// work on the posterior probabilty, so every score should be smaller than 1.0
             }
 
-            std::sort(tPairs.begin(), tPairs.end(), comparator<ElemType>);
+            std::sort(tPairs.begin(), tPairs.end(), comparator<double>);
 
             bool bAboveThreshold = false;
-            for (typename vector<pair<int, ElemType>>::iterator itr = tPairs.begin(); itr != tPairs.end(); itr++)
+            for (typename vector<pair<int, double>>::iterator itr = tPairs.begin(); itr != tPairs.end(); itr++)
             {
                 if (itr->second < 0.0)
                     LogicError("This means to use probability so the value should be non-negative");
 
-                ElemType dScore = (itr->second >(ElemType)EPS_IN_LOG) ? log(itr->second) : (ElemType)LOG_OF_EPS_IN_LOG;
+                double dScore = (itr->second >(double)EPS_IN_LOG) ? log(itr->second) : (double)LOG_OF_EPS_IN_LOG;
 
                 dScore += preScore;
                 if (dScore >= threshold && dScore >= best_score_so_far)
@@ -770,7 +769,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return false;
             }
 
-            UpdateEvalTimeStamps(featureNodes);
+            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
             size_t actualMBSize = net.GetActualMBSize();
             net.SetActualMiniBatchSize(actualMBSize);
@@ -809,7 +808,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             dataWriter.SaveData(nidx, outputMatrices, bSize, bSize, 0);
         }
 
-        void BeamSearch(IDataReader<ElemType>* dataReader, IDataWriter<ElemType>& dataWriter, const vector<wstring>& outputNodeNames, const vector<wstring>& writeNodeNames, const size_t mbSize, const ElemType beam, const size_t testSize)
+        void BeamSearch(IDataReader<ElemType>* dataReader, IDataWriter<ElemType>& dataWriter, const vector<wstring>& outputNodeNames, const vector<wstring>& writeNodeNames, const size_t mbSize, const double beam, const size_t testSize)
         {
             clock_t startReadMBTime = 0, endComputeMBTime = 0;
 
@@ -842,10 +841,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             startReadMBTime = clock();
             size_t numMBsRun = 0;
-            ElemType ComputeTimeInMBs = 0;
+            double ComputeTimeInMBs = 0;
             while (dataReader->GetMinibatch(inputMatrices))
             {
-                UpdateEvalTimeStamps(featureNodes);
+                ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
                 actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
@@ -868,7 +867,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (m_traceLevel > 0)
                 {
-                    ElemType MBComputeTime = (ElemType)(endComputeMBTime - startReadMBTime) / CLOCKS_PER_SEC;
+                    double MBComputeTime = (double)(endComputeMBTime - startReadMBTime) / CLOCKS_PER_SEC;
 
                     ComputeTimeInMBs += MBComputeTime;
 
@@ -886,7 +885,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                           const std::vector<ComputationNodeBasePtr>& evalNodes,
                           const std::vector<ComputationNodeBasePtr>& outputNodes,
                           /*const*/ std::vector<ComputationNodeBasePtr>& featureNodes,
-                          const ElemType beam,
+                          const double beam,
                           std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
                           vector<size_t> &best_path)
         {
@@ -902,7 +901,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             evaluate their scores, save their histories
             */
             priority_queue<Token<ElemType>> from_queue, to_queue;
-            vector<ElemType> evalResults;
+            vector<double> evalResults;
 
             size_t mbSize;
             mbSize = evalnet->GetActualMBSize();
@@ -938,7 +937,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (itdx = 0; itdx < maxSize; itdx++)
             {
-                ElemType best_score = -numeric_limits<ElemType>::infinity();
+                double best_score = -numeric_limits<double>::infinity();
                 vector<size_t> best_output_label;
 
                 if (itdx > 0)
@@ -954,7 +953,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     vector<size_t> history = from_token.sequence;
 
                     /// update feature nodes once, as the observation is the same for all propsoals in labels
-                    UpdateEvalTimeStamps(featureNodes);
+                    ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
                     /// history is updated in the getproposalobs function
                     dataReader->GetProposalObs(inputMatrices, itdx, history);
@@ -966,13 +965,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (int i = 0; i < evalNodes.size(); i++)
                     {
                         evalnet->Evaluate(evalNodes[i]);
-                        vector<pair<int, ElemType>> retPair;
-                        if (GetCandidatesAtOneTimeInstance(dynamic_pointer_cast<ComputationNode<ElemType>>(evalNodes[i])->FunctionValues(), from_token.score, best_score - beam, -numeric_limits<ElemType>::infinity(), retPair)
+                        vector<pair<int, double>> retPair;
+                        if (GetCandidatesAtOneTimeInstance(dynamic_pointer_cast<ComputationNode<ElemType>>(evalNodes[i])->FunctionValues(), from_token.score, best_score - beam, -numeric_limits<double>::infinity(), retPair)
                             == false)
                             continue;
 
                         evalnet->GetHistory(state.hidden_activity, true);
-                        for (typename vector<pair<int, ElemType>>::iterator itr = retPair.begin(); itr != retPair.end(); itr++)
+                        for (typename vector<pair<int, double>>::iterator itr = retPair.begin(); itr != retPair.end(); itr++)
                         {
                             vector<size_t> history = from_token.sequence;
                             history.push_back(itr->first);
@@ -997,7 +996,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     break;
 
                 // beam pruning
-                const ElemType threshold = best_score - beam;
+                const double threshold = best_score - beam;
                 while (!to_queue.empty())
                 {
                     if (to_queue.top().score >= threshold)
@@ -1036,14 +1035,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
             beam search decoder
             */
-        ElemType FindBestPathWithVariableLength(ComputationNetwork* evalnet,
+        double FindBestPathWithVariableLength(ComputationNetwork* evalnet,
             size_t inputLength,
             IDataReader<ElemType>* dataReader,
             IDataWriter<ElemType>& dataWriter,
             std::vector<ComputationNodeBasePtr>& evalNodes,
             std::vector<ComputationNodeBasePtr>& outputNodes,
             std::vector<ComputationNodeBasePtr>& featureNodes,
-            const ElemType beam,
+            const double beam,
             std::map<std::wstring, Matrix<ElemType>*> * inputMatrices,
             vector<size_t> &best_path)
         {
@@ -1060,7 +1059,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             */
             std::priority_queue<Token<ElemType>> from_queue, to_queue;
             std::priority_queue<Token<ElemType>> result_queue;
-            vector<ElemType> evalResults;
+            vector<double> evalResults;
 
             size_t mbSize = inputLength;
             size_t maxMbSize = 3 * mbSize;
@@ -1093,14 +1092,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// is the begining of sentence
             evalnet->SetActualMiniBatchSize(dataReader->NumberSlicesInEachRecurrentIter());
 
-            ElemType best_score = -numeric_limits<ElemType>::infinity();
-            ElemType best_score_so_far = -numeric_limits<ElemType>::infinity();
+            double best_score = -numeric_limits<double>::infinity();
+            double best_score_so_far = -numeric_limits<double>::infinity();
 
             evalnet->SentenceBoundary().SetValue(SEQUENCE_START);
 
             for (itdx = 0; itdx < maxMbSize; itdx++)
             {
-                ElemType best_score = -numeric_limits<ElemType>::infinity();
+                double best_score = -numeric_limits<double>::infinity();
                 vector<size_t> best_output_label;
 
                 if (itdx > 0)
@@ -1116,7 +1115,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     vector<size_t> history = from_token.sequence;
 
                     /// update feature nodes once, as the observation is the same for all propsoals in labels
-                    UpdateEvalTimeStamps(featureNodes);
+                    ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
                     /// history is updated in the getproposalobs function
                     dataReader->GetProposalObs(inputMatrices, itdx, history);
@@ -1128,14 +1127,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (int i = 0; i < evalNodes.size(); i++)
                     {
                         evalnet->Evaluate(evalNodes[i]);
-                        vector<pair<int, ElemType>> retPair;
+                        vector<pair<int, double>> retPair;
                         if (GetCandidatesAtOneTimeInstance(dynamic_pointer_cast<ComputationNode<ElemType>>(evalNodes[i])->FunctionValues(),
-                                                           from_token.score, best_score - beam, -numeric_limits<ElemType>::infinity(), retPair)
+                                                           from_token.score, best_score - beam, -numeric_limits<double>::infinity(), retPair)
                             == false)   // ==false??? !(.)?
                             continue;
 
                         evalnet->GetHistory(state.hidden_activity, true);
-                        for (typename vector<pair<int, ElemType>>::iterator itr = retPair.begin(); itr != retPair.end(); itr++)
+                        for (typename vector<pair<int, double>>::iterator itr = retPair.begin(); itr != retPair.end(); itr++)
                         {
                             vector<size_t> history = from_token.sequence;
                             history.push_back(itr->first);
@@ -1169,7 +1168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     break;
 
                 // beam pruning
-                const ElemType threshold = best_score - beam;
+                const double threshold = best_score - beam;
                 while (!to_queue.empty())
                 {
                     if (to_queue.top().score >= threshold)
@@ -1189,7 +1188,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 assert(best_path.empty());
                 best_path.swap(const_cast<vector<size_t>&>(result_queue.top().sequence));
                 {
-                    ElemType score = result_queue.top().score;
+                    double score = result_queue.top().score;
                     best_score = score;
                     fprintf(stderr, "best[%zd] score = %.4e\t", ibest, score);
                     if (best_path.size() > 0)

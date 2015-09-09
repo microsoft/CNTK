@@ -22,7 +22,7 @@
     </SccLocalPath>
     <SccProvider>
     </SccProvider>
-    <ProjectName>CNTKMath</ProjectName>
+    <ProjectName>CNTKMathDll</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">

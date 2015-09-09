@@ -6,7 +6,6 @@
 #pragma once
 
 #include "ComputationNetwork.h"
-#include "ComputationNetworkHelper.h"
 #include "DataReader.h"
 #include <vector>
 #include <string>
@@ -20,19 +19,15 @@ using namespace std;
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
-    class SimpleOutputWriter : ComputationNetworkHelper<ElemType>
+    class SimpleOutputWriter
     {
-        typedef ComputationNetworkHelper<ElemType> B;
-        using B::UpdateEvalTimeStamps;
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
     public:
 
-        SimpleOutputWriter(ComputationNetwork & net, int verbosity=0)
-            : m_net(net), m_verbosity(verbosity)
-        {
-
-        }
+        SimpleOutputWriter(ComputationNetwork & net, int verbosity = 0) :
+            m_net(net), m_verbosity(verbosity)
+        { }
 
         void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, IDataWriter<ElemType>& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples=requestDataSize, bool doUnitTest = false)
         {
@@ -74,8 +69,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             while (dataReader.GetMinibatch(inputMatrices))
             {
-                UpdateEvalTimeStamps(featureNodes);
-                UpdateEvalTimeStamps(labelNodes);
+                ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+                ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
                 size_t actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
@@ -157,7 +152,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             while (dataReader.GetMinibatch(inputMatrices))
             {
-                UpdateEvalTimeStamps(featureNodes);
+                ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
                 size_t actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
