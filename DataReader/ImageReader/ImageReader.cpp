@@ -6,12 +6,13 @@
 
 #include "stdafx.h"
 #define DATAREADER_EXPORTS  // creating the exports here
-#include "DataReader.h"
-#include "ImageReader.h"
-#include "commandArgUtil.h"
 #include <algorithm>
 #include <fstream>
 #include <sstream>
+#include <opencv2/opencv.hpp>
+#include "DataReader.h"
+#include "ImageReader.h"
+#include "commandArgUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -44,7 +45,7 @@ public:
     {
         m_cropType = ParseCropType(config("cropType", ""));
         m_cropRatio = std::stof(config("cropRatio", "1"));
-        if (!(0 < m_cropRatio && m_cropRatio <= 1.0f))
+        if (!(0 < m_cropRatio && m_cropRatio <= 1.0))
             RuntimeError("Invalid cropRatio value: %f.", m_cropRatio);
         if (!config.ExistsCurrent("hflip"))
             m_hFlip = m_cropType == CropType::Random;
@@ -77,11 +78,11 @@ private:
         RuntimeError("Invalid crop type: %s.", src.c_str());
     }
 
-    cv::Rect GetCropRect(CropType type, int crow, int ccol, float cropRatio)
+    cv::Rect GetCropRect(CropType type, int crow, int ccol, double cropRatio)
     {
         assert(crow > 0);
         assert(ccol > 0);
-        assert(0 < cropRatio && cropRatio <= 1.0f);
+        assert(0 < cropRatio && cropRatio <= 1.0);
 
         int cropSize = static_cast<int>(std::min(crow, ccol) * cropRatio);
         int xOff = -1;
@@ -111,7 +112,7 @@ private:
     std::uniform_int_distribution<int> m_rndUniInt;
 
     CropType m_cropType;
-    float m_cropRatio;
+    double m_cropRatio;
     bool m_hFlip;
 };
 
@@ -154,7 +155,7 @@ public:
     void Apply(cv::Mat& mat)
     {
         // If matrix has not been converted to the right type, do it now as rescaling requires floating point type.
-        if (mat.type() != m_dataType)
+        if (mat.type() != CV_MAKETYPE(m_dataType, m_imgChannels))
             mat.convertTo(mat, m_dataType);
 
         assert(m_interp.size() > 0);
@@ -186,12 +187,14 @@ public:
 
     void Init(const ConfigParameters& config)
     {
-        m_meanFile = config(L"meanFile", L"");
-        if (!m_meanFile.empty())
+        std::wstring meanFile = config(L"meanFile", L"");
+        if (meanFile.empty())
+            m_meanImg.release();
+        else
         {
             cv::FileStorage fs;
             // REVIEW alexeyk: this sort of defeats the purpose of using wstring at all...
-            auto fname = msra::strfun::utf8(m_meanFile);
+            auto fname = msra::strfun::utf8(meanFile);
             fs.open(fname, cv::FileStorage::READ);
             if (!fs.isOpened())
                 RuntimeError("Could not open file: " + fname);
@@ -219,7 +222,6 @@ public:
     }
 
 private:
-    std::wstring m_meanFile;
     cv::Mat m_meanImg;
 };
 
@@ -255,11 +257,13 @@ void ImageReader<ElemType>::Init(const ConfigParameters& config)
     // REVIEW alexeyk: currently support only one feature and label section.
     SectionT featSect{ gettter("width") };
     m_featName = msra::strfun::utf16(featSect.first);
-    m_imgWidth = featSect.second("width");
-    m_imgHeight = featSect.second("height");
-    m_imgChannels = featSect.second("channels");
-    m_featDim = m_imgWidth * m_imgHeight * m_imgChannels;
+    // REVIEW alexeyk: w, h and c will be read again in ScaleTransform.
+    size_t w = featSect.second("width");
+    size_t h = featSect.second("height");
+    size_t c = featSect.second("channels");
+    m_featDim = w * h * c;
 
+    // Initialize transforms.
     for (auto& t: m_transforms)
         t->Init(featSect.second);
 
@@ -335,31 +339,14 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
 
     std::fill(m_labBuf.begin(), m_labBuf.end(), static_cast<ElemType>(0));
     
-//#pragma omp parallel for ordered schedule(dynamic)
+#pragma omp parallel for ordered schedule(dynamic)
     for (long long i = 0; i < static_cast<long long>(mbLim - m_mbStart); i++)
     {
         const auto& p = files[i + m_mbStart];
-        auto img = cv::imread(p.first, cv::IMREAD_COLOR);
+        cv::Mat img{ cv::imread(p.first, cv::IMREAD_COLOR) };
         for (auto& t: m_transforms)
             t->Apply(img);
-        // Crop
-        //cv::Mat cropped;
-        //CropTransform(img, cropped);
-        //int w = img.cols;
-        //int h = img.rows;
-        //int cropSize = std::min(w, h);
-        //int xOff = (w - cropSize) / 2;
-        //int yOff = (h - cropSize) / 2;
-        //cv::Mat cropped{ img(cv::Rect(xOff, yOff, cropSize, cropSize)) };
-        
-        //cropped.convertTo(img, CV_32F);
-        //img.convertTo(img, CV_32F);
-        //// Scale
-        //cv::resize(img, img, cv::Size(static_cast<int>(m_imgWidth), static_cast<int>(m_imgHeight)), 0, 0, cv::INTER_LINEAR);
-
-        // Subtract mean
-        //SubMeanTransform(img, img);
-
+       
         assert(img.isContinuous());
         auto data = reinterpret_cast<ElemType*>(img.ptr());
         std::copy(data, data + m_featDim, m_featBuf.begin() + m_featDim * i);

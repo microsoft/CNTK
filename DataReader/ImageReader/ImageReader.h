@@ -7,7 +7,6 @@
 #pragma once
 #include <random>
 #include <memory>
-#include <opencv2/opencv.hpp>
 #include "DataReader.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -39,18 +38,15 @@ public:
     void SetRandomSeed(unsigned int seed) override;
 
 private:
-    std::vector<std::unique_ptr<ITransform>> m_transforms;
-
-private:
+    unsigned int m_seed;
     std::default_random_engine m_rng;
     std::uniform_int_distribution<int> m_rndUniInt;
+
+    std::vector<std::unique_ptr<ITransform>> m_transforms;
 
     std::wstring m_featName;
     std::wstring m_labName;
 
-    size_t m_imgWidth;
-    size_t m_imgHeight;
-    size_t m_imgChannels;
     size_t m_featDim;
     size_t m_labDim;
 
@@ -65,7 +61,5 @@ private:
     size_t m_mbStart;
     std::vector<ElemType> m_featBuf;
     std::vector<ElemType> m_labBuf;
-
-    unsigned int m_seed;
 };
 }}}
