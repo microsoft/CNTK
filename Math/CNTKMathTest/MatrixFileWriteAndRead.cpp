@@ -4,14 +4,19 @@
 // </copyright>
 //
 #include "stdafx.h"
-#include <string>
+#include "..\..\common\include\Basics.h"
 #include "CppUnitTest.h"
 #include "..\Math\Matrix.h"
-#include "..\..\common\include\Basics.h"
+#include "..\Math\CPUMatrix.h"
+#include "..\Math\GPUMatrix.h"
+#include "..\Math\CPUSparseMatrix.h"
+#include "..\Math\GPUSparseMatrix.h"
+#include "..\Math\Helpers.h"
 #include "..\..\common\include\fileutil.h"
 #include "..\..\common\include\File.h"
 #include "..\..\common\File.cpp"
 #include "..\..\common\fileutil.cpp"
+#include <string>
 
 
 

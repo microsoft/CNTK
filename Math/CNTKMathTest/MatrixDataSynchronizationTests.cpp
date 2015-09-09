@@ -6,6 +6,11 @@
 #include "stdafx.h"
 #include "CppUnitTest.h"
 #include "..\Math\Matrix.h"
+#include "..\Math\CPUMatrix.h"
+#include "..\Math\GPUMatrix.h"
+#include "..\Math\CPUSparseMatrix.h"
+#include "..\Math\GPUSparseMatrix.h"
+#include "..\Math\Helpers.h"
 
 #define epsilon 0.000001
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing

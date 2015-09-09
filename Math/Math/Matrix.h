@@ -6,10 +6,20 @@
 
 #pragma once
 
-#include "CPUMatrix.h"
-#include "CPUSparseMatrix.h"
-#include "GPUMatrix.h"
-#include "GPUSparseMatrix.h"
+#ifdef    _WIN32
+#ifdef MATH_EXPORTS
+#define MATH_API __declspec(dllexport)
+#else
+#define MATH_API __declspec(dllimport)
+#endif
+#else    // no DLLs on Linux
+#define    MATH_API 
+#endif
+
+#include "Basics.h"
+#include "File.h"
+#include "CommonMatrix.h"
+#include <limits.h>
 
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -55,12 +65,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
        UNDETERMINED, DENSE, SPARSE
     };
 
+    // TODO: create an <ElemType>-agnostic base class, then move generic functions such as getting dims, resizing, and getting/setting as scalars
+    class MATH_API MatrixBase
+    {
+    protected:
+        //virtual ~MatrixBase() { };
+        // TODO: currently this causes link errors when building DLLs
+    };
+
+    // avoid pulling in these header files for consumers of this class
+    template<class ElemType> class GPUMatrix;
+    template<class ElemType> class CPUMatrix;
+    template<class ElemType> class GPUSparseMatrix;
+    template<class ElemType> class CPUSparseMatrix;
+    template<class ElemType> class DeviceBoundNumber;
+
     //To compy with BLAS libraries matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor
     //convertion is need when passing data between Matrix and C++ matrices
     //For the best performance compile CNTKMath project with NO_SYNC preprocessor directive
     //!!!WARNING!!! This class is NOT THREAD SAFE. Test and add necessary modifications if using in multi-threaded environment    
     template<class ElemType>
-    class MATH_API Matrix 
+    class MATH_API Matrix : public MatrixBase
     {
     private:
         mutable BaseMatrix<ElemType> *m_baseMatrix;
@@ -104,7 +129,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static Matrix<ElemType> Ones(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
         static Matrix<ElemType> Zeros(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
         static Matrix<ElemType> Eye(const size_t rows, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
-        static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
+
+#define USE_TIME_BASED_SEED ULONG_MAX
+        static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
         static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
 
         void Clear();
@@ -174,6 +201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void ShiftBy(int numShift);
 
+        // TODO: all these scalars should be passed as doubles and cast down inside
         void NormalGrad(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
         ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
         ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
@@ -437,84 +465,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
 
     public:
-        friend File& operator>>(File& stream, Matrix<ElemType>& M)
-        {
-            char type;
-            stream>>type;
-            if (type=='d')
-            {
-                if (M.GetDeviceId()<0)
-                {
-                    if (M.m_CPUMatrix==NULL) M.m_CPUMatrix = new CPUMatrix<ElemType>();
-                    stream>>(*M.m_CPUMatrix);
-                    M.SetDataLocation(CPU, DENSE);
-                }
-                else
-                {
-                    if (M.m_GPUMatrix==NULL) M.m_GPUMatrix = new GPUMatrix<ElemType>();
-                    stream>>(*M.m_GPUMatrix);  
-                    M.SetDataLocation(GPU, DENSE);
-                }                
-            }
-            else if (type=='s')
-            {
-                if (M.GetDeviceId()<0)
-                {
-                    NOT_IMPLEMENTED;//You might want to tranfer your matrix to GPU
-                }
-                else
-                {
-                    if (M.m_GPUSparseMatrix==NULL) M.m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>();
-                    stream>>(*M.m_GPUSparseMatrix); 
-                    M.SetDataLocation(GPU, SPARSE);
-                }                
-            }
-            else
-                LogicError("wrong matrix type!");
-            return stream;
+        void Read(File& stream);
+        void Write(File& stream) const;
 
-        }
-        friend File& operator<<(File& stream, const Matrix<ElemType>& M)
-        {
-            if (M.GetMatrixType()==MatrixType::DENSE)
-            {
-                stream<<'d';
-                if (M.GetDeviceId()<0)
-                {
-                    stream<<(*M.m_CPUMatrix);
-                }
-                else
-                {
-                    stream<<(*M.m_GPUMatrix);
-                }                
-            }
-            else
-            {
-                stream<<'s';
-                if (M.GetDeviceId()<0)
-                {
-                    NOT_IMPLEMENTED;
-                    //stream<<(*M.m_CPUMatrix);
-                }
-                else
-                {
-                    stream<<(*M.m_GPUSparseMatrix);
-                }           
-            }
-            return stream;
-        }
+        Matrix<ElemType>& Shift(const Matrix<ElemType>& a, int shift);
 
-    public:
-
-		public:
-            Matrix<ElemType>& Shift(const Matrix<ElemType>& a, int shift);
-
-			Matrix<ElemType>& AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber);
-			Matrix<ElemType>& AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber);
-			static void InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber);
-			Matrix<ElemType>& GetARowByIndex(const Matrix<ElemType>& a, size_t index);
-			static void ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed);
-			Matrix<ElemType>& AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift);
+        Matrix<ElemType>& AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber);
+        Matrix<ElemType>& AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber);
+        static void InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber);
+        Matrix<ElemType>& GetARowByIndex(const Matrix<ElemType>& a, size_t index);
+        static void ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed);
+        Matrix<ElemType>& AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift);
 
     public:
         static void RCRFBackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
@@ -535,6 +496,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         template<typename T>
         friend class QuantizedMatrix;
     };
+
+    // overload I/O operators
+    template<class ElemType>
+    File& operator>>(File& stream, Matrix<ElemType>& M) { M.Read(stream); return stream; }
+    template<class ElemType>
+    File& operator<<(File& stream, const Matrix<ElemType>& M) { M.Write(stream); return stream; }
 
     typedef Matrix<float> SingleMatrix;
     typedef Matrix<double> DoubleMatrix;

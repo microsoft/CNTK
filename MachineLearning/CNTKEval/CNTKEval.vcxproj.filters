@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="..\..\Common\BestGpu.cpp" />
-    <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="CNTKEval.cpp" />
     <ClCompile Include="..\..\Common\ConfigFile.cpp">
       <Filter>Common</Filter>
@@ -20,15 +17,16 @@
     <ClCompile Include="..\..\Common\TimerUtility.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="..\CNTK\ComputationNode.cpp" />
-    <ClCompile Include="..\CNTK\ComputationNetwork.cpp" />
-    <ClCompile Include="..\CNTK\ComputationNetworkBuilder.cpp" />
+    <ClCompile Include="dllmain.cpp">
+      <Filter>Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Misc</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EvalReader.h" />
     <ClInclude Include="EvalWriter.h" />
-    <ClInclude Include="stdafx.h" />
-    <ClInclude Include="targetver.h" />
     <ClInclude Include="CNTKEval.h" />
     <ClInclude Include="..\..\Common\Include\Eval.h">
       <Filter>Common\Include</Filter>
@@ -48,6 +46,12 @@
     <ClInclude Include="..\..\Common\Include\Basics.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -55,6 +59,9 @@
     </Filter>
     <Filter Include="Common\Include">
       <UniqueIdentifier>{f3bf0104-8a08-40c9-a4d9-af8411c49669}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Misc">
+      <UniqueIdentifier>{3660ead9-4e83-4246-8f76-dd1fda8e2590}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

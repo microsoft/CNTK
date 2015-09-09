@@ -50,7 +50,7 @@ endif
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 CXX = mpic++
 
-INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK BrainScript
+INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib BrainScript
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
 CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror
 LIBPATH:=
@@ -355,15 +355,17 @@ endif
 
 CNTK_SRC =\
 	MachineLearning/CNTK/CNTK.cpp \
-	MachineLearning/CNTK/ComputationNode.cpp \
 	MachineLearning/CNTK/ModelEditLanguage.cpp \
 	MachineLearning/CNTK/NetworkDescriptionLanguage.cpp \
-	MachineLearning/CNTK/Profiler.cpp \
-	MachineLearning/CNTK/ComputationNetwork.cpp \
-	MachineLearning/CNTK/ComputationNetworkBuilder.cpp \
 	MachineLearning/CNTK/SimpleNetworkBuilder.cpp \
 	MachineLearning/CNTK/SynchronousExecutionEngine.cpp \
 	MachineLearning/CNTK/tests.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNode.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetwork.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkBuilder.cpp \
+	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
+	MachineLearning/CNTKSGDLib/Profiler.cpp \
+	MachineLearning/CNTKSGDLib/SGD.cpp \
 	MachineLearning/CNTKEval/CNTKEval.cpp \
 	BrainScript/BrainScriptEvaluator.cpp \
 	BrainScript/BrainScriptParser.cpp \
