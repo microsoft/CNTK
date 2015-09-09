@@ -5177,5 +5177,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template CPUMatrix<char>::~CPUMatrix();
     template CPUMatrix<char> CPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
     template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
+    template void CPUMatrix<char>::SetValue(const char);
 }}}
 
