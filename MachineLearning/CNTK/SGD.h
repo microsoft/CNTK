@@ -2143,7 +2143,7 @@ protected:
                 for (size_t i = 0; i < numEvalNodes; i++)
                     m_gradHeader->evalErrors[i] = wasDataRead ? (ElemType)evaluationNodes[i]->Get00Element() : 0;
 
-                m_distGradAgg->AggregateGradients(m_gradHeader);
+                m_distGradAgg->AggregateGradients(m_gradHeader, epochNumber);
 
                 aggregateNumSamples = m_gradHeader->numSamples;
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
@@ -2301,8 +2301,6 @@ protected:
             }
         }
 
-        UninitDistGradAgg();
-
         if (useModelAveraging && (g_mpi->NumNodesInUse() > 1) && nSamplesSinceLastModelSync)
         {
             // may not be synced after epoch finished, so do the sync here 
@@ -2332,24 +2330,6 @@ protected:
             if (m_gradHeader == nullptr)
             {
                 m_gradHeader = DistGradHeader<ElemType>::Create(numEvalNodes);
-            }
-        }
-    }
-
-    void UninitDistGradAgg()
-    {
-        if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
-        {
-            if (m_distGradAgg != nullptr)
-            {
-                delete m_distGradAgg;
-                m_distGradAgg = nullptr;
-            }
-
-            if (m_gradHeader != nullptr)
-            {
-                DistGradHeader<ElemType>::Destroy(m_gradHeader);
-                m_gradHeader = nullptr;
             }
         }
     }
