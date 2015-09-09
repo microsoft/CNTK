@@ -1,3 +1,9 @@
+//
+// <copyright company="Microsoft">
+//     Copyright (c) Microsoft Corporation.  All rights reserved.
+// </copyright>
+//
+
 #include "stdafx.h"
 #define DATAREADER_EXPORTS  // creating the exports here
 #include "DataReader.h"
@@ -6,13 +12,226 @@
 #include <algorithm>
 #include <fstream>
 #include <sstream>
-#include <locale>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+//-------------------
+// Transforms
+
+class ITransform
+{
+public:
+    virtual void Init(const ConfigParameters& config) = 0;
+    virtual void Apply(cv::Mat& mat) = 0;
+
+    ITransform() {};
+    virtual ~ITransform() {};
+public:
+    ITransform(const ITransform&) = delete;
+    ITransform& operator=(const ITransform&) = delete;
+    ITransform(ITransform&&) = delete;
+    ITransform& operator=(ITransform&&) = delete;
+};
+
+class CropTransform : public ITransform
+{
+public:
+    CropTransform(unsigned int seed) : m_rng(seed), m_rndUniInt(0, INT_MAX)
+    {
+    }
+
+    void Init(const ConfigParameters& config)
+    {
+        m_cropType = ParseCropType(config("cropType", ""));
+        m_cropRatio = std::stof(config("cropRatio", "1"));
+        if (!(0 < m_cropRatio && m_cropRatio <= 1.0f))
+            RuntimeError("Invalid cropRatio value: %f.", m_cropRatio);
+        if (!config.ExistsCurrent("hflip"))
+            m_hFlip = m_cropType == CropType::Random;
+        else
+            m_hFlip = std::stoi(config("hflip")) != 0;
+    }
+
+    void Apply(cv::Mat& mat)
+    {
+        mat = mat(GetCropRect(m_cropType, mat.rows, mat.cols, m_cropRatio));
+        if (m_hFlip && (m_rndUniInt(m_rng) % 2) != 0)
+            cv::flip(mat, mat, 1);
+    }
+
+private:
+    enum class CropType { Center = 0, Random = 1 };
+
+    CropType ParseCropType(const std::string& src)
+    {
+        auto AreEqual = [](const std::string& s1, const std::string& s2) -> bool
+        {
+            return std::equal(s1.begin(), s1.end(), s2.begin(), [](const char& a, const char& b) { return std::tolower(a) == std::tolower(b); });
+        };
+
+        if (src.empty() || AreEqual(src, "center"))
+            return CropType::Center;
+        if (AreEqual(src, "random"))
+            return CropType::Random;
+
+        RuntimeError("Invalid crop type: %s.", src.c_str());
+    }
+
+    cv::Rect GetCropRect(CropType type, int crow, int ccol, float cropRatio)
+    {
+        assert(crow > 0);
+        assert(ccol > 0);
+        assert(0 < cropRatio && cropRatio <= 1.0f);
+
+        int cropSize = static_cast<int>(std::min(crow, ccol) * cropRatio);
+        int xOff = -1;
+        int yOff = -1;
+
+        switch (type)
+        {
+        case CropType::Center:
+            xOff = (ccol - cropSize) / 2;
+            yOff = (crow - cropSize) / 2;
+            break;
+        case CropType::Random:
+            xOff = m_rndUniInt(m_rng) % std::max(ccol - cropSize, 1);
+            yOff = m_rndUniInt(m_rng) % std::max(crow - cropSize, 1);
+            break;
+        default:
+            assert(false);
+        }
+
+        assert(0 <= xOff && xOff <= ccol - cropSize);
+        assert(0 <= yOff && yOff <= crow - cropSize);
+        return cv::Rect(xOff, yOff, cropSize, cropSize);
+    }
+
+private:
+    std::default_random_engine m_rng;
+    std::uniform_int_distribution<int> m_rndUniInt;
+
+    CropType m_cropType;
+    float m_cropRatio;
+    bool m_hFlip;
+};
+
+class ScaleTransform : public ITransform
+{
+public:
+    ScaleTransform(int dataType, unsigned int seed) : m_dataType(dataType), m_rng(seed), m_rndUniInt(0, INT_MAX)
+    {
+        assert(m_dataType == CV_32F || m_dataType == CV_64F);
+
+        m_interpMap.emplace("nearest", cv::INTER_NEAREST);
+        m_interpMap.emplace("linear", cv::INTER_LINEAR);
+        m_interpMap.emplace("cubic", cv::INTER_CUBIC);
+        m_interpMap.emplace("lanczos", cv::INTER_LANCZOS4);
+    }
+
+    void Init(const ConfigParameters& config)
+    {
+        m_imgWidth = config("width");
+        m_imgHeight = config("height");
+        m_imgChannels = config("channels");
+        size_t cfeat = m_imgWidth * m_imgHeight * m_imgChannels;
+        if (cfeat == 0 || cfeat > std::numeric_limits<size_t>().max() / 2)
+            RuntimeError("Invalid image dimensions.");
+
+        m_interp.clear();
+        std::stringstream ss{ config("interpolations", "") };
+        for (std::string token = ""; std::getline(ss, token, ':');)
+        {
+            std::transform(token.begin(), token.end(), token.begin(), std::tolower);
+            StrToIntMapT::const_iterator res = m_interpMap.find(token);
+            if (res != m_interpMap.end())
+                m_interp.push_back((*res).second);
+        }
+
+        if (m_interp.size() == 0)
+            m_interp.push_back(cv::INTER_LINEAR);
+    }
+
+    void Apply(cv::Mat& mat)
+    {
+        // If matrix has not been converted to the right type, do it now as rescaling requires floating point type.
+        if (mat.type() != m_dataType)
+            mat.convertTo(mat, m_dataType);
+
+        assert(m_interp.size() > 0);
+        cv::resize(mat, mat, cv::Size(static_cast<int>(m_imgWidth), static_cast<int>(m_imgHeight)), 0, 0, 
+            m_interp[m_rndUniInt(m_rng) % m_interp.size()]);
+    }
+
+private:
+    std::default_random_engine m_rng;
+    std::uniform_int_distribution<int> m_rndUniInt;
+
+    int m_dataType;
+
+    using StrToIntMapT = std::unordered_map<std::string, int>;
+    StrToIntMapT m_interpMap;
+    std::vector<int> m_interp;
+
+    size_t m_imgWidth;
+    size_t m_imgHeight;
+    size_t m_imgChannels;
+};
+
+class MeanTransform : public ITransform
+{
+public:
+    MeanTransform()
+    {
+    }
+
+    void Init(const ConfigParameters& config)
+    {
+        m_meanFile = config(L"meanFile", L"");
+        if (!m_meanFile.empty())
+        {
+            cv::FileStorage fs;
+            // REVIEW alexeyk: this sort of defeats the purpose of using wstring at all...
+            auto fname = msra::strfun::utf8(m_meanFile);
+            fs.open(fname, cv::FileStorage::READ);
+            if (!fs.isOpened())
+                RuntimeError("Could not open file: " + fname);
+            fs["MeanImg"] >> m_meanImg;
+            int cchan;
+            fs["Channel"] >> cchan;
+            int crow;
+            fs["Row"] >> crow;
+            int ccol;
+            fs["Col"] >> ccol;
+            if (cchan * crow * ccol != m_meanImg.channels() * m_meanImg.rows * m_meanImg.cols)
+                RuntimeError("Invalid data in file: " + fname);
+            fs.release();
+            m_meanImg = m_meanImg.reshape(cchan, crow);
+        }
+    }
+
+    void Apply(cv::Mat& mat)
+    {
+        assert(m_meanImg.size() == cv::Size(0, 0) || (m_meanImg.size() == mat.size() && m_meanImg.channels()));
+
+        // REVIEW alexeyk: check type conversion (float/double).
+        if (m_meanImg.size() == mat.size())
+            mat = mat - m_meanImg;
+    }
+
+private:
+    std::wstring m_meanFile;
+    cv::Mat m_meanImg;
+};
+
+//-------------------
+// ImageReader
 
 template<class ElemType>
 ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed), m_rndUniInt(0, INT_MAX)
 {
+    m_transforms.push_back(std::make_unique<CropTransform>(m_seed));
+    m_transforms.push_back(std::make_unique<ScaleTransform>(sizeof(ElemType) == 4 ? CV_32F : CV_64F, m_seed));
+    m_transforms.push_back(std::make_unique<MeanTransform>());
 }
 
 template<class ElemType>
@@ -40,12 +259,9 @@ void ImageReader<ElemType>::Init(const ConfigParameters& config)
     m_imgHeight = featSect.second("height");
     m_imgChannels = featSect.second("channels");
     m_featDim = m_imgWidth * m_imgHeight * m_imgChannels;
-    m_meanFile = featSect.second(L"meanFile", L"");
 
-    m_cropType = ParseCropType(featSect.second("cropType", ""));
-    m_cropRatio = std::stof(featSect.second("cropRatio", "1"));
-    if (!(0 < m_cropRatio && m_cropRatio <= 1.0f))
-        RuntimeError("Invalid cropRatio value: %f.", m_cropRatio);
+    for (auto& t: m_transforms)
+        t->Init(featSect.second);
 
     SectionT labSect{ gettter("labelDim") };
     m_labName = msra::strfun::utf16(labSect.first);
@@ -55,7 +271,7 @@ void ImageReader<ElemType>::Init(const ConfigParameters& config)
     std::ifstream mapFile(mapPath);
     if (!mapFile)
         RuntimeError("Could not open " + mapPath + " for reading.");
-    
+
     std::string line{ "" };
     for (size_t cline = 0; std::getline(mapFile, line); cline++)
     {
@@ -124,9 +340,11 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
     {
         const auto& p = files[i + m_mbStart];
         auto img = cv::imread(p.first, cv::IMREAD_COLOR);
+        for (auto& t: m_transforms)
+            t->Apply(img);
         // Crop
-        cv::Mat cropped;
-        CropTransform(img, cropped);
+        //cv::Mat cropped;
+        //CropTransform(img, cropped);
         //int w = img.cols;
         //int h = img.rows;
         //int cropSize = std::min(w, h);
@@ -134,9 +352,13 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
         //int yOff = (h - cropSize) / 2;
         //cv::Mat cropped{ img(cv::Rect(xOff, yOff, cropSize, cropSize)) };
         
-        cropped.convertTo(img, CV_32F);
-        // Scale
-        cv::resize(img, img, cv::Size(static_cast<int>(m_imgWidth), static_cast<int>(m_imgHeight)), 0, 0, cv::INTER_LINEAR);
+        //cropped.convertTo(img, CV_32F);
+        //img.convertTo(img, CV_32F);
+        //// Scale
+        //cv::resize(img, img, cv::Size(static_cast<int>(m_imgWidth), static_cast<int>(m_imgHeight)), 0, 0, cv::INTER_LINEAR);
+
+        // Subtract mean
+        //SubMeanTransform(img, img);
 
         assert(img.isContinuous());
         auto data = reinterpret_cast<ElemType*>(img.ptr());
@@ -179,64 +401,6 @@ void ImageReader<ElemType>::SetRandomSeed(unsigned int seed)
 {
     m_seed = seed;
     m_rng.seed(m_seed);
-}
-
-template<class ElemType>
-typename ImageReader<ElemType>::CropType ImageReader<ElemType>::ParseCropType(const std::string& src)
-{
-    auto AreEqual = [](const std::string& s1, const std::string& s2) -> bool
-    {
-        return std::equal(s1.begin(), s1.end(), s2.begin(), [](const char& a, const char& b) { return std::tolower(a) == std::tolower(b); });
-    };
-
-    if (src.empty() || AreEqual(src, "center"))
-        return CropType::Center;
-    if (AreEqual(src, "random"))
-        return CropType::Random;
-
-    RuntimeError("Invalid crop type: %s.", src.c_str());
-}
-
-template<class ElemType>
-cv::Rect ImageReader<ElemType>::GetCropRect(CropType type, int crow, int ccol, float cropRatio)
-{
-    assert(crow > 0);
-    assert(ccol > 0);
-    assert(0 < cropRatio && cropRatio <= 1.0f);
-
-    int cropSize = static_cast<int>(std::min(crow, ccol) * cropRatio);
-    int xOff = -1;
-    int yOff = -1;
-
-    switch (type)
-    {
-    case CropType::Center:
-        xOff = (ccol - cropSize) / 2;
-        yOff = (crow - cropSize) / 2;
-        break;
-    case CropType::Random:
-        xOff = m_rndUniInt(m_rng) % (ccol - cropSize);
-        yOff = m_rndUniInt(m_rng) % (crow - cropSize);
-        break;
-    default:
-        assert(false);
-    }
-
-    assert(0 <= xOff && xOff <= ccol - cropSize);
-    assert(0 <= yOff && yOff <= crow - cropSize);
-    return cv::Rect(xOff, yOff, cropSize, cropSize);
-}
-
-template<class ElemType>
-void ImageReader<ElemType>::CropTransform(const cv::Mat& src, cv::Mat& dst)
-{
-    // REVIEW alexeyk: optimize resizing?
-    dst = src(GetCropRect(m_cropType, src.rows, src.cols, m_cropRatio)).clone();
-}
-
-template<class ElemType>
-void ImageReader<ElemType>::SubMeanTransform(const cv::Mat& , cv::Mat& )
-{
 }
 
 template class ImageReader<double>;

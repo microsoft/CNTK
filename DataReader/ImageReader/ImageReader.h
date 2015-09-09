@@ -1,16 +1,19 @@
 //
-// <copyright file="UCIFastReader.h" company="Microsoft">
+// <copyright company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-// ImageReader.h - Include file for the image reader 
 
 #pragma once
 #include <random>
+#include <memory>
 #include <opencv2/opencv.hpp>
 #include "DataReader.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+// REVIEW alexeyk: can't put it into ImageReader itself as ImageReader is a template.
+class ITransform;
 
 template<class ElemType>
 class ImageReader : public IDataReader<ElemType>
@@ -36,13 +39,7 @@ public:
     void SetRandomSeed(unsigned int seed) override;
 
 private:
-    enum class CropType { Center = 0, Random = 1 };
-
-    CropType ParseCropType(const std::string& src);
-    cv::Rect GetCropRect(CropType type, int crow, int ccol, float cropRatio);
-    void CropTransform(const cv::Mat& src, cv::Mat& dst);
-
-    void SubMeanTransform(const cv::Mat& src, cv::Mat& dst);
+    std::vector<std::unique_ptr<ITransform>> m_transforms;
 
 private:
     std::default_random_engine m_rng;
@@ -70,10 +67,5 @@ private:
     std::vector<ElemType> m_labBuf;
 
     unsigned int m_seed;
-
-    CropType m_cropType;
-    float m_cropRatio;
-
-    std::wstring m_meanFile;
 };
 }}}
