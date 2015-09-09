@@ -495,8 +495,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
             Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, inputFunctionValues, inputGradientValues);
             //fprintf(stderr, "debughtx gradientValues size : %d %d\n", inputGradientValues.GetNumRows(), inputGradientValues.GetNumCols());  //Vocabsize * miniBatchSize
-            DEVICEID_TYPE gradientValues_deviceId = inputGradientValues.GetDeviceId();
-            inputGradientValues.TransferFromDeviceToDevice(gradientValues_deviceId, CPUDEVICE);
+            //DEVICEID_TYPE gradientValues_deviceId = inputGradientValues.GetDeviceId();
+            inputGradientValues.TransferFromDeviceToDevice(m_deviceId, CPUDEVICE);
             for (int i = 0;i < inputGradientValues.GetNumCols();i++) {
                 int sen_id = i % isFromData.size();
                 double scaling;
@@ -505,6 +505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 } else {
                     scaling = - exp(helperLogDivCal(lp_model[sen_id], log(noiseRatio) + lp_noise[sen_id])); //- p_model[sen_id] / (p_model[sen_id] + p_noise[sen_id] * noiseRatio);
                 }
+                //fprintf(stderr, "scaling : %lf\n", scaling); //At the beginning of the training, it should 
                 if (isnan(scaling) || scaling < -1 || scaling > 1)
                     RuntimeError("LMNCENode ComputeInputPartialRight error, scaling not in normal range:%lf\n", scaling);
                 for (int j = 0; j < inputGradientValues.GetNumRows(); j++) {
@@ -512,7 +513,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     inputGradientValues.SetValue(j, i, (ElemType)scaling * ele_ori);
                 }
             }
-            inputGradientValues.TransferFromDeviceToDevice(CPUDEVICE, gradientValues_deviceId);
+            inputGradientValues.TransferFromDeviceToDevice(CPUDEVICE, m_deviceId);
 #if DUMPOUTPUT
             inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
@@ -546,8 +547,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int j = 0; j < mb_size; j++) {
                     int idx = j * seq_size + i;
                     int w_id = (int)(m_clabel(0, idx));
-                    lp_noise[i] += log(m_prob_noise(0, idx));
-                    lp_model[i] += log(m_softmaxOfRight(w_id, idx));
+                    if (isnan(log(m_prob_noise(0, idx))) || isinf(log(m_prob_noise(0, idx)))) { //Got a crash, is it triggered by this?
+                        lp_noise[i] += -7;
+                        fprintf(stderr, "LMNCESoftmaxCE EvaluateThisNode WARNING got a strange noise prob (i%d, j%d, w%d) %lf, setting to 1e-7\n", i, j, w_id, m_prob_noise(0, idx));
+                    } else
+                        lp_noise[i] += log(m_prob_noise(0, idx));
+                    if (isnan(m_softmaxOfRight(w_id, idx)) || isinf(m_softmaxOfRight(w_id, idx))) {
+                        lp_model[i] += -7;
+                        fprintf(stderr, "LMNCESoftmaxCE EvaluateThisNode WARNING got a strange model prob (i%d, j%d, w%d) %lf, setting to 1e-7\n", i, j, w_id, m_softmaxOfRight(w_id, idx));
+                    } else
+                        lp_model[i] += log(m_softmaxOfRight(w_id, idx));
                     /*
                     while (p_noise[i] < 0.01 || p_model[i] < 0.01) //they could be too small
                     {
@@ -579,8 +588,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     isFromData[i] = false;
                     cNow = (ElemType)helperLogDivCal(log(noiseRatio) + lp_noise[i], lp_model[i]); //log(noiseRatio * p_noise[i] / (p_model[i] + noiseRatio * p_noise[i])); //fprintf(stderr, "debughtx [NOISE_SEQ]");
                 }
-                if (isnan(cNow)) {
-                    RuntimeError("LMNCENode error: got a NaN criterion lp_model:%lf lp_noise:%lf\n", lp_model[i], lp_noise[i]);
+                if (isnan(cNow) || isinf(cNow)) {
+                    RuntimeError("LMNCENode error: got a NaN or Inf criterion lp_model:%lf lp_noise:%lf\n", lp_model[i], lp_noise[i]);
                 }
                 criterion += cNow;
             }

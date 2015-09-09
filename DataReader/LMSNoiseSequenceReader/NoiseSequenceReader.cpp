@@ -242,7 +242,7 @@ void BatchSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epo
     fprintf(stderr, "debughtx StartMinibatchLoop sequenceSize is %d\n", mBlgSize);
     fprintf(stderr, "debughtx StartMinibatchLoop loopNoiseFile is %d\n", loopNoiseFile);
     fprintf(stderr, "debughtx StartMinibatchLoop noiseRatio is %d\n", noiseRatio);
-    DEBUG_HTX fprintf(stderr, "fileName:%s\n", fileName.c_str());
+    fprintf(stderr, "fileName:%s\n", fileName.c_str());
     if (fin.is_open()) {
         LogicError("NoiseSequenceReader::StartMinibatchLoop fin should not be opened now.\n");
     }
