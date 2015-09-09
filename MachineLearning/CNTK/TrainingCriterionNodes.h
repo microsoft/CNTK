@@ -552,10 +552,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         fprintf(stderr, "LMNCESoftmaxCE EvaluateThisNode WARNING got a strange noise prob (i%d, j%d, w%d) %lf, setting to 1e-7\n", i, j, w_id, m_prob_noise(0, idx));
                     } else
                         lp_noise[i] += log(m_prob_noise(0, idx));
-                    if (isnan(m_softmaxOfRight(w_id, idx)) || isinf(m_softmaxOfRight(w_id, idx))) {
+                    if (isnan(log(m_softmaxOfRight(w_id, idx))) || isinf(log(m_softmaxOfRight(w_id, idx)))) {
                         lp_model[i] += -7;
                         fprintf(stderr, "LMNCESoftmaxCE EvaluateThisNode WARNING got a strange model prob (i%d, j%d, w%d) %lf, setting to 1e-7\n", i, j, w_id, m_softmaxOfRight(w_id, idx));
-                    } else
+                    } else 
                         lp_model[i] += log(m_softmaxOfRight(w_id, idx));
                     /*
                     while (p_noise[i] < 0.01 || p_model[i] < 0.01) //they could be too small
