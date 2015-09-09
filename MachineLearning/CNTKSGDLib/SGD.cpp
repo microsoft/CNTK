@@ -939,10 +939,10 @@ template<class ElemType>
         {
             // Synchronize all ranks before writing the model to ensure that 
             // everyone is done loading the model
-            if (m_parallelizationMethod != ParallelizationMethod::None)
+            if (g_mpi != nullptr)
                 g_mpi->WaitAll();
 
-            if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
+            if ((g_mpi == nullptr) || g_mpi->IsMainNode())
             {
                 // only needs to be done by one process
                 net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
@@ -999,7 +999,7 @@ template<class ElemType>
         {
             // Synchronize all ranks before proceeding to ensure that 
             // rank 0 has finished writing the previous model file
-            if (m_parallelizationMethod != ParallelizationMethod::None)
+            if (g_mpi != nullptr)
                 g_mpi->WaitAll();
 
             Timer timer;
@@ -1041,7 +1041,7 @@ template<class ElemType>
                         i + 1, learnRatePerSample, m_minLearnRate);
                 if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
                 {
-                    if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
+                    if ((g_mpi == nullptr) || g_mpi->IsMainNode())
                         net.SaveToFile(m_modelPath);
                     }
                 break;
@@ -1138,7 +1138,7 @@ template<class ElemType>
                 }
             }
 
-            if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
+            if ((g_mpi == nullptr) || g_mpi->IsMainNode())
             {
                 if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
                 {
@@ -1209,7 +1209,7 @@ template<class ElemType>
                             learnRateReduced = true;
                         else
                         {
-                            if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
+                            if ((g_mpi == nullptr) || g_mpi->IsMainNode())
                                 net.SaveToFile(GetModelNameForEpoch(i, true));
 
                             fprintf(stderr, "Finished training and saved final model\n\n");
@@ -1257,11 +1257,11 @@ template<class ElemType>
             // Synchronize all ranks before proceeding to ensure that 
             // nobody tries reading the checkpoint file at the same time
             // as rank 0 deleting it below
-            if (m_parallelizationMethod != ParallelizationMethod::None)
+            if (g_mpi != nullptr)
                 g_mpi->WaitAll();
 
             // persist model and check-point info
-            if ((m_parallelizationMethod == ParallelizationMethod::None) || g_mpi->IsMainNode())
+            if ((g_mpi == nullptr) || g_mpi->IsMainNode())
             {
                 net.SaveToFile(GetModelNameForEpoch(i));
                 SaveCheckPointInfo(i, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
@@ -1925,7 +1925,7 @@ template<class ElemType>
 
         if (useDistributedMBReading)
         {
-            fprintf(stderr, "Distributed reading is ENABLED");
+            fprintf(stderr, ", Distributed reading is ENABLED");
         }
         fprintf(stderr, ".\n");
 
