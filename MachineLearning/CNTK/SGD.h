@@ -2133,7 +2133,7 @@ protected:
             }
             else
             {
-                LazyInitDistGradAgg(learnableNodes, numEvalNodes);
+                LazyInitDistGradAgg(learnableNodes, numEvalNodes, m_traceLevel);
 
                 //prepare the header
                 m_gradHeader->numEvalNode = numEvalNodes;
@@ -2312,7 +2312,7 @@ protected:
         return totalEpochSamples;
     }
 
-    void LazyInitDistGradAgg(const std::list<ComputationNodeBasePtr>& learnableNodes, int numEvalNodes)
+    void LazyInitDistGradAgg(const std::list<ComputationNodeBasePtr>& learnableNodes, int numEvalNodes, int traceLevel)
     {
         if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
         {
@@ -2326,7 +2326,7 @@ protected:
                     learnParamsGradients.push_back(&(node->GradientValues()));
                 }
 
-                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(learnParamsGradients, numEvalNodes, m_numGradientBits, g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/);
+                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(learnParamsGradients, numEvalNodes, m_numGradientBits, g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, traceLevel);
             }
 
             if (m_gradHeader == nullptr)

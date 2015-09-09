@@ -4751,4 +4751,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void Matrix<char>::_transferToDevice(int id_to, bool ismoved, bool emptyTransfer) const;
     template size_t Matrix<char>::GetNumRows() const;
     template size_t Matrix<char>::GetNumCols() const;
+    template void Matrix<char>::SetValue(const char);
 }}}
