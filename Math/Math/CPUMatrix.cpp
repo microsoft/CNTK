@@ -20,6 +20,7 @@
 #include <exception>
 #include <thread>
 #include<iostream>
+#include <algorithm>
 #ifdef     _WIN32
 #include <Windows.h>
 #else
@@ -3301,7 +3302,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
     //I decided to use CPUMatrix<ElemType>& maxIndexes instead of integer vector because the result may be used to do additional calculation
     template<class ElemType>
-    void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<ElemType>& maxValues, const bool isColWise) const
+    void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<ElemType>& maxValues, const bool isColWise, int topK) const
     {
         if (IsEmpty())
             LogicError("VectorMax: Matrix is empty.");
@@ -3309,33 +3310,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         auto& us=*this;
         const int m = (int)GetNumRows();
         const int n = (int)GetNumCols();
+        assert(topK <= m);
 
         assert (m>0 && n>0); //converting from size_t to int may cause overflow
 
         if (isColWise)  //col-wise
         {
-            maxValues.Resize(1, n);
-            maxIndexes.Resize(1, n);
+            maxValues.Resize(topK, n);
+            maxIndexes.Resize(topK, n);
 
-#pragma omp parallel for
-            for (int j=0; j<n; j++)
+            if (topK == 1)
             {
-                ElemType v = us(0, j);
-                size_t index = 0;
-                foreach_row(i,us)
+#pragma omp parallel for
+                for (int j = 0; j < n; j++)
                 {
-                    if (v < us(i,j))
+                    ElemType v = us(0, j);
+                    size_t index = 0;
+                    foreach_row(i, us)
                     {
-                        index = i;
-                        v = us(i,j);
+                        if (v < us(i, j))
+                        {
+                            index = i;
+                            v = us(i, j);
+                        }
+                    }
+                    maxValues(0, j) = v;
+                    maxIndexes(0, j) = (ElemType)index;
+                }
+            }
+            else
+            {
+                std::vector<int> indices(m);
+                int i = 0;
+                std::generate(indices.begin(), indices.end(), [&i] { return i++; });
+
+                const ElemType* curVal = m_pArray;
+                ElemType* curIdx = maxIndexes.m_pArray;
+                ElemType* curMax = maxValues.m_pArray;
+                for (int icol = 0; icol < n; icol++, curVal += m, curIdx += topK, curMax += topK)
+                {
+                    // Partial sort, descending order.
+                    std::nth_element(indices.begin(), indices.begin() + topK, indices.end(),
+                        [curVal](const int& a, const int& b) { return curVal[a] > curVal[b]; });
+                    // REVIEW alexeyk: the following produces warning (see SCL_SECURE_NO_WARNINGS) so use loop instead.
+                    //std::transform(indices.begin(), indices.begin() + topK, curIdx, [](const int& a) { return static_cast<ElemType>(a); });
+                    for (int i = 0; i < topK; i++)
+                    {
+                        curIdx[i] = static_cast<ElemType>(indices[i]);
+                        curMax[i] = curVal[indices[i]];
                     }
                 }
-                maxValues(0,j) = v;                
-                maxIndexes(0,j) = (ElemType)index;                
             }
         }
         else
         {
+            if (topK > 1)
+                RuntimeError("Row-wise TopK max is not supported.");
+
             maxValues.Resize(m,1);
             maxIndexes.Resize(m, 1);
 
@@ -3420,19 +3451,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    CPUMatrix<ElemType>&  CPUMatrix<ElemType>::AssignNumOfDiff(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b)
+    CPUMatrix<ElemType>&  CPUMatrix<ElemType>::AssignNumOfDiff(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, bool searchInCol)
     {
-        if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
-            InvalidArgument("AssignNumOfDiff: a and b must have same dimension.");
-        
+        if (a.GetNumCols() != b.GetNumCols())
+            throw std::invalid_argument("AssignNumOfDiff: a and b must have the same number of columns.");
+        if (!searchInCol && a.GetNumRows() != b.GetNumRows())
+            throw std::invalid_argument("AssignNumOfDiff: a and b must have the same number of rows.");
+
         ElemType n = 0;
-        foreach_coord(i,j,a)
+        if (!searchInCol)
         {
-            n += (a(i,j) != b(i,j));
+            foreach_coord(i, j, a)
+            {
+                n += (a(i, j) != b(i, j));
+            }
+        }
+        else
+        {
+            size_t crow = b.GetNumRows();
+            const ElemType* curCol = b.m_pArray;
+            for (size_t icol = 0; icol < a.GetNumCols(); icol++, curCol += crow)
+            {
+                auto res = std::find(curCol, curCol + crow, a(0, icol));
+                if (res == curCol + crow)
+                    n++;
+            }
         }
 
-        Resize(1,1); //result should be one element
-        (*this)(0,0) = n;
+        Resize(1, 1); //result should be one element
+        (*this)(0, 0) = n;
 
         return *this;
     }

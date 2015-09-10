@@ -37,16 +37,31 @@ public:
 class CropTransform : public ITransform
 {
 public:
-    CropTransform(unsigned int seed) : m_rng(seed), m_rndUniInt(0, INT_MAX)
+    CropTransform(unsigned int seed) : m_rng(seed)
     {
     }
 
     void Init(const ConfigParameters& config)
     {
         m_cropType = ParseCropType(config("cropType", ""));
-        m_cropRatio = std::stof(config("cropRatio", "1"));
-        if (!(0 < m_cropRatio && m_cropRatio <= 1.0))
-            RuntimeError("Invalid cropRatio value: %f.", m_cropRatio);
+
+        std::stringstream ss{ config("cropRatio", "1") };
+        std::string token{ "" };
+        if (std::getline(ss, token, ':'))
+        {
+            m_cropRatioMin = std::stof(token);
+            m_cropRatioMax = std::getline(ss, token, ':') ? std::stof(token) : m_cropRatioMin;
+        }
+
+        if (!(0 < m_cropRatioMin && m_cropRatioMin <= 1.0) || 
+            !(0 < m_cropRatioMax && m_cropRatioMax <= 1.0) ||
+            m_cropRatioMin > m_cropRatioMax)
+        {
+            RuntimeError("Invalid cropRatio value, must be > 0 and <= 1. cropMin must <= cropMax");
+        }
+
+        m_jitterType = ParseJitterType(config("jitterType", ""));
+
         if (!config.ExistsCurrent("hflip"))
             m_hFlip = m_cropType == CropType::Random;
         else
@@ -55,27 +70,64 @@ public:
 
     void Apply(cv::Mat& mat)
     {
-        mat = mat(GetCropRect(m_cropType, mat.rows, mat.cols, m_cropRatio));
-        if (m_hFlip && (m_rndUniInt(m_rng) % 2) != 0)
+        double ratio = 1;
+        switch (m_jitterType)
+        {
+        case RatioJitterType::None:
+            ratio = m_cropRatioMin;
+            break;
+        case RatioJitterType::UniRatio:
+            ratio = UniRealT(m_cropRatioMin, m_cropRatioMax)(m_rng);
+            assert(m_cropRatioMin <= ratio && ratio < m_cropRatioMax);
+            break;
+        default:
+            RuntimeError("Jitter type currently not implemented.");
+        }
+        mat = mat(GetCropRect(m_cropType, mat.rows, mat.cols, ratio));
+        if (m_hFlip && std::bernoulli_distribution()(m_rng))
             cv::flip(mat, mat, 1);
     }
 
 private:
+    using UniRealT = std::uniform_real_distribution<double>;
+    using UniIntT = std::uniform_int_distribution<int>;
+
     enum class CropType { Center = 0, Random = 1 };
+    enum class RatioJitterType
+    { 
+        None = 0,
+        UniRatio = 1,
+        UniLength = 2,
+        UniArea = 3
+    };
+
+    bool AreEqual(const std::string& s1, const std::string& s2)
+    {
+        return std::equal(s1.begin(), s1.end(), s2.begin(), [](const char& a, const char& b) { return std::tolower(a) == std::tolower(b); });
+    };
 
     CropType ParseCropType(const std::string& src)
     {
-        auto AreEqual = [](const std::string& s1, const std::string& s2) -> bool
-        {
-            return std::equal(s1.begin(), s1.end(), s2.begin(), [](const char& a, const char& b) { return std::tolower(a) == std::tolower(b); });
-        };
-
         if (src.empty() || AreEqual(src, "center"))
             return CropType::Center;
         if (AreEqual(src, "random"))
             return CropType::Random;
 
         RuntimeError("Invalid crop type: %s.", src.c_str());
+    }
+
+    RatioJitterType ParseJitterType(const std::string& src)
+    {
+        if (src.empty() || AreEqual(src, "none"))
+            return RatioJitterType::None;
+        if (AreEqual(src, "uniratio"))
+            return RatioJitterType::UniRatio;
+        if (AreEqual(src, "unilength"))
+            return RatioJitterType::UniLength;
+        if (AreEqual(src, "uniarea"))
+            return RatioJitterType::UniArea;
+
+        RuntimeError("Invalid jitter type: %s.", src.c_str());
     }
 
     cv::Rect GetCropRect(CropType type, int crow, int ccol, double cropRatio)
@@ -87,7 +139,6 @@ private:
         int cropSize = static_cast<int>(std::min(crow, ccol) * cropRatio);
         int xOff = -1;
         int yOff = -1;
-
         switch (type)
         {
         case CropType::Center:
@@ -95,8 +146,8 @@ private:
             yOff = (crow - cropSize) / 2;
             break;
         case CropType::Random:
-            xOff = m_rndUniInt(m_rng) % std::max(ccol - cropSize, 1);
-            yOff = m_rndUniInt(m_rng) % std::max(crow - cropSize, 1);
+            xOff = UniIntT(0, ccol - cropSize)(m_rng);
+            yOff = UniIntT(0, crow - cropSize)(m_rng);
             break;
         default:
             assert(false);
@@ -108,18 +159,20 @@ private:
     }
 
 private:
-    std::default_random_engine m_rng;
-    std::uniform_int_distribution<int> m_rndUniInt;
+    // REVIEW alexeyk: currently not thread safe. Engines are expensive to create.
+    std::mt19937 m_rng;
 
     CropType m_cropType;
-    double m_cropRatio;
+    double m_cropRatioMin;
+    double m_cropRatioMax;
+    RatioJitterType m_jitterType;
     bool m_hFlip;
 };
 
 class ScaleTransform : public ITransform
 {
 public:
-    ScaleTransform(int dataType, unsigned int seed) : m_dataType(dataType), m_rng(seed), m_rndUniInt(0, INT_MAX)
+    ScaleTransform(int dataType, unsigned int seed) : m_dataType(dataType), m_rng(seed)
     {
         assert(m_dataType == CV_32F || m_dataType == CV_64F);
 
@@ -160,12 +213,13 @@ public:
 
         assert(m_interp.size() > 0);
         cv::resize(mat, mat, cv::Size(static_cast<int>(m_imgWidth), static_cast<int>(m_imgHeight)), 0, 0, 
-            m_interp[m_rndUniInt(m_rng) % m_interp.size()]);
+            m_interp[UniIntT(0, static_cast<int>(m_interp.size()) - 1)(m_rng)]);
     }
 
 private:
-    std::default_random_engine m_rng;
-    std::uniform_int_distribution<int> m_rndUniInt;
+    using UniIntT = std::uniform_int_distribution<int>;
+    // REVIEW alexeyk: currently not thread safe. Engines are expensive to create.
+    std::mt19937 m_rng;
 
     int m_dataType;
 
@@ -229,7 +283,7 @@ private:
 // ImageReader
 
 template<class ElemType>
-ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed), m_rndUniInt(0, INT_MAX)
+ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed)
 {
     m_transforms.push_back(std::make_unique<CropTransform>(m_seed));
     m_transforms.push_back(std::make_unique<ScaleTransform>(sizeof(ElemType) == 4 ? CV_32F : CV_64F, m_seed));
@@ -287,8 +341,6 @@ void ImageReader<ElemType>::Init(const ConfigParameters& config)
         files.push_back({ imgPath, std::stoi(clsId) });
     }
 
-    std::shuffle(files.begin(), files.end(), m_rng);
-
     m_epochStart = 0;
     m_mbStart = 0;
 }
@@ -303,6 +355,8 @@ void ImageReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size
 {
     assert(mbSize > 0);
     assert(requestedEpochSamples > 0);
+
+    std::shuffle(files.begin(), files.end(), m_rng);
 
     m_epochSize = (requestedEpochSamples == requestDataSize ? files.size() : requestedEpochSamples);
     m_mbSize = mbSize;
@@ -339,7 +393,7 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
 
     std::fill(m_labBuf.begin(), m_labBuf.end(), static_cast<ElemType>(0));
     
-#pragma omp parallel for ordered schedule(dynamic)
+//#pragma omp parallel for ordered schedule(dynamic)
     for (long long i = 0; i < static_cast<long long>(mbLim - m_mbStart); i++)
     {
         const auto& p = files[i + m_mbStart];
