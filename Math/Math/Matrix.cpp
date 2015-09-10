@@ -2457,7 +2457,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    Matrix<ElemType>& Matrix<ElemType>::AssignNumOfDiff (const Matrix<ElemType>& a, const Matrix<ElemType>& b)
+    Matrix<ElemType>& Matrix<ElemType>::AssignNumOfDiff (const Matrix<ElemType>& a, const Matrix<ElemType>& b, bool searchInCol)
     {
         DecideAndMoveToRightDevice(a, b, *this);        
         //WARNING: a and b must have same type
@@ -2468,7 +2468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
-            this->m_CPUMatrix->AssignNumOfDiff(*a.m_CPUMatrix, *b.m_CPUMatrix), 
+            this->m_CPUMatrix->AssignNumOfDiff(*a.m_CPUMatrix, *b.m_CPUMatrix, searchInCol), 
             this->m_GPUMatrix->AssignNumOfDiff(*a.m_GPUMatrix, *b.m_GPUMatrix), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
@@ -3380,7 +3380,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //I decided to use Matrix<ElemType>& maxIndexes instead of integer vector because the result may be used to do additional calculation
     template<class ElemType>
-    void Matrix<ElemType>::VectorMax(Matrix<ElemType>& maxIndexes, Matrix<ElemType>& maxValues, const bool isColWise) const
+    void Matrix<ElemType>::VectorMax(Matrix<ElemType>& maxIndexes, Matrix<ElemType>& maxValues, const bool isColWise, int topK) const
     {
         if (IsEmpty())
             LogicError("VectorMax: Matrix is empty.");
@@ -3391,7 +3391,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &maxValues,
-            this->m_CPUMatrix->VectorMax(*maxIndexes.m_CPUMatrix,*maxValues.m_CPUMatrix,isColWise); maxIndexes.SetDataLocation(CPU, DENSE), 
+            this->m_CPUMatrix->VectorMax(*maxIndexes.m_CPUMatrix,*maxValues.m_CPUMatrix,isColWise,topK); maxIndexes.SetDataLocation(CPU, DENSE), 
             this->m_GPUMatrix->VectorMax(*maxIndexes.m_GPUMatrix,*maxValues.m_GPUMatrix,isColWise); maxIndexes.SetDataLocation(GPU, DENSE), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED

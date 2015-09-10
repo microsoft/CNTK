@@ -367,10 +367,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType MatrixNorm0() const; //number of non-zero elemets
         Matrix<ElemType>& AssignSignOf(const Matrix<ElemType>& a);
         Matrix<ElemType>& AddSignOf(const Matrix<ElemType>& a);
-        void VectorMax(Matrix<ElemType>& maxIndexes, Matrix<ElemType>& maxValues, const bool isColWise) const;
+        void VectorMax(Matrix<ElemType>& maxIndexes, Matrix<ElemType>& maxValues, const bool isColWise, int topK = 1) const;
         void VectorMin(Matrix<ElemType>& mainndexes, Matrix<ElemType>& minValues, const bool isColWise) const;
 
-        Matrix<ElemType>&  AssignNumOfDiff(const Matrix<ElemType>& a, const Matrix<ElemType>& b); 
+        Matrix<ElemType>&  AssignNumOfDiff(const Matrix<ElemType>& a, const Matrix<ElemType>& b, bool searchInCol = false); 
 
         Matrix<ElemType>& AssignInnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b); //this method will resize(1,1) first
 

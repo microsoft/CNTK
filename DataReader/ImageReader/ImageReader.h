@@ -39,8 +39,7 @@ public:
 
 private:
     unsigned int m_seed;
-    std::default_random_engine m_rng;
-    std::uniform_int_distribution<int> m_rndUniInt;
+    std::mt19937 m_rng;
 
     std::vector<std::unique_ptr<ITransform>> m_transforms;
 
