@@ -110,7 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_uniformInit = uniformInit;
             m_initValueScale = initValueScale;
             if (m_layerSizes.size() < 2)
-                throw std::invalid_argument("A network should have at least two layers (one input and one output)");
+                InvalidArgument("A network should have at least two layers (one input and one output)");
 
             if (m_deviceId == AUTOPLACEMATRIX)
                 m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
@@ -330,12 +330,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int numRows, numCols;
             std::string name;
             if (!CheckDbnTag(fstream, "BMAT"))
-                throw std::runtime_error("Error reading DBN file - did not find expected tag BMAT\n");
+                RuntimeError("Error reading DBN file - did not find expected tag BMAT\n");
             //fstream.GetMarker(FileMarker::fileMarkerBeginSection, "BMAT");
             fstream >> name >> numRows >> numCols;
             if (name != expectedName)
             {
-                throw std::invalid_argument(msra::strfun::strprintf("ERROR reading pretrained DBN file, expected name %s, found name %s\n", expectedName.c_str(), name.c_str()));
+                InvalidArgument(msra::strfun::strprintf("ERROR reading pretrained DBN file, expected name %s, found name %s\n", expectedName.c_str(), name.c_str()));
             }
 
             if (numCols>1) // transpose W because dbn stores that way apparently
@@ -358,7 +358,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //d_array[i] = (ElemType)tmp;                
                 }
             if (!CheckDbnTag(fstream, "EMAT"))
-                throw std::runtime_error("Error reading DBN file - did not find expected tag EMAT\n");
+                RuntimeError("Error reading DBN file - did not find expected tag EMAT\n");
             //fstream.GetMarker(FileMarker::fileMarkerBeginSection, "EMAT");
 
             return mat;

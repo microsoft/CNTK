@@ -36,7 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of elements in the Matrix<ElemType>
         {
-            throw std::logic_error("ErrorPrediction is used for evaluation only.");
+            LogicError("ErrorPrediction is used for evaluation only.");
         }
 
         virtual void EvaluateThisNode()  
@@ -64,7 +64,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("ErrorPrediction operation requires two inputs.");
+                LogicError("ErrorPrediction operation requires two inputs.");
 
             size_t index = 0;
             // TODO: use dynamic_pointer_cast instead
@@ -87,12 +87,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("ErrorPrediction operation: one of the operants has 0 element.");
+                LogicError("ErrorPrediction operation: one of the operants has 0 element.");
 
             if (((!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match size
                 Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()) )) && Inputs(0)->LoopId() < 0)
             {
-                throw std::logic_error("The Matrix dimension in the ErrorPrediction operation does not match.");
+                LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
             }       
 
             FunctionValues().Resize(1,1);

@@ -243,7 +243,7 @@ void DoCrossValidate(const ConfigParameters& config)
 
     //find best model
     if (cvErrorResults.size() == 0)
-        throw std::logic_error("No model is evaluated.");
+        LogicError("No model is evaluated.");
 
     std::vector<double> minErrors;
     std::vector<int> minErrIds;

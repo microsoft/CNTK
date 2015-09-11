@@ -68,7 +68,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //intentionally comment out to support automatic dimension inference
             //if (rows * cols == 0) 
-            //    throw std::logic_error("This LearnableParameter dimension is 0.");
+            //    LogicError("This LearnableParameter dimension is 0.");
 
             m_functionValues.Resize(rows, cols);
             fstream >> m_functionValues;
@@ -205,7 +205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNode<ElemType>(deviceId, name)
         {
             if (rows * cols == 0)
-                throw std::logic_error("This InputValue dimension is 0.");
+                LogicError("This InputValue dimension is 0.");
 
             m_outputWidth = 1;
             m_outputHeight = rows;
@@ -220,7 +220,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t cols = numImages;
 
             if (rows * cols == 0)
-                throw std::logic_error("This InputValue dimension is 0.");
+                LogicError("This InputValue dimension is 0.");
 
             m_outputWidth = imageWidth;
             m_outputHeight = imageHeight;
@@ -243,7 +243,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows, cols;
             fstream >> rows >> cols;
             if (rows * cols == 0) 
-                throw std::logic_error("This InputValue dimension is 0.");
+                LogicError("This InputValue dimension is 0.");
 
             fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels; 
 
@@ -576,7 +576,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 1)
-                throw std::logic_error("PairNetwork operation should have one input.");
+                LogicError("PairNetwork operation should have one input.");
 
             if (!(Inputs(0) == nullptr))
             {

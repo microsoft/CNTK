@@ -67,7 +67,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of elements in the Matrix<ElemType>
         {
-            throw std::logic_error("SequenceDecoder is used for evaluation only.");
+            LogicError("SequenceDecoder is used for evaluation only.");
         }
 
         /// compute posterior probability of label y at position t
@@ -171,14 +171,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 3)
-                throw std::logic_error("SequenceDecoderNode requires three inputs.");
+                LogicError("SequenceDecoderNode requires three inputs.");
 
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&  // position dependent and pair scores have same number of labels
                 Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
                 Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() && // position dependent and pair scores have the same observation numbers
                 Inputs(2)->FunctionValues().GetNumCols() == Inputs(2)->FunctionValues().GetNumRows()))
             {
-                throw std::logic_error("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
+                LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
             }
 
             InferImageDimsFromInputs();
