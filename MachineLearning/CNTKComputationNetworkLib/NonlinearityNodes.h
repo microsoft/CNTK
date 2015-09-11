@@ -89,9 +89,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) = 0;
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1) 
                 throw std::logic_error("Nonlinearity operations should have one input.");
@@ -548,9 +548,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1) 
                 throw std::logic_error("SoftmaxNode operation should have one input.");
@@ -644,9 +644,9 @@ private:
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1)
                 throw std::logic_error("LogSoftmaxNode operation should have one input.");
@@ -995,9 +995,9 @@ virtual const std::wstring OperationName() const { return TypeName(); }
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 4)
                 throw std::logic_error("GMMLogLikelihoodNode requires four inputs.");
@@ -1196,9 +1196,9 @@ virtual const std::wstring OperationName() const { return TypeName(); }
                 return Inputs(0)->FunctionValues();
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1)
                 throw std::logic_error("Dropout operation should have one input.");
@@ -1369,9 +1369,9 @@ private:
             }
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1)
                 throw std::logic_error("Reshape operation: Should have one input.");
@@ -1625,9 +1625,9 @@ private:
             }
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1)
                 throw std::logic_error("RowRepeat operation should have one input.");

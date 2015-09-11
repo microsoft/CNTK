@@ -53,11 +53,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SaveToFile(File& fstream) const
         {
             Base::SaveToFile(fstream);
-            fstream << NeedGradient();
+            fstream << m_needGradient;
             fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
             fstream << FunctionValues();
         }
-        
+
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
             Base::LoadFromFile(fstream, modelVersion);
@@ -66,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_needGradient;
             fstream >> rows >> cols;
 
-            //intentionally comment out to support automatic dimention inference
+            //intentionally comment out to support automatic dimension inference
             //if (rows * cols == 0) 
             //    throw std::logic_error("This LearnableParameter dimension is 0.");
 
@@ -118,10 +118,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
         virtual void EvaluateThisNode() {}
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) {}
-        virtual void Validate() 
-        {
-            PrintSelfBeforeValidation();
-        }
 
         static const std::wstring TypeName() {return L"LearnableParameter";} 
 
@@ -269,12 +265,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
-
-        virtual void Validate() 
-        {
-            PrintSelfBeforeValidation();
-            //InferImageDimsFromInputs(); //not necessary since InputValue are leafs. put it here for consistent
-        }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
@@ -426,9 +416,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             functionValues.Reshape(rows * wordsInEachSample, cols1);
         }
             
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (Inputs(1)->FunctionValues().GetNumRows() % Inputs(0)->FunctionValues().GetNumCols() != 0)
                 throw invalid_argument("Mismatched dimention. rows in input1 must be multiples of cols in input0.");
@@ -581,9 +571,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             mTmp.SetValue(Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation(true);
+            Base::Validate();
 
             if (m_children.size() != 1)
                 throw std::logic_error("PairNetwork operation should have one input.");

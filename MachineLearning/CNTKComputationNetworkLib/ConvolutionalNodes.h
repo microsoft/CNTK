@@ -272,9 +272,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         // note: this also infers dimensions from chilren
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 LogicError("ConvolutionNode requires two inputs.");
@@ -455,9 +455,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this function must be overriden by Max or AveragePoolingNode
         virtual void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) = 0;
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1)
                 LogicError("PoolingNodes require one input.");

@@ -127,7 +127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNodeGivenInputs() = 0;
         virtual void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
 
-        virtual void Validate() = 0;
+        virtual void /*ComputationNodeBase::*/Validate() { }
         virtual bool UnitTest() { return true; }
 
         virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs, size_t numExpected = SIZE_MAX) = 0;
@@ -281,10 +281,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_evalTimeStamp = s_timeStampCounter;
         }
 
-        //for debugging purpose
+        // implemented by ComputationNode<ElemType>
+        // for debugging purpose
         virtual void PrintSelf(bool printMatrices = false) const = 0;
 
-    protected:
+        // called in validation loop right before Validate()
         virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
         {
             fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
@@ -318,7 +319,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, ")");
             }
         }
-    public:
 
         const std::wstring& NodeName() const { return m_nodeName; }
         std::wstring& NodeName() { return m_nodeName; }
@@ -996,8 +996,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         */
 
-        //for debugging purpose
-        virtual void PrintSelf(bool printMatrices = false) const
+        // for debugging purpose
+        void /*ComputationNodeBase::*/PrintSelf(bool printMatrices = false) const
         {
             fprintf(stderr, "\n%ls[%lu, %lu] = %ls", NodeName().c_str(), GetNumRows(), GetNumCols(), OperationName().c_str());           
 
@@ -1301,7 +1301,7 @@ public: \
     using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
     using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
-    using Base::OperationName; using Base::PrintNodeValuesToFile; using Base::PrintSelf; using Base::PrintSelfBeforeValidation; \
+    using Base::OperationName; using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
     using Base::SaveToFile; using Base::SetFunctionAndGradientSize; using Base::SetInput; using Base::Validate; \
 protected:  \
