@@ -39,7 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // if it receives a lonely std::string then throw that directly
     template<class E>
-    static inline void ThrowFormatted(const string & message) { throw E(message); }
+    __declspec_noreturn static inline void ThrowFormatted(const string & message) { throw E(message); }
 
     // RuntimeError - throw a std::runtime_error with a formatted error string
     template<class... _Types>
@@ -54,7 +54,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         va_list args;
         char buffer[1024];
-
         va_start(args, format);
         vsprintf(buffer, format, args);
     };
