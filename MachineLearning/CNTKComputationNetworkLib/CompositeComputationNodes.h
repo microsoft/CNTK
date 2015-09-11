@@ -851,9 +851,11 @@ public:
     {
         assert(m_memory.GetNumCols() > 0);
 
-        FunctionValues().Resize(m_memory.GetNumRows(), m_samplesInRecurrentStep);
-        if (frameRange.t() == 0)
-            assert(FunctionValues().ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm() == m_memory.ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm());
+        //FunctionValues().Resize(m_memory.GetNumRows(), m_samplesInRecurrentStep);
+        FunctionValues().Resize(m_memory.GetNumRows(), frameRange.NumCols());   // extra space for one time step
+        if (frameRange.t() == 0)    // for first frame, check that we got all in memory  --TODO: is this comment correct? How about going backwards?
+            assert(FunctionValues().FrameSlice(FrameRange(0, m_samplesInRecurrentStep)/*TODO: delete the next two parameters*/, 0, m_samplesInRecurrentStep).FrobeniusNorm() == m_memory.FrameSlice(FrameRange(0, m_samplesInRecurrentStep)/*TODO: delete the next two parameters*/, 0, m_samplesInRecurrentStep).FrobeniusNorm());
+            //assert(FunctionValues().ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm() == m_memory.ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm());
         FunctionValues().SetValue(m_memory.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
         assert(FunctionValues().GetNumCols() == m_samplesInRecurrentStep);
     }
@@ -892,18 +894,15 @@ protected:
 };
 
 // add this at the start of each derived class, to get access to the members of ComputationNode
-// TODO: comment here why this is needed and how to maintain it
+// See #define of 'UsingComputationNodeMembers' for more explanation.
 #define UsingBatchModeNodeMembers UsingComputationNodeMembers; \
     protected:  \
-        typedef BatchModeNode<ElemType>* BatchModeNodePtr;  \
-    public: \
-        using Base::HasComputed; using Base::MarkComputed; using Base::RequiresBatchMode; \
-    protected:  \
         using Base::m_memory; using Base::m_hasComputed; \
-    public:
+    public: \
+        using Base::HasComputed; using Base::MarkComputed; using Base::RequiresBatchMode
 
-template class BatchModeNode<float>;
-template class BatchModeNode<double>;
+//template class BatchModeNode<float>;
+//template class BatchModeNode<double>;
 
 /**
 Developed by Kaisheng Yao.

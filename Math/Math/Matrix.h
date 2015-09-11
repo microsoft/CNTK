@@ -29,6 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure
     // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
     // TODO: m_samplesInRecurrentStep should be subsumed here & removed from nodes
+    // BUGBUG: This does not work for BatchModeNodes. They must access m_samplesInRecurrentStep, yet operate on the whole sequence.
     struct FrameRange
     {
         const size_t timeIdxInSeq;              // start frame
