@@ -133,35 +133,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
             //size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;  //size of each input sample
 
-            long batchSize = (long)input1.GetNumCols(); //right child is the input sample
+            size_t batchSize = input1.GetNumCols(); //right child is the input sample
 
-            long maxTempMemSizeInSamples = (long)(m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
+            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
 
             //const Matrix<ElemType> & weightMatrix = input0;
             //inputGradientValues.Resize(weightMatrix.GetNumRows(), weightMatrix.GetNumCols()); //should have been resized when preparing gradient computation
 
             gradientValues.Reshape(m_outputChannels, outputSizePerChannel * batchSize);  //reshape to match the longernal operation
 
-            long subBatchSize = min(batchSize, maxTempMemSizeInSamples);
-            long numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
+            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
+            size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
 
             if (numSubBatches == 1 && !inLoop)  //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
                 Matrix<ElemType>::MultiplyAndAdd(gradientValues, false, tempMatrix, true, inputGradientValues);
             else
             {
-                for (long i = 0; i<numSubBatches; i++)
+                for (size_t i = 0; i<numSubBatches; i++)
                 {
-                    long startSampleID = i*subBatchSize;
-                    long endSampleID = min(batchSize, startSampleID + subBatchSize);
-                    long smallBatchSize = endSampleID - startSampleID;
+                    size_t startSampleID = i*subBatchSize;
+                    size_t endSampleID = min(batchSize, startSampleID + subBatchSize);
+                    size_t smallBatchSize = endSampleID - startSampleID;
 
                     tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                     Matrix<ElemType> inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
                     tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
-                        m_inputWidth, m_inputHeight, m_inputChannels,
-                        m_outputWidth, m_outputHeight, m_outputChannels,
-                        m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample,
-                        m_zeroPadding);
+                                                            m_inputWidth, m_inputHeight, m_inputChannels,
+                                                            m_outputWidth, m_outputHeight, m_outputChannels,
+                                                            m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample,
+                                                            m_zeroPadding);
 
                     Matrix<ElemType> outputGradientSubBatch = gradientValues.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
                     Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, tempMatrix, true, inputGradientValues);
@@ -180,22 +180,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
             //size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;  //size of each input sample
 
-            long batchSize = (long)input1.GetNumCols(); //right child is the input sample
+            size_t batchSize = input1.GetNumCols(); //right child is the input sample
 
-            long maxTempMemSizeInSamples = (long)(m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
+            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
 
             const Matrix<ElemType> & weightMatrix = input0;
 
             gradientValues.Reshape(m_outputChannels, outputSizePerChannel * batchSize);  //reshape to match the longernal operation
 
-            long subBatchSize = min(batchSize, maxTempMemSizeInSamples);
-            long numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
+            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
+            size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
 
-            for (long i = 0; i<numSubBatches; i++)
+            for (size_t i = 0; i<numSubBatches; i++)
             {
-                long startSampleID = i*subBatchSize;
-                long endSampleID = min(batchSize, startSampleID + subBatchSize);
-                long smallBatchSize = endSampleID - startSampleID;
+                size_t startSampleID = i*subBatchSize;
+                size_t endSampleID = min(batchSize, startSampleID + subBatchSize);
+                size_t smallBatchSize = endSampleID - startSampleID;
 
                 tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Matrix<ElemType> outputGradientSubBatch = gradientValues.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
@@ -203,10 +203,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 Matrix<ElemType> inputGradientSubBatch = inputGradientValues.ColumnSlice(startSampleID, smallBatchSize);
                 tempMatrix.UnpackConvolutionInput(inputGradientSubBatch,
-                    m_inputWidth, m_inputHeight, m_inputChannels,
-                    m_outputWidth, m_outputHeight, m_outputChannels,
-                    m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample,
-                    m_zeroPadding);
+                                                  m_inputWidth, m_inputHeight, m_inputChannels,
+                                                  m_outputWidth, m_outputHeight, m_outputChannels,
+                                                  m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample,
+                                                  m_zeroPadding);
             }
 
             gradientValues.Reshape(m_outputChannels * outputSizePerChannel, batchSize);  //change back
@@ -234,22 +234,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
             //size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;  //size of each input sample
 
-            long batchSize = (long)input1.GetNumCols();  //right child is the input sample
+            size_t batchSize = input1.GetNumCols();  //right child is the input sample
 
-            long maxTempMemSizeInSamples = (long)(m_maxTempMemSizeInSamples == 0? batchSize : m_maxTempMemSizeInSamples);
+            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0? batchSize : m_maxTempMemSizeInSamples);
 
             const Matrix<ElemType> & weightMatrix = input0;
             assert(weightMatrix.GetNumCols() == packedInputRows && weightMatrix.GetNumRows() == m_outputChannels);
             functionValues.Resize(m_outputChannels, outputSizePerChannel * batchSize);
 
-            long subBatchSize = (long)min(batchSize, maxTempMemSizeInSamples); 
-            long numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
+            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples); 
+            size_t numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
 
-            for (long i=0; i<numSubBatches; i++) 
+            for (size_t i=0; i<numSubBatches; i++) 
             {
-                long startSampleID = i*subBatchSize; 
-                long endSampleID = min(batchSize, startSampleID + subBatchSize); 
-                long smallBatchSize = endSampleID-startSampleID; 
+                size_t startSampleID = i*subBatchSize; 
+                size_t endSampleID = min(batchSize, startSampleID + subBatchSize); 
+                size_t smallBatchSize = endSampleID-startSampleID; 
 
                 tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Matrix<ElemType>  inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
