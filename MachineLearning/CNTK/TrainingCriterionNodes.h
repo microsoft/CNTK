@@ -540,9 +540,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, this);
             
             //fprintf(stderr, "debughtx m_sentenceSeg check row:%d col:%d norm:%f\n", m_sentenceSeg->GetNumRows(), m_sentenceSeg->GetNumCols(), curNode->m_sentenceSeg->MatrixNormInf());
+            //m_clabel.TransferFromDeviceToDevice(m_deviceId, CPUDEVICE); //This did not improve speed
+            //m_prob_noise.TransferFromDeviceToDevice(m_deviceId, CPUDEVICE);
             int seq_size = m_sentenceSeg->GetNumRows(), mb_size = m_sentenceSeg->GetNumCols();
             lp_model.resize(seq_size); lp_noise.resize(seq_size); isFromData.resize(seq_size); //resize
             ElemType criterion = 0; //NCE criterion for this MB
+            int nWordsMB = 0; //How many effective words?
             for (int i = 0; i < seq_size; i++) {
                 if ((((*m_sentenceSeg)(i, 0))) == (float)MinibatchPackingFlag::NoInput)
                     continue;
@@ -560,25 +563,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         fprintf(stderr, "LMNCESoftmaxCE EvaluateThisNode WARNING got a strange model prob (i%d, j%d, w%d) %lf, setting to 1e-7\n", i, j, w_id, m_softmaxOfRight(w_id, idx));
                     } else 
                         lp_model[i] += log(m_softmaxOfRight(w_id, idx));
-                    /*
-                    while (p_noise[i] < 0.01 || p_model[i] < 0.01) //they could be too small
-                    {
-                        p_noise[i] *= 10;
-                        p_model[i] *= 10;
-                        if (isinf(p_noise[i])) {
-                            fprintf(stderr, "debughtx WARNING: p_noise[i] got to inf, restrict it to 1e10\n");
-                            p_noise[i] = 1e10;
-                        }
-                        if (isinf(p_model[i])) {
-                            fprintf(stderr, "debughtx WARNING: p_model[i] got to inf, restrict it to 1e10\n");
-                            p_model[i] = 1e10;
-                        }
-                        if (p_noise[i] <= 0 || p_model[i] <= 0)
-                            RuntimeError("LMNCE Evaluate this node, got prob <=0 p_noise:%lf p_model:%lf\n", p_noise[i], p_model[i]);
-                    }
-                    */
-                    //while (p_noise[i] > p_model[i] * 1000000) p_noise[i] /= 10;
-                    //while (p_model[i] > p_noise[i] * 1000000) p_model[i] /= 10; //Don't know whether it could get to NAN because of this
+                    nWordsMB++;
                     if (((*m_sentenceSeg)(i, j)) == (float)MinibatchPackingFlag::SequenceEnd)
                         break;
                 }
@@ -596,9 +581,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 criterion += cNow;
             }
+            //m_clabel.TransferFromDeviceToDevice(CPUDEVICE, m_deviceId); //This did not improve speed
+            //m_prob_noise.TransferFromDeviceToDevice(CPUDEVICE, m_deviceId);
             DEVICEID_TYPE FunctionValues_deviceId = FunctionValues().GetDeviceId();
             FunctionValues().TransferFromDeviceToDevice(FunctionValues_deviceId, CPUDEVICE);
-            FunctionValues().SetValue(0, 0, (-1) * criterion);
+            FunctionValues().SetValue(0, 0, (-1) * criterion * nWordsMB / seq_size); //Was a big bug: Here the sample is sentence, not word!
             FunctionValues().TransferFromDeviceToDevice(CPUDEVICE, FunctionValues_deviceId);
 
             /*
