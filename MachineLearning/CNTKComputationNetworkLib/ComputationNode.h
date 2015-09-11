@@ -5,6 +5,12 @@
 //
 #pragma once
 
+#include "Basics.h"
+#include "Matrix.h"
+#include "BrainScriptObjects.h"
+
+#include "MatrixPool.h"
+
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -17,12 +23,6 @@
 #include <atomic>
 #include <sstream>
 #include <iostream>
-
-#include "Basics.h"
-#include "Matrix.h"
-#include "BrainScriptObjects.h"
-
-#include "MatrixPool.h"
 
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
