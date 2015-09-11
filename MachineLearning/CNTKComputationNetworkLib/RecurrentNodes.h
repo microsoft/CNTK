@@ -255,8 +255,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
+            Base::Validate();
+
             PrintSelfBeforeValidation(true/*allowNulls*/);
 
             if (m_children.size() != 1)
@@ -1273,9 +1275,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // input(3) : output gate [outputdim x [inputdim + outputdim + 2]] for bo, Wxo, Who, and Wco
         // input(4) : memory cell weight [outputdim x [inputdim + outputdim + 1]] for bc, Wxc, and Whc 
         // output : dimension [outputdim x T]
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 5)
                 throw std::logic_error("LSTMNode requires four inputs.");

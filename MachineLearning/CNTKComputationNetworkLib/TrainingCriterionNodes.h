@@ -69,9 +69,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 LogicError("SquareError operation requires two inputs.");
@@ -232,9 +232,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 LogicError("CrossEntropyWithSoftmaxNode criterion requires two inputs.");
@@ -385,9 +385,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 LogicError("CrossEntropyNode criterion requires two inputs.");
@@ -516,9 +516,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1) 
                 LogicError("MatrixL1Reg criterion should have one input.");
@@ -612,9 +612,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1) 
                 LogicError("MatrixL2Reg criterion should have one input.");
@@ -777,9 +777,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
         [3] clsprob in dense matrix in [nbr_cls x T]. this is the output from logsoftmax node for the log-posterior probabilty of class given observations
         */
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 4)
                 LogicError("NoiseContrastiveEstimationNode criterion requires four inputs.");
@@ -1125,9 +1125,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
         [3] clsprob in dense matrix in [nbr_cls x T]. this input, if applied softmax on, is the posterior probabilty of class given observations
         */
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 4)
                 LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires four inputs.");
@@ -1437,9 +1437,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             postprob.InplaceExp();
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 3)
                 LogicError("CRFNode requires three inputs.");
@@ -1561,9 +1561,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 3) 
                 LogicError("DummyCriterionNode criterion requires three inputs.");

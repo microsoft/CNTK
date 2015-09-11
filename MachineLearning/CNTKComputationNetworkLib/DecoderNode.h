@@ -166,9 +166,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /// need to feed in quesudo label data, which tells the decoder what is the begining
         /// and ending output symbol. these symbols will constrain the search space
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 3)
                 throw std::logic_error("SequenceDecoderNode requires three inputs.");

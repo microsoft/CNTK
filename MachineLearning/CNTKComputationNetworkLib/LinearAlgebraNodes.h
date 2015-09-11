@@ -80,9 +80,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1) 
                 throw std::logic_error("Negate operation should have one input.");
@@ -162,9 +162,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1) 
                 throw std::logic_error("SumElements operation should have one input.");
@@ -253,9 +253,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1)
                 throw std::logic_error("SumColumnElements operation should have one input.");
@@ -386,9 +386,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1) 
                 throw std::logic_error("RowSlice operation should have one input.");
@@ -497,12 +497,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
-            
-            unsigned int numInputs = ChildrenSize();
-            if (numInputs < 2)
+            Base::Validate();
+
+            if (m_children.size() < 2)
                 LogicError("RowStack operation: must have two or more inputs.");
 
             if (Inputs(0) == nullptr)
@@ -645,9 +644,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 throw std::logic_error("Scale operation requires two inputs.");
@@ -794,9 +793,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 throw std::logic_error("Times operation requires two inputs.");
@@ -958,9 +957,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2)
                 throw std::logic_error("TransposeTimes operation requires two inputs.");
@@ -1081,9 +1080,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 throw std::logic_error("ElementTimes operation requires two inputs.");
@@ -1230,9 +1229,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2)
                 throw std::logic_error("RowElementTimes operation requires two inputs.");
@@ -1376,9 +1375,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2)
                 throw std::logic_error("ColumnElementTimes operation requires two inputs.");
@@ -1608,9 +1607,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 throw std::logic_error("Plus operation requires two inputs.");
@@ -1892,9 +1891,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 throw std::logic_error("Minus operation requires two inputs.");
@@ -2040,9 +2039,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             functionValues.ColumnElementMultiplyWith(inputFunctionValues0);
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 throw std::logic_error("DiagTimes operation requires two inputs.");
@@ -2242,9 +2241,9 @@ private:
             functionValues.ElementMultiplyWith(invNorm1);
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 throw std::logic_error("CosDistance operation requires two inputs.");
@@ -2414,9 +2413,9 @@ private:
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 throw std::logic_error("KhatriRaoProduct operation requires two inputs.");
@@ -2648,9 +2647,9 @@ private:
             functionValues.AssignElementProductOf(leftTermTemp, rightTermTemp);
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 4)
                 throw std::logic_error("CosDistanceWithNegativeSamples operation requires 4 inputs.");
@@ -2803,9 +2802,9 @@ private:
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1)
                 throw std::logic_error("Transpose operation requires one input.");
@@ -3145,9 +3144,9 @@ private:
         input1: right matrix
         stridedim: single element no gradient matrix, 0 row stride / 1 column stride
         */
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 3)
                 throw std::logic_error("StrideTimes operation requires three inputs.");
