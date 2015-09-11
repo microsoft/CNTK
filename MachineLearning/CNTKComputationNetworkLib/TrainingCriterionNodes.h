@@ -879,29 +879,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t sz = 0;
             for (size_t t = 0; t < nT; t++)
             {
+                FrameRange frameRange(t, 1);
                 /// compute prb - 1 and prb
-                Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().ColumnSlice(t, 1);
+                Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
                 size_t c_t = (size_t)lbl_t(1, 0);
                 size_t lft_bnd = (size_t)lbl_t(2, 0);
                 size_t rgt_bnd = (size_t)lbl_t(3, 0);
                 size_t nbr_wrd = rgt_bnd - lft_bnd; // number of words in the class
                 if (nbr_wrd == 0)
-                {
                     continue;
-                }
 
                 Matrix<ElemType> input_weight_t = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);
-
-                Matrix<ElemType> obs = Inputs(1)->FunctionValues().ColumnSlice(t, 1);
-
+                Matrix<ElemType> obs = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
                 Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
-
-                Matrix<ElemType> grd_to_cls_prob = m_clsLogSoftmax.ColumnSlice(t, 1);
+                Matrix<ElemType> grd_to_cls_prob = m_clsLogSoftmax.FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
 
                 switch (inputIndex){
                 case 1:
                     /// gradient to input
-                    grd_t = Inputs(1)->GradientValues().ColumnSlice(t, 1);
+                    grd_t = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
                     ComputeInputPartialRight(input_weight_t, grd_t, grd_to_soft_max_input);
                     break;
                 case 2:
@@ -910,8 +906,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     ComputeInputPartialLeft(obs, grd_to_wgt_t, grd_to_soft_max_input);
                     break;
                 case 3:
-                    grd_t = Inputs(3)->GradientValues().ColumnSlice(t, 1);
-                    grd_t.SetValue(m_clsSoftmax.ColumnSlice(t, 1));
+                    grd_t = Inputs(3)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
+                    grd_t.SetValue(m_clsSoftmax.FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1));
                     ComputeCEPartialToSoftmaxInputs(grd_t, GradientValues(), c_t);
                     break;
                 default:
@@ -949,8 +945,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t sz = 0;
                 for (size_t t = 0; t < nT; t++)
                 {
+                    FrameRange frameRange(t, 1);
                     /// compute prb - 1 and prb
-                    Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().ColumnSlice(t, 1);
+                    Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
                     size_t y_t = (size_t)lbl_t(0, 0);
                     size_t lft_bnd = (size_t)lbl_t(2, 0);
                     size_t rgt_bnd = (size_t)lbl_t(3, 0);
@@ -989,10 +986,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
-            const Matrix<ElemType>& inputs, const Matrix<ElemType>& input_weight, const Matrix<ElemType>& input_cls_log_post_prob,
-            Matrix<ElemType>& logSoftmax,
-            Matrix<ElemType>& softMax, 
-            Matrix<ElemType>& clsLogSoftmax, Matrix<ElemType>& clsSoftmax, size_t& totalWords, ClassBasedCrossEntropyWithSoftmaxNode* curNode)
+                                      const Matrix<ElemType>& inputs, const Matrix<ElemType>& input_weight, const Matrix<ElemType>& input_cls_log_post_prob,
+                                      Matrix<ElemType>& logSoftmax,
+                                      Matrix<ElemType>& softMax, 
+                                      Matrix<ElemType>& clsLogSoftmax, Matrix<ElemType>& clsSoftmax, size_t& totalWords, ClassBasedCrossEntropyWithSoftmaxNode* curNode)
         {
             totalWords = 0;
             size_t nT = lbls.GetNumCols();
