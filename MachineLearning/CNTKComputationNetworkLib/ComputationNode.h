@@ -31,7 +31,7 @@
 #define NOT_IMPLEMENTED \
 {   \
     fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
-    throw std::logic_error("Not Implemented"); \
+    LogicError("Not Implemented"); \
 }
 #endif
 
@@ -789,34 +789,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // these take ComputationNodePtr, not ComputationNodeBasePtr, as these are being overloaded by nodes
         virtual void AttachInputs(const ComputationNodePtr /*singleInput*/) 
         {
-            throw std::logic_error("This operation does not support single input.");
+            LogicError("This operation does not support single input.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*rightInput*/) 
         {
-            throw std::logic_error("This operation does not support two inputs.");
+            LogicError("This operation does not support two inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*middleInput*/, const ComputationNodePtr /*rightInput*/) 
         {
-            throw std::logic_error("This operation does not support three inputs.");
+            LogicError("This operation does not support three inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, const ComputationNodePtr /*fourthInput*/)
         {
-            throw std::logic_error("This operation does not support four inputs.");
+            LogicError("This operation does not support four inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, 
                                   const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
         {
-            throw std::logic_error("This operation does not support five inputs.");
+            LogicError("This operation does not support five inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/,
                                   const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
         {
-            throw std::logic_error("This operation does not support six inputs.");
+            LogicError("This operation does not support six inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodeBasePtr singleInput) { AttachInputs(UpCast(singleInput)); }

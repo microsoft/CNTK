@@ -85,10 +85,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 1) 
-                throw std::logic_error("Negate operation should have one input.");
+                LogicError("Negate operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("Negate operation: the input node has 0 element.");
+                LogicError("Negate operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             
@@ -167,10 +167,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 1) 
-                throw std::logic_error("SumElements operation should have one input.");
+                LogicError("SumElements operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("SumElements operation: the input node has 0 element.");
+                LogicError("SumElements operation: the input node has 0 element.");
 
             FunctionValues().Resize(1, 1);
             InferImageDimsFromInputs(); 
@@ -258,10 +258,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 1)
-                throw std::logic_error("SumColumnElements operation should have one input.");
+                LogicError("SumColumnElements operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("SumColumnElements operation: the input node has 0 element.");
+                LogicError("SumColumnElements operation: the input node has 0 element.");
 
             FunctionValues().Resize(1, Inputs(0)->FunctionValues().GetNumCols());
             InferImageDimsFromInputs();
@@ -391,13 +391,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 1) 
-                throw std::logic_error("RowSlice operation should have one input.");
+                LogicError("RowSlice operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("RowSlice operation: the input node has 0 element.");
+                LogicError("RowSlice operation: the input node has 0 element.");
 
             if (Inputs(0)->FunctionValues().GetNumRows() < m_startIndex + m_numRows)
-                throw std::logic_error("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
+                LogicError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
 
             FunctionValues().Resize(m_numRows, Inputs(0)->FunctionValues().GetNumCols());
             InferImageDimsFromInputs(); 
@@ -649,13 +649,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("Scale operation requires two inputs.");
+                LogicError("Scale operation requires two inputs.");
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("Scale operation: one of the operands has 0 element.");
+                LogicError("Scale operation: one of the operands has 0 element.");
 
             if (Inputs(0)->FunctionValues().GetNumRows() != 1 || Inputs(0)->FunctionValues().GetNumCols() != 1)
-                throw std::logic_error("The left value of ScaleNode must be a scalar value.");
+                LogicError("The left value of ScaleNode must be a scalar value.");
 
             FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             //left Node must be a scalar
@@ -798,7 +798,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("Times operation requires two inputs.");
+                LogicError("Times operation requires two inputs.");
 
             //support automatic dimention inference for learnable parameters
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
@@ -816,12 +816,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(1)->FunctionValues().Resize(cols0, cols1);
 
             if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())&& this->LoopId() < 0)
-                throw std::logic_error("Times operation: One of the operants has 0 elements.");
+                LogicError("Times operation: One of the operants has 0 elements.");
 
             //cols0 and rows1 may have been changed so don't use them in the following check
             if ((Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumCols()) && this->LoopId() < 0)
             {
-                throw std::logic_error("The Matrix dimension in the Times operation does not match.");
+                LogicError("The Matrix dimension in the Times operation does not match.");
             }
             FunctionValues().Resize(rows0, cols1);
             InferImageDimsFromInputs(); 
@@ -962,7 +962,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 2)
-                throw std::logic_error("TransposeTimes operation requires two inputs.");
+                LogicError("TransposeTimes operation requires two inputs.");
 
             //support automatic dimention inference for learnable parameters
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
@@ -978,12 +978,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(1)->FunctionValues().Resize(cols0, cols1);
 
             if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->LoopId() < 0)
-                throw std::logic_error("TransposeTimes operation: One of the operants has 0 elements.");
+                LogicError("TransposeTimes operation: One of the operants has 0 elements.");
 
             //cols0 and rows1 may have been changed so don't use them in the following check
             if ((Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows()) && this->LoopId() < 0)
             {
-                throw std::logic_error("The Matrix dimension in the TransposeTimes operation does not match.");
+                LogicError("The Matrix dimension in the TransposeTimes operation does not match.");
             }
             FunctionValues().Resize(cols0, cols1);
             InferImageDimsFromInputs();
@@ -1085,7 +1085,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("ElementTimes operation requires two inputs.");
+                LogicError("ElementTimes operation requires two inputs.");
 
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
@@ -1099,11 +1099,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("ElementTimes operation: one of the operants has 0 element.");
+                LogicError("ElementTimes operation: one of the operants has 0 element.");
 
             if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() ||
                 Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
-                throw std::logic_error("The Matrix<ElemType> dimension in the ElementTimes operation does not match.");
+                LogicError("The Matrix<ElemType> dimension in the ElementTimes operation does not match.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             InferImageDimsFromInputs(); 
@@ -1234,16 +1234,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 2)
-                throw std::logic_error("RowElementTimes operation requires two inputs.");
+                LogicError("RowElementTimes operation requires two inputs.");
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("RowElementTimes operation: one of the operants has 0 element.");
+                LogicError("RowElementTimes operation: one of the operants has 0 element.");
 
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
 
             if (cols0 != cols1 || rows1 != 1)
-                throw std::logic_error("RowElementTimes: Either the second operand is not a row vector or the number of columns of operands does not match.");
+                LogicError("RowElementTimes: Either the second operand is not a row vector or the number of columns of operands does not match.");
 
             FunctionValues().Resize(rows0, cols0);
             InferImageDimsFromInputs();
@@ -1380,7 +1380,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 2)
-                throw std::logic_error("ColumnElementTimes operation requires two inputs.");
+                LogicError("ColumnElementTimes operation requires two inputs.");
 
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
@@ -1394,13 +1394,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("ColumnElementTimes operation: one of the operants has 0 element.");
+                LogicError("ColumnElementTimes operation: one of the operants has 0 element.");
 
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
 
             if (rows0 != rows1 || cols1 != 1)
-                throw std::logic_error("ColumnElementTimes: Either the second operand is not a column vector or the number of rows of operands does not match.");
+                LogicError("ColumnElementTimes: Either the second operand is not a column vector or the number of rows of operands does not match.");
 
             FunctionValues().Resize(rows0, cols0);
             InferImageDimsFromInputs();
@@ -1612,7 +1612,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("Plus operation requires two inputs.");
+                LogicError("Plus operation requires two inputs.");
 
             //if dimention not specified we assume two operants' dimentions should be the same
             size_t index = 0;
@@ -1632,7 +1632,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->LoopId() < 0)
-                throw std::logic_error("Plus operation: one of the operants has 0 element.");
+                LogicError("Plus operation: one of the operants has 0 element.");
 
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
@@ -1896,7 +1896,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("Minus operation requires two inputs.");
+                LogicError("Minus operation requires two inputs.");
 
             //if dimention is missing make the two operatants to have same size
             size_t index = 0;
@@ -1916,7 +1916,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("Minus operation: one of the operants has 0 element.");
+                LogicError("Minus operation: one of the operants has 0 element.");
 
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
@@ -1925,7 +1925,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 !((rows0 == 1 || rows1 == 1) && cols0 == cols1) && //one is row vec
                 !((cols0 == 1 && rows1 % rows0 == 0) || (cols1 == 1 && rows0 % rows1 == 0)))  //one is col vec with divisable rows, including scalar
             {
-                throw std::logic_error("The Matrix dimension in the Minus operation does not match.");
+                LogicError("The Matrix dimension in the Minus operation does not match.");
             }       
 
             FunctionValues().Resize(max(rows0, rows1), max(cols0,cols1) );
@@ -2044,7 +2044,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("DiagTimes operation requires two inputs.");
+                LogicError("DiagTimes operation requires two inputs.");
 
             //if dimention not specified we assume two operants' dimentions should match
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0 && Inputs(1)->FunctionValues().GetNumRows() != 0)
@@ -2058,13 +2058,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("DiagTimes operation: one of the operants has 0 element.");
+                LogicError("DiagTimes operation: one of the operants has 0 element.");
 
             if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows())
-                throw std::logic_error("The Matrix dimension in the DiagTimes operation does not match.");
+                LogicError("The Matrix dimension in the DiagTimes operation does not match.");
 
             if (1 != Inputs(0)->FunctionValues().GetNumCols())
-                throw std::logic_error("The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation.");
+                LogicError("The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             m_innerproduct.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
@@ -2246,7 +2246,7 @@ private:
             Base::Validate();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("CosDistance operation requires two inputs.");
+                LogicError("CosDistance operation requires two inputs.");
 
             //if dimention is missing make the two operatants to have same size
             size_t index = 0;
@@ -2266,11 +2266,11 @@ private:
             }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("CosDistance operation: one of the operants has 0 element.");
+                LogicError("CosDistance operation: one of the operants has 0 element.");
 
             if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() || 
                 Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
-                throw std::logic_error("The Matrix dimension in the CosDistance operation does not match.");
+                LogicError("The Matrix dimension in the CosDistance operation does not match.");
 
             FunctionValues().Resize(1, Inputs(1)->FunctionValues().GetNumCols());
 
@@ -2418,7 +2418,7 @@ private:
             Base::Validate();
 
             if (m_children.size() != 2) 
-                throw std::logic_error("KhatriRaoProduct operation requires two inputs.");
+                LogicError("KhatriRaoProduct operation requires two inputs.");
 
             //support automatic dimention inference for learnable parameters
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
@@ -2435,11 +2435,11 @@ private:
 
             //cols may be changed before this line and so cannot use cached cols values below
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("KhatriRaoProduct operation: One of the operants has 0 elements.");
+                LogicError("KhatriRaoProduct operation: One of the operants has 0 elements.");
 
             if (Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
             {
-                throw std::logic_error("The Matrices should have same number of columns.");
+                LogicError("The Matrices should have same number of columns.");
             }
 
             FunctionValues().Resize(rows0 * rows1, Inputs(0)->FunctionValues().GetNumCols());
@@ -2652,7 +2652,7 @@ private:
             Base::Validate();
 
             if (m_children.size() != 4)
-                throw std::logic_error("CosDistanceWithNegativeSamples operation requires 4 inputs.");
+                LogicError("CosDistanceWithNegativeSamples operation requires 4 inputs.");
 
             //if dimention is missing make the two operatants to have same size
             size_t index = 0;
@@ -2672,11 +2672,11 @@ private:
             }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                throw std::logic_error("CosDistanceWithNegativeSamples operation: one of the operants has 0 element.");
+                LogicError("CosDistanceWithNegativeSamples operation: one of the operants has 0 element.");
 
             if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() ||
                 Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
-                throw std::logic_error("The Matrix dimension in the CosDistanceWithNegativeSamples operation does not match.");
+                LogicError("The Matrix dimension in the CosDistanceWithNegativeSamples operation does not match.");
 
             // input(2) is shift, input(3) is the #neg
             size_t negNumber = (size_t)Inputs(3)->FunctionValues()(0, 0);
@@ -2807,7 +2807,7 @@ private:
             Base::Validate();
 
             if (m_children.size() != 1)
-                throw std::logic_error("Transpose operation requires one input.");
+                LogicError("Transpose operation requires one input.");
 
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
 
@@ -3149,7 +3149,7 @@ private:
             Base::Validate();
 
             if (m_children.size() != 3)
-                throw std::logic_error("StrideTimes operation requires three inputs.");
+                LogicError("StrideTimes operation requires three inputs.");
 
             //support automatic dimention inference for learnable parameters
             if (Inputs(2)->FunctionValues().GetNumElements() != 1)

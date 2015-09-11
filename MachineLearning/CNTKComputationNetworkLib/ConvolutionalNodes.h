@@ -98,7 +98,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //virtual void ComputeInputPartial(const size_t inputIndex) 
         //{
         //    if (inputIndex > 1)
-        //        throw std::invalid_argument("Convolution operation only takes two inputs.");
+        //        InvalidArgument("Convolution operation only takes two inputs.");
         //
         //    if (inputIndex == 0)  //derivative with regard to the weight matrix
         //        ComputeInputPartialOverWeight(GradientValues(), Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_tempMatrix, true);
@@ -281,7 +281,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //we may want to remove this check in the future if we want to support the case that the weight itself is result of some computation 
             //if (Inputs(0)->OperationName() != OperationNameOf(LearnableParameter))
-            //    throw std::logic_error("ConvolutionNode requires the first input to be LearnableParameter type.");
+            //    LogicError("ConvolutionNode requires the first input to be LearnableParameter type.");
 
             if (m_horizontalSubsample > m_kernelWidth || m_verticalSubsample > m_kernelHeight)
                 InvalidArgument("In ConvolutionNode horizontalSubsample must <= kernelWidth and verticalSubsample must <= kernelHeight.");
@@ -315,7 +315,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false);
 
             if (m_inputWidth < m_kernelWidth || m_inputHeight < m_kernelHeight)
-                throw std::invalid_argument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");
+                InvalidArgument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");
 
             if (m_zeroPadding)
             {
@@ -431,7 +431,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
             if (inputIndex > 0)
-                throw std::invalid_argument("MaxPooling operation only takes one inputs.");
+                InvalidArgument("MaxPooling operation only takes one inputs.");
 
             Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
             Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
@@ -487,7 +487,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0, false);
 
             if (m_inputWidth < m_windowWidth || m_inputHeight < m_windowHeight)
-                throw std::invalid_argument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
+                InvalidArgument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
             m_outputWidth = (m_inputWidth - m_windowWidth) / m_horizontalSubsample + 1;
             m_outputHeight = (m_inputHeight - m_windowHeight) / m_verticalSubsample + 1;

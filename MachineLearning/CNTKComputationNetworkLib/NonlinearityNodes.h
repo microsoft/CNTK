@@ -94,10 +94,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 1) 
-                throw std::logic_error("Nonlinearity operations should have one input.");
+                LogicError("Nonlinearity operations should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("Nonlinearity operation: the input node has 0 element.");
+                LogicError("Nonlinearity operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_gradient.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
@@ -553,10 +553,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 1) 
-                throw std::logic_error("SoftmaxNode operation should have one input.");
+                LogicError("SoftmaxNode operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("SoftmaxNode operation: the input node has 0 element.");
+                LogicError("SoftmaxNode operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             // TODO: differs from base in that it does not resize the gradient--why?
@@ -649,10 +649,10 @@ private:
             Base::Validate();
 
             if (m_children.size() != 1)
-                throw std::logic_error("LogSoftmaxNode operation should have one input.");
+                LogicError("LogSoftmaxNode operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("LogSoftmaxNode operation: the input node has 0 element.");
+                LogicError("LogSoftmaxNode operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             // differs from base in that it does not resize the gradient
@@ -1000,7 +1000,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             Base::Validate();
 
             if (m_children.size() != 4)
-                throw std::logic_error("GMMLogLikelihoodNode requires four inputs.");
+                LogicError("GMMLogLikelihoodNode requires four inputs.");
 
             size_t rows[4], cols[4];
             for (int i = 0; i < 4; i++)
@@ -1010,16 +1010,16 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             }
 
             if (cols[0] != cols[1] || cols[0] != cols[2])
-                throw std::logic_error("GMMLogLikelihoodNode: UnnormedPrior (first input), mean (second input), and logStddev (third input) should have same number of columns.");
+                LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input), mean (second input), and logStddev (third input) should have same number of columns.");
 
             if (cols[0] != 1 && cols[0] != cols[3])
-                throw std::logic_error("GMMLogLikelihoodNode: UnnormedPrior (first input) should either have same number of columns as the features (fourth input) or have only one column.");
+                LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should either have same number of columns as the features (fourth input) or have only one column.");
 
             if (rows[0] != rows[2])
-                throw std::logic_error("GMMLogLikelihoodNode: UnnormedPrior (first input) should have same dimension as logStddev (third input), i.e., all dimensions in each Gaussian component share the same stddev.");
+                LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should have same dimension as logStddev (third input), i.e., all dimensions in each Gaussian component share the same stddev.");
 
             if (rows[1] != rows[0]*rows[3])
-                throw std::logic_error("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
+                LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
 
             FunctionValues().Resize(1, cols[3]);
             InferImageDimsFromInputs();
@@ -1201,10 +1201,10 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             Base::Validate();
 
             if (m_children.size() != 1)
-                throw std::logic_error("Dropout operation should have one input.");
+                LogicError("Dropout operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("Dropout operation: the input node has 0 element.");
+                LogicError("Dropout operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
@@ -1220,7 +1220,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
         void SetDropoutRate(const double val)
         {
             if (val < 0 || val >= 1)
-                throw std::logic_error("DropoutRate must be >= 0 and < 1.");
+                LogicError("DropoutRate must be >= 0 and < 1.");
             m_dropoutRate = val;
         }
 
@@ -1374,10 +1374,10 @@ private:
             Base::Validate();
 
             if (m_children.size() != 1)
-                throw std::logic_error("Reshape operation: Should have one input.");
+                LogicError("Reshape operation: Should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("Reshape operation: The input node has 0 element.");
+                LogicError("Reshape operation: The input node has 0 element.");
 
             size_t cols = Inputs(0)->FunctionValues().GetNumElements() / m_numRows;
 
@@ -1401,7 +1401,7 @@ private:
             size_t rows = Inputs(0)->FunctionValues().GetNumRows();
             if ((rows * m_samplesInRecurrentStep) % m_numRows > 0)
             {
-                throw std::logic_error("Reshape operation: Number of elements in the recurrent input step is not a multiple of the specified number of rows.");
+                LogicError("Reshape operation: Number of elements in the recurrent input step is not a multiple of the specified number of rows.");
             }
 
             size_t outputSamplesInRecurrentStep = m_samplesInRecurrentStep * rows / m_numRows;
@@ -1419,7 +1419,7 @@ private:
             if (functionValues.GetNumRows() != numRows)
             {
                 if (functionValues.GetNumElements() % numRows > 0)
-                    throw std::logic_error("Reshape operation: Number of elements in the input is not a multiple of the specified number of rows.");
+                    LogicError("Reshape operation: Number of elements in the input is not a multiple of the specified number of rows.");
 
                 functionValues.Reshape(numRows, functionValues.GetNumElements() / numRows);
             }
@@ -1444,7 +1444,7 @@ private:
             size_t rows = Inputs(0)->GradientValues().GetNumRows();
             if ((rows * m_samplesInRecurrentStep) % m_numRows > 0)
             {
-                throw std::logic_error("Reshape operation: Number of elements in the recurrent input step is not a multiple of the specified number of rows.");
+                LogicError("Reshape operation: Number of elements in the recurrent input step is not a multiple of the specified number of rows.");
             }
 
             size_t outputSamplesInRecurrentStep = m_samplesInRecurrentStep * rows / m_numRows;
@@ -1630,10 +1630,10 @@ private:
             Base::Validate();
 
             if (m_children.size() != 1)
-                throw std::logic_error("RowRepeat operation should have one input.");
+                LogicError("RowRepeat operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("RowRepeat  operation: the input node has 0 element.");
+                LogicError("RowRepeat  operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows() * m_numRepeat, Inputs(0)->FunctionValues().GetNumCols());
             InferImageDimsFromInputs();

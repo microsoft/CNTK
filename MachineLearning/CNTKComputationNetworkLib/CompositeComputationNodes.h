@@ -94,7 +94,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 2)
-                throw std::logic_error("Parallel operation requires two inputs.");
+                LogicError("Parallel operation requires two inputs.");
 
             size_t rows1, cols1;
             rows1 = Inputs(1)->FunctionValues().GetNumRows();
@@ -294,7 +294,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)
         {
-            throw std::logic_error("Mean operation should not be involved in the gradient calculation.");
+            LogicError("Mean operation should not be involved in the gradient calculation.");
         }
 
         virtual void EvaluateThisNode()
@@ -326,10 +326,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 1)
-                throw std::logic_error("Mean operation should have one input.");
+                LogicError("Mean operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("Mean operation: the input node has 0 element.");
+                LogicError("Mean operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
             InferImageDimsFromInputs();
@@ -415,7 +415,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)
         {
-            throw std::logic_error("InvStdDev operation should not be involved in the gradient calculation.");
+            LogicError("InvStdDev operation should not be involved in the gradient calculation.");
         }
 
         virtual void EvaluateThisNode()
@@ -456,10 +456,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 1)
-                throw std::logic_error("InvStdDev operation should have one input.");
+                LogicError("InvStdDev operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("InvStdDev operation: the input node has 0 element.");
+                LogicError("InvStdDev operation: the input node has 0 element.");
 
             size_t inputDim = Inputs(0)->FunctionValues().GetNumRows();
             m_mean.Resize(inputDim, 1);
@@ -614,7 +614,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(1)->FunctionValues().HasNoElements() ||
                 Inputs(2)->FunctionValues().HasNoElements())
             {
-                throw std::logic_error(
+                LogicError(
                     "PerDimMeanVarNormalizationNode operation: one of the operants has 0 element.");
             }
 
@@ -622,13 +622,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
                 Inputs(2)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()))
             {
-                throw std::logic_error(
+                LogicError(
                     "PerDimMeanVarNormalizationNode: All inputs should have same number of rows.");
             }
 
             if (!(Inputs(1)->FunctionValues().GetNumCols() == 1 && Inputs(2)->FunctionValues().GetNumCols() == 1))
             {
-                throw std::logic_error(
+                LogicError(
                     "PerDimMeanVarNormalizationNode: Mean and InvStdDev should be a colum  vector.");
             }
 
@@ -738,7 +738,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (Inputs(0)->RequiresPreCompute())
             {
-                throw std::logic_error(
+                LogicError(
                     "PerDimMeanVarDeNormalizationNode criterion forbids first input from being a pre-compute node. "
                     "The first input should be the node whose output should be de-normalized, and the second and third inputs "
                     "should be LearnableParameter type or (Mean, InvStdDev) so that the values will be saved.");
@@ -749,7 +749,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 !(Inputs(1)->OperationName() == OperationNameOf(MeanNode) &&
                   Inputs(2)->OperationName() == OperationNameOf(InvStdDevNode)))
             {
-                throw std::logic_error(
+                LogicError(
                     "PerDimMeanVarDeNormalizationNode criterion requires the last two inputs to be "
                     "LearnableParameter type or (Mean, InvStdDev) so that the values will be saved.");
             }
@@ -772,7 +772,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(1)->FunctionValues().HasNoElements() ||
                 Inputs(2)->FunctionValues().HasNoElements())
             {
-                throw std::logic_error("PerDimMeanVarDeNormalizationNode operation: one of the operants has 0 element.");
+                LogicError("PerDimMeanVarDeNormalizationNode operation: one of the operants has 0 element.");
             }
 
             if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match rows
@@ -780,12 +780,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 //Inputs(1)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
                 //Inputs(2)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
-                throw std::logic_error("PerDimMeanVarDeNormalizationNode: All inputs should have same number of rows.");
+                LogicError("PerDimMeanVarDeNormalizationNode: All inputs should have same number of rows.");
             }
 
             if (!(Inputs(1)->FunctionValues().GetNumCols() == 1 && Inputs(2)->FunctionValues().GetNumCols() == 1))
             {
-                throw std::logic_error("PerDimMeanVarDeNormalizationNode: Mean and InvStdDev should be a colum  vector.");
+                LogicError("PerDimMeanVarDeNormalizationNode: Mean and InvStdDev should be a colum  vector.");
             }
 
             Inputs(1)->NeedGradient() = false;
@@ -997,7 +997,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (m_children.size() != 1)
-                throw std::logic_error("TimeReverse operation requires one input.");
+                LogicError("TimeReverse operation requires one input.");
 
             size_t rows, cols;
             rows = Inputs(0)->FunctionValues().GetNumRows();

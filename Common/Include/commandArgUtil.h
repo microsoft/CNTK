@@ -961,7 +961,7 @@ public:
         // ensure that this method was called on a single line (eg, no newline characters exist in 'configLine').
         if (configLine.find_first_of("\n") != std::string::npos)
         {
-            throw std::logic_error(
+            LogicError(
                 "\"ResolveVariablesInSingleLine\" shouldn't be called with a string containing a newline character");
         }
 
@@ -1008,7 +1008,7 @@ public:
 
             if (varValue.find_first_of("\n") != std::string::npos)
             {
-                throw std::logic_error(
+                LogicError(
                     "Newline character cannot be contained in the value of a variable which is resolved using $varName$ feature");
             }
 
