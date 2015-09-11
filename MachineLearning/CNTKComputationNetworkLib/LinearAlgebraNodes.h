@@ -1525,7 +1525,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
             inputGradientValues.Print("child Gradient-out");
 #endif
-                }
+        }
 
 
         virtual void EvaluateThisNode()  

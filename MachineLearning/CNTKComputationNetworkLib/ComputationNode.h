@@ -1278,9 +1278,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNode() = 0;
     };
 
-    // add 'typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;' at the start of each derived class, to get access to the members of ComputationNode
-    // BUGBUG: some should be protected, not public; TODO: comment here why this is needed and how to maintain it
-    // Whoever invented that insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain. [fseide]
+    // helper macro to ease access to base members in presence of C++ two-phase name lookup
+    // Add 'typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;' at the start of each derived class
+    // (some derived classes define a similar macro; there please modify the typedef for Base accordingly.)
+    // This macro imports, one by one, every member of ComputationNode into the name space of the derived class.
+    // Without this, one would have to use the name prefix, or alternatively this->, in front of all base member,
+    // because the standard does not allow the compiler to do that for you (as MSVC still kindly does).
+    // If you add new members to ComputationNode, please also add them here.
+    // This macro expects 'Base' to be the name of the base class. Please also use 'Base' outside this macro to make it less likely to accidentally call the wrong base class members.
+    // BUGBUG: some should be protected, not public
+    // Note: Whoever invented that insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain. [fseide]
 #define UsingComputationNodeMembers    \
 protected:  \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  \
