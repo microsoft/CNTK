@@ -1545,7 +1545,7 @@ static BOOL ExpandWildcards (wstring path, vector<wstring> & paths)
         return FALSE;                   // another error
     }
     size_t pos = path.find_last_of (L"\\");
-    if (pos == wstring::npos) throw std::logic_error ("unexpected missing \\ in path");
+    if (pos == wstring::npos) LogicError ("unexpected missing \\ in path");
     wstring parent = path.substr (0, pos);
     do
     {
@@ -1604,7 +1604,7 @@ void msra::files::make_intermediate_dirs (const wstring & filepath)
     wstring subpath;
     int skip = 0;
 #ifdef _WIN32
-    // On windows, if share (\\) then the first two levels (machine, share name) cannot be made
+    // On windows, if share (\\) then the first two levels (machine, share name) cannot be made.
     if ((buf[0] == '/' && buf[1] == '/') || (buf[0] == '\\' && buf[1] == '\\'))
     {
         subpath = L"/";

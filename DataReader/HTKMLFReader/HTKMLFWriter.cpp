@@ -7,7 +7,9 @@
 //
 
 #include "stdafx.h"
+#ifdef _WIN32
 #include <objbase.h>
+#endif
 #include "basetypes.h"
 
 #include "htkfeatio.h"                  // for reading HTK features
@@ -85,7 +87,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 n++;
             }
 
-            fprintf (stderr, " %d entries\n", n);
+            fprintf (stderr, " %d entries\n", (int)n);
 
             if (i==0)
                 numFiles=n;
@@ -163,17 +165,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         msra::files::make_intermediate_dirs (outputFile);
         msra::util::attempt (5, [&]()
         {
-            msra::asr::htkfeatwriter::write (outputFile, "USER", sampPeriod, output);
+            msra::asr::htkfeatwriter::write (outputFile, "USER", this->sampPeriod, output);
         });
                         
-        fprintf (stderr, "evaluate: writing %d frames of %S\n", output.cols(), outputFile.c_str());
+        fprintf (stderr, "evaluate: writing %d frames of %S\n", (int)output.cols(), outputFile.c_str());
 
 
     }
 
 
     template<class ElemType>
-    void HTKMLFWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& /*labelMapping*/)
+    void HTKMLFWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& /*labelMapping*/)
     {
     }
    

@@ -12,7 +12,9 @@
 #include "basetypes.h"
 #include "minibatchiterator.h"
 #include "latticearchive.h"
+#ifdef _WIN32
 #include "simplethread.h"
+#endif
 #include <deque>
 #include <stdexcept>
 

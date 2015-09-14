@@ -160,7 +160,7 @@ bool DataReader<ElemType>::SupportsDistributedMBRead() const
 // numSubsets - [in] total number of nodes participating in the parallel training
 // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
 template<class ElemType>
-void DataReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize)
+void DataReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples/* = requestDataSize*/)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
@@ -242,7 +242,7 @@ bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType
 }
 
 template<class ElemType>
-void DataReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceEnd, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+void DataReader<ElemType>::SetSentenceSegBatch(Matrix<float> &sentenceEnd, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
         m_dataReader[m_ioNames[i]]->SetSentenceSegBatch(sentenceEnd, minibatchPackingFlag);
@@ -259,7 +259,7 @@ template<class ElemType>
 bool DataReader<ElemType>::GetMinibatchCopy(
     std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
     std::map<std::wstring, Matrix<ElemType>*>& matrices,
-    Matrix<ElemType>& sentenceBegin,
+    Matrix<float>& sentenceBegin,
     std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     bool ans = false;
@@ -272,7 +272,7 @@ template<class ElemType>
 bool DataReader<ElemType>::SetNetOutput(
     const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
     const Matrix<ElemType>& outputs,
-    const Matrix<ElemType>& sentenceBegin,
+    const Matrix<float>& sentenceBegin,
     const std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     bool ans = false;

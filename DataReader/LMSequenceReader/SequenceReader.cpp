@@ -2101,7 +2101,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
 }
 
 template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
     mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);

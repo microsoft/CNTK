@@ -1,0 +1,157 @@
+load=ndlMacroDefine
+run=ndlCreateNetwork_LSTMP_c1024_p256_x3
+
+ndlMacroDefine=[
+    # Macro definitions
+    MeanVarNorm(x)=[
+	xMean = Mean(x);
+    	xStdDev = InvStdDev(x)
+    	xNorm=PerDimMeanVarNormalization(x,xMean,xStdDev)
+    ]
+ 
+    LogPrior(labels)
+    {
+	Prior=Mean(labels)
+	LogPrior=Log(Prior)
+    }   
+
+
+    LSTMPComponentWithSelfStab(inputDim, outputDim, cellDim, inputx)
+    {
+        Wxo = Parameter(cellDim, inputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Wxi = Parameter(cellDim, inputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Wxf = Parameter(cellDim, inputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Wxc = Parameter(cellDim, inputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+
+        bo = Parameter(cellDim, init=fixedValue, value=0.0);
+        bc = Parameter(cellDim, init=fixedValue, value=0.0);
+        bi = Parameter(cellDim, init=fixedValue, value=0.0);
+        bf = Parameter(cellDim, init=fixedValue, value=0.0);
+
+        Whi = Parameter(cellDim, outputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+
+        Wci = Parameter(cellDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+
+
+        Whf = Parameter(cellDim, outputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Wcf = Parameter(cellDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Who = Parameter(cellDim, outputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Wco = Parameter(cellDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        Whc = Parameter(cellDim, outputDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        
+        Wmr = Parameter(outputDim, cellDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        
+        #we provide a scale value for each weight
+        
+        sWxo = Parameter(1, 1, init=fixedValue, value=0.0);
+        sWxi = Parameter(1, 1, init=fixedValue, value=0.0);
+        sWxf = Parameter(1, 1, init=fixedValue, value=0.0);
+        sWxc = Parameter(1, 1, init=fixedValue, value=0.0);
+
+        sWhi = Parameter(1, 1, init=fixedValue, value=0.0);
+        sWci = Parameter(1, 1, init=fixedValue, value=0.0);
+        
+        sWhf = Parameter(1, 1, init=fixedValue, value=0.0);
+        sWcf = Parameter(1, 1, init=fixedValue, value=0.0);
+        sWho = Parameter(1, 1, init=fixedValue, value=0.0);
+        sWco = Parameter(1, 1, init=fixedValue, value=0.0);
+        sWhc = Parameter(1, 1, init=fixedValue, value=0.0);
+
+        sWmr = Parameter(1, 1, init=fixedValue, value=0.0);
+
+        expsWxo = Exp(sWxo);
+        expsWxi = Exp(sWxi);
+        expsWxf = Exp(sWxf);
+        expsWxc = Exp(sWxc);
+
+        expsWhi = Exp(sWhi);
+        expsWci = Exp(sWci);     
+
+        expsWhf = Exp(sWhf);
+        expsWcf = Exp(sWcf);
+        expsWho = Exp(sWho);
+        expsWco = Exp(sWco);
+        expsWhc = Exp(sWhc);
+        
+        expsWmr = Exp(sWmr);
+        
+        #end of scale values        
+        
+        dh = PastValue(outputDim, output, timeStep=1);
+        dc = PastValue(cellDim, ct, timeStep=1);
+
+        Wxix = Times(Wxi, Scale(expsWxi, inputx));
+        Whidh = Times(Whi, Scale(expsWhi, dh));
+        Wcidc = DiagTimes(Wci, Scale(expsWci, dc));
+
+        it = Sigmoid (Plus ( Plus (Plus (Wxix, bi), Whidh), Wcidc));
+
+        Wxcx = Times(Wxc, Scale(expsWxc, inputx));
+        Whcdh = Times(Whc, Scale(expsWhc, dh));
+        bit = ElementTimes(it, Tanh( Plus(Wxcx, Plus(Whcdh, bc))));
+
+        Wxfx = Times(Wxf, Scale(expsWxf,inputx));
+        Whfdh = Times(Whf, Scale(expsWhf, dh));
+        Wcfdc = DiagTimes(Wcf, Scale(expsWcf, dc));
+
+        ft = Sigmoid( Plus (Plus (Plus(Wxfx, bf), Whfdh), Wcfdc));
+
+        bft = ElementTimes(ft, dc);
+
+        ct = Plus(bft, bit);
+
+        Wxox  = Times(Wxo, Scale(expsWxo, inputx));
+        Whodh = Times(Who, Scale(expsWho, dh));
+        Wcoct = DiagTimes(Wco, Scale(expsWco, ct));
+
+        ot = Sigmoid( Plus( Plus( Plus(Wxox, bo), Whodh), Wcoct));
+
+        mt = ElementTimes(ot, Tanh(ct));
+
+        output = Times(Wmr, Scale(expsWmr, mt)); 
+    }
+
+]
+
+ndlCreateNetwork_LSTMP_c1024_p256_x3=[
+
+	#define basic i/o
+	baseFeatDim=33
+    RowSliceStart=330 
+    FeatDim=363
+	labelDim=132
+    cellDim=1024
+	hiddenDim=256
+
+	features=Input(FeatDim, tag=feature)
+	labels=Input(labelDim, tag=label)
+    feashift=RowSlice(RowSliceStart, baseFeatDim, features);      # shift 5 frames right (x_{t+5} -> x_{t} )
+
+
+	featNorm = MeanVarNorm(feashift)
+
+
+	# layer 1
+    LSTMoutput1 = LSTMPComponentWithSelfStab(baseFeatDim, hiddenDim, cellDim, featNorm);
+    # layer 2 
+    LSTMoutput2 = LSTMPComponentWithSelfStab(hiddenDim, hiddenDim, cellDim, LSTMoutput1);
+    # layer 3 
+    LSTMoutput3 = LSTMPComponentWithSelfStab(hiddenDim, hiddenDim, cellDim, LSTMoutput2);
+
+
+	W = Parameter(labelDim, hiddenDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+	b = Parameter(labelDim, init=fixedvalue, value=0);
+	
+	sW = Parameter(1, 1, init=fixedValue, value=0.0);
+    expsW = Exp(sW);
+
+	LSTMoutputW = Plus(Times(W, Scale(expsW, LSTMoutput3)), b);
+	
+    cr = CrossEntropyWithSoftmax(labels, LSTMoutputW,tag=Criteria);
+    Err = ErrorPrediction(labels,LSTMoutputW,tag=Eval);
+    
+    logPrior = LogPrior(labels)	 
+    ScaledLogLikelihood=Minus(LSTMoutputW,logPrior,tag=Output)
+
+]
+

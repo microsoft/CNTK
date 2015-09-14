@@ -23,10 +23,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     private:
-        ComputationNetwork<ElemType>* m_net;
+        ComputationNetwork* m_net;
 
     public:
-        NDLUtil(ComputationNetwork<ElemType>* net) : m_net(net)
+        NDLUtil(ComputationNetwork * net) : m_net(net)
         {
         }
 
@@ -37,32 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // FixupInputMinibatchSize - go through all the inputs and make sure they have a consistent minibatch size
         void FixupInputMinibatchSize()
         {
-            std::list<ComputationNodePtr> inputs = m_net->GetNodesWithType(InputValue<ElemType>::TypeName());
-            int minibatchMax = 0;
-            bool minibatchDifferent = false; // flag to see if all the values are already the same
-            for (ComputationNodePtr node : inputs)
-            {
-                size_t cols = node->FunctionValues().GetNumCols();
-                if (cols != minibatchMax)
-                {
-                    if (minibatchMax != 0)
-                        minibatchDifferent = true;
-                    if (minibatchMax < cols)
-                        minibatchMax = cols;
-                }
-            }
-            if (minibatchDifferent)
-            {
-                for (ComputationNodePtr node : inputs)
-                {
-                    Matrix<ElemType>& matrix = node->FunctionValues();
-                    size_t cols = matrix.GetNumCols();
-                    if (cols != minibatchMax)
-                    {
-                        matrix.Resize(matrix.GetNumRows(), minibatchMax);
-                    }
-                }
-            }
+            m_net->FixupInputMinibatchSize();
         }
 
         // ProcessNDLConfig - Process the NDL script from a configuration string value
@@ -144,7 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // CheckOutputNodes - check output nodes
         // symbolName - name of the computation nodes we are collecting
         // compNodes - array of computation nodes
-        void CheckOutputNodes(NDLScript<ElemType>* script, std::string symbolName, std::vector<ComputationNodePtr> & compNodes)
+        void CheckOutputNodes(NDLScript<ElemType>* script, std::string symbolName, std::vector<ComputationNodeBasePtr> & compNodes)
         {
             NDLNode<ElemType>* nodeArray = script->FindSymbol(symbolName);
             bool valid = m_net->FeatureNodes().size() > 0; // see if it's already valid
@@ -177,7 +152,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     // see if it's already in the collection
                     bool found = false;
-                    for (ComputationNodePtr compNode : compNodes)
+                    for (const auto & compNode : compNodes)
                     {
                         if (cnNode == compNode)
                         {

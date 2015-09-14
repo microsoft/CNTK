@@ -1,6 +1,7 @@
 #ifndef __COLUMN_QUANTIZER_H__
 #define __COLUMN_QUANTIZER_H__
 #include "ValueQuantizer.h"
+#include <math.h>
 
 #pragma warning (disable: 4127) // conditional expression is constant
 

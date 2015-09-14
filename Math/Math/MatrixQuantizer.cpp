@@ -2,7 +2,10 @@
 #include "Matrix.h"
 #include "MatrixQuantizer.h"
 #include "MatrixQuantizerCPU.h"
+#include "BestGpu.h"    // for CPUONLY
+#ifndef CPUONLY
 #include "MatrixQuantizerGPU.h"
+#endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     
@@ -12,7 +15,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (inMatrix.GetDeviceId() >= 0)
         {
+#ifndef CPUONLY
             return new MatrixQuantizerGPU<ElemType>(inMatrix);
+#else
+            RuntimeError("CreateMatrixQuantizer: attempted to use GPU while compiled without GPU support");
+#endif
         }
         else
         {

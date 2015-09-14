@@ -16,9 +16,6 @@
     <CudaCompile Include="MatrixQuantizerGPU.cu">
       <Filter>GPU\1bitSGD</Filter>
     </CudaCompile>
-    <CudaCompile Include="ValueQuantizer.cu">
-      <Filter>GPU\1bitSGD</Filter>
-    </CudaCompile>
     <CudaCompile Include="MatrixQuantizer_kernel.cu">
       <Filter>GPU\1bitSGD</Filter>
     </CudaCompile>

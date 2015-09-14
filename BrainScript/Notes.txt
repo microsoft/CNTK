@@ -1,0 +1,400 @@
+CNTK configuration language redesign (ongoing work)
+====================================
+
+F. Seide, August 2015
+
+These are the original notes from before coding began. Basic ideas are correct, but may be a bit outdated.
+
+ - config specifies all configurable runtime objects and their initialization parameters
+ - basic concepts: dictionaries and runtime-object definitions
+ - basic syntactic elements:
+    - runtime object definitions            // new classname initargsdictionary
+    - macro definition                      // M(x,y,z) = expression    // expression uses x, y, and z
+    - expressions
+       - dictionaries                       // [ a=expr1 ; c=expr2 ]
+       - math ops and parentheses as usual  // W*v+a, n==0
+       - conditional expression             // if c then a else b
+       - array                              // a:b:c ; array [1..N] (i => f(i))
+ - syntax supports usual math and boolean expressions
+ - functions are runtime objects defined through macros, e.g. Replace(s,with,withwhat) = String [ from=s ; replacing=what ; with=withwhat ]
+ - config is parsed eagerly but evaluated lazily
+ - CNTK command line "configFile=conf.bs a=b c=d" expands to "new CNTK {content of conf.bs} + [ a=b ; c=d ]"
+
+current issues
+--------------
+
+ - syntax does not distinguish between dictionary members, intermediate variables, and actual parameter names
+ - dictionary editing needs to allow a.b.c syntax; and subtracting is not pretty as it needs dummy values -> maybe use a delete symbol? a=delete?
+ - missing: optional parameters to macros; and how this whole thing would work with MEL
+
+grammar
+-------
+
+// --- top level defines a runtime object of class 'CNTK'
+// example: new CNTK [ actions=train ; train=TrainAction [ ... ] ]       // where "new CNTK [" is prepended by the command-line parser
+
+$ = $dictitems                  // this is a dictionary without enclosing [ ... ] that defines instantiation args of CNTK class
+
+// ---  defining a runtime object and its parameters
+// example: new ComputeNode [ class="Plus" ; arg1=A ; arg2=B ]
+
+$newinstance = 'new' $classname $expr
+               where $expr must be a dictionary expression
+$classname = $identifier
+             where $identifier is one of the known pre-defined C++ class names
+
+// --- dictionaries are groups of key-value pairs.
+//     Dictionaries are expressions.
+//     Multiple dictionaries can be edited (dict1 + dict2) where dict2 members override dict1 ones of the same name.
+// examples: [ arg1=A ; arg2=B ]
+//           dict1 + (if (dpt && layer < totallayers) then [ numiter = 5 ] else []) // overrides 'numiter' in 'dict1' if condition is fulfilled
+
+$dictdef = '[' $dictitems ']'
+$dictitems = $itemdef*
+
+$itemdef = $paramdef            // var=val
+         | $macrodef            // macro(args)=expression
+
+$paramdef = $identifier '=' $expr                           // e.g. numiter = 13
+$macrodef = $identifier '(' $arg (',' $arg) ')' = $expr     // e.g. sqr(x) = x*x
+
+// --- expressions
+//     Expressions are what you'd expect. Infix operators those of C, with addition of '.*' '**' ':' '..'
+//     ML-style "let ... in" (expression-local variables) are possible but not super-pretty: [ a=13; b=42; res=a*b ].res
+//     There are infix ops for strings (concatenation) and dictionaries (editing).
+
+$expr = $operand
+      | $expr $infixop $operand
+      | $expr '.' $memberref                    // dict.member   TODO: fix this; memberrefs exist without '.'
+        where $expr is a dictionary
+      | $expr '(' $expr (',' $expr)* ')'        // a(13)   also:  dict.a(13); note: partial application possible, i.e. macros may be passed as args and curried
+        where $expr is a macro
+      | $expr '[' $expr ']'                     // h_fwd[t]
+        where first $expr must be a array and second $expr a number (that must be an integer value)
+$infixop =      // highest precedence level
+           '*'                                  // numbers; also magic short-hand for "Times" and "Scale" ComputeNodes
+         | '/'                                  // numbers; Scale ComputeNode
+         | '.*'                                 // ComputeNodes: component-wise product
+         | '**'                                 // numbers (exponentiation, FORTRAN style!)
+         | '%'                                  // numbers: remainder
+                // next lower precedence level
+         | '+'                                  // numbers; ComputeNodes; strings; dictionary editing
+         | '-'                                  // numbers; ComputeNodes; dictionary editing
+                // next lower precedence level
+         | '==' '!=' '<' '>' '<=' '>='          // applies to config items only; objects other than boxed primitive values are compared by object identity not content
+                // next lower precedence level
+         | '&&'                                 // booleans
+                // next lower precedence level
+         | '||' | '^'                           // booleans
+                // next lower precedence level
+         | ':'                                  // concatenate items and/or arrays --TODO: can arrays have nested arrays? Syntax?
+$operand = $literal                             // "Hello World"
+         | $memberref                           // a
+         | $dictdef                             // [ a="Hello World" ]
+         | $newinstance                         // new ComputeNode [ ... ]
+         | ('-' | '+' | '!') $operand           // -X+Y
+         | '(' $expr ')'                        // (a==b) || (c==d)
+         | $arrayconstructor                    // array [1..N] (i => i*i)
+
+$literal = $number                              // built-in literal types are numeric, string, and boolean
+         | $string
+         | $boolconst
+$number = // floating point number; no separate 'int' type, 'int' args are checked at runtime to be non-fractional
+$string = // characters enclosed in "" or ''; no escape characters inside, use combinations of "", '', and + instead (TODO: do we need string interpolation?).
+          // Strings may span multiple lines (containing newlines)
+$boolconst = 'true' | 'false'
+
+$memberref = $identifier                          // will search parent scopes
+
+$arrayconstructor = 'array' '[' $expr '..' $expr ']' '(' $identifier '=>' $expr ')'     // array [1..N] (i => i*i)
+                    where       ^start     ^end (int)    ^index variable  ^function of index variable
+
+// --- predefined functions
+//     *All* functions are defined as macros that instantiate a runtime object. (The same is true for operators above, too, actually.)
+
+// functions that really are macros that instantiate ComputeNodes:
+//  - Times(,), Plus(,), Sigmoid(), etc.
+// numeric functions:
+//  - Floor() (for int division), Ceil(), Round() (for rounding), Abs(), Sign(), ...
+// string functions:
+//  - Replace(s,what,withwhat), Str(number) (number to string), Chr(number) (convert Unicode codepoint to string), Format(fmt,val) (sprintf-like formatting with one arg)
+// other:
+//  - Fail("error description")     --will throw exception when executed; use this like assertion
+
+dictionaries
+------------
+
+ - dictionaries are key-value pairs; they are records or compound data structures for use inside the config file itself
+ - dictionaries are immutable and exist inside the parser but are not serialized to disk with a model   --TODO: it might be needed to do that for MEL
+ - the argument to a runtime-object instantiation is also a dictionary
+    - the config file can access that dictionary's members directly from the runtime-object expression, for convenience
+ - intermediate variables that are only used to construct dictionary entries also become dictionary entries (no syntactic distinction)   --TODO: should we distinguish them?
+ - macros are also dictionary members
+ - dictionary values are read out using dict.field syntax, where 'dict' is any expression that evaluates to a dictionary
+ - object instantiations will also traverse outer scopes to find values (e.g. precision, which is shared by many)
+ - runtime objects themselves are inputs to other runtime objects, but they cannot have data members that output values
+    - instead, output arguments use a proxy class ComputeNodeRef that can be used as a ComputeNode for input, and gets filled in at runtime
+ - dictionaries can be "edited" by "adding" (+) a second dictionary to it; items from the second will overwrite the same items in the first.
+   Subtracting a dictionary will remove all items in the second dict from the first.
+   This is used to allow for overriding variables on the command line.   --TODO: not fully fleshed out how to access nested inner variables inside a dict
+
+arrays
+------
+
+ - another core data type is the array. Like dictionaries, arrays are immutable and exist inside the parser only.
+ - arrays are created at once in two ways
+    - 'array' expression:
+      array [1..N] (i => f(i))        // fake lambda syntax could be made real lambda; also could extend to multi-dim arrays
+    - ':' operator concatenates arrays and/or elements. Arrays are flattened.
+      1:2:3
+ - elements are read-accessed with index operator
+   X[i]
+ - example syntax of how one could define useful operators for arrays
+    - Append(seq,item) = seq : item
+    - Repeat(item,N) = array [1..N] (i => item)
+ - arrays with repetition can be created like this:
+      0.8 : array [1..3] (i => 0.2) : 0.05
+   or 
+      0.8 : Repeat(0.2,3) : 0.05
+ - the array[] () argument looks like a C# lambda, but for now is hard-coded syntax (but with potential to be a true lambda in the future)
+
+towards MEL
+-----------
+
+Model editing is now done in a functional manner, like this:
+
+TIMIT_AddLayer = new EditAction [
+
+    currModelPath = "ExpDir\TrainWithPreTrain\dptmodel1\cntkSpeech.dnn"
+    newModelPath  = "ExpDir\TrainWithPreTrain\dptmodel2\cntkSpeech.dnn.0"
+
+    model = LoadModel(currModelPath);
+    newModel = EditModel(model, [
+        // new items here
+        outZ = SBFF(model.outZ.INPUT, LABELDIM, outZ.INPUT.OUTDIM)
+    ])
+    do = ( Dump(newModel, newModelPath + ".dump.txt")
+         : SaveModel(newModel, newModelPath) )
+
+]
+
+sample
+------
+
+// This sample is a modification of the original TIMIT_TrainSimpleNetwork.config and TIMIT_TrainNDLNetwork.config.
+// The changes compared to the origina syntax are called out in comments.
+
+stderr = ExpDir + "\TrainSimpleNetwork\log\log"     // before: $ExpDir$\TrainSimpleNetwork\log\log
+actions = TIMIT_TrainSimple                         // before: command = ...  ('command' is singular, but this can be a sequence of actions)
+
+// these values are used by several runtime-object instantiations below
+precision = 'float'                                 // before: precision = float
+deviceId = DeviceNumber                             // before: $DeviceNumber$
+
+#######################################
+#  TRAINING CONFIG (Simple, Fixed LR) #
+#######################################
+
+Repeat(val,count) = array [1..count] (i => val)        // new: array helper to repeat a value (result is a array) (this would be defined in a library eventually)
+
+TIMIT_TrainSimple = new TrainAction [               // new: added TrainAction; this is a class name of the underlying runtime object
+    // new: TrainAction takes three main parameters: 'source' -> 'model' -> 'optimizer'  (-> indicating logical dependency)
+    //action = train                                // removed (covered by class name)
+    traceLevel = 1
+
+    // new: Model object; some parameters were moved into this
+    model = new Model [                             // this is an input to TrainAction
+        modelPath = ExpDir + "\TrainSimpleNetwork\model\cntkSpeech.dnn"  // before: $ExpDir$\TrainSimpleNetwork\model\cntkSpeech.dnn
+
+        // EXAMPLE 1: SimpleNetworkBuilder   --TODO: do we even need a C++ class, or can we use a macro instead? Would make life easier re connecting inputs
+        network = new SimpleNetworkBuilder [        // before: SimpleNetworkBuilder = [
+            layerSizes = 792 : Repeat(512,3) : 183  // before: 792:512*3:183
+            layerTypes = 'Sigmoid'                  // before: no quotes
+            initValueScale = 1.0
+            applyMeanVarNorm = true
+            uniformInit = true
+            needPrior = true
+            // the following two belong into SGD, so they were removed here
+            //trainingCriterion = CrossEntropyWithSoftmax
+            //evalCriterion = ErrorPrediction
+            // new: connect to input stream from source; and expose the output layer
+            input = source.features.data                        // these are also ComputeNodeRefs, exposed by the source
+            output = ComputeNodeRef [ dim = source.labels.dim ] // SimpleNetworkBuilder will put top layer affine transform output (input to softmax) here
+            // criteria are configurable here; these are ComputeNodes created here
+            trainingCriterion = CrossEntropyWithSoftmax (source.labels.data, output)
+            evalCriterion = ErrorPrediction (source.labels.data, output)
+            // new: (and half-baked) define Input nodes
+            myFeatures=Input(featDim)               // reader stream will reference this
+            myLabels=Input(labelDim)
+        ]
+
+        // EXAMPLE 2: network from NDL (an actual config would contain one of these two examples)
+        network = new NDL [                         // before: run=ndlCreateNetwork ; ndlCreateNetwork=[
+            featDim = myFeatures.dim                // before: 792 hard-coded; note: myFeatures and myLabels are defined below
+            labelDim = myLabels.dim                 // before: 183 hard-coded
+            hiddenDim = 512
+
+            // input nodes
+            myFeatures=Input(featDim)               // before: optional arg tag=feature
+            myLabels=Input(labelDim)                // before: optional arg tag=label
+               
+            // old                                        
+            //# define network
+            //featNorm = MeanVarNorm(myFeatures)
+            //L1 = SBFF(featNorm,hiddenDim,featDim)
+            //L2 = SBFF(L1,hiddenDim,hiddenDim)
+            //L3 = SBFF(L2,hiddenDim,hiddenDim)
+            //CE = SMBFF(L3,labelDim,hiddenDim,myLabels,tag=Criteria)
+            //Err = ErrorPrediction(myLabels,CE.BFF.FF.P,tag=Eval)
+            //logPrior = LogPrior(myLabels)	 
+            //ScaledLogLikelihood=Minus(CE.BFF.FF.P,logPrior,tag=Output)
+
+            // new:
+            // Let's have the macros declared here for illustration (in the end, these would live in a library)
+            FF(X1, W1, B1) = W1 * X1 +  B1          // before: T=Times(W1,X1) ; P=Plus(T, B1)
+            BFF(in, rows, cols) = [                 // before: BFF(in, rows, cols) { ... }
+                B = Parameter(rows, init = fixedvalue, value = 0)
+                W = Parameter(rows, cols)
+                z = FF(in, w, b)                    // before: FF = ...; illegal now, cannot use same name again
+            ]
+            SBFF(in, rowCount, colCount) = [        // before: SBFF(in,rowCount,colCount) { ... }
+                z = BFF(in, rowCount, colCount).z   // before: BFF = BFF(in, rowCount, colCount)
+                Eh = Sigmoid(z)
+            ]
+            // Macros are expressions. FF returns a ComputeNode; while BFF and SBFF return a dictionary that contains multiple named ComputeNode.
+
+            // new: define network in a loop. This allows parameterizing over the network depth.
+            numLayers = 7
+            layers = array [0..numLayers] ( layer =>
+                if layer == 0 then             featNorm
+                else if layer == 1 then        SBFF(layers[layer-1].Eh, hiddenDim, featDim)
+                else if layer < numLayers then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim)
+                else                            BFF(layers[layer-1].Eh, labelDim,  hiddenDim)
+            )
+            outZ = layers[numLayers].z              // new: to access the output value, the variable name (dictionary member) cannot be omitted
+
+            // alternative to the above: define network with recursion
+            HiddenStack(layer) = if layer > 1 then SBFF(HiddenStack(layer-1).Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim)
+            outZ = BFF(HiddenStack(numlayers).Eh, labelDim, hiddenDim)
+
+            // define criterion nodes
+            CE = CrossEntropyWithSoftmax(myLabels, outZ)
+            Err = ErrorPrediction(myLabels, outZ)
+
+            // define output node for decoding
+            logPrior = LogPrior(myLabels)	 
+            ScaledLogLikelihood = outZ - logPrior   // before: Minus(CE.BFF.FF.P,logPrior,tag=Output)
+        ]
+    ]
+
+    // the SGD optimizer
+    optimizer = new SGDOptimizer [                  // before: SGD = [
+        epochSize = 0 
+        minibatchSize = 256 : 1024
+        learningRatesPerMB = 0.8 : Repeat(3.2,14) : 0.08    // (syntax change for repetition)
+        momentumPerMB = 0.9
+        dropoutRate = 0.0
+        maxEpochs = 25
+        // new: link to the criterion node
+        trainingCriterion = model.network.CE        // (note: I would like to rename this to 'objective')
+    ]
+
+    // The RandomizingSource performs randomization and mini-batching, while driving low-level random-access readers.
+    source = new RandomizingSource [                // before: reader = [
+        //readerType = HTKMLFReader                 // removed since covered by class name
+
+        // new: define what utterances to get from what stream sources
+        dataSetFile = ScpDir + "\TIMIT.train.scp.fbank.fullpath"    // (new) defines set of utterances to train on; accepts HTK archives
+        streams = ( [                                               // This passes the 'features' and 'labels' runtime objects to the source, and also connects them to the model's Input nodes.
+                        reader = features                           // random-access reader
+                        input = model.network.myFeatures            // Input node that this feeds into
+                    ]
+                  : [
+                        reader = labels
+                        input = model.network.myLabels
+                    ] ) // note: ':' is array syntax. Parentheses are only for readability
+
+        readMethod = 'blockRandomize'               // before: no quotes
+        miniBatchMode = 'Partial'                   // before: no quotes
+        randomize = 'Auto'                          // before: no quotes
+        verbosity = 1   
+
+        // change: The following two are not accessed directly by the source, but indirectly through the 'streams' argument.
+        //         They could also be defined outside of this dictionary. They are from the NDL, though.
+        //         The 'RandomizingSource' does not know about features and labels specifically.
+        features = new HTKFeatReader [              // before: features = [
+            //dim = 792                             // (moved to 'data' node)
+            scpFile = dataSetFile                   // HTK reader can share source's archive file that defines dataSet
+            data = new ComputeNodeRef [ dim = 792 ] // an input node the model can connect to; dimension is verified when files are opened
+        ]
+
+        labels = new HTKMLFReader [                 // before: labels = [
+            mlfFile = MlfDir + "\TIMIT.train.align_cistate.mlf.cntk"  // before: $MlfDir$\TIMIT.train.align_cistate.mlf.cntk
+            //labelDim = 183                        // (moved to 'data' node)
+            labelMappingFile = MlfDir + "\TIMIT.statelist"            // before: $MlfDir$\TIMIT.statelist
+            data = new ComputeNodeRef [ dim = 183 ] // an input node the model can connect to; dimension is verified when reading statelist file
+        ]
+    ]
+]
+
+Example 2: truncated bidirectional RNN
+--------------------------------------
+
+network = new NDL [
+    // network parameters
+    hiddenDim = 512
+    numHiddenLayers = 6                     // 6 hidden layers
+    T = 41                                  // total context window
+
+    // data sources
+    myFeatures = source.features.data
+    myLabels = source.labels.data
+
+    // derived dimensions
+    augmentedFeatDim = myFeatures.dim       // feature arrays are context window frames stacked into a single long array
+    labelDim = myLabels.dim
+
+    centerT = Floor(T/2)                    // center frame to predict
+    featDim = Floor(augmentedFeatDim / T)
+
+    // split the augmented input vector into individual frame vectors
+    subframes = array [0..T-1] (t => RowSlice(t * featDim, featDim, myFeatures))
+
+    // hidden layers
+    // Hidden state arrays for all frames are stored in a array object.
+    layers = array [1..numHiddenLayers] (layer => [     // each layer stores a dictionary that stores its output hidden fwd and bwd state vectors
+        // model parameters
+        W_fwd = Parameter(hiddenDim, featDim)                                           // Parameter(outdim, indim) --in_fwd.rows is an initialization parameter read from the dict
+        W_bwd = if layer > 1 then Parameter(hiddenDim, hiddenDim) else Fail("no W_bwd") // W denotes input-to-hidden connections
+        H_fwd = Parameter(hiddenDim, hiddenDim)                                         // H denotes hidden-to-hidden lateral connections
+        H_bwd = Parameter(hiddenDim, hiddenDim)
+        b     = Parameter(hiddenDim, 1)                                                 // bias
+        // shared part of activations (input connections and bias)
+        z_shared = array [0..T-1] (t => if layers > 1 then W_fwd * layers[layer-1].h_fwd[t] + W_bwd * layers[layer-1].h_bwd[t] + b    // intermediate layer gets fed fwd and bwd hidden state
+                                                      else W_fwd * subframes                                                   + b)   // input layer reads frames directly
+        // recurrent part and non-linearity
+        neededT = if layer < numHiddenLayers then T else centerT+1                  // last hidden layer does not require all frames
+        step(H,h,dt,t) = Sigmoid(if (t+dt > 0 && t+dt < T) then z_shared[t] + H * h[t+dt]
+                                                           else z_shared[t])
+        h_fwd = array [0..neededT-1]   (t => step(H_fwd, h_fwd, -1, t))
+        h_bwd = array [T-neededT..T-1] (t => step(H_bwd, h_bwd,  1, t))
+    ])
+    // output layer --linear only at this point; Softmax is applied later
+    outZ = [
+        // model parameters
+        W_fwd = Parameter(labelDim, hiddenDim)
+        W_bwd = Parameter(labelDim, hiddenDim)
+        b     = Parameter(labelDim, 1)
+        //  output
+        topHiddenLayer = layers[numHiddenLayers]
+        z = W_fwd * topHiddenLayer.h_fwd[centerT] + W_bwd * topHiddenLayer.h_bwd[centerT] + b
+    ].z     // we only want this one & don't care about the rest of this dictionary
+
+    // define criterion nodes
+    CE = CrossEntropyWithSoftmax(myLabels, outZ)
+    Err = ErrorPrediction(myLabels, outZ)
+
+    // define output node for decoding
+    logPrior = LogPrior(myLabels)	 
+    ScaledLogLikelihood = outZ - logPrior   // before: Minus(CE.BFF.FF.P,logPrior,tag=Output)
+]

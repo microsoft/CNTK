@@ -7,9 +7,11 @@
 
 #pragma once
 
+#ifndef __unix__
 #include <Windows.h>
-#include <stdexcept>
 #include "pplhelpers.h"
+#endif
+#include <stdexcept>
 #include "simple_checked_arrays.h"
 #include "basetypes.h"  // for FormatWin32Error
 
