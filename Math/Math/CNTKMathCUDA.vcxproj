@@ -94,7 +94,7 @@
     <Link>
     </Link>
     <CudaCompile>
-      <CodeGeneration>compute_20,compute_20;</CodeGeneration>
+      <CodeGeneration>compute_20,compute_20;compute_35,sm_35</CodeGeneration>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
