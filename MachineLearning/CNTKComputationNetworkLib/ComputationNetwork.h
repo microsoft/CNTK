@@ -26,14 +26,13 @@
 #include "commandArgUtil.h" // for nocase_compare
 
 #include "ComputationNode.h"
-#include "BrainScriptObjects.h"
-#include "BrainScriptEvaluator.h"   // TODO: move (I)ConfigRecord to BrainScriptConfig that only has the config-related stuff (ConfigValuePtr and IConfigRecord, possibly need to do the same for Array and Lambda)
+#include "ScriptableObjects.h"
 
 //#include "MatrixPool.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-class ComputationNetwork : public BS::Object, public BS::HasToString, public BS::IConfigRecord
+class ComputationNetwork : public ScriptableObjects::Object, public ScriptableObjects::HasToString, public ScriptableObjects::IConfigRecord
 {
 protected:
     typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
@@ -1531,11 +1530,11 @@ public:
     }
 
     // pretending to be a ConfigRecord. TODO: implement this when we actually need it (when we get to MEL)
-    const BS::ConfigValuePtr & /*IConfigRecord::*/operator[](const wstring & id) const   // e.g. confRec[L"message"]
+    const ScriptableObjects::ConfigValuePtr & /*IConfigRecord::*/operator[](const wstring & id) const   // e.g. confRec[L"message"]
     {
         id; RuntimeError("unknown class parameter");    // (for now)
     }
-    const BS::ConfigValuePtr * /*IConfigRecord::*/Find(const wstring & id) const         // returns nullptr if not found
+    const ScriptableObjects::ConfigValuePtr * /*IConfigRecord::*/Find(const wstring & id) const         // returns nullptr if not found
     {
         id; return nullptr; // (for now)
     }

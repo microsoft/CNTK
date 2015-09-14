@@ -141,6 +141,21 @@
     <ClInclude Include="IComputationNetBuilder.h">
       <Filter>SGD</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\ScriptableObjects.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Math\Math\Matrix.h">
+      <Filter>from CNTKMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Math\Math\CUDAPageLockedMemAllocator.h">
+      <Filter>from CNTKMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Math\Math\MatrixQuantizer.h">
+      <Filter>from CNTKMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Math\Math\QuantizedMatrix.h">
+      <Filter>from CNTKMath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -172,6 +187,9 @@
     </Filter>
     <Filter Include="from CNTKComputationNetworkLib\Nodes">
       <UniqueIdentifier>{0b366814-48b2-4619-bf92-85ee24e3cbc1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="from CNTKMath">
+      <UniqueIdentifier>{4c82e709-ff3e-43ab-b94c-763e300b637e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

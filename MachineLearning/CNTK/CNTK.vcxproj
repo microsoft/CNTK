@@ -157,7 +157,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\BrainScript\BrainScriptEvaluator.h" />
-    <ClInclude Include="..\..\BrainScript\BrainScriptObjects.h" />
     <ClInclude Include="..\..\BrainScript\BrainScriptParser.h" />
     <ClInclude Include="..\..\Common\CrossProcessMutex.h" />
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
@@ -171,6 +170,7 @@
     <ClInclude Include="..\..\Common\Include\hostname.h" />
     <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h" />
     <ClInclude Include="..\..\Common\Include\Platform.h" />
+    <ClInclude Include="..\..\Common\Include\ScriptableObjects.h" />
     <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
     <ClInclude Include="..\..\Math\Math\CPUMatrix.h" />
     <ClInclude Include="..\..\Math\Math\Matrix.h" />

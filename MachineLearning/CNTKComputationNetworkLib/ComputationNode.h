@@ -7,7 +7,7 @@
 
 #include "Basics.h"
 #include "Matrix.h"
-#include "BrainScriptObjects.h"
+#include "ScriptableObjects.h"
 
 #include "MatrixPool.h"
 
@@ -60,7 +60,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: decide the name. This does contain actual members such as the node name, so it's not really a pure interface.
     // =======================================================================
 
-    class ComputationNodeBase : public BS::ComputationNodeObject, public BS::WithTag, public BS::HasName, public BS::HasToString, public std::enable_shared_from_this<ComputationNodeBase>
+    class ComputationNodeBase :
+        public ScriptableObjects::ComputationNodeObject,
+        public ScriptableObjects::WithTag, public ScriptableObjects::HasName, public ScriptableObjects::HasToString,
+        public std::enable_shared_from_this<ComputationNodeBase>
     {
     public:
         typedef shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;

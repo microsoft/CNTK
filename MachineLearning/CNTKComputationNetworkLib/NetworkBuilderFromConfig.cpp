@@ -3,7 +3,7 @@
 #define _CRT_SECURE_NO_WARNINGS     // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "Basics.h"
-#include "BrainScriptEvaluator.h"
+#include "ScriptableObjects.h"
 
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
@@ -24,7 +24,7 @@
 #define let const auto
 #endif
 
-namespace Microsoft { namespace MSR { namespace BS {
+namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
     using namespace Microsoft::MSR;
 
@@ -624,7 +624,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     // initialize a ComputationNetwork from a ConfigRecord
     template<>
-    /*static*/ shared_ptr<Object> MakeRuntimeObject<ComputationNetwork>(const IConfigRecordPtr configp)
+    /*static*/ shared_ptr<Object> Microsoft::MSR::ScriptableObjects::MakeRuntimeObject<ComputationNetwork>(const IConfigRecordPtr configp)
     {
         let & config = *configp;
 

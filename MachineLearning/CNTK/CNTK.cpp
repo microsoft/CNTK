@@ -46,8 +46,7 @@
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
 #include "BestGpu.h"
-#include "BrainScriptEvaluator.h"
-#include "BrainScriptParser.h"
+#include "ScriptableObjects.h"
 #include <fileutil.h>
 
 // TODO: Get rid of this global
@@ -1426,7 +1425,7 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
 
         delete g_mpi;
     }
-    catch (const BS::ConfigError &err)
+    catch (const ScriptableObjects::ScriptingError &err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
         err.PrintError();

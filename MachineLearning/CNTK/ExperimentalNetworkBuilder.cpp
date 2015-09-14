@@ -5,13 +5,9 @@
 
 #include "Basics.h"
 #include "ExperimentalNetworkBuilder.h"
+#include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
-
-// TODO: get this from the new BrainScriptEvaluator.h once stuff got renamed
-namespace Microsoft { namespace MSR { namespace BS {
-    shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring & id);  // for experimental CNTK integration
-}}}
 
 #include <string>
 

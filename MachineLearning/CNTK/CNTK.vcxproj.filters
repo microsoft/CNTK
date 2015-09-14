@@ -157,9 +157,6 @@
     <ClInclude Include="..\..\BrainScript\BrainScriptEvaluator.h">
       <Filter>Model Building, experimental extensions</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\BrainScript\BrainScriptObjects.h">
-      <Filter>Model Building, experimental extensions</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\BrainScript\BrainScriptParser.h">
       <Filter>Model Building, experimental extensions</Filter>
     </ClInclude>
@@ -201,6 +198,9 @@
     </ClInclude>
     <ClInclude Include="..\..\Math\Math\CPUMatrix.h">
       <Filter>from CNTKMath</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\ScriptableObjects.h">
+      <Filter>Common\Include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
