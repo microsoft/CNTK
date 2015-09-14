@@ -6,6 +6,8 @@
 // cn.cpp : Defines the entry point for the console application.
 //
 
+// TODO: should we split all these DoXXX() up into separate commands? Mainly to separate common vs. non-standard/special ones?
+
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 
 #include "stdafx.h"
@@ -24,6 +26,7 @@
 #include <iostream>
 #include <queue>
 #include <set>
+#include <memory>
 
 #include "Basics.h"
 #include "ComputationNetwork.h"
@@ -32,20 +35,25 @@
 #include "DataWriter.h"
 #include "SimpleNetworkBuilder.h"
 #include "NDLNetworkBuilder.h"
+#include "ExperimentalNetworkBuilder.h"
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
+#include "CPUMatrix.h"  // used for SetNumThreads()
 #include "SGD.h"
+#include "MPIWrapper.h"
 #include "commandArgUtil.h"
 #include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
 #include "BestGpu.h"
+#include "BrainScriptEvaluator.h"
 #include <fileutil.h>
 
 // TODO: Get rid of this global
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 using namespace std;
+using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK;
 
 // internal test routine forward declaration
@@ -88,8 +96,8 @@ void DumpNodeInfo(const ConfigParameters& config)
     wstring outputFile = config("outputFile", WCharToString(defOutFilePath.c_str()).c_str());
     bool printValues = config("printValues", "true");
 
-    ComputationNetwork<ElemType> net(-1);  //always use CPU
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(-1);  //always use CPU
+    net.LoadFromFile<ElemType>(modelPath);
     net.DumpNodeInfoToFile(nodeName, printValues, outputFile);
 }
 
@@ -116,8 +124,8 @@ void DoEvalBase(const ConfigParameters& config, IDataReader<ElemType>& reader)
         evalNodeNamesVector.push_back(evalNodeNames[i]);
     }
 
-    ComputationNetwork<ElemType> net(deviceId);
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(deviceId);
+    net.LoadFromFile<ElemType>(modelPath);
     net.ResetEvalTimeStamp();
 
     SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
@@ -156,12 +164,12 @@ void DoEvalUnroll(const ConfigParameters& config)
     intargvector mbSize = minibatchSize;
     wstring path2EvalResults = config("path2EvalResults", L"");
 
-    ComputationNetwork<ElemType> net(deviceId);
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(deviceId);
+    net.LoadFromFile<ElemType>(modelPath);
     net.ResetEvalTimeStamp();
 
     SimpleEvaluator<ElemType> eval(net);
-    ElemType evalEntropy;
+    double evalEntropy;
     eval.EvaluateUnroll(&testDataReader, mbSize[0], evalEntropy, path2EvalResults == L"" ? nullptr : path2EvalResults.c_str(), epochSize);
 }
 
@@ -197,7 +205,7 @@ void DoCrossValidate(const ConfigParameters& config)
         evalNodeNamesVector.push_back(evalNodeNames[i]);
     }
 
-    std::vector<std::vector<ElemType>> cvErrorResults;
+    std::vector<std::vector<double>> cvErrorResults;
     std::vector<std::wstring> cvModels;
 
     DataReader<ElemType> cvDataReader(readerConfig);
@@ -220,15 +228,14 @@ void DoCrossValidate(const ConfigParameters& config)
         }
 
         cvModels.push_back(cvModelPath);
-        ComputationNetwork<ElemType> net(deviceId);
-        net.LoadFromFile(cvModelPath);
+        ComputationNetwork net(deviceId);
+        net.LoadFromFile<ElemType>(cvModelPath);
         net.ResetEvalTimeStamp();
 
         SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
 
         fprintf(stderr, "model %ls --> \n", cvModelPath.c_str());
-        std::vector<ElemType> evalErrors;
-        evalErrors = eval.Evaluate(&cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
+        auto evalErrors = eval.Evaluate(&cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
         cvErrorResults.push_back(evalErrors);
 
         ::Sleep(1000 * sleepSecondsBetweenRuns);
@@ -238,9 +245,9 @@ void DoCrossValidate(const ConfigParameters& config)
     if (cvErrorResults.size() == 0)
         throw std::logic_error("No model is evaluated.");
 
-    std::vector<ElemType> minErrors;
+    std::vector<double> minErrors;
     std::vector<int> minErrIds;
-    std::vector<ElemType> evalErrors = cvErrorResults[0];
+    std::vector<double> evalErrors = cvErrorResults[0];
     for (int i = 0; i < evalErrors.size(); ++i)
     {
         minErrors.push_back(evalErrors[i]);
@@ -295,8 +302,8 @@ void DoWriteOutput(const ConfigParameters& config)
         outputNodeNamesVector.push_back(outputNodeNames[i]);
     }
 
-    ComputationNetwork<ElemType> net(deviceId);
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(deviceId);
+    net.LoadFromFile<ElemType>(modelPath);
     net.ResetEvalTimeStamp();
 
     SimpleOutputWriter<ElemType> writer(net, 1);
@@ -470,7 +477,7 @@ void SVDConfigFileUsage()
 
 
 }
-template<typename ElemType>
+template<class ElemType>
 void  DoParameterSVD(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceID = -1;        // use CPU for SVD 
@@ -503,10 +510,10 @@ void  DoParameterSVD(const ConfigParameters& config)
     }
 
 
-    ComputationNetwork<ElemType> net(deviceID);
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(deviceID);
+    net.LoadFromFile<ElemType>(modelPath);
 
-    net.PerformSVDecomposition(svdconfig);
+    net.PerformSVDecomposition<ElemType>(svdconfig);
     if (!outputmodelPath.empty())
         net.SaveToFile(outputmodelPath);
 
@@ -721,26 +728,32 @@ void DoTrain(const ConfigParameters& config)
     ConfigParameters readerConfig(config("reader"));
     readerConfig.Insert("traceLevel", config("traceLevel", "0"));
 
-    unique_ptr<IComputationNetBuilder<ElemType> > netBuilder;
+    unique_ptr<IComputationNetBuilder<ElemType>> netBuilder;
 
     if (config.Exists("NDLNetworkBuilder"))
     {
-        ConfigParameters configNDL(config("NDLNetworkBuilder"));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType> >( static_cast<IComputationNetBuilder<ElemType>*>(new NDLBuilder<ElemType>(configNDL)));
+        ConfigParameters ndlNetworkBuilderConfig(config("NDLNetworkBuilder"));
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new NDLBuilder<ElemType>(ndlNetworkBuilderConfig));
     }
     else if (config.Exists("SimpleNetworkBuilder"))
     {
-        ConfigParameters configSNB(config("SimpleNetworkBuilder"));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType> >{ static_cast<IComputationNetBuilder<ElemType>*>(new SimpleNetworkBuilder<ElemType>(configSNB)) };
+        ConfigParameters simpleNetworkBuilderConfig(config("SimpleNetworkBuilder"));
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new SimpleNetworkBuilder<ElemType>(simpleNetworkBuilderConfig));
+    }
+    else if (config.Exists("ExperimentalNetworkBuilder"))   // for testing/early access to NDL extensions
+    {
+        DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+        string sourceCode(config("ExperimentalNetworkBuilder"));
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new ExperimentalNetworkBuilder<ElemType>(msra::strfun::utf16(sourceCode), deviceId));
     }
     else
     {
         RuntimeError("No network builder found in the config file. NDLNetworkBuilder or SimpleNetworkBuilde must be specified");
     }
 
-    unique_ptr<DataReader<ElemType> > dataReader { new DataReader<ElemType>(readerConfig) };
+    unique_ptr<DataReader<ElemType>> dataReader { new DataReader<ElemType>(readerConfig) };
 
-    unique_ptr<DataReader<ElemType> > cvDataReader;
+    unique_ptr<DataReader<ElemType>> cvDataReader;
     ConfigParameters cvReaderConfig(config("cvReader", L""));
 
     if (cvReaderConfig.size() != 0)
@@ -976,13 +989,13 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     int traceLevel = config("traceLevel", "0");
     size_t numMBsToShowResult = config("numMBsToShowResult", "100");
 
-    vector<ComputationNetwork<ElemType>*> nets;
-    ComputationNetwork<ElemType> encoderNet(deviceId);
-    encoderNet.LoadFromFile(encoderModelPath, FileOptions::fileOptionsBinary, true);
+    vector<ComputationNetwork*> nets;
+    ComputationNetwork encoderNet(deviceId);
+    encoderNet.LoadFromFile<ElemType>(encoderModelPath, FileOptions::fileOptionsBinary, true);
     encoderNet.ResetEvalTimeStamp();
 
-    ComputationNetwork<ElemType> decoderNet(deviceId);
-    decoderNet.LoadFromFile(decoderModelPath, FileOptions::fileOptionsBinary, false, &encoderNet);
+    ComputationNetwork decoderNet(deviceId);
+    decoderNet.LoadFromFile<ElemType>(decoderModelPath, FileOptions::fileOptionsBinary, false, &encoderNet);
     decoderNet.ResetEvalTimeStamp();
 
     nets.push_back(&encoderNet);
@@ -1051,8 +1064,8 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
     int traceLevel = config("traceLevel", "0");
     size_t numMBsToShowResult = config("numMBsToShowResult", "100");
 
-    ComputationNetwork<ElemType> net(deviceId);
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(deviceId);
+    net.LoadFromFile<ElemType>(modelPath);
     net.ResetEvalTimeStamp();
 
     ConfigArray evalNodeNames = config("evalNodeNames");
@@ -1147,7 +1160,7 @@ void DoConvertFromDbn(const ConfigParameters& config)
     wstring dbnModelPath = config("dbnModelPath");
 
     IComputationNetBuilder<ElemType>* netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(config);
-    ComputationNetwork<ElemType>* net = netBuilder->LoadNetworkFromFile(dbnModelPath);
+    ComputationNetwork* net = netBuilder->LoadNetworkFromFile(dbnModelPath);
     net->SaveToFile(modelPath);
     delete (netBuilder);
 }
@@ -1184,8 +1197,8 @@ void DoTopologyPlot(const ConfigParameters& config)
     }
 
 
-    ComputationNetwork<ElemType> net(-1);
-    net.LoadFromFile(modelPath);
+    ComputationNetwork net(-1);
+    net.LoadFromFile<ElemType>(modelPath);
     net.PlotNetworkTopology(outdot);
     fprintf(stderr, "Output network description in dot language to %S\n", outdot.c_str());
 
@@ -1316,7 +1329,7 @@ void PrintUsageInfo()
     fprintf(stderr, "-------------------------------------------------------------------\n");
 }
 
-int wmain(int argc, wchar_t* argv[])
+int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper that catches & repots Win32 exceptions
 {
     try
     {
@@ -1361,33 +1374,33 @@ int wmain(int argc, wchar_t* argv[])
 #endif
         std::string timestamp = TimeDateStamp();
 
-        //dump config info
-        fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
-        fprintf(stderr, "command line options: \n");
-        for (int i = 1; i < argc; i++)
-            fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
+            //dump config info
+            fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
+            fprintf(stderr, "command line options: \n");
+            for (int i = 1; i < argc; i++)
+                fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
 
-        // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
-        // and prints it.
-        fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
-        fprintf(stderr, "%s\n", rawConfigString.c_str());
-        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
+            // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
+            // and prints it.
+            fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
+            fprintf(stderr, "%s\n", rawConfigString.c_str());
+            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
 
-        // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
-        // All of these assignments will appear, even though only the last assignment matters.
-        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-        fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
-        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+            // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
+            // All of these assignments will appear, even though only the last assignment matters.
+            fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+            fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
+            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
-        // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
-        // value it is set to will appear).
-        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-        config.dumpWithResolvedVariables();
-        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+            // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
+            // value it is set to will appear).
+            fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+            config.dumpWithResolvedVariables();
+            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
-        fprintf(stderr, "command: ");
-        for (int i = 0; i < command.size(); i++)
-            fprintf(stderr, "%s ", command[i].c_str());
+            fprintf(stderr, "command: ");
+            for (int i = 0; i < command.size(); i++)
+                fprintf(stderr, "%s ", command[i].c_str());
 
         //run commands
         std::string type = config("precision", "float");
@@ -1412,6 +1425,12 @@ int wmain(int argc, wchar_t* argv[])
 
         delete g_mpi;
     }
+    catch (const BS::ConfigError &err)
+    {
+        fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
+        err.PrintError();
+        return EXIT_FAILURE;
+    }
     catch (const std::exception &err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
@@ -1427,6 +1446,26 @@ int wmain(int argc, wchar_t* argv[])
     return EXIT_SUCCESS;
 }
 
+#ifdef __WINDOWS__
+void terminate_this() { fprintf(stderr, "terminate_this: aborting\n"), fflush(stderr); exit(EXIT_FAILURE); }
+
+int wmain(int argc, wchar_t* argv[])    // wmain wrapper that reports Win32 exceptions
+{
+    set_terminate (terminate_this); // insert a termination handler to ensure stderr gets flushed before actually terminating
+    // Note: this does not seem to work--processes with this seem to just hang instead of terminating
+    __try
+    {
+        return wmain1 (argc, argv);
+    }
+    __except (1/*EXCEPTION_EXECUTE_HANDLER, see excpt.h--not using constant to avoid Windows header in here*/)
+    {
+        fprintf (stderr, "dbn: Win32 exception caught\n");
+        fflush (stderr);
+        exit (EXIT_FAILURE);
+    }
+}
+#endif
+
 #ifdef __UNIX__
 /// UNIX main function converts arguments in UTF-8 encoding and passes to Visual-Studio style wmain() which takes wchar_t strings.
 int main(int argc, char* argv[])
@@ -1439,7 +1478,7 @@ int main(int argc, char* argv[])
         size_t ans = ::mbstowcs(wargs[i], argv[i], strlen(argv[i]) + 1);
         assert(ans == strlen(argv[i]));
     }
-    int ret = wmain(argc, wargs);
+    int ret = wmain1(argc, wargs);
     for (int i = 0; i < argc; ++i)
         delete[] wargs[i];
     delete[] wargs;

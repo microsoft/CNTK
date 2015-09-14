@@ -3,7 +3,10 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
+
 //helpful macros
+// TODO: the file's name is too general to be included from outside; MathHelpers.h?
+
 //iterators
 #pragma once
 #undef foreach_row

@@ -4,28 +4,16 @@
 // </copyright>
 //
 #pragma once
+#include "Basics.h" // for RuntimeError()
+#include "Matrix.h"
+#include "File.h"
+#include "Helpers.h"
+#include "CommonMatrix.h"
 #include <vector>
 #include <stdio.h>
 #include <ctime>
 #include <limits.h>
-#include "File.h"
-#include "Helpers.h"
-#include "CommonMatrix.h"
-#include "Basics.h" // for RuntimeError()
 
-#ifdef    _WIN32
-#ifdef MATH_EXPORTS
-#define MATH_API __declspec(dllexport)
-#else
-#define MATH_API __declspec(dllimport)
-#endif
-#else    // no DLLs on Linux
-#define    MATH_API 
-#endif
-
-#ifndef USE_TIME_BASED_SEED
-#define USE_TIME_BASED_SEED ULONG_MAX
-#endif
 // NOTE NOTE NOTE:
 // use CPUSingleMatrix and CPUDoubleMatrix instead of using the template directly
 ///////////////////////////////////////////////

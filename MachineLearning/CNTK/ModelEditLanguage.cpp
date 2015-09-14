@@ -24,15 +24,11 @@ bool EqualInsensitive(std::string& string1, const char* string2, const char* alt
 
     // don't allow partial matches that are less than half the string
     if (equal && string1.size() < strlen(string2)/2)
-    {
         equal = false;
-    }
 
     // if we have a (partial) match replace with the full name
     if (equal && strcmp(string1.c_str(), string2))
-    {
         string1 = string2;
-    }
 
     if (!equal && alternate != NULL)
     {
@@ -40,15 +36,11 @@ bool EqualInsensitive(std::string& string1, const char* string2, const char* alt
 
         // don't allow partial matches that are less than half the string
         if (equal && string1.size() < strlen(alternate)/2)
-        {
             equal = false;
-        }
 
         // if we have a match of the alternate string replace with the full name
         if (equal)
-        {
             string1 = string2;
-        }
     }
 
     return equal;
@@ -73,7 +65,7 @@ enum MELProperty
 // propArray - Array which contains all nodes that are associated with a particular property
 // set - true if property is to be added, false if property is deleted
 template <typename ElemType>
-void MELScript<ElemType>::SetProperty(ComputationNodePtr nodeProp, vector<ComputationNodePtr>& propArray, bool set)
+void MELScript<ElemType>::SetProperty(ComputationNodeBasePtr nodeProp, vector<ComputationNodeBasePtr>& propArray, bool set)
 {
     auto found = propArray.begin();
     for (;found != propArray.end() && *found != nodeProp; ++found)
@@ -113,7 +105,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
             RuntimeError("Invalid number of parameters. Valid parameters: CreateModel(). newly created model always becomes the new default.");
 
-        ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
+        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
         OverrideModelNameAndSetDefaultModel(cn);
     }
     if (EqualInsensitive(name, "CreateModelWithName"))  //create a blank model
@@ -122,7 +114,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         if (params.size() > numFixedParams + numOptionalParams || params.size() < numFixedParams)
             RuntimeError("Invalid number of parameters. Valid parameters: CreateModelWithName(modelName). newly created model always becomes the new default.");
 
-        ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
+        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
         OverrideModelNameAndSetDefaultModel(cn, params[0]);
     }
     else if (EqualInsensitive(name, "LoadModel"))
@@ -133,8 +125,8 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
-        ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
-        cn->LoadFromFile(params[0]);
+        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
+        cn->LoadFromFile<ElemType>(params[0]);
         OverrideModelNameAndSetDefaultModel(cn);
     }
     else if (EqualInsensitive(name, "LoadModelWithName"))
@@ -145,8 +137,8 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::wstring modelFormat = GetOptionalModelFormat(params, numFixedParams);
 
-        ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
-        cn->LoadFromFile(params[1]);
+        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
+        cn->LoadFromFile<ElemType>(params[1]);
         OverrideModelNameAndSetDefaultModel(cn, params[0]);
     }
     else if (EqualInsensitive(name, "LoadNDLSnippet"))
@@ -157,7 +149,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         string modelName = params[0];
         wstring ndlSnippetFileName = params[1];
-        ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>(CPUDEVICE);
+        ComputationNetwork* cn = new ComputationNetwork(CPUDEVICE);
         NDLScript<ElemType> script;
         ConfigParameters ndlScript (script.ReadConfigFile(ndlSnippetFileName));
 
@@ -190,7 +182,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         std::wstring fileName = params[0];
 
-        ComputationNetwork<ElemType>* cn = m_netNdlDefault->cn;
+        ComputationNetwork* cn = m_netNdlDefault->cn;
         if (cn == NULL)
             RuntimeError("SaveDefaultModel can only be called after a default name exists (i.e., at least one model is loaded.)");
 
@@ -277,7 +269,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         std::wstring fileName = params[1];
 
         NetNdl<ElemType>* netNdl;
-        vector<ComputationNodePtr> nodes = FindSymbols(params[0], netNdl);
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
         ProcessNDLScript(netNdl, ndlPassAll);
         netNdl->cn->DumpNodeInfoToFile(nodes, includeData, fileName);
     }
@@ -339,8 +331,8 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         // get the nodes
         NetNdl<ElemType>* netNdlTo;
         NetNdl<ElemType>* netNdlFrom;
-        vector<ComputationNodePtr> nodeTo = FindSymbols(params[0], netNdlTo);
-        vector<ComputationNodePtr> nodeFrom = FindSymbols(params[2], netNdlFrom);
+        vector<ComputationNodeBasePtr> nodeTo = FindSymbols(params[0], netNdlTo);
+        vector<ComputationNodeBasePtr> nodeFrom = FindSymbols(params[2], netNdlFrom);
         int inputNum = params[1];
 
         if (netNdlTo != netNdlFrom)
@@ -365,11 +357,11 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // get the nodes
         NetNdl<ElemType>* netNdlTo;
-        vector<ComputationNodePtr> nodeTo = FindSymbols(params[0], netNdlTo);
+        vector<ComputationNodeBasePtr> nodeTo = FindSymbols(params[0], netNdlTo);
         if (nodeTo.size() != 1)
             RuntimeError("SetNodeInputs() must have exactly one target, %s doesn't represent any node.",params[0].c_str());
         
-        vector<ComputationNodePtr> inputNodes;
+        vector<ComputationNodeBasePtr> inputNodes;
         inputNodes.resize(params.size()-1);
 
         // process outstanding NDL scripts ensuring that the inputs have all been resolved
@@ -378,7 +370,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         for (int i=1; i<params.size(); i++)
         {
             NetNdl<ElemType>* netNdlFrom;
-            vector<ComputationNodePtr> nodeFrom = FindSymbols(params[i], netNdlFrom);
+            vector<ComputationNodeBasePtr> nodeFrom = FindSymbols(params[i], netNdlFrom);
 
             if (netNdlTo != netNdlFrom)
                 RuntimeError("SetNodeInputs() requires all symbols from the same network, %s and %s belong to different networks", params[0].c_str(), params[i].c_str());
@@ -444,12 +436,12 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // get the nodes
         NetNdl<ElemType>* netNdl;
-        vector<ComputationNodePtr> nodes = FindSymbols(params[0], netNdl);
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
 
         // this probabably won't do anything, but make sure all NDL has been created
         ProcessNDLScript(netNdl, ndlPassInitial, false);
 
-        ComputationNetwork<ElemType>* cn = netNdl->cn;
+        ComputationNetwork* cn = netNdl->cn;
         for (auto node : nodes)
         {
             switch(prop)
@@ -527,7 +519,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // get the nodes
         NetNdl<ElemType>* netNdl;
-        vector<ComputationNodePtr> nodes = FindSymbols(params[0], netNdl);
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
 
         // make sure all NDL links have been resolved
         ProcessNDLScript(netNdl, ndlPassResolve);
@@ -539,7 +531,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 case melPropComputeGradient:
                 {
                     bool needGradient = params[2];
-                    netNdl->cn->SetLeanableNodesBelowNeedGradient(needGradient, node);
+                    netNdl->cn->SetLearnableNodesBelowNeedGradient(needGradient, node);
                     break;
                 }
                 default:
@@ -558,7 +550,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             // get the nodes
             NetNdl<ElemType>* netNdl;
-            vector<ComputationNodePtr> nodes = FindSymbols(params[i], netNdl);
+            vector<ComputationNodeBasePtr> nodes = FindSymbols(params[i], netNdl);
 
             // make sure all NDL has been processed in case we are removing some of them...
             // only process each network once, because validates will start failing after first delete

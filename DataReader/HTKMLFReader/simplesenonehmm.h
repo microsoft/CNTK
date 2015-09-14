@@ -64,7 +64,7 @@ public: // (TODO: better encapsulation)
         transP() : numstates (0) {}
     };
     std::vector<transP> transPs;                       // the transition matrices  --TODO: finish this
-    std::hash_map<std::string,size_t> transPmap;    // [transPname] -> index into transPs[]
+    std::unordered_map<std::string, size_t> transPmap;    // [transPname] -> index into transPs[]
 public:
     // get an hmm by index
     const hmm & gethmm (size_t i) const { return hmms[i]; }
@@ -216,7 +216,7 @@ public:
             }
         }
         fprintf (stderr, "simplesenonehmm: %d units with %d unique HMMs, %d tied states, and %d trans matrices read\n",
-                 symmap.size(), hmms.size(), statemap.size(), transPs.size());
+                 (int)symmap.size(), (int)hmms.size(), (int)statemap.size(), (int)transPs.size());
     }
 
     // exposed so we can pass it to the lattice reader, which maps the symbol ids for us

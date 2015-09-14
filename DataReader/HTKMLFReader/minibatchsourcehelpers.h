@@ -12,7 +12,9 @@
 #include <stdio.h>
 #include <vector>
 #include <algorithm>
+#ifndef __unix__
 #include "ssematrix.h"      // for matrix type
+#endif
 
 namespace msra { namespace dbn {
 
@@ -246,7 +248,7 @@ public:
                         retries++;
                     }
                 }
-                fprintf (stderr, "randomordering: %d retries for %d elements (%.1f%%) to ensure window condition\n", retries, map.size(), 100.0 * retries / map.size());
+                fprintf (stderr, "randomordering: %d retries for %d elements (%.1f%%) to ensure window condition\n", (int)retries, (int)map.size(), 100.0 * retries / map.size());
                 // ensure the window condition
                 foreach_index (t, map) assert ((size_t) t <= map[t] + randomizationrange/2 && map[t] < (size_t) t + randomizationrange/2);
     #if 1       // and a live check since I don't trust myself here yet

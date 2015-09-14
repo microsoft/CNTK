@@ -9,6 +9,7 @@
 
 #include "commandArgUtil.h"
 #include "ComputationNetwork.h"
+#include "ComputationNetworkBuilder.h"
 #include "NetworkDescriptionLanguage.h"
 #include "SynchronousExecutionEngine.h"
 #include "NDLUtil.h"
@@ -77,7 +78,7 @@ public:
         m_netNdlDefault = move(melScript.m_netNdlDefault);
     }
     void ProcessNDLScript(NetNdl<ElemType>* netNdl, NDLPass ndlPassUntil=ndlPassAll, bool fullValidate = false);
-    void SetProperty(ComputationNodePtr nodeProp, vector<ComputationNodePtr>& propArray, bool set);
+    void SetProperty(ComputationNodeBasePtr nodeProp, vector<ComputationNodeBasePtr>& propArray, bool set);
     void CallFunction(const std::string& name, const ConfigParamList& params);
 
     // ParseName - Parse the name and find positions of the wildcard matches
@@ -130,7 +131,7 @@ public:
     // symbol - symbol to find
     // netNdl - [out] netNdl associated with this symbol
     // returns - nodes this symbol references, might be empty
-    vector<ComputationNodePtr> FindSymbols(const std::string& symbol, NetNdl<ElemType>*& netNdl)
+    vector<ComputationNodeBasePtr> FindSymbols(const std::string& symbol, NetNdl<ElemType>*& netNdl)
     {
         size_t firstStart, firstCount, secondStart, secondCount;
         netNdl = ParseName(symbol, firstStart, firstCount, secondStart, secondCount);
@@ -146,12 +147,13 @@ public:
             search = symbol.substr(firstStart);
         }
 
-        ComputationNetwork<ElemType>* cn = netNdl->cn;
+        ComputationNetwork* cn = netNdl->cn;
         wstring name = msra::strfun::utf16(search);
-        vector<ComputationNodePtr> nodes = cn->GetNodesFromName(name);
+        vector<ComputationNodeBasePtr> nodes = cn->GetNodesFromName(name);
         // didn't find the name in the current symbols, try NDL
         if (nodes.empty() && netNdl->ndl != nullptr)
         {
+            ComputationNetworkBuilder<ElemType> builder(*cn);
             NDLNode<ElemType>* ndlNode = netNdl->ndl->FindSymbol(search);
             if (ndlNode != nullptr)
             {
@@ -165,7 +167,7 @@ public:
                     if (ndlNode->GetType() != ndlTypeConstant)
                         RuntimeError("Matching NDL name found for %s, but no corresponding computation node found\n", symbol.c_str());
                     // probably a constant node, so make the ComputationNode that is equivalent
-                    auto nodePtr = cn->CreateLearnableParameter(name, 1, 1);
+                    auto nodePtr = builder.CreateLearnableParameter(name, 1, 1);
                     ndlNode->SetEvalValue(nodePtr.get());
                     ElemType val = ndlNode->GetScalar();
                     nodePtr->FunctionValues().SetValue(val);
@@ -184,7 +186,7 @@ public:
     // netNdlIn -  netNdl to copy from
     // netNdlOut - netNdl to copy to
     // returns - Source nodes and Target names
-    typedef pair<ComputationNodePtr,std::wstring> GenNameValue;
+    typedef pair<ComputationNodeBasePtr,std::wstring> GenNameValue;
     vector<GenNameValue> GenerateNames(const std::string& symbolIn, const std::string& symbolOut, NetNdl<ElemType>*& netNdlIn, NetNdl<ElemType>*& netNdlOut)
     {
         MapNodes mapInOut;
@@ -207,7 +209,7 @@ public:
         }
         
         wstring name = msra::strfun::utf16(search);
-        vector<ComputationNodePtr> nodes = netNdlIn->cn->GetNodesFromName(name);
+        vector<ComputationNodeBasePtr> nodes = netNdlIn->cn->GetNodesFromName(name);
 
         if (!nodes.size()) //found
             RuntimeError("GenerateNames: Node name does not exist %ls.", name.c_str());
@@ -253,7 +255,7 @@ public:
         if (singleInputMultiOutput)
         {
             auto nodeIn = nodes[0];
-            vector<ComputationNodePtr> nodesOut = netNdlOut->cn->GetNodesFromName(nameOut);
+            vector<ComputationNodeBasePtr> nodesOut = netNdlOut->cn->GetNodesFromName(nameOut);
 
             // make sure that there are some nodes to copy to
             if (nodesOut.size() == 0)
@@ -300,7 +302,7 @@ public:
         NetNdl<ElemType>* netNdlTo;
         NetNdl<ElemType>* netNdlFrom;
         vector<GenNameValue> copyNodes = GenerateNames(symbolIn, symbolOut, netNdlFrom, netNdlTo);
-        map<ComputationNodePtr,ComputationNodePtr> mapCopied; // map from old nodes to new nodes
+        map<ComputationNodeBasePtr,ComputationNodeBasePtr> mapCopied; // map from old nodes to new nodes
 
         // Process any outstanding NDL Scripts
         bool crossNetwork = netNdlTo->cn != netNdlFrom->cn;
@@ -321,7 +323,7 @@ public:
             std::wstring nodeName = node->NodeName();
             std::wstring nodeOutName = name.second;
 
-            ComputationNodePtr newNode = netNdlTo->cn->CopyNode(*netNdlFrom->cn, nodeName, nodeOutName, copyFlags);
+            ComputationNodeBasePtr newNode = netNdlTo->cn->CopyNode(*netNdlFrom->cn, nodeName, nodeOutName, copyFlags);
             mapCopied[node] = newNode;
         }
 
@@ -331,11 +333,11 @@ public:
             // loop through the nodes that were copied and fixup all the child links
             for (GenNameValue nodeVal : copyNodes)
             {
-                ComputationNodePtr fromNode = nodeVal.first;
-                ComputationNodePtr toNode = mapCopied[fromNode];
+                ComputationNodeBasePtr fromNode = nodeVal.first;
+                ComputationNodeBasePtr toNode = mapCopied[fromNode];
                 for (int i=0; i<fromNode->ChildrenSize(); i++)
                 {
-                    auto found = mapCopied.find(fromNode->Inputs(i));
+                    auto found = mapCopied.find(fromNode->GetChildren()[i]);
                     auto newNode = (found == mapCopied.end())?ComputationNodePtr():found->second;
                     toNode->SetInput(i, newNode);
                 }                     
@@ -352,7 +354,7 @@ public:
         // get the nodes
         NetNdl<ElemType>* netNdlFrom;
         
-        vector<ComputationNodePtr> fromNodes = FindSymbols(symbolFrom, netNdlFrom);
+        vector<ComputationNodeBasePtr> fromNodes = FindSymbols(symbolFrom, netNdlFrom);
         size_t firstStart, firstCount, secondStart, secondCount;
         NetNdl<ElemType>* netNdlTo = ParseName(toCNName, firstStart, firstCount, secondStart, secondCount);
 
@@ -369,14 +371,14 @@ public:
         // now we have the original names from the input symbol, generate the output names
         for (int i=0; i<fromNodes.size(); i++)
         {
-            ComputationNodePtr fromNode = fromNodes[i];
+            ComputationNodeBasePtr fromNode = fromNodes[i];
             std::wstring fromNodeName = fromNode->NodeName();
 
             netNdlTo->cn->CopySubTree(*netNdlFrom->cn, fromNodeName, toNamePrefixW, copyFlags);
         }
     }
     
-    void OverrideModelNameAndSetDefaultModel(ComputationNetwork<ElemType>* cn, string modelName = "default")
+    void OverrideModelNameAndSetDefaultModel(ComputationNetwork* cn, string modelName = "default")
     {
         auto found = m_mapNameToNetNdl.find(modelName);
         if (found != m_mapNameToNetNdl.end() && found->second.cn != cn)
@@ -581,7 +583,7 @@ public:
     // EvaluateNDLSnippet - evaluate the passed snippet of NDL into a computational network
     // script - [in] text of the NDL snippet
     // network - [in/out] computation network to insert NDL into
-    void EvaluateNDLSnippet(const ConfigValue& script, ComputationNetwork<ElemType>* network)
+    void EvaluateNDLSnippet(const ConfigValue& script, ComputationNetwork* network)
     {
         NDLUtil<ElemType> ndlUtil(network);
         ndlUtil.ProcessNDLConfig(script);
@@ -644,7 +646,7 @@ public:
                 // model1=[...] - Embedded NDL script
                 if (0 == foundBrace)
                 {
-                    ComputationNetwork<ElemType>* cn = new ComputationNetwork<ElemType>();
+                    ComputationNetwork* cn = new ComputationNetwork();
                     EvaluateNDLSnippet(rightValue, cn);
                     OverrideModelNameAndSetDefaultModel(cn, key);
                 }
