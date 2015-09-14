@@ -12,9 +12,6 @@
 
 namespace Microsoft { namespace MSR { namespace BS {
 
-    // TODO: get this from the new BrainScriptEvaluator.h once stuff got renamed
-    void Do(ExpressionPtr e);                   // evaluate e.do
-
     using namespace std;
     using namespace msra::strfun;
 

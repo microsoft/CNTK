@@ -28,8 +28,11 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "Basics.h"
+
+#include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
+
 #include <deque>
 #include <set>
 #include <functional>
@@ -40,15 +43,14 @@
 #define let const auto
 #endif
 
-namespace Microsoft { namespace MSR { namespace CNTK { class ComputationNodeObject; class ComputationNetwork; } } }
-
 namespace Microsoft { namespace MSR { namespace BS {
 
     using namespace std;
     using namespace msra::strfun;
     using namespace Microsoft::MSR::CNTK;
+    using namespace Microsoft::MSR::ScriptableObjects;
 
-    bool trace = true;      // enable to get debug output
+    bool trace = false;     // enable to get debug output
 
 #define exprPathSeparator L"."
 
@@ -752,9 +754,6 @@ namespace Microsoft { namespace MSR { namespace BS {
         return rtInfo;
     }
 
-    // external types (such as CNTK proper--that's external to BrainScript)
-    const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring & typeId);
-
     // get information about configurable runtime types
     static const ConfigurableRuntimeType * FindRuntimeTypeInfo(const wstring & typeId)
     {
@@ -774,7 +773,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         let newIter = configurableRuntimeTypes.find(typeId);
         if (newIter != configurableRuntimeTypes.end())
             return &newIter->second;
-        
+
         // not our own type: check external types
         return FindExternalRuntimeTypeInfo(typeId);
     }

@@ -102,6 +102,12 @@
     <ClInclude Include="MatrixPool.h">
       <Filter>Network</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\ScriptableObjects.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Math\Math\Matrix.h">
+      <Filter>from CNTKMath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -124,6 +130,9 @@
     </Filter>
     <Filter Include="Network">
       <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="from CNTKMath">
+      <UniqueIdentifier>{7d838fa4-b5a1-4b8a-b37d-823fb026055b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
