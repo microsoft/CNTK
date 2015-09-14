@@ -6,20 +6,13 @@
 #include "Basics.h"
 #include "ExperimentalNetworkBuilder.h"
 #include "BrainScriptEvaluator.h"
+#include "BrainScriptParser.h"
 
-//#include "ComputationNode.h"
-//#include "InputAndParamNodes.h"
-//#include "RecurrentNodes.h"
-//#include "NonlinearityNodes.h"
-//#include "LinearAlgebraNodes.h"
-//#include "ConvolutionalNodes.h"
-//
-//#include "ComputationNetwork.h"
-//#include "ComputationNetworkBuilder.h"
-//
-//#include <memory>
-//#include <deque>
-//#include <set>
+// TODO: get this from the new BrainScriptEvaluator.h once stuff got renamed
+namespace Microsoft { namespace MSR { namespace BS {
+    shared_ptr<Object> EvaluateField(ExpressionPtr e, const wstring & id);  // for experimental CNTK integration
+}}}
+
 #include <string>
 
 #ifndef let

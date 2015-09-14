@@ -166,8 +166,8 @@ namespace Microsoft { namespace MSR { namespace BS {
 #endif
             if (OpIs(InputValue))
             {
-                let isSparse = config(L"isSparse");
-                let isImage = config(L"isImage");
+                let isSparse = config[L"isSparse"];
+                let isImage  = config[L"isImage"];
                 if (!isImage)
                     node = New<InputValue<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"], isSparse);
                 else
@@ -612,7 +612,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 ConfigArrayPtr inputsArray = (ConfigArrayPtr&)inputsArg;
                 let range = inputsArray->GetIndexRange();
                 for (int i = range.first; i <= range.second; i++)   // pull them. This will resolve all of them.
-                    inputs.push_back(inputsArray->At(i, inputsArg.GetLocation()));
+                    inputs.push_back(inputsArray->At(i, [](const wstring &){ LogicError("GetInputs: out of bounds index while iterating??"); }));
             }
             return inputs;
         }

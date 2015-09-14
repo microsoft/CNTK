@@ -56,6 +56,8 @@ ComputationNetwork* net = startEpoch < 0 ? netBuilder->BuildNetworkFromDescripti
 namespace Microsoft { namespace MSR { namespace BS {
     // this only makes it build--this test wrapper is dead by now
     const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring &) { return nullptr;  }
+    // TODO: get this from the new BrainScriptEvaluator.h once stuff got renamed
+    void SomeTests();
 }}}
 
 int wmain(int /*argc*/, wchar_t* /*argv*/[])

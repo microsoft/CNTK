@@ -12,7 +12,6 @@
 #pragma once
 
 #include "Basics.h"
-#include "BrainScriptParser.h"
 #include "BrainScriptObjects.h"
 #include <memory>   // for shared_ptr
 
@@ -21,15 +20,6 @@ namespace Microsoft { namespace MSR { namespace BS {
     using namespace std;
     using namespace msra::strfun;   // for wstrprintf()
     using namespace Microsoft::MSR::CNTK;
-
-    // error object
-
-    class EvaluationError : public ConfigError
-    {
-    public:
-        EvaluationError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
-        /*Configerror::*/ const wchar_t * kind() const { return L"evaluating"; }
-    };
 
     // =======================================================================
     // ConfigValuePtr -- shared pointer to a config value
@@ -65,21 +55,21 @@ namespace Microsoft { namespace MSR { namespace BS {
     // TODO: separate this out from BrainScript to an interface that still does type casts--possible?
     class ConfigValuePtr : public shared_ptr<Object>
     {
-        TextLocation location;      // in source code
-        wstring expressionName;     // the expression name reflects the path to reach this expression in the (possibly dynamically macro-expanded) expression tree. Used for naming ComputationNodes.
+        function<void(const wstring &)> failfn;     // function to call in case of failure due to this value
+        wstring expressionName;                     // the expression name reflects the path to reach this expression in the (possibly dynamically macro-expanded) expression tree. Used for naming ComputationNodes.
 
         // Thunk for resolving a value. This Object represents a function that returns a ConfigValuePtr; call to resolve a deferred value
         class Thunk : public Object
         {
-            function<ConfigValuePtr()> f;   // the function to compute the value
-            bool currentlyResolving;        // set during resolution phase, to detect circular references
-            TextLocation location;          // in source code
+            function<ConfigValuePtr()> f;           // the function to compute the value
+            bool currentlyResolving;                // set during resolution phase, to detect circular references
+            function<void(const wstring &)> failfn; // function to call in case of failure due to this value
         public:
-            Thunk(function<ConfigValuePtr()> f, TextLocation location) : f(f), location(location), currentlyResolving(false) { }
+            Thunk(function<ConfigValuePtr()> f, const function<void(const wstring &)> & failfn) : f(f), failfn(failfn), currentlyResolving(false) { }
             ConfigValuePtr ResolveValue()
             {
                 if (currentlyResolving)                 // detect circular references (infinite recursion)
-                    throw EvaluationError(L"circular reference (expression to compute identifier's value uses the identifier's value)", location);
+                    failfn(L"circular reference (expression to compute identifier's value uses the identifier's value)");
                 currentlyResolving = true;              // can't run from inside ourselves
                 return f();
                 // no need to reset currentlyResolving because this object gets replaced and thus deleted anyway
@@ -91,12 +81,11 @@ namespace Microsoft { namespace MSR { namespace BS {
         // --- assignment and copy/move constructors
 
         ConfigValuePtr() {} // (formally needed somehow)
-        ConfigValuePtr(const shared_ptr<Object> & p, TextLocation location, const wstring & expressionName) : shared_ptr<Object>(p), location(location), expressionName(expressionName) { }
+        ConfigValuePtr(const shared_ptr<Object> & p, const function<void(const wstring &)> & failfn, const wstring & expressionName) : shared_ptr<Object>(p), failfn(failfn), expressionName(expressionName) { }
         //ConfigValuePtr(const function<ConfigValuePtr()> & f, TextLocation location, const wstring & expressionName) : shared_ptr<Object>(make_shared<Thunk>(f, location)), location(location), expressionName(expressionName) { }
-        static ConfigValuePtr MakeThunk(const function<ConfigValuePtr()> & f, TextLocation location, const wstring & expressionName)
+        static ConfigValuePtr MakeThunk(const function<ConfigValuePtr()> & f, const function<void(const wstring &)> & failfn, const wstring & expressionName)
         {
-            return ConfigValuePtr(make_shared<Thunk>(f, location), location, expressionName);
-            //return ConfigValuePtr(f, location, expressionName);
+            return ConfigValuePtr(make_shared<Thunk>(f, failfn), failfn, expressionName);
         }
         // TODO: somehow the constructor overload from Thunk function fails to compile, so for now use MakeThunk instead
 
@@ -107,15 +96,17 @@ namespace Microsoft { namespace MSR { namespace BS {
             if (other.GetThunk())       // unresolved ConfigValuePtrs are not copyable, only movable
                 Microsoft::MSR::CNTK::LogicError("ConfigValuePtr::operator=() on unresolved object; ConfigValuePtr is not assignable until resolved");
             (shared_ptr<Object>&)*this = other;
-            location = other.location;
+            failfn = other.failfn;
             expressionName = other.expressionName;
         }
         void operator=(ConfigValuePtr && other)
         {
-            location = move(other.location);
+            failfn = move(other.failfn);
             expressionName = move(other.expressionName);
             (shared_ptr<Object>&)*this = move(other);
         }
+        void Fail(const wstring & msg) const { failfn(msg); }
+        const function<void(const wstring &)> & GetFailFn() const { return failfn; }    // if you need to pass on the fail function
 
         // --- retrieving values by type cast
 
@@ -136,7 +127,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             const char * t = typeid(INT).name(); t;
             // TODO: there is some duplication of type checking; can we unify that?
             if (ival != val)
-                throw EvaluationError(wstrprintf(L"expected expression of type %ls instead of floating-point value %f", type, val), location);
+                Fail(wstrprintf(L"expected expression of type %ls instead of floating-point value %f", type, val));
             return ival;
         }
         operator size_t() const { return AsInt<size_t>(); }
@@ -160,7 +151,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             //const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
             const auto p = dynamic_cast<C*>(get());
             if (p == nullptr)   // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
-                throw EvaluationError(L"config member has wrong type (" + msra::strfun::utf16(typeid(*get()).name()) + L"), expected a " + TypeId<C>(), location);
+                Fail(L"config member has wrong type (" + msra::strfun::utf16(typeid(*get()).name()) + L"), expected a " + TypeId<C>());
             return *p;
         }
         template<class C>
@@ -169,14 +160,13 @@ namespace Microsoft { namespace MSR { namespace BS {
             EnsureIsResolved();
             const auto p = dynamic_pointer_cast<C>(*this);
             if (!p)             // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
-                throw EvaluationError(L"config member has wrong type (" + msra::strfun::utf16(typeid(*get()).name()) + L"), expected a " + TypeId<C>(), location);
+                Fail(L"config member has wrong type (" + msra::strfun::utf16(typeid(*get()).name()) + L"), expected a " + TypeId<C>());
             return p;
         }
 
         // --- properties
 
         const char * TypeName() const { return typeid(*get()).name(); }
-        TextLocation GetLocation() const { return location; }
         const wstring & GetExpressionName() const{ return expressionName;  }
         // TODO: ^^ it seems by saving the name in the ConfigValuePtr itself, we don't gain anything; maybe remove again in the future
 
@@ -203,9 +193,9 @@ namespace Microsoft { namespace MSR { namespace BS {
     };  // ConfigValuePtr
 
     // use this for primitive values, double and bool
-    template<typename T> static inline ConfigValuePtr MakePrimitiveConfigValuePtr(const T & val, TextLocation location, const wstring & exprPath)
+    template<typename T> static inline ConfigValuePtr MakePrimitiveConfigValuePtr(const T & val, const function<void(const wstring &)> & failfn, const wstring & exprPath)
     {
-        return ConfigValuePtr(make_shared<BoxOf<Wrapped<T>>>(val), location, exprPath);
+        return ConfigValuePtr(make_shared<BoxOf<Wrapped<T>>>(val), failfn, exprPath);
     }
 
     // -----------------------------------------------------------------------
@@ -218,10 +208,9 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     struct IConfigRecord   // any class that exposes config can derive from this
     {
-        virtual const ConfigValuePtr & operator()(const wstring & id, wstring message = L"") const = 0; // e.g. config(L"arg", L"arg is the argument to this function")
-        virtual const ConfigValuePtr & operator[](const wstring & id) const { return operator()(id); }  // e.g. confRec[L"message"]
-        virtual const ConfigValuePtr * Find(const wstring & id) const = 0;                              // returns nullptr if not found
-        virtual vector<wstring> GetMemberIds() const = 0;                                               // returns the names of all members in this record (but not including parent scopes)
+        virtual const ConfigValuePtr & operator[](const wstring & id) const = 0;    // e.g. confRec[L"message"]
+        virtual const ConfigValuePtr * Find(const wstring & id) const = 0;          // returns nullptr if not found
+        virtual vector<wstring> GetMemberIds() const = 0;                           // returns the names of all members in this record (but not including parent scopes)
     };
 
     // -----------------------------------------------------------------------
@@ -230,6 +219,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     class ConfigRecord : public Object, public IConfigRecord      // all configuration arguments to class construction, resolved into ConfigValuePtrs
     {
+        function<void(const wstring &)> failfn;     // function to call in case of failure due to this value
         // change to ContextInsensitiveMap<ConfigValuePtr>
         map<wstring, ConfigValuePtr> members;
         IConfigRecordPtr parentScope;           // we look up the chain
@@ -238,26 +228,26 @@ namespace Microsoft { namespace MSR { namespace BS {
 
         // --- creation phase
 
-        ConfigRecord(IConfigRecordPtr parentScope) : parentScope(parentScope) { }
-        void Add(const wstring & id, TextLocation idLocation/*text location of the identifier*/, const ConfigValuePtr & value) { members[id] = value; idLocation; }
-        void Add(const wstring & id, TextLocation idLocation, ConfigValuePtr && value) { members[id] = move(value); idLocation; } // use this for unresolved ConfigPtrs
+        ConfigRecord(IConfigRecordPtr parentScope, const function<void(const wstring &)> & failfn) : parentScope(parentScope), failfn(failfn) { }
+        void Add(const wstring & id, const function<void(const wstring &)> & failfn, const ConfigValuePtr & value) { members[id] = value; failfn; }
+        void Add(const wstring & id, const function<void(const wstring &)> & failfn, ConfigValuePtr && value) { members[id] = move(value); failfn; } // use this for unresolved ConfigPtrs
+        // TODO: Add() does not yet correctly handle the failfn. It is meant to flag the location of the variable identifier
 
         // --- usage phase
 
         // regular lookup: just use record[id] or record(id, L"helpful message what 'id' does")
         // Any unresolved value is resolved at this time, as it is being consumed. Only after resolving a ConfigValuePtr, it can be copied.
-        const ConfigValuePtr & /*IConfigRecord::*/operator()(const wstring & id, wstring message) const   // e.g. confRec(L"name", L"This specifies the object's internal name.")
+        const ConfigValuePtr & /*IConfigRecord::*/operator[](const wstring & id) const   // e.g. confRec[L"name"]
         {
             const auto memberIter = members.find(id);
             if (memberIter != members.end())
                 return memberIter->second.ResolveValue();   // resolve upon access
-            if (parentScope)
-                return (*parentScope)[id];                  // not found but have parent: look it up there
-            // failed: shown an error
-            if (message.empty())
-                throw EvaluationError(L"required parameter '" + id + L"' not found", TextLocation());
-            else
-                throw EvaluationError(L"required parameter '" + id + L"' not found. " + message, TextLocation());
+            if (!parentScope)                               // not found: if at top scope, we fail
+                failfn(L"required parameter '" + id + L"' not found");
+            // The failfn will report the location where the dictionary itself was formed.
+            // This is because this function is meant to be used by C++ code.
+            // When we look up a name by a BrainScript ".FIELD" expression, we will use Find() so we can report the error for the offending FIELD itself.
+            return (*parentScope)[id];                      // have parent: look it up there
         }
         const ConfigValuePtr * /*IConfigRecord::*/Find(const wstring & id) const         // returns nullptr if not found
         {
@@ -300,13 +290,6 @@ namespace Microsoft { namespace MSR { namespace BS {
     {
         vector<ConfigValuePtr> values;
         int firstIndex;
-        // TODO: get rid of this function, only used in one place
-        const ConfigValuePtr & GetElemRef(int index, TextLocation indexLocation) const
-        {
-            if (index < firstIndex || index >= firstIndex + values.size())
-                throw EvaluationError(L"index out of bounds", indexLocation);
-            return values[(size_t)(index - firstIndex)].ResolveValue(); // resolve upon access
-        }
     public:
         ConfigArray() : firstIndex(0) { }
         ConfigArray(int firstIndex, vector<ConfigValuePtr> && values) : firstIndex(firstIndex), values(move(values)) { }
@@ -315,7 +298,13 @@ namespace Microsoft { namespace MSR { namespace BS {
         void Append(ConfigValuePtr value) { values.push_back(value); }
         void Append(const ConfigArray & other) { values.insert(values.end(), other.values.begin(), other.values.end()); }
         // get element at index, including bounds check
-        const ConfigValuePtr & At(int index, TextLocation indexLocation) const { return GetElemRef(index, indexLocation); }
+        template<typename FAILFN>
+        const ConfigValuePtr & At(int index, const FAILFN & failfn/*should report location of the index*/) const
+        {
+            if (index < firstIndex || index >= firstIndex + values.size())
+                failfn(L"index out of bounds");
+            return values[(size_t)(index - firstIndex)].ResolveValue(); // resolve upon access
+        }
     };
     typedef shared_ptr<ConfigArray> ConfigArrayPtr;
 
@@ -357,7 +346,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     {
                         return namedParam.second.ResolveValue();
                     };
-                    actualNamedArgs[id] = move(ConfigValuePtr::MakeThunk(f, namedParam.second.GetLocation(), exprName));
+                    actualNamedArgs[id] = move(ConfigValuePtr::MakeThunk(f, namedParam.second.GetFailFn(), exprName));
                 }
                 else                                                        // named parameter was passed
                     actualNamedArgs[id] = move(valuei->second);             // move it, possibly remaining unresolved
@@ -365,13 +354,14 @@ namespace Microsoft { namespace MSR { namespace BS {
             }
             for (const auto & namedArg : namedArgs)   // make sure there are no extra named args that the macro does not take
                 if (namedParams.find(namedArg.first) == namedParams.end())
-                    throw EvaluationError(L"function does not have an optional argument '" + namedArg.first + L"'", namedArg.second.GetLocation());
+                    namedArg.second.Fail(L"function does not have an optional argument '" + namedArg.first + L"'");
             return f(move(args), move(actualNamedArgs), exprName);
         }
         // TODO: define an overload that takes const & for external users (which will then take a copy and pass it on to Apply &&)
     };
     typedef shared_ptr<ConfigLambda> ConfigLambdaPtr;
 
+#if 0   // TODO: revive this once we split this header
     // -----------------------------------------------------------------------
     // functions exposed by this module
     // TODO: This is the only thing that should stay in an actual BrainScriptEvaluator.h.
@@ -384,5 +374,6 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     // some simple tests
     void SomeTests();
+#endif
 
 }}} // end namespaces

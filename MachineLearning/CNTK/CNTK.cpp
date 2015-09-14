@@ -47,6 +47,7 @@
 #include "SimpleOutputWriter.h"
 #include "BestGpu.h"
 #include "BrainScriptEvaluator.h"
+#include "BrainScriptParser.h"
 #include <fileutil.h>
 
 // TODO: Get rid of this global

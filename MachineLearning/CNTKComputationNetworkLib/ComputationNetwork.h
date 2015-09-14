@@ -1531,9 +1531,9 @@ public:
     }
 
     // pretending to be a ConfigRecord. TODO: implement this when we actually need it (when we get to MEL)
-    const BS::ConfigValuePtr & /*IConfigRecord::*/operator()(const wstring & id, wstring message) const   // e.g. confRec(L"message", helpString)
+    const BS::ConfigValuePtr & /*IConfigRecord::*/operator[](const wstring & id) const   // e.g. confRec[L"message"]
     {
-        id; message; RuntimeError("unknown class parameter");    // (for now)
+        id; RuntimeError("unknown class parameter");    // (for now)
     }
     const BS::ConfigValuePtr * /*IConfigRecord::*/Find(const wstring & id) const         // returns nullptr if not found
     {
