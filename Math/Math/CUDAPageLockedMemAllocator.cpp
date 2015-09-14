@@ -1,9 +1,13 @@
 #include "stdafx.h"
 #include "CUDAPageLockedMemAllocator.h"
+#include "BestGpu.h"    // for CPUONLY
+#ifndef CPUONLY
 #include <cuda_runtime_api.h>
+#endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+#ifndef CPUONLY
     CUDAPageLockedMemAllocator::CUDAPageLockedMemAllocator(int deviceID)
         : m_deviceID(deviceID)
     {
@@ -25,4 +29,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaSetDevice(m_deviceID);
         cudaFreeHost(p) || "Free in CUDAPageLockedMemAllocator failed";
     }
+
+    int CUDAPageLockedMemAllocator::GetDeviceID() const
+    {
+        return m_deviceID;
+    }
+#else
+    // Dummy definitions when compiling for CPUONLY
+    CUDAPageLockedMemAllocator::CUDAPageLockedMemAllocator(int)
+    {
+    }
+
+    int CUDAPageLockedMemAllocator::GetDeviceID() const
+    {
+        return -1;
+    }
+
+    char* CUDAPageLockedMemAllocator::Malloc(size_t)
+    {
+        return nullptr;
+    }
+
+    void CUDAPageLockedMemAllocator::Free(char*)
+    {
+    }
+#endif
 }}}

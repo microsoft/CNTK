@@ -49,14 +49,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Program Files (x86)\Microsoft SDKs\MPI\Include;..\..\Math\Math;..\..\Common\;..\..\Common\include;$(VCInstallDir)include;$(CUDA_PATH)\include;$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..\CNTKSGDLib;..\CNTKComputationNetworkLib;..\..\Math\Math;..\..\Common\Include;..\..\BrainScript;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
     <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Program Files (x86)\Microsoft SDKs\MPI\Include;..\..\Math\Math;..\..\Common\;..\..\Common\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(CUDA_PATH)\include;$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..\CNTKSGDLib;..\CNTKComputationNetworkLib;..\..\Math\Math;..\..\Common\Include;..\..\BrainScript;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
     <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
@@ -78,9 +78,10 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>CNTKSGDLib.lib; CNTKComputationNetworkLib.lib; CNTKMathDll.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>CNTKMath.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>CNTKMathDll.dll; msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <StackReserveSize>100000000</StackReserveSize>
     </Link>
     <PostBuildEvent>
       <Command>if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>
@@ -119,9 +120,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>CNTKSGDLib.lib; CNTKComputationNetworkLib.lib; CNTKMathDll.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
-      <DelayLoadDLLs>CNTKMath.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>CNTKMathDll.dll; msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
       <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
@@ -146,11 +147,18 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <Text Include="..\..\BrainScript\Notes.txt">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </Text>
     <Text Include="DefaultMacros.txt" />
     <Text Include="modelEditor.txt" />
     <Text Include="modelEditorFromScratch.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\BrainScript\BrainScriptEvaluator.h" />
+    <ClInclude Include="..\..\BrainScript\BrainScriptObjects.h" />
+    <ClInclude Include="..\..\BrainScript\BrainScriptParser.h" />
     <ClInclude Include="..\..\Common\CrossProcessMutex.h" />
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\Basics.h" />
@@ -162,31 +170,34 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\hostname.h" />
     <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h" />
-    <ClInclude Include="..\..\Common\Include\nvml.h" />
+    <ClInclude Include="..\..\Common\Include\Platform.h" />
     <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
-    <ClInclude Include="CompositeComputationNodes.h" />
+    <ClInclude Include="..\..\Math\Math\CPUMatrix.h" />
+    <ClInclude Include="..\..\Math\Math\Matrix.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\CompositeComputationNodes.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\MatrixPool.h" />
+    <ClInclude Include="..\CNTKSGDLib\IComputationNetBuilder.h" />
     <ClInclude Include="AllReduceDistGradAggregator.h" />
-    <ClInclude Include="ComputationNetwork.h" />
-    <ClInclude Include="ComputationNetworkHelper.h" />
-    <ClInclude Include="ComputationNode.h" />
-    <ClInclude Include="ConvolutionalNodes.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetwork.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetworkBuilder.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNode.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\ConvolutionalNodes.h" />
     <ClInclude Include="DistGradHeader.h" />
     <ClInclude Include="IDistGradAggregator.h" />
     <ClInclude Include="MPIWrapper.h" />
-    <ClInclude Include="DecoderNode.h" />
-    <ClInclude Include="EvaluationCriterionNodes.h" />
-    <ClInclude Include="IComputationNetBuilder.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\DecoderNode.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\EvaluationCriterionNodes.h" />
+    <ClInclude Include="ExperimentalNetworkBuilder.h" />
     <ClInclude Include="IExecutionEngine.h" />
-    <ClInclude Include="InputAndParamNodes.h" />
-    <ClInclude Include="LinearAlgebraNodes.h" />
-    <ClInclude Include="MatrixPool.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\InputAndParamNodes.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\LinearAlgebraNodes.h" />
     <ClInclude Include="ModelEditLanguage.h" />
     <ClInclude Include="MultiNetworksSGD.h" />
     <ClInclude Include="NDLNetworkBuilder.h" />
     <ClInclude Include="NDLUtil.h" />
     <ClInclude Include="NetworkDescriptionLanguage.h" />
-    <ClInclude Include="NonlinearityNodes.h" />
-    <ClInclude Include="RecurrentNodes.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\NonlinearityNodes.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\RecurrentNodes.h" />
     <ClInclude Include="SimpleEvaluator.h" />
     <ClInclude Include="SimpleOutputWriter.h" />
     <ClInclude Include="SGD.h" />
@@ -194,10 +205,12 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="SynchronousExecutionEngine.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="TrainingCriterionNodes.h" />
+    <ClInclude Include="..\CNTKComputationNetworkLib\TrainingCriterionNodes.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\Common\BestGpu.cpp" />
+    <ClCompile Include="..\..\BrainScript\BrainScriptEvaluator.cpp" />
+    <ClCompile Include="..\..\BrainScript\BrainScriptParser.cpp" />
+    <ClCompile Include="..\..\BrainScript\BrainScriptTest.cpp" />
     <ClCompile Include="..\..\Common\ConfigFile.cpp" />
     <ClCompile Include="..\..\Common\DataReader.cpp" />
     <ClCompile Include="..\..\Common\DataWriter.cpp" />
@@ -209,15 +222,16 @@
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
     <ClCompile Include="CNTK.cpp" />
-    <ClCompile Include="ComputationNode.cpp" />
+    <ClCompile Include="ExperimentalNetworkBuilder.cpp" />
     <ClCompile Include="ModelEditLanguage.cpp" />
     <ClCompile Include="NetworkDescriptionLanguage.cpp" />
     <ClCompile Include="SimpleNetworkBuilder.cpp" />
-    <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="SynchronousExecutionEngine.cpp" />
     <ClCompile Include="tests.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\BrainScript\BrainScript--extending the CNTK config language, Frank Seide August 2015.pptx" />
     <None Include="prebuild.bat" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -25,9 +25,9 @@
 
 #include "Basics.h"
 #include "Matrix.h"
+#include "commandArgUtil.h" // for ConfigParameters
 #include <map>
 #include <string>
-
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

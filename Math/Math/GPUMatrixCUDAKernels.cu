@@ -23,8 +23,14 @@
 #define IDX2C(i,j,ld) (((j)*(ld))+(i)) // 0 based indexing
 #define threadsPerBlock 512
 
+#ifdef __GNUC__
+#define UNUSED_FUNCTION_ATTRIBUTE __attribute__ ((unused))
+#else
+#define UNUSED_FUNCTION_ATTRIBUTE
+#endif
+
 // Predefine this for later.
-static __inline__ __device__ double atomicAdd(double* address, double val);
+static __inline__ __device__ double atomicAdd(double* address, double val) UNUSED_FUNCTION_ATTRIBUTE;
 //CUDA Kernels code
 template<class ElemType>
 __global__ void _elementWisePowerOnCuda(

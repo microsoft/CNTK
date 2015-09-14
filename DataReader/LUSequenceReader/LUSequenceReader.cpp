@@ -238,7 +238,7 @@ void LUSequenceReader<ElemType>::WriteLabelFile()
             }
             else if (!m_cachingWriter)
             {
-                fprintf(stderr, "WARNING: file %ws NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
+                fprintf(stderr, "WARNING: file %ls NOT written to disk, label files only written when starting at epoch zero!", labelInfo.fileToWrite.c_str());
             }
         }
     }
@@ -431,7 +431,7 @@ void BatchLUSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     std::wstring m_file = readerConfig("file");
     if (m_traceLevel > 0)
-        fprintf(stderr, "reading sequence file %ws\n", m_file.c_str());
+        fprintf(stderr, "reading sequence file %ls\n", m_file.c_str());
 
     const LabelInfo& labelIn = m_labelInfo[labelInfoIn];
     const LabelInfo& labelOut = m_labelInfo[labelInfoOut];
@@ -984,7 +984,7 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+void BatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
     mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
@@ -1291,7 +1291,7 @@ void MultiIOBatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, s
 }
 
 template<class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
 {
     /// run for each reader
     vector<size_t> col;

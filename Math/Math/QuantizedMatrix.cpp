@@ -5,7 +5,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
     
     template<class ElemType>
-    QuantizedMatrix<ElemType>::QuantizedMatrix(const size_t numRows, const size_t numCols, const size_t nbits, short deviceId, MemAllocator* allocator /* = nullptr */)
+    QuantizedMatrix<ElemType>::QuantizedMatrix(const size_t numRows, const size_t numCols, const size_t nbits, DEVICEID_TYPE deviceId, MemAllocator* allocator /* = nullptr */)
         : m_numRows(numRows), m_numCols(numCols), m_numBits(nbits), m_allocator(allocator)
     {
         m_qColSize = QuantizedColumn<ElemType>::QuantizedColumnSize(m_numBits, m_numRows);
@@ -170,7 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     val = q.valQ.Unquantize(qVal);
                 }
 
-                fprintf(stderr, "%10d (%.10f)          \t", qVal, val);
+                fprintf(stderr, "%10d (%.10f)          \t", (int) qVal, val);
             }
             fprintf(stderr, "\n");
         }

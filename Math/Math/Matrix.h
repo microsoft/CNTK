@@ -6,13 +6,61 @@
 
 #pragma once
 
-#include "CPUMatrix.h"
-#include "CPUSparseMatrix.h"
-#include "GPUMatrix.h"
-#include "GPUSparseMatrix.h"
+#ifdef    _WIN32
+#ifdef MATH_EXPORTS
+#define MATH_API __declspec(dllexport)
+#else
+#define MATH_API __declspec(dllimport)
+#endif
+#else    // no DLLs on Linux
+#define    MATH_API 
+#endif
+
+#include "Basics.h"
+#include "File.h"
+#include "CommonMatrix.h"
+#include <limits.h>
 
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+    // there is a version down there of ColumnSlice() that abstracts the number of streams
+    // TODO: This may not belong here, but having it in ComputeNode would require syntax changes, while having it as a member here only requires a local find-replace. Let's make it work first, then decide how to refactor.
+    // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure
+    // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
+    // TODO: m_samplesInRecurrentStep should be subsumed here & removed from nodes
+    // TODO: Where this design currently breaks:
+    //  - BatchModeNodes must access m_samplesInRecurrentStep, yet operate on the whole sequence
+    //  - likewise, LSTMNode does its own iteration, hence needs access to m_samplesInRecurrentStep or NumCols() in the whole-batch iterator
+    //  - RecurrentNodes access frames with a time shift, where out-of-bounds ones access a different matrix' values
+    //  - RecurrentNodes iterate over individual slices--need a sub-setting constructor from a FrameRange to another?
+    //  - RecurrentNodes access boundary info with a similar pattern, but boundary info has a different #streams (namely, 1)
+    struct FrameRange
+    {
+        const size_t timeIdxInSeq;              // start frame
+        const size_t samplesInRecurrentStep;    // number of samples in this step
+        // can construct from a single size_t -> a single-frame range
+        //FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(0)/*FIX THIS*/{}
+        FrameRange(size_t timeIdxInSeq, size_t samplesInRecurrentStep) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(samplesInRecurrentStep){}
+        // or without arguments -> entire minibatch / no frame-range
+        FrameRange() : timeIdxInSeq(0), samplesInRecurrentStep(SIZE_MAX) {}
+        // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
+        // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).
+        size_t t() const { EnsureNotAllFrames(); return timeIdxInSeq; }
+        // multi-frame slice case: these two get startFrame and numFrames
+        size_t StartColumn() const { EnsureNotAllFrames(); return timeIdxInSeq * samplesInRecurrentStep; }
+        size_t NumCols() const { EnsureNotAllFrames(); return samplesInRecurrentStep; }
+        bool IsAllFrames() const { return samplesInRecurrentStep == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
+    private:
+        FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
+        void operator=(const FrameRange &);
+        void EnsureNotAllFrames() const
+        {
+            if (IsAllFrames())
+                LogicError("FrameRange::t() called when frame range refers to whole minibatch");
+        }
+    };
+
     enum CurrentDataLocation
     {
         NONE, CPU, GPU, BOTH
@@ -23,12 +71,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
        UNDETERMINED, DENSE, SPARSE
     };
 
+    // TODO: create an <ElemType>-agnostic base class, then move generic functions such as getting dims, resizing, and getting/setting as scalars
+    class MATH_API MatrixBase
+    {
+    protected:
+        //virtual ~MatrixBase() { };
+        // TODO: currently this causes link errors when building DLLs
+    };
+
+    // avoid pulling in these header files for consumers of this class
+    template<class ElemType> class GPUMatrix;
+    template<class ElemType> class CPUMatrix;
+    template<class ElemType> class GPUSparseMatrix;
+    template<class ElemType> class CPUSparseMatrix;
+    template<class ElemType> class DeviceBoundNumber;
+
     //To compy with BLAS libraries matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor
     //convertion is need when passing data between Matrix and C++ matrices
     //For the best performance compile CNTKMath project with NO_SYNC preprocessor directive
     //!!!WARNING!!! This class is NOT THREAD SAFE. Test and add necessary modifications if using in multi-threaded environment    
     template<class ElemType>
-    class MATH_API Matrix 
+    class MATH_API Matrix : public MatrixBase
     {
     private:
         mutable BaseMatrix<ElemType> *m_baseMatrix;
@@ -72,7 +135,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static Matrix<ElemType> Ones(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
         static Matrix<ElemType> Zeros(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
         static Matrix<ElemType> Eye(const size_t rows, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
-        static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
+
+#define USE_TIME_BASED_SEED ULONG_MAX
+        static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId = AUTOPLACEMATRIX);
         static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED, DEVICEID_TYPE deviceId=AUTOPLACEMATRIX);
 
         void Clear();
@@ -94,12 +159,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId){ if (m_preferredDeviceId != preferredDeviceId) m_preferredDeviceId = preferredDeviceId; }
         //Moves matrix from device id_from to device with id_to. 
         //If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
-        void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved=false, bool emptyTransfer=false, bool updatePreferredDevice=true) const; 
+        void TransferFromDeviceToDevice(int id_from, int id_to, bool ismoved = false,/*if false then keep source and set location to BOTH*/ bool emptyTransfer = false, bool updatePreferredDevice = true) const;
+        //Same as TransferFromDeviceToDevice() but moves only if it is currently not on the target device
+        void TransferToDeviceIfNotThere(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
+        void TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool ismoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
         CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
         void SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat, const bool keepValues); //sets matrix type between dense and sparse
         size_t GetNumRows() const;
         size_t GetNumCols() const;
         size_t GetNumElements() const;
+        bool HasNoElements() const { return GetNumElements() == 0; }
         wchar_t* GetMatrixName() const;
         void SetMatrixName(const wchar_t* s);
         bool IsEmpty() const;  
@@ -112,6 +181,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
 
+        // special convenience function to apply ColumnSlice() to getting a frame range
+        // It assumes that columns are frames, and returns a sub-range.
+        // TODO: decide whether this belongs here or elsewhere
+        Matrix<ElemType> FrameSlice(const FrameRange & frameRange
+            // TODO: temporary only until this has been tested to work:
+            , size_t expectedStartColumn, size_t expectedNumCols
+            ) const
+        {
+            if (frameRange.IsAllFrames()) return ColumnSlice(0, GetNumCols());  // TODO: can we just return a reference to ourselves? --ownership problem
+            // TODO: temporary only until this has been tested to work:
+            if (expectedStartColumn != frameRange.StartColumn() || expectedNumCols != frameRange.NumCols())
+                LogicError("FrameSlice: FrameRange object gives different range than original explicit code. Logic is borked.");
+            return ColumnSlice(frameRange.StartColumn(), frameRange.NumCols());
+        }
+
         // difference between AssignColumnSlice and SetColumnSlice 
         // AssignColumnSlice :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, startColumn: startColumn+numCols-1) 
         // SetColumnSlice    :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, 0: startColumn+numCols-1) 
@@ -121,8 +205,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
         Matrix<ElemType>& SetColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
-        void ShiftBy(int numShift) ;
+        void ShiftBy(int numShift);
 
+        // TODO: all these scalars should be passed as doubles and cast down inside
         void NormalGrad(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
         ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
         ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
@@ -386,84 +471,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
 
     public:
-        friend File& operator>>(File& stream, Matrix<ElemType>& M)
-        {
-            char type;
-            stream>>type;
-            if (type=='d')
-            {
-                if (M.GetDeviceId()<0)
-                {
-                    if (M.m_CPUMatrix==NULL) M.m_CPUMatrix = new CPUMatrix<ElemType>();
-                    stream>>(*M.m_CPUMatrix);
-                    M.SetDataLocation(CPU, DENSE);
-                }
-                else
-                {
-                    if (M.m_GPUMatrix==NULL) M.m_GPUMatrix = new GPUMatrix<ElemType>();
-                    stream>>(*M.m_GPUMatrix);  
-                    M.SetDataLocation(GPU, DENSE);
-                }                
-            }
-            else if (type=='s')
-            {
-                if (M.GetDeviceId()<0)
-                {
-                    NOT_IMPLEMENTED;//You might want to tranfer your matrix to GPU
-                }
-                else
-                {
-                    if (M.m_GPUSparseMatrix==NULL) M.m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>();
-                    stream>>(*M.m_GPUSparseMatrix); 
-                    M.SetDataLocation(GPU, SPARSE);
-                }                
-            }
-            else
-                LogicError("wrong matrix type!");
-            return stream;
+        void Read(File& stream);
+        void Write(File& stream) const;
 
-        }
-        friend File& operator<<(File& stream, const Matrix<ElemType>& M)
-        {
-            if (M.GetMatrixType()==MatrixType::DENSE)
-            {
-                stream<<'d';
-                if (M.GetDeviceId()<0)
-                {
-                    stream<<(*M.m_CPUMatrix);
-                }
-                else
-                {
-                    stream<<(*M.m_GPUMatrix);
-                }                
-            }
-            else
-            {
-                stream<<'s';
-                if (M.GetDeviceId()<0)
-                {
-                    NOT_IMPLEMENTED;
-                    //stream<<(*M.m_CPUMatrix);
-                }
-                else
-                {
-                    stream<<(*M.m_GPUSparseMatrix);
-                }           
-            }
-            return stream;
-        }
+        Matrix<ElemType>& Shift(const Matrix<ElemType>& a, int shift);
 
-    public:
-
-		public:
-            Matrix<ElemType>& Shift(const Matrix<ElemType>& a, int shift);
-
-			Matrix<ElemType>& AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber);
-			Matrix<ElemType>& AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber);
-			static void InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber);
-			Matrix<ElemType>& GetARowByIndex(const Matrix<ElemType>& a, size_t index);
-			static void ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed);
-			Matrix<ElemType>& AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift);
+        Matrix<ElemType>& AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber);
+        Matrix<ElemType>& AssignInnerProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool isColWise, size_t shift, size_t negnumber);
+        static void InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber);
+        Matrix<ElemType>& GetARowByIndex(const Matrix<ElemType>& a, size_t index);
+        static void ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed);
+        Matrix<ElemType>& AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift);
 
     public:
         static void RCRFBackwardCompute(const Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
@@ -484,6 +502,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         template<typename T>
         friend class QuantizedMatrix;
     };
+
+    // overload I/O operators
+    template<class ElemType>
+    File& operator>>(File& stream, Matrix<ElemType>& M) { M.Read(stream); return stream; }
+    template<class ElemType>
+    File& operator<<(File& stream, const Matrix<ElemType>& M) { M.Write(stream); return stream; }
 
     typedef Matrix<float> SingleMatrix;
     typedef Matrix<double> DoubleMatrix;
