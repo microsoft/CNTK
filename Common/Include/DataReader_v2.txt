@@ -1,0 +1,140 @@
+thoughts on DataReader redesign
+===============================
+
+current basic usage pattern:
+
+ - StartMinibatchLoop() sets the start and MB size
+ - GetMinibatch() fills matrices in a dictionary of named matrices
+ - sample code:
+
+    std::map<std::wstring, Matrix<ElemType>*> matrices;
+    matrices[featureNames[0]] = &featuresMatrix;
+    matrices[labelNames[0]] = &labelsMatrix;
+
+    dataReader.StartMinibatchLoop(mbSize, epoch, epochSize);
+    while (dataReader.GetMinibatch(matrices))
+    {
+        Matrix<ElemType>& features = *matrices[featureNames[0]];
+        Matrix<ElemType>& labels = *matrices[labelNames[0]];
+    // no function called at end, implied in GetMinibatch()
+
+issues with current data reader design:
+
+ - monolithic, combines all (or not) of these:
+    - paging in data (incl. format parsing)
+    - randomization
+    - caching
+    - packing of parallel streams
+    - prefetch (in the original DBN.exe version of the HTK reader)
+    - minibatch decimation in presence of MPI (done in a way that avoids to read data that is not needed by a node)
+ - multiple streams must match in their timing frame-by-frame
+    - kills sequence-to-sequence
+    - currently circumvented by paring multiple networks
+
+goals:
+
+ - remove time-synchronity limitation
+    - which means that the interface must separate the notion of frames and utterances
+ - break into composable blocks
+    - hopefully, people in the future will only have to implement the data paging
+    - note: packing is not a reader function; nodes themselves may determine packing for each minibatch
+ - more abstract notion of 'utterance' e.g. include variable-size images (2D) and video (3D)
+ - seems we canb keep the existing DataReader interface, but with extensions and a new implementation
+
+feature details that must be considered/covered:
+
+ - augmentation of context frames
+ - some utterances are missing
+    - multi-lingual training (multi-task learning where each utterance only has labels for one task)
+    - realignment may fail on some utterances 
+ - should support non-matrix data, e.g. lattices
+ - maybe we can improve efficiency of decimated minibatch reading (current approach from DBN.exe is not optimally load-balanced)
+
+thinking out loud on how we may proceed (high level):
+
+ - basic unit of thought is the utterance, not the minibatch
+    - a minibatch is a set of utterances
+    - framewise CE training: each frame is an utterance; the N frames are batched into N streams of 1 frame
+       - note: design must be non-wasteful in this important special case
+    - an utterance should be understood more generally as a fixed or variable-dimension N-dimensional tensor,
+      including images (2D tensor, of possibly variable size) and even video (3D tensor).
+      And 'utterance length' generalizes to image dimensions as well. Everything that's variable length.
+ - interface Sequencer
+    - determines the sequence of utterances and grouping into minibatches
+       - by driving on utterance level, different feature streams with mismatching timing are not a concern of the Sequencer
+    - owns knowlegde of blocks
+       - provides caching control information, that is, when to release data from memory
+       - for frame mode, there must be some form of translation between utterances and frames, so that we can cache utterances while randomizing over frames
+    - does NOT actually read data; only provides descriptors of what to read, which are passed to pagers
+       - DataReader class does the reading
+       - in eval mode, there is also a DataWriter
+    - class RandomSequencer
+       - performs block randomization, based on one user-selected data pager
+       - for SGD
+    - class RandomFrameSequencer
+       - treats frames of utterances into individual utterances and randomizes those (for CE training of DNNs or other windows models)
+    - class LinearSequencer
+       - returns data in original sequence
+       - for evaluation
+ - interface DataPager
+    - random access to page in utterances
+       - specified by a descriptor obtained from the Sequencer
+       - knowledge of how to parse input data formats is in these pagers
+       - data assumed immutable
+    - examples:
+       - HTK features
+       - HTK labels from MLF (also: labels stored in feature format, for reduced startup time)
+       - Python adapter
+    - lightweight agreement between DataPager and Sequencer:
+       - pager provides block-forming relevant information, such that the reading of data consecutively in each block will be optimal;
+         sequencer will ask one user-selected pager to provide this information as a basis for block randomization
+    - class CachedDataPager
+       - TODO: think this through:
+          - are DataPagers driven in blocks? That would be the unit of caching
+          - releasing a block from cache must be an explicit function
+          - maybe that helper class needs to do that
+          - or we use a ref count for utterances to control releasing of blocks? Could be expensive, since invidiual speech frames can be utterances (DNN/CE). It's only a refcount of 0 or 1
+    - should we call this DataPageReader or DataBlockReader?
+    - let's call them Pager for now (need to change because name has a problem with reading vs. writing)
+ - class DataReader
+    - outer layer of the new structure
+       - designed to support reading data streams that that have mismatching utterance lengths
+       - there is only one DataReader instance that handles all utterance-data streams (including mismatching lenths)
+    - takes a reference to one user-specified sequencer
+    - takes ownership of one or more user-supplied pagers
+    - after construction, the above are only accessed through the DataReader
+    - a nested hierarchy of DataReaders implement specific functionaliaty
+      class CachingDataReader
+       - wraps a DataReader with caching--this is what one would use when randomizing (not needed for evaluation)
+      class PrefetchingDataReader
+       - wraps a DataReader and reads ahead on a parallel thread
+          - TODO: so where does the sequencer run?? Or does sequencer provides a FIFO of minibatches (lookahead)?
+                  maybe sequence info is routed through the prefetch for everything? Consider that we also need to do writing, so this becomes weird
+                  in that one would always have to access the sequencer through the DataReader (in order to get the correctly delayed sequencing information)
+      class BatchingDataReader?
+       - meant to batch utterances into streams
+       - NO: this should not be a DataReader, as this is a network function. But we may have supporting code in the reader interface or a reader helper class
+       - instead, there should be a Minibatch batcher class that (re-)batches and reshuffles minibatches (this could be a ComputeNode, actually)
+    - this new DataReader differs (extends) the current DataReader as:
+       - GetMinibatch() has to return utterance and length/packing information for every minibatch
+       - minibatches must also carry their own sequencing information (utterance ids); this can then be used for data writing
+       - we may want to rethink the glue between reading and Input nodes. Maybe Input nodes can know about readers?
+ - how to set up the whole thing:
+    - create all desired data pagers
+    - create a Sequencer of the desired type
+       - e.g. random utterance, random frame, non-random
+    - pass it one user-selected data pager to let it determining how data is grouped in blocks
+    - create the desired DataReader by passing it the readers and the sequencer
+       - there may be a hierarchy of nested DataReaders, to do caching and prefetching
+    - use it mostly as before
+       - Note: sequencer information can only be accessed through the DataReader.
+
+on writing:
+
+ - writing is used for evaluation, and also for data conversion
+ - DataReader returns minibatches that carry their utterance information (i.e. utterance ids)
+ - class DataWriter
+    - new SaveData() overload takes an output minibatch complete with utterance information
+      TODO: we could make the two interfaces a little more symmetric w.r.t. function naming
+
+[fseide 9/2015]
