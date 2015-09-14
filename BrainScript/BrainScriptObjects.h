@@ -142,6 +142,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     struct ConfigurableRuntimeType
     {
         bool isConfigRecord;        // exposes IConfigRecord  --in this case the expression name is computed differently, namely relative to this item
+        // TODO: is this ^^ actually still used anywhere?
         function<shared_ptr<Object>(const IConfigRecordPtr)> construct; // lambda to construct an object of this class
         // TODO: we should pass the expression name to construct() as well
     };

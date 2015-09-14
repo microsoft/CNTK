@@ -29,6 +29,7 @@
 
 #include "Basics.h"
 #include "BrainScriptEvaluator.h"
+#include "BrainScriptParser.h"
 #include <deque>
 #include <set>
 #include <functional>
@@ -103,7 +104,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             {
                 if (i > range.first)
                     result.append(L"\n");
-                result.append(FormatConfigValue(arr->At(i, TextLocation()), how));
+                result.append(FormatConfigValue(arr->At(i, [](const wstring &){ LogicError("FormatConfigValue: out of bounds index while iterating??"); }), how));
             }
             return HasToString::NestString(result, L'(', false, L')');
         }
@@ -580,8 +581,9 @@ namespace Microsoft { namespace MSR { namespace BS {
         }
         // TODO: RegexReplace!
     public:
-        StringFunction(const ConfigRecord & config)
+        StringFunction(const IConfigRecordPtr & configp)
         {
+            let & config = *configp;
             wstring & us = *this;   // we write to this
             let arg = config[L"arg"];
             let whatArg = config[L"what"];
@@ -595,8 +597,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             else if (what == L"Replace")
                 us = Replace(arg, config[L"replacewhat"], config[L"withwhat"]);
             else
-                // TODO: this should become whatArg.Fail(...)
-                throw EvaluationError(L"unknown 'what' value to StringFunction: " + what, whatArg.GetLocation());
+                whatArg.Fail(L"unknown 'what' value to StringFunction: " + what);
         }
     };
 
@@ -606,8 +607,9 @@ namespace Microsoft { namespace MSR { namespace BS {
     class NumericFunction : public BoxOf<Double>
     {
     public:
-        NumericFunction(const ConfigRecord & config) : BoxOf<Double>(0.0)
+        NumericFunction(const IConfigRecordPtr & configp) : BoxOf<Double>(0.0)
         {
+            let & config = *configp;
             double & us = *this;   // we write to this
             let arg = config[L"arg"];
             let whatArg = config[L"what"];
@@ -626,7 +628,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 }
             }
             else
-                throw EvaluationError(L"unknown 'what' value to NumericFunction: " + what, whatArg.GetLocation());
+                whatArg.Fail(L"unknown 'what' value to NumericFunction: " + what);
         }
     };
 
@@ -635,40 +637,30 @@ namespace Microsoft { namespace MSR { namespace BS {
     // =======================================================================
 
     // sample runtime objects for testing
-    // We are trying all sorts of traits here, even if they make no sense for PrintAction.
-    class PrintAction : public Object, public HasName
+    class PrintAction : public Object
     {
     public:
-        PrintAction(const ConfigRecord & config)
+        PrintAction(const IConfigRecordPtr & configp)
         {
-            let what = config(L"what", L"This specifies the object to print.");
+            let & config = *configp;
+            let what = config[L"what"];
             let str = what.Is<String>() ? what : FormatConfigValue(what, L""); // convert to string (without formatting information)
             fprintf(stderr, "%ls\n", str.c_str());
         }
-        /*HasName::*/ void SetName(const wstring & name)
-        {
-            name;
-        }
-    };
-
-    class AnotherAction : public Object
-    {
-    public:
-        AnotherAction(const ConfigRecord &) { fprintf(stderr, "Another\n"); }
-        virtual ~AnotherAction(){}
     };
 
     // FailAction just throw a config error
     class FailAction : public Object
     {
     public:
-        FailAction(const ConfigRecord & config)
+        FailAction(const IConfigRecordPtr & configp)
         {
+            let & config = *configp;
             // note: not quite optimal yet in terms of how the error is shown; e.g. ^ not showing under offending variable
-            wstring message = config[L"what"];
+            let messageValue = config[L"what"];
             bool fail = true;
             if (fail)   // this will trick the VS compiler into not issuing warning 4702: unreachable code
-                throw EvaluationError(message, TextLocation()/*no location means it will show the parent's location*/);
+                messageValue.Fail(messageValue);    // this will show the location of the message string, which is next to the Fail() call
         }
     };
 
@@ -682,9 +674,25 @@ namespace Microsoft { namespace MSR { namespace BS {
     // error handling
     // -----------------------------------------------------------------------
 
+    // error object
+
+    class EvaluationError : public ConfigError
+    {
+    public:
+        EvaluationError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
+        /*Configerror::*/ const wchar_t * kind() const { return L"evaluating"; }
+    };
+
     __declspec_noreturn static void Fail(const wstring & msg, TextLocation where) { throw EvaluationError(msg, where); }
     __declspec_noreturn static void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type '" + what + L"'", e->location); }
     __declspec_noreturn static void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown identifier '" + id + L"'", where); }
+
+    // create a function that will fail with an error message at the given text location
+    // This is used to abstract awat knowledge of TextLocations from ConfigValuePtr (which could arise out of a different system, such as a Python wrapper).
+    function<void(const wstring &)> MakeFailFn(const TextLocation & textLocation)
+    {
+        return [textLocation](const wstring & msg) { Fail(msg, textLocation); };
+    }
 
     // -----------------------------------------------------------------------
     // access to ConfigValuePtr content with error messages
@@ -760,7 +768,6 @@ namespace Microsoft { namespace MSR { namespace BS {
             // Actions
             DefineRuntimeType(PrintAction),
             DefineRuntimeType(FailAction),
-            DefineRuntimeType(AnotherAction),
         };
 
         // first check our own internal types
@@ -782,12 +789,10 @@ namespace Microsoft { namespace MSR { namespace BS {
     // If it is not found, it tries all lexically enclosing scopes inside out. This is handled by the ConfigRecord itself.
     static const ConfigValuePtr & ResolveIdentifier(const wstring & id, const TextLocation & idLocation, const IConfigRecordPtr & scope)
     {
-        //if (!scope)                                           // no scope or went all the way up: not found
-        //    UnknownIdentifier(id, idLocation);
         auto p = scope->Find(id);                               // look up the name
+        // Note: We could also just use scope->operator[] here, like any C++ consumer, but then we'd not be able to print an error with a proper text location (that of the offending field).
         if (!p)
             UnknownIdentifier(id, idLocation);
-        //    return ResolveIdentifier(id, idLocation, scope->up);    // not found: try next higher scope
         // found it: resolve the value lazily (the value will hold a Thunk to compute its value upon first use)
         p->EnsureIsResolved();          // if this is the first access, then the value must have executed its Thunk
         // now the value is available
@@ -844,45 +849,45 @@ namespace Microsoft { namespace MSR { namespace BS {
     template<typename T>
     static ConfigValuePtr CompOp(const ExpressionPtr &  e, const T & left, const T & right, const IConfigRecordPtr &, const wstring & exprPath)
     {
-        if (e->op == L"==")      return MakePrimitiveConfigValuePtr(left == right, e->location, exprPath);
-        else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, e->location, exprPath);
-        else if (e->op == L"<")  return MakePrimitiveConfigValuePtr(left <  right, e->location, exprPath);
-        else if (e->op == L">")  return MakePrimitiveConfigValuePtr(left >  right, e->location, exprPath);
-        else if (e->op == L"<=") return MakePrimitiveConfigValuePtr(left <= right, e->location, exprPath);
-        else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, e->location, exprPath);
+        if (e->op == L"==")      return MakePrimitiveConfigValuePtr(left == right, MakeFailFn(e->location), exprPath);
+        else if (e->op == L"!=") return MakePrimitiveConfigValuePtr(left != right, MakeFailFn(e->location), exprPath);
+        else if (e->op == L"<")  return MakePrimitiveConfigValuePtr(left <  right, MakeFailFn(e->location), exprPath);
+        else if (e->op == L">")  return MakePrimitiveConfigValuePtr(left >  right, MakeFailFn(e->location), exprPath);
+        else if (e->op == L"<=") return MakePrimitiveConfigValuePtr(left <= right, MakeFailFn(e->location), exprPath);
+        else if (e->op == L">=") return MakePrimitiveConfigValuePtr(left >= right, MakeFailFn(e->location), exprPath);
         else LogicError("unexpected infix op");
     }
-    static ConfigValuePtr NumOp(const ExpressionPtr &  e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
+    static ConfigValuePtr NumOp(const ExpressionPtr & e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
     {
         let left = leftVal.AsRef<Double>();
         let right = rightVal.AsRef<Double>();
-        if (e->op == L"+")       return MakePrimitiveConfigValuePtr(left + right,      e->location, exprPath);
-        else if (e->op == L"-")  return MakePrimitiveConfigValuePtr(left - right,      e->location, exprPath);
-        else if (e->op == L"*")  return MakePrimitiveConfigValuePtr(left * right,      e->location, exprPath);
-        else if (e->op == L"/")  return MakePrimitiveConfigValuePtr(left / right,      e->location, exprPath);
-        else if (e->op == L"%")  return MakePrimitiveConfigValuePtr(fmod(left, right), e->location, exprPath);
-        else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right),  e->location, exprPath);
+        if (e->op == L"+")       return MakePrimitiveConfigValuePtr(left + right,      MakeFailFn(e->location), exprPath);
+        else if (e->op == L"-")  return MakePrimitiveConfigValuePtr(left - right,      MakeFailFn(e->location), exprPath);
+        else if (e->op == L"*")  return MakePrimitiveConfigValuePtr(left * right,      MakeFailFn(e->location), exprPath);
+        else if (e->op == L"/")  return MakePrimitiveConfigValuePtr(left / right,      MakeFailFn(e->location), exprPath);
+        else if (e->op == L"%")  return MakePrimitiveConfigValuePtr(fmod(left, right), MakeFailFn(e->location), exprPath);
+        else if (e->op == L"**") return MakePrimitiveConfigValuePtr(pow(left, right),  MakeFailFn(e->location), exprPath);
         else return CompOp<double>(e, left, right, scope, exprPath);
     };
-    static ConfigValuePtr StrOp(const ExpressionPtr &  e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
+    static ConfigValuePtr StrOp(const ExpressionPtr & e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
     {
         let left = leftVal.AsRef<String>();
         let right = rightVal.AsRef<String>();
-        if (e->op == L"+")  return ConfigValuePtr(make_shared<String>(left + right), e->location, exprPath);
+        if (e->op == L"+")  return ConfigValuePtr(make_shared<String>(left + right), MakeFailFn(e->location), exprPath);
         else return CompOp<wstring>(e, left, right, scope, exprPath);
     };
-    static ConfigValuePtr BoolOp(const ExpressionPtr &  e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
+    static ConfigValuePtr BoolOp(const ExpressionPtr & e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
     {
         let left = leftVal.AsRef<Bool>();
         //let right = rightVal.AsRef<Bool>();   // we do this inline, as to get the same short-circuit semantics as C++ (if rightVal is thunked, it will remain so unless required for this operation)
-        if (e->op == L"||")       return MakePrimitiveConfigValuePtr(left || rightVal.AsRef<Bool>(), e->location, exprPath);
-        else if (e->op == L"&&")  return MakePrimitiveConfigValuePtr(left && rightVal.AsRef<Bool>(), e->location, exprPath);
-        else if (e->op == L"^")   return MakePrimitiveConfigValuePtr(left ^  rightVal.AsRef<Bool>(), e->location, exprPath);
+        if (e->op == L"||")       return MakePrimitiveConfigValuePtr(left || rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
+        else if (e->op == L"&&")  return MakePrimitiveConfigValuePtr(left && rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
+        else if (e->op == L"^")   return MakePrimitiveConfigValuePtr(left ^  rightVal.AsRef<Bool>(), MakeFailFn(e->location), exprPath);
         else return CompOp<bool>(e, left, rightVal.AsRef<Bool>(), scope, exprPath);
     };
     // NodeOps handle the magic CNTK types, that is, infix operations between ComputeNode objects.
     // TODO: rename to MagicOps
-    static ConfigValuePtr NodeOp(const ExpressionPtr &  e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
+    static ConfigValuePtr NodeOp(const ExpressionPtr & e, ConfigValuePtr leftVal, ConfigValuePtr rightVal, const IConfigRecordPtr & scope, const wstring & exprPath)
     {
         // special cases/overloads:
         //  - unary minus -> NegateNode
@@ -913,24 +918,24 @@ namespace Microsoft { namespace MSR { namespace BS {
         let rtInfo = FindRuntimeTypeInfo(L"ComputationNode");
         if (!rtInfo)
             LogicError("unknown magic runtime-object class");
-        // form the ConfigRecord
-        auto config = make_shared<ConfigRecord>(scope);
+        // form the ConfigRecord for the ComputeNode that corresponds to the operation
+        auto config = make_shared<ConfigRecord>(scope, MakeFailFn(e->location));
         // Note on scope: This config holds the arguments of the XXXNode runtime-object instantiations.
         // When they fetch their parameters, they should only look in this record, not in any parent scope (if they don't find what they are looking for, it's a bug in this routine here).
         // The values themselves are already in ConfigValuePtr form, so we won't need any scope lookups there either.
-        config->Add(L"operation", e->location, ConfigValuePtr(make_shared<String>(operationName), e->location, exprPath));
+        config->Add(L"operation", MakeFailFn(e->location), ConfigValuePtr(make_shared<String>(operationName), MakeFailFn(e->location), exprPath));
         vector<ConfigValuePtr> inputs;
         if (operationName == L"Scale")
         {
             // if we scale, the first operand is a Double, and we must convert that into a 1x1 Constant
-            auto constantConfig = make_shared<ConfigRecord>(config);
-            let leftLocation = leftVal.GetLocation();
-            constantConfig->Add(L"operation", leftLocation, ConfigValuePtr(make_shared<String>(L"Constant"), leftLocation, exprPath));
-            let one = MakePrimitiveConfigValuePtr(1.0, leftVal.GetLocation(), exprPath);
-            constantConfig->Add(L"rows",      leftLocation, one);
-            constantConfig->Add(L"cols",      leftLocation, one);
-            constantConfig->Add(L"value",     leftLocation, leftVal);
-            let value = ConfigValuePtr(rtInfo->construct(constantConfig), e->location, exprPath);
+            auto constantConfig = make_shared<ConfigRecord>(config, MakeFailFn(e->location));
+            let leftFailFn = leftVal.GetFailFn();   // report any error for this Constant object as belonging to the scalar factor's expression
+            constantConfig->Add(L"operation", leftFailFn, ConfigValuePtr(make_shared<String>(L"Constant"), leftFailFn, exprPath));
+            let one = MakePrimitiveConfigValuePtr(1.0, leftVal.GetFailFn(), exprPath);
+            constantConfig->Add(L"rows",      leftFailFn , one);
+            constantConfig->Add(L"cols",      leftFailFn , one);
+            constantConfig->Add(L"value",     leftFailFn , leftVal);
+            let value = ConfigValuePtr(rtInfo->construct(constantConfig), leftFailFn, exprPath);
             let valueWithName = dynamic_cast<HasName*>(value.get());
             if (valueWithName)
                 valueWithName->SetName(value.GetExpressionName());
@@ -939,10 +944,10 @@ namespace Microsoft { namespace MSR { namespace BS {
         inputs.push_back(leftVal);
         if (operationName != L"Negate") // Negate only has one input (rightVal is a nullptr)
             inputs.push_back(rightVal);
-        config->Add(L"inputs", leftVal.GetLocation(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftVal.GetLocation(), exprPath));
-        config->Add(L"tag", leftVal.GetLocation(), ConfigValuePtr(make_shared<String>(), leftVal.GetLocation(), exprPath)); // infix nodes have no tag
-        // instantiate
-        let value = ConfigValuePtr(rtInfo->construct(config), e->location, exprPath);
+        config->Add(L"inputs", leftVal.GetFailFn(), ConfigValuePtr(make_shared<ConfigArray>(0, move(inputs)), leftVal.GetFailFn(), exprPath));
+        config->Add(L"tag",    leftVal.GetFailFn(), ConfigValuePtr(make_shared<String>(), leftVal.GetFailFn(), exprPath)); // infix nodes have no tag
+        // instantiate the ComputationNode
+        let value = ConfigValuePtr(rtInfo->construct(config), MakeFailFn(e->location), exprPath);
         let valueWithName = dynamic_cast<HasName*>(value.get());
         if (valueWithName)
             valueWithName->SetName(value.GetExpressionName());
@@ -988,7 +993,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             let value = Evaluate(expr, scope, exprPath, exprId);
             return value;   // this is a great place to set a breakpoint!
         };
-        return ConfigValuePtr::MakeThunk(f, expr->location, exprPath);
+        return ConfigValuePtr::MakeThunk(f, MakeFailFn(expr->location), exprPath);
     }
 
     // -----------------------------------------------------------------------
@@ -1020,9 +1025,9 @@ namespace Microsoft { namespace MSR { namespace BS {
             if (trace)
                 TextLocation::Trace(e->location, msra::strfun::wstrprintf(L"eval SP=0x%p", &exprPath).c_str(), e->op.c_str(), exprPath.c_str());
             // --- literals
-            if (e->op == L"d")       return MakePrimitiveConfigValuePtr(e->d, e->location, exprPath);         // === double literal
-            else if (e->op == L"s")  return ConfigValuePtr(make_shared<String>(e->s), e->location, exprPath); // === string literal
-            else if (e->op == L"b")  return MakePrimitiveConfigValuePtr(e->b, e->location, exprPath);         // === bool literal
+            if (e->op == L"d")       return MakePrimitiveConfigValuePtr(e->d, MakeFailFn(e->location), exprPath);         // === double literal
+            else if (e->op == L"s")  return ConfigValuePtr(make_shared<String>(e->s), MakeFailFn(e->location), exprPath); // === string literal
+            else if (e->op == L"b")  return MakePrimitiveConfigValuePtr(e->b, MakeFailFn(e->location), exprPath);         // === bool literal
             else if (e->op == L"new")                                                   // === 'new' expression: instantiate C++ runtime object right here
             {
                 // find the constructor lambda
@@ -1032,7 +1037,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 // form the config record
                 let & dictExpr = e->args[0];
                 let argsExprPath = rtInfo->isConfigRecord ? L"" : exprPath;   // reset expr-name path if object exposes a dictionary
-                let value = ConfigValuePtr(rtInfo->construct(ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath)), e->location, exprPath); // this constructs it
+                let value = ConfigValuePtr(rtInfo->construct(ConfigRecordFromDictExpression(dictExpr, scope, argsExprPath)), MakeFailFn(e->location), exprPath); // this constructs it
                 // if object has a name, we set it
                 let valueWithName = dynamic_cast<HasName*>(value.get());
                 if (valueWithName)
@@ -1068,8 +1073,9 @@ namespace Microsoft { namespace MSR { namespace BS {
                     //  - parent scope for this is the scope of the function definition (captured context)
                     //    Note that the 'scope' variable in here (we are in a lambda) is the scope of the '=>' expression, that is, the macro definition.
                     // create a ConfigRecord with param names from 'argList' and values from 'args'
-                    let argScope = make_shared<ConfigRecord>(scope); // look up in params first; then proceed upwards in lexical scope of '=>' (captured context)
-                    //let thisScope = MakeScope(argScope, scope);   
+                    let argScope = make_shared<ConfigRecord>(scope, MakeFailFn(argListExpr->location)); // look up in params first; then proceed upwards in lexical scope of '=>' (captured context)
+                    // Note: ^^ The failfn in the ConfigRecord will report unknown variables by pointing to the location of the argList expression.
+                    // However, as long as we run this lambda inside BrainScript, the access will check by itself and instead print the location of the variable.
                     // create an entry for every argument value
                     // Note that these values should normally be thunks since we only want to evaluate what's used.
                     for (size_t i = 0; i < args.size(); i++)    // positional arguments
@@ -1077,8 +1083,9 @@ namespace Microsoft { namespace MSR { namespace BS {
                         let argName = argList[i];       // parameter name
                         if (argName->op != L"id")
                             LogicError("function parameter list must consist of identifiers");
-                        auto argVal = move(args[i]);         // value of the parameter
-                        argScope->Add(argName->id, argName->location, move(argVal));
+                        auto argVal = move(args[i]);    // value of the parameter
+                        let failfn = argVal.GetFailFn();
+                        argScope->Add(argName->id, MakeFailFn(argName->location), move(argVal));
                         // note: these are expressions for the parameter values; so they must be evaluated in the current scope
                     }
                     // also named arguments
@@ -1086,8 +1093,8 @@ namespace Microsoft { namespace MSR { namespace BS {
                     {
                         let id = namedArg.first;
                         auto argVal = move(namedArg.second);
-                        let location = argVal.GetLocation();    // note: do before argVal gets destroyed in the upcoming move()
-                        argScope->Add(id, location, move(argVal));
+                        let failfn = argVal.GetFailFn();            // note: do before argVal gets destroyed in the upcoming move()
+                        argScope->Add(id, failfn, move(argVal));    // TODO: is the failfn the right one?
                     }
                     // get the macro name for the exprPath
                     wstring macroId = exprPath;
@@ -1118,7 +1125,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     //namedParams->Add(id, location/*loc of id*/, ConfigValuePtr(MakeEvaluateThunkPtr(expr, scope/*evaluate default value in context of definition*/, exprPath, id), expr->location, exprPath/*TODO??*/));
                     // the thunk is called if the default value is ever used
                 }
-                return ConfigValuePtr(make_shared<ConfigLambda>(move(paramNames), move(namedParams), f), e->location, exprPath);
+                return ConfigValuePtr(make_shared<ConfigLambda>(move(paramNames), move(namedParams), f), MakeFailFn(e->location), exprPath);
             }
             else if (e->op == L"(")                                         // === apply a function to its arguments
             {
@@ -1169,9 +1176,9 @@ namespace Microsoft { namespace MSR { namespace BS {
             // --- variable access
             else if (e->op == L"[]")                                                // === record (-> ConfigRecord)
             {
-                let newScope = make_shared<ConfigRecord>(scope);      // new scope: inside this record, all symbols from above are also visible
+                let newScope = make_shared<ConfigRecord>(scope, MakeFailFn(e->location));   // new scope: inside this record, all symbols from above are also visible
+                // ^^ The failfn here will be used if C++ code uses operator[] to retrieve a value. It will report the text location where the record was defined.
                 // create an entry for every dictionary entry.
-                //let thisScope = MakeScope(record, scope);         // lexical scope includes this dictionary itself, so we can access forward references
                 // We do not evaluate the members at this point.
                 // Instead, as the value, we keep the ExpressionPtr itself wrapped in a lambda that evaluates that ExpressionPtr to a ConfigValuePtr when called.
                 // Members are evaluated on demand when they are used.
@@ -1179,13 +1186,13 @@ namespace Microsoft { namespace MSR { namespace BS {
                 {
                     let & id = entry.first;
                     let & expr = entry.second.second;             // expression to compute the entry
-                    newScope->Add(id, entry.second.first/*loc of id*/, MakeEvaluateThunkPtr(expr, newScope/*scope*/, exprPath/*TODO??*/, id));
+                    newScope->Add(id, MakeFailFn(entry.second.first/*loc of id*/), MakeEvaluateThunkPtr(expr, newScope/*scope*/, exprPath/*TODO??*/, id));
                     // Note on scope: record assignments are like a "let rec" in F#/OCAML. That is, all record members are visible to all
                     // expressions that initialize the record members. E.g. [ A = 13 ; B = A ] assigns B as 13, not to a potentially outer A.
                     // (To explicitly access an outer A, use the slightly ugly syntax ...A)
                 }
                 // BUGBUG: wrong text location passed in. Should be the one of the identifier, not the RHS. NamedArgs store no location for their identifier.
-                return ConfigValuePtr(newScope, e->location, exprPath);
+                return ConfigValuePtr(newScope, MakeFailFn(e->location), exprPath);
             }
             else if (e->op == L"id") return ResolveIdentifier(e->id, e->location, scope);   // === variable/macro access within current scope
             else if (e->op == L".")                                                         // === variable/macro access in given ConfigRecord element
@@ -1207,7 +1214,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     else
                         arr->Append(item);
                 }
-                return ConfigValuePtr(arr, e->location, exprPath);  // location will be that of the first ':', not sure if that is best way
+                return ConfigValuePtr(arr, MakeFailFn(e->location), exprPath);  // location will be that of the first ':', not sure if that is best way
             }
             else if (e->op == L"array")                                                     // === array constructor from lambda function
             {
@@ -1225,10 +1232,10 @@ namespace Microsoft { namespace MSR { namespace BS {
                 vector<ConfigValuePtr> elementThunks;
                 for (int index = firstIndex; index <= lastIndex; index++)
                 {
-                    let indexValue = MakePrimitiveConfigValuePtr((double)index, e->location, exprPath/*never needed*/);           // index as a ConfigValuePtr
+                    let indexValue = MakePrimitiveConfigValuePtr((double)index, MakeFailFn(e->location), exprPath/*never needed*/);           // index as a ConfigValuePtr
                     let elemExprPath = exprPath.empty() ? L"" : wstrprintf(L"%ls[%d]", exprPath.c_str(), index);    // expression name shows index lookup
                     let initExprPath = exprPath.empty() ? L"" : wstrprintf(L"_lambda");    // expression name shows initializer with arg
-                    // create an expression
+                    // create a lambda that realizes this array element
                     function<ConfigValuePtr()> f = [indexValue, initLambdaExpr, scope, elemExprPath, initExprPath]()   // lambda that computes this value of 'expr'
                     {
                         if (trace)
@@ -1241,10 +1248,10 @@ namespace Microsoft { namespace MSR { namespace BS {
                         // TODO: change this ^^ to the const & version of Apply() once it is there
                         return value;   // this is a great place to set a breakpoint!
                     };
-                    elementThunks.push_back(ConfigValuePtr::MakeThunk(f, initLambdaExpr->location, elemExprPath/*TODO??*/));
+                    elementThunks.push_back(ConfigValuePtr::MakeThunk(f, MakeFailFn(initLambdaExpr->location), elemExprPath/*TODO??*/));
                 }
                 auto arr = make_shared<ConfigArray>(firstIndex, move(elementThunks));
-                return ConfigValuePtr(arr, e->location, exprPath);
+                return ConfigValuePtr(arr, MakeFailFn(e->location), exprPath);
             }
             else if (e->op == L"[")                                         // === access array element by index
             {
@@ -1252,7 +1259,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 let & indexExpr = e->args[1];
                 let arr = AsPtr<ConfigArray>(arrValue, indexExpr, L"array");
                 let index = ToInt(Evaluate(indexExpr, scope, exprPath, L"_index"), indexExpr);
-                return arr->At(index, indexExpr->location); // note: the array element may be as of now unresolved; this resolved it
+                return arr->At(index, MakeFailFn(indexExpr->location)); // note: the array element may be as of now unresolved; this resolved it
             }
             // --- unary operators '+' '-' and '!'
             else if (e->op == L"+(" || e->op == L"-(")                      // === unary operators + and -
@@ -1262,7 +1269,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 // note on exprPath: since - has only one argument, we do not include it in the expessionPath
                 if (argValPtr.Is<Double>())
                     if (e->op == L"+(") return argValPtr;
-                    else return MakePrimitiveConfigValuePtr(-(double)argValPtr, e->location, exprPath);
+                    else return MakePrimitiveConfigValuePtr(-(double)argValPtr, MakeFailFn(e->location), exprPath);
                 else if (argValPtr.Is<ComputationNodeObject>())   // -ComputationNode becomes NegateNode(arg)
                     if (e->op == L"+(") return argValPtr;
                     else return NodeOp(e, argValPtr, ConfigValuePtr(), scope, exprPath);
@@ -1272,7 +1279,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             else if (e->op == L"!(")                                        // === unary operator !
             {
                 let arg = ToBoolean(Evaluate(e->args[0], scope, exprPath, L"_not"), e->args[0]);
-                return MakePrimitiveConfigValuePtr(!arg, e->location, exprPath);
+                return MakePrimitiveConfigValuePtr(!arg, MakeFailFn(e->location), exprPath);
             }
             // --- regular infix operators such as '+' and '=='
             else
