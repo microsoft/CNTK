@@ -130,7 +130,7 @@ GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50)
 
 ifeq ("$(BUILDTYPE)","debug")
   CXXFLAGS += -g
-  CUFLAGS += -O0 -G -lineinfo -gencode arch=compute_20,code=\"compute_20\"
+  CUFLAGS += -O0 -G -lineinfo -gencode arch=compute_20,code=\"compute_20\" $(GENCODE_SM35)
 endif
 
 ifeq ("$(BUILDTYPE)","release")
