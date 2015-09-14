@@ -182,7 +182,7 @@ public:
 
     virtual bool SupportsDistributedMBRead() const override
     {
-        return m_frameSource->supportsbatchsubsetting();
+        return ((m_frameSource != nullptr) && m_frameSource->supportsbatchsubsetting());
     }
 
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
