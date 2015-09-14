@@ -20,6 +20,10 @@
 #
 # ----- testcases.yml format -------
 # dataDir: <path> #<relative-path-to the data directory
+# tags: # optional tags - see tagging system
+#   - <tag1> <optional-predicate> 
+#   - <tag2> <optional-predicate>
+#   - ....
 #
 # testCases:
 #   <name of the testcase 1>:  
@@ -62,7 +66,18 @@
 #   8. baseline.txt
 #        where <flavor> = { debug | release }
 #              <device> = { cpu | gpu }
-# 
+#
+# Baseline files are optional. They only evaluate if test defines one or more pattern-drivern test cases.
+# If no test cases are defined, then TestDriver uses exit code of the run-test script as the only criteria
+# of successful copmpletion of the test.
+
+# ----- Tagging system ------
+# Unit tests can be optionally tagged with 1 or many tags
+# CNTK build/test lab uses those tags to understand which tests to run during different flavors of build jobs (nightly, BVT, checkin)
+#
+# Tag can be optionally predicated with a python boolean expression over 'flavor' (debug/release), 'device' (cpu/gpu), 'os' (windows/linux) variables.
+# this allows to restrict tagging of the test to specific combinations of those variables
+#
 # ----- Algorithm ------
 # Baseline verification:
 #   For each testcase 
@@ -80,7 +95,7 @@
 # matching against all test-cases/pattern simulteneously
 #
 
-import sys, os, argparse, traceback, yaml, subprocess, random, re, time
+import sys, os, argparse, traceback, yaml, subprocess, random, re, time, sets
 
 thisDir = os.path.dirname(os.path.realpath(__file__))
 windows = os.getenv("OS")=="Windows_NT"
@@ -97,8 +112,10 @@ class Test:
     self.suite = suite
     self.name = name
     self.fullName = suite + "/" + name
+
     # computing location of test directory (yml file directory)
     self.testDir = os.path.dirname(pathToYmlFile)
+
     # parsing yml file with testcases 
     with open(pathToYmlFile, "r") as f:
       self.rawYamlData = yaml.safe_load(f.read())
@@ -109,14 +126,42 @@ class Test:
     else:
       self.dataDir = self.testDir
 
-    testCasesYaml = self.rawYamlData["testCases"]
+    # parsing test cases
     self.testCases = []
-    for name in testCasesYaml.keys():
-      try:
-        self.testCases.append(TestCase(name, testCasesYaml[name]))
-      except Exception as e:
-        print >>sys.stderr, "ERROR registering test case: " + name
-        raise
+    if "testCases" in self.rawYamlData.keys():
+      testCasesYaml = self.rawYamlData["testCases"]
+      for name in testCasesYaml.keys():
+        try:
+          self.testCases.append(TestCase(name, testCasesYaml[name]))
+        except Exception as e:
+          print >>sys.stderr, "ERROR registering test case: " + name
+          raise 
+
+    # parsing all tags, example input:
+    # tags:
+    # - bvt-l  (flavor=='debug') ^ (device=='cpu')  # tag with a python predicate expression
+    # - nightly-l  #tag without a predicate
+    #
+    # Predicate expressions must produce boolean value and may refer to following variables: flavor, device, os
+    self.tags = {}
+    if self.rawYamlData["tags"]:
+      for tagLine in self.rawYamlData["tags"]:
+        tagLineSplit = tagLine.split(' ', 1) # splitting tag name from predicate expression
+        tagName = tagLineSplit[0].lower().strip()
+
+        # using specified python expression (or 'True' if former isn't provided)
+        pythonExpr = tagLineSplit[1] if len(tagLineSplit)==2 else "True"
+
+        # converting python expression into lambda and doing a smoke test by calling it with dummy parameters
+        predicate = lambda pythonExpr=pythonExpr, **kwargs: eval(pythonExpr, kwargs)
+        try:
+          assert(type(predicate(flavor='foo', device='var', os='foobar')) == bool)
+        except Exception as e:
+          print "Can't parse tag predicate expression in {0} ({1}):\n{2}".format(pathToYmlFile, pythonExpr, e)
+          raise e
+
+        # saving generated lambda into tags dictionary
+        self.tags[tagName] = predicate
 
   # Populates Tests.allTestsIndexedByFullName by scanning directory tree
   # and finding all testcases.yml files
@@ -143,27 +188,37 @@ class Test:
   #   args - command line arguments from argparse
   # returns an instance of TestRunResult
   def run(self, flavor, device, args):
-    # Locating and reading baseline file
-    baselineFile = self.findBaselineFile(flavor, device)
-    if baselineFile == None:
-      return TestRunResult.fatalError("Baseline file sanity check", "Can't find baseline file")
+    # measuring the time of running of the test
+    startTime = time.time()
+    result = self.runImpl(flavor, device, args)
+    result.duration = time.time() - startTime 
+    return result
 
-    with open(baselineFile, "r") as f:
-      baseline = f.read().split("\n")
-      if args.verbose:
-         print "Baseline:", baselineFile
+  def runImpl(self, flavor, device, args):
+    result = TestRunResult()
+    result.succeeded = True
+
+    # Preparation for pattern-based test cases
+    if len(self.testCases) > 0:
+      # Locating and reading baseline file
+      baselineFile = self.findBaselineFile(flavor, device)
+      if baselineFile == None:
+        return TestRunResult.fatalError("Baseline file sanity check", "Can't find baseline file")
+  
+      with open(baselineFile, "r") as f:
+        baseline = f.read().split("\n")
+        if args.verbose:
+           print "Baseline:", baselineFile
 
     # Before running the test, pre-creating TestCaseRunResult object for each test case
     # and compute filtered lines from baseline file.
     # Note: some test cases might fail at this time if baseline and/or patterns are inconsistant
-    result = TestRunResult()
-    result.succeeded = True
-    if not args.update_baseline:
-      for testCase in self.testCases:
-        testCaseRunResult = testCase.processBaseline(baseline)
-        if not testCaseRunResult.succeeded:
-           result.succeeded = False
-        result.testCaseRunResults.append(testCaseRunResult)
+      if not args.update_baseline:
+        for testCase in self.testCases:
+          testCaseRunResult = testCase.processBaseline(baseline)
+          if not testCaseRunResult.succeeded:
+             result.succeeded = False
+          result.testCaseRunResults.append(testCaseRunResult)
   
     # preparing run directory
     runDir = os.path.join(args.run_dir, "{0}_{1}@{2}_{3}".format(self.suite, self.name, flavor, device))
@@ -229,7 +284,7 @@ class Test:
       if not testCaseRunResult.succeeded:
         result.succeeded = False
 
-    if args.update_baseline and result.succeeded:
+    if (self.testCases)>0 and args.update_baseline and result.succeeded:
       # When running in --update-baseline mode 
       # verifying that new output is succesfully matching every pattern in the testcases.yml
       # If this is not the case then baseline update will be rejected
@@ -264,6 +319,20 @@ class Test:
           fullPath = os.path.join(self.testDir, candidateName)
           if os.path.isfile(fullPath):
             return fullPath
+    return None
+
+  # Checks whether the test matches the specified tag,
+  # returns matched tag name on succes, or None if there is no match(boolean, string) tuple
+  def matchesTag(self, tag, flavor, device, os):
+    tagL = tag.lower() # normalizing the tag for comparison
+    # enumerating all the tags
+    for tag in self.tags.keys():
+      # match by direct string comparison or by prefix matching rule: 
+      # e.g: 'bvt' matches 'bvt' 'bvt-a', 'bvt-b' but not 'bvtx'
+      if tag==tagL or tag.startswith(tagL + "-"):
+        # evaluating tag's predicate
+        if self.tags[tag](flavor=flavor, device=device, os=os):
+          return tag
     return None
 
 # This class encapsulates one testcase (in testcases.yml file)
@@ -426,6 +495,7 @@ class TestRunResult:
   def __init__(self):
     self.succeeded = False;
     self.testCaseRunResults = [] # list of TestCaseRunResult
+    self.duration = -1
   
   @staticmethod
   def fatalError(name, diagnostics, logFile = None):
@@ -443,8 +513,22 @@ class TestCaseRunResult:
 
 # Lists all available tests
 def listCommand(args):
-  for t in Test.allTestsIndexedByFullName.values():
-    print t.fullName
+  testsByTag = {}
+  for test in Test.allTestsIndexedByFullName.values():
+     for flavor in args.flavors:
+        for device in args.devices:
+           for os in args.oses:
+             tag = test.matchesTag(args.tag, flavor, device, os) if args.tag else '*'
+             if tag:
+               if tag in testsByTag.keys():
+                 testsByTag[tag].add(test.fullName)
+               else:
+                 testsByTag[tag] = sets.Set([test.fullName])
+  for tag in sorted(testsByTag.keys()):
+    if tag=="*":
+      print ' '.join(sorted(testsByTag[tag]))
+    else:
+      print tag+":", ' '.join(sorted(testsByTag[tag]))
 
 # Runs given test(s) or all tests
 def runCommand(args):
@@ -458,21 +542,9 @@ def runCommand(args):
          return 1
   else:
      testsToRun = Test.allTestsIndexedByFullName.values()
-  devices = ["cpu", "gpu"]
-  if (args.device):
-    args.device = args.device.lower()
-    if not args.device in devices:
-      print >>sys.stderr, "--device must be one of", devices
-      return 1
-    devices = [args.device]
 
-  flavors = ["debug", "release"]
-  if (args.flavor):
-    args.flavor = args.flavor.lower()
-    if not args.flavor in flavors:
-      print >>sys.stderr, "--flavor must be one of", flavors
-      return 1
-    flavors = [args.flavor]
+  devices = args.devices
+  flavors = args.flavors
 
   print "CNTK Test Driver is started"
   print "Running tests:  ", " ".join([y.fullName for y in testsToRun])
@@ -487,24 +559,33 @@ def runCommand(args):
   for test in testsToRun:
     for flavor in flavors:
       for device in devices:
+        if args.tag and args.tag != '' and not test.matchesTag(args.tag, flavor, device, 'windows' if windows else 'linux'):
+          continue
         totalCount = totalCount + 1
+        if len(test.testCases)==0:
+          # forcing verbose mode (showing all output) for all test which are based on exit code (no pattern-based test cases)
+          args.verbose = True
         # Printing the test which is about to run (without terminating the line)
         sys.stdout.write("Running test {0} ({1} {2}) - ".format(test.fullName, flavor, device));
+        if args.dry_run:
+           print "[SKIPPED] (dry-run)"
+           continue
         # in verbose mode, terminate the line, since there will be a lot of output
         if args.verbose:
           sys.stdout.write("\n");
         sys.stdout.flush()
         # Running the test and collecting a run results
         result = test.run(flavor, device, args)
+
         if args.verbose:
           # writing the test name one more time (after possibly long verbose output)
           sys.stdout.write("Test finished {0} ({1} {2}) - ".format(test.fullName, flavor, device));
         if result.succeeded:
           succeededCount = succeededCount + 1
           # in no-verbose mode this will be printed in the same line as 'Running test...'
-          print "[OK]"
+          print "[OK] {0:.2f} sec".format(result.duration)
         else:
-          print "[FAILED]"
+          print "[FAILED] {0:.2f} sec".format(result.duration)
         # Showing per-test-case results:
         for testCaseRunResult in result.testCaseRunResults:
            if testCaseRunResult.succeeded:
@@ -540,17 +621,24 @@ runSubparser.add_argument("test", nargs="*",
 defaultBuildLocation=os.path.realpath(os.path.join(thisDir, "..", "x64" if windows else "build"))
 
 runSubparser.add_argument("-b", "--build-location", default=defaultBuildLocation, help="location of the CNTK build to run")
-runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specific device")
-runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specific flavor")
+runSubparser.add_argument("-t", "--tag", help="runs tests which match the spacified tag")
+runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specified device")
+runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specified flavor")
 tmpDir = os.getenv("TEMP") if windows else "/tmp"
 defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
 runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")
 runSubparser.add_argument("--update-baseline", action='store_true', help="update baseline file(s) instead of matching them")
 runSubparser.add_argument("-v", "--verbose", action='store_true', help="verbose output - dump all output of test script")
+runSubparser.add_argument("-n", "--dry-run", action='store_true', help="do not run the tests, only print test names and condfigurations to be run")
 
 runSubparser.set_defaults(func=runCommand)
 
 listSubparser = subparsers.add_parser("list", help="list available tests")
+listSubparser.add_argument("-t", "--tag", help="limits a resulting list to tests matching the spacified tag")
+listSubparser.add_argument("-d", "--device", help="cpu|gpu - tests for a specified device")
+listSubparser.add_argument("-f", "--flavor", help="release|debug - tests for specified flavor")
+listSubparser.add_argument("--os", help="windows|linux - tests for a specified operating system")
+
 listSubparser.set_defaults(func=listCommand)
 
 if len(sys.argv)==1:
@@ -558,6 +646,32 @@ if len(sys.argv)==1:
     sys.exit(1)
 
 args = parser.parse_args(sys.argv[1:])
+
+# parsing a --device, --flavor and --os options:
+args.devices = ["cpu", "gpu"]
+if (args.device):
+  args.device = args.device.lower()
+  if not args.device in args.devices:
+    print >>sys.stderr, "--device must be one of", args.devices
+    sys.exit(1)
+  args.devices = [args.device]
+
+args.flavors = ["debug", "release"]
+if (args.flavor):
+  args.flavor = args.flavor.lower()
+  if not args.flavor in args.flavors:
+    print >>sys.stderr, "--flavor must be one of", args.flavors
+    sys.exit(1)
+  args.flavors = [args.flavor]
+
+if args.func == listCommand:
+  args.oses = ["windows", "linux"]
+  if (args.os):
+    args.os = args.os.lower()
+    if not args.os in args.oses:
+      print >>sys.stderr, "--os must be one of", args.oses
+      sys.exit(1)
+  args.oses = [args.os]
 
 # discover all the tests
 Test.discoverAllTests()

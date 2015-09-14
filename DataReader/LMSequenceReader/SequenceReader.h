@@ -76,7 +76,7 @@ public:
     double logprob(int i) const { if (uniform_sampling) return uniform_log_prob; else return m_log_prob[i]; }
 
     template <typename Engine>
-    int sample(Engine &eng) const
+    int sample(Engine &eng)
     {
         int m = unif_int(eng);
         if (uniform_sampling)
@@ -353,7 +353,7 @@ private:
     bool   mSentenceEnd; 
     bool   mSentenceBegin; 
 
-    Matrix<ElemType> mtSentenceBegin; 
+    Matrix<float> mtSentenceBegin; 
     vector<MinibatchPackingFlag> m_minibatchPackingFlag;
 
 public:
@@ -396,7 +396,7 @@ public:
     size_t NumberSlicesInEachRecurrentIter();
 
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
-    void SetSentenceSegBatch(Matrix<ElemType>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
+    void SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
 
     int GetSentenceEndIdFromOutputLabel();
 

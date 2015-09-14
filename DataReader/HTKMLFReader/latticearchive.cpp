@@ -18,7 +18,7 @@
 #include <vector>
 #include <string>
 #include <set>
-#include <hash_map>
+#include <unordered_map>
 #include <regex>
 
 #pragma warning(disable : 4996)
@@ -95,20 +95,6 @@ static size_t tryfind (const MAPTYPE & map, const KEYTYPE & key, VALTYPE deflt)
                                 const msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence> & labels,   // non-empty: build numer lattices
                                 const msra::lm::CMGramLM & unigram, const msra::lm::CSymbolSet & unigramsymbols)  // for numer lattices
 {
-#if 0   // little unit test helper for testing the read function
-    bool test = true;
-    if (test)
-    {
-        archive a;
-        a.open (outpath + L".toc");
-        lattice L;
-        std::hash_map<string,size_t> symmap;
-        a.getlattice (L"sw2001_A_1263622500_1374610000", L, symmap);
-        a.getlattice (L"sw2001_A_1391162500_1409287500", L, symmap);
-        return;
-    }
-#endif
-
     const bool numermode = !labels.empty(); // if labels are passed then we shall convert the MLFs to lattices, and 'infiles' are regular keys
 
     const std::wstring tocpath = outpath + L".toc";

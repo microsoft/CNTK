@@ -25,7 +25,7 @@ class CNTKEval : public IEvaluateModel<ElemType>
     EvalReader<ElemType>* m_reader;
     EvalWriter<ElemType>* m_writer;
     ConfigParameters m_config;
-    ComputationNetwork<ElemType>* m_net;
+    ComputationNetwork* m_net;
     std::map<std::wstring, size_t> m_dimensions;
     size_t m_start;
 

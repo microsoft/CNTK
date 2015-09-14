@@ -24,6 +24,8 @@
 #include <nvml.h>                   // note: expected at "c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include" (Windows) and /the path you installed deployment kit/usr/include/nvidia/gdk (Linux)
 #pragma comment (lib, "nvml.lib")   // note: expected at "c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib" (Windows) and /the path you installed deployment kit/usr/include/nvidia/gdk (Linux)
 #include <vector>
+#else
+int bestGPUDummy = 42;              // put something into this CPP, as to avoid a linker warning
 #endif
 #include "CommonMatrix.h" // for CPUDEVICE and AUTOPLACEMATRIX
 
@@ -44,9 +46,6 @@
 
 #include <memory>
 #include "CrossProcessMutex.h"
-#include "../../MachineLearning/CNTK/MPIWrapper.h"
-extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
-
 
 // ---------------------------------------------------------------------------
 // BestGpu class
@@ -124,6 +123,9 @@ private:
 // 0:2:3- an array of ids to use, (PTask will only use the specified IDs)
 // *3   - a count of GPUs to use (PTask)
 // All  - Use all the GPUs (PTask) 
+#ifdef MATH_EXPORTS
+__declspec(dllexport)
+#endif
 DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 {
     static BestGpu* g_bestGpu = NULL;
