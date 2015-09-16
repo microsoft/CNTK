@@ -1094,8 +1094,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
-            if (m_sentenceSeg != nullptr && m_minibatchPackingFlag != nullptr 
-                && !m_sentenceSeg->IsEmpty() && !m_minibatchPackingFlag->size() == 0)
+            if (m_sentenceSeg != nullptr && m_minibatchPackingFlags != nullptr 
+                && !m_sentenceSeg->IsEmpty() && !m_minibatchPackingFlags->size() == 0)
             {
                 size_t nS = m_sentenceSeg->GetNumRows();
 
@@ -1103,7 +1103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t j = t / nS;
                 size_t i = t % nS;
-                if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
+                if ((*m_minibatchPackingFlags)[j] & MinibatchPackingFlags::NoLabel)
                 {
                     if ((int)(*m_sentenceSeg)(i,j) & NO_LABEL)
                     {

@@ -1056,39 +1056,40 @@ public:
 /**
 These macros are used for sentence segmentation information. 
 */
-#define SEQUENCE_START ((int) MinibatchPackingFlag::SequenceStart)
-#define SEQUENCE_MIDDLE ((int) MinibatchPackingFlag::None)
-#define SEQUENCE_END ((int) MinibatchPackingFlag::SequenceEnd)
-#define NO_INPUT ((int) MinibatchPackingFlag::NoInput)
-#define NO_FEATURE ((int) MinibatchPackingFlag::NoFeature)
-#define NO_LABEL ((int) MinibatchPackingFlag::NoLabel)
+#define SEQUENCE_START ((int) MinibatchPackingFlags::SequenceStart)
+#define SEQUENCE_MIDDLE ((int) MinibatchPackingFlags::None)
+#define SEQUENCE_END ((int) MinibatchPackingFlags::SequenceEnd)
+#define NO_INPUT ((int) MinibatchPackingFlags::NoInput)
+#define NO_FEATURE ((int) MinibatchPackingFlags::NoFeature)
+#define NO_LABEL ((int) MinibatchPackingFlags::NoLabel)
 
-enum class MinibatchPackingFlag : unsigned char
+// boundary flags for a frame
+enum class MinibatchPackingFlags : unsigned char
 {
     None = 0,
-    SequenceStart = 1 << 0,   //binary 0001
-    SequenceEnd = 1 << 1,   //binary 0010
-    NoFeature = 1 << 2,      //binary 0100
-    NoLabel = 1 << 3,      //binary 1000
+    SequenceStart = 1 << 0,         // binary 0001  frame is first of an utterance
+    SequenceEnd = 1 << 1,           // binary 0010  frame is last of an utterance
+    NoFeature = 1 << 2,             // binary 0100  frame has no feature (e.g. a gap due to BPTT)
+    NoLabel = 1 << 3,               // binary 1000  frame has no label
 
-    NoInput = NoFeature | NoLabel, //when we refactorize reader, NoInput will no longer needed
+    NoInput = NoFeature | NoLabel,  // when we refactorize reader, NoInput will no longer needed
     SequenceStartOrNoFeature = SequenceStart | NoFeature,
     SequenceEndOrNoFeature = SequenceEnd | NoFeature,
     SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
 };
 
-inline MinibatchPackingFlag operator| (MinibatchPackingFlag a, MinibatchPackingFlag b)
+inline MinibatchPackingFlags operator| (MinibatchPackingFlags a, MinibatchPackingFlags b)
 {
-    return static_cast<MinibatchPackingFlag>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
+    return static_cast<MinibatchPackingFlags>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
 }
 
-inline MinibatchPackingFlag& operator|= (MinibatchPackingFlag& a, MinibatchPackingFlag b)
+inline MinibatchPackingFlags& operator|= (MinibatchPackingFlags& a, MinibatchPackingFlags b)
 {
     a = a | b;
     return a;
 }
 
-inline bool operator& (MinibatchPackingFlag a, MinibatchPackingFlag b)
+inline bool operator& (MinibatchPackingFlags a, MinibatchPackingFlags b)
 {
     return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
 }

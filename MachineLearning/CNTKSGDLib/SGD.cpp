@@ -68,7 +68,7 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
                                       int rank, int numprocs,                                    /* (input) rank info */
                                       size_t& nSlices,                                           /* (input/output): on input, # parallel sentence total , on output, # paralel sentence in this node  */
                                       Matrix<float>& SentenceBoundary,                           /* (output) nSlices X nMBsize matrix */
-                                      vector<MinibatchPackingFlag>& PackingFlags,                /* (output) 1 X nMBsize vector  */
+                                      vector<MinibatchPackingFlags>& PackingFlags,               /* (output) 1 X nMBsize vector  */
                                       IDataReader<ElemType>* trainDataReader)                    /* (input)  to have access to reader */
 {
     // For RNN, a input Matrix is organized in the following way: 
@@ -167,15 +167,15 @@ size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<E
         size_t nMBSize = PackingFlags.size(); 
         newBoundary.Resize(nSlices, nMBSize);
         newBoundary.AssignRowSliceValuesOf(SentenceBoundary, sent_start, nSlices);
-        fill(PackingFlags.begin(), PackingFlags.end(), MinibatchPackingFlag::None);
+        fill(PackingFlags.begin(), PackingFlags.end(), MinibatchPackingFlags::None);
         for (size_t nt = 0; nt < nMBSize; nt++)
         {
             for (size_t ns = 0; ns < nSlices; ns++)
             {
                 if (newBoundary(ns, nt) == SEQUENCE_START)
-                    PackingFlags[nt] |= MinibatchPackingFlag::SequenceStart;
+                    PackingFlags[nt] |= MinibatchPackingFlags::SequenceStart;
                 if (newBoundary(ns, nt) == SEQUENCE_END)
-                    PackingFlags[nt] |= MinibatchPackingFlag::SequenceEnd;
+                    PackingFlags[nt] |= MinibatchPackingFlags::SequenceEnd;
             }
         }
        
@@ -1358,7 +1358,7 @@ template<class ElemType>
             size_t actualMBSize = net.GetActualMBSize();
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-            trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
+            trainSetDataReader->SetSentenceSegBatch(net.GetSentenceBoundaryFlags(), net.GetMinibatchPackingFlags());
 
             // TODO: Exactly this loop should be INSIDE ComputationNetwork--pass the nodes array instead!
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
@@ -1807,10 +1807,10 @@ template<class ElemType>
         assert(trainSetDataReader != NULL);
         std::vector<std::vector<std::pair<wstring, size_t>>> uttInfo;
         Matrix<float> sentenceBoundary;
-        std::vector<MinibatchPackingFlag> minibatchPackingFlag;
+        std::vector<MinibatchPackingFlags> minibatchPackingFlags;
         while (trainSetDataReader->GetMinibatchCopy(uttInfo, *inputMatrices,
                                                     sentenceBoundary,
-                                                    minibatchPackingFlag))
+                                                    minibatchPackingFlags))
         {
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
@@ -1821,12 +1821,12 @@ template<class ElemType>
             size_t actualMBSize = net.GetActualMBSize();
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-            trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
+            trainSetDataReader->SetSentenceSegBatch(net.GetSentenceBoundaryFlags(), net.GetMinibatchPackingFlags());
             net.Evaluate(outputNodes[0]);   // Only evaluate the first output
             trainSetDataReader->SetNetOutput(uttInfo,
                                              dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->FunctionValues(),
                                              sentenceBoundary,
-                                             minibatchPackingFlag);
+                                             minibatchPackingFlags);
         }
     }
 
@@ -1979,7 +1979,7 @@ template<class ElemType>
             {
                 size_t nSlices = trainSetDataReader->NumberSlicesInEachRecurrentIter();
                 Matrix<float> sentenceBegin(CPUDEVICE);
-                vector<MinibatchPackingFlag> packingFlags;
+                vector<MinibatchPackingFlags> packingFlags;
                 if (!useDistributedMBReading && useParallelTrain)
                 {
                     // TODO: refactor this as a function 
@@ -2005,12 +2005,12 @@ template<class ElemType>
 
                     if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
                     {
-                        net.SentenceBoundary().SetValue(sentenceBegin);
-                        net.MinibatchPackingFlags() = packingFlags;
+                        net.GetSentenceBoundaryFlags().SetValue(sentenceBegin);
+                        net.GetMinibatchPackingFlags() = packingFlags;
                     }
                     else
                     {
-                        trainSetDataReader->SetSentenceSegBatch(net.SentenceBoundary(), net.MinibatchPackingFlags());
+                        trainSetDataReader->SetSentenceSegBatch(net.GetSentenceBoundaryFlags(), net.GetMinibatchPackingFlags());
                     }
 
                     ComputationNetwork::UpdateEvalTimeStamps(featureNodes);

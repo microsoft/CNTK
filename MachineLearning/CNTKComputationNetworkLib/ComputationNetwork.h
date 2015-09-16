@@ -8,6 +8,13 @@
 
 //The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
 
+#include "File.h"
+#include "Matrix.h"
+#include "commandArgUtil.h" // for nocase_compare
+
+#include "ComputationNode.h"
+#include "ScriptableObjects.h"
+
 #include <map>
 #include <string>
 #include <stdexcept>
@@ -20,13 +27,6 @@
 #include <iostream>
 #include <regex>
 #include <chrono>
-
-#include "File.h"
-#include "Matrix.h"
-#include "commandArgUtil.h" // for nocase_compare
-
-#include "ComputationNode.h"
-#include "ScriptableObjects.h"
 
 //#include "MatrixPool.h"
 
@@ -76,7 +76,7 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
-                    : m_deviceId(deviceId), m_SentenceBoundary(CPUDEVICE)
+                    : m_deviceId(deviceId), m_sentenceBoundaryFlags(CPUDEVICE)
     {
         m_randomSeedOffset = 0;
         m_actMiniBSize = 0;
@@ -241,24 +241,24 @@ public:
     //in which case the packing info is not available (and not meaningful) for them
     size_t GetNumSamplesWithLabel(const size_t numAllSamples)
     {
-        if (!m_SentenceBoundary.IsEmpty() &&
-            !m_minibatchPackingFlag.size() == 0)
+        if (!m_sentenceBoundaryFlags.IsEmpty() &&
+            !m_minibatchPackingFlags.size() == 0)
         {
-            size_t numTimeSteps = m_SentenceBoundary.GetNumCols();
-            size_t numSequences = m_SentenceBoundary.GetNumRows();
+            size_t numTimeSteps = m_sentenceBoundaryFlags.GetNumCols();
+            size_t numSequences = m_sentenceBoundaryFlags.GetNumRows();
 
-            if (m_minibatchPackingFlag.size() != numTimeSteps)
-                LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlag should have one element for each timestep of all streams.Check feature reader. ");
+            if (m_minibatchPackingFlags.size() != numTimeSteps)
+                LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlags should have one element for each timestep of all streams.Check feature reader. ");
 
             size_t numSamplesWithoutLabel = 0;
 
             for (size_t j = 0; j < numTimeSteps; j++)
             {
-                if (m_minibatchPackingFlag[j] & MinibatchPackingFlag::NoLabel)
+                if (m_minibatchPackingFlags[j] & MinibatchPackingFlags::NoLabel)
                 {
                     for (int i = 0; i < numSequences; i++)
                     {
-                        if ((int)(m_SentenceBoundary(i, j)) & NO_LABEL)
+                        if ((int)(m_sentenceBoundaryFlags(i, j)) & NO_LABEL)
                             numSamplesWithoutLabel++;
                         }
                     }
@@ -616,7 +616,7 @@ public:
             // TODO: nbrSlices set once to the same value for all nodes each evaluation--is it ever changed later?
             (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
             if ((*nodeIter)->ReqMultiSeqHandling())
-                    (*nodeIter)->ResetBound(&m_SentenceBoundary, &m_minibatchPackingFlag);
+                (*nodeIter)->ResetBound(&m_sentenceBoundaryFlags, &m_minibatchPackingFlags);
         }
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
@@ -1353,9 +1353,9 @@ public:
         }
     };
 
-    Matrix<float> & SentenceBoundary() { return m_SentenceBoundary; }
+    Matrix<float> & GetSentenceBoundaryFlags() { return m_sentenceBoundaryFlags; }
 
-    vector<MinibatchPackingFlag> & MinibatchPackingFlags() { return m_minibatchPackingFlag; }
+    vector<MinibatchPackingFlags> & GetMinibatchPackingFlags() { return m_minibatchPackingFlags; }
 
 protected:
     // -----------------------------------------------------------------------
@@ -1543,12 +1543,15 @@ protected:
         return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_nodesReqMultiSeqHandling };
     }
 
-    std::vector<RecurrentInfo> m_recurrentInfo;
+    std::vector<RecurrentInfo> m_recurrentInfo;     // [index--TODO: comment what this is indexed with]
 
     //used for sentence boundary information passed from reader to reset RNN state 
-    Matrix<float> m_SentenceBoundary; // this matrix is always in CPU memory  --TODO: should rather be a matrix of some int
+    Matrix<float> m_sentenceBoundaryFlags; // (t,stream) this matrix is always in CPU memory  --TODO: should rather be a matrix of some int
+    // ^^ really Matrix<MinibatchPackingFlags> stored as float matrix
+
     // specify how the minibatch is packed for each sample
-    vector<MinibatchPackingFlag> m_minibatchPackingFlag;
+    vector<MinibatchPackingFlags> m_minibatchPackingFlags;    // [t]
+    // TODO: how are the two above related?
 
     int m_actMiniBSize;
     size_t m_nbrSlicesInEachRecurrentIteration;

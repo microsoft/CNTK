@@ -67,7 +67,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using SGDBase::m_numMBsToShowResult;
         using SGDBase::m_gradientCheckSigDigit;
         using SGDBase::m_prevChosenMinibatchSize;
-        using SGDBase::CriterionNodes;
         using SGDBase::UpdateWeights;
         using SGDBase::GetCheckPointFileNameForEpoch;
 
@@ -550,7 +549,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
-                    nets[i]->BuildAndValidateNetwork(*ptr);
+                    nets[i]->BuildAndValidateSubNetwork(*ptr);
             }
 
 
@@ -1160,7 +1159,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             encoderNet->SetActualMiniBatchSize(actualMBSize);
             encoderNet->SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
-            encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet->SentenceBoundary(), encoderNet->MinibatchPackingFlags());
+            encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet->GetSentenceBoundaryFlags(), encoderNet->GetMinibatchPackingFlags());
 
             encoderNet->Evaluate(encoderEvaluationNodes[0]);
 
@@ -1170,7 +1169,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             decoderNet->SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
 
             /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-            decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet->SentenceBoundary(), decoderNet->MinibatchPackingFlags());
+            decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet->GetSentenceBoundaryFlags(), decoderNet->GetMinibatchPackingFlags());
 
             if (decoderCriterionNodes.size() == 0 && decoderEvaluationNodes.size() == 0)
             {
