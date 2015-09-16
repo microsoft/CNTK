@@ -80,7 +80,7 @@ public:
     {
         m_randomSeedOffset = 0;
         m_actMiniBSize = 0;
-        SetDeviceID(deviceId);
+        SetDeviceId(deviceId);
         m_nbrSlicesInEachRecurrentIteration = 1;
     }
 
@@ -184,7 +184,7 @@ public:
     // -----------------------------------------------------------------------
 
     // TODO: DeviceID vs. DeviceId? Use the latter throughout
-    void SetDeviceID(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+    void SetDeviceId(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
     {
         if (m_deviceId == AUTOPLACEMATRIX)
             m_deviceId = Matrix<float>::GetBestGPUDeviceId();
@@ -192,7 +192,7 @@ public:
             m_deviceId = deviceId;
     }
 
-    DEVICEID_TYPE GetDeviceID() { return m_deviceId; }
+    DEVICEID_TYPE GetDeviceId() { return m_deviceId; }
 
     unsigned long GetRandomSeedOffset() { return m_randomSeedOffset; }
     void SetRandomSeedOffset(unsigned long value) { m_randomSeedOffset = value; }

@@ -111,7 +111,7 @@ private:
     {
         if (m_cudaAllocator != nullptr)
         {
-            if (m_cudaAllocator->GetDeviceID() != deviceID)
+            if (m_cudaAllocator->GetDeviceId() != deviceID)
             {
                 delete m_cudaAllocator;
                 m_cudaAllocator = nullptr;

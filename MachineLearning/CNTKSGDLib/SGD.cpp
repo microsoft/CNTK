@@ -890,7 +890,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
             smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(),
                                                          node->FunctionValues().GetNumCols(),
-                                                         net.GetDeviceID()));
+                                                         net.GetDeviceId()));
         }
 
         double epochCriterion, avgCriterion, prevCriterion, lrControlCriterion;
@@ -1852,8 +1852,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // NOTE: the following two local matrices are not used in distGradAgg path
         // assume only one training criterion node for each epoch
 
-        Matrix<ElemType> localEpochCriterion(1, 1, net.GetDeviceID());
-        Matrix<ElemType> localEpochEvalErrors(1, numEvalNodes, net.GetDeviceID());
+        Matrix<ElemType> localEpochCriterion(1, 1, net.GetDeviceId());
+        Matrix<ElemType> localEpochEvalErrors(1, numEvalNodes, net.GetDeviceId());
 
         localEpochCriterion.SetValue(0);
         localEpochEvalErrors.SetValue(0);
@@ -2632,8 +2632,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
 
                 double eOrg = node->FunctionValues()(irow, icol);
-                //if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
-                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceID(), true);
+                //if (node->FunctionValues().GetDeviceId() != net.GetDeviceId())
+                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
 
                 node->UpdateEvalTimeStamp();
 
@@ -2650,15 +2650,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // TODO: why is this value not used?
                 criterionNodes[npos]->Get00Element();
                 double eGradErr = node->GradientValues()(irow, icol);
-                //if (node->GradientValues().GetDeviceId() != net.GetDeviceID())
-                    node->GradientValues().TransferToDeviceIfNotThere(net.GetDeviceID(), true);
+                //if (node->GradientValues().GetDeviceId() != net.GetDeviceId())
+                    node->GradientValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
 
                 double ePos = eOrg + EPSILON;
                 double eNeg = eOrg - EPSILON;
 
                 node->FunctionValues()(irow, icol) = (ElemType)ePos;
-                //if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
-                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceID(), true);
+                //if (node->FunctionValues().GetDeviceId() != net.GetDeviceId())
+                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
 
                 node->UpdateEvalTimeStamp();
                 net.Evaluate(criterionNodes[npos]);
@@ -2667,8 +2667,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 double mbEvalCriPos = criterionNodes[npos]->Get00Element(); // TODO: make Get00Element() a function of ComputationNodeBase
 
                 node->FunctionValues()(irow, icol) = (ElemType)eNeg;
-                //if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
-                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceID(), true);
+                //if (node->FunctionValues().GetDeviceId() != net.GetDeviceId())
+                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
 
                 node->UpdateEvalTimeStamp();
                 net.Evaluate(criterionNodes[npos]);
@@ -2678,8 +2678,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // back to its orginal parameter value
                 node->FunctionValues()(irow, icol) = (ElemType)eOrg;
-                //if (node->FunctionValues().GetDeviceId() != net.GetDeviceID())
-                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceID(), true);
+                //if (node->FunctionValues().GetDeviceId() != net.GetDeviceId())
+                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
 
                 // check if they are consistent
                 double eGradNum = ((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));

@@ -58,7 +58,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
 
 
-            m_net->SetDeviceID(m_deviceId);
+            m_net->SetDeviceId(m_deviceId);
             if (m_deviceId < 0)
                 fprintf(stderr, "NDLBuilder Using CPU\n");
             else
