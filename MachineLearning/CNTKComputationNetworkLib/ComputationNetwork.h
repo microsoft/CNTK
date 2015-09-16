@@ -27,6 +27,7 @@
 
 #include "ComputationNode.h"
 #include "ScriptableObjects.h"
+#include "MPIWrapper.h"
 
 //#include "MatrixPool.h"
 

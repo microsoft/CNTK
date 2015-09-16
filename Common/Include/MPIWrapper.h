@@ -247,3 +247,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 }}}
+
+extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
