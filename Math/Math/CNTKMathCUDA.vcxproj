@@ -47,7 +47,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>..\..\common\include;$(ACML_PATH)\include;$(CudaPath)\include;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\common\include;$(ACML_PATH)\include;$(CudaPath)\include;$(CUB_PATH);$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration);$(ACML_PATH)\lib;$(CudaPath)\lib\$(Platform);$(LibraryPath)</LibraryPath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>

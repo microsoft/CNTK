@@ -295,9 +295,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
 
         void VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise) const;
-        void VectorMin(GPUMatrix<ElemType>& mainndexes, GPUMatrix<ElemType>& minValues, const bool isColWise) const;
+        void VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise, int topK, GPUMatrix<ElemType>& workspace) const;
+        void VectorMin(GPUMatrix<ElemType>& minIndexes, GPUMatrix<ElemType>& minValues, const bool isColWise) const;
 
-        GPUMatrix<ElemType>&   AssignNumOfDiff(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b); 
+        GPUMatrix<ElemType>&   AssignNumOfDiff(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, bool searchInCol = false); 
 
 
         GPUMatrix<ElemType>& AssignInnerProductOfMatrices(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b); 

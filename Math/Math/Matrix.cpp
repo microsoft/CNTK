@@ -2469,7 +2469,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             this->m_CPUMatrix->AssignNumOfDiff(*a.m_CPUMatrix, *b.m_CPUMatrix, searchInCol), 
-            this->m_GPUMatrix->AssignNumOfDiff(*a.m_GPUMatrix, *b.m_GPUMatrix), 
+            this->m_GPUMatrix->AssignNumOfDiff(*a.m_GPUMatrix, *b.m_GPUMatrix, searchInCol), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -3380,7 +3380,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //I decided to use Matrix<ElemType>& maxIndexes instead of integer vector because the result may be used to do additional calculation
     template<class ElemType>
-    void Matrix<ElemType>::VectorMax(Matrix<ElemType>& maxIndexes, Matrix<ElemType>& maxValues, const bool isColWise, int topK) const
+    void Matrix<ElemType>::VectorMax(Matrix<ElemType>& maxIndexes, Matrix<ElemType>& maxValues, const bool isColWise) const
     {
         if (IsEmpty())
             LogicError("VectorMax: Matrix is empty.");
@@ -3391,13 +3391,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DISPATCH_MATRIX_ON_FLAG(this,
             &maxValues,
-            this->m_CPUMatrix->VectorMax(*maxIndexes.m_CPUMatrix,*maxValues.m_CPUMatrix,isColWise,topK); maxIndexes.SetDataLocation(CPU, DENSE), 
-            this->m_GPUMatrix->VectorMax(*maxIndexes.m_GPUMatrix,*maxValues.m_GPUMatrix,isColWise); maxIndexes.SetDataLocation(GPU, DENSE), 
-            NOT_IMPLEMENTED, 
+            this->m_CPUMatrix->VectorMax(*maxIndexes.m_CPUMatrix, *maxValues.m_CPUMatrix, isColWise); maxIndexes.SetDataLocation(CPU, DENSE),
+            this->m_GPUMatrix->VectorMax(*maxIndexes.m_GPUMatrix, *maxValues.m_GPUMatrix, isColWise); maxIndexes.SetDataLocation(GPU, DENSE),
+            NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
             );
-               
-        }
+
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::VectorMax(Matrix<ElemType>& maxIndexes, Matrix<ElemType>& maxValues, const bool isColWise, int topK, Matrix<ElemType>& workspace) const
+    {
+        if (IsEmpty())
+            throw std::logic_error("VectorMax: Matrix is empty.");
+
+        DecideAndMoveToRightDevice(*this, maxIndexes, maxValues);
+        maxIndexes.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
+        maxValues.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
+        workspace.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            &maxValues,
+            this->m_CPUMatrix->VectorMax(*maxIndexes.m_CPUMatrix, *maxValues.m_CPUMatrix, isColWise, topK); maxIndexes.SetDataLocation(CPU, DENSE),
+            this->m_GPUMatrix->VectorMax(*maxIndexes.m_GPUMatrix, *maxValues.m_GPUMatrix, isColWise, topK, *workspace.m_GPUMatrix); maxIndexes.SetDataLocation(GPU, DENSE),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
 
     template<class ElemType>
     void Matrix<ElemType>::VectorMin(Matrix<ElemType>& minIndexes, Matrix<ElemType>& minValues, const bool isColWise) const
