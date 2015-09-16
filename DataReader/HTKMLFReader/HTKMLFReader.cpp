@@ -864,14 +864,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (first)
                             {
                                 m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
-                                m_minibatchPackingFlag.resize(feat.cols());
+                                m_minibatchPackingFlags.resize(feat.cols());
 
                                 m_sentenceBegin.SetValue((ElemType) SEQUENCE_MIDDLE);
                                 m_sentenceBegin.SetValue(0, 0, (ElemType) SEQUENCE_START);
                                 m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SEQUENCE_END);
-                                std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
-                                m_minibatchPackingFlag[(size_t)feat.cols() - 1] = MinibatchPackingFlag::SequenceEnd;
+                                std::fill(m_minibatchPackingFlags.begin(), m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
+                                m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceStart;
+                                m_minibatchPackingFlags[(size_t)feat.cols() - 1] = MinibatchPackingFlags::SequenceEnd;
                                 first = false;
                             }
 
@@ -1004,7 +1004,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t numOfLabel = m_labelsBufferMultiIO.size();
 
                     m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_mbSize);
-                    m_minibatchPackingFlag.resize(m_mbSize);
+                    m_minibatchPackingFlags.resize(m_mbSize);
 
                     for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
                     {
@@ -1013,7 +1013,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_sentenceBegin.SetValue(i,j,(ElemType) SEQUENCE_MIDDLE);
                         }
                     }
-                    std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+                    std::fill(m_minibatchPackingFlags.begin(), m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
 
 
                     vector<size_t> actualmbsize;
@@ -1031,7 +1031,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 if (m_processedFrame[i] == 1)
                                 {
                                     m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_END);
-                                    m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceEnd;
+                                    m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceEnd;
                                 }
                             }
                             else
@@ -1039,7 +1039,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 m_switchFrame[i] = 0;
                                 m_sentenceEnd[i] = true;
                                 m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
-                                m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
+                                m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceStart;
                             }
                             actualmbsize[i] = m_mbSize;
                             endFr = startFr + actualmbsize[i];
@@ -1170,12 +1170,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (actualmbsize[i] < m_mbSize)
                             {
                                 m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SEQUENCE_START);
-                                m_minibatchPackingFlag[actualmbsize[i]] |= MinibatchPackingFlag::SequenceStart;
+                                m_minibatchPackingFlags[actualmbsize[i]] |= MinibatchPackingFlags::SequenceStart;
                             }
                             if (actualmbsize[i] == m_mbSize)
                             {
                                 m_sentenceBegin.SetValue(i, actualmbsize[i]-1, (ElemType)SEQUENCE_END);
-                                m_minibatchPackingFlag[actualmbsize[i]-1] |= MinibatchPackingFlag::SequenceEnd;
+                                m_minibatchPackingFlags[actualmbsize[i]-1] |= MinibatchPackingFlags::SequenceEnd;
                             }
                             startFr = m_switchFrame[i];
                             endFr = m_mbSize;
@@ -1322,13 +1322,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (first)
                         {
                             m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
-                            m_minibatchPackingFlag.resize((size_t)feat.cols());
+                            m_minibatchPackingFlags.resize((size_t)feat.cols());
                             m_sentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
                             m_sentenceBegin.SetValue(0, 0, (ElemType)SEQUENCE_START);
                             m_sentenceBegin.SetValue(0, (size_t)feat.cols() - 1, (ElemType)SEQUENCE_END);
-                            std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-                            m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
-                            m_minibatchPackingFlag[(size_t)feat.cols() - 1] = MinibatchPackingFlag::SequenceEnd;
+                            std::fill(m_minibatchPackingFlags.begin(), m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
+                            m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceStart;
+                            m_minibatchPackingFlags[(size_t)feat.cols() - 1] = MinibatchPackingFlags::SequenceEnd;
                             first = false;
                         }
 
@@ -1637,12 +1637,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     template<class ElemType>
-        void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<float> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+        void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<float> &sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags)
         {
             if (!m_framemode)
             {
                 sentenceBegin.SetValue(m_sentenceBegin);
-                minibatchPackingFlag = m_minibatchPackingFlag;
+                minibatchPackingFlags = m_minibatchPackingFlags;
             }
         }
 

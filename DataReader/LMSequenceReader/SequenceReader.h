@@ -354,7 +354,7 @@ private:
     bool   mSentenceBegin; 
 
     Matrix<float> mtSentenceBegin; 
-    vector<MinibatchPackingFlag> m_minibatchPackingFlag;
+    vector<MinibatchPackingFlags> m_minibatchPackingFlags;
 
 public:
     vector<bool> mProcessed; 
@@ -396,7 +396,7 @@ public:
     size_t NumberSlicesInEachRecurrentIter();
 
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
-    void SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
+    void SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags);
 
     int GetSentenceEndIdFromOutputLabel();
 

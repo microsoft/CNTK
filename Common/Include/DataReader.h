@@ -86,7 +86,7 @@ public:
     virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
     virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
     virtual bool DataEnd(EndDataType) { NOT_IMPLEMENTED; };
-    virtual void SetSentenceSegBatch(Matrix<float>&, vector<MinibatchPackingFlag>& ) { NOT_IMPLEMENTED; };
+    virtual void SetSentenceSegBatch(Matrix<float>&, vector<MinibatchPackingFlags>& ) { NOT_IMPLEMENTED; };
     virtual void SetRandomSeed(unsigned seed = 0) { m_seed = seed; };
     virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&) { return false; }
     virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>*) { }
@@ -106,7 +106,7 @@ public:
         std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
         std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/,
         Matrix<float>& /*sentenceBegin*/,
-        std::vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
+        std::vector<MinibatchPackingFlags>& /*minibatchPackingFlags*/)
     {
         return false;
     }
@@ -117,7 +117,7 @@ public:
         const std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
         const Matrix<ElemType>& /*outputs*/,
         const Matrix<float>& /*sentenceBegin*/,
-        const std::vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
+        const std::vector<MinibatchPackingFlags>& /*minibatchPackingFlags*/)
     {
         return false;
     }
@@ -228,7 +228,7 @@ public:
         std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         std::map<std::wstring, Matrix<ElemType>*>& matrices,
         Matrix<float>& sentenceBegin,
-        std::vector<MinibatchPackingFlag>& minibatchPackingFlag);
+        std::vector<MinibatchPackingFlags>& minibatchPackingFlags);
 
     // Sets the neural network output to the reader. This can be useful if some
     // of the computation has to happen in the reader.
@@ -236,9 +236,9 @@ public:
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& outputs,
         const Matrix<float>& sentenceBegin,
-        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag);
+        const std::vector<MinibatchPackingFlags>& minibatchPackingFlags);
 
-    void SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
+    void SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags);
 
     void SetRandomSeed(int);
 

@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // The two differ in the step direction, some loop directions, and sequence-boundary flags.
     // =======================================================================
 
-    template<class ElemType, int direction/*-1 or +1*/, int SEQUENCE_START_or_END/*_START or _END*/, MinibatchPackingFlag SequenceStart_or_End/*-Start or -End*/>
+    template<class ElemType, int direction/*-1 or +1*/, int SEQUENCE_START_or_END/*_START or _END*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>  // TODO: unify the two flag sets
     class DelayedValueNode : public ComputationNode<ElemType>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
@@ -95,14 +95,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"DelayedValue"; }
 
         //Set sentence boundary information according to a specified time step. 
-        void ResetBound(Matrix<ElemType> * seg, vector<MinibatchPackingFlag> * minibatchPackingFlag)
+        void ResetBound(Matrix<ElemType> * seg, vector<MinibatchPackingFlags> * minibatchPackingFlags)
         {
             if (m_timeStep <= 0)
                 LogicError("timeStep should be 1 or larger");
 
-            ComputationNode<ElemType>::ResetBound(seg, minibatchPackingFlag);
+            ComputationNode<ElemType>::ResetBound(seg, minibatchPackingFlags);
 
-            m_shiftedMinibatchPackingFlag = *minibatchPackingFlag;
+            m_shiftedMinibatchPackingFlag = *minibatchPackingFlags;
             m_boundaryInfo = *seg;
 
             if (m_timeStep > 1)
@@ -114,11 +114,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 std::fill(numResetLeft.begin(), numResetLeft.end(), 0);
 
                 // Note: this loop direction is from PastValueNode. FutureValueNode uses this for loop:
-                //   for (int i = minibatchPackingFlag->size() - 1; i >= 0; i--) // Future
+                //   for (int i = minibatchPackingFlags->size() - 1; i >= 0; i--) // Future
                 // The loop bodies for each 'i' are independent, so the loop order should not matter; hence, this code can be shared.
-                for (int i = 0; i < minibatchPackingFlag->size(); i++)      // Past
+                for (int i = 0; i < minibatchPackingFlags->size(); i++)      // Past
                 {
-                    if ((*minibatchPackingFlag)[i] & (SequenceStart_or_End | MinibatchPackingFlag::NoFeature))
+                    if ((*minibatchPackingFlags)[i] & (SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
                     {
                         //we set timeStep-1 elements following it to be SequenceStart until met NoInput
                         for (int j = 0; j < numRows; j++)
@@ -158,7 +158,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows());
             assert(m_sentenceSeg != nullptr);
-            assert(m_minibatchPackingFlag != nullptr);
+            assert(m_minibatchPackingFlags != nullptr);
 
             Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.FrameSlice(FrameRange(frameRange.t(), 1)/*TODO: delete the next two parameters*/, frameRange.t(), 1);
             ComputeInputPartialSRP(frameRange, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
@@ -166,7 +166,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void WINAPI ComputeInputPartialSRP(const FrameRange & frameRange, int timeStep,
                                                   Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
-                                                  const Matrix<ElemType>& colBoundaryFlags, MinibatchPackingFlag minibatchPackingFlag)
+                                                  const Matrix<ElemType>& colBoundaryFlags, MinibatchPackingFlags minibatchPackingFlags)
         {
             size_t timeIdxInSeq = frameRange.t();
             size_t mNbr = frameRange.NumCols();
@@ -174,7 +174,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (timeIdxInSeq + direction * timeStep >= 0 && timeIdxInSeq + direction * timeStep < gradientValues.GetNumCols())
             {
                 // if there is a bondary in this frame, we treat each stream separately; otherwise we do all in one go
-                if (minibatchPackingFlag & (SequenceStart_or_End | MinibatchPackingFlag::NoFeature))
+                if (minibatchPackingFlags & (SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
                 {
                     for (int i = 0; i < mNbr; i++)
                     {
@@ -205,7 +205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void WINAPI EvaluateThisNodeSRP(const FrameRange & frameRange, const int timeStep,
                                                Matrix<ElemType>& functionValues, const Matrix<ElemType>& delayedActivation, const Matrix<ElemType>& inputFunctionValues,
-                                               const ElemType & initStateValue, const Matrix<ElemType> & colBoundaryFlags, const MinibatchPackingFlag minibatchPackingFlag)
+                                               const ElemType & initStateValue, const Matrix<ElemType> & colBoundaryFlags, const MinibatchPackingFlags minibatchPackingFlags)
         {
             size_t timeIdxInSeq = frameRange.t();
             size_t mNbr = frameRange.NumCols();
@@ -225,7 +225,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> out = functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq * mNbr, mNbr);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
 
-            if (minibatchPackingFlag & SequenceStart_or_End)
+            if (minibatchPackingFlags & SequenceStart_or_End)
             {
                 for (int i = 0; i < mNbr; i++)
                 {
@@ -334,7 +334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType m_initialActivationValue;      // starting value for hidden activation vector at boundary
         Matrix<ElemType> m_delayedActivation;   // saves the activation of the previous step that this node points to
         int      m_timeStep;                    // delay in frames (typ. 1)
-        vector<MinibatchPackingFlag> m_shiftedMinibatchPackingFlag;
+        vector<MinibatchPackingFlags> m_shiftedMinibatchPackingFlag;
         Matrix<ElemType> m_boundaryInfo;        // individual sentence boundary information 
         bool m_historyAlreadySet;               // for PastValueNode only
     };
@@ -349,9 +349,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
 
     template<class ElemType>
-    class PastValueNode : public DelayedValueNode<ElemType, -1, SEQUENCE_START, MinibatchPackingFlag::SequenceStart>
+    class PastValueNode : public DelayedValueNode<ElemType, -1, SEQUENCE_START, MinibatchPackingFlags::SequenceStart>
     {
-        typedef DelayedValueNode<ElemType, -1, SEQUENCE_START, MinibatchPackingFlag::SequenceStart> Base; UsingDelayedValueNodeMembers;
+        typedef DelayedValueNode<ElemType, -1, SEQUENCE_START, MinibatchPackingFlags::SequenceStart> Base; UsingDelayedValueNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -401,7 +401,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // reset past activity as it reached to the begining of a minibatch
             // the node pointed hasn't yet updated, so it is the past activity 
             assert(m_sentenceSeg != nullptr);
-            assert(m_minibatchPackingFlag != nullptr);
+            assert(m_minibatchPackingFlags != nullptr);
 
             if (frameRange.t() == 0 && m_historyAlreadySet == false)
                 m_delayedActivation = Inputs(0)->FunctionValues();
@@ -421,9 +421,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //get value from future (used in the bi-directional models)
     template<class ElemType>
-    class FutureValueNode : public DelayedValueNode<ElemType, +1, SEQUENCE_END, MinibatchPackingFlag::SequenceEnd>
+    class FutureValueNode : public DelayedValueNode<ElemType, +1, SEQUENCE_END, MinibatchPackingFlags::SequenceEnd>
     {
-        typedef DelayedValueNode<ElemType, +1, SEQUENCE_END, MinibatchPackingFlag::SequenceEnd> Base; UsingDelayedValueNodeMembers;
+        typedef DelayedValueNode<ElemType, +1, SEQUENCE_END, MinibatchPackingFlags::SequenceEnd> Base; UsingDelayedValueNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -468,7 +468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
             assert(m_sentenceSeg != nullptr);
-            assert(m_minibatchPackingFlag != nullptr);
+            assert(m_minibatchPackingFlags != nullptr);
 
             if (frameRange.t() == Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep - 1)
                 m_delayedActivation = Inputs(0)->FunctionValues();
@@ -1350,11 +1350,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 boundary.SetValue(SEQUENCE_MIDDLE);
                 boundary.ColumnSlice(0, 1).SetValue(SEQUENCE_START);
 
-                vector<MinibatchPackingFlag> minibatchPackingFlag;
-                minibatchPackingFlag.resize(nT);
-                std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-                minibatchPackingFlag[1] = MinibatchPackingFlag::SequenceStart;
-                ComputationNode<ElemType>::ResetBound(&boundary, &minibatchPackingFlag);
+                vector<MinibatchPackingFlags> minibatchPackingFlags;
+                minibatchPackingFlags.resize(nT);
+                std::fill(minibatchPackingFlags.begin(), minibatchPackingFlags.end(), MinibatchPackingFlags::None);
+                minibatchPackingFlags[1] = MinibatchPackingFlags::SequenceStart;
+                ComputationNode<ElemType>::ResetBound(&boundary, &minibatchPackingFlags);
 
                 f0 = Inputs(0)->FunctionValues();
                 f1 = Inputs(1)->FunctionValues();

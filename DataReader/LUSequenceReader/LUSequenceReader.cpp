@@ -719,8 +719,8 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         DEVICEID_TYPE sentenceSegDeviceId = mtSentenceBegin.GetDeviceId();
         mtSentenceBegin.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
 
-        m_minibatchPackingFlag.resize(mMaxSentenceLength);
-        std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
+        m_minibatchPackingFlags.resize(mMaxSentenceLength);
+        std::fill(m_minibatchPackingFlags.begin(), m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
 
         for (i = (int)mLastPosInSentence; j < (int)mMaxSentenceLength; i++, j++)
         {
@@ -736,7 +736,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                     if (mIgnoreSentenceBeginTag == false)  /// ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
                     {
                         mtSentenceBegin.SetValue(k, j, (ElemType)SEQUENCE_START);
-                        m_minibatchPackingFlag[j] |= MinibatchPackingFlag::SequenceStart;
+                        m_minibatchPackingFlags[j] |= MinibatchPackingFlags::SequenceStart;
                     }
                 }
 
@@ -799,7 +799,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 
                     m_labelIdData.push_back((LabelIdType)NULLLABEL);
                     mtSentenceBegin.SetValue(k, j, (ElemType) NO_INPUT);
-                    m_minibatchPackingFlag[j] |= MinibatchPackingFlag::NoInput;
+                    m_minibatchPackingFlags[j] |= MinibatchPackingFlags::NoInput;
                 }
 
             }
@@ -984,14 +984,14 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+void BatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags)
 {
     DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
     mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
     sentenceBegin.SetValue(mtSentenceBegin); 
     mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
 
-    minibatchPackingFlag = m_minibatchPackingFlag;
+    minibatchPackingFlags = m_minibatchPackingFlags;
 }
 
 template<class ElemType>
@@ -1291,14 +1291,14 @@ void MultiIOBatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, s
 }
 
 template<class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags)
 {
     /// run for each reader
     vector<size_t> col;
     size_t rows = 0, cols = 0;
     for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
     {
-        (p->second)->SetSentenceSegBatch(sentenceBegin, minibatchPackingFlag);
+        (p->second)->SetSentenceSegBatch(sentenceBegin, minibatchPackingFlags);
         if (rows == 0)
             rows = sentenceBegin.GetNumRows();
         else
