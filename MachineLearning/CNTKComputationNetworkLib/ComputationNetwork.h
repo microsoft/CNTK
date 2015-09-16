@@ -35,9 +35,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class ComputationNetwork : public ScriptableObjects::Object, public ScriptableObjects::HasToString, public ScriptableObjects::IConfigRecord
 {
 protected:
-    typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
-
-    typedef struct stRecurrentInfo
+    // TODO: comment: what info is stored here? For what?
+    struct RecurrentInfo
     {
         std::vector<ComputationNodeBasePtr> m_recurrentNodes;
         std::vector<ComputationNodeBasePtr> m_recurrentNodesForForward;
@@ -56,7 +55,7 @@ protected:
         }
 
         // TODO: why is this not a copy constructor or assignment operator?
-        void Copy(const stRecurrentInfo& src)
+        void Copy(const RecurrentInfo& src)
         {
             m_recurrentNodes = src.m_recurrentNodes;
             m_recurrentNodesForForward = src.m_recurrentNodesForForward;
@@ -66,7 +65,7 @@ protected:
             m_completedEvaluate = src.m_completedEvaluate;
             m_loopClosed = src.m_loopClosed;
         }
-    } RecurrentInfo;
+    };
 
 public:
 
@@ -176,6 +175,7 @@ public:
 
 private:
     wstring FormSpecialNodes(wstring style, std::vector<ComputationNodeBasePtr>& specialNodes);
+    typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
 public:
     void DescribeNetworkUsingDot(std::list<ComputationArc>& arcs, std::wstring outFile);
     void PlotNetworkTopology(const std::wstring outputFile); //  [1/13/2015 erw] plot network topology using dot language
@@ -594,8 +594,10 @@ public:
     // TODO: rename to ForwardProp()? To make it very clear?
     void Evaluate(const ComputationNodeBasePtr rootNode)
     {
+        // ...
         BuildAndValidateNetwork(rootNode);
 
+        // determines order of evaluation, such that children get evaluated before their parent nodes
         std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
 
 #ifdef DISPLAY_DEBUG
@@ -1147,19 +1149,25 @@ public:
         fprintf(stderr, "\n\n");
     }
 
+    // prepares the network for computation
+    // Done lazily, called for every minibatch's invocation of EvaluateNode().
     void BuildAndValidateNetwork(const ComputationNodeBasePtr rootNode)
     {
-        const ComputationNodeBasePtr key = rootNode;
+        const auto inserted = m_built.insert(rootNode).second;  // remember we built it
+        if (!inserted)
+            return;                                             // already done
 
-        //not found
-        if (m_built.find(key) == m_built.end())
-        {
-            m_built[key] = true;
-            FormRecurrentLoops(rootNode);
-            ValidateNetwork(rootNode);
-            CollectInputAndLeanableParameters(rootNode);
-            SetNodesReqMultiSeqHandling();
-        }
+        // remember recurrent loops for this root node
+        FormRecurrentLoops(rootNode);
+
+        //
+        ValidateNetwork(rootNode);
+
+        //
+        CollectInputAndLeanableParameters(rootNode);
+
+        //
+        SetNodesReqMultiSeqHandling();
     }
 
     //this function will need to be called before actual validation and execution to 
@@ -1473,37 +1481,28 @@ public:
 
 protected:
 
+    // TODO: decide where this stuff goes--Node or Network? Why is EnumerateNodes() in Node?
     static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
                                                            const bool forwardCompute)
     {
-        const ComputationNodeBasePtr key = rootNode;
-
-        //not found
-        if (orderMap.find(key) == orderMap.end())
-            orderMap[key] = rootNode->EnumerateNodes(forwardCompute);
-
-        return orderMap[key];
+        if (orderMap.find(rootNode) == orderMap.end())
+            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute);
+        return orderMap[rootNode];
     }
 
+    // TODO: what's the difference to the above?
     static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
                                                            const bool forwardCompute,
                                                            std::vector<ComputationNodeBasePtr> & rootRecurrentNodes)
     {
-        const ComputationNodeBasePtr key = rootNode;
-        std::list<ComputationNodeBasePtr> listNodes;
-
-        //not found
-        if (orderMap.find(key) == orderMap.end())
+        if (orderMap.find(rootNode) == orderMap.end())
         {
             rootRecurrentNodes.clear();
-            listNodes = rootNode->EnumerateNodes(forwardCompute, rootRecurrentNodes);
-
-            orderMap[key] = listNodes;
-
+            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, rootRecurrentNodes);
         }
-        return orderMap[key];
+        return orderMap[rootNode];
     }
 
 public:
@@ -1582,15 +1581,23 @@ protected:
     int m_actMiniBSize;
     size_t m_nbrSlicesInEachRecurrentIteration;
 
-    std::map<const ComputationNodeBasePtr, bool> m_built;
-    std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // this is the main container that holds this networks' nodes
+    // main node holder
+    std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes
+
+    // cache for evaluation ordering:
+
+private:    // TODO: make all private that can be made private
+    std::unordered_set<ComputationNodeBasePtr> m_built;   // [node] flag: BuildAndValidateNetwork() has been called
+protected:
 
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheEvalOrders;
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheGradientCalcOrders;
 
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputs;
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_learnableParameters;
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputs;                 // [out node] -> all input nodes
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_learnableParameters;    // [out node] -> all parameter nodes
 
+    // pool for matrices that can be shared across nodes
+    // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?
     MatrixPool m_matrixPool;
 };
 

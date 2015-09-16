@@ -593,8 +593,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[0] = inputNode;
         }
 
+#if 0   // folded into base function, to avoid virtual; that base function already knows about some node types anyway
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
-            std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromDelayNode)
+                                           std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromDelayNode)
         {
             if (visited.find(shared_from_this()) == visited.end())  //not visited
             {
@@ -602,12 +603,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 //children first for function evaluation
                 if (!IsLeaf())
-                {
-                    if (ChildrenNeedGradient())  //only nodes that require gradient calculation is included in gradient calculation
-                        m_needGradient = true;
-                    else
-                        m_needGradient = false;
-                }
+                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
                 result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
                 this->m_visitedOrder = result.size();
@@ -618,6 +614,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     sourceRecurrentNodePtr.push_back(shared_from_this());
             }
         }
+#endif
 
         static const std::wstring TypeName() { return L"PairNetwork"; }
 protected:

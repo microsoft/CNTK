@@ -465,9 +465,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // get the strong connected component from the graph
+    // This sets index, lowLink, m_visited, m_inStack
     void ComputationNetwork::getStrongSCC(const ComputationNodeBasePtr rootNode)    // TODO: method names start uppercase
     {
-                    /// notice that this graph including graphs from a parent networks if two or more networks are connected via pairnetwork node
+        /// notice that this graph including graphs from a parent networks if two or more networks are connected via PairNode
         std::unordered_set<ComputationNodeBasePtr> visited;
         std::list<ComputationNodeBasePtr> sccStack;
         size_t index = 0;
@@ -476,6 +477,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             strongSCC(rootNode, sccStack, index, loopId);
     }
 
+    // (called only from getStrongSCC())
     void ComputationNetwork::strongSCC(ComputationNodeBasePtr cur,      // TODO: method names start uppercase
                                        std::list<ComputationNodeBasePtr>& sccStack,
                                        size_t& index, size_t& loopId)
@@ -505,7 +507,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        if (cur->Getlowlink() == cur->GetIndex())
+        if (cur->Getlowlink() == cur->GetIndex())   // something special has happened   --TODO: comment what that was!!
         {
             RecurrentInfo rInfo;
             rInfo.m_loopId = loopId;
@@ -556,19 +558,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("There is infinite Loop which cannot be unrolled!!");
         }
     }
-            
-    //must be called before ValidateNetwork
+
+    // forms the recurrent loop that 'rootNode' participates in
+    // This sets/updates:
+    //  - 
+    // Must be called before ValidateNetwork() on root; will be called from inside ValidateNetwork() as well.
     void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr rootNode)
     {
-        std::vector<ComputationNodeBasePtr> sourceLoopNodes;
-
+        // ...?
         getStrongSCC(rootNode);
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, sourceLoopNodes);
+
+        std::vector<ComputationNodeBasePtr> sourceLoopNodesDummy;
+        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, sourceLoopNodesDummy);
         std::list<ComputationNodeBasePtr> nodesForGrad;
 
+        // ??
         MergeRecurrentLoops(rootNode);
 
-        /// debug purpose
+        /// debug purpose  --TODO: <-- this comment seems incorrect; SetVisitedOrder() is basis of IsSmaller()
+        // ... where does m_recurrentInfo get set?
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
         {
             fprintf(stderr, " nodes in the recurrent loops : \n");

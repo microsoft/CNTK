@@ -171,18 +171,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_minibatchPackingFlag = minibatchPackingFlag;
         }
 
-        void SetLoopId(const int id)
-        {
-            m_loopId = id;
-        }
-        void SetVisitedOrder(const int id)
-        {
-            m_visitedOrder = id;
-        }
-        void SetIndex(const size_t ind)
-        {
-            m_index = ind;
-        }
+        void SetLoopId(const int id) { m_loopId = id; }
+        void SetVisitedOrder(const int id) { m_visitedOrder = id; }
+        void SetIndex(const size_t ind) { m_index = ind; }
 
         void Setlowlink(const size_t lowlink)
         {
@@ -423,19 +414,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         std::list<ComputationNodeBasePtr> EnumerateNodes(const bool forwardComputation, std::vector<ComputationNodeBasePtr>& rootOfLoop)
         {
-            std::list<ComputationNodeBasePtr> result;
 
             if (forwardComputation)
             {
+                std::list<ComputationNodeBasePtr> result;
                 std::unordered_set<ComputationNodeBasePtr> visited;
                 EnumerateNodesForEval(visited, result, rootOfLoop, false);
+                return result;
             }
             else
-            {
-                result = EnumerateNodesForGradient();
-            }
-
-            return result;
+                return EnumerateNodesForGradient();
         }
 
         std::list<ComputationNodeBasePtr> ReshuffleNodes(std::map<int, std::list<ComputationNodeBasePtr>> recurrentResult)
@@ -450,19 +438,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         std::list<ComputationNodeBasePtr> EnumerateNodes(const bool forwardComputation)
         {
-            std::list<ComputationNodeBasePtr> result;
 
             if (forwardComputation)
             {
+                std::list<ComputationNodeBasePtr> result;
                 std::unordered_set<ComputationNodeBasePtr> visited;
                 EnumerateNodesForEval(visited, result);
+                return result;
             }
             else
-            {
-                result = EnumerateNodesForGradient();
-            }
-
-            return result;
+                return EnumerateNodesForGradient();
         }
 
     protected:
@@ -478,34 +463,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             return false;
         }
-        
-        // TODO: why virtual?
-        virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result,
-                                           std::vector<ComputationNodeBasePtr>& sourceRecurrentNodePtr, const bool isFromPastOrFutureValueNode)
+
+        void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result,
+                                   std::vector<ComputationNodeBasePtr>& sourceRecurrentNodePtr, const bool isFromPastOrFutureValueNode)
         {
             if (visited.find(shared_from_this()) == visited.end())  //not visited
             {
                 visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
-                for (int i = 0; i<m_children.size(); i++)
+                // children first for function evaluation
+                if (OperationName() != L"PairNetwork")
                 {
-                    if (m_children[i] == nullptr)
-                        continue;
-                    m_children[i]->EnumerateNodesForEval(visited, result, sourceRecurrentNodePtr,
-                                                         this->OperationName() == L"PastValue" || this->OperationName() == L"FutureValue");
+                    for (int i = 0; i < m_children.size(); i++)
+                    {
+                        if (m_children[i])
+                            m_children[i]->EnumerateNodesForEval(visited, result, sourceRecurrentNodePtr,
+                                                                 OperationName() == L"PastValue" || OperationName() == L"FutureValue");
+                    }
                 }
 
-                //children first for function evaluation
                 if (!IsLeaf())
-                {
-                    if (ChildrenNeedGradient())  //only nodes that require gradient calculation is included in gradient calculation
-                        m_needGradient = true;
-                    else
-                        m_needGradient = false;
-                }
+                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
                 result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
-                this->m_visitedOrder = result.size();
+                m_visitedOrder = result.size();
             }
             else
             {
@@ -514,64 +495,55 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        // TODO: what does this do?
+        // As a side effect, it also propagates m_needGradient to intermediate nodes
         void ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult,
-                                                     std::list<ComputationNodeBasePtr>& noRecurrentResult)
+            std::list<ComputationNodeBasePtr>& noRecurrentResult)
         {
             if (visited.find(shared_from_this()) == visited.end())  //not visited
             {
                 visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 for (int i = 0; i<m_children.size(); i++)
-                {
                     m_children[i]->ReshuffleNodesForEvalWithRecurrentLoops(visited, recurrentResult, noRecurrentResult);
-                }
 
                 //children first for function evaluation
                 if (!IsLeaf())
-                {
-                    if (ChildrenNeedGradient())  //only nodes that require gradient calculation is included in gradient calculation
-                        m_needGradient = true;
-                    else
-                        m_needGradient = false;
-                }
+                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
                 if (LoopId() >= 0)
-                {
                     recurrentResult[LoopId()].push_back(shared_from_this());
-                }
                 else
-                {
                     noRecurrentResult.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
-                }
             }
         }
 
+        // create list such that children are evaluated before their parents
+        // Unbeknownst to the name of the function, it also updates the m_needGradient flags (set if children are set).
+        // TODO: when is this called vs. the other?
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result)
         {
             if (visited.find(shared_from_this()) == visited.end())  //not visited
             {
                 visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
+                // first put children into list, before putting ourselves
                 for (int i = 0; i<m_children.size(); i++)
-                {
                     m_children[i]->EnumerateNodesForEval(visited, result);
-                }
 
-                //children first for function evaluation
+                // propagate needGradient flags upwards from leaves
                 if (!IsLeaf())
-                {
-                    if (ChildrenNeedGradient())  //only nodes that require gradient calculation is included in gradient calculation
-                        m_needGradient = true;
-                    else
-                        m_needGradient = false;
-                }
+                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
+                // now that all children are in list before us, put ourselves
                 result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
             }
         }
 
     public:
 
+        // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
+        // If this returns false, node must be evaluated to update m_functionValues.
         bool IsFuncValueOlderThanInputs() const
         {
             for (size_t i = 0; i<ChildrenSize(); i++)
@@ -587,10 +559,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ClearGradientForChildren(const int /*iActMiniBatchSize*/) = 0;
 
         typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
-        //  [1/13/2015 erw] add to enumerate all the edges 
+        // [1/13/2015 erw] add to enumerate all the edges 
+        // enumerate arcs that can be reached starting from the current node's children
+        // [in/out] visited record already visited nodes 
         void EnumerateArcs(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationArc>& arcs)
-            //  enumerate arcs that can be reached starting from the current node's children
-            //  [in/out] visited record already visited nodes 
         {
             std::list<ComputationNodeBasePtr>	tovisit;
 
@@ -610,9 +582,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             arcs.push_back(ComputationArc(curNode, curNode->m_children[i]));
 
                             if (visited.find(curNode->m_children[i]) == visited.end()) // this children has not been visited before 
-                            {
                                 tovisit.push_front(curNode->m_children[i]);		// going to visit each of the children
-                            }
                         }
                         visited.insert(curNode);
                     }
@@ -648,12 +618,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return name;
         }
 
+        // determine order in which nodes must be processed for back prop
         std::list<ComputationNodeBasePtr> EnumerateNodesForGradient()
         {
-            std::list<ComputationNodeBasePtr>  nodes = this->EnumerateNodes(true);  //get forward computation order first
+            std::list<ComputationNodeBasePtr> nodes = EnumerateNodes(true);  //get forward computation order first
 
-            nodes.sort(IsSmaller);
-            nodes.reverse();
+            // TODO: comment why can't directly reverse(); what's wrong with EnumerateNodes()' result?
+            nodes.sort(IsSmaller);  // sort nodes by m_visitedOrder   --TODO: why?
+            nodes.reverse();        // and go backwards
 
             return nodes;
         }
