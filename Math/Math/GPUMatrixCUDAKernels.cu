@@ -13,6 +13,19 @@
 #include "CommonMatrix.h"
 #include "device_functions.h"
 
+// REVIEW alexeyk: disable warnings properly for GCC/clang
+#ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4100)
+#pragma warning (disable: 4127)
+#pragma warning (disable: 4201)
+#pragma warning (disable: 4515)
+#endif
+#include <cub/cub.cuh>
+#ifdef _MSC_VER
+#pragma warning (pop)
+#endif
+
 // We would like to use 64-bit integer to support large matrices. However, CUDA seems to support only 32-bit integer
 // For now, use int32_t to ensure that both Linux and Windows see this as 32 bit integer type.
 
@@ -4502,4 +4515,47 @@ __global__ void _AssignSequenceError(const ElemType hsmoothingWeight, ElemType *
     //error[id] -= alpha * (label[id] - dnnoutput[id] );
 
 }
+
+template<class ElemType>
+__global__ void _copyTopKResults(const uint64_t* indexes, const ElemType* values, ElemType* maxIndexes, ElemType* maxValues,
+    CUDA_LONG crow, CUDA_LONG ccol, int topK)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= topK * ccol)
+        return;
+    CUDA_LONG irow = id % topK;
+    CUDA_LONG icol = id / topK;
+    maxIndexes[id] = static_cast<CUDA_LONG>(indexes[icol * crow + irow] >> 32);
+    maxValues[id] = values[icol * crow + irow];
+}
+
+template<int BlockSize, class ElemType>
+__global__ void _assignNumOfDiffCol(const ElemType *a, const ElemType *b, ElemType *c, CUDA_LONG crowB, CUDA_LONG ccol)
+{
+    assert(gridDim.x == 1 && gridDim.y == 1 && gridDim.z == 1);
+
+    int cur = 0;
+    CUDA_LONG icol = threadIdx.x;
+    for (; icol < ccol; icol += blockDim.x)
+    {
+        ElemType key = a[icol];
+        CUDA_LONG idxB = icol * crowB;
+        CUDA_LONG irow = 0;
+        for (; irow < crowB; irow++, idxB++)
+        {
+            if (b[idxB] == key)
+                break;
+        }
+
+        cur += (irow == crowB);
+    }
+
+    using BlockReduceT = cub::BlockReduce<int, BlockSize>;
+    __shared__ typename BlockReduceT::TempStorage tmp;
+
+    int res = BlockReduceT(tmp).Sum(cur);
+    if (threadIdx.x == 0)
+        *c = res;
+}
+
 #endif // !CPUONLY
