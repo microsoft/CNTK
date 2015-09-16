@@ -560,16 +560,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // forms the recurrent loop that 'rootNode' participates in
+    // TODO: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't. Not sure why/how that's OK--won't we reassign loop ids?
     // This sets/updates:
     //  - 
-    // Must be called before ValidateNetwork() on root; will be called from inside ValidateNetwork() as well.
+    // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
     void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr rootNode)
     {
         // ...?
         getStrongSCC(rootNode);
 
         std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*recurrent*/);
-        std::list<ComputationNodeBasePtr> nodesForGrad;
 
         // ??
         MergeRecurrentLoops(rootNode);
@@ -663,7 +663,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReorderLoops(nodes, recurrentNodes, noRecurrentNodes);
 
             m_cacheEvalOrders[rootNode] = nodes;
-            nodesForGrad = nodes;
+            std::list<ComputationNodeBasePtr> nodesForGrad = nodes;
             nodesForGrad.reverse();
             m_cacheGradientCalcOrders[rootNode] = nodesForGrad;
 

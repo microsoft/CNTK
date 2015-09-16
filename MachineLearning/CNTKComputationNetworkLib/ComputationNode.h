@@ -109,6 +109,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // base class has nothing to load
         }
 
+        // float/double-independent access to the m_functionValues for a few specific use cases
+        // TODO: Not nice. This would go away if we abstracted out the matrix type as well from float/double.
         virtual size_t GetNumRows() const = 0;
         virtual size_t GetNumCols() const = 0;
         virtual void Resize(size_t rows, size_t cols) = 0;

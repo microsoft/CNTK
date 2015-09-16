@@ -67,8 +67,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using SGDBase::m_numMBsToShowResult;
         using SGDBase::m_gradientCheckSigDigit;
         using SGDBase::m_prevChosenMinibatchSize;
-        using SGDBase::GetTrainCriterionNodes;
-        using SGDBase::GetEvalCriterionNodes;
+        using SGDBase::CriterionNodes;
         using SGDBase::UpdateWeights;
         using SGDBase::GetCheckPointFileNameForEpoch;
 

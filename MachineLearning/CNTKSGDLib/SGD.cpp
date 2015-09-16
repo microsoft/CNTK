@@ -8,9 +8,13 @@
 #include "AllReduceDistGradAggregator.h"
 #include "MPIWrapper.h"
 
+#include <map>
+
 extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+using namespace std;
 
 template<class ElemType>
 void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb, int numProcessor, int myID)
@@ -842,25 +846,36 @@ template<class ElemType>
 
 // protected:
 
+    // Get{Train,Eval}CriterionNodes() return a reference that is, unfortunately, dependent on the network.
+    // So we hold those inside here. Not very nice. Also not thread-safe. This may go away once we fix sequence-to-sequence models properly.
+    static map<ComputationNetwork*, vector<ComputationNodeBasePtr>> tmpCriterionNodeSets;
+    // TODO: test this, then remove this comment
+
     template<class ElemType>
     std::vector<ComputationNodeBasePtr> & SGD<ElemType>::GetTrainCriterionNodes(ComputationNetwork& net)
     {
         fprintf(stderr, "GetTrainCriterionNodes %ls ...\n", m_trainCriterionNodeName.c_str());
         if (!m_trainCriterionNodeName.empty())
-            return net.TrainCriterionNodesFrom(m_trainCriterionNodeName);
+        {
+            tmpCriterionNodeSets[&net] = net.CriterionNodesFrom(m_trainCriterionNodeName);
+            return tmpCriterionNodeSets[&net];
+        }
         else
             return net.FinalCriterionNodes();
-        }
+    }
 
     template<class ElemType>
     std::vector<ComputationNodeBasePtr> & SGD<ElemType>::GetEvalCriterionNodes(ComputationNetwork& net)
     {
         fprintf(stderr, "GetEvalCriterionNodes %ls ...\n", m_evalCriterionNodeName.c_str());
         if (!m_evalCriterionNodeName.empty())
-            return net.EvalCriterionNodesFrom(m_evalCriterionNodeName);
+        {
+            tmpCriterionNodeSets[&net] = net.CriterionNodesFrom(m_evalCriterionNodeName);
+            return tmpCriterionNodeSets[&net];
+        }
         else
             return net.EvaluationNodes();
-        }
+    }
 
     template<class ElemType>
     void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetwork& net,

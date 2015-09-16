@@ -87,7 +87,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int i = 0; i < evalNodeNames.size(); i++)
                 {
                     const auto & node = m_net.GetNodeFromName(evalNodeNames[i]);
-                    m_net.BuildAndValidateNetwork(node);
+                    m_net.BuildAndValidateSubNetwork(node);
                     if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
                         throw std::logic_error("The nodes passed to SimpleEvaluator::Evaluate function must be either eval or training criterion nodes (which evalues to 1x1 value).");
                     evalNodes.push_back(node);
