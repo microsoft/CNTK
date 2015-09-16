@@ -208,7 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
             for (size_t i = 0; i < labelNodes.size(); i++)
                 inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->FunctionValues();
-            inputMatrices[L"numberobs"] = new Matrix<ElemType>(1, 1, m_net.GetDeviceID());
+            inputMatrices[L"numberobs"] = new Matrix<ElemType>(1, 1, m_net.GetDeviceId());
 
             dataReader->StartMinibatchLoop(mbSize, 0, testSize);
 
@@ -631,7 +631,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 (*ptr)->SetNbrSlicesEachRecurrentIter(1);
             }
 
-            Matrix<ElemType> historyMat(m_net.GetDeviceID());
+            Matrix<ElemType> historyMat(m_net.GetDeviceId());
 
             bool bDecoding = true;
             while (bDecoding)
