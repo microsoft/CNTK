@@ -594,7 +594,10 @@ public:
     // TODO: rename to ForwardProp()? To make it very clear?
     void Evaluate(const ComputationNodeBasePtr rootNode)
     {
-        // ...
+        // prepare to compute with the subnetwork that this rootNode depends on, including
+        //  - auto-detecting recurrent loops
+        //  - calling Validate() on all nodes, which, a.o, resizes the matrices
+        //  - ...more stuff
         BuildAndValidateSubNetwork(rootNode);
 
         // determines order of evaluation, such that children get evaluated before their parent nodes
@@ -843,30 +846,18 @@ public:
         return m_learnableParameters[rootNode];
     }
 
-    inline std::vector<ComputationNodeBasePtr> & FeatureNodes()        { return m_features; }
-    inline std::vector<ComputationNodeBasePtr> & LabelNodes()          { return m_labels; }
+    inline std::vector<ComputationNodeBasePtr> & FeatureNodes()        { return m_features;      }
+    inline std::vector<ComputationNodeBasePtr> & LabelNodes()          { return m_labels;        }
     inline std::vector<ComputationNodeBasePtr> & FinalCriterionNodes() { return m_finalCriteria; }
 
-    inline std::vector<ComputationNodeBasePtr> & TrainCriterionNodesFrom(wstring criterionNodeName)
+    inline std::vector<ComputationNodeBasePtr> CriterionNodesFrom(const wstring & criterionNodeName)
     {
-        ComputationNodeBasePtr node = this->GetNodeFromName(criterionNodeName);
-        this->ValidateSubNetwork(node);
+        ComputationNodeBasePtr node = GetNodeFromName(criterionNodeName);
+        ValidateSubNetwork(node);
         if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
-            InvalidArgument("the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
-        m_tmpTrainCriterion.clear();
-        m_tmpTrainCriterion.push_back(node);
-        return m_tmpTrainCriterion;
-    }
-
-    inline std::vector<ComputationNodeBasePtr> & EvalCriterionNodesFrom(wstring criterionNodeName)
-    {
-        ComputationNodeBasePtr node = this->GetNodeFromName(criterionNodeName);
-        this->ValidateSubNetwork(node);
-        if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
-            InvalidArgument("the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
-        m_tmpEvalulationCriterion.clear();
-        m_tmpEvalulationCriterion.push_back(node);
-        return m_tmpEvalulationCriterion;
+            InvalidArgument("the criterionNodeName specified in the config file is not a valid training or eval criterion node.");
+        // TODO: test this, then remove this comment
+        return std::vector<ComputationNodeBasePtr> { node };
     }
 
     inline std::vector<ComputationNodeBasePtr> & NodesReqMultiSeqHandling() { return m_nodesReqMultiSeqHandling; }
@@ -1072,16 +1063,17 @@ private:
     template<class N> void GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequirePreComputation, const ComputationNodeBasePtr rootNode, bool checkComputed);
 public:
     //return list of nodes that require precomputation and not precomputed yet.
-    // TODO: name has a grammar error, fix
     std::list<ComputationNodeBasePtr> GetNodesRequiringPreComputation(const ComputationNodeBasePtr rootNode = nullptr, bool checkComputed = true);
     //return list of nodes that require precomputation and not precomputed yet.
-    // TODO: name has grammar error, fix
     std::list<ComputationNodeBasePtr> GetNodesRequiringBatchMode(const ComputationNodeBasePtr rootNode = nullptr, bool checkComputed = true);
 
     // -----------------------------------------------------------------------
     // evaluation
     // -----------------------------------------------------------------------
 
+private:
+
+public: // yak--used by NDLUtil. Will go away someday.
     // ValidateNetwork() - Validate the entire network
     // This calls ValidateNetowrk(Node) for all output nodes.
     // This is used after loading or for dumping the network.
@@ -1135,9 +1127,10 @@ public:
             }
         }
     }
+private:
 
     // validate sub-network needed to evalute a specific output node
-    // Note: must call FormRecurrentNodes() on this node before calling this.
+    // Note: under some circumstances, one must call FormRecurrentNodes() on this node before calling this. TODO: Not clear which ones.
     // TODO: ^^ is this really needed? Can we just call it inside?
     void ValidateSubNetwork(const ComputationNodeBasePtr rootNode)
     {
@@ -1153,7 +1146,7 @@ public:
 
         fprintf(stderr, "\n\n");
     }
-
+public:
     // prepares the network for computation
     // Done lazily, called for every minibatch's invocation of EvaluateNode().
     void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode)
@@ -1460,52 +1453,30 @@ public:
             m_recurrentInfo[i].m_completedGradient = false;
     }
 
-#if 0
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr rootNode, bool recurrent)
-    {
-        if (!rootNode)
-            LogicError("rootNode is pointing to a nullptr.");
-
-        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*forward*/, recurrent);
-    }
-#endif
-
+    // determine the required order in which nodes must be computed in order to compute 'rootNode'
     // recurrent == true is only used when called from FormRecurrentLoops()
     std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr rootNode, bool recurrent)
     {
-        if (!rootNode)
-            LogicError("rootNode is NULL.");
-
-        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*forward*/, recurrent);
+        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*means for forward prop*/, recurrent);
     }
 
+    // determine the required order in which nodes must be computed in order to compute the gradient of 'rootNode'
+    // Basically returns the reverse of GetEvalOrder(), with some special consideration to loops.
     std::list<ComputationNodeBasePtr>& GetGradientCalcOrder(const ComputationNodeBasePtr rootNode)
     {
+        return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*means for backprop*/, false/*recurrent*/);
+    }
+
+private:
+
+    // determine computation order to evalute a node (forward prop) or a node's gradient (backprop)
+    // This is the common part of GetEvalOrder() and GetGradientCalcOrder().
+    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
+                                                           std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
+                                                           const bool forwardCompute, bool recurrent)
+    {
         if (!rootNode)
             LogicError("rootNode is NULL.");
-
-        return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*not forward*/, false/*recurrent*/);
-    }
-
-protected:
-
-#if 0
-    // TODO: decide where this stuff goes--Node or Network? Why is EnumerateNodes() in Node?
-    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
-                                                           std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                           const bool forwardCompute, bool recurrent)
-    {
-        if (orderMap.find(rootNode) == orderMap.end())
-            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, recurrent);
-        return orderMap[rootNode];
-    }
-#endif
-
-    // TODO: what's the difference to the above?
-    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
-                                                           std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                           const bool forwardCompute, bool recurrent)
-    {
         if (orderMap.find(rootNode) == orderMap.end())
             orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, recurrent);
         return orderMap[rootNode];
@@ -1574,11 +1545,6 @@ protected:
 
     std::vector<RecurrentInfo> m_recurrentInfo;
 
-    /** temporary space
-    */
-    std::vector<ComputationNodeBasePtr> m_tmpTrainCriterion; /// array saving tempary query terms
-    std::vector<ComputationNodeBasePtr> m_tmpEvalulationCriterion; /// array saving tempary query terms
-
     //used for sentence boundary information passed from reader to reset RNN state 
     Matrix<float> m_SentenceBoundary; // this matrix is always in CPU memory  --TODO: should rather be a matrix of some int
     // specify how the minibatch is packed for each sample
@@ -1590,11 +1556,9 @@ protected:
     // main node holder
     std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes
 
-    // cache for evaluation ordering:
-
 private:    // TODO: make all private that can be made private
+    // cache for evaluation ordering:
     std::unordered_set<ComputationNodeBasePtr> m_built;   // [node] flag: BuildAndValidateSubNetwork() has been called
-protected:
 
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheEvalOrders;
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheGradientCalcOrders;
