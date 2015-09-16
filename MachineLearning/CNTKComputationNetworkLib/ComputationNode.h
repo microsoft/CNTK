@@ -418,7 +418,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // The 'recurrent' version is only called from FormRecurrentLoops().
         // Side-effects (unbeknownst to the name of the function):
         //  - m_needGradient flags, are propagated up from children
-        //  - m_visitedOrder (only if 'recurrent' flag is sert)
+        //  - m_visitedOrder (only if 'recurrent' flag is set; otherwise leave untouched)
         std::list<ComputationNodeBasePtr> EnumerateNodes(bool forForwardProp/*else get order for backprop*/, bool recurrent)
         {
             std::list<ComputationNodeBasePtr> nodes;
