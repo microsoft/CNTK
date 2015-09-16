@@ -1094,18 +1094,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
-            if (m_sentenceBoundaryFlags != nullptr && m_minibatchPackingFlags != nullptr 
-                && !m_sentenceBoundaryFlags->IsEmpty() && !m_minibatchPackingFlags->size() == 0)
+            if (m_pMBLayout && !m_pMBLayout->IsEmpty())
             {
-                size_t nS = m_sentenceBoundaryFlags->GetNumRows();
+                size_t nS = m_pMBLayout->GetNumStreams();
 
-                Matrix<ElemType> colSeg(m_sentenceBoundaryFlags->GetDeviceId());
+                Matrix<ElemType> colSeg(m_pMBLayout->m_sentenceBoundaryFlags.GetDeviceId());
+                // TODO: ^^ device id is CPUDEVICE. Enforce?
 
                 size_t j = t / nS;
                 size_t i = t % nS;
-                if ((*m_minibatchPackingFlags)[j] & MinibatchPackingFlags::NoLabel)
+                if (m_pMBLayout->m_minibatchPackingFlags[j] & MinibatchPackingFlags::NoLabel)
                 {
-                    if ((int)(*m_sentenceBoundaryFlags)(i,j) & NO_LABEL)
+                    if ((int)m_pMBLayout->m_sentenceBoundaryFlags(i,j) & NO_LABEL)
                     {
                         matrixToBeMasked.ColumnSlice(t,1).SetValue(0);
 

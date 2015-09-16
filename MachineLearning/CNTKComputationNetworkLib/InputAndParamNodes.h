@@ -553,11 +553,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0)
                 InvalidArgument("Delay operation only takes one input.");
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
-            assert(m_sentenceBoundaryFlags != nullptr);
+            assert(m_pMBLayout);
 
             Matrix<ElemType> mTmp = Inputs(inputIndex)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep), 
-                mTmp);
+            Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep), mTmp);
         }
 
         virtual void EvaluateThisNode()

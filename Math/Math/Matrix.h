@@ -61,13 +61,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-    // TODO: move this to an appropriate place and name it properly
-    class MBLayout
-    {
-    public:
-
-    };
-
     enum CurrentDataLocation
     {
         NONE, CPU, GPU, BOTH
@@ -518,4 +511,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     typedef Matrix<float> SingleMatrix;
     typedef Matrix<double> DoubleMatrix;
+
+    // TODO: move this to an appropriate place and name it properly
+    // MBLayout -- layout information of minibatch
+    // Currently this is to bind the two somewhat inconsistent boundary flags and packing flags.
+    // Once that is unified, we can clean it up further. For now, it's just moving the data members.
+    struct MBLayout
+    {   
+        MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { }
+
+        Matrix<float> m_sentenceBoundaryFlags;  // (t,stream)
+        // ^^ float -> MinibatchPackingFlags, right?
+        // This matrix ^^ is always in CPU memory  --TODO: should rather be a matrix of some int
+        /// conditionally point to either a pointer to that provided by network, or point to 
+        /// an individual sentence boundary info, which happens if timeStep > 1 is required for PastValue node
+        vector<MinibatchPackingFlags> m_minibatchPackingFlags;
+
+        // these accessors were for now just collected from actual usage; need to be cleaned up once this compiles again
+        size_t GetNumFrames()  const { return m_sentenceBoundaryFlags.GetNumCols(); }
+        size_t GetNumStreams() const { return m_sentenceBoundaryFlags.GetNumRows(); }
+        size_t GetSize() const { return m_minibatchPackingFlags.size(); }
+        // ^^ TODO: add a check whether Size() == GetNumFrames(); it really should, unless I misunderstood
+        bool IsEmpty() const { return m_sentenceBoundaryFlags.IsEmpty() || m_minibatchPackingFlags.size() == 0; }
+    };
 }}}
