@@ -61,6 +61,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
+    // TODO: move this to an appropriate place and name it properly
+    class MBLayout
+    {
+    public:
+
+    };
+
     enum CurrentDataLocation
     {
         NONE, CPU, GPU, BOTH

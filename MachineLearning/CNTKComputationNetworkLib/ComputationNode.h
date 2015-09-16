@@ -80,7 +80,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_visited(false),
             m_inStack(false),
             m_minibatchPackingFlags(nullptr),
-            m_sentenceSeg(nullptr),
+            m_sentenceBoundaryFlags(nullptr),
             m_reqMultiSeqHandling(false),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name)
         {
@@ -169,7 +169,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ResetBound(Matrix<float> * seg, vector<MinibatchPackingFlags> *minibatchPackingFlags)
         {
             assert(seg->GetNumCols() == minibatchPackingFlags->size());
-            m_sentenceSeg = seg;
+            m_sentenceBoundaryFlags = seg;
             m_minibatchPackingFlags = minibatchPackingFlags;
         }
 
@@ -687,7 +687,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
-        Matrix<float> * m_sentenceSeg;  // TODO: this should be not a float but some integer type
+        Matrix<float> * m_sentenceBoundaryFlags;  // TODO: this should be not a float but some integer type
         /// conditionally point to either a pointer to that provided by network, or point to 
         /// an indiviaul sentence boundary info, which happens if timeStep > 1 is required for PastValue node
         vector<MinibatchPackingFlags> * m_minibatchPackingFlags;
@@ -903,18 +903,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
-            if (m_sentenceSeg != nullptr && 
+            if (m_sentenceBoundaryFlags != nullptr && 
                 m_minibatchPackingFlags != nullptr && 
-                !m_sentenceSeg->IsEmpty() && 
+                !m_sentenceBoundaryFlags->IsEmpty() && 
                 !m_minibatchPackingFlags->size() == 0)
             {
                 size_t nT = matrixToBeMasked.GetNumCols();
-                size_t nS = m_sentenceSeg->GetNumRows();
+                size_t nS = m_sentenceBoundaryFlags->GetNumRows();
 
                 if (m_minibatchPackingFlags->size() != nT / nS)
                     LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
 
-                //Matrix<ElemType> colSeg(m_sentenceSeg->GetDeviceId());
+                //Matrix<ElemType> colSeg(m_sentenceBoundaryFlags->GetDeviceId());
 
                 size_t startT = (timeIdxInSeq == (size_t)-1) ? 0 : timeIdxInSeq * nS;
                 size_t endT = (timeIdxInSeq == (size_t)-1) ? nT : timeIdxInSeq * nS + nS;
@@ -924,7 +924,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if ((*m_minibatchPackingFlags)[j] & MinibatchPackingFlags::NoLabel)
                     {
-                        const auto & colSeg = m_sentenceSeg->ColumnSlice(j,1);
+                        const auto & colSeg = m_sentenceBoundaryFlags->ColumnSlice(j,1);
                         for (int i = 0; i < nS; i++)
                             if ((int)colSeg(i,0) & NO_LABEL)
                                 matrixToBeMasked.ColumnSlice(utt_t+i, 1).SetValue(0);
@@ -939,13 +939,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /*
         virtual size_t GetNumSamplesWithLabel(const size_t numAllSamples)
         {
-            if (m_sentenceSeg != nullptr &&
+            if (m_sentenceBoundaryFlags != nullptr &&
                 m_minibatchPackingFlags != nullptr &&
-                !m_sentenceSeg->IsEmpty() &&
+                !m_sentenceBoundaryFlags->IsEmpty() &&
                 !m_minibatchPackingFlags->size() == 0)
             {
-                size_t numTimeSteps = m_sentenceSeg->GetNumCols();
-                size_t numSequences = m_sentenceSeg->GetNumRows();
+                size_t numTimeSteps = m_sentenceBoundaryFlags->GetNumCols();
+                size_t numSequences = m_sentenceBoundaryFlags->GetNumRows();
 
                 if (m_minibatchPackingFlags->size() != numTimeSteps)
                 {
@@ -960,7 +960,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (int i = 0; i < numSequences; i++)
                         {
-                            if ((int)(*m_sentenceSeg)(i, j) & NO_LABEL)
+                            if ((int)(*m_sentenceBoundaryFlags)(i, j) & NO_LABEL)
                             {
                                 numSamplesWithoutLabel++;
                             }
@@ -1289,7 +1289,7 @@ protected:  \
     using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
     using Base::m_visitedOrder; using Base::m_index; using Base::m_lowlink; using Base::m_visited; using Base::m_inStack; \
     using Base::m_indexInLoop; \
-    using Base::m_sentenceSeg; using Base::m_minibatchPackingFlags; \
+    using Base::m_sentenceBoundaryFlags; using Base::m_minibatchPackingFlags; \
     using Base::m_reqMultiSeqHandling; using Base::UseCustomizedMultiSeqHandling; \
     using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
