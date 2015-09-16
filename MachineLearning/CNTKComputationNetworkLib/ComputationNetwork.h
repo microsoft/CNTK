@@ -1454,6 +1454,7 @@ public:
             m_recurrentInfo[i].m_completedGradient = false;
     }
 
+#if 0
     std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr rootNode, bool recurrent)
     {
         if (!rootNode)
@@ -1461,27 +1462,28 @@ public:
 
         return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*forward*/, recurrent);
     }
+#endif
 
-    // called from FormRecurrentLoops() only
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr rootNode, bool recurrent,
-                                                    std::vector<ComputationNodeBasePtr>& recurrentNodes)
+    // recurrent == true is only used when called from FormRecurrentLoops()
+    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr rootNode, bool recurrent)
     {
         if (!rootNode)
-            LogicError("rootNode is pointing to a nullptr.");
+            LogicError("rootNode is NULL.");
 
-        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*forward*/, recurrent, recurrentNodes);
+        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*forward*/, recurrent);
     }
 
     std::list<ComputationNodeBasePtr>& GetGradientCalcOrder(const ComputationNodeBasePtr rootNode)
     {
         if (!rootNode)
-            LogicError("rootNode is pointing to a nullptr.");
+            LogicError("rootNode is NULL.");
 
         return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*not forward*/, false/*recurrent*/);
     }
 
 protected:
 
+#if 0
     // TODO: decide where this stuff goes--Node or Network? Why is EnumerateNodes() in Node?
     static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
@@ -1491,18 +1493,15 @@ protected:
             orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, recurrent);
         return orderMap[rootNode];
     }
+#endif
 
     // TODO: what's the difference to the above?
     static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                           const bool forwardCompute, bool recurrent,
-                                                           std::vector<ComputationNodeBasePtr> & rootRecurrentNodes)
+                                                           const bool forwardCompute, bool recurrent)
     {
         if (orderMap.find(rootNode) == orderMap.end())
-        {
-            rootRecurrentNodes.clear();
-            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, recurrent, rootRecurrentNodes);
-        }
+            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, recurrent);
         return orderMap[rootNode];
     }
 
