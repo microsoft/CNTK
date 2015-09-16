@@ -157,7 +157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
 
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows());
-            assert(m_sentenceSeg != nullptr);
+            assert(m_sentenceBoundaryFlags != nullptr);
             assert(m_minibatchPackingFlags != nullptr);
 
             Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.FrameSlice(FrameRange(frameRange.t(), 1)/*TODO: delete the next two parameters*/, frameRange.t(), 1);
@@ -400,7 +400,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // reset past activity as it reached to the begining of a minibatch
             // the node pointed hasn't yet updated, so it is the past activity 
-            assert(m_sentenceSeg != nullptr);
+            assert(m_sentenceBoundaryFlags != nullptr);
             assert(m_minibatchPackingFlags != nullptr);
 
             if (frameRange.t() == 0 && m_historyAlreadySet == false)
@@ -467,7 +467,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
-            assert(m_sentenceSeg != nullptr);
+            assert(m_sentenceBoundaryFlags != nullptr);
             assert(m_minibatchPackingFlags != nullptr);
 
             if (frameRange.t() == Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep - 1)
@@ -625,7 +625,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
                     PrepareThisErrorsBeforeBackProp(timeIdxInSeq, nT, error, stateError, grdToPrevOutput, grdToPrevState,
-                                                    m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, m_samplesInRecurrentStep, m_sentenceSeg);
+                                                    m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, m_samplesInRecurrentStep, m_sentenceBoundaryFlags);
 
 #ifdef DEBUG_DECODER
                     fprintf(stderr, "output error [%ld] norm = %.8e\n", timeIdxInSeq, error.FrobeniusNorm());
@@ -637,7 +637,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     grdToPrevOutput.SetValue(0);
                     grdToPrevState.SetValue(0);
 
-                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, m_sentenceSeg);
+                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, m_sentenceBoundaryFlags);
 
                     ComputeInputGradientWrtGates(
                         error,
@@ -666,7 +666,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     );
                     grdToObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep).SetValue(grdToObsSlice);
 
-                    PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, m_samplesInRecurrentStep, m_sentenceSeg);
+                    PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, m_samplesInRecurrentStep, m_sentenceBoundaryFlags);
                 }
 #ifdef DEBUG_DECODER
                 fprintf(stderr, "after error prop b_c norm = %.8e\n", Inputs(4)->FunctionValues().ColumnSlice(0, 1).FrobeniusNorm());
@@ -923,7 +923,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", t, nT);
 
             int utt_t = (int)t / m_samplesInRecurrentStep;
-            Matrix<float> thisCol = m_sentenceSeg->ColumnSlice(utt_t, 1);
+            Matrix<float> thisCol = m_sentenceBoundaryFlags->ColumnSlice(utt_t, 1);
             thisCol.Reshape(1, m_samplesInRecurrentStep);
             return (int) thisCol.ColumnSlice(streamid, 1).Get00Element();
         }
@@ -1006,7 +1006,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
                     Matrix<ElemType> sliceTanhInput = tanhObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
 
-                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, m_sentenceSeg);
+                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, m_sentenceBoundaryFlags);
 
                     EvaluateThisNodeS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
                             sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
