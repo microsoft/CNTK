@@ -412,18 +412,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return true;
         }
 
-        std::list<ComputationNodeBasePtr> EnumerateNodes(const bool forwardComputation, bool recurrent)
+        // determine enumeration order for everything needed to evaluate this node (and its children)
+        // This creates a list such that children are evaluated before their parents.
+        // If !forForwardProp then the order will be reversed, suitable for backprop.
+        // The 'recurrent' version is only called from FormRecurrentLoops().
+        // Side-effects (unbeknownst to the name of the function):
+        //  - m_needGradient flags, are propagated up from children
+        //  - m_visitedOrder (only if 'recurrent' flag is sert)
+        std::list<ComputationNodeBasePtr> EnumerateNodes(bool forForwardProp/*else get order for backprop*/, bool recurrent)
         {
-            if (forwardComputation)
+            std::list<ComputationNodeBasePtr> nodes;
+            std::unordered_set<ComputationNodeBasePtr> visited;
+
+            // get forward computation order
+            EnumerateNodesR(visited, nodes, recurrent);  // call into the recursive portion of this function below
+
+            // if caller wants order for backprop then reverse it
+            if (!forForwardProp)
             {
-                std::list<ComputationNodeBasePtr> result;
-                std::unordered_set<ComputationNodeBasePtr> visited;
-                EnumerateNodesForEval(visited, result, recurrent);  // call into the recursive portion of this function
-                return result;
+                assert(!recurrent);     // TODO: not sure if required, but currently only called this way
+
+                // TODO: comment why can't directly reverse(); what's wrong with EnumerateNodes()' result?
+                nodes.sort(IsSmaller);  // sort nodes by m_visitedOrder   --TODO: why? What about nodes with visitedOrder -1? Will they stay the same? Comment please!!!
+                nodes.reverse();        // and go backwards
             }
-            else
-                return EnumerateNodesForGradient();
+
+            return nodes;
         }
+    private:
+        // Recursive part of EnumerateNodes().
+        void EnumerateNodesR(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, boolean recurrent)
+        {
+            if (visited.find(shared_from_this()) == visited.end())      // do not include a node twice
+            {
+                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
+
+                // children first for function evaluation
+                if (OperationName() != L"PairNetwork" || !recurrent)    // (don't step through network-pair boundary if recurrent)
+                {
+                    for (int i = 0; i < m_children.size(); i++)
+                    {
+                        if (m_children[i])
+                            m_children[i]->EnumerateNodesR(visited, result, recurrent);
+                    }
+                }
+
+                // propagate needGradient flags upwards from leaves
+                if (!IsLeaf())
+                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
+
+                // now that all children are in list before us, put ourselves
+                result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
+
+                if (recurrent)
+                    m_visitedOrder = result.size();
+            }
+        }
+    public:
 
         std::list<ComputationNodeBasePtr> ReshuffleNodes(std::map<int, std::list<ComputationNodeBasePtr>> recurrentResult)
         {
@@ -462,39 +507,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     return true;
             }
             return false;
-        }
-
-        // create list such that children are evaluated before their parents
-        // Unbeknownst to the name of the function, it also updates the m_needGradient flags (set if children are set).
-        // If recurrent, then this also sets m_visitedOrder.
-        // This is a recursive function only called from EnumerateNodes().
-        void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result,
-                                   boolean recurrent)
-        {
-            if (visited.find(shared_from_this()) == visited.end())  //not visited
-            {
-                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
-
-                // children first for function evaluation
-                if (OperationName() != L"PairNetwork" || !recurrent)    // (don't step through network-pair boundary if recurrent)
-                {
-                    for (int i = 0; i < m_children.size(); i++)
-                    {
-                        if (m_children[i])
-                            m_children[i]->EnumerateNodesForEval(visited, result, recurrent);
-                    }
-                }
-
-                // propagate needGradient flags upwards from leaves
-                if (!IsLeaf())
-                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
-
-                // now that all children are in list before us, put ourselves
-                result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
-
-                if (recurrent)
-                    m_visitedOrder = result.size();
-            }
         }
 
         // TODO: what does this do?
@@ -620,18 +632,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
             return name;
-        }
-
-        // determine order in which nodes must be processed for back prop
-        std::list<ComputationNodeBasePtr> EnumerateNodesForGradient()
-        {
-            std::list<ComputationNodeBasePtr> nodes = EnumerateNodes(true/*forward*/, false/*recurrent*/);  //get forward computation order first
-
-            // TODO: comment why can't directly reverse(); what's wrong with EnumerateNodes()' result?
-            nodes.sort(IsSmaller);  // sort nodes by m_visitedOrder   --TODO: why?
-            nodes.reverse();        // and go backwards
-
-            return nodes;
         }
 
         // TODO: These 4 functions will be completed after refactoring.
@@ -1276,7 +1276,7 @@ public: \
     using Base::ComputeGradientForChildren; using Base::ComputeInputPartial; using Base::ConstOnes; using Base::InferImageDimsFromInput; \
     using Base::InferImageDimsFromInputs; using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
-    using Base::EnumerateNodesForGradient; using Base::EvaluateThisNode; using Base::FindChildInASet; using Base::FunctionValues; \
+    using Base::EvaluateThisNode; using Base::FindChildInASet; using Base::FunctionValues; \
     using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
     using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
