@@ -366,7 +366,6 @@ CNTK_SRC =\
 	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
 	MachineLearning/CNTKSGDLib/Profiler.cpp \
 	MachineLearning/CNTKSGDLib/SGD.cpp \
-	MachineLearning/CNTKEval/CNTKEval.cpp \
 	BrainScript/BrainScriptEvaluator.cpp \
 	BrainScript/BrainScriptParser.cpp \
 	BrainScript/BrainScriptTest.cpp \

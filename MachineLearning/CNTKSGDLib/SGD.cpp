@@ -6,9 +6,6 @@
 #include "SGD.h"
 //#include "MultiNetworksSGD.h"
 #include "AllReduceDistGradAggregator.h"
-#include "MPIWrapper.h"
-
-extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -942,11 +939,7 @@ template<class ElemType>
             if (g_mpi != nullptr)
                 g_mpi->WaitAll();
 
-            if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-            {
-                // only needs to be done by one process
-                net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
-            }
+            net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
         }
 
         // first, we need to normalize the effect of nbruttsineachrecurrentiter
@@ -1041,9 +1034,8 @@ template<class ElemType>
                         i + 1, learnRatePerSample, m_minLearnRate);
                 if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
                 {
-                    if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-                        net.SaveToFile(m_modelPath);
-                    }
+                    net.SaveToFile(m_modelPath);
+                }
                 break;
             }
 
@@ -1209,8 +1201,7 @@ template<class ElemType>
                             learnRateReduced = true;
                         else
                         {
-                            if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-                                net.SaveToFile(GetModelNameForEpoch(i, true));
+                            net.SaveToFile(GetModelNameForEpoch(i, true));
 
                             fprintf(stderr, "Finished training and saved final model\n\n");
                             break;
@@ -2490,41 +2481,45 @@ template<class ElemType>
                             const double prevCriterion,
                             const size_t minibatchSize)
     {
-        wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch));
-        // Saving into temporary file and then renaming it to the checkPointFileName
-        // This is a standard trick to avoid havign corrupted checkpoints files if process dies during writing
-        wstring tempFileName = checkPointFileName + L".tmp";
-
+        // In case of parallel training only the main node should we saving the checkpoint to prevent
+        // the parallel training nodes from colliding to write the same file
+        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
         {
-            File fstream(tempFileName,
-                         FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
+            wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch));
+            // Saving into temporary file and then renaming it to the checkPointFileName
+            // This is a standard trick to avoid havign corrupted checkpoints files if process dies during writing
+            wstring tempFileName = checkPointFileName + L".tmp";
 
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
-            fstream << totalSamplesSeen << learnRatePerSample << prevCriterion;
-            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
-
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
-            fstream << minibatchSize;
-            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EMinibatchSize");
-
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
-
-            for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
             {
-                const Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
-                fstream << smoothedGradient;
+                File fstream(tempFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
+
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
+                fstream << totalSamplesSeen << learnRatePerSample << prevCriterion;
+                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
+
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
+                fstream << minibatchSize;
+                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EMinibatchSize");
+
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
+
+                for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
+                {
+                    const Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
+                    fstream << smoothedGradient;
+                }
+
+                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
+
+                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
+
+                // Ensuring that data is written
+                fstream.Flush();
             }
 
-            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
-
-            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
-
-            // Ensuring that data is written
-            fstream.Flush();
+            renameOrDie(tempFileName, checkPointFileName);
         }
-
-        renameOrDie(tempFileName, checkPointFileName);
     }
 
     template<class ElemType>
