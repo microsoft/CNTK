@@ -1223,7 +1223,8 @@ void DoCommand(const ConfigParameters& config)
     ConfigArray command = config("command", "train");
 
     int numCPUThreads = config("numCPUThreads", "0");
-    numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
+    // BUGBUG: suddenly this stopped to link
+//    numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
 
     if (numCPUThreads>0)
         std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
