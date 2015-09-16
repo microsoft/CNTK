@@ -863,10 +863,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise) const
     {}
 
+    template<class ElemType> void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise, int topK, GPUMatrix<ElemType>& workspace) const
+    {}
+
     template<class ElemType> void GPUMatrix<ElemType>::VectorMin(GPUMatrix<ElemType>& minIndexes, GPUMatrix<ElemType>& minValues, const bool isColWise) const
     {}
 
-    template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignNumOfDiff(const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/) { return *this; }
+    template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignNumOfDiff(const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/, bool /*searchInCol = false*/) { return *this; }
 
 #pragma endregion Member BLAS Functions    
 
