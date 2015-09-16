@@ -421,7 +421,7 @@ public:
 
         ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
 
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(fromRoot);
+        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(fromRoot, false);
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
             ComputationNodeBasePtr fromNode = *nodeIter;
@@ -598,7 +598,7 @@ public:
         BuildAndValidateNetwork(rootNode);
 
         // determines order of evaluation, such that children get evaluated before their parent nodes
-        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
+        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode, false);
 
 #ifdef DISPLAY_DEBUG
         for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
@@ -769,7 +769,7 @@ public:
         if (forwardCompute)
         {
             fprintf(stderr, "\n\nPrinting Forward Computation Node Order ... \n");
-            nodes = GetEvalOrder(rootNode);
+            nodes = GetEvalOrder(rootNode, false);
         }
         else
         {
@@ -1056,7 +1056,7 @@ public:
         else
         {
             //for calculating a specific node
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = (*nodeIter);
@@ -1138,7 +1138,7 @@ public:
     {
         fprintf(stderr, "\n\nValidating node %ls \n", rootNode->NodeName().c_str());
 
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
 
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
@@ -1194,7 +1194,7 @@ public:
     {
         FormRecurrentLoops(rootNode);
 
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
 
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
@@ -1208,7 +1208,7 @@ public:
         //first, compute the number of parents for each node
         std::map<ComputationNodeBasePtr, int> numParents;
 
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
 
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
@@ -1295,7 +1295,7 @@ public:
     {
         fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
 
-        std::list<ComputationNodeBasePtr>&  nodes = GetEvalOrder(rootNode);
+        std::list<ComputationNodeBasePtr>&  nodes = GetEvalOrder(rootNode, false);
 
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         if (!(*nodeIter)->UnitTest())
@@ -1454,21 +1454,22 @@ public:
             m_recurrentInfo[i].m_completedGradient = false;
     }
 
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr rootNode)
+    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr rootNode, bool recurrent)
     {
         if (!rootNode)
             LogicError("rootNode is pointing to a nullptr.");
 
-        return GetCalcOrder(rootNode, m_cacheEvalOrders, true);
+        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*forward*/, recurrent);
     }
 
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr rootNode,
+    // called from FormRecurrentLoops() only
+    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr rootNode, bool recurrent,
                                                     std::vector<ComputationNodeBasePtr>& recurrentNodes)
     {
         if (!rootNode)
             LogicError("rootNode is pointing to a nullptr.");
 
-        return GetCalcOrder(rootNode, m_cacheEvalOrders, true, recurrentNodes);
+        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*forward*/, recurrent, recurrentNodes);
     }
 
     std::list<ComputationNodeBasePtr>& GetGradientCalcOrder(const ComputationNodeBasePtr rootNode)
@@ -1476,7 +1477,7 @@ public:
         if (!rootNode)
             LogicError("rootNode is pointing to a nullptr.");
 
-        return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false);
+        return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*not forward*/, false/*recurrent*/);
     }
 
 protected:
@@ -1484,23 +1485,23 @@ protected:
     // TODO: decide where this stuff goes--Node or Network? Why is EnumerateNodes() in Node?
     static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                           const bool forwardCompute)
+                                                           const bool forwardCompute, bool recurrent)
     {
         if (orderMap.find(rootNode) == orderMap.end())
-            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute);
+            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, recurrent);
         return orderMap[rootNode];
     }
 
     // TODO: what's the difference to the above?
     static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                           const bool forwardCompute,
+                                                           const bool forwardCompute, bool recurrent,
                                                            std::vector<ComputationNodeBasePtr> & rootRecurrentNodes)
     {
         if (orderMap.find(rootNode) == orderMap.end())
         {
             rootRecurrentNodes.clear();
-            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, rootRecurrentNodes);
+            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, recurrent, rootRecurrentNodes);
         }
         return orderMap[rootNode];
     }

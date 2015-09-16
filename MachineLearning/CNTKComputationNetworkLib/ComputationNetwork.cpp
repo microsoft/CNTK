@@ -245,7 +245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             //for calculating a specific node
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = (*nodeIter);
@@ -366,7 +366,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else                            // or for calculating a specific node
         {
-            const auto & nodes = GetEvalOrder(rootNode);
+            const auto & nodes = GetEvalOrder(rootNode, false);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
@@ -569,7 +569,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         getStrongSCC(rootNode);
 
         std::vector<ComputationNodeBasePtr> sourceLoopNodesDummy;
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, sourceLoopNodesDummy);
+        // TODO: this is the only place that calls GetEvalOrder() with sourceLoopNodes, but it is not used?
+        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true, sourceLoopNodesDummy);
         std::list<ComputationNodeBasePtr> nodesForGrad;
 
         // ??
@@ -781,7 +782,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             std::list<ComputationNodeBasePtr> inputs;
 
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end();
                     nodeIter++)
             {
@@ -801,8 +802,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::list<std::wstring> learnableParameterNames;
             std::list<ComputationNodeBasePtr> learnableParameters;
 
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
-            ;
+            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
+
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = (*nodeIter);
