@@ -25,12 +25,12 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // =======================================================================
-    // DelayedValueNode -- abstract base class for PastValueNode and FutureValueNode to hold all shared code
+    // DelayedValueNodeBase -- abstract base class for PastValueNode and FutureValueNode to hold all shared code
     // The two differ in the step direction, some loop directions, and sequence-boundary flags.
     // =======================================================================
 
-    template<class ElemType, int direction/*-1 or +1*/, int SEQUENCE_START_or_END/*_START or _END*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>  // TODO: unify the two flag sets
-    class DelayedValueNode : public ComputationNode<ElemType>
+    template<class ElemType, int direction/*-1 or +1*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>  // TODO: unify the two flag sets
+    class DelayedValueNodeBase : public ComputationNode<ElemType>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     private:
@@ -45,13 +45,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     protected:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
-        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNode<ElemType>(deviceId, name),
             m_delayedActivation(deviceId), m_boundaryInfo(CPUDEVICE)
         {
             Init(1, 1);
         }
-        DelayedValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
+        DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
             ComputationNode<ElemType>(deviceId, name),
             m_delayedActivation(deviceId), m_boundaryInfo(CPUDEVICE)
         {
@@ -68,7 +68,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         void SaveToFile(File& fstream) const
         {
-            fstream << OperationName() << NodeName();
+            Base::SaveToFile(fstream);
+
             fstream << m_timeStep;
             fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols();
 
@@ -126,7 +127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         for (int j = 0; j < numRows; j++)
                         {
                             //we use & since ((int) MinibatchPackingFlags::SequenceStart) may come with NoLabel
-                            if ((int)pMBLayout->m_sentenceBoundaryFlags(j, i) & SEQUENCE_START_or_END)
+                            if ((int)pMBLayout->m_sentenceBoundaryFlags(j, i) & ((int) SequenceStart_or_End))
                                 numResetLeft[j] = m_timeStep;
                             else if ((int)pMBLayout->m_sentenceBoundaryFlags(j, i) & ((int) MinibatchPackingFlags::NoFeature))
                                 numResetLeft[j] = 0;
@@ -139,7 +140,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (numResetLeft[j]-- > 0)
                         {
-                            m_boundaryInfo(j, i) = (float)(SEQUENCE_START_or_END | ((int)m_boundaryInfo(j, i) & ((int) MinibatchPackingFlags::NoLabel)));
+                            m_boundaryInfo(j, i) = (float)(((int) SequenceStart_or_End) | ((int)m_boundaryInfo(j, i) & ((int) MinibatchPackingFlags::NoLabel)));
                             valueChanged = true;
                         }
                     }
@@ -179,7 +180,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     for (int i = 0; i < mNbr; i++)
                     {
-                        if (! ((int)colBoundaryFlags(i,0) & SEQUENCE_START_or_END) &&
+                        if (! ((int)colBoundaryFlags(i,0) & ((int) SequenceStart_or_End)) &&
                             ! ((int)colBoundaryFlags(i,0) & ((int) MinibatchPackingFlags::NoFeature)))
                         {
                             Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + direction * timeStep)*mNbr + i, 1);
@@ -232,7 +233,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
 
-                    if ((int)colBoundaryFlags(i,0) & SEQUENCE_START_or_END)
+                    if ((int)colBoundaryFlags(i,0) & ((int) SequenceStart_or_End))
                         out.SetValue(initStateValue);
                     else
                     {
@@ -324,14 +325,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                auto node = dynamic_pointer_cast<DelayedValueNode<ElemType, direction, SEQUENCE_START_or_END, SequenceStart_or_End>>(nodeP);
+                auto node = dynamic_pointer_cast<DelayedValueNodeBase<ElemType, direction, SequenceStart_or_End>>(nodeP);
                 node->m_timeStep = m_timeStep;
                 node->m_initialActivationValue = m_initialActivationValue;
                 node->m_delayedActivation = m_delayedActivation;
                 node->m_historyAlreadySet = false;
             }
         }
+
     protected:
+
         ElemType m_initialActivationValue;      // starting value for hidden activation vector at boundary
         Matrix<ElemType> m_delayedActivation;   // saves the activation of the previous step that this node points to
         int      m_timeStep;                    // delay in frames (typ. 1)
@@ -350,9 +353,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
 
     template<class ElemType>
-    class PastValueNode : public DelayedValueNode<ElemType, -1, ((int) MinibatchPackingFlags::SequenceStart), MinibatchPackingFlags::SequenceStart>
+    class PastValueNode : public DelayedValueNodeBase<ElemType, -1, MinibatchPackingFlags::SequenceStart>
     {
-        typedef DelayedValueNode<ElemType, -1, ((int) MinibatchPackingFlags::SequenceStart), MinibatchPackingFlags::SequenceStart> Base; UsingDelayedValueNodeMembers;
+        typedef DelayedValueNodeBase<ElemType, -1, MinibatchPackingFlags::SequenceStart> Base; UsingDelayedValueNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -421,9 +424,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //get value from future (used in the bi-directional models)
     template<class ElemType>
-    class FutureValueNode : public DelayedValueNode<ElemType, +1, ((int) MinibatchPackingFlags::SequenceEnd), MinibatchPackingFlags::SequenceEnd>
+    class FutureValueNode : public DelayedValueNodeBase<ElemType, +1, MinibatchPackingFlags::SequenceEnd>
     {
-        typedef DelayedValueNode<ElemType, +1, ((int) MinibatchPackingFlags::SequenceEnd), MinibatchPackingFlags::SequenceEnd> Base; UsingDelayedValueNodeMembers;
+        typedef DelayedValueNodeBase<ElemType, +1, MinibatchPackingFlags::SequenceEnd> Base; UsingDelayedValueNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
