@@ -595,7 +595,7 @@ public:
     void Evaluate(const ComputationNodeBasePtr rootNode)
     {
         // ...
-        BuildAndValidateNetwork(rootNode);
+        BuildAndValidateSubNetwork(rootNode);
 
         // determines order of evaluation, such that children get evaluated before their parent nodes
         std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode, false);
@@ -823,7 +823,7 @@ public:
     void RebuildNetwork(const ComputationNodeBasePtr rootNode)
     {
         ClearCaches();
-        BuildAndValidateNetwork(rootNode);
+        BuildAndValidateSubNetwork(rootNode);
     }
 
     // -----------------------------------------------------------------------
@@ -833,13 +833,13 @@ public:
     std::list<ComputationNodeBasePtr> & InputNodes(const ComputationNodeBasePtr rootNode, bool bNoBuild = false)
     {
         if (bNoBuild == false)
-            BuildAndValidateNetwork(rootNode);
+            BuildAndValidateSubNetwork(rootNode);
         return m_inputs[rootNode];
     }
 
     std::list<ComputationNodeBasePtr> & LearnableNodes(const ComputationNodeBasePtr rootNode)
     {
-        BuildAndValidateNetwork(rootNode);
+        BuildAndValidateSubNetwork(rootNode);
         return m_learnableParameters[rootNode];
     }
 
@@ -850,7 +850,7 @@ public:
     inline std::vector<ComputationNodeBasePtr> & TrainCriterionNodesFrom(wstring criterionNodeName)
     {
         ComputationNodeBasePtr node = this->GetNodeFromName(criterionNodeName);
-        this->ValidateNetwork(node);
+        this->ValidateSubNetwork(node);
         if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
             InvalidArgument("the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
         m_tmpTrainCriterion.clear();
@@ -861,7 +861,7 @@ public:
     inline std::vector<ComputationNodeBasePtr> & EvalCriterionNodesFrom(wstring criterionNodeName)
     {
         ComputationNodeBasePtr node = this->GetNodeFromName(criterionNodeName);
-        this->ValidateNetwork(node);
+        this->ValidateSubNetwork(node);
         if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
             InvalidArgument("the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
         m_tmpEvalulationCriterion.clear();
@@ -1082,7 +1082,9 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    // Validate - Validate the network
+    // ValidateNetwork() - Validate the entire network
+    // This calls ValidateNetowrk(Node) for all output nodes.
+    // This is used after loading or for dumping the network.
     void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false)
     {
         // currently only validates nodes, we should validate everything we can
@@ -1099,7 +1101,7 @@ public:
                 PrintComputationTree(node, false);
                 size_t actualMBSize = this->GetActualMBSize();
                 this->SetActualMiniBatchSize(actualMBSize);
-                ValidateNetwork(node);
+                ValidateSubNetwork(node);
             }
         }
         else if (bAllowNoCriterion == true)
@@ -1116,7 +1118,7 @@ public:
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
-                ValidateNetwork(node);
+                ValidateSubNetwork(node);
             }
         }
         else if (!allowFragment)
@@ -1129,12 +1131,15 @@ public:
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
-                ValidateNetwork(node);
+                ValidateSubNetwork(node);
             }
         }
     }
 
-    void ValidateNetwork(const ComputationNodeBasePtr rootNode)
+    // validate sub-network needed to evalute a specific output node
+    // Note: must call FormRecurrentNodes() on this node before calling this.
+    // TODO: ^^ is this really needed? Can we just call it inside?
+    void ValidateSubNetwork(const ComputationNodeBasePtr rootNode)
     {
         fprintf(stderr, "\n\nValidating node %ls \n", rootNode->NodeName().c_str());
 
@@ -1151,20 +1156,21 @@ public:
 
     // prepares the network for computation
     // Done lazily, called for every minibatch's invocation of EvaluateNode().
-    void BuildAndValidateNetwork(const ComputationNodeBasePtr rootNode)
+    void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode)
     {
         const auto inserted = m_built.insert(rootNode).second;  // remember we built it
         if (!inserted)
             return;                                             // already done
 
-        // remember recurrent loops for this root node
+        // detect recurrent loops for this root node (more loops will be detected inside ValidateSubNetwork())
+        // TODO: not nice--why not always call this in ValidateSubNetwork() only?
         FormRecurrentLoops(rootNode);
 
         //
-        ValidateNetwork(rootNode);
+        ValidateSubNetwork(rootNode);
 
         //
-        CollectInputAndLeanableParameters(rootNode);
+        CollectInputAndLearnableParameters(rootNode);
 
         //
         SetNodesReqMultiSeqHandling();
@@ -1393,11 +1399,11 @@ protected:
     void getStrongSCC(const ComputationNodeBasePtr rootNode);    // TODO: method names start uppercase
     void strongSCC(ComputationNodeBasePtr cur, std::list<ComputationNodeBasePtr>& sccStack, size_t& index, size_t& loopId);     // TODO: method names start uppercase
     void getLoopForwordOrder(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);   // TODO: method name
-    //must be called before ValidateNetwork
+    //must be called before ValidateSubNetwork
     void FormRecurrentLoops(const ComputationNodeBasePtr rootNode);
     void DetermineLoopTypes();
     void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr> & /*noRecurrentNodes*/);
-    void CollectInputAndLeanableParameters(const ComputationNodeBasePtr rootNode);
+    void CollectInputAndLearnableParameters(const ComputationNodeBasePtr rootNode);
 
     // -----------------------------------------------------------------------
     // node creation
@@ -1587,7 +1593,7 @@ protected:
     // cache for evaluation ordering:
 
 private:    // TODO: make all private that can be made private
-    std::unordered_set<ComputationNodeBasePtr> m_built;   // [node] flag: BuildAndValidateNetwork() has been called
+    std::unordered_set<ComputationNodeBasePtr> m_built;   // [node] flag: BuildAndValidateSubNetwork() has been called
 protected:
 
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheEvalOrders;

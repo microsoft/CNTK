@@ -773,7 +773,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         nodes = newList;
     }
 
-    void ComputationNetwork::CollectInputAndLeanableParameters(const ComputationNodeBasePtr rootNode)
+    void ComputationNetwork::CollectInputAndLearnableParameters(const ComputationNodeBasePtr rootNode)
     {
         //not found
         if (m_inputs.find(rootNode) == m_inputs.end())
@@ -1260,7 +1260,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::PlotNetworkTopology(const std::wstring outputFile) //  [1/13/2015 erw] plot network topology using dot language
     {
-        BuildAndValidateNetwork(m_evalNodes[0]);
+        BuildAndValidateSubNetwork(m_evalNodes[0]);
 
         //////////////////////////////////////////////////////////////////////////
         //	step 1.		get all the arcs in the network
