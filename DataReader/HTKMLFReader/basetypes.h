@@ -275,12 +275,12 @@ extern void _CHECKED_ASSERT_error(const char * file, int line, const char * exp)
 These macros are used for sentence segmentation information.
 TODO: get rid of this, no need
 */
-#define SEQUENCE_START ((int) MinibatchPackingFlags::SequenceStart)
-#define SEQUENCE_MIDDLE ((int) MinibatchPackingFlags::None)
-#define SEQUENCE_END ((int) MinibatchPackingFlags::SequenceEnd)
-#define NO_INPUT ((int) MinibatchPackingFlags::NoInput)
-#define NO_FEATURE ((int) MinibatchPackingFlags::NoFeature)
-#define NO_LABEL ((int) MinibatchPackingFlags::NoLabel)
+//#define ((int) MinibatchPackingFlags::SequenceStart) ((int) MinibatchPackingFlags::SequenceStart)
+//#define ((int) MinibatchPackingFlags::None) ((int) MinibatchPackingFlags::None)
+//#define ((int) MinibatchPackingFlags::SequenceEnd) ((int) MinibatchPackingFlags::SequenceEnd)
+//#define ((int) MinibatchPackingFlags::NoInput) ((int) MinibatchPackingFlags::NoInput)
+//#define ((int) MinibatchPackingFlags::NoFeature) ((int) MinibatchPackingFlags::NoFeature)
+//#define ((int) MinibatchPackingFlags::NoLabel) ((int) MinibatchPackingFlags::NoLabel)
 
 enum class MinibatchPackingFlags : unsigned char
 {

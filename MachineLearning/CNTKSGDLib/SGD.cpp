@@ -172,9 +172,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (size_t ns = 0; ns < nSlices; ns++)
                 {
-                    if (newBoundary(ns, nt) == SEQUENCE_START)
+                    if (newBoundary(ns, nt) == ((int) MinibatchPackingFlags::SequenceStart))
                         pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceStart;
-                    if (newBoundary(ns, nt) == SEQUENCE_END)
+                    if (newBoundary(ns, nt) == ((int) MinibatchPackingFlags::SequenceEnd))
                         pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceEnd;
                 }
             }

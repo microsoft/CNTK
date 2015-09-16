@@ -125,10 +125,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         //we set timeStep-1 elements following it to be SequenceStart until met NoInput
                         for (int j = 0; j < numRows; j++)
                         {
-                            //we use & since SEQUENCE_START may come with NoLabel
+                            //we use & since ((int) MinibatchPackingFlags::SequenceStart) may come with NoLabel
                             if ((int)pMBLayout->m_sentenceBoundaryFlags(j, i) & SEQUENCE_START_or_END)
                                 numResetLeft[j] = m_timeStep;
-                            else if ((int)pMBLayout->m_sentenceBoundaryFlags(j, i) & NO_FEATURE)
+                            else if ((int)pMBLayout->m_sentenceBoundaryFlags(j, i) & ((int) MinibatchPackingFlags::NoFeature))
                                 numResetLeft[j] = 0;
                         }
                     }
@@ -139,7 +139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (numResetLeft[j]-- > 0)
                         {
-                            m_boundaryInfo(j, i) = (float)(SEQUENCE_START_or_END | ((int)m_boundaryInfo(j, i) & NO_LABEL));
+                            m_boundaryInfo(j, i) = (float)(SEQUENCE_START_or_END | ((int)m_boundaryInfo(j, i) & ((int) MinibatchPackingFlags::NoLabel)));
                             valueChanged = true;
                         }
                     }
@@ -180,7 +180,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (int i = 0; i < mNbr; i++)
                     {
                         if (! ((int)colBoundaryFlags(i,0) & SEQUENCE_START_or_END) &&
-                            ! ((int)colBoundaryFlags(i,0) & NO_FEATURE))
+                            ! ((int)colBoundaryFlags(i,0) & ((int) MinibatchPackingFlags::NoFeature)))
                         {
                             Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + direction * timeStep)*mNbr + i, 1);
                             Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
@@ -350,9 +350,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
 
     template<class ElemType>
-    class PastValueNode : public DelayedValueNode<ElemType, -1, SEQUENCE_START, MinibatchPackingFlags::SequenceStart>
+    class PastValueNode : public DelayedValueNode<ElemType, -1, ((int) MinibatchPackingFlags::SequenceStart), MinibatchPackingFlags::SequenceStart>
     {
-        typedef DelayedValueNode<ElemType, -1, SEQUENCE_START, MinibatchPackingFlags::SequenceStart> Base; UsingDelayedValueNodeMembers;
+        typedef DelayedValueNode<ElemType, -1, ((int) MinibatchPackingFlags::SequenceStart), MinibatchPackingFlags::SequenceStart> Base; UsingDelayedValueNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -421,9 +421,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //get value from future (used in the bi-directional models)
     template<class ElemType>
-    class FutureValueNode : public DelayedValueNode<ElemType, +1, SEQUENCE_END, MinibatchPackingFlags::SequenceEnd>
+    class FutureValueNode : public DelayedValueNode<ElemType, +1, ((int) MinibatchPackingFlags::SequenceEnd), MinibatchPackingFlags::SequenceEnd>
     {
-        typedef DelayedValueNode<ElemType, +1, SEQUENCE_END, MinibatchPackingFlags::SequenceEnd> Base; UsingDelayedValueNodeMembers;
+        typedef DelayedValueNode<ElemType, +1, ((int) MinibatchPackingFlags::SequenceEnd), MinibatchPackingFlags::SequenceEnd> Base; UsingDelayedValueNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -909,7 +909,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         /**
-        get the segmentation information, SENTENECE_BEGIN, SEQUENCE_MIDDLE, NO_INPUT 
+        get the segmentation information, SENTENECE_BEGIN, ((int) MinibatchPackingFlags::None), ((int) MinibatchPackingFlags::NoInput) 
         for time at t and stream of streamid
         */
         int GetSegInfo(size_t t, size_t streamid)
@@ -943,7 +943,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (int t = nT - m_samplesInRecurrentStep + i; t >= 0; t -= m_samplesInRecurrentStep)
                 {
-                    if (GetSegInfo(t, i) == SEQUENCE_MIDDLE)
+                    if (GetSegInfo(t, i) == ((int) MinibatchPackingFlags::None))
                     {
                         mLastOutput.ColumnSlice(i, 1).SetValue(FunctionValues().ColumnSlice(t, 1));
                         mLastState.ColumnSlice(i, 1).SetValue(m_State.ColumnSlice(t, 1));
@@ -1038,7 +1038,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         Prepare history for LSTMnode
 
-        This function returns state and output from the previous time instance. For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from sentenceBegin. In case of sentence begining, the state activity is set to an initial value. The sentenceBegin has element of SEQUENCE_START, SEQUENCE_MIDDLE and NO_INPUT, which are 0, 1, and -1, respectively. 
+        This function returns state and output from the previous time instance. For recurrent network, the initial state needs to be set in the case of sentence begining, which is carried over from sentenceBegin. In case of sentence begining, the state activity is set to an initial value. The sentenceBegin has element of ((int) MinibatchPackingFlags::SequenceStart), ((int) MinibatchPackingFlags::None) and ((int) MinibatchPackingFlags::NoInput), which are 0, 1, and -1, respectively. 
         To compute the initial value, we use
         prevState = sentenceBegin * delayedActivation + ~sentenceBegin * initialStateValue
         and ~sentenceBegin is computed as -1*(sentenceBegin - 1), assuming that sentenceBegin is either 0 or 1. For example, when sentenceBegin == 1, ~sentenceBegin == 0. 
@@ -1077,8 +1077,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             colSeg.Resize(nStream, nStream);
             // will reset to 0 if sentence begining at a position is 0
             // will keep the output if it is not the sentence begining
-            colBegin.InplaceTruncateBottom(SEQUENCE_START);
-            colBegin.InplaceTruncateTop(SEQUENCE_MIDDLE);
+            colBegin.InplaceTruncateBottom(((int) MinibatchPackingFlags::SequenceStart));
+            colBegin.InplaceTruncateTop(((int) MinibatchPackingFlags::None));
 #if 1
             initStateValue; pastState; pastOutput; state; output;
             LogicError("PrepareHistory: finish this");
@@ -1132,8 +1132,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t utt_id = 0; utt_id < nsamples; utt_id++)
                 {
                     // if uses errors from future minibatch
-                    if ((GetSegInfo(timeIdxInSeq, utt_id) == SEQUENCE_MIDDLE && utt_t == total_utt_t - 1) // last time 
-                        || (utt_t < total_utt_t - 1 && GetSegInfo(timeIdxInSeq, utt_id) == SEQUENCE_MIDDLE && GetSegInfo(timeIdxInSeq + nsamples, utt_id) == NO_INPUT) // future observation is no observation
+                    if ((GetSegInfo(timeIdxInSeq, utt_id) == ((int) MinibatchPackingFlags::None) && utt_t == total_utt_t - 1) // last time 
+                        || (utt_t < total_utt_t - 1 && GetSegInfo(timeIdxInSeq, utt_id) == ((int) MinibatchPackingFlags::None) && GetSegInfo(timeIdxInSeq + nsamples, utt_id) == ((int) MinibatchPackingFlags::NoInput)) // future observation is no observation
                         )
                     {
                         error.ColumnSlice(utt_id, 1) += obs_error_from_future_minibatch.ColumnSlice(utt_id, 1);
@@ -1149,9 +1149,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #else
             Matrix<ElemType> colBegin(sentenceBegin->GetDeviceId());
             colBegin.SetValue(sentenceBegin->ColumnSlice(utt_t, 1));
-            colBegin.InplaceTruncateBottom(NO_INPUT);
-            colBegin.InplaceTruncateTop(SEQUENCE_START);
-            colBegin += fabs((ElemType)NO_INPUT); // raise this so that -1 -> 0 and therefore 
+            colBegin.InplaceTruncateBottom(((int) MinibatchPackingFlags::NoInput));
+            colBegin.InplaceTruncateTop(((int) MinibatchPackingFlags::SequenceStart));
+            colBegin += fabs((ElemType)((int) MinibatchPackingFlags::NoInput)); // raise this so that -1 -> 0 and therefore 
             Matrix<ElemType> colSeg(colBegin.GetDeviceId());
             colSeg.Resize(nsamples, nsamples);
             colSeg.SetDiagonalValue(colBegin);
@@ -1184,8 +1184,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             colBegin.SetValue(sentenceBegin->ColumnSlice(utt_t, 1));
             // will reset to 0 if sentence begining at a posiiton is 0
             // will keep the output if it is not the sentence begining
-            colBegin.InplaceTruncateBottom(SEQUENCE_START);
-            colBegin.InplaceTruncateTop(SEQUENCE_MIDDLE);
+            colBegin.InplaceTruncateBottom(((int) MinibatchPackingFlags::SequenceStart));
+            colBegin.InplaceTruncateTop(((int) MinibatchPackingFlags::None));
 
             Matrix<ElemType> colSeg(colBegin.GetDeviceId());
             colSeg.Resize(nsamples, nsamples);
@@ -1348,8 +1348,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<float> & boundary = pMBLayout->m_sentenceBoundaryFlags;
                 vector<MinibatchPackingFlags> & minibatchPackingFlags = pMBLayout->m_minibatchPackingFlags;
                 boundary.Resize(1, nT);
-                boundary.SetValue(SEQUENCE_MIDDLE);
-                boundary.ColumnSlice(0, 1).SetValue(SEQUENCE_START);
+                boundary.SetValue(((int) MinibatchPackingFlags::None));
+                boundary.ColumnSlice(0, 1).SetValue(((int) MinibatchPackingFlags::SequenceStart));
 
                 minibatchPackingFlags.resize(nT);
                 std::fill(minibatchPackingFlags.begin(), minibatchPackingFlags.end(), MinibatchPackingFlags::None);

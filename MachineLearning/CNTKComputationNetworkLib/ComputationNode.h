@@ -879,9 +879,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
             colPos.SetValue(sentenceBegin); /// -1 0 1
-            colPos.InplaceTruncateBottom(SEQUENCE_START);
+            colPos.InplaceTruncateBottom(((int) MinibatchPackingFlags::SequenceStart));
             Matrix<ElemType>::Scale((ElemType)-1.0, colPos);
-            colPos += SEQUENCE_MIDDLE;
+            colPos += ((int) MinibatchPackingFlags::None);
+            // BUGBUG: ^^ What is this? colPos is a matrix, None is a flag; and it is 0
             colSeg.SetDiagonalValue(colPos);
             Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
             ones.Resize(nStateRow, nStream);
@@ -917,7 +918,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         const auto & colSeg = m_pMBLayout->m_sentenceBoundaryFlags.ColumnSlice(j,1);
                         for (int i = 0; i < nS; i++)
-                            if ((int)colSeg(i,0) & NO_LABEL)
+                            if ((int)colSeg(i,0) & ((int) MinibatchPackingFlags::NoLabel))
                                 matrixToBeMasked.ColumnSlice(utt_t+i, 1).SetValue(0);
                         processedExistsNoLabelorFeatureMissing = true;
                     }
@@ -951,7 +952,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (int i = 0; i < numSequences; i++)
                         {
-                            if ((int)m_pMBLayout->m_sentenceBoundaryFlags(i, j) & NO_LABEL)
+                            if ((int)m_pMBLayout->m_sentenceBoundaryFlags(i, j) & ((int) MinibatchPackingFlags::NoLabel))
                             {
                                 numSamplesWithoutLabel++;
                             }

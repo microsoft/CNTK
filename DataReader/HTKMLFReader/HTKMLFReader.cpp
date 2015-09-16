@@ -866,9 +866,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
                                 /*m_mbLayout.*/m_minibatchPackingFlags.resize(feat.cols());
 
-                                m_sentenceBegin.SetValue((ElemType) SEQUENCE_MIDDLE);
-                                m_sentenceBegin.SetValue(0, 0, (ElemType) SEQUENCE_START);
-                                m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SEQUENCE_END);
+                                m_sentenceBegin.SetValue((ElemType) ((int) MinibatchPackingFlags::None));
+                                m_sentenceBegin.SetValue(0, 0, (ElemType) ((int) MinibatchPackingFlags::SequenceStart));
+                                m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) ((int) MinibatchPackingFlags::SequenceEnd));
                                 std::fill(/*m_mbLayout.*/m_minibatchPackingFlags.begin(), /*m_mbLayout.*/m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
                                 /*m_mbLayout.*/m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceStart;
                                 /*m_mbLayout.*/m_minibatchPackingFlags[(size_t)feat.cols() - 1] = MinibatchPackingFlags::SequenceEnd;
@@ -1007,12 +1007,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_minibatchPackingFlags.resize(m_mbSize);
 
                     for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
-                    {
                         for (size_t j = 0; j < m_mbSize; j++)
-                        {
-                            m_sentenceBegin.SetValue(i,j,(ElemType) SEQUENCE_MIDDLE);
-                        }
-                    }
+                            m_sentenceBegin.SetValue(i,j,(ElemType) ((int) MinibatchPackingFlags::None));
                     std::fill(/*m_mbLayout.*/m_minibatchPackingFlags.begin(), /*m_mbLayout.*/m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
 
 
@@ -1030,7 +1026,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 m_switchFrame[i] = m_mbSize+1;
                                 if (m_processedFrame[i] == 1)
                                 {
-                                    m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_END);
+                                    m_sentenceBegin.SetValue(i, 0, (ElemType)((int) MinibatchPackingFlags::SequenceEnd));
                                     /*m_mbLayout.*/m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceEnd;
                                 }
                             }
@@ -1038,7 +1034,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 m_switchFrame[i] = 0;
                                 m_sentenceEnd[i] = true;
-                                m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
+                                m_sentenceBegin.SetValue(i, 0, (ElemType)((int) MinibatchPackingFlags::SequenceStart));
                                 /*m_mbLayout.*/m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceStart;
                             }
                             actualmbsize[i] = m_mbSize;
@@ -1169,12 +1165,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_switchFrame[i] = actualmbsize[i];
                             if (actualmbsize[i] < m_mbSize)
                             {
-                                m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)SEQUENCE_START);
+                                m_sentenceBegin.SetValue(i, actualmbsize[i], (ElemType)((int) MinibatchPackingFlags::SequenceStart));
                                 m_minibatchPackingFlags[actualmbsize[i]] |= MinibatchPackingFlags::SequenceStart;
                             }
                             if (actualmbsize[i] == m_mbSize)
                             {
-                                m_sentenceBegin.SetValue(i, actualmbsize[i]-1, (ElemType)SEQUENCE_END);
+                                m_sentenceBegin.SetValue(i, actualmbsize[i]-1, (ElemType)((int) MinibatchPackingFlags::SequenceEnd));
                                 m_minibatchPackingFlags[actualmbsize[i]-1] |= MinibatchPackingFlags::SequenceEnd;
                             }
                             startFr = m_switchFrame[i];
@@ -1323,9 +1319,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
                             /*m_mbLayout.*/m_minibatchPackingFlags.resize((size_t)feat.cols());
-                            m_sentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
-                            m_sentenceBegin.SetValue(0, 0, (ElemType)SEQUENCE_START);
-                            m_sentenceBegin.SetValue(0, (size_t)feat.cols() - 1, (ElemType)SEQUENCE_END);
+                            m_sentenceBegin.SetValue((ElemType)((int) MinibatchPackingFlags::None));
+                            m_sentenceBegin.SetValue(0, 0, (ElemType)((int) MinibatchPackingFlags::SequenceStart));
+                            m_sentenceBegin.SetValue(0, (size_t)feat.cols() - 1, (ElemType)((int) MinibatchPackingFlags::SequenceEnd));
                             std::fill(/*m_mbLayout.*/m_minibatchPackingFlags.begin(), /*m_mbLayout.*/m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
                             /*m_mbLayout.*/m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceStart;
                             /*m_mbLayout.*/m_minibatchPackingFlags[(size_t)feat.cols() - 1] = MinibatchPackingFlags::SequenceEnd;

@@ -258,11 +258,11 @@ public:
                 {
                     for (int i = 0; i < numSequences; i++)
                     {
-                        if ((int)(m_pMBLayout->m_sentenceBoundaryFlags(i, j)) & NO_LABEL)
+                        if ((int)(m_pMBLayout->m_sentenceBoundaryFlags(i, j)) & ((int) MinibatchPackingFlags::NoLabel))
                             numSamplesWithoutLabel++;
-                        }
                     }
                 }
+            }
 
             return numTimeSteps*numSequences - numSamplesWithoutLabel;
         }
