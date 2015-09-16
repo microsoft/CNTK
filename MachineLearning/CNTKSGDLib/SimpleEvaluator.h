@@ -130,7 +130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
                 m_net.SetActualNbrSlicesInEachRecIter(dataReader->NumberSlicesInEachRecurrentIter());
-                dataReader->SetSentenceSegBatch(m_net.GetSentenceBoundaryFlags(), m_net.GetMinibatchPackingFlags());
+                dataReader->CopyMBLayoutTo(m_net.GetMBLayoutPtr());
 
                 //for now since we share the same label masking flag we call this on one node only
                 //Later, when we apply different labels on different nodes
@@ -451,7 +451,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     (*ptr)->SetActualMiniBatchSize(actualMBSize);
                     (*ptr)->SetActualNbrSlicesInEachRecIter((*preader)->NumberSlicesInEachRecurrentIter());
-                    (*preader)->SetSentenceSegBatch((*ptr)->GetSentenceBoundaryFlags(), (*ptr)->GetMinibatchPackingFlags());
+                    (*preader)->CopyMBLayoutTo((*ptr)->GetMBLayoutPtr());
 
                     const auto & pairs = (*ptr)->PairNodes();
                     for (auto ptr2 = pairs.begin(); ptr2 != pairs.end(); ptr2++)
@@ -465,7 +465,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (actualMBSize == 0)
                     LogicError("decoderTrainSetDataReader read data but decoderNet reports no data read");
                 decoderNet->SetActualNbrSlicesInEachRecIter(decoderDataReader->NumberSlicesInEachRecurrentIter());
-                decoderDataReader->SetSentenceSegBatch(decoderNet->GetSentenceBoundaryFlags(), decoderNet->GetMinibatchPackingFlags());
+                decoderDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
 
                 size_t i = 0;
                 assert(decoderEvaluationNodes.size() == 1);
@@ -668,7 +668,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     (*ptr)->SetActualMiniBatchSize(actualMBSize);
                     mNutt = (*ptrreader)->NumberSlicesInEachRecurrentIter();
                     (*ptr)->SetActualNbrSlicesInEachRecIter(mNutt);
-                    (*ptrreader)->SetSentenceSegBatch((*ptr)->GetSentenceBoundaryFlags(), (*ptr)->GetMinibatchPackingFlags());
+                    (*ptrreader)->CopyMBLayoutTo((*ptr)->GetMBLayoutPtr());
 
                     const auto & pairs = (*ptr)->PairNodes();
                     for (auto ptr2 = pairs.begin(); ptr2 != pairs.end(); ptr2++)
@@ -680,7 +680,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
                 decoderNet->SetActualMiniBatchSize(actualMBSize);
                 decoderNet->SetActualNbrSlicesInEachRecIter(mNutt);
-                encoderDataReader->SetSentenceSegBatch(decoderNet->GetSentenceBoundaryFlags(), decoderNet->GetMinibatchPackingFlags());
+                encoderDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
 
                 FindBestPathWithVariableLength(decoderNet, actualMBSize, decoderDataReader, dataWriter, outputNodes, writeNodes, decoderFeatureNodes, beam, &decoderInputMatrices, best_path);
 
@@ -911,7 +911,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// is the begining of sentence
             evalnet->SetActualMiniBatchSize(mbSize);
             evalnet->SetActualNbrSlicesInEachRecIter(dataReader->NumberSlicesInEachRecurrentIter());
-            dataReader->SetSentenceSegBatch(evalnet->GetSentenceBoundaryFlags(), evalnet->GetMinibatchPackingFlags());
+            dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
 
             clock_t start, now;
             start = clock();
@@ -931,9 +931,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
             evalnet->SetActualMiniBatchSize(1, &featureNodes);
-            dataReader->SetSentenceSegBatch(evalnet->GetSentenceBoundaryFlags(), evalnet->GetMinibatchPackingFlags());
+            dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
             /// need to set the sentence begining segmentation info
-            evalnet->GetSentenceBoundaryFlags().SetValue(SEQUENCE_START);
+            evalnet->GetMBLayoutPtr()->m_sentenceBoundaryFlags.SetValue(SEQUENCE_START);
 
             for (itdx = 0; itdx < maxSize; itdx++)
             {
@@ -943,7 +943,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    evalnet->GetSentenceBoundaryFlags().SetValue(SEQUENCE_MIDDLE);
+                    evalnet->GetMBLayoutPtr()->m_sentenceBoundaryFlags.SetValue(SEQUENCE_MIDDLE);
                 }
 
                 PreComputeActivityAtTime(itdx);
@@ -1095,7 +1095,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             double best_score = -numeric_limits<double>::infinity();
             double best_score_so_far = -numeric_limits<double>::infinity();
 
-            evalnet->GetSentenceBoundaryFlags().SetValue(SEQUENCE_START);
+            evalnet->GetMBLayoutPtr()->m_sentenceBoundaryFlags.SetValue(SEQUENCE_START);
 
             for (itdx = 0; itdx < maxMbSize; itdx++)
             {
@@ -1105,7 +1105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    evalnet->GetSentenceBoundaryFlags().SetValue(SEQUENCE_MIDDLE);
+                    evalnet->GetMBLayoutPtr()->m_sentenceBoundaryFlags.SetValue(SEQUENCE_MIDDLE);
                 }
 
                 PreComputeActivityAtTime(itdx);

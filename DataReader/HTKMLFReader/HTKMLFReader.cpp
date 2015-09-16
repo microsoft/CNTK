@@ -1631,18 +1631,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             sentenceEnd.resize(m_switchFrame.size());
             for (size_t i = 0; i < m_switchFrame.size() ; i++)
-            {
                 sentenceEnd[i] = m_switchFrame[i];
-            }
         }
 
     template<class ElemType>
-        void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<float> &sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags)
+        void HTKMLFReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
         {
             if (!m_framemode)
             {
-                sentenceBegin.SetValue(m_sentenceBegin);
-                minibatchPackingFlags = m_minibatchPackingFlags;
+                pMBLayout->m_sentenceBoundaryFlags.SetValue(m_sentenceBegin);
+                pMBLayout->m_minibatchPackingFlags = m_minibatchPackingFlags;
             }
         }
 

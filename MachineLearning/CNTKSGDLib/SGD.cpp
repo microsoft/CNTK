@@ -14,264 +14,227 @@ extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-using namespace std;
+    using namespace std;
 
-template<class ElemType>
-void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb, int numProcessor, int myID)
-{
-    int rank = myID;
-    int procs = numProcessor;
-
-    size_t rv = 0;
-    if (procs > 1)
+    template<class ElemType>
+    void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb, int numProcessor, int myID)
     {
-        for (auto it = mb.begin(); it != mb.end(); ++it)
+        int rank = myID;
+        int procs = numProcessor;
+
+        size_t rv = 0;
+        if (procs > 1)
         {
-            MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
-            size_t nCols = mat.GetNumCols();
-            size_t col_start = (nCols * rank) / procs;
-            size_t col_end = (nCols * (rank + 1)) / procs;
-            if (col_end > nCols)
+            for (auto it = mb.begin(); it != mb.end(); ++it)
             {
-                // this shouldn't happen
-                col_end = nCols;
-            }
-
-            if (col_end == col_start)
-            {
-                MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), 0, AUTOPLACEMATRIX, DENSE);
-                mat.SetValue(tmp);
-            }
-            else
-            {
-                MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(col_start, col_end - col_start);
-                mat.SetValue(tmp);
-            }
-
-            if (rv == 0)
-            {
-                rv = mat.GetNumCols();
-            }
-            else
-            {
-                if (rv != mat.GetNumCols())
+                MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
+                size_t nCols = mat.GetNumCols();
+                size_t col_start = (nCols * rank) / procs;
+                size_t col_end = (nCols * (rank + 1)) / procs;
+                if (col_end > nCols)
                 {
-                    throw std::logic_error("Uneven number of columns among inputs.");
+                    // this shouldn't happen
+                    col_end = nCols;
+                }
+
+                if (col_end == col_start)
+                {
+                    MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), 0, AUTOPLACEMATRIX, DENSE);
+                    mat.SetValue(tmp);
+                }
+                else
+                {
+                    MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(col_start, col_end - col_start);
+                    mat.SetValue(tmp);
+                }
+
+                if (rv == 0)
+                {
+                    rv = mat.GetNumCols();
+                }
+                else
+                {
+                    if (rv != mat.GetNumCols())
+                    {
+                        throw std::logic_error("Uneven number of columns among inputs.");
+                    }
                 }
             }
         }
     }
-}
 
-template<class ElemType> 
-size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb,  /* (input) matrix to be decimated */
-                                      int rank, int numprocs,                                    /* (input) rank info */
-                                      size_t& nSlices,                                           /* (input/output): on input, # parallel sentence total , on output, # paralel sentence in this node  */
-                                      Matrix<float>& SentenceBoundary,                           /* (output) nSlices X nMBsize matrix */
-                                      vector<MinibatchPackingFlags>& PackingFlags,               /* (output) 1 X nMBsize vector  */
-                                      IDataReader<ElemType>* trainDataReader)                    /* (input)  to have access to reader */
-{
-    // For RNN, a input Matrix is organized in the following way: 
-    //   | x_t^1  x_t^2 ... x_t^N |  .... | x_{t+T-1}^1 ... x_{t+T-1}^N | 
-    //   |<----   block 1    ---->|  .... |<------  block T       ----->| 
-    // N is the nSlice (input)
-    // The decimation here is to split each block to individual GPUs 
-    // So After decimation 
-    //   | x_t^{st} ... x_t^{en-1}|  .... | x_{t+T-1}^{st} ... x_{t+T-1}^{en-1} | 
-    // Each block now has nSlice/nProcs 
-    // 
-    // Correspondingly, the SentenceBoundary and PackingFlags will be revised 
-    trainDataReader->SetSentenceSegBatch(SentenceBoundary, PackingFlags);
-
-    size_t rv = 0;
-    size_t nOrigParallelUtts = nSlices;
-    static bool warned = false;
-    if (numprocs > 1)
+    template<class ElemType> 
+    size_t DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb,  /* (input) matrix to be decimated */
+                                          int rank, int numprocs,                                    /* (input) rank info */
+                                          size_t& nSlices,                                           /* (input/output): on input, # parallel sentence total , on output, # paralel sentence in this node  */
+                                          MBLayoutPtr pMBLayout,                                     // gets filled in
+                                          IDataReader<ElemType>* trainDataReader)                    /* (input)  to have access to reader */
     {
-        // decide new parallel utterances 
-        size_t sent_start = 0;
-        size_t sent_end = 0;
-        if (nOrigParallelUtts % numprocs != 0)
+        // For RNN, a input Matrix is organized in the following way: 
+        //   | x_t^1  x_t^2 ... x_t^N |  .... | x_{t+T-1}^1 ... x_{t+T-1}^N | 
+        //   |<----   block 1    ---->|  .... |<------  block T       ----->| 
+        // N is the nSlice (input)
+        // The decimation here is to split each block to individual GPUs 
+        // So After decimation 
+        //   | x_t^{st} ... x_t^{en-1}|  .... | x_{t+T-1}^{st} ... x_{t+T-1}^{en-1} | 
+        // Each block now has nSlice/nProcs 
+        // 
+        // Correspondingly, the SentenceBoundary and PackingFlags will be revised 
+        trainDataReader->CopyMBLayoutTo(pMBLayout); // fill this
+
+        size_t rv = 0;
+        size_t nOrigParallelUtts = nSlices;
+        static bool warned = false;
+        if (numprocs > 1)
         {
-            if (!warned)
+            // decide new parallel utterances 
+            size_t sent_start = 0;
+            size_t sent_end = 0;
+            if (nOrigParallelUtts % numprocs != 0)
             {
-                /* give a warning of potential bandwidth wasting */
-                fprintf(stderr, "WARNING: %d GPUs are used in model averaging, but the number of parallel utterances are %d, a potential training speed degradation.\n",
-                        (int)g_mpi->NumNodesInUse(), (int)nOrigParallelUtts);
-                warned = true;
-            }
-            if (rank == numprocs - 1)
-            {
-                nSlices = nOrigParallelUtts - (nOrigParallelUtts / numprocs + 1) * (numprocs - 1);
-                sent_start = (nOrigParallelUtts / numprocs + 1) * (numprocs - 1);
-                sent_end = nOrigParallelUtts;
+                if (!warned)
+                {
+                    /* give a warning of potential bandwidth wasting */
+                    fprintf(stderr, "WARNING: %d GPUs are used in model averaging, but the number of parallel utterances are %d, a potential training speed degradation.\n",
+                            (int)g_mpi->NumNodesInUse(), (int)nOrigParallelUtts);
+                    warned = true;
+                }
+                if (rank == numprocs - 1)
+                {
+                    nSlices = nOrigParallelUtts - (nOrigParallelUtts / numprocs + 1) * (numprocs - 1);
+                    sent_start = (nOrigParallelUtts / numprocs + 1) * (numprocs - 1);
+                    sent_end = nOrigParallelUtts;
+                }
+                else
+                {
+                    nSlices = nOrigParallelUtts / numprocs + 1;
+                    sent_start = nSlices * rank;
+                    sent_end = nSlices * (rank + 1);
+                    if (sent_end > nOrigParallelUtts) sent_end = nOrigParallelUtts;
+                }
             }
             else
             {
-                nSlices = nOrigParallelUtts / numprocs + 1;
-                sent_start = nSlices * rank;
-                sent_end = nSlices * (rank + 1);
+                nSlices = nOrigParallelUtts / numprocs;
+                sent_start = rank*nSlices;
+                sent_end = (rank + 1)*nSlices;
                 if (sent_end > nOrigParallelUtts) sent_end = nOrigParallelUtts;
             }
-        }
-        else
-        {
-            nSlices = nOrigParallelUtts / numprocs;
-            sent_start = rank*nSlices;
-            sent_end = (rank + 1)*nSlices;
-            if (sent_end > nOrigParallelUtts) sent_end = nOrigParallelUtts;
-        }
-        // decimate data 
-        for (auto it = mb.begin(); it != mb.end(); ++it)
-        {
-            MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
-            size_t nCols = mat.GetNumCols();
+            // decimate data 
+            for (auto it = mb.begin(); it != mb.end(); ++it)
+            {
+                MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
+                size_t nCols = mat.GetNumCols();
 
-            if (nCols % nOrigParallelUtts != 0)
-            {
-                // this should not happen for DNN, RNN with truncated BPTT, not sure about other special stuff ... 
-                RuntimeError("ERROR: minibatch size %d, but with %d parallel utterances\n", nCols, nOrigParallelUtts);
-            }
-            size_t nBlocks = nCols / nOrigParallelUtts;
-            // for RNN, nBlocks is the size of truncated BPTT
-            if (sent_end == sent_start)
-            {
-                // should never happen, print debug info
-                RuntimeError("ERROR: in DecimateMinibatch, col_st=col_en=%d, nCol=%d, nBlock=%d, nParaUtts=%d, nGPU=%d\n",
-                    (int)sent_start, (int)nCols, (int)nBlocks, (int)nOrigParallelUtts, (int)numprocs);
-            }
+                if (nCols % nOrigParallelUtts != 0)
+                {
+                    // this should not happen for DNN, RNN with truncated BPTT, not sure about other special stuff ... 
+                    RuntimeError("ERROR: minibatch size %d, but with %d parallel utterances\n", nCols, nOrigParallelUtts);
+                }
+                size_t nBlocks = nCols / nOrigParallelUtts;
+                // for RNN, nBlocks is the size of truncated BPTT
+                if (sent_end == sent_start)
+                {
+                    // should never happen, print debug info
+                    RuntimeError("ERROR: in DecimateMinibatch, col_st=col_en=%d, nCol=%d, nBlock=%d, nParaUtts=%d, nGPU=%d\n",
+                        (int)sent_start, (int)nCols, (int)nBlocks, (int)nOrigParallelUtts, (int)numprocs);
+                }
 
-            MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), nSlices*nBlocks, mat.GetPreferredDeviceId(), mat.GetMatrixType());
+                MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), nSlices*nBlocks, mat.GetPreferredDeviceId(), mat.GetMatrixType());
 
-            // do the column slice for each block 
-            for (size_t iblock = 0; iblock < nBlocks; iblock++)
-            {
-                tmp.SetColumnSlice(mat.ColumnSlice(nOrigParallelUtts*iblock + sent_start, nSlices),
-                    iblock*nSlices, nSlices);
-            }
-            mat.SetValue(tmp);
+                // do the column slice for each block 
+                for (size_t iblock = 0; iblock < nBlocks; iblock++)
+                {
+                    tmp.SetColumnSlice(mat.ColumnSlice(nOrigParallelUtts*iblock + sent_start, nSlices),
+                        iblock*nSlices, nSlices);
+                }
+                mat.SetValue(tmp);
 
-            // assert the cols are even among nodes 
-            if (0 == rv)
-            {
-                rv = mat.GetNumCols();
+                // assert the cols are even among nodes 
+                if (0 == rv)
+                {
+                    rv = mat.GetNumCols();
+                }
+                else
+                {
+                    if (rv != mat.GetNumCols())
+                        throw std::logic_error("Uneven number of columns among inputs.");
+                }
             }
-            else
+            // revise sentence boundary and packing flags
+            Matrix<float>  newBoundary(CPUDEVICE); // TODO: change Matrix<float> to a typedef
+            size_t nMBSize = pMBLayout->GetSize(); 
+            newBoundary.Resize(nSlices, nMBSize);
+            newBoundary.AssignRowSliceValuesOf(pMBLayout->m_sentenceBoundaryFlags, sent_start, nSlices);
+            fill(pMBLayout->m_minibatchPackingFlags.begin(), pMBLayout->m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
+            // BUGBUG? what happens with newBoundary? Does not get assigned?
+            for (size_t nt = 0; nt < nMBSize; nt++)
             {
-                if (rv != mat.GetNumCols())
-                    throw std::logic_error("Uneven number of columns among inputs.");
-            }
-        }
-        // revise sentence boundary and packing flags
-        Matrix<float>  newBoundary(CPUDEVICE); // TODO: change Matrix<float> to a typedef
-        size_t nMBSize = PackingFlags.size(); 
-        newBoundary.Resize(nSlices, nMBSize);
-        newBoundary.AssignRowSliceValuesOf(SentenceBoundary, sent_start, nSlices);
-        fill(PackingFlags.begin(), PackingFlags.end(), MinibatchPackingFlags::None);
-        for (size_t nt = 0; nt < nMBSize; nt++)
-        {
-            for (size_t ns = 0; ns < nSlices; ns++)
-            {
-                if (newBoundary(ns, nt) == SEQUENCE_START)
-                    PackingFlags[nt] |= MinibatchPackingFlags::SequenceStart;
-                if (newBoundary(ns, nt) == SEQUENCE_END)
-                    PackingFlags[nt] |= MinibatchPackingFlags::SequenceEnd;
+                for (size_t ns = 0; ns < nSlices; ns++)
+                {
+                    if (newBoundary(ns, nt) == SEQUENCE_START)
+                        pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceStart;
+                    if (newBoundary(ns, nt) == SEQUENCE_END)
+                        pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceEnd;
+                }
             }
         }
-       
- 
+
+        return rv; 
     }
 
-    return rv; 
-}
-
     static AdaptationRegType ParseAdaptationRegType(wstring s)
-{
+    {
         msra::strfun::tolower_ascii(s);
         if (s == L"" || s == L"none")
-{
             return AdaptationRegType::None;
-        }
         else if (s == L"kl" || s == L"klreg")
-{
             return AdaptationRegType::KL;
-        }
         else
-{
-            throw std::invalid_argument(
-                "ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are "
-                "(None | KL)");
-        }
+            throw std::invalid_argument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (None | KL)");
     }
 
     static GradientsUpdateType ParseGradUpdateType(wstring s)
-{
+    {
         msra::strfun::tolower_ascii(s);
         if (s == L"" || s == L"none" || s == L"normal" || s == L"simple")
-    {
             return GradientsUpdateType::None;
-    }
         else if (s == L"adagrad")
-        {
             return GradientsUpdateType::AdaGrad;
-        }
         else if (s == L"rmsprop")
-        {
             return GradientsUpdateType::RmsProp;
-        }
         else
-        {
-            throw std::invalid_argument(
-                "ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are "
-                "(None | AdaGrad | RmsProp )");
-        }
+            throw std::invalid_argument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (None | AdaGrad | RmsProp )");
     }
 
     static ParallelizationMethod ParseParallelizationMethod(wstring s)
-{
+    {
         msra::strfun::tolower_ascii(s);
         if ((s == L"") || (s == L"none"))
-        {
             return ParallelizationMethod::None;
-        }
         else if (s == L"dataparallelsgd")
-        {
             return ParallelizationMethod::DataParallelSGD;
-        }
         else if (s == L"modelaveragingsgd")
-        {
             return ParallelizationMethod::ModelAveragingSGD;
-        }
         else
-        {
             throw std::invalid_argument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD | ModelAveragingSGD)");
-        }
     }
 
     static LearningRateSearchAlgorithm ParseLearningRateSearchType(wstring s)
     {
+        // TODO: why allow so many variants?
         msra::strfun::tolower_ascii(s);
         if (s == L"false" || s == L"none")
-        {
             return LearningRateSearchAlgorithm::None;
-    }
         else if (s == L"searchbeforeepoch" || s == L"beforeepoch" || s == L"before")
-        {
             return LearningRateSearchAlgorithm::SearchBeforeEpoch;
-        }
         else if (s == L"adjustafterepoch" || s == L"afterepoch" || s == L"after")
-        {
             return LearningRateSearchAlgorithm::AdjustAfterEpoch;
-        }
         else
-        {
-            throw std::invalid_argument(
-                "autoAdjustLR: Invalid learning rate search type. Valid values are "
-                "(None | SearchBeforeEpoch | AdjustAfterEpoch)");
-        }
+            throw std::invalid_argument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
     }
 
-template<class ElemType>
+    template<class ElemType>
     SGD<ElemType>::SGD(const ConfigParameters& configSGD)
     {
         ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB", "");
@@ -1358,12 +1321,12 @@ template<class ElemType>
             size_t actualMBSize = net.GetActualMBSize();
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-            trainSetDataReader->SetSentenceSegBatch(net.GetSentenceBoundaryFlags(), net.GetMinibatchPackingFlags());
+            trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
 
             // TODO: Exactly this loop should be INSIDE ComputationNetwork--pass the nodes array instead!
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
                 net.Evaluate(*nodeIter);
-            }
+        }
 
         // mark done
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
@@ -1821,7 +1784,7 @@ template<class ElemType>
             size_t actualMBSize = net.GetActualMBSize();
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-            trainSetDataReader->SetSentenceSegBatch(net.GetSentenceBoundaryFlags(), net.GetMinibatchPackingFlags());
+            trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
             net.Evaluate(outputNodes[0]);   // Only evaluate the first output
             trainSetDataReader->SetNetOutput(uttInfo,
                                              dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->FunctionValues(),
@@ -1978,16 +1941,16 @@ template<class ElemType>
             if (wasDataRead)
             {
                 size_t nSlices = trainSetDataReader->NumberSlicesInEachRecurrentIter();
-                Matrix<float> sentenceBegin(CPUDEVICE);
-                vector<MinibatchPackingFlags> packingFlags;
+                MBLayoutPtr pMBLayout;
                 if (!useDistributedMBReading && useParallelTrain)
                 {
                     // TODO: refactor this as a function 
                     if (trainSetDataReader->RequireSentenceSeg())
                     {
+                        pMBLayout = make_shared<MBLayout>();    // items get filled in
                         DecimateMinibatchWithSentences(*inputMatrices,
                                                        g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(),
-                                                       nSlices, sentenceBegin, packingFlags,
+                                                       nSlices, pMBLayout,
                                                        trainSetDataReader);
                     }
                     else
@@ -2005,12 +1968,12 @@ template<class ElemType>
 
                     if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
                     {
-                        net.GetSentenceBoundaryFlags().SetValue(sentenceBegin);
-                        net.GetMinibatchPackingFlags() = packingFlags;
+                        *net.GetMBLayoutPtr() = *pMBLayout;
+                        // TODO: ^^ we should just pass pointers; this current code is semantically identical to before the change to MBLayout
                     }
                     else
                     {
-                        trainSetDataReader->SetSentenceSegBatch(net.GetSentenceBoundaryFlags(), net.GetMinibatchPackingFlags());
+                        trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
                     }
 
                     ComputationNetwork::UpdateEvalTimeStamps(featureNodes);

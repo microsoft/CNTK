@@ -86,7 +86,7 @@ public:
     virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
     virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
     virtual bool DataEnd(EndDataType) { NOT_IMPLEMENTED; };
-    virtual void SetSentenceSegBatch(Matrix<float>&, vector<MinibatchPackingFlags>& ) { NOT_IMPLEMENTED; };
+    virtual void CopyMBLayoutTo(MBLayoutPtr) { NOT_IMPLEMENTED; };
     virtual void SetRandomSeed(unsigned seed = 0) { m_seed = seed; };
     virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&) { return false; }
     virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>*) { }
@@ -238,7 +238,7 @@ public:
         const Matrix<float>& sentenceBegin,
         const std::vector<MinibatchPackingFlags>& minibatchPackingFlags);
 
-    void SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags);
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
 
     void SetRandomSeed(int);
 

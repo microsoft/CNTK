@@ -164,7 +164,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SetFunctionAndGradientSize(const int numSamples) = 0;
 
-        virtual void ResetBound(shared_ptr<MBLayout> pMBLayout)
+        virtual void ResetBound(MBLayoutPtr pMBLayout)
         {
             assert(pMBLayout->GetNumFrames() == pMBLayout->GetSize());  // TODO: move this check into MBLayout
             m_pMBLayout = pMBLayout;
@@ -684,7 +684,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
-        shared_ptr<MBLayout> m_pMBLayout;
+        MBLayoutPtr m_pMBLayout;
 
     private:
         // for loop nodes

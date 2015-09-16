@@ -20,6 +20,7 @@
 #include "File.h"
 #include "CommonMatrix.h"
 #include <limits.h>
+#include <memory>   // for shared_ptr
 
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -516,6 +517,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // MBLayout -- layout information of minibatch
     // Currently this is to bind the two somewhat inconsistent boundary flags and packing flags.
     // Once that is unified, we can clean it up further. For now, it's just moving the data members.
+    // This should probably also contain m_actualNbrSlicesInEachRecIter (which should be node-dependent).
     struct MBLayout
     {   
         MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { }
@@ -533,5 +535,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t GetSize() const { return m_minibatchPackingFlags.size(); }
         // ^^ TODO: add a check whether Size() == GetNumFrames(); it really should, unless I misunderstood
         bool IsEmpty() const { return m_sentenceBoundaryFlags.IsEmpty() || m_minibatchPackingFlags.size() == 0; }
+#if 0   // we have this pattern often:
+        // TODO: mbSize and #slices must also move into MBLayout 
+        evalnet->SetActualMiniBatchSize(mbSize);
+        evalnet->SetActualNbrSlicesInEachRecIter(dataReader->NumberSlicesInEachRecurrentIter());
+        dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
+#endif
+#if 0   // a VERY TELLING piece of code
+        // packing flags = frame-wise or over all streams of start and end
+        for (size_t nt = 0; nt < nMBSize; nt++)
+        {
+            for (size_t ns = 0; ns < nSlices; ns++)
+            {
+                if (newBoundary(ns, nt) == SEQUENCE_START)
+                    pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceStart;
+                if (newBoundary(ns, nt) == SEQUENCE_END)
+                    pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceEnd;
+            }
+        }
+#endif
     };
+    typedef std::shared_ptr<MBLayout> MBLayoutPtr;
+
 }}}

@@ -172,22 +172,22 @@ public:
             sentenceEnd[i] = m_switchFrame[i];
         }
     }
-    void SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags)
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
     {
         assert(m_switchFrame.size() == 1);        
-        sentenceBegin.Resize(1, m_mbSize);
-        minibatchPackingFlags.resize(m_mbSize);
-        sentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
-        std::fill(minibatchPackingFlags.begin(), minibatchPackingFlags.end(), MinibatchPackingFlags::None); 
+        pMBLayout->m_sentenceBoundaryFlags.Resize(1, m_mbSize);
+        pMBLayout->m_minibatchPackingFlags.resize(m_mbSize);
+        pMBLayout->m_sentenceBoundaryFlags.SetValue((ElemType)SEQUENCE_MIDDLE);
+        std::fill(pMBLayout->m_minibatchPackingFlags.begin(), pMBLayout->m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
 
         if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch*/
         {
-            sentenceBegin.SetValue(0, m_switchFrame[0], (ElemType)SEQUENCE_START); 
-            minibatchPackingFlags[m_switchFrame[0]] = MinibatchPackingFlags::SequenceStart; 
+            pMBLayout->m_sentenceBoundaryFlags.SetValue(0, m_switchFrame[0], (ElemType)SEQUENCE_START);
+            pMBLayout->m_minibatchPackingFlags[m_switchFrame[0]] = MinibatchPackingFlags::SequenceStart;
             if (m_switchFrame[0] > 0)
             {
-                sentenceBegin.SetValue(0, m_switchFrame[0] - 1, (ElemType)SEQUENCE_END); 
-                minibatchPackingFlags[m_switchFrame[0] - 1] = MinibatchPackingFlags::SequenceEnd;
+                pMBLayout->m_sentenceBoundaryFlags.SetValue(0, m_switchFrame[0] - 1, (ElemType)SEQUENCE_END);
+                pMBLayout->m_minibatchPackingFlags[m_switchFrame[0] - 1] = MinibatchPackingFlags::SequenceEnd;
             }
         }
     }
@@ -196,9 +196,7 @@ public:
     {
         m_switchFrame.resize(boundaryInfo.size());
         for (size_t i = 0; i < m_switchFrame.size(); i ++)
-        {
             m_switchFrame[i] = boundaryInfo[i];
-        }
     }
 
     void SetRandomSeed(int) { NOT_IMPLEMENTED;  }

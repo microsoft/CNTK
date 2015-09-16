@@ -895,8 +895,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
                 //                    decoderTrainSetDataReader->SetSentenceBegin(false);
-                //                    decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet->m_mbLayout.m_sentenceBoundaryFlags);
-                //                    decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet->m_sentenceBegin);
+                //                    decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->m_mbLayout.m_sentenceBoundaryFlags);
+                //                    decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->m_sentenceBegin);
 
                 if (m_doGradientCheck)
                 {
@@ -1159,7 +1159,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             encoderNet->SetActualMiniBatchSize(actualMBSize);
             encoderNet->SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
-            encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet->GetSentenceBoundaryFlags(), encoderNet->GetMinibatchPackingFlags());
+            encoderTrainSetDataReader->CopyMBLayoutTo(encoderNet->GetMBLayoutPtr());
 
             encoderNet->Evaluate(encoderEvaluationNodes[0]);
 
@@ -1169,7 +1169,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             decoderNet->SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
 
             /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-            decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet->GetSentenceBoundaryFlags(), decoderNet->GetMinibatchPackingFlags());
+            decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
 
             if (decoderCriterionNodes.size() == 0 && decoderEvaluationNodes.size() == 0)
             {
