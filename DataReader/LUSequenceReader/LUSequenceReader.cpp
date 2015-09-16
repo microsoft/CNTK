@@ -705,8 +705,8 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         if (mMaxSentenceLength > m_mbSize)
             throw std::runtime_error("LUSequenceReader : minibatch size needs to be large enough to accomodate the longest sentence");
 
-        /// reset sentenceending index to NO_INPUT, which is negative
-        mSentenceEndAt.assign(mSentenceEndAt.size(), NO_INPUT);
+        /// reset sentence-end index to ((int) MinibatchPackingFlags::NoInput), which is negative
+        mSentenceEndAt.assign(mSentenceEndAt.size(), ((int) MinibatchPackingFlags::NoInput));
 
         /**
         mtSentenceBegin : a matrix with [Ns x T]
@@ -715,7 +715,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         1 : case exists
         */
         mtSentenceBegin.Resize(mToProcess.size(), mMaxSentenceLength);
-        mtSentenceBegin.SetValue((ElemType) SEQUENCE_MIDDLE);
+        mtSentenceBegin.SetValue((ElemType) ((int) MinibatchPackingFlags::None));
         DEVICEID_TYPE sentenceSegDeviceId = mtSentenceBegin.GetDeviceId();
         mtSentenceBegin.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
 
@@ -735,7 +735,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                     mSentenceBeginAt[k] = i;
                     if (mIgnoreSentenceBeginTag == false)  /// ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
                     {
-                        mtSentenceBegin.SetValue(k, j, (ElemType)SEQUENCE_START);
+                        mtSentenceBegin.SetValue(k, j, (ElemType)((int) MinibatchPackingFlags::SequenceStart));
                         /*m_mbLayout.*/m_minibatchPackingFlags[j] |= MinibatchPackingFlags::SequenceStart;
                     }
                 }
@@ -798,7 +798,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                     m_featureWordContext.push_back(tmpCxt);
 
                     m_labelIdData.push_back((LabelIdType)NULLLABEL);
-                    mtSentenceBegin.SetValue(k, j, (ElemType) NO_INPUT);
+                    mtSentenceBegin.SetValue(k, j, (ElemType) ((int) MinibatchPackingFlags::NoInput));
                     /*m_mbLayout.*/m_minibatchPackingFlags[j] |= MinibatchPackingFlags::NoInput;
                 }
 
@@ -899,10 +899,8 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 
                     if (idx >= featInfo.dim)
                     {
-                        if (mtSentenceBegin(utt_id, utt_t) != NO_INPUT) /// for those obs that are for no observations
-                        {
+                        if (mtSentenceBegin(utt_id, utt_t) != ((int) MinibatchPackingFlags::NoInput)) /// for those obs that are for no observations
                             LogicError("BatchLUSequenceReader::GetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here. ");
-                        }
                         continue;
                     }
 
@@ -1046,10 +1044,8 @@ bool BatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         ret = true;
         for (size_t i = 0; i < mToProcess.size(); i++)
         {
-            if (mSentenceEndAt[i] == NO_INPUT)
-            {
+            if (mSentenceEndAt[i] == ((int) MinibatchPackingFlags::NoInput))
                 LogicError("BatchLUSequenceReader: minibatch should be large enough to accomodate the longest sentence");
-            }
             size_t k = mToProcess[i];
             mProcessed[k] = true;
         }

@@ -933,7 +933,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             evalnet->SetActualMiniBatchSize(1, &featureNodes);
             dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
             /// need to set the sentence begining segmentation info
-            evalnet->GetMBLayoutPtr()->m_sentenceBoundaryFlags.SetValue(SEQUENCE_START);
+            evalnet->GetMBLayoutPtr()->m_sentenceBoundaryFlags.SetValue(((int) MinibatchPackingFlags::SequenceStart));
 
             for (itdx = 0; itdx < maxSize; itdx++)
             {
@@ -943,7 +943,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    evalnet->GetMBLayoutPtr()->m_sentenceBoundaryFlags.SetValue(SEQUENCE_MIDDLE);
+                    evalnet->GetMBLayoutPtr()->m_sentenceBoundaryFlags.SetValue(((int) MinibatchPackingFlags::None));
                 }
 
                 PreComputeActivityAtTime(itdx);
@@ -1095,7 +1095,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             double best_score = -numeric_limits<double>::infinity();
             double best_score_so_far = -numeric_limits<double>::infinity();
 
-            evalnet->GetMBLayoutPtr()->m_sentenceBoundaryFlags.SetValue(SEQUENCE_START);
+            evalnet->GetMBLayoutPtr()->m_sentenceBoundaryFlags.SetValue(((int) MinibatchPackingFlags::SequenceStart));
 
             for (itdx = 0; itdx < maxMbSize; itdx++)
             {
@@ -1105,7 +1105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    evalnet->GetMBLayoutPtr()->m_sentenceBoundaryFlags.SetValue(SEQUENCE_MIDDLE);
+                    evalnet->GetMBLayoutPtr()->m_sentenceBoundaryFlags.SetValue(((int) MinibatchPackingFlags::None));
                 }
 
                 PreComputeActivityAtTime(itdx);

@@ -1858,7 +1858,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         size_t nT = actualmbsize / mToProcess.size();
         mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
         mtSentenceBegin.Resize(mToProcess.size(), nT);
-        mtSentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
+        mtSentenceBegin.SetValue((ElemType)((int) MinibatchPackingFlags::None));
         /*m_mbLayout.*/m_minibatchPackingFlags.resize(nT);
         std::fill(/*m_mbLayout.*/m_minibatchPackingFlags.begin(), /*m_mbLayout.*/m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
 
@@ -1964,7 +1964,7 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
         if (wrd == (int)index)
         {
             mSentenceBegin = true;
-            mtSentenceBegin.SetValue(uttPos, timePos, (ElemType)SEQUENCE_START);
+            mtSentenceBegin.SetValue(uttPos, timePos, (ElemType)((int) MinibatchPackingFlags::SequenceStart));
             /*m_mbLayout.*/m_minibatchPackingFlags[timePos] = MinibatchPackingFlags::SequenceStart;
         }
     }

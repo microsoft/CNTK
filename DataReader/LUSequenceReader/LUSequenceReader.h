@@ -352,7 +352,8 @@ public:
     /// n_length is the maximum lenght of each stream
     /// for example, two sentences used in parallel in one minibatch would be
     /// [2 x 5] if the max length of one of the sentences is 5
-    /// the elements of the matrix is 0, 1, or -1, defined as SEQUENCE_START, SEQUENCE_MIDDLE, NO_INPUT in cbasetype.h 
+    /// the elements of the matrix is 0, 1, or -1, defined as ((int) MinibatchPackingFlags::SequenceStart), ((int) MinibatchPackingFlags::None), ((int) MinibatchPackingFlags::NoInput) in cbasetype.h 
+    //  TODO: ^^ this comment seems out of date
     /// 0 1 1 0 1
     /// 1 0 1 0 0 
     /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
@@ -367,7 +368,7 @@ public:
     vector<MinibatchPackingFlags> m_minibatchPackingFlags;
 
     /// by default it is false
-    /// if true, reader will set to SEQUENCE_MIDDLE for time positions that are orignally correspond to SEQUENCE_START
+    /// if true, reader will set to ((int) MinibatchPackingFlags::None) for time positions that are orignally correspond to ((int) MinibatchPackingFlags::SequenceStart)
     /// set to true so that a current minibatch can uses state activities from the previous minibatch. 
     /// default will have truncated BPTT, which only does BPTT inside a minibatch
     bool mIgnoreSentenceBeginTag;

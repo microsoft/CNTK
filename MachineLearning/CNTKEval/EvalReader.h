@@ -177,16 +177,16 @@ public:
         assert(m_switchFrame.size() == 1);        
         pMBLayout->m_sentenceBoundaryFlags.Resize(1, m_mbSize);
         pMBLayout->m_minibatchPackingFlags.resize(m_mbSize);
-        pMBLayout->m_sentenceBoundaryFlags.SetValue((ElemType)SEQUENCE_MIDDLE);
+        pMBLayout->m_sentenceBoundaryFlags.SetValue((ElemType)((int) MinibatchPackingFlags::None));
         std::fill(pMBLayout->m_minibatchPackingFlags.begin(), pMBLayout->m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
 
         if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch*/
         {
-            pMBLayout->m_sentenceBoundaryFlags.SetValue(0, m_switchFrame[0], (ElemType)SEQUENCE_START);
+            pMBLayout->m_sentenceBoundaryFlags.SetValue(0, m_switchFrame[0], (ElemType)((int) MinibatchPackingFlags::SequenceStart));
             pMBLayout->m_minibatchPackingFlags[m_switchFrame[0]] = MinibatchPackingFlags::SequenceStart;
             if (m_switchFrame[0] > 0)
             {
-                pMBLayout->m_sentenceBoundaryFlags.SetValue(0, m_switchFrame[0] - 1, (ElemType)SEQUENCE_END);
+                pMBLayout->m_sentenceBoundaryFlags.SetValue(0, m_switchFrame[0] - 1, (ElemType)((int) MinibatchPackingFlags::SequenceEnd));
                 pMBLayout->m_minibatchPackingFlags[m_switchFrame[0] - 1] = MinibatchPackingFlags::SequenceEnd;
             }
         }
