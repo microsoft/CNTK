@@ -393,7 +393,7 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
 
     std::fill(m_labBuf.begin(), m_labBuf.end(), static_cast<ElemType>(0));
     
-//#pragma omp parallel for ordered schedule(dynamic)
+#pragma omp parallel for ordered schedule(dynamic)
     for (long long i = 0; i < static_cast<long long>(mbLim - m_mbStart); i++)
     {
         const auto& p = files[i + m_mbStart];

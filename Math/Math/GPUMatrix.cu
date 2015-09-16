@@ -22,39 +22,6 @@
 #include "GPUSparseMatrix.h"
 #include <iostream> // for cout
 
-// REVIEW alexeyk: disable warnings properly for GCC/clang
-//#ifdef _MSC_VER
-//#pragma warning (push)
-//#pragma warning (disable: 4100)
-//#pragma warning (disable: 4127)
-//#pragma warning (disable: 4201)
-//#pragma warning (disable: 4244)
-//#pragma warning (disable: 4267)
-//#pragma warning (disable: 4324)
-//#pragma warning (disable: 4510)
-//#pragma warning (disable: 4512)
-//#pragma warning (disable: 4515)
-//#pragma warning (disable: 4610)
-//#endif
-//#include <thrust/device_ptr.h>
-//#include <thrust/sort.h>
-//#ifdef _MSC_VER
-//#pragma warning (pop)
-//#endif
-
-// REVIEW alexeyk: disable warnings properly for GCC/clang
-#ifdef _MSC_VER
-#pragma warning (push)
-#pragma warning (disable: 4100)
-#pragma warning (disable: 4127)
-#pragma warning (disable: 4201)
-#pragma warning (disable: 4515)
-#endif
-#include <cub/cub.cuh>
-#ifdef _MSC_VER
-#pragma warning (pop)
-#endif
-
 #pragma comment (lib, "cudart.lib")     // instruct linker to reference these libs
 #pragma comment (lib, "cublas.lib")
 #pragma comment (lib, "cusparse.lib")
@@ -2971,7 +2938,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
     }
-
+    
     __global__ void _initIndicesForSort(uint64_t* indexes, CUDA_LONG crow, CUDA_LONG ccol)
     {
         CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -2980,19 +2947,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         uint32_t irow = id % crow;
         uint32_t icol = id / crow;
         indexes[id] = (static_cast<uint64_t>(irow) << 32) | icol;
-    }
-
-    template<class ElemType>
-    __global__ void _copyTopKResults(uint64_t* indexes, ElemType* values, ElemType* maxIndexes, ElemType* maxValues,
-        CUDA_LONG crow, CUDA_LONG ccol, int topK)
-    {
-        CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-        if (id >= topK * ccol)
-            return;
-        CUDA_LONG irow = id % topK;
-        CUDA_LONG icol = id / topK;
-        maxIndexes[id] = static_cast<CUDA_LONG>(indexes[icol * crow + irow] >> 32);
-        maxValues[id] = values[icol * crow + irow];
     }
 
     template<class ElemType>
@@ -3121,35 +3075,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-    }
-
-    template<int BlockSize, class ElemType>
-    __global__ void _assignNumOfDiffCol(const ElemType *a, const ElemType *b, ElemType *c, CUDA_LONG crowB, CUDA_LONG ccol)
-    {
-        assert(gridDim.x == 1 && gridDim.y == 1 && gridDim.z == 1);
-
-        using BlockReduceT = cub::BlockReduce<int, BlockSize>;
-        __shared__ typename BlockReduceT::TempStorage tmp;
-        
-        int cur = 0;
-        CUDA_LONG icol = threadIdx.x;
-        for (; icol < ccol; icol += blockDim.x)
-        {
-            ElemType key = a[icol];
-            CUDA_LONG idxB = icol * crowB;
-            CUDA_LONG irow = 0;
-            for (; irow < crowB; irow++, idxB++)
-            {
-                if (b[idxB] == key)
-                    break;
-            }
-
-            cur += (irow == crowB);
-        }
-
-        int res = BlockReduceT(tmp).Sum(cur);
-        if (threadIdx.x == 0)
-            *c = res;
     }
 
     template<class ElemType>
