@@ -418,8 +418,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 std::list<ComputationNodeBasePtr> result;
                 std::unordered_set<ComputationNodeBasePtr> visited;
-                std::vector<ComputationNodeBasePtr> rootOfLoop;
-                EnumerateNodesForEval(visited, result, recurrent, rootOfLoop, false);
+                EnumerateNodesForEval(visited, result, recurrent);  // call into the recursive portion of this function
                 return result;
             }
             else
@@ -467,23 +466,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // create list such that children are evaluated before their parents
         // Unbeknownst to the name of the function, it also updates the m_needGradient flags (set if children are set).
+        // If recurrent, then this also sets m_visitedOrder.
         // This is a recursive function only called from EnumerateNodes().
         void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result,
-                                   boolean recurrent,
-                                   std::vector<ComputationNodeBasePtr>& sourceRecurrentNodePtr, const bool isFromPastOrFutureValueNode)
+                                   boolean recurrent)
         {
             if (visited.find(shared_from_this()) == visited.end())  //not visited
             {
                 visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 // children first for function evaluation
-                if (OperationName() != L"PairNetwork" || !recurrent)
+                if (OperationName() != L"PairNetwork" || !recurrent)    // (don't step through network-pair boundary if recurrent)
                 {
                     for (int i = 0; i < m_children.size(); i++)
                     {
                         if (m_children[i])
-                            m_children[i]->EnumerateNodesForEval(visited, result, recurrent, sourceRecurrentNodePtr,
-                                                                 recurrent && (OperationName() == L"PastValue" || OperationName() == L"FutureValue"));
+                            m_children[i]->EnumerateNodesForEval(visited, result, recurrent);
                     }
                 }
 
@@ -496,11 +494,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (recurrent)
                     m_visitedOrder = result.size();
-            }
-            else if (recurrent)
-            {
-                if (!IsLeaf() && isFromPastOrFutureValueNode)
-                    sourceRecurrentNodePtr.push_back(shared_from_this());
             }
         }
 
@@ -632,8 +625,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // determine order in which nodes must be processed for back prop
         std::list<ComputationNodeBasePtr> EnumerateNodesForGradient()
         {
-            std::vector<ComputationNodeBasePtr> rootOfLoopDummy;
-            std::list<ComputationNodeBasePtr> nodes = EnumerateNodes(true/*forward*/, false/*recurrent*/, rootOfLoopDummy);  //get forward computation order first
+            std::list<ComputationNodeBasePtr> nodes = EnumerateNodes(true/*forward*/, false/*recurrent*/);  //get forward computation order first
 
             // TODO: comment why can't directly reverse(); what's wrong with EnumerateNodes()' result?
             nodes.sort(IsSmaller);  // sort nodes by m_visitedOrder   --TODO: why?
