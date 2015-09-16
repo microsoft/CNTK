@@ -75,13 +75,12 @@ public:
     // construction
     // -----------------------------------------------------------------------
 
-    ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
-                    : m_deviceId(deviceId), m_sentenceBoundaryFlags(CPUDEVICE)
+    ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) :
+        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())
     {
         m_randomSeedOffset = 0;
         m_actMiniBSize = 0;
-        if (m_deviceId == AUTOPLACEMATRIX)  // TODO: code dup with SetDeviceId()
-            m_deviceId = Matrix<float>::GetBestGPUDeviceId();
+        SetDeviceID(deviceId);
         m_nbrSlicesInEachRecurrentIteration = 1;
     }
 
@@ -184,11 +183,13 @@ public:
     // construction
     // -----------------------------------------------------------------------
 
+    // TODO: DeviceID vs. DeviceId? Use the latter throughout
     void SetDeviceID(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
     {
-        m_deviceId = deviceId;
         if (m_deviceId == AUTOPLACEMATRIX)
             m_deviceId = Matrix<float>::GetBestGPUDeviceId();
+        else
+            m_deviceId = deviceId;
     }
 
     DEVICEID_TYPE GetDeviceID() { return m_deviceId; }
@@ -241,24 +242,23 @@ public:
     //in which case the packing info is not available (and not meaningful) for them
     size_t GetNumSamplesWithLabel(const size_t numAllSamples)
     {
-        if (!m_sentenceBoundaryFlags.IsEmpty() &&
-            !m_minibatchPackingFlags.size() == 0)
+        if (!m_pMBLayout->IsEmpty())
         {
-            size_t numTimeSteps = m_sentenceBoundaryFlags.GetNumCols();
-            size_t numSequences = m_sentenceBoundaryFlags.GetNumRows();
+            size_t numTimeSteps = m_pMBLayout->GetNumFrames();
+            size_t numSequences = m_pMBLayout->GetNumStreams();
 
-            if (m_minibatchPackingFlags.size() != numTimeSteps)
-                LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlags should have one element for each timestep of all streams.Check feature reader. ");
+            if (m_pMBLayout->GetSize() != numTimeSteps)
+                LogicError("GetNumSamplesWithLabel(): m_pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams.Check feature reader. ");
 
             size_t numSamplesWithoutLabel = 0;
 
             for (size_t j = 0; j < numTimeSteps; j++)
             {
-                if (m_minibatchPackingFlags[j] & MinibatchPackingFlags::NoLabel)
+                if (m_pMBLayout->m_minibatchPackingFlags[j] & MinibatchPackingFlags::NoLabel)
                 {
                     for (int i = 0; i < numSequences; i++)
                     {
-                        if ((int)(m_sentenceBoundaryFlags(i, j)) & NO_LABEL)
+                        if ((int)(m_pMBLayout->m_sentenceBoundaryFlags(i, j)) & NO_LABEL)
                             numSamplesWithoutLabel++;
                         }
                     }
@@ -616,7 +616,7 @@ public:
             // TODO: nbrSlices set once to the same value for all nodes each evaluation--is it ever changed later?
             (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
             if ((*nodeIter)->ReqMultiSeqHandling())
-                (*nodeIter)->ResetBound(&m_sentenceBoundaryFlags, &m_minibatchPackingFlags);
+                (*nodeIter)->ResetBound(m_pMBLayout);
         }
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
@@ -1353,9 +1353,10 @@ public:
         }
     };
 
-    Matrix<float> & GetSentenceBoundaryFlags() { return m_sentenceBoundaryFlags; }
+    // TODO: these go next!
+    Matrix<float> & GetSentenceBoundaryFlags() { return m_pMBLayout->m_sentenceBoundaryFlags; }
 
-    vector<MinibatchPackingFlags> & GetMinibatchPackingFlags() { return m_minibatchPackingFlags; }
+    vector<MinibatchPackingFlags> & GetMinibatchPackingFlags() { return m_pMBLayout->m_minibatchPackingFlags; }
 
 protected:
     // -----------------------------------------------------------------------
@@ -1545,13 +1546,9 @@ protected:
 
     std::vector<RecurrentInfo> m_recurrentInfo;     // [index--TODO: comment what this is indexed with]
 
-    //used for sentence boundary information passed from reader to reset RNN state 
-    Matrix<float> m_sentenceBoundaryFlags; // (t,stream) this matrix is always in CPU memory  --TODO: should rather be a matrix of some int
-    // ^^ really Matrix<MinibatchPackingFlags> stored as float matrix
-
+    // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
-    vector<MinibatchPackingFlags> m_minibatchPackingFlags;    // [t]
-    // TODO: how are the two above related?
+    shared_ptr<MBLayout> m_pMBLayout;
 
     int m_actMiniBSize;
     size_t m_nbrSlicesInEachRecurrentIteration;

@@ -1859,8 +1859,8 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
         mtSentenceBegin.Resize(mToProcess.size(), nT);
         mtSentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
-        m_minibatchPackingFlags.resize(nT);
-        std::fill(m_minibatchPackingFlags.begin(), m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
+        /*m_mbLayout.*/m_minibatchPackingFlags.resize(nT);
+        std::fill(/*m_mbLayout.*/m_minibatchPackingFlags.begin(), /*m_mbLayout.*/m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
 
         if (features.GetMatrixType() == MatrixType::DENSE)
         {
@@ -1890,7 +1890,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
 //        mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
-//        m_minibatchPackingFlags.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
+//        /*m_mbLayout.*/m_minibatchPackingFlags.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
 
         // TODO: move these two methods to startMiniBatchLoop()
         if (readerMode == ReaderMode::Class)
@@ -1965,7 +1965,7 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
         {
             mSentenceBegin = true;
             mtSentenceBegin.SetValue(uttPos, timePos, (ElemType)SEQUENCE_START);
-            m_minibatchPackingFlags[timePos] = MinibatchPackingFlags::SequenceStart;
+            /*m_mbLayout.*/m_minibatchPackingFlags[timePos] = MinibatchPackingFlags::SequenceStart;
         }
     }
 }

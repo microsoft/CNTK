@@ -895,7 +895,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
                 //                    decoderTrainSetDataReader->SetSentenceBegin(false);
-                //                    decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet->m_sentenceBoundaryFlags);
+                //                    decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet->m_mbLayout.m_sentenceBoundaryFlags);
                 //                    decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet->m_sentenceBegin);
 
                 if (m_doGradientCheck)

@@ -9,12 +9,10 @@
 #include "Basics.h"
 #include "ComputationNetwork.h"
 #include "ComputationNetworkBuilder.h"  // used for load & save
-//#include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
-//#include "DecoderNode.h"
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
