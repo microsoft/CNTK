@@ -242,10 +242,10 @@ bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType
 }
 
 template<class ElemType>
-void DataReader<ElemType>::SetSentenceSegBatch(Matrix<float> &sentenceEnd, vector<MinibatchPackingFlags>& minibatchPackingFlags)
+void DataReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReader[m_ioNames[i]]->SetSentenceSegBatch(sentenceEnd, minibatchPackingFlags);
+        m_dataReader[m_ioNames[i]]->CopyMBLayoutTo(pMBLayout);
 }
 
 template<class ElemType>

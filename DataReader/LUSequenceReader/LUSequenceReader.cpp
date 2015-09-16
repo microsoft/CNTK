@@ -984,14 +984,14 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags)
+void BatchLUSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
     DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
-    mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
-    sentenceBegin.SetValue(mtSentenceBegin); 
-    mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
+    mtSentenceBegin.TransferFromDeviceToDevice(device, pMBLayout->m_sentenceBoundaryFlags.GetDeviceId(), true);
+    pMBLayout->m_sentenceBoundaryFlags.SetValue(mtSentenceBegin); 
+    mtSentenceBegin.TransferFromDeviceToDevice(pMBLayout->m_sentenceBoundaryFlags.GetDeviceId(), device, true);
 
-    minibatchPackingFlags = /*m_mbLayout.*/m_minibatchPackingFlags;
+    pMBLayout->m_minibatchPackingFlags = /*m_mbLayout.*/m_minibatchPackingFlags;
 }
 
 template<class ElemType>
@@ -1291,20 +1291,19 @@ void MultiIOBatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, s
 }
 
 template<class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags)
+void MultiIOBatchLUSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
     /// run for each reader
     vector<size_t> col;
     size_t rows = 0, cols = 0;
-    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    for (auto p : mReader)
     {
-        (p->second)->SetSentenceSegBatch(sentenceBegin, minibatchPackingFlags);
+        p.second->CopyMBLayoutTo(pMBLayout);
         if (rows == 0)
-            rows = sentenceBegin.GetNumRows();
-        else
-            if (rows != sentenceBegin.GetNumRows())
-                LogicError("multiple streams for LU sequence reader must have the same number of rows for sentence begining");
-        size_t this_col = sentenceBegin.GetNumCols();
+            rows = pMBLayout->GetNumStreams();
+        else if (rows != pMBLayout->GetNumStreams())
+            LogicError("multiple streams for LU sequence reader must have the same number of rows for sentence begining");
+        size_t this_col = pMBLayout->GetNumFrames();
         col.push_back(this_col);
         cols += this_col;
     }

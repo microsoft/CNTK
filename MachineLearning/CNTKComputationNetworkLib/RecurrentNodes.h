@@ -95,7 +95,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"DelayedValue"; }
 
         //Set sentence boundary information according to a specified time step. 
-        virtual void ResetBound(shared_ptr<MBLayout> pMBLayout)
+        virtual void ResetBound(MBLayoutPtr pMBLayout)
         {
             if (m_timeStep <= 0)
                 LogicError("timeStep should be 1 or larger");

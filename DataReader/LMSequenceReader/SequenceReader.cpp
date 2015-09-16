@@ -1970,6 +1970,7 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
     }
 }
 
+// TODO: this should have been renamed to CopyMBLayoutTo(), but it had the wrong signature??
 template<class ElemType>
 void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentenceEnd)
 {
@@ -2101,14 +2102,14 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
 }
 
 template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags)
+void BatchSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
     DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
-    mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
-    sentenceBegin.SetValue(mtSentenceBegin);
-    mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
+    mtSentenceBegin.TransferFromDeviceToDevice(device, pMBLayout->m_sentenceBoundaryFlags.GetDeviceId(), true);
+    pMBLayout->m_sentenceBoundaryFlags.SetValue(mtSentenceBegin);
+    mtSentenceBegin.TransferFromDeviceToDevice(pMBLayout->m_sentenceBoundaryFlags.GetDeviceId(), device, true);
 
-    minibatchPackingFlags = m_minibatchPackingFlags;
+    pMBLayout->m_minibatchPackingFlags = m_minibatchPackingFlags;
 }
 
 template<class ElemType>

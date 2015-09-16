@@ -301,7 +301,7 @@ public:
     size_t NumberSlicesInEachRecurrentIter();
     void SetNbrSlicesEachRecurrentIter(const size_t mz);
 
-    void SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags);
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
 
 public:
     void GetClassInfo(LabelInfo& lblInfo);
@@ -399,7 +399,7 @@ public:
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples);
 
-    void SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlags>& minibatchPackingFlags);
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
 
     size_t NumberSlicesInEachRecurrentIter();
 

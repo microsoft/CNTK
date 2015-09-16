@@ -44,8 +44,9 @@ void CNTKEval<ElemType>::Init(const std::string& config)
         std::wstring path = m_config("modelPath");
         LoadModel(path);
     }
-    size_t nThread = m_config("numCPUThreads", "1");
-    CPUMatrix<ElemType>::SetNumThreads(nThread);    
+    size_t nThreads = m_config("numCPUThreads", "1");
+    // TODO: fix this, does not link currently:
+nThreads;//    CPUMatrix<ElemType>::SetNumThreads(nThreads);    
 }
 
 // Destroy - cleanup and remove this class

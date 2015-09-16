@@ -163,6 +163,7 @@ public:
     /// != 0 denotes the case that there exists sentence begin or no_labels case in this frame
     /// == 0 denotes such case is not in this frame
     vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // [t]
+    // TODO: replace the two above by a MBLayoutPtr
 
     /// by default it is false
     /// if true, reader will set to SEQUENCE_MIDDLE for time positions that are orignally correspond to SEQUENCE_START
@@ -193,7 +194,7 @@ public:
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
-    void SetSentenceSegBatch(Matrix<float> &sentenceBegin, vector<MinibatchPackingFlags>& sentenceExistsBeginOrNoLabels);
+    void CopyMBLayoutTo(MBLayoutPtr);
     void SetSentenceEndInBatch(vector<size_t> &/*sentenceEnd*/);
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetRandomSeed(int){ NOT_IMPLEMENTED };

@@ -1353,10 +1353,8 @@ public:
         }
     };
 
-    // TODO: these go next!
-    Matrix<float> & GetSentenceBoundaryFlags() { return m_pMBLayout->m_sentenceBoundaryFlags; }
-
-    vector<MinibatchPackingFlags> & GetMinibatchPackingFlags() { return m_pMBLayout->m_minibatchPackingFlags; }
+    // note: this is called to write into our exisdting MBLayout instance
+    const MBLayoutPtr & GetMBLayoutPtr() { return m_pMBLayout; }
 
 protected:
     // -----------------------------------------------------------------------
@@ -1548,7 +1546,7 @@ protected:
 
     // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
-    shared_ptr<MBLayout> m_pMBLayout;
+    MBLayoutPtr m_pMBLayout;
 
     int m_actMiniBSize;
     size_t m_nbrSlicesInEachRecurrentIteration;

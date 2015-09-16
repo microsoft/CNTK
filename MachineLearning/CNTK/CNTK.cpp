@@ -1225,6 +1225,7 @@ void DoCommand(const ConfigParameters& config)
     int numCPUThreads = config("numCPUThreads", "0");
     // BUGBUG: suddenly this stopped to link
 //    numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
+    // TODO: size_t?
 
     if (numCPUThreads>0)
         std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
