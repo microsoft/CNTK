@@ -568,9 +568,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // ...?
         getStrongSCC(rootNode);
 
-        std::vector<ComputationNodeBasePtr> sourceLoopNodesDummy;
-        // TODO: this is the only place that calls GetEvalOrder() with sourceLoopNodes, but it is not used?
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true, sourceLoopNodesDummy);
+        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*recurrent*/);
         std::list<ComputationNodeBasePtr> nodesForGrad;
 
         // ??

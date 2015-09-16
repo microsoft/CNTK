@@ -412,12 +412,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return true;
         }
 
-        std::list<ComputationNodeBasePtr> EnumerateNodes(const bool forwardComputation, bool recurrent, std::vector<ComputationNodeBasePtr>& rootOfLoop)
+        std::list<ComputationNodeBasePtr> EnumerateNodes(const bool forwardComputation, bool recurrent)
         {
             if (forwardComputation)
             {
                 std::list<ComputationNodeBasePtr> result;
                 std::unordered_set<ComputationNodeBasePtr> visited;
+                std::vector<ComputationNodeBasePtr> rootOfLoop;
                 EnumerateNodesForEval(visited, result, recurrent, rootOfLoop, false);
                 return result;
             }
@@ -435,6 +436,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return noRecurrentResult;
         }
 
+#if 0
         std::list<ComputationNodeBasePtr> EnumerateNodes(const bool forwardComputation, bool recurrent)
         {
             if (forwardComputation)
@@ -447,6 +449,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 return EnumerateNodesForGradient();
         }
+#endif
 
     protected:
 
@@ -462,7 +465,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, boolean recurrent,
+        // create list such that children are evaluated before their parents
+        // Unbeknownst to the name of the function, it also updates the m_needGradient flags (set if children are set).
+        // This is a recursive function only called from EnumerateNodes().
+        void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result,
+                                   boolean recurrent,
                                    std::vector<ComputationNodeBasePtr>& sourceRecurrentNodePtr, const bool isFromPastOrFutureValueNode)
         {
             if (visited.find(shared_from_this()) == visited.end())  //not visited
@@ -470,23 +477,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 // children first for function evaluation
-                if (OperationName() != L"PairNetwork")
+                if (OperationName() != L"PairNetwork" || !recurrent)
                 {
                     for (int i = 0; i < m_children.size(); i++)
                     {
                         if (m_children[i])
                             m_children[i]->EnumerateNodesForEval(visited, result, recurrent, sourceRecurrentNodePtr,
-                                                                 OperationName() == L"PastValue" || OperationName() == L"FutureValue");
+                                                                 recurrent && (OperationName() == L"PastValue" || OperationName() == L"FutureValue"));
                     }
                 }
 
+                // propagate needGradient flags upwards from leaves
                 if (!IsLeaf())
                     m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
+                // now that all children are in list before us, put ourselves
                 result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
-                m_visitedOrder = result.size();
+
+                if (recurrent)
+                    m_visitedOrder = result.size();
             }
-            else
+            else if (recurrent)
             {
                 if (!IsLeaf() && isFromPastOrFutureValueNode)
                     sourceRecurrentNodePtr.push_back(shared_from_this());
@@ -516,6 +527,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+#if 0
         // create list such that children are evaluated before their parents
         // Unbeknownst to the name of the function, it also updates the m_needGradient flags (set if children are set).
         // TODO: when is this called vs. the other?
@@ -537,6 +549,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
             }
         }
+#endif
 
     public:
 
@@ -619,7 +632,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // determine order in which nodes must be processed for back prop
         std::list<ComputationNodeBasePtr> EnumerateNodesForGradient()
         {
-            std::list<ComputationNodeBasePtr> nodes = EnumerateNodes(true/*forward*/, false/*recurrent*/);  //get forward computation order first
+            std::vector<ComputationNodeBasePtr> rootOfLoopDummy;
+            std::list<ComputationNodeBasePtr> nodes = EnumerateNodes(true/*forward*/, false/*recurrent*/, rootOfLoopDummy);  //get forward computation order first
 
             // TODO: comment why can't directly reverse(); what's wrong with EnumerateNodes()' result?
             nodes.sort(IsSmaller);  // sort nodes by m_visitedOrder   --TODO: why?
@@ -1269,7 +1283,7 @@ public: \
     using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; \
     using Base::ComputeGradientForChildren; using Base::ComputeInputPartial; using Base::ConstOnes; using Base::InferImageDimsFromInput; \
     using Base::InferImageDimsFromInputs; using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
-    using Base::DumpNodeInfo; using Base::EnumerateNodes; using Base::EnumerateNodesForEval; \
+    using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::EnumerateNodesForGradient; using Base::EvaluateThisNode; using Base::FindChildInASet; using Base::FunctionValues; \
     using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
