@@ -10,11 +10,15 @@
 #define EVAL_EXPORTS  // creating the exports here
 #include "Eval.h"
 #include "CNTKEval.h"
+#include "CPUMatrix.h"  // for SetNumThreads()
 #include "SimpleOutputWriter.h"
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
 #include "BestGpu.h"
+
+// TODO: Get rid of this global
+Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -45,7 +49,6 @@ void CNTKEval<ElemType>::Init(const std::string& config)
     }
     size_t nThread = m_config("numCPUThreads", "1");
     CPUMatrix<ElemType>::SetNumThreads(nThread);    
-        
 }
 
 // Destroy - cleanup and remove this class
@@ -69,8 +72,8 @@ void CNTKEval<ElemType>::LoadModel(const std::wstring& modelFileName)
     fprintf(stderr, "DeviceID=%d\n", (int)deviceId);
     if (m_net != NULL)
         delete m_net;
-    m_net = new ComputationNetwork<ElemType>(deviceId);
-    m_net->LoadFromFile(modelFileName);
+    m_net = new ComputationNetwork(deviceId);
+    m_net->LoadFromFile<ElemType>(modelFileName);
     m_net->ResetEvalTimeStamp();
 }
 
@@ -84,13 +87,11 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
     if (m_net == NULL)
     {
         for (auto iter = dimensions.begin(); iter != dimensions.end(); iter++)
-        {
             iter->second = 0;
-        }
         return;
     }
 
-    std::vector<ComputationNodePtr>& outputNodes = m_net->OutputNodes();
+    const auto & outputNodes = m_net->OutputNodes();
     switch (nodeGroup)
     {
     case nodeInput:
@@ -99,18 +100,18 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
         for (auto & node : nodes)
         {
             std::wstring name = node->NodeName();
-            size_t size = node->FunctionValues().GetNumRows();
+            size_t size = node->GetNumRows();
             dimensions[name] = size;
         }
         break;
         }
     case nodeOutput:
         {
-        std::vector<ComputationNodePtr> & nodes = outputNodes;
+                       const auto & nodes = outputNodes;
         for (auto & node : nodes)
         {
             std::wstring name = node->NodeName();
-            size_t size = node->FunctionValues().GetNumRows();
+            size_t size = node->GetNumRows();
             dimensions[name] = size;
         }
         break;
@@ -119,7 +120,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
         for (auto iter = dimensions.begin(); iter != dimensions.end(); iter++)
         {
             auto node = m_net->GetNodeFromName(iter->first);
-            iter->second = node->FunctionValues().GetNumRows();
+            iter->second = node->GetNumRows();
         }
         break;
     }

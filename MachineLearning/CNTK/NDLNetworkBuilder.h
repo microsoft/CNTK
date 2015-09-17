@@ -152,22 +152,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             delete m_executionEngine;
         }
-        virtual ComputationNetwork<ElemType>* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-            bool bAllowNoCriterionNode = false, ComputationNetwork<ElemType>* anotherNetwork = nullptr)
+
+        virtual ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
+                                                        bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr)
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
-                m_net->LoadFromFile(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
+                m_net->LoadFromFile<ElemType>(modelFileName, FileOptions::fileOptionsBinary, bAllowNoCriterionNode, anotherNetwork);
 
             m_net->ResetEvalTimeStamp();
             return m_net;
         }
 
-        ComputationNetwork<ElemType>* LoadNetworkFromConfig(const wstring& configFilePaths, bool forceLoad = true)
+        ComputationNetwork* LoadNetworkFromConfig(const wstring& configFilePaths, bool forceLoad = true)
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
-            {
                 LoadFromConfig(configFilePaths);
-            }
 
             m_net->ResetEvalTimeStamp();
             return m_net;
@@ -211,7 +210,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ndlUtil.ProcessNDLConfig(config, true);
         }
 
-        virtual ComputationNetwork<ElemType>* BuildNetworkFromDescription(ComputationNetwork<ElemType>* = nullptr)
+        virtual ComputationNetwork* BuildNetworkFromDescription(ComputationNetwork* = nullptr)
         {
             if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
             {
@@ -223,7 +222,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        ComputationNetwork<ElemType>* m_net;
+        ComputationNetwork* m_net;
         IExecutionEngine<ElemType>* m_executionEngine;
         std::wstring m_networkConfig;
         std::wstring m_dumpFileName;

@@ -6,6 +6,8 @@
 // HTKMLFReader.h - Include file for the MTK and MLF format of features and samples 
 #pragma once
 #include "DataWriter.h"
+#include <map>
+#include <vector>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -33,11 +35,13 @@ private:
     };
 
 public:
+    using LabelType = typename IDataWriter<ElemType>::LabelType;
+    using LabelIdType = typename IDataWriter<ElemType>::LabelIdType;
     virtual void Init(const ConfigParameters& writerConfig);
     virtual void Destroy();
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections);
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized);
-    virtual void SaveMapping(std::wstring saveId, const std::map<typename LabelIdType, typename LabelType>& labelMapping);
+    virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping);
 };
 
 }}}

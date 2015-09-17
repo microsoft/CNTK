@@ -50,9 +50,9 @@ endif
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 CXX = mpic++
 
-INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK
+INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib BrainScript
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
-CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC
+CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror
 LIBPATH:=
 LIBS:=
 LDFLAGS:=
@@ -65,14 +65,8 @@ SRC:=
 # this early in the file, so let buildall do the work.
 all : buildall
 
-# Set up nvcc target architectures (will generate code to support them all, i.e. fat-binary)
-GENCODE_SM20 := -gencode arch=compute_20,code=\"sm_20,compute_20\"
-GENCODE_SM30 := -gencode arch=compute_30,code=\"sm_30,compute_30\"
-GENCODE_SM35 := -gencode arch=compute_35,code=\"sm_35,compute_35\"
-GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35)
-
 # Set up basic nvcc options and add CUDA targets from above
-CUFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -m 64 $(GENCODE_FLAGS)
+CUFLAGS = -std=c++11 -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -m 64
 
 ifdef CUDA_PATH
   ifndef GDK_PATH
@@ -126,14 +120,22 @@ ifdef KALDI_PATH
   KALDI_LIBS += -lkaldi-util -lkaldi-matrix -lkaldi-base -lkaldi-hmm -lkaldi-cudamatrix -lkaldi-nnet -lkaldi-lat
 endif
 
+# Set up nvcc target architectures (will generate code to support them all, i.e. fat-binary, in release mode)
+# In debug mode we will rely on JIT to create code "on the fly" for the underlying architecture
+GENCODE_SM20 := -gencode arch=compute_20,code=\"sm_20,compute_20\"
+GENCODE_SM30 := -gencode arch=compute_30,code=\"sm_30,compute_30\"
+GENCODE_SM35 := -gencode arch=compute_35,code=\"sm_35,compute_35\"
+GENCODE_SM50 := -gencode arch=compute_50,code=\"sm_50,compute_50\"
+GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50)
+
 ifeq ("$(BUILDTYPE)","debug")
   CXXFLAGS += -g
-  CUFLAGS += -O0 -G -lineinfo
+  CUFLAGS += -O0 -G -lineinfo -gencode arch=compute_20,code=\"compute_20\"
 endif
 
 ifeq ("$(BUILDTYPE)","release")
   CXXFLAGS += -O4
-  CUFLAGS += -O3 -use_fast_math -lineinfo
+  CUFLAGS += -O3 -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif
 
 #######
@@ -205,7 +207,6 @@ $(CNTKMATH_LIB): $(MATH_OBJ)
 # BinaryReader plugin
 ########################################
 
-
 BINARYREADER_SRC =\
 	DataReader/BinaryReader/BinaryFile.cpp \
 	DataReader/BinaryReader/BinaryReader.cpp \
@@ -226,12 +227,11 @@ $(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB)
 # HTKMLFReader plugin
 ########################################
 
-
 HTKMLFREADER_SRC =\
-	DataReader/HTKMLFReader_linux/DataReader.cpp \
-	DataReader/HTKMLFReader_linux/DataWriter.cpp \
-	DataReader/HTKMLFReader_linux/HTKMLFReader.cpp \
-	DataReader/HTKMLFReader_linux/HTKMLFWriter.cpp \
+	DataReader/HTKMLFReader/DataReader.cpp \
+	DataReader/HTKMLFReader/DataWriter.cpp \
+	DataReader/HTKMLFReader/HTKMLFReader.cpp \
+	DataReader/HTKMLFReader/HTKMLFWriter.cpp \
 
 HTKMLREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
 
@@ -355,13 +355,21 @@ endif
 
 CNTK_SRC =\
 	MachineLearning/CNTK/CNTK.cpp \
-	MachineLearning/CNTK/ComputationNode.cpp \
 	MachineLearning/CNTK/ModelEditLanguage.cpp \
 	MachineLearning/CNTK/NetworkDescriptionLanguage.cpp \
-	MachineLearning/CNTK/Profiler.cpp \
 	MachineLearning/CNTK/SimpleNetworkBuilder.cpp \
+	MachineLearning/CNTK/SynchronousExecutionEngine.cpp \
 	MachineLearning/CNTK/tests.cpp \
-	MachineLearning/CNTKEval/CNTKEval.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNode.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetwork.cpp \
+	MachineLearning/CNTKComputationNetworkLib/ComputationNetworkBuilder.cpp \
+	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
+	MachineLearning/CNTKSGDLib/Profiler.cpp \
+	MachineLearning/CNTKSGDLib/SGD.cpp \
+	BrainScript/BrainScriptEvaluator.cpp \
+	BrainScript/BrainScriptParser.cpp \
+	BrainScript/BrainScriptTest.cpp \
+	MachineLearning/CNTK/ExperimentalNetworkBuilder.cpp \
 
 CNTK_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTK_SRC))
 
@@ -394,7 +402,7 @@ $(OBJDIR)/%.o : %.cu Makefile
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
 	@mkdir -p $(dir $@)
-	$(NVCC) -c $< -o $@  $(CUFLAGS) $(INCLUDEPATH:%=-I%) -Xcompiler -fPIC
+	$(NVCC) -c $< -o $@  $(CUFLAGS) $(INCLUDEPATH:%=-I%) -Xcompiler "-fPIC -Werror"
 
 $(OBJDIR)/%.o : %.cpp Makefile
 	@echo $(SEPARATOR)

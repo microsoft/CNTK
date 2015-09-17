@@ -2,6 +2,7 @@
 #ifndef __VALLUE_QUANTIZER_H__
 #define __VALLUE_QUANTIZER_H__
 
+#include "BestGpu.h"    // for CPUONLY
 #ifndef CPUONLY
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -183,8 +184,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return 1 + ld(v >> 1);
             }
         }
-
-    protected:
+        
+    protected:   
         // quantize for full ElemType size bits case (special case that allows to bypass quantization, for testing/debugging purposes)
         cudasharedcode QWordVal QuantizeToFullQWord(ElemType u) const
         {
@@ -215,4 +216,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType ufactor;
     };
 }}}
-#endif 
+
+#endif  // __VALUE_QUANTIZER_H__
