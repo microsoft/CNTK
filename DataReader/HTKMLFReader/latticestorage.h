@@ -25,7 +25,7 @@ static void checkoverflow (size_t fieldval, size_t targetval, const char * field
     if (fieldval != targetval)
     {
         char buf[1000];
-        sprintf_s (buf, "lattice: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, targetval, fieldval);
+        sprintf_s (buf, sizeof(buf), "lattice: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, (unsigned int)targetval, (unsigned int)fieldval);
         throw std::runtime_error (buf);
     }
 }

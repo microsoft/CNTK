@@ -168,7 +168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_tempGPUQuantizedMatrix = nullptr;
         }
         
-        m_tempGPUQuantizedMatrix = new QuantizedMatrix<ElemType>(this->m_inMatrix.GetNumRows(), this->m_inMatrix.GetNumCols(), nBits, this->GetDeviceId());
+        m_tempGPUQuantizedMatrix = new QuantizedMatrix<ElemType>(this->m_inMatrix.GetNumRows(), this->m_inMatrix.GetNumCols(), nBits, (short)this->GetDeviceId());
         newlyAllocated = true;
 
         return *m_tempGPUQuantizedMatrix;

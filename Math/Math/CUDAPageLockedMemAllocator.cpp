@@ -1,9 +1,9 @@
 #include "stdafx.h"
 #include "CUDAPageLockedMemAllocator.h"
+#include "BestGpu.h"    // for CPUONLY
 #ifndef CPUONLY
 #include <cuda_runtime_api.h>
-#endif // !CPUONLY
-#include "BestGpu.h"
+#endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -47,7 +47,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     char* CUDAPageLockedMemAllocator::Malloc(size_t)
     {
-        return NULL;
+        return nullptr;
     }
 
     void CUDAPageLockedMemAllocator::Free(char*)

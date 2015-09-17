@@ -8,6 +8,7 @@
 #define _BASICS_H_
 
 #include "basetypes.h"  // TODO: gradually move over here all that's needed of basetypes.h, then remove basetypes.h.
+#include "Platform.h"
 
 #define TWO_PI 6.283185307f // TODO: find the official standards-confirming definition of this and use it instead
 
@@ -25,61 +26,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool operator()(const std::wstring& left, const std::wstring& right) { return _wcsicmp(left.c_str(), right.c_str()) < 0; }
     };
 
+    // ThrowFormatted() - template function to throw a std::exception with a formatted error string
+    template<class E>
+    __declspec_noreturn static inline void ThrowFormatted(const char * format, ...)
+    {
+        va_list args;
+        char buffer[1024];
+        va_start(args, format);
+        vsprintf(buffer, format, args);
+        throw E(buffer);
+    };
+
+    // if it receives a lonely std::string then throw that directly
+    template<class E>
+    __declspec_noreturn static inline void ThrowFormatted(const string & message) { throw E(message); }
+
     // RuntimeError - throw a std::runtime_error with a formatted error string
-#ifdef _MSC_VER
-    __declspec(noreturn)
-#endif
-    static inline void RuntimeError(const char * format, ...)
-    {
-        va_list args;
-        char buffer[1024];
-
-        va_start(args, format);
-        vsprintf(buffer, format, args);
-        throw std::runtime_error(buffer);
-    };
-    static inline void RuntimeError(const string & message) { RuntimeError("%s", message.c_str()); }
-
-    // LogicError - throw a std::logic_error with a formatted error string
-#ifdef _MSC_VER
-    __declspec(noreturn)
-#endif
-    static inline void LogicError(const char * format, ...)
-    {
-        va_list args;
-        char buffer[1024];
-
-        va_start(args, format);
-        vsprintf(buffer, format, args);
-        throw std::logic_error(buffer);
-    };
-    static inline void LogicError(const string & message) { LogicError("%s", message.c_str()); }
-
-    // InvalidArgument - throw a std::logic_error with a formatted error string
-#ifdef _MSC_VER
-    __declspec(noreturn)
-#endif
-    static inline void InvalidArgument(const char * format, ...)
-    {
-        va_list args;
-        char buffer[1024];
-
-        va_start(args, format);
-        vsprintf(buffer, format, args);
-        throw std::invalid_argument(buffer);
-    };
-    static inline void InvalidArgument(const string & message) { InvalidArgument("%s", message.c_str()); }
+    template<class... _Types>
+    __declspec_noreturn static inline void RuntimeError(_Types&&... _Args) { ThrowFormatted<std::runtime_error>(forward<_Types>(_Args)...); }
+    template<class... _Types>
+    __declspec_noreturn static inline void LogicError(_Types&&... _Args) { ThrowFormatted<std::logic_error>(forward<_Types>(_Args)...); }
+    template<class... _Types>
+    __declspec_noreturn static inline void InvalidArgument(_Types&&... _Args) { ThrowFormatted<std::invalid_argument>(forward<_Types>(_Args)...); }
 
     // Warning - warn with a formatted error string
     static inline void Warning(const char * format, ...)
     {
         va_list args;
         char buffer[1024];
-
         va_start(args, format);
         vsprintf(buffer, format, args);
     };
     static inline void Warning(const string & message) { Warning("%s", message.c_str()); }
+
+    // ----------------------------------------------------------------------------
+    // random collection of stuff we needed at some place
+    // ----------------------------------------------------------------------------
+
+    // TODO: maybe change to type id of an actual thing we pass in
+    // TODO: is this header appropriate?
+    template<class C> static wstring TypeId() { return msra::strfun::utf16(typeid(C).name()); }
 
     // ----------------------------------------------------------------------------
     // dynamic loading of modules  --TODO: not Basics, should move to its own header
@@ -91,7 +77,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         HMODULE m_hModule;      // module handle for the writer DLL
         std::wstring m_dllName; // name of the writer DLL
     public:
-        Plugin() { m_hModule = NULL; }
+        Plugin() : m_hModule(NULL) { }
         template<class STRING>  // accepts char (UTF-8) and wide string 
         FARPROC Load(const STRING & plugin, const std::string & proc)
         {
@@ -99,13 +85,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_dllName += L".dll";
             m_hModule = LoadLibrary(m_dllName.c_str());
             if (m_hModule == NULL)
-                Microsoft::MSR::CNTK::RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName).c_str());
-
+                RuntimeError("Plugin not found: %s", msra::strfun::utf8(m_dllName).c_str());
             // create a variable of each type just to call the proper templated version
             return GetProcAddress(m_hModule, proc.c_str());
         }
         ~Plugin(){}
-        // removed because this causes the exception messages to be lost  (exception vftables are unloaded when DLL is unloaded) 
+        // we do not unload because this causes the exception messages to be lost (exception vftables are unloaded when DLL is unloaded) 
         // ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
     };
 #else
@@ -114,11 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         void *handle;
     public:
-        Plugin()
-        {
-            handle = NULL;
-        }
-
+        Plugin() : handle (NULL) { }
         template<class STRING>  // accepts char (UTF-8) and wide string 
         void * Load(const STRING & plugin, const std::string & proc)
         {
@@ -126,14 +107,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             soName = soName + ".so";
             void *handle = dlopen(soName.c_str(), RTLD_LAZY);
             if (handle == NULL)
-                RuntimeError("Plugin not found: %s", soName.c_str());
+                RuntimeError("Plugin not found: %s (error: %s)", soName.c_str(), dlerror());
             return dlsym(handle, proc.c_str());
         }
-
-        ~Plugin() {
-            if (handle != NULL)
-                dlclose(handle);
-        }
+        ~Plugin() { if (handle != NULL) dlclose(handle); }
     };
 #endif
 

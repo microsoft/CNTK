@@ -355,75 +355,55 @@ public:
     // understood. Also, braces in strings are not protected. [fseide]
     static std::string::size_type FindBraces(const std::string& str, std::string::size_type tokenStart)
     {
-        // open braces and quote
-        static const std::string openBraces = OPENBRACES;
-
-        // close braces and quote
-        static const std::string closingBraces = CLOSINGBRACES;
-
         const auto len = str.length();
-
         // start is outside (or rather, at end of string): no brace here
         if (tokenStart >= len) {
             return npos;
         }
 
-        auto braceFound = openBraces.find(str[tokenStart]);
+        // open braces and quote
+        static const std::string openBraces = OPENBRACES;
+        // close braces and quote
+        static const std::string closingBraces = CLOSINGBRACES;
 
+        const auto charsToLookFor = closingBraces + openBraces;       // all chars we match for
+
+        // get brace index for first character of input string
+        const auto braceFound = openBraces.find(str[tokenStart]);
         // no brace present at tokenStart
-        if (braceFound == npos) {
+        if (braceFound == npos)
             return npos;
-        }
-
         // string begins with a brace--find the closing brace, while correctly handling nested braces
-        std::vector<std::string::size_type> bracesFound;
-        std::string::size_type current, opening;
-
-        current = opening = tokenStart;
-
-        // create a brace pair for string searches
-        std::string braces;
-        braces += openBraces[braceFound];
-        braces += closingBraces[braceFound];
-
+        std::string braceStack;                                 // nesting stack; .back() is closing symbol for inner-most brace
+        braceStack.push_back(closingBraces[braceFound]);        // closing symbol for current
         // search for end brace or other nested layers of this brace type
-        while (current != npos && current + 1 < len)
+        for (auto current = tokenStart; current + 1 < len;)
         {
-            current = str.find_first_of(braces, current + 1);
-            // check for a nested opening brace
-            if (current == npos)
-            {
+            // look for closing brace and also for another opening brace
+            // Inside strings we only accept the closing quote, and ignore any braces inside.
+            current = str.find_first_of(braceStack.back() == '"' ? "\"" : charsToLookFor, current + 1); //
+            if (current == string::npos)                        // none found: done or error
                 break;
-            }
-
-            // found a closing brace
-            if (str[current] == braces[1])
+            char brace = str[current];
+            // found the expected closing brace?
+            if (brace == braceStack.back())
             {
-                // no braces on the stack, we are done
-                if (bracesFound.empty())
-                {
+                braceStack.pop_back();                          // yes: pop up and continue (or stop if stack is empty)
+                if (braceStack.empty())                         // fully closed: done
                     return current;
-                }
-
-                // have braces on the stack, pop the current one off
-                opening = bracesFound.back();
-                bracesFound.pop_back();
             }
+            // or any other closing brace? That's an error.
+            else if (closingBraces.find(brace) != string::npos)
+                RuntimeError("unmatched bracket found in parameters");
+            // found another opening brace, push it on the stack
             else
             {
-                // found another opening brace, push it on the stack
-                bracesFound.push_back(opening);
-                opening = current;
+                const auto braceFound = openBraces.find(brace);     // index of brace
+                braceStack.push_back(closingBraces[braceFound]);    // closing symbol for current
             }
         }
-
-        // if we found unmatched parenthesis, throw an exception
-        if (opening != npos)
-        {
-            RuntimeError("unmatched bracket found in parameters");
-        }
-
-        return current;
+        // hit end before everything was closed: error
+        RuntimeError("no closing bracket found in parameters");
     }
 
     // ParseValue - virtual function to parse a "token" as tokenized by Parse() below.
@@ -981,7 +961,7 @@ public:
         // ensure that this method was called on a single line (eg, no newline characters exist in 'configLine').
         if (configLine.find_first_of("\n") != std::string::npos)
         {
-            throw std::logic_error(
+            LogicError(
                 "\"ResolveVariablesInSingleLine\" shouldn't be called with a string containing a newline character");
         }
 
@@ -1028,7 +1008,7 @@ public:
 
             if (varValue.find_first_of("\n") != std::string::npos)
             {
-                throw std::logic_error(
+                LogicError(
                     "Newline character cannot be contained in the value of a variable which is resolved using $varName$ feature");
             }
 

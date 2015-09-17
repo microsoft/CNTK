@@ -1036,7 +1036,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return sum;
     }
 
-    template <class ElemType>
+    template <typename ElemType>
     MATH_API File& operator>>(File& stream, CPUSparseMatrix<ElemType>& us)
     {
         stream.GetMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
@@ -1090,7 +1090,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template MATH_API File& operator>>(File& stream, CPUSparseMatrix<float>& us);
     template MATH_API File& operator>>(File& stream, CPUSparseMatrix<double>& us);
 
-    template <class ElemType>
+    template <typename ElemType>
     MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
     {
         if (us.GetFormat() != matrixFormatSparseCSC && us.GetFormat() != matrixFormatSparseCSR)
