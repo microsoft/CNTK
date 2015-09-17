@@ -1262,7 +1262,7 @@ template<class ssematrixbase> class ssematrix : public ssematrixbase
     static __declspec(noreturn) void failed (size_t nbytes) { static/*not thread-safe--for diagnostics only*/ char buf[80] = { 0 }; sprintf_s (buf, "allocation of SSE vector failed (%d bytes)", nbytes); throw std::bad_exception (buf); }
 #endif
 #ifdef __unix__
-    static void failed (size_t nbytes) { static/*not thread-safe--for diagnostics only*/ char buf[80] = { 0 }; sprintf_s (buf, "allocation of SSE vector failed (%zu bytes)", nbytes); throw std::bad_exception (); }
+    static void failed (size_t nbytes) { static/*not thread-safe--for diagnostics only*/ char buf[80] = { 0 }; sprintf_s (buf, sizeof(buf), "allocation of SSE vector failed (%zu bytes)", nbytes); throw std::bad_exception (); }
 #endif
 #if 0   // TODO: move to separate header file numahelpers.h
     template<typename T> static T * new_sse (size_t nbytes) { T * pv = (T *) msra::numa::malloc (nbytes * sizeof (T), 16); if (pv) return pv; failed (nbytes * sizeof (T)); }
