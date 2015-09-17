@@ -222,7 +222,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // for raw pointer 
-        template<typename ElemType>
+        template<class ElemType>
         void AllReduce(ElemType* pData, size_t nData)
         {
             if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
@@ -231,7 +231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        template<typename ElemType>
+        template<class ElemType>
         void Bcast(ElemType* pData, size_t nData, size_t srcRank)
         {
             if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
@@ -247,3 +247,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 }}}
+
+extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;

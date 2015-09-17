@@ -69,15 +69,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 LogicError("SquareError operation requires two inputs.");
 
             size_t index = 0;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -85,7 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -232,9 +232,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 LogicError("CrossEntropyWithSoftmaxNode criterion requires two inputs.");
@@ -245,7 +245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //we may release the constraint that the first operant is an inputValue later so the following code should be kept
             size_t index = 0;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -253,7 +253,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -385,9 +385,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 2) 
                 LogicError("CrossEntropyNode criterion requires two inputs.");
@@ -396,7 +396,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //we may release the constraint that the first operant is an inputValue later so the following code should be kept
             size_t index = 0;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -404,7 +404,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
                 size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
@@ -516,9 +516,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1) 
                 LogicError("MatrixL1Reg criterion should have one input.");
@@ -612,9 +612,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 1) 
                 LogicError("MatrixL2Reg criterion should have one input.");
@@ -777,13 +777,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
         [3] clsprob in dense matrix in [nbr_cls x T]. this is the output from logsoftmax node for the log-posterior probabilty of class given observations
         */
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 4)
                 LogicError("NoiseContrastiveEstimationNode criterion requires four inputs.");
-            if (Inputs(0)->OperationName() != InputValue<ElemType>::TypeName())
+            if (Inputs(0)->OperationName() != OperationNameOf(InputValue))
                 LogicError("NoiseContrastiveEstimationNode criterion requires the first input to be the label.");
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
                 LogicError("The Matrix<ElemType>  dimension for observation and weight in the NoiseContrastiveEstimationNode operation does not match.");
@@ -879,29 +879,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t sz = 0;
             for (size_t t = 0; t < nT; t++)
             {
+                FrameRange frameRange(t, 1);
                 /// compute prb - 1 and prb
-                Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().ColumnSlice(t, 1);
+                Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
                 size_t c_t = (size_t)lbl_t(1, 0);
                 size_t lft_bnd = (size_t)lbl_t(2, 0);
                 size_t rgt_bnd = (size_t)lbl_t(3, 0);
                 size_t nbr_wrd = rgt_bnd - lft_bnd; // number of words in the class
                 if (nbr_wrd == 0)
-                {
                     continue;
-                }
 
                 Matrix<ElemType> input_weight_t = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);
-
-                Matrix<ElemType> obs = Inputs(1)->FunctionValues().ColumnSlice(t, 1);
-
+                Matrix<ElemType> obs = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
                 Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
-
-                Matrix<ElemType> grd_to_cls_prob = m_clsLogSoftmax.ColumnSlice(t, 1);
+                Matrix<ElemType> grd_to_cls_prob = m_clsLogSoftmax.FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
 
                 switch (inputIndex){
                 case 1:
                     /// gradient to input
-                    grd_t = Inputs(1)->GradientValues().ColumnSlice(t, 1);
+                    grd_t = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
                     ComputeInputPartialRight(input_weight_t, grd_t, grd_to_soft_max_input);
                     break;
                 case 2:
@@ -910,8 +906,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     ComputeInputPartialLeft(obs, grd_to_wgt_t, grd_to_soft_max_input);
                     break;
                 case 3:
-                    grd_t = Inputs(3)->GradientValues().ColumnSlice(t, 1);
-                    grd_t.SetValue(m_clsSoftmax.ColumnSlice(t, 1));
+                    grd_t = Inputs(3)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
+                    grd_t.SetValue(m_clsSoftmax.FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1));
                     ComputeCEPartialToSoftmaxInputs(grd_t, GradientValues(), c_t);
                     break;
                 default:
@@ -949,8 +945,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t sz = 0;
                 for (size_t t = 0; t < nT; t++)
                 {
+                    FrameRange frameRange(t, 1);
                     /// compute prb - 1 and prb
-                    Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().ColumnSlice(t, 1);
+                    Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
                     size_t y_t = (size_t)lbl_t(0, 0);
                     size_t lft_bnd = (size_t)lbl_t(2, 0);
                     size_t rgt_bnd = (size_t)lbl_t(3, 0);
@@ -989,10 +986,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
-            const Matrix<ElemType>& inputs, const Matrix<ElemType>& input_weight, const Matrix<ElemType>& input_cls_log_post_prob,
-            Matrix<ElemType>& logSoftmax,
-            Matrix<ElemType>& softMax, 
-            Matrix<ElemType>& clsLogSoftmax, Matrix<ElemType>& clsSoftmax, size_t& totalWords, ClassBasedCrossEntropyWithSoftmaxNode* curNode)
+                                      const Matrix<ElemType>& inputs, const Matrix<ElemType>& input_weight, const Matrix<ElemType>& input_cls_log_post_prob,
+                                      Matrix<ElemType>& logSoftmax,
+                                      Matrix<ElemType>& softMax, 
+                                      Matrix<ElemType>& clsLogSoftmax, Matrix<ElemType>& clsSoftmax, size_t& totalWords, ClassBasedCrossEntropyWithSoftmaxNode* curNode)
         {
             totalWords = 0;
             size_t nT = lbls.GetNumCols();
@@ -1128,13 +1125,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
         [3] clsprob in dense matrix in [nbr_cls x T]. this input, if applied softmax on, is the posterior probabilty of class given observations
         */
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 4)
                 LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires four inputs.");
-            if (Inputs(0)->OperationName() != InputValue<ElemType>::TypeName())
+            if (Inputs(0)->OperationName() != OperationNameOf(InputValue))
                 LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
                 LogicError("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
@@ -1440,9 +1437,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             postprob.InplaceExp();
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 3)
                 LogicError("CRFNode requires three inputs.");
@@ -1564,9 +1561,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 3) 
                 LogicError("DummyCriterionNode criterion requires three inputs.");

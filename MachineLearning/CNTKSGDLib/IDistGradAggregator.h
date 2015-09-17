@@ -18,7 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
         
-        virtual void AggregateGradients(DistGradHeader<ElemType> *headerCPU) = 0;
+        virtual void AggregateGradients(DistGradHeader *headerCPU, int epochNumber) = 0;
 
         size_t NumProc()
         {

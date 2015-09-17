@@ -4165,6 +4165,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template GPUMatrix<char> GPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
     template GPUMatrix<char>& GPUMatrix<char>::operator=(GPUMatrix<char>&&);
     template GPUMatrix<char>::GPUMatrix(int);
+    template void GPUMatrix<char>::SetValue(const char);
 }}}
 
 // !!!!This is from helper_cuda.h which comes with CUDA samples!!!! Consider if it is beneficial to just include all helper_cuda.h

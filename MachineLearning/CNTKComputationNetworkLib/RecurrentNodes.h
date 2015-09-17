@@ -220,9 +220,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int d = delayedIndex;
             if (d < 0 || d >= inputFunctionValues.GetNumCols())
                 d = (int)functionValues.Mod((float)delayedIndex, (float)delayedActivation.GetNumCols());
-            // this can point to the past activity of the previous mninibatch
+            // this can point to the past activity of the previous minibatch
 
-            Matrix<ElemType> out = functionValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
+            Matrix<ElemType> out = functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq * mNbr, mNbr);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
 
             if (minibatchPackingFlag & SequenceStart_or_End)
@@ -255,12 +255,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
+            Base::Validate();
+
             PrintSelfBeforeValidation(true/*allowNulls*/);
 
             if (m_children.size() != 1)
-                throw std::logic_error("PastValue operation should have one input.");
+                LogicError("PastValue operation should have one input.");
 
             if (!(Inputs(0) == nullptr))
             {
@@ -305,7 +307,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetTimeStep(const int val)
         {
             if (val <= 0)
-                throw std::logic_error("timeStep must be > 0.");    // TODO: then make 'val' a size_t please?
+                LogicError("timeStep must be > 0.");    // TODO: then make 'val' a size_t please?
             m_timeStep = val;
         }
 
@@ -601,18 +603,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (int timeIdxInSeq = nT - m_samplesInRecurrentStep; timeIdxInSeq >= 0; timeIdxInSeq -= m_samplesInRecurrentStep)
                 {
-                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceOutput = FunctionValues().ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceState = m_State.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+                    FrameRange frameRange(timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceOutput = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceState = m_State.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
 
-                    Matrix<ElemType> sliceGi = m_Gi.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceGf = m_Gf.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceGo = m_Go.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGi = m_Gi.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGf = m_Gf.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGo = m_Go.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
 
-                    Matrix<ElemType> sliceTanhState = tanhState.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceTanhObs = tanhObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceTanhObs = tanhObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
 
-                    Matrix<ElemType> error = GradientValues().ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> error = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
 
                     Matrix<ElemType> grdToObsSlice(this->m_deviceId);
 
@@ -661,7 +664,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         grdToPrevState,
                         m_tempMatrix
                     );
-                    grdToObs.ColumnSlice(timeIdxInSeq, m_samplesInRecurrentStep).SetValue(grdToObsSlice);
+                    grdToObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep).SetValue(grdToObsSlice);
 
                     PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, m_samplesInRecurrentStep, m_sentenceSeg);
                 }
@@ -733,7 +736,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             mTmp.AssignDifferenceOf(1, extTmp); // 1-v^2
             if (inputGradientValues.GetNumRows() != functionValues.GetNumRows() ||
                 inputGradientValues.GetNumCols() != functionValues.GetNumCols())
-                throw std::logic_error("LSTMNode::GradientOfTanh : inputGradientValues need to be pre-allocated!");
+                LogicError("LSTMNode::GradientOfTanh : inputGradientValues need to be pre-allocated!");
             inputGradientValues.AddElementProductOf(gradientOut, mTmp); //  d .* ((1-v) .* v))
         }
 
@@ -1272,32 +1275,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // input(3) : output gate [outputdim x [inputdim + outputdim + 2]] for bo, Wxo, Who, and Wco
         // input(4) : memory cell weight [outputdim x [inputdim + outputdim + 1]] for bc, Wxc, and Whc 
         // output : dimension [outputdim x T]
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (m_children.size() != 5)
-                throw std::logic_error("LSTMNode requires four inputs.");
+                LogicError("LSTMNode requires four inputs.");
 
             InferImageDimsFromInputs();
 
             if (Inputs(0)->FunctionValues().GetMatrixType() == SPARSE)
                 LogicError("LSTMNode: input to LSTM has to be dense matrix. Consider adding a project layer using lookuptable before LSTM node. ");
 
-            if (Inputs(1)->OperationName() != LearnableParameter<ElemType>::TypeName() ||
-                Inputs(2)->OperationName() != LearnableParameter<ElemType>::TypeName() ||
-                Inputs(3)->OperationName() != LearnableParameter<ElemType>::TypeName() ||
-                Inputs(4)->OperationName() != LearnableParameter<ElemType>::TypeName())
-                throw std::logic_error("LSTM validation: need to have learnable parameters ");
+            // TODO: use dynamic_pointer_cast instead
+            if (Inputs(1)->OperationName() != OperationNameOf(LearnableParameter) ||
+                Inputs(2)->OperationName() != OperationNameOf(LearnableParameter) ||
+                Inputs(3)->OperationName() != OperationNameOf(LearnableParameter) ||
+                Inputs(4)->OperationName() != OperationNameOf(LearnableParameter))
+                LogicError("LSTM validation: need to have learnable parameters ");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("LSTM validation: input size is zero!");
+                LogicError("LSTM validation: input size is zero!");
 
             if (Inputs(1)->FunctionValues().HasNoElements() ||
                 Inputs(2)->FunctionValues().HasNoElements() ||
                 Inputs(3)->FunctionValues().HasNoElements() ||
                 Inputs(4)->FunctionValues().HasNoElements())
-                throw std::logic_error("LSTM validation : parameter size is zero!");
+                LogicError("LSTM validation : parameter size is zero!");
 
 
             size_t nindim = Inputs(0)->FunctionValues().GetNumRows();
@@ -1306,22 +1310,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t nCol = nindim + noutdim + 2;
             if (Inputs(1)->FunctionValues().GetNumCols() != nCol)
             {
-                throw std::logic_error("LSTM validation : dimension mismatched between child and inputGate");
+                LogicError("LSTM validation : dimension mismatched between child and inputGate");
             }
             if (Inputs(2)->FunctionValues().GetNumCols() != nCol)
             {
-                throw std::logic_error("LSTM validation : dimension mismatched between child and forgetGate");
+                LogicError("LSTM validation : dimension mismatched between child and forgetGate");
             }
             if (Inputs(3)->FunctionValues().GetNumCols() != nCol)
             {
-                throw std::logic_error("LSTM validation : dimension mismatched between child and outputGate");
+                LogicError("LSTM validation : dimension mismatched between child and outputGate");
             }
 
             if (noutdim != Inputs(2)->FunctionValues().GetNumRows() ||
                 noutdim != Inputs(3)->FunctionValues().GetNumRows() ||
                 noutdim != Inputs(4)->FunctionValues().GetNumRows())
             {
-                throw std::logic_error("LSTM validation: output dimension mismatched!");
+                LogicError("LSTM validation: output dimension mismatched!");
             }
 
             FunctionValues().Resize(noutdim, nT);

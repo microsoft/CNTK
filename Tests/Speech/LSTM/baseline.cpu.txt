@@ -1,7 +1,7 @@
-=== Running /home/mluser/src/cplx_master/build/release/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/LSTM/cntk.config RunDir=/tmp/cntk-test-20150902130203.211023/Speech_LSTM@release_cpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data DeviceId=-1 NDLDir=/home/mluser/src/cplx_master/Tests/Speech/LSTM
-running on localhost at 2015/09/02 13:02:03
+=== Running /home/mluser/src/cplx_master/build/release/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/LSTM/cntk.config RunDir=/tmp/cntk-test-20150908125817.974706/Speech_LSTM@release_cpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data DeviceId=-1 NDLDir=/home/mluser/src/cplx_master/Tests/Speech/LSTM
+running on localhost at 2015/09/08 12:58:17
 command line options: 
-configFile=/home/mluser/src/cplx_master/Tests/Speech/LSTM/cntk.config RunDir=/tmp/cntk-test-20150902130203.211023/Speech_LSTM@release_cpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data DeviceId=-1 NDLDir=/home/mluser/src/cplx_master/Tests/Speech/LSTM 
+configFile=/home/mluser/src/cplx_master/Tests/Speech/LSTM/cntk.config RunDir=/tmp/cntk-test-20150908125817.974706/Speech_LSTM@release_cpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data DeviceId=-1 NDLDir=/home/mluser/src/cplx_master/Tests/Speech/LSTM 
 
 >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
 precision=float
@@ -16,7 +16,7 @@ speechTrain=[
     deviceId=$DeviceId$
     traceLevel=1
     NDLNetworkBuilder=[
-		networkDescription=$NDLDir$/lstmp-3layer_WithSelfStab.ndl
+        networkDescription=$NDLDir$/lstmp-3layer_WithSelfStab.ndl
     ]    
     SGD=[
         epochSize=20480
@@ -46,8 +46,152 @@ speechTrain=[
           labelType=Category
       ]
     ]
+    originalExperimentalNetworkBuilder=[
+        LSTMPComponentWithSelfStab(inputDim, outputDim, cellDim, inputx) =
+        [
+Wxo = Parameter(cellDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1); 
+            Wxi = Parameter(cellDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wxf = Parameter(cellDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wxc = Parameter(cellDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+bo = Parameter(cellDim, 1, init='fixedValue', value=0.0); 
+            bc = Parameter(cellDim, 1, init='fixedValue', value=0.0);
+            bi = Parameter(cellDim, 1, init='fixedValue', value=0.0);
+            bf = Parameter(cellDim, 1, init='fixedValue', value=0.0);
+            Whi = Parameter(cellDim, outputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wci = Parameter(cellDim, 1, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Whf = Parameter(cellDim, outputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wcf = Parameter(cellDim, 1, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Who = Parameter(cellDim, outputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wco = Parameter(cellDim, 1, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Whc = Parameter(cellDim, outputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wmr = Parameter(outputDim, cellDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            sWxo = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWxi = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWxf = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWxc = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWhi = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWci = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWhf = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWcf = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWho = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWco = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWhc = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWmr = Parameter(1, 1, init='fixedValue', value=0.0);
+            expsWxo = Exp(sWxo);
+            expsWxi = Exp(sWxi);
+            expsWxf = Exp(sWxf);
+            expsWxc = Exp(sWxc);
+            expsWhi = Exp(sWhi);
+            expsWci = Exp(sWci);     
+            expsWhf = Exp(sWhf);
+            expsWcf = Exp(sWcf);
+            expsWho = Exp(sWho);
+            expsWco = Exp(sWco);
+            expsWhc = Exp(sWhc);
+            expsWmr = Exp(sWmr);
+            dh = PastValue(outputDim, 1, output, timeStep=1);
+            dc = PastValue(cellDim, 1, ct, timeStep=1);
+            Wxix = Times(Wxi, Scale(expsWxi, inputx));
+            Whidh = Times(Whi, Scale(expsWhi, dh));
+            Wcidc = DiagTimes(Wci, Scale(expsWci, dc));
+            it = Sigmoid (Plus ( Plus (Plus (Wxix, bi), Whidh), Wcidc));
+            Wxcx = Times(Wxc, Scale(expsWxc, inputx));
+            Whcdh = Times(Whc, Scale(expsWhc, dh));
+            bit = ElementTimes(it, Tanh( Plus(Wxcx, Plus(Whcdh, bc))));
+            Wxfx = Times(Wxf, Scale(expsWxf,inputx));
+            Whfdh = Times(Whf, Scale(expsWhf, dh));
+            Wcfdc = DiagTimes(Wcf, Scale(expsWcf, dc));
+            ft = Sigmoid( Plus (Plus (Plus(Wxfx, bf), Whfdh), Wcfdc));
+            bft = ElementTimes(ft, dc);
+            ct = Plus(bft, bit);
+            Wxox  = Times(Wxo, Scale(expsWxo, inputx));
+            Whodh = Times(Who, Scale(expsWho, dh));
+            Wcoct = DiagTimes(Wco, Scale(expsWco, ct));
+            ot = Sigmoid( Plus( Plus( Plus(Wxox, bo), Whodh), Wcoct));
+            mt = ElementTimes(ot, Tanh(ct));
+            output = Times(Wmr, Scale(expsWmr, mt)); 
+        ]
+        baseFeatDim=33
+        RowSliceStart=330 
+        FeatDim=363
+        labelDim=132
+        cellDim=1024
+        hiddenDim=256
+features=Input(FeatDim, 1, tag='feature')     
+        labels=Input(labelDim, 1, tag='label')
+feashift=RowSlice(RowSliceStart, baseFeatDim, features);      
+        featNorm = MeanVarNorm(feashift)
+        LSTMoutput1 = LSTMPComponentWithSelfStab(baseFeatDim, hiddenDim, cellDim, featNorm);
+LSTMoutput2 = LSTMPComponentWithSelfStab(hiddenDim, hiddenDim, cellDim, LSTMoutput1.output);    
+        LSTMoutput3 = LSTMPComponentWithSelfStab(hiddenDim, hiddenDim, cellDim, LSTMoutput2.output);
+        W = Parameter(labelDim, hiddenDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        b = Parameter(labelDim, 1, init='fixedValue', value=0);
+        sW = Parameter(1, 1, init='fixedValue', value=0.0);
+        expsW = Exp(sW);
+        LSTMoutputW = Plus(Times(W, Scale(expsW, LSTMoutput3.output)), b);
+cr = CrossEntropyWithSoftmax(labels, LSTMoutputW,tag='criteria');  
+        Err = ErrorPrediction(labels,LSTMoutputW,tag='eval');
+        logPrior = LogPrior(labels)	 
+        ScaledLogLikelihood=Minus(LSTMoutputW,logPrior,tag='output')
+    ]
+    ExperimentalNetworkBuilder=[
+        void = 0        // (BUGBUG: we do not allow zero-argument macros; will be fixed. For now, pass void)
+        WeightParam(m,n) = Parameter(m, n, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
+        BiasParam(m) = Parameter(m, 1, init='fixedValue', value=0.0)
+        ScalarParam(void) = Parameter(1, 1, init='fixedValue', value=0.0)
+        NewBeta(void) = Exp(ScalarParam(void))
+        Stabilize(in) = Scale(NewBeta(void), in)
+        LSTMPComponentWithSelfStab(inputDim, outputDim, cellDim, inputx) =
+        [
+            // parameter macros--these carry their own weight matrices
+            B(void) = BiasParam(cellDim)
+            Wmr = WeightParam(outputDim, cellDim);
+            W(v) = WeightParam(cellDim, inputDim) * Stabilize(v)    // input-to-hidden
+            H(h) = WeightParam(cellDim, outputDim) * Stabilize(h)   // hidden-to-hidden
+            C(c) = DiagTimes(WeightParam(cellDim, 1), Stabilize(c)) // cell-to-hiddden
+            // LSTM cell
+            dh = PastValue(outputDim, 1, output);                   // hidden state(t-1)
+            dc = PastValue(cellDim, 1, ct);                         // cell(t-1)
+            // note: the W(inputx) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
+            it = Sigmoid(W(inputx) + B(void) + H(dh) + C(dc))       // input gate(t)
+            bit = it .* Tanh(W(inputx) + (H(dh) + B(void)))         // applied to tanh of input network
+            ft = Sigmoid(W(inputx) + B(void) + H(dh) + C(dc))       // forget-me-not gate(t)
+            bft = ft .* dc                                          // applied to cell(t-1)
+            ct = bft + bit                                          // c(t) is sum of both
+            ot = Sigmoid(W(inputx) + B(void) + H(dh) + C(ct))       // output gate(t)
+            mt = ot .* Tanh(ct)                                     // applied to tanh(cell(t))
+            output = Wmr * Stabilize(mt)                            // projection
+        ]
+        // define basic I/O
+        baseFeatDim = 33
+        featDim = 11 * baseFeatDim      // TODO: 363--is this the correct explanation?
+        labelDim = 132
+        // hidden dimensions
+        cellDim = 1024
+        hiddenDim = 256
+        numLSTMs = 3        // number of hidden LSTM model layers
+        // features
+        features = Input(featDim, 1, tag='feature')
+        labels = Input(labelDim, 1, tag='label')
+feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, features);      
+        featNorm = MeanVarNorm(feashift)
+        // define the stack of hidden LSTM layers
+        LSTMoutput[k:1..numLSTMs] = if k == 1
+                                    then LSTMPComponentWithSelfStab(baseFeatDim, hiddenDim, cellDim, featNorm)
+                                    else LSTMPComponentWithSelfStab(hiddenDim,   hiddenDim, cellDim, LSTMoutput[k-1].output)
+        // and add a softmax layer on top
+        W(in) = WeightParam(labelDim, hiddenDim) * Stabilize(in)
+        B = BiasParam(labelDim)
+        LSTMoutputW = W(LSTMoutput[numLSTMs].output) + B;
+        // training
+        cr = CrossEntropyWithSoftmax(labels, LSTMoutputW, tag='criterion')  // this is the objective
+        Err = ErrorPrediction(labels, LSTMoutputW, tag='eval')              // this also gets tracked
+        // decoding
+        logPrior = LogPrior(labels)	 
+        ScaledLogLikelihood = Minus(LSTMoutputW, logPrior, tag='output')    // sadly we can't say x - y since we want to assign a tag
+    ]
 ]
-RunDir=/tmp/cntk-test-20150902130203.211023/Speech_LSTM@release_cpu
+RunDir=/tmp/cntk-test-20150908125817.974706/Speech_LSTM@release_cpu
 DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
 DeviceId=-1
 NDLDir=/home/mluser/src/cplx_master/Tests/Speech/LSTM
@@ -63,11 +207,11 @@ frameMode=false
 Truncated=true
 speechTrain=[
     action=train
-    modelPath=/tmp/cntk-test-20150902130203.211023/Speech_LSTM@release_cpu/models/cntkSpeech.dnn
+    modelPath=/tmp/cntk-test-20150908125817.974706/Speech_LSTM@release_cpu/models/cntkSpeech.dnn
     deviceId=-1
     traceLevel=1
     NDLNetworkBuilder=[
-		networkDescription=/home/mluser/src/cplx_master/Tests/Speech/LSTM/lstmp-3layer_WithSelfStab.ndl
+        networkDescription=/home/mluser/src/cplx_master/Tests/Speech/LSTM/lstmp-3layer_WithSelfStab.ndl
     ]    
     SGD=[
         epochSize=20480
@@ -97,8 +241,152 @@ speechTrain=[
           labelType=Category
       ]
     ]
+    originalExperimentalNetworkBuilder=[
+        LSTMPComponentWithSelfStab(inputDim, outputDim, cellDim, inputx) =
+        [
+Wxo = Parameter(cellDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1); 
+            Wxi = Parameter(cellDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wxf = Parameter(cellDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wxc = Parameter(cellDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+bo = Parameter(cellDim, 1, init='fixedValue', value=0.0); 
+            bc = Parameter(cellDim, 1, init='fixedValue', value=0.0);
+            bi = Parameter(cellDim, 1, init='fixedValue', value=0.0);
+            bf = Parameter(cellDim, 1, init='fixedValue', value=0.0);
+            Whi = Parameter(cellDim, outputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wci = Parameter(cellDim, 1, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Whf = Parameter(cellDim, outputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wcf = Parameter(cellDim, 1, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Who = Parameter(cellDim, outputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wco = Parameter(cellDim, 1, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Whc = Parameter(cellDim, outputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wmr = Parameter(outputDim, cellDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            sWxo = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWxi = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWxf = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWxc = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWhi = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWci = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWhf = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWcf = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWho = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWco = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWhc = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWmr = Parameter(1, 1, init='fixedValue', value=0.0);
+            expsWxo = Exp(sWxo);
+            expsWxi = Exp(sWxi);
+            expsWxf = Exp(sWxf);
+            expsWxc = Exp(sWxc);
+            expsWhi = Exp(sWhi);
+            expsWci = Exp(sWci);     
+            expsWhf = Exp(sWhf);
+            expsWcf = Exp(sWcf);
+            expsWho = Exp(sWho);
+            expsWco = Exp(sWco);
+            expsWhc = Exp(sWhc);
+            expsWmr = Exp(sWmr);
+            dh = PastValue(outputDim, 1, output, timeStep=1);
+            dc = PastValue(cellDim, 1, ct, timeStep=1);
+            Wxix = Times(Wxi, Scale(expsWxi, inputx));
+            Whidh = Times(Whi, Scale(expsWhi, dh));
+            Wcidc = DiagTimes(Wci, Scale(expsWci, dc));
+            it = Sigmoid (Plus ( Plus (Plus (Wxix, bi), Whidh), Wcidc));
+            Wxcx = Times(Wxc, Scale(expsWxc, inputx));
+            Whcdh = Times(Whc, Scale(expsWhc, dh));
+            bit = ElementTimes(it, Tanh( Plus(Wxcx, Plus(Whcdh, bc))));
+            Wxfx = Times(Wxf, Scale(expsWxf,inputx));
+            Whfdh = Times(Whf, Scale(expsWhf, dh));
+            Wcfdc = DiagTimes(Wcf, Scale(expsWcf, dc));
+            ft = Sigmoid( Plus (Plus (Plus(Wxfx, bf), Whfdh), Wcfdc));
+            bft = ElementTimes(ft, dc);
+            ct = Plus(bft, bit);
+            Wxox  = Times(Wxo, Scale(expsWxo, inputx));
+            Whodh = Times(Who, Scale(expsWho, dh));
+            Wcoct = DiagTimes(Wco, Scale(expsWco, ct));
+            ot = Sigmoid( Plus( Plus( Plus(Wxox, bo), Whodh), Wcoct));
+            mt = ElementTimes(ot, Tanh(ct));
+            output = Times(Wmr, Scale(expsWmr, mt)); 
+        ]
+        baseFeatDim=33
+        RowSliceStart=330 
+        FeatDim=363
+        labelDim=132
+        cellDim=1024
+        hiddenDim=256
+features=Input(FeatDim, 1, tag='feature')     
+        labels=Input(labelDim, 1, tag='label')
+feashift=RowSlice(RowSliceStart, baseFeatDim, features);      
+        featNorm = MeanVarNorm(feashift)
+        LSTMoutput1 = LSTMPComponentWithSelfStab(baseFeatDim, hiddenDim, cellDim, featNorm);
+LSTMoutput2 = LSTMPComponentWithSelfStab(hiddenDim, hiddenDim, cellDim, LSTMoutput1.output);    
+        LSTMoutput3 = LSTMPComponentWithSelfStab(hiddenDim, hiddenDim, cellDim, LSTMoutput2.output);
+        W = Parameter(labelDim, hiddenDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        b = Parameter(labelDim, 1, init='fixedValue', value=0);
+        sW = Parameter(1, 1, init='fixedValue', value=0.0);
+        expsW = Exp(sW);
+        LSTMoutputW = Plus(Times(W, Scale(expsW, LSTMoutput3.output)), b);
+cr = CrossEntropyWithSoftmax(labels, LSTMoutputW,tag='criteria');  
+        Err = ErrorPrediction(labels,LSTMoutputW,tag='eval');
+        logPrior = LogPrior(labels)	 
+        ScaledLogLikelihood=Minus(LSTMoutputW,logPrior,tag='output')
+    ]
+    ExperimentalNetworkBuilder=[
+        void = 0        // (BUGBUG: we do not allow zero-argument macros; will be fixed. For now, pass void)
+        WeightParam(m,n) = Parameter(m, n, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
+        BiasParam(m) = Parameter(m, 1, init='fixedValue', value=0.0)
+        ScalarParam(void) = Parameter(1, 1, init='fixedValue', value=0.0)
+        NewBeta(void) = Exp(ScalarParam(void))
+        Stabilize(in) = Scale(NewBeta(void), in)
+        LSTMPComponentWithSelfStab(inputDim, outputDim, cellDim, inputx) =
+        [
+            // parameter macros--these carry their own weight matrices
+            B(void) = BiasParam(cellDim)
+            Wmr = WeightParam(outputDim, cellDim);
+            W(v) = WeightParam(cellDim, inputDim) * Stabilize(v)    // input-to-hidden
+            H(h) = WeightParam(cellDim, outputDim) * Stabilize(h)   // hidden-to-hidden
+            C(c) = DiagTimes(WeightParam(cellDim, 1), Stabilize(c)) // cell-to-hiddden
+            // LSTM cell
+            dh = PastValue(outputDim, 1, output);                   // hidden state(t-1)
+            dc = PastValue(cellDim, 1, ct);                         // cell(t-1)
+            // note: the W(inputx) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
+            it = Sigmoid(W(inputx) + B(void) + H(dh) + C(dc))       // input gate(t)
+            bit = it .* Tanh(W(inputx) + (H(dh) + B(void)))         // applied to tanh of input network
+            ft = Sigmoid(W(inputx) + B(void) + H(dh) + C(dc))       // forget-me-not gate(t)
+            bft = ft .* dc                                          // applied to cell(t-1)
+            ct = bft + bit                                          // c(t) is sum of both
+            ot = Sigmoid(W(inputx) + B(void) + H(dh) + C(ct))       // output gate(t)
+            mt = ot .* Tanh(ct)                                     // applied to tanh(cell(t))
+            output = Wmr * Stabilize(mt)                            // projection
+        ]
+        // define basic I/O
+        baseFeatDim = 33
+        featDim = 11 * baseFeatDim      // TODO: 363--is this the correct explanation?
+        labelDim = 132
+        // hidden dimensions
+        cellDim = 1024
+        hiddenDim = 256
+        numLSTMs = 3        // number of hidden LSTM model layers
+        // features
+        features = Input(featDim, 1, tag='feature')
+        labels = Input(labelDim, 1, tag='label')
+feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, features);      
+        featNorm = MeanVarNorm(feashift)
+        // define the stack of hidden LSTM layers
+        LSTMoutput[k:1..numLSTMs] = if k == 1
+                                    then LSTMPComponentWithSelfStab(baseFeatDim, hiddenDim, cellDim, featNorm)
+                                    else LSTMPComponentWithSelfStab(hiddenDim,   hiddenDim, cellDim, LSTMoutput[k-1].output)
+        // and add a softmax layer on top
+        W(in) = WeightParam(labelDim, hiddenDim) * Stabilize(in)
+        B = BiasParam(labelDim)
+        LSTMoutputW = W(LSTMoutput[numLSTMs].output) + B;
+        // training
+        cr = CrossEntropyWithSoftmax(labels, LSTMoutputW, tag='criterion')  // this is the objective
+        Err = ErrorPrediction(labels, LSTMoutputW, tag='eval')              // this also gets tracked
+        // decoding
+        logPrior = LogPrior(labels)	 
+        ScaledLogLikelihood = Minus(LSTMoutputW, logPrior, tag='output')    // sadly we can't say x - y since we want to assign a tag
+    ]
 ]
-RunDir=/tmp/cntk-test-20150902130203.211023/Speech_LSTM@release_cpu
+RunDir=/tmp/cntk-test-20150908125817.974706/Speech_LSTM@release_cpu
 DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
 DeviceId=-1
 NDLDir=/home/mluser/src/cplx_master/Tests/Speech/LSTM
@@ -113,14 +401,14 @@ configparameters: cntk.config:frameMode=false
 configparameters: cntk.config:NDLDir=/home/mluser/src/cplx_master/Tests/Speech/LSTM
 configparameters: cntk.config:parallelTrain=false
 configparameters: cntk.config:precision=float
-configparameters: cntk.config:RunDir=/tmp/cntk-test-20150902130203.211023/Speech_LSTM@release_cpu
+configparameters: cntk.config:RunDir=/tmp/cntk-test-20150908125817.974706/Speech_LSTM@release_cpu
 configparameters: cntk.config:speechTrain=[
     action=train
-    modelPath=/tmp/cntk-test-20150902130203.211023/Speech_LSTM@release_cpu/models/cntkSpeech.dnn
+    modelPath=/tmp/cntk-test-20150908125817.974706/Speech_LSTM@release_cpu/models/cntkSpeech.dnn
     deviceId=-1
     traceLevel=1
     NDLNetworkBuilder=[
-		networkDescription=/home/mluser/src/cplx_master/Tests/Speech/LSTM/lstmp-3layer_WithSelfStab.ndl
+        networkDescription=/home/mluser/src/cplx_master/Tests/Speech/LSTM/lstmp-3layer_WithSelfStab.ndl
     ]    
     SGD=[
         epochSize=20480
@@ -149,6 +437,150 @@ configparameters: cntk.config:speechTrain=[
           labelDim=132
           labelType=Category
       ]
+    ]
+    originalExperimentalNetworkBuilder=[
+        LSTMPComponentWithSelfStab(inputDim, outputDim, cellDim, inputx) =
+        [
+Wxo = Parameter(cellDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1); 
+            Wxi = Parameter(cellDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wxf = Parameter(cellDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wxc = Parameter(cellDim, inputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+bo = Parameter(cellDim, 1, init='fixedValue', value=0.0); 
+            bc = Parameter(cellDim, 1, init='fixedValue', value=0.0);
+            bi = Parameter(cellDim, 1, init='fixedValue', value=0.0);
+            bf = Parameter(cellDim, 1, init='fixedValue', value=0.0);
+            Whi = Parameter(cellDim, outputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wci = Parameter(cellDim, 1, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Whf = Parameter(cellDim, outputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wcf = Parameter(cellDim, 1, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Who = Parameter(cellDim, outputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wco = Parameter(cellDim, 1, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Whc = Parameter(cellDim, outputDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            Wmr = Parameter(outputDim, cellDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+            sWxo = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWxi = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWxf = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWxc = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWhi = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWci = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWhf = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWcf = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWho = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWco = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWhc = Parameter(1, 1, init='fixedValue', value=0.0);
+            sWmr = Parameter(1, 1, init='fixedValue', value=0.0);
+            expsWxo = Exp(sWxo);
+            expsWxi = Exp(sWxi);
+            expsWxf = Exp(sWxf);
+            expsWxc = Exp(sWxc);
+            expsWhi = Exp(sWhi);
+            expsWci = Exp(sWci);     
+            expsWhf = Exp(sWhf);
+            expsWcf = Exp(sWcf);
+            expsWho = Exp(sWho);
+            expsWco = Exp(sWco);
+            expsWhc = Exp(sWhc);
+            expsWmr = Exp(sWmr);
+            dh = PastValue(outputDim, 1, output, timeStep=1);
+            dc = PastValue(cellDim, 1, ct, timeStep=1);
+            Wxix = Times(Wxi, Scale(expsWxi, inputx));
+            Whidh = Times(Whi, Scale(expsWhi, dh));
+            Wcidc = DiagTimes(Wci, Scale(expsWci, dc));
+            it = Sigmoid (Plus ( Plus (Plus (Wxix, bi), Whidh), Wcidc));
+            Wxcx = Times(Wxc, Scale(expsWxc, inputx));
+            Whcdh = Times(Whc, Scale(expsWhc, dh));
+            bit = ElementTimes(it, Tanh( Plus(Wxcx, Plus(Whcdh, bc))));
+            Wxfx = Times(Wxf, Scale(expsWxf,inputx));
+            Whfdh = Times(Whf, Scale(expsWhf, dh));
+            Wcfdc = DiagTimes(Wcf, Scale(expsWcf, dc));
+            ft = Sigmoid( Plus (Plus (Plus(Wxfx, bf), Whfdh), Wcfdc));
+            bft = ElementTimes(ft, dc);
+            ct = Plus(bft, bit);
+            Wxox  = Times(Wxo, Scale(expsWxo, inputx));
+            Whodh = Times(Who, Scale(expsWho, dh));
+            Wcoct = DiagTimes(Wco, Scale(expsWco, ct));
+            ot = Sigmoid( Plus( Plus( Plus(Wxox, bo), Whodh), Wcoct));
+            mt = ElementTimes(ot, Tanh(ct));
+            output = Times(Wmr, Scale(expsWmr, mt)); 
+        ]
+        baseFeatDim=33
+        RowSliceStart=330 
+        FeatDim=363
+        labelDim=132
+        cellDim=1024
+        hiddenDim=256
+features=Input(FeatDim, 1, tag='feature')     
+        labels=Input(labelDim, 1, tag='label')
+feashift=RowSlice(RowSliceStart, baseFeatDim, features);      
+        featNorm = MeanVarNorm(feashift)
+        LSTMoutput1 = LSTMPComponentWithSelfStab(baseFeatDim, hiddenDim, cellDim, featNorm);
+LSTMoutput2 = LSTMPComponentWithSelfStab(hiddenDim, hiddenDim, cellDim, LSTMoutput1.output);    
+        LSTMoutput3 = LSTMPComponentWithSelfStab(hiddenDim, hiddenDim, cellDim, LSTMoutput2.output);
+        W = Parameter(labelDim, hiddenDim, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+        b = Parameter(labelDim, 1, init='fixedValue', value=0);
+        sW = Parameter(1, 1, init='fixedValue', value=0.0);
+        expsW = Exp(sW);
+        LSTMoutputW = Plus(Times(W, Scale(expsW, LSTMoutput3.output)), b);
+cr = CrossEntropyWithSoftmax(labels, LSTMoutputW,tag='criteria');  
+        Err = ErrorPrediction(labels,LSTMoutputW,tag='eval');
+        logPrior = LogPrior(labels)	 
+        ScaledLogLikelihood=Minus(LSTMoutputW,logPrior,tag='output')
+    ]
+    ExperimentalNetworkBuilder=[
+        void = 0        // (BUGBUG: we do not allow zero-argument macros; will be fixed. For now, pass void)
+        WeightParam(m,n) = Parameter(m, n, init='uniform', initValueScale=1, initOnCPUOnly=true, randomSeed=1)
+        BiasParam(m) = Parameter(m, 1, init='fixedValue', value=0.0)
+        ScalarParam(void) = Parameter(1, 1, init='fixedValue', value=0.0)
+        NewBeta(void) = Exp(ScalarParam(void))
+        Stabilize(in) = Scale(NewBeta(void), in)
+        LSTMPComponentWithSelfStab(inputDim, outputDim, cellDim, inputx) =
+        [
+            // parameter macros--these carry their own weight matrices
+            B(void) = BiasParam(cellDim)
+            Wmr = WeightParam(outputDim, cellDim);
+            W(v) = WeightParam(cellDim, inputDim) * Stabilize(v)    // input-to-hidden
+            H(h) = WeightParam(cellDim, outputDim) * Stabilize(h)   // hidden-to-hidden
+            C(c) = DiagTimes(WeightParam(cellDim, 1), Stabilize(c)) // cell-to-hiddden
+            // LSTM cell
+            dh = PastValue(outputDim, 1, output);                   // hidden state(t-1)
+            dc = PastValue(cellDim, 1, ct);                         // cell(t-1)
+            // note: the W(inputx) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
+            it = Sigmoid(W(inputx) + B(void) + H(dh) + C(dc))       // input gate(t)
+            bit = it .* Tanh(W(inputx) + (H(dh) + B(void)))         // applied to tanh of input network
+            ft = Sigmoid(W(inputx) + B(void) + H(dh) + C(dc))       // forget-me-not gate(t)
+            bft = ft .* dc                                          // applied to cell(t-1)
+            ct = bft + bit                                          // c(t) is sum of both
+            ot = Sigmoid(W(inputx) + B(void) + H(dh) + C(ct))       // output gate(t)
+            mt = ot .* Tanh(ct)                                     // applied to tanh(cell(t))
+            output = Wmr * Stabilize(mt)                            // projection
+        ]
+        // define basic I/O
+        baseFeatDim = 33
+        featDim = 11 * baseFeatDim      // TODO: 363--is this the correct explanation?
+        labelDim = 132
+        // hidden dimensions
+        cellDim = 1024
+        hiddenDim = 256
+        numLSTMs = 3        // number of hidden LSTM model layers
+        // features
+        features = Input(featDim, 1, tag='feature')
+        labels = Input(labelDim, 1, tag='label')
+feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, features);      
+        featNorm = MeanVarNorm(feashift)
+        // define the stack of hidden LSTM layers
+        LSTMoutput[k:1..numLSTMs] = if k == 1
+                                    then LSTMPComponentWithSelfStab(baseFeatDim, hiddenDim, cellDim, featNorm)
+                                    else LSTMPComponentWithSelfStab(hiddenDim,   hiddenDim, cellDim, LSTMoutput[k-1].output)
+        // and add a softmax layer on top
+        W(in) = WeightParam(labelDim, hiddenDim) * Stabilize(in)
+        B = BiasParam(labelDim)
+        LSTMoutputW = W(LSTMoutput[numLSTMs].output) + B;
+        // training
+        cr = CrossEntropyWithSoftmax(labels, LSTMoutputW, tag='criterion')  // this is the objective
+        Err = ErrorPrediction(labels, LSTMoutputW, tag='eval')              // this also gets tracked
+        // decoding
+        logPrior = LogPrior(labels)	 
+        ScaledLogLikelihood = Minus(LSTMoutputW, logPrior, tag='output')    // sadly we can't say x - y since we want to assign a tag
     ]
 ]
 
@@ -521,41 +953,41 @@ Validating --> LSTMoutput1.Whc = LearnableParameter
 Validating --> LSTMoutput1.sWhc = LearnableParameter
 Validating --> LSTMoutput1.expsWhc = Exp(LSTMoutput1.sWhc[1, 1])
 Validating --> LSTMoutput1.bc = LearnableParameter
-Validating --> LSTMoutput1.dh = PastValue(LSTMoutput1.output[0 {W=489626271855, H=416611827821, C=450971566188}, 0])
-Validating --> LSTMoutput1.unnamed169 = Scale(LSTMoutput1.expsWho[1, 1], LSTMoutput1.dh[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Whodh = Times(LSTMoutput1.Who[1024, 256], LSTMoutput1.unnamed169[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.dh = PastValue(LSTMoutput1.output[0 {W=472446402560, H=13569, C=140261196433336}, 0])
+Validating --> LSTMoutput1.unnamed169 = Scale(LSTMoutput1.expsWho[1, 1], LSTMoutput1.dh[256 {W=472446402560, H=13569, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Whodh = Times(LSTMoutput1.Who[1024, 256], LSTMoutput1.unnamed169[256 {W=472446402560, H=13569, C=140261196433336}, 1])
 Validating --> LSTMoutput1.unnamed172 = Plus(LSTMoutput1.unnamed173[1024, 1], LSTMoutput1.Whodh[1024, 1])
-Validating --> LSTMoutput1.unnamed163 = Scale(LSTMoutput1.expsWhf[1, 1], LSTMoutput1.dh[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Whfdh = Times(LSTMoutput1.Whf[1024, 256], LSTMoutput1.unnamed163[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed163 = Scale(LSTMoutput1.expsWhf[1, 1], LSTMoutput1.dh[256 {W=472446402560, H=13569, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Whfdh = Times(LSTMoutput1.Whf[1024, 256], LSTMoutput1.unnamed163[256 {W=472446402560, H=13569, C=140261196433336}, 1])
 Validating --> LSTMoutput1.unnamed166 = Plus(LSTMoutput1.unnamed167[1024, 1], LSTMoutput1.Whfdh[1024, 1])
-Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[0 {W=489626271855, H=416611827821, C=450971566188}, 0])
-Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 1], LSTMoutput1.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed152 = Scale(LSTMoutput1.expsWhi[1, 1], LSTMoutput1.dh[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Whidh = Times(LSTMoutput1.Whi[1024, 256], LSTMoutput1.unnamed152[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[0 {W=472446402560, H=8241, C=140261196433336}, 0])
+Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 1], LSTMoutput1.Wcfdc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed152 = Scale(LSTMoutput1.expsWhi[1, 1], LSTMoutput1.dh[256 {W=472446402560, H=13569, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Whidh = Times(LSTMoutput1.Whi[1024, 256], LSTMoutput1.unnamed152[256 {W=472446402560, H=13569, C=140261196433336}, 1])
 Validating --> LSTMoutput1.unnamed155 = Plus(LSTMoutput1.unnamed156[1024, 1], LSTMoutput1.Whidh[1024, 1])
-Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 1], LSTMoutput1.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed158 = Scale(LSTMoutput1.expsWhc[1, 1], LSTMoutput1.dh[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Whcdh = Times(LSTMoutput1.Whc[1024, 256], LSTMoutput1.unnamed158[256 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 1], LSTMoutput1.Wcidc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed158 = Scale(LSTMoutput1.expsWhc[1, 1], LSTMoutput1.dh[256 {W=472446402560, H=13569, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Whcdh = Times(LSTMoutput1.Whc[1024, 256], LSTMoutput1.unnamed158[256 {W=472446402560, H=13569, C=140261196433336}, 1])
 Validating --> LSTMoutput1.unnamed161 = Plus(LSTMoutput1.Whcdh[1024, 1], LSTMoutput1.bc[1024, 1])
 Validating --> LSTMoutput1.unnamed160 = Plus(LSTMoutput1.Wxcx[1024, 1], LSTMoutput1.unnamed161[1024, 1])
 Validating --> LSTMoutput1.unnamed159 = Tanh(LSTMoutput1.unnamed160[1024, 1])
-Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed159[1024, 1])
-Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 1], LSTMoutput1.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed174[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.unnamed159[1024, 1])
+Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.bit[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 1], LSTMoutput1.Wcoct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.unnamed174[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
 Validating --> LSTMoutput2.unnamed218 = Scale(LSTMoutput2.expsWxo[1, 1], LSTMoutput1.output[256, 1])
 Validating --> LSTMoutput2.Wxox = Times(LSTMoutput2.Wxo[1024, 256], LSTMoutput2.unnamed218[256, 1])
 Validating --> LSTMoutput2.bo = LearnableParameter
@@ -601,41 +1033,41 @@ Validating --> LSTMoutput2.Whc = LearnableParameter
 Validating --> LSTMoutput2.sWhc = LearnableParameter
 Validating --> LSTMoutput2.expsWhc = Exp(LSTMoutput2.sWhc[1, 1])
 Validating --> LSTMoutput2.bc = LearnableParameter
-Validating --> LSTMoutput2.dh = PastValue(LSTMoutput2.output[0 {W=139630799538104, H=31220368, C=0}, 0])
-Validating --> LSTMoutput2.unnamed219 = Scale(LSTMoutput2.expsWho[1, 1], LSTMoutput2.dh[256 {W=139630799538104, H=31220368, C=0}, 1])
-Validating --> LSTMoutput2.Whodh = Times(LSTMoutput2.Who[1024, 256], LSTMoutput2.unnamed219[256 {W=139630799538104, H=31220368, C=0}, 1])
+Validating --> LSTMoutput2.dh = PastValue(LSTMoutput2.output[0 {W=42096, H=42423, C=42248}, 0])
+Validating --> LSTMoutput2.unnamed219 = Scale(LSTMoutput2.expsWho[1, 1], LSTMoutput2.dh[256 {W=42096, H=42423, C=42248}, 1])
+Validating --> LSTMoutput2.Whodh = Times(LSTMoutput2.Who[1024, 256], LSTMoutput2.unnamed219[256 {W=42096, H=42423, C=42248}, 1])
 Validating --> LSTMoutput2.unnamed222 = Plus(LSTMoutput2.unnamed223[1024, 1], LSTMoutput2.Whodh[1024, 1])
-Validating --> LSTMoutput2.unnamed213 = Scale(LSTMoutput2.expsWhf[1, 1], LSTMoutput2.dh[256 {W=139630799538104, H=31220368, C=0}, 1])
-Validating --> LSTMoutput2.Whfdh = Times(LSTMoutput2.Whf[1024, 256], LSTMoutput2.unnamed213[256 {W=139630799538104, H=31220368, C=0}, 1])
+Validating --> LSTMoutput2.unnamed213 = Scale(LSTMoutput2.expsWhf[1, 1], LSTMoutput2.dh[256 {W=42096, H=42423, C=42248}, 1])
+Validating --> LSTMoutput2.Whfdh = Times(LSTMoutput2.Whf[1024, 256], LSTMoutput2.unnamed213[256 {W=42096, H=42423, C=42248}, 1])
 Validating --> LSTMoutput2.unnamed216 = Plus(LSTMoutput2.unnamed217[1024, 1], LSTMoutput2.Whfdh[1024, 1])
-Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[0 {W=489626271855, H=416611827821, C=450971566188}, 0])
-Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 1], LSTMoutput2.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed202 = Scale(LSTMoutput2.expsWhi[1, 1], LSTMoutput2.dh[256 {W=139630799538104, H=31220368, C=0}, 1])
-Validating --> LSTMoutput2.Whidh = Times(LSTMoutput2.Whi[1024, 256], LSTMoutput2.unnamed202[256 {W=139630799538104, H=31220368, C=0}, 1])
+Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[0 {W=0, H=0, C=283467841605}, 0])
+Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 1], LSTMoutput2.Wcfdc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed202 = Scale(LSTMoutput2.expsWhi[1, 1], LSTMoutput2.dh[256 {W=42096, H=42423, C=42248}, 1])
+Validating --> LSTMoutput2.Whidh = Times(LSTMoutput2.Whi[1024, 256], LSTMoutput2.unnamed202[256 {W=42096, H=42423, C=42248}, 1])
 Validating --> LSTMoutput2.unnamed205 = Plus(LSTMoutput2.unnamed206[1024, 1], LSTMoutput2.Whidh[1024, 1])
-Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 1], LSTMoutput2.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed208 = Scale(LSTMoutput2.expsWhc[1, 1], LSTMoutput2.dh[256 {W=139630799538104, H=31220368, C=0}, 1])
-Validating --> LSTMoutput2.Whcdh = Times(LSTMoutput2.Whc[1024, 256], LSTMoutput2.unnamed208[256 {W=139630799538104, H=31220368, C=0}, 1])
+Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 1], LSTMoutput2.Wcidc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed208 = Scale(LSTMoutput2.expsWhc[1, 1], LSTMoutput2.dh[256 {W=42096, H=42423, C=42248}, 1])
+Validating --> LSTMoutput2.Whcdh = Times(LSTMoutput2.Whc[1024, 256], LSTMoutput2.unnamed208[256 {W=42096, H=42423, C=42248}, 1])
 Validating --> LSTMoutput2.unnamed211 = Plus(LSTMoutput2.Whcdh[1024, 1], LSTMoutput2.bc[1024, 1])
 Validating --> LSTMoutput2.unnamed210 = Plus(LSTMoutput2.Wxcx[1024, 1], LSTMoutput2.unnamed211[1024, 1])
 Validating --> LSTMoutput2.unnamed209 = Tanh(LSTMoutput2.unnamed210[1024, 1])
-Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed209[1024, 1])
-Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 1], LSTMoutput2.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed224[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.unnamed209[1024, 1])
+Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.bit[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 1], LSTMoutput2.Wcoct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.unnamed224[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=0, H=0, C=283467841605}, 1])
 Validating --> LSTMoutput3.unnamed268 = Scale(LSTMoutput3.expsWxo[1, 1], LSTMoutput2.output[256, 1])
 Validating --> LSTMoutput3.Wxox = Times(LSTMoutput3.Wxo[1024, 256], LSTMoutput3.unnamed268[256, 1])
 Validating --> LSTMoutput3.bo = LearnableParameter
@@ -681,41 +1113,41 @@ Validating --> LSTMoutput3.Whc = LearnableParameter
 Validating --> LSTMoutput3.sWhc = LearnableParameter
 Validating --> LSTMoutput3.expsWhc = Exp(LSTMoutput3.sWhc[1, 1])
 Validating --> LSTMoutput3.bc = LearnableParameter
-Validating --> LSTMoutput3.dh = PastValue(LSTMoutput3.output[0 {W=42949673064, H=438086664200, C=55834574866}, 0])
-Validating --> LSTMoutput3.unnamed269 = Scale(LSTMoutput3.expsWho[1, 1], LSTMoutput3.dh[256 {W=42949673064, H=438086664200, C=55834574866}, 1])
-Validating --> LSTMoutput3.Whodh = Times(LSTMoutput3.Who[1024, 256], LSTMoutput3.unnamed269[256 {W=42949673064, H=438086664200, C=55834574866}, 1])
+Validating --> LSTMoutput3.dh = PastValue(LSTMoutput3.output[0 {W=274877906945, H=12884901950, C=279172874305}, 0])
+Validating --> LSTMoutput3.unnamed269 = Scale(LSTMoutput3.expsWho[1, 1], LSTMoutput3.dh[256 {W=274877906945, H=12884901950, C=279172874305}, 1])
+Validating --> LSTMoutput3.Whodh = Times(LSTMoutput3.Who[1024, 256], LSTMoutput3.unnamed269[256 {W=274877906945, H=12884901950, C=279172874305}, 1])
 Validating --> LSTMoutput3.unnamed272 = Plus(LSTMoutput3.unnamed273[1024, 1], LSTMoutput3.Whodh[1024, 1])
-Validating --> LSTMoutput3.unnamed263 = Scale(LSTMoutput3.expsWhf[1, 1], LSTMoutput3.dh[256 {W=42949673064, H=438086664200, C=55834574866}, 1])
-Validating --> LSTMoutput3.Whfdh = Times(LSTMoutput3.Whf[1024, 256], LSTMoutput3.unnamed263[256 {W=42949673064, H=438086664200, C=55834574866}, 1])
+Validating --> LSTMoutput3.unnamed263 = Scale(LSTMoutput3.expsWhf[1, 1], LSTMoutput3.dh[256 {W=274877906945, H=12884901950, C=279172874305}, 1])
+Validating --> LSTMoutput3.Whfdh = Times(LSTMoutput3.Whf[1024, 256], LSTMoutput3.unnamed263[256 {W=274877906945, H=12884901950, C=279172874305}, 1])
 Validating --> LSTMoutput3.unnamed266 = Plus(LSTMoutput3.unnamed267[1024, 1], LSTMoutput3.Whfdh[1024, 1])
-Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[0 {W=489626271855, H=416611827821, C=450971566188}, 0])
-Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 1], LSTMoutput3.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed252 = Scale(LSTMoutput3.expsWhi[1, 1], LSTMoutput3.dh[256 {W=42949673064, H=438086664200, C=55834574866}, 1])
-Validating --> LSTMoutput3.Whidh = Times(LSTMoutput3.Whi[1024, 256], LSTMoutput3.unnamed252[256 {W=42949673064, H=438086664200, C=55834574866}, 1])
+Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[0 {W=429496729701, H=489626271811, C=493921239151}, 0])
+Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 1], LSTMoutput3.Wcfdc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed252 = Scale(LSTMoutput3.expsWhi[1, 1], LSTMoutput3.dh[256 {W=274877906945, H=12884901950, C=279172874305}, 1])
+Validating --> LSTMoutput3.Whidh = Times(LSTMoutput3.Whi[1024, 256], LSTMoutput3.unnamed252[256 {W=274877906945, H=12884901950, C=279172874305}, 1])
 Validating --> LSTMoutput3.unnamed255 = Plus(LSTMoutput3.unnamed256[1024, 1], LSTMoutput3.Whidh[1024, 1])
-Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 1], LSTMoutput3.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed258 = Scale(LSTMoutput3.expsWhc[1, 1], LSTMoutput3.dh[256 {W=42949673064, H=438086664200, C=55834574866}, 1])
-Validating --> LSTMoutput3.Whcdh = Times(LSTMoutput3.Whc[1024, 256], LSTMoutput3.unnamed258[256 {W=42949673064, H=438086664200, C=55834574866}, 1])
+Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 1], LSTMoutput3.Wcidc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed258 = Scale(LSTMoutput3.expsWhc[1, 1], LSTMoutput3.dh[256 {W=274877906945, H=12884901950, C=279172874305}, 1])
+Validating --> LSTMoutput3.Whcdh = Times(LSTMoutput3.Whc[1024, 256], LSTMoutput3.unnamed258[256 {W=274877906945, H=12884901950, C=279172874305}, 1])
 Validating --> LSTMoutput3.unnamed261 = Plus(LSTMoutput3.Whcdh[1024, 1], LSTMoutput3.bc[1024, 1])
 Validating --> LSTMoutput3.unnamed260 = Plus(LSTMoutput3.Wxcx[1024, 1], LSTMoutput3.unnamed261[1024, 1])
 Validating --> LSTMoutput3.unnamed259 = Tanh(LSTMoutput3.unnamed260[1024, 1])
-Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.unnamed259[1024, 1])
-Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 1], LSTMoutput3.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.unnamed274[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.unnamed259[1024, 1])
+Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.bit[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 1], LSTMoutput3.Wcoct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.unnamed274[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
 Validating --> unnamed284 = Scale(expsW[1, 1], LSTMoutput3.output[256, 1])
 Validating --> unnamed283 = Times(W[132, 256], unnamed284[256, 1])
 Validating --> b = LearnableParameter
@@ -810,34 +1242,34 @@ Validating --> LSTMoutput1.unnamed172 = Plus(LSTMoutput1.unnamed173[1024, 1], LS
 Validating --> LSTMoutput1.unnamed163 = Scale(LSTMoutput1.expsWhf[1, 1], LSTMoutput1.dh[256, 1])
 Validating --> LSTMoutput1.Whfdh = Times(LSTMoutput1.Whf[1024, 256], LSTMoutput1.unnamed163[256, 1])
 Validating --> LSTMoutput1.unnamed166 = Plus(LSTMoutput1.unnamed167[1024, 1], LSTMoutput1.Whfdh[1024, 1])
-Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 1], LSTMoutput1.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 1], LSTMoutput1.Wcfdc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
 Validating --> LSTMoutput1.unnamed152 = Scale(LSTMoutput1.expsWhi[1, 1], LSTMoutput1.dh[256, 1])
 Validating --> LSTMoutput1.Whidh = Times(LSTMoutput1.Whi[1024, 256], LSTMoutput1.unnamed152[256, 1])
 Validating --> LSTMoutput1.unnamed155 = Plus(LSTMoutput1.unnamed156[1024, 1], LSTMoutput1.Whidh[1024, 1])
-Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 1], LSTMoutput1.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 1], LSTMoutput1.Wcidc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
 Validating --> LSTMoutput1.unnamed158 = Scale(LSTMoutput1.expsWhc[1, 1], LSTMoutput1.dh[256, 1])
 Validating --> LSTMoutput1.Whcdh = Times(LSTMoutput1.Whc[1024, 256], LSTMoutput1.unnamed158[256, 1])
 Validating --> LSTMoutput1.unnamed161 = Plus(LSTMoutput1.Whcdh[1024, 1], LSTMoutput1.bc[1024, 1])
 Validating --> LSTMoutput1.unnamed160 = Plus(LSTMoutput1.Wxcx[1024, 1], LSTMoutput1.unnamed161[1024, 1])
 Validating --> LSTMoutput1.unnamed159 = Tanh(LSTMoutput1.unnamed160[1024, 1])
-Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed159[1024, 1])
-Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 1], LSTMoutput1.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed174[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.unnamed159[1024, 1])
+Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.bit[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 1], LSTMoutput1.Wcoct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.unnamed174[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
 Validating --> LSTMoutput2.unnamed218 = Scale(LSTMoutput2.expsWxo[1, 1], LSTMoutput1.output[256, 1])
 Validating --> LSTMoutput2.Wxox = Times(LSTMoutput2.Wxo[1024, 256], LSTMoutput2.unnamed218[256, 1])
 Validating --> LSTMoutput2.bo = LearnableParameter
@@ -890,34 +1322,34 @@ Validating --> LSTMoutput2.unnamed222 = Plus(LSTMoutput2.unnamed223[1024, 1], LS
 Validating --> LSTMoutput2.unnamed213 = Scale(LSTMoutput2.expsWhf[1, 1], LSTMoutput2.dh[256, 1])
 Validating --> LSTMoutput2.Whfdh = Times(LSTMoutput2.Whf[1024, 256], LSTMoutput2.unnamed213[256, 1])
 Validating --> LSTMoutput2.unnamed216 = Plus(LSTMoutput2.unnamed217[1024, 1], LSTMoutput2.Whfdh[1024, 1])
-Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 1], LSTMoutput2.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 1], LSTMoutput2.Wcfdc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 1])
 Validating --> LSTMoutput2.unnamed202 = Scale(LSTMoutput2.expsWhi[1, 1], LSTMoutput2.dh[256, 1])
 Validating --> LSTMoutput2.Whidh = Times(LSTMoutput2.Whi[1024, 256], LSTMoutput2.unnamed202[256, 1])
 Validating --> LSTMoutput2.unnamed205 = Plus(LSTMoutput2.unnamed206[1024, 1], LSTMoutput2.Whidh[1024, 1])
-Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 1], LSTMoutput2.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 1], LSTMoutput2.Wcidc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=0, H=0, C=283467841605}, 1])
 Validating --> LSTMoutput2.unnamed208 = Scale(LSTMoutput2.expsWhc[1, 1], LSTMoutput2.dh[256, 1])
 Validating --> LSTMoutput2.Whcdh = Times(LSTMoutput2.Whc[1024, 256], LSTMoutput2.unnamed208[256, 1])
 Validating --> LSTMoutput2.unnamed211 = Plus(LSTMoutput2.Whcdh[1024, 1], LSTMoutput2.bc[1024, 1])
 Validating --> LSTMoutput2.unnamed210 = Plus(LSTMoutput2.Wxcx[1024, 1], LSTMoutput2.unnamed211[1024, 1])
 Validating --> LSTMoutput2.unnamed209 = Tanh(LSTMoutput2.unnamed210[1024, 1])
-Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed209[1024, 1])
-Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 1], LSTMoutput2.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed224[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.unnamed209[1024, 1])
+Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.bit[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 1], LSTMoutput2.Wcoct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.unnamed224[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=0, H=0, C=283467841605}, 1])
 Validating --> LSTMoutput3.unnamed268 = Scale(LSTMoutput3.expsWxo[1, 1], LSTMoutput2.output[256, 1])
 Validating --> LSTMoutput3.Wxox = Times(LSTMoutput3.Wxo[1024, 256], LSTMoutput3.unnamed268[256, 1])
 Validating --> LSTMoutput3.bo = LearnableParameter
@@ -970,34 +1402,34 @@ Validating --> LSTMoutput3.unnamed272 = Plus(LSTMoutput3.unnamed273[1024, 1], LS
 Validating --> LSTMoutput3.unnamed263 = Scale(LSTMoutput3.expsWhf[1, 1], LSTMoutput3.dh[256, 1])
 Validating --> LSTMoutput3.Whfdh = Times(LSTMoutput3.Whf[1024, 256], LSTMoutput3.unnamed263[256, 1])
 Validating --> LSTMoutput3.unnamed266 = Plus(LSTMoutput3.unnamed267[1024, 1], LSTMoutput3.Whfdh[1024, 1])
-Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 1], LSTMoutput3.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 1], LSTMoutput3.Wcfdc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
 Validating --> LSTMoutput3.unnamed252 = Scale(LSTMoutput3.expsWhi[1, 1], LSTMoutput3.dh[256, 1])
 Validating --> LSTMoutput3.Whidh = Times(LSTMoutput3.Whi[1024, 256], LSTMoutput3.unnamed252[256, 1])
 Validating --> LSTMoutput3.unnamed255 = Plus(LSTMoutput3.unnamed256[1024, 1], LSTMoutput3.Whidh[1024, 1])
-Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 1], LSTMoutput3.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 1], LSTMoutput3.Wcidc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
 Validating --> LSTMoutput3.unnamed258 = Scale(LSTMoutput3.expsWhc[1, 1], LSTMoutput3.dh[256, 1])
 Validating --> LSTMoutput3.Whcdh = Times(LSTMoutput3.Whc[1024, 256], LSTMoutput3.unnamed258[256, 1])
 Validating --> LSTMoutput3.unnamed261 = Plus(LSTMoutput3.Whcdh[1024, 1], LSTMoutput3.bc[1024, 1])
 Validating --> LSTMoutput3.unnamed260 = Plus(LSTMoutput3.Wxcx[1024, 1], LSTMoutput3.unnamed261[1024, 1])
 Validating --> LSTMoutput3.unnamed259 = Tanh(LSTMoutput3.unnamed260[1024, 1])
-Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.unnamed259[1024, 1])
-Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 1], LSTMoutput3.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.unnamed274[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.unnamed259[1024, 1])
+Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.bit[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 1], LSTMoutput3.Wcoct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.unnamed274[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
 Validating --> unnamed284 = Scale(expsW[1, 1], LSTMoutput3.output[256, 1])
 Validating --> unnamed283 = Times(W[132, 256], unnamed284[256, 1])
 Validating --> b = LearnableParameter
@@ -1096,34 +1528,34 @@ Validating --> LSTMoutput1.unnamed172 = Plus(LSTMoutput1.unnamed173[1024, 1], LS
 Validating --> LSTMoutput1.unnamed163 = Scale(LSTMoutput1.expsWhf[1, 1], LSTMoutput1.dh[256, 1])
 Validating --> LSTMoutput1.Whfdh = Times(LSTMoutput1.Whf[1024, 256], LSTMoutput1.unnamed163[256, 1])
 Validating --> LSTMoutput1.unnamed166 = Plus(LSTMoutput1.unnamed167[1024, 1], LSTMoutput1.Whfdh[1024, 1])
-Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 1], LSTMoutput1.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 1], LSTMoutput1.Wcfdc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
 Validating --> LSTMoutput1.unnamed152 = Scale(LSTMoutput1.expsWhi[1, 1], LSTMoutput1.dh[256, 1])
 Validating --> LSTMoutput1.Whidh = Times(LSTMoutput1.Whi[1024, 256], LSTMoutput1.unnamed152[256, 1])
 Validating --> LSTMoutput1.unnamed155 = Plus(LSTMoutput1.unnamed156[1024, 1], LSTMoutput1.Whidh[1024, 1])
-Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 1], LSTMoutput1.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 1], LSTMoutput1.Wcidc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
 Validating --> LSTMoutput1.unnamed158 = Scale(LSTMoutput1.expsWhc[1, 1], LSTMoutput1.dh[256, 1])
 Validating --> LSTMoutput1.Whcdh = Times(LSTMoutput1.Whc[1024, 256], LSTMoutput1.unnamed158[256, 1])
 Validating --> LSTMoutput1.unnamed161 = Plus(LSTMoutput1.Whcdh[1024, 1], LSTMoutput1.bc[1024, 1])
 Validating --> LSTMoutput1.unnamed160 = Plus(LSTMoutput1.Wxcx[1024, 1], LSTMoutput1.unnamed161[1024, 1])
 Validating --> LSTMoutput1.unnamed159 = Tanh(LSTMoutput1.unnamed160[1024, 1])
-Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed159[1024, 1])
-Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 1], LSTMoutput1.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed174[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.unnamed159[1024, 1])
+Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.bit[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 1], LSTMoutput1.Wcoct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.unnamed174[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
 Validating --> LSTMoutput2.unnamed218 = Scale(LSTMoutput2.expsWxo[1, 1], LSTMoutput1.output[256, 1])
 Validating --> LSTMoutput2.Wxox = Times(LSTMoutput2.Wxo[1024, 256], LSTMoutput2.unnamed218[256, 1])
 Validating --> LSTMoutput2.bo = LearnableParameter
@@ -1176,34 +1608,34 @@ Validating --> LSTMoutput2.unnamed222 = Plus(LSTMoutput2.unnamed223[1024, 1], LS
 Validating --> LSTMoutput2.unnamed213 = Scale(LSTMoutput2.expsWhf[1, 1], LSTMoutput2.dh[256, 1])
 Validating --> LSTMoutput2.Whfdh = Times(LSTMoutput2.Whf[1024, 256], LSTMoutput2.unnamed213[256, 1])
 Validating --> LSTMoutput2.unnamed216 = Plus(LSTMoutput2.unnamed217[1024, 1], LSTMoutput2.Whfdh[1024, 1])
-Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 1], LSTMoutput2.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 1], LSTMoutput2.Wcfdc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 1])
 Validating --> LSTMoutput2.unnamed202 = Scale(LSTMoutput2.expsWhi[1, 1], LSTMoutput2.dh[256, 1])
 Validating --> LSTMoutput2.Whidh = Times(LSTMoutput2.Whi[1024, 256], LSTMoutput2.unnamed202[256, 1])
 Validating --> LSTMoutput2.unnamed205 = Plus(LSTMoutput2.unnamed206[1024, 1], LSTMoutput2.Whidh[1024, 1])
-Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 1], LSTMoutput2.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 1], LSTMoutput2.Wcidc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=0, H=0, C=283467841605}, 1])
 Validating --> LSTMoutput2.unnamed208 = Scale(LSTMoutput2.expsWhc[1, 1], LSTMoutput2.dh[256, 1])
 Validating --> LSTMoutput2.Whcdh = Times(LSTMoutput2.Whc[1024, 256], LSTMoutput2.unnamed208[256, 1])
 Validating --> LSTMoutput2.unnamed211 = Plus(LSTMoutput2.Whcdh[1024, 1], LSTMoutput2.bc[1024, 1])
 Validating --> LSTMoutput2.unnamed210 = Plus(LSTMoutput2.Wxcx[1024, 1], LSTMoutput2.unnamed211[1024, 1])
 Validating --> LSTMoutput2.unnamed209 = Tanh(LSTMoutput2.unnamed210[1024, 1])
-Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed209[1024, 1])
-Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 1], LSTMoutput2.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed224[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.unnamed209[1024, 1])
+Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.bit[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 1], LSTMoutput2.Wcoct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.unnamed224[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=0, H=0, C=283467841605}, 1])
 Validating --> LSTMoutput3.unnamed268 = Scale(LSTMoutput3.expsWxo[1, 1], LSTMoutput2.output[256, 1])
 Validating --> LSTMoutput3.Wxox = Times(LSTMoutput3.Wxo[1024, 256], LSTMoutput3.unnamed268[256, 1])
 Validating --> LSTMoutput3.bo = LearnableParameter
@@ -1256,34 +1688,34 @@ Validating --> LSTMoutput3.unnamed272 = Plus(LSTMoutput3.unnamed273[1024, 1], LS
 Validating --> LSTMoutput3.unnamed263 = Scale(LSTMoutput3.expsWhf[1, 1], LSTMoutput3.dh[256, 1])
 Validating --> LSTMoutput3.Whfdh = Times(LSTMoutput3.Whf[1024, 256], LSTMoutput3.unnamed263[256, 1])
 Validating --> LSTMoutput3.unnamed266 = Plus(LSTMoutput3.unnamed267[1024, 1], LSTMoutput3.Whfdh[1024, 1])
-Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 1], LSTMoutput3.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 1], LSTMoutput3.Wcfdc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
 Validating --> LSTMoutput3.unnamed252 = Scale(LSTMoutput3.expsWhi[1, 1], LSTMoutput3.dh[256, 1])
 Validating --> LSTMoutput3.Whidh = Times(LSTMoutput3.Whi[1024, 256], LSTMoutput3.unnamed252[256, 1])
 Validating --> LSTMoutput3.unnamed255 = Plus(LSTMoutput3.unnamed256[1024, 1], LSTMoutput3.Whidh[1024, 1])
-Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 1], LSTMoutput3.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 1], LSTMoutput3.Wcidc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
 Validating --> LSTMoutput3.unnamed258 = Scale(LSTMoutput3.expsWhc[1, 1], LSTMoutput3.dh[256, 1])
 Validating --> LSTMoutput3.Whcdh = Times(LSTMoutput3.Whc[1024, 256], LSTMoutput3.unnamed258[256, 1])
 Validating --> LSTMoutput3.unnamed261 = Plus(LSTMoutput3.Whcdh[1024, 1], LSTMoutput3.bc[1024, 1])
 Validating --> LSTMoutput3.unnamed260 = Plus(LSTMoutput3.Wxcx[1024, 1], LSTMoutput3.unnamed261[1024, 1])
 Validating --> LSTMoutput3.unnamed259 = Tanh(LSTMoutput3.unnamed260[1024, 1])
-Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.unnamed259[1024, 1])
-Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 1], LSTMoutput3.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.unnamed274[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.unnamed259[1024, 1])
+Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.bit[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 1], LSTMoutput3.Wcoct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.unnamed274[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
 Validating --> unnamed284 = Scale(expsW[1, 1], LSTMoutput3.output[256, 1])
 Validating --> unnamed283 = Times(W[132, 256], unnamed284[256, 1])
 Validating --> b = LearnableParameter
@@ -1381,34 +1813,34 @@ Validating --> LSTMoutput1.unnamed172 = Plus(LSTMoutput1.unnamed173[1024, 1], LS
 Validating --> LSTMoutput1.unnamed163 = Scale(LSTMoutput1.expsWhf[1, 1], LSTMoutput1.dh[256, 1])
 Validating --> LSTMoutput1.Whfdh = Times(LSTMoutput1.Whf[1024, 256], LSTMoutput1.unnamed163[256, 1])
 Validating --> LSTMoutput1.unnamed166 = Plus(LSTMoutput1.unnamed167[1024, 1], LSTMoutput1.Whfdh[1024, 1])
-Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 1], LSTMoutput1.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 1], LSTMoutput1.Wcfdc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
 Validating --> LSTMoutput1.unnamed152 = Scale(LSTMoutput1.expsWhi[1, 1], LSTMoutput1.dh[256, 1])
 Validating --> LSTMoutput1.Whidh = Times(LSTMoutput1.Whi[1024, 256], LSTMoutput1.unnamed152[256, 1])
 Validating --> LSTMoutput1.unnamed155 = Plus(LSTMoutput1.unnamed156[1024, 1], LSTMoutput1.Whidh[1024, 1])
-Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 1], LSTMoutput1.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 1], LSTMoutput1.Wcidc[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
 Validating --> LSTMoutput1.unnamed158 = Scale(LSTMoutput1.expsWhc[1, 1], LSTMoutput1.dh[256, 1])
 Validating --> LSTMoutput1.Whcdh = Times(LSTMoutput1.Whc[1024, 256], LSTMoutput1.unnamed158[256, 1])
 Validating --> LSTMoutput1.unnamed161 = Plus(LSTMoutput1.Whcdh[1024, 1], LSTMoutput1.bc[1024, 1])
 Validating --> LSTMoutput1.unnamed160 = Plus(LSTMoutput1.Wxcx[1024, 1], LSTMoutput1.unnamed161[1024, 1])
 Validating --> LSTMoutput1.unnamed159 = Tanh(LSTMoutput1.unnamed160[1024, 1])
-Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed159[1024, 1])
-Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 1], LSTMoutput1.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput1.unnamed174[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.unnamed159[1024, 1])
+Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.bit[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 1], LSTMoutput1.Wcoct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=472446402560, H=8241, C=140261196433336}, 1], LSTMoutput1.unnamed174[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
+Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=472446402560, H=8241, C=140261196433336}, 1])
 Validating --> LSTMoutput2.unnamed218 = Scale(LSTMoutput2.expsWxo[1, 1], LSTMoutput1.output[256, 1])
 Validating --> LSTMoutput2.Wxox = Times(LSTMoutput2.Wxo[1024, 256], LSTMoutput2.unnamed218[256, 1])
 Validating --> LSTMoutput2.bo = LearnableParameter
@@ -1461,34 +1893,34 @@ Validating --> LSTMoutput2.unnamed222 = Plus(LSTMoutput2.unnamed223[1024, 1], LS
 Validating --> LSTMoutput2.unnamed213 = Scale(LSTMoutput2.expsWhf[1, 1], LSTMoutput2.dh[256, 1])
 Validating --> LSTMoutput2.Whfdh = Times(LSTMoutput2.Whf[1024, 256], LSTMoutput2.unnamed213[256, 1])
 Validating --> LSTMoutput2.unnamed216 = Plus(LSTMoutput2.unnamed217[1024, 1], LSTMoutput2.Whfdh[1024, 1])
-Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 1], LSTMoutput2.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 1], LSTMoutput2.Wcfdc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 1])
 Validating --> LSTMoutput2.unnamed202 = Scale(LSTMoutput2.expsWhi[1, 1], LSTMoutput2.dh[256, 1])
 Validating --> LSTMoutput2.Whidh = Times(LSTMoutput2.Whi[1024, 256], LSTMoutput2.unnamed202[256, 1])
 Validating --> LSTMoutput2.unnamed205 = Plus(LSTMoutput2.unnamed206[1024, 1], LSTMoutput2.Whidh[1024, 1])
-Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 1], LSTMoutput2.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 1], LSTMoutput2.Wcidc[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=0, H=0, C=283467841605}, 1])
 Validating --> LSTMoutput2.unnamed208 = Scale(LSTMoutput2.expsWhc[1, 1], LSTMoutput2.dh[256, 1])
 Validating --> LSTMoutput2.Whcdh = Times(LSTMoutput2.Whc[1024, 256], LSTMoutput2.unnamed208[256, 1])
 Validating --> LSTMoutput2.unnamed211 = Plus(LSTMoutput2.Whcdh[1024, 1], LSTMoutput2.bc[1024, 1])
 Validating --> LSTMoutput2.unnamed210 = Plus(LSTMoutput2.Wxcx[1024, 1], LSTMoutput2.unnamed211[1024, 1])
 Validating --> LSTMoutput2.unnamed209 = Tanh(LSTMoutput2.unnamed210[1024, 1])
-Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed209[1024, 1])
-Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 1], LSTMoutput2.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput2.unnamed224[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.unnamed209[1024, 1])
+Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.bit[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 1], LSTMoutput2.Wcoct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=0, H=0, C=283467841605}, 1], LSTMoutput2.unnamed224[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=0, H=0, C=283467841605}, 1])
+Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=0, H=0, C=283467841605}, 1])
 Validating --> LSTMoutput3.unnamed268 = Scale(LSTMoutput3.expsWxo[1, 1], LSTMoutput2.output[256, 1])
 Validating --> LSTMoutput3.Wxox = Times(LSTMoutput3.Wxo[1024, 256], LSTMoutput3.unnamed268[256, 1])
 Validating --> LSTMoutput3.bo = LearnableParameter
@@ -1541,41 +1973,44 @@ Validating --> LSTMoutput3.unnamed272 = Plus(LSTMoutput3.unnamed273[1024, 1], LS
 Validating --> LSTMoutput3.unnamed263 = Scale(LSTMoutput3.expsWhf[1, 1], LSTMoutput3.dh[256, 1])
 Validating --> LSTMoutput3.Whfdh = Times(LSTMoutput3.Whf[1024, 256], LSTMoutput3.unnamed263[256, 1])
 Validating --> LSTMoutput3.unnamed266 = Plus(LSTMoutput3.unnamed267[1024, 1], LSTMoutput3.Whfdh[1024, 1])
-Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 1], LSTMoutput3.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 1], LSTMoutput3.Wcfdc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
 Validating --> LSTMoutput3.unnamed252 = Scale(LSTMoutput3.expsWhi[1, 1], LSTMoutput3.dh[256, 1])
 Validating --> LSTMoutput3.Whidh = Times(LSTMoutput3.Whi[1024, 256], LSTMoutput3.unnamed252[256, 1])
 Validating --> LSTMoutput3.unnamed255 = Plus(LSTMoutput3.unnamed256[1024, 1], LSTMoutput3.Whidh[1024, 1])
-Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 1], LSTMoutput3.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 1], LSTMoutput3.Wcidc[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
 Validating --> LSTMoutput3.unnamed258 = Scale(LSTMoutput3.expsWhc[1, 1], LSTMoutput3.dh[256, 1])
 Validating --> LSTMoutput3.Whcdh = Times(LSTMoutput3.Whc[1024, 256], LSTMoutput3.unnamed258[256, 1])
 Validating --> LSTMoutput3.unnamed261 = Plus(LSTMoutput3.Whcdh[1024, 1], LSTMoutput3.bc[1024, 1])
 Validating --> LSTMoutput3.unnamed260 = Plus(LSTMoutput3.Wxcx[1024, 1], LSTMoutput3.unnamed261[1024, 1])
 Validating --> LSTMoutput3.unnamed259 = Tanh(LSTMoutput3.unnamed260[1024, 1])
-Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.unnamed259[1024, 1])
-Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 1], LSTMoutput3.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 1], LSTMoutput3.unnamed274[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
-Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=489626271855, H=416611827821, C=450971566188}, 1])
+Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.unnamed259[1024, 1])
+Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.bit[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 1], LSTMoutput3.Wcoct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=429496729701, H=489626271811, C=493921239151}, 1], LSTMoutput3.unnamed274[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
+Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=429496729701, H=489626271811, C=493921239151}, 1])
 Validating --> unnamed284 = Scale(expsW[1, 1], LSTMoutput3.output[256, 1])
 Validating --> unnamed283 = Times(W[132, 256], unnamed284[256, 1])
 Validating --> b = LearnableParameter
 Validating --> LSTMoutputW = Plus(unnamed283[132, 1], b[132, 1])
 Validating --> cr = CrossEntropyWithSoftmax(labels[132, 1], LSTMoutputW[132, 1])
 
-Found 3 PreCompute nodes
+Found 6 PreCompute nodes
+	NodeName: featNorm.xMean
+	NodeName: featNorm.xStdDev
+	NodeName: logPrior.Prior
 	NodeName: featNorm.xMean
 	NodeName: featNorm.xStdDev
 	NodeName: logPrior.Prior
@@ -1716,34 +2151,34 @@ Validating --> LSTMoutput1.unnamed172 = Plus(LSTMoutput1.unnamed173[1024, 640], 
 Validating --> LSTMoutput1.unnamed163 = Scale(LSTMoutput1.expsWhf[1, 1], LSTMoutput1.dh[256, 640])
 Validating --> LSTMoutput1.Whfdh = Times(LSTMoutput1.Whf[1024, 256], LSTMoutput1.unnamed163[256, 640])
 Validating --> LSTMoutput1.unnamed166 = Plus(LSTMoutput1.unnamed167[1024, 640], LSTMoutput1.Whfdh[1024, 640])
-Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 640], LSTMoutput1.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.dc = PastValue(LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.unnamed164 = Scale(LSTMoutput1.expsWcf[1, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.Wcfdc = DiagTimes(LSTMoutput1.Wcf[1024, 1], LSTMoutput1.unnamed164[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.unnamed165 = Plus(LSTMoutput1.unnamed166[1024, 640], LSTMoutput1.Wcfdc[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.ft = Sigmoid(LSTMoutput1.unnamed165[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.bft = ElementTimes(LSTMoutput1.ft[1024 {W=472446402560, H=8241, C=140261196433336}, 640], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
 Validating --> LSTMoutput1.unnamed152 = Scale(LSTMoutput1.expsWhi[1, 1], LSTMoutput1.dh[256, 640])
 Validating --> LSTMoutput1.Whidh = Times(LSTMoutput1.Whi[1024, 256], LSTMoutput1.unnamed152[256, 640])
 Validating --> LSTMoutput1.unnamed155 = Plus(LSTMoutput1.unnamed156[1024, 640], LSTMoutput1.Whidh[1024, 640])
-Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 640], LSTMoutput1.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.unnamed153 = Scale(LSTMoutput1.expsWci[1, 1], LSTMoutput1.dc[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.Wcidc = DiagTimes(LSTMoutput1.Wci[1024, 1], LSTMoutput1.unnamed153[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.unnamed154 = Plus(LSTMoutput1.unnamed155[1024, 640], LSTMoutput1.Wcidc[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.it = Sigmoid(LSTMoutput1.unnamed154[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
 Validating --> LSTMoutput1.unnamed158 = Scale(LSTMoutput1.expsWhc[1, 1], LSTMoutput1.dh[256, 640])
 Validating --> LSTMoutput1.Whcdh = Times(LSTMoutput1.Whc[1024, 256], LSTMoutput1.unnamed158[256, 640])
 Validating --> LSTMoutput1.unnamed161 = Plus(LSTMoutput1.Whcdh[1024, 640], LSTMoutput1.bc[1024, 1])
 Validating --> LSTMoutput1.unnamed160 = Plus(LSTMoutput1.Wxcx[1024, 640], LSTMoutput1.unnamed161[1024, 640])
 Validating --> LSTMoutput1.unnamed159 = Tanh(LSTMoutput1.unnamed160[1024, 640])
-Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput1.unnamed159[1024, 640])
-Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput1.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 640], LSTMoutput1.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput1.unnamed174[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput1.bit = ElementTimes(LSTMoutput1.it[1024 {W=472446402560, H=8241, C=140261196433336}, 640], LSTMoutput1.unnamed159[1024, 640])
+Validating --> LSTMoutput1.ct = Plus(LSTMoutput1.bft[1024 {W=472446402560, H=8241, C=140261196433336}, 640], LSTMoutput1.bit[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.unnamed170 = Scale(LSTMoutput1.expsWco[1, 1], LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.Wcoct = DiagTimes(LSTMoutput1.Wco[1024, 1], LSTMoutput1.unnamed170[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.unnamed171 = Plus(LSTMoutput1.unnamed172[1024, 640], LSTMoutput1.Wcoct[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.ot = Sigmoid(LSTMoutput1.unnamed171[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.unnamed174 = Tanh(LSTMoutput1.ct[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.mt = ElementTimes(LSTMoutput1.ot[1024 {W=472446402560, H=8241, C=140261196433336}, 640], LSTMoutput1.unnamed174[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.unnamed175 = Scale(LSTMoutput1.expsWmr[1, 1], LSTMoutput1.mt[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
+Validating --> LSTMoutput1.output = Times(LSTMoutput1.Wmr[256, 1024], LSTMoutput1.unnamed175[1024 {W=472446402560, H=8241, C=140261196433336}, 640])
 Validating --> LSTMoutput2.unnamed218 = Scale(LSTMoutput2.expsWxo[1, 1], LSTMoutput1.output[256, 640])
 Validating --> LSTMoutput2.Wxox = Times(LSTMoutput2.Wxo[1024, 256], LSTMoutput2.unnamed218[256, 640])
 Validating --> LSTMoutput2.bo = LearnableParameter
@@ -1796,34 +2231,34 @@ Validating --> LSTMoutput2.unnamed222 = Plus(LSTMoutput2.unnamed223[1024, 640], 
 Validating --> LSTMoutput2.unnamed213 = Scale(LSTMoutput2.expsWhf[1, 1], LSTMoutput2.dh[256, 640])
 Validating --> LSTMoutput2.Whfdh = Times(LSTMoutput2.Whf[1024, 256], LSTMoutput2.unnamed213[256, 640])
 Validating --> LSTMoutput2.unnamed216 = Plus(LSTMoutput2.unnamed217[1024, 640], LSTMoutput2.Whfdh[1024, 640])
-Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 640], LSTMoutput2.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.dc = PastValue(LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.unnamed214 = Scale(LSTMoutput2.expsWcf[1, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.Wcfdc = DiagTimes(LSTMoutput2.Wcf[1024, 1], LSTMoutput2.unnamed214[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.unnamed215 = Plus(LSTMoutput2.unnamed216[1024, 640], LSTMoutput2.Wcfdc[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.ft = Sigmoid(LSTMoutput2.unnamed215[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.bft = ElementTimes(LSTMoutput2.ft[1024 {W=0, H=0, C=283467841605}, 640], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 640])
 Validating --> LSTMoutput2.unnamed202 = Scale(LSTMoutput2.expsWhi[1, 1], LSTMoutput2.dh[256, 640])
 Validating --> LSTMoutput2.Whidh = Times(LSTMoutput2.Whi[1024, 256], LSTMoutput2.unnamed202[256, 640])
 Validating --> LSTMoutput2.unnamed205 = Plus(LSTMoutput2.unnamed206[1024, 640], LSTMoutput2.Whidh[1024, 640])
-Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 640], LSTMoutput2.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.unnamed203 = Scale(LSTMoutput2.expsWci[1, 1], LSTMoutput2.dc[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.Wcidc = DiagTimes(LSTMoutput2.Wci[1024, 1], LSTMoutput2.unnamed203[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.unnamed204 = Plus(LSTMoutput2.unnamed205[1024, 640], LSTMoutput2.Wcidc[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.it = Sigmoid(LSTMoutput2.unnamed204[1024 {W=0, H=0, C=283467841605}, 640])
 Validating --> LSTMoutput2.unnamed208 = Scale(LSTMoutput2.expsWhc[1, 1], LSTMoutput2.dh[256, 640])
 Validating --> LSTMoutput2.Whcdh = Times(LSTMoutput2.Whc[1024, 256], LSTMoutput2.unnamed208[256, 640])
 Validating --> LSTMoutput2.unnamed211 = Plus(LSTMoutput2.Whcdh[1024, 640], LSTMoutput2.bc[1024, 1])
 Validating --> LSTMoutput2.unnamed210 = Plus(LSTMoutput2.Wxcx[1024, 640], LSTMoutput2.unnamed211[1024, 640])
 Validating --> LSTMoutput2.unnamed209 = Tanh(LSTMoutput2.unnamed210[1024, 640])
-Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput2.unnamed209[1024, 640])
-Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput2.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 640], LSTMoutput2.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput2.unnamed224[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput2.bit = ElementTimes(LSTMoutput2.it[1024 {W=0, H=0, C=283467841605}, 640], LSTMoutput2.unnamed209[1024, 640])
+Validating --> LSTMoutput2.ct = Plus(LSTMoutput2.bft[1024 {W=0, H=0, C=283467841605}, 640], LSTMoutput2.bit[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.unnamed220 = Scale(LSTMoutput2.expsWco[1, 1], LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.Wcoct = DiagTimes(LSTMoutput2.Wco[1024, 1], LSTMoutput2.unnamed220[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.unnamed221 = Plus(LSTMoutput2.unnamed222[1024, 640], LSTMoutput2.Wcoct[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.ot = Sigmoid(LSTMoutput2.unnamed221[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.unnamed224 = Tanh(LSTMoutput2.ct[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.mt = ElementTimes(LSTMoutput2.ot[1024 {W=0, H=0, C=283467841605}, 640], LSTMoutput2.unnamed224[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.unnamed225 = Scale(LSTMoutput2.expsWmr[1, 1], LSTMoutput2.mt[1024 {W=0, H=0, C=283467841605}, 640])
+Validating --> LSTMoutput2.output = Times(LSTMoutput2.Wmr[256, 1024], LSTMoutput2.unnamed225[1024 {W=0, H=0, C=283467841605}, 640])
 Validating --> LSTMoutput3.unnamed268 = Scale(LSTMoutput3.expsWxo[1, 1], LSTMoutput2.output[256, 640])
 Validating --> LSTMoutput3.Wxox = Times(LSTMoutput3.Wxo[1024, 256], LSTMoutput3.unnamed268[256, 640])
 Validating --> LSTMoutput3.bo = LearnableParameter
@@ -1876,66 +2311,66 @@ Validating --> LSTMoutput3.unnamed272 = Plus(LSTMoutput3.unnamed273[1024, 640], 
 Validating --> LSTMoutput3.unnamed263 = Scale(LSTMoutput3.expsWhf[1, 1], LSTMoutput3.dh[256, 640])
 Validating --> LSTMoutput3.Whfdh = Times(LSTMoutput3.Whf[1024, 256], LSTMoutput3.unnamed263[256, 640])
 Validating --> LSTMoutput3.unnamed266 = Plus(LSTMoutput3.unnamed267[1024, 640], LSTMoutput3.Whfdh[1024, 640])
-Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 640], LSTMoutput3.Wcfdc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput3.dc = PastValue(LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.unnamed264 = Scale(LSTMoutput3.expsWcf[1, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.Wcfdc = DiagTimes(LSTMoutput3.Wcf[1024, 1], LSTMoutput3.unnamed264[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.unnamed265 = Plus(LSTMoutput3.unnamed266[1024, 640], LSTMoutput3.Wcfdc[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.ft = Sigmoid(LSTMoutput3.unnamed265[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.bft = ElementTimes(LSTMoutput3.ft[1024 {W=429496729701, H=489626271811, C=493921239151}, 640], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
 Validating --> LSTMoutput3.unnamed252 = Scale(LSTMoutput3.expsWhi[1, 1], LSTMoutput3.dh[256, 640])
 Validating --> LSTMoutput3.Whidh = Times(LSTMoutput3.Whi[1024, 256], LSTMoutput3.unnamed252[256, 640])
 Validating --> LSTMoutput3.unnamed255 = Plus(LSTMoutput3.unnamed256[1024, 640], LSTMoutput3.Whidh[1024, 640])
-Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 640], LSTMoutput3.Wcidc[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput3.unnamed253 = Scale(LSTMoutput3.expsWci[1, 1], LSTMoutput3.dc[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.Wcidc = DiagTimes(LSTMoutput3.Wci[1024, 1], LSTMoutput3.unnamed253[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.unnamed254 = Plus(LSTMoutput3.unnamed255[1024, 640], LSTMoutput3.Wcidc[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.it = Sigmoid(LSTMoutput3.unnamed254[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
 Validating --> LSTMoutput3.unnamed258 = Scale(LSTMoutput3.expsWhc[1, 1], LSTMoutput3.dh[256, 640])
 Validating --> LSTMoutput3.Whcdh = Times(LSTMoutput3.Whc[1024, 256], LSTMoutput3.unnamed258[256, 640])
 Validating --> LSTMoutput3.unnamed261 = Plus(LSTMoutput3.Whcdh[1024, 640], LSTMoutput3.bc[1024, 1])
 Validating --> LSTMoutput3.unnamed260 = Plus(LSTMoutput3.Wxcx[1024, 640], LSTMoutput3.unnamed261[1024, 640])
 Validating --> LSTMoutput3.unnamed259 = Tanh(LSTMoutput3.unnamed260[1024, 640])
-Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput3.unnamed259[1024, 640])
-Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput3.bit[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 640], LSTMoutput3.Wcoct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=489626271855, H=416611827821, C=450971566188}, 640], LSTMoutput3.unnamed274[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
-Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=489626271855, H=416611827821, C=450971566188}, 640])
+Validating --> LSTMoutput3.bit = ElementTimes(LSTMoutput3.it[1024 {W=429496729701, H=489626271811, C=493921239151}, 640], LSTMoutput3.unnamed259[1024, 640])
+Validating --> LSTMoutput3.ct = Plus(LSTMoutput3.bft[1024 {W=429496729701, H=489626271811, C=493921239151}, 640], LSTMoutput3.bit[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.unnamed270 = Scale(LSTMoutput3.expsWco[1, 1], LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.Wcoct = DiagTimes(LSTMoutput3.Wco[1024, 1], LSTMoutput3.unnamed270[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.unnamed271 = Plus(LSTMoutput3.unnamed272[1024, 640], LSTMoutput3.Wcoct[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.ot = Sigmoid(LSTMoutput3.unnamed271[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.unnamed274 = Tanh(LSTMoutput3.ct[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.mt = ElementTimes(LSTMoutput3.ot[1024 {W=429496729701, H=489626271811, C=493921239151}, 640], LSTMoutput3.unnamed274[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.unnamed275 = Scale(LSTMoutput3.expsWmr[1, 1], LSTMoutput3.mt[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
+Validating --> LSTMoutput3.output = Times(LSTMoutput3.Wmr[256, 1024], LSTMoutput3.unnamed275[1024 {W=429496729701, H=489626271811, C=493921239151}, 640])
 Validating --> unnamed284 = Scale(expsW[1, 1], LSTMoutput3.output[256, 640])
 Validating --> unnamed283 = Times(W[132, 256], unnamed284[256, 640])
 Validating --> b = LearnableParameter
 Validating --> LSTMoutputW = Plus(unnamed283[132, 640], b[132, 1])
 Validating --> Err = ErrorPrediction(labels[132, 640], LSTMoutputW[132, 640])
 
- Epoch[ 1 of 4]-Minibatch[   1-  10 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.80671501; EvalErr[0]PerSample = 0.90328127; TotalTime = 23.54055s; TotalTimePerSample = 3.67821ms; SamplesPerSecond = 271
- Epoch[ 1 of 4]-Minibatch[  11-  20 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.60523415; EvalErr[0]PerSample = 0.85390627; TotalTime = 23.21542s; TotalTimePerSample = 3.62741ms; SamplesPerSecond = 275
- Epoch[ 1 of 4]-Minibatch[  21-  30 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.44545460; EvalErr[0]PerSample = 0.85171872; TotalTime = 23.17254s; TotalTimePerSample = 3.62071ms; SamplesPerSecond = 276
-Finished Epoch[1]: [Training Set] TrainLossPerSample = 4.5849714; EvalErrPerSample = 0.8588379; Ave LearnRatePerSample = 0.0007812500116; EpochTime=74.693821
+ Epoch[ 1 of 4]-Minibatch[   1-  10 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.80573845; EvalErr[0]PerSample = 0.90281248; TotalTime = 19.87632s; TotalTimePerSample = 3.10567ms; SamplesPerSecond = 321
+ Epoch[ 1 of 4]-Minibatch[  11-  20 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.59921408; EvalErr[0]PerSample = 0.85390627; TotalTime = 19.82498s; TotalTimePerSample = 3.09765ms; SamplesPerSecond = 322
+ Epoch[ 1 of 4]-Minibatch[  21-  30 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  5.29250860; EvalErr[0]PerSample = 0.87921876; TotalTime = 19.80590s; TotalTimePerSample = 3.09467ms; SamplesPerSecond = 323
+Finished Epoch[1]: [Training Set] TrainLossPerSample = 4.8512683; EvalErrPerSample = 0.86728519; Ave LearnRatePerSample = 0.0007812500116; EpochTime=63.50621
 Starting Epoch 2: learning rate per sample = 0.000781  momentum = 0.899991 
 minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20546), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 2 of 4]-Minibatch[   1-  10 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.37558031; EvalErr[0]PerSample = 0.85187501; TotalTime = 23.40066s; TotalTimePerSample = 3.65635ms; SamplesPerSecond = 273
- Epoch[ 2 of 4]-Minibatch[  11-  20 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.25023031; EvalErr[0]PerSample = 0.84484375; TotalTime = 23.34113s; TotalTimePerSample = 3.64705ms; SamplesPerSecond = 274
- Epoch[ 2 of 4]-Minibatch[  21-  30 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  3.78095222; EvalErr[0]PerSample = 0.74578124; TotalTime = 23.21538s; TotalTimePerSample = 3.62740ms; SamplesPerSecond = 275
-Finished Epoch[2]: [Training Set] TrainLossPerSample = 4.0678782; EvalErrPerSample = 0.79853517; Ave LearnRatePerSample = 0.0007812500116; EpochTime=74.641357
+ Epoch[ 2 of 4]-Minibatch[   1-  10 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.39003897; EvalErr[0]PerSample = 0.85187501; TotalTime = 19.81426s; TotalTimePerSample = 3.09598ms; SamplesPerSecond = 322
+ Epoch[ 2 of 4]-Minibatch[  11-  20 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.25110912; EvalErr[0]PerSample = 0.84484375; TotalTime = 19.86298s; TotalTimePerSample = 3.10359ms; SamplesPerSecond = 322
+ Epoch[ 2 of 4]-Minibatch[  21-  30 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  3.78259087; EvalErr[0]PerSample = 0.74578124; TotalTime = 19.80410s; TotalTimePerSample = 3.09439ms; SamplesPerSecond = 323
+Finished Epoch[2]: [Training Set] TrainLossPerSample = 4.0735426; EvalErrPerSample = 0.79853517; Ave LearnRatePerSample = 0.0007812500116; EpochTime=63.448328
 Starting Epoch 3: learning rate per sample = 0.000781  momentum = 0.899991 
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40980), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 3 of 4]-Minibatch[   1-  10 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.11718130; EvalErr[0]PerSample = 0.83671874; TotalTime = 23.35990s; TotalTimePerSample = 3.64998ms; SamplesPerSecond = 273
- Epoch[ 3 of 4]-Minibatch[  11-  20 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.18483114; EvalErr[0]PerSample = 0.86468750; TotalTime = 22.93987s; TotalTimePerSample = 3.58435ms; SamplesPerSecond = 278
- Epoch[ 3 of 4]-Minibatch[  21-  30 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  3.90120411; EvalErr[0]PerSample = 0.83328128; TotalTime = 23.05218s; TotalTimePerSample = 3.60190ms; SamplesPerSecond = 277
-Finished Epoch[3]: [Training Set] TrainLossPerSample = 4.009151; EvalErrPerSample = 0.83603519; Ave LearnRatePerSample = 0.0007812500116; EpochTime=74.13787
+ Epoch[ 3 of 4]-Minibatch[   1-  10 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.11762667; EvalErr[0]PerSample = 0.83671874; TotalTime = 19.81028s; TotalTimePerSample = 3.09536ms; SamplesPerSecond = 323
+ Epoch[ 3 of 4]-Minibatch[  11-  20 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.18654871; EvalErr[0]PerSample = 0.86468750; TotalTime = 19.94983s; TotalTimePerSample = 3.11716ms; SamplesPerSecond = 320
+ Epoch[ 3 of 4]-Minibatch[  21-  30 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  3.90151191; EvalErr[0]PerSample = 0.83328128; TotalTime = 19.84286s; TotalTimePerSample = 3.10045ms; SamplesPerSecond = 322
+Finished Epoch[3]: [Training Set] TrainLossPerSample = 4.0097833; EvalErrPerSample = 0.83603519; Ave LearnRatePerSample = 0.0007812500116; EpochTime=63.583729
 Starting Epoch 4: learning rate per sample = 0.000781  momentum = 0.899991 
 minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61662), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
- Epoch[ 4 of 4]-Minibatch[   1-  10 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.06602287; EvalErr[0]PerSample = 0.85124999; TotalTime = 23.40899s; TotalTimePerSample = 3.65765ms; SamplesPerSecond = 273
- Epoch[ 4 of 4]-Minibatch[  11-  20 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.13828659; EvalErr[0]PerSample = 0.87437499; TotalTime = 23.53392s; TotalTimePerSample = 3.67718ms; SamplesPerSecond = 271
- Epoch[ 4 of 4]-Minibatch[  21-  30 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  3.94570184; EvalErr[0]PerSample = 0.81968749; TotalTime = 23.46715s; TotalTimePerSample = 3.66674ms; SamplesPerSecond = 272
-Finished Epoch[4]: [Training Set] TrainLossPerSample = 3.9955521; EvalErrPerSample = 0.83603519; Ave LearnRatePerSample = 0.0007812500116; EpochTime=74.984253
+ Epoch[ 4 of 4]-Minibatch[   1-  10 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.06626463; EvalErr[0]PerSample = 0.85124999; TotalTime = 19.81933s; TotalTimePerSample = 3.09677ms; SamplesPerSecond = 322
+ Epoch[ 4 of 4]-Minibatch[  11-  20 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  4.13874817; EvalErr[0]PerSample = 0.87437499; TotalTime = 19.87037s; TotalTimePerSample = 3.10474ms; SamplesPerSecond = 322
+ Epoch[ 4 of 4]-Minibatch[  21-  30 of 1024]: SamplesSeen = 6400; TrainLossPerSample =  3.94609928; EvalErr[0]PerSample = 0.81968749; TotalTime = 19.82486s; TotalTimePerSample = 3.09763ms; SamplesPerSecond = 322
+Finished Epoch[4]: [Training Set] TrainLossPerSample = 3.9959297; EvalErrPerSample = 0.83603519; Ave LearnRatePerSample = 0.0007812500116; EpochTime=63.485547
 COMPLETED

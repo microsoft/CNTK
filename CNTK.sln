@@ -3,13 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKMath", "Math\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKMathDll", "Math\Math\Math.vcxproj", "{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}"
 	ProjectSection(ProjectDependencies) = postProject
 		{B3DD765E-694E-4494-BAD7-37BBF2942517} = {B3DD765E-694E-4494-BAD7-37BBF2942517}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTK", "MachineLearning\CNTK\CNTK.vcxproj", "{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}"
 	ProjectSection(ProjectDependencies) = postProject
+		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
 		{33D2FD22-DEF2-4507-A58A-368F641AEBE5} = {33D2FD22-DEF2-4507-A58A-368F641AEBE5}
 		{D667AF32-028A-4A5D-BE19-F46776F0F6B2} = {D667AF32-028A-4A5D-BE19-F46776F0F6B2}
 		{9A2F2441-5972-4EA8-9215-4119FCE0FB68} = {9A2F2441-5972-4EA8-9215-4119FCE0FB68}
@@ -17,6 +18,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTK", "MachineLearning\CNT
 		{014DA766-B37B-4581-BC26-963EA5507931} = {014DA766-B37B-4581-BC26-963EA5507931}
 		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6} = {62836DC1-DF77-4B98-BF2D-45C943B7DDC6}
 		{1D5787D4-52E4-45DB-951B-82F220EE0C6A} = {1D5787D4-52E4-45DB-951B-82F220EE0C6A}
+		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937} = {DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}
 		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {E6646FFE-3588-4276-8A15-8D65C22711C1}
 	EndProjectSection
 EndProject
@@ -50,8 +52,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LUSequenceReader", "DataRea
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKEval", "MachineLearning\CNTKEval\CNTKEval.vcxproj", "{482999D1-B7E2-466E-9F8D-2119F93EAFD9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKEvalDll", "MachineLearning\CNTKEval\CNTKEval.vcxproj", "{482999D1-B7E2-466E-9F8D-2119F93EAFD9}"
 	ProjectSection(ProjectDependencies) = postProject
+		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
 	EndProjectSection
 EndProject
@@ -196,6 +199,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{5F733BBA-F
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{19EE975B-232D-49F0-94C7-6F1C6424FB53}"
 	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\LSTM\baseline.cpu.txt = Tests\Speech\LSTM\baseline.cpu.txt
+		Tests\Speech\LSTM\baseline.gpu.txt = Tests\Speech\LSTM\baseline.gpu.txt
+		Tests\Speech\LSTM\baseline.windows.cpu.txt = Tests\Speech\LSTM\baseline.windows.cpu.txt
+		Tests\Speech\LSTM\baseline.windows.gpu.txt = Tests\Speech\LSTM\baseline.windows.gpu.txt
 		Tests\Speech\LSTM\cntk.config = Tests\Speech\LSTM\cntk.config
 		Tests\Speech\LSTM\lstmp-3layer_WithSelfStab.ndl = Tests\Speech\LSTM\lstmp-3layer_WithSelfStab.ndl
 		Tests\Speech\LSTM\run-test = Tests\Speech\LSTM\run-test
@@ -203,6 +210,47 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{19EE975B-2
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ParseConfig", "MachineLearning\ParseConfig\ParseConfig.vcxproj", "{7C4E77C9-6B17-4B02-82C1-DB62EEE2635B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKComputationNetworkLib", "MachineLearning\CNTKComputationNetworkLib\CNTKComputationNetworkLib.vcxproj", "{928ABD1B-4D3B-4017-AEF1-0FA1B4467513}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKSGDLib", "MachineLearning\CNTKSGDLib\CNTKSGDLib.vcxproj", "{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}"
+	ProjectSection(ProjectDependencies) = postProject
+		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelTraining", "ParallelTraining", "{5E666C53-2D82-49C9-9127-3FDDC321C741}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\ParallelTraining\SimpleMultiGPU.config = Tests\ParallelTraining\SimpleMultiGPU.config
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{6D1353D6-F196-466F-B886-F16D48759B20}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\ParallelTraining\Data\SimpleDataTrain.txt = Tests\ParallelTraining\Data\SimpleDataTrain.txt
+		Tests\ParallelTraining\Data\SimpleMapping.txt = Tests\ParallelTraining\Data\SimpleMapping.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NoQuantization", "NoQuantization", "{B6725C9F-A6D2-4269-9B74-7888A90F7884}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SinglePrecision", "SinglePrecision", "{B27DD434-EECD-4EE0-A03B-1150EB87258E}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.cpu.txt
+		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.gpu.txt
+		Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt = Tests\ParallelTraining\NoQuantization\SinglePrecision\baseline.windows.cpu.txt
+		Tests\ParallelTraining\NoQuantization\SinglePrecision\run-test = Tests\ParallelTraining\NoQuantization\SinglePrecision\run-test
+		Tests\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml = Tests\ParallelTraining\NoQuantization\SinglePrecision\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DoublePrecision", "DoublePrecision", "{A4884465-CFBB-4A64-A9DE-690E1A63EF7E}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.cpu.txt
+		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.gpu.txt
+		Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt = Tests\ParallelTraining\NoQuantization\DoublePrecision\baseline.windows.cpu.txt
+		Tests\ParallelTraining\NoQuantization\DoublePrecision\run-test = Tests\ParallelTraining\NoQuantization\DoublePrecision\run-test
+		Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml = Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -273,6 +321,14 @@ Global
 		{7C4E77C9-6B17-4B02-82C1-DB62EEE2635B}.Debug|x64.Build.0 = Debug|x64
 		{7C4E77C9-6B17-4B02-82C1-DB62EEE2635B}.Release|x64.ActiveCfg = Release|x64
 		{7C4E77C9-6B17-4B02-82C1-DB62EEE2635B}.Release|x64.Build.0 = Release|x64
+		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513}.Debug|x64.ActiveCfg = Debug|x64
+		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513}.Debug|x64.Build.0 = Debug|x64
+		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513}.Release|x64.ActiveCfg = Release|x64
+		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513}.Release|x64.Build.0 = Release|x64
+		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}.Debug|x64.ActiveCfg = Debug|x64
+		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}.Debug|x64.Build.0 = Debug|x64
+		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}.Release|x64.ActiveCfg = Release|x64
+		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -282,11 +338,15 @@ Global
 		{482999D1-B7E2-466E-9F8D-2119F93EAFD9} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{B3DD765E-694E-4494-BAD7-37BBF2942517} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
+		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
+		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{6CEE834A-8104-46A8-8902-64C81BD7928F} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{DBB3C106-B0B4-4059-8477-C89528CEC1B0} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8} = {D45DF403-6781-444E-B654-A96868C5BE68}
+		{5E666C53-2D82-49C9-9127-3FDDC321C741} = {D45DF403-6781-444E-B654-A96868C5BE68}
+		{7C4E77C9-6B17-4B02-82C1-DB62EEE2635B} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{1D5787D4-52E4-45DB-951B-82F220EE0C6A} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6} = {33EBFE78-A1A8-4961-8938-92A271941F94}
@@ -306,5 +366,9 @@ Global
 		{4BBF2950-3DBD-469A-AD57-6CACBEBAF541} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
 		{5F733BBA-FE83-4668-8F83-8B0E78A36619} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
 		{19EE975B-232D-49F0-94C7-6F1C6424FB53} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
+		{6D1353D6-F196-466F-B886-F16D48759B20} = {5E666C53-2D82-49C9-9127-3FDDC321C741}
+		{B6725C9F-A6D2-4269-9B74-7888A90F7884} = {5E666C53-2D82-49C9-9127-3FDDC321C741}
+		{B27DD434-EECD-4EE0-A03B-1150EB87258E} = {B6725C9F-A6D2-4269-9B74-7888A90F7884}
+		{A4884465-CFBB-4A64-A9DE-690E1A63EF7E} = {B6725C9F-A6D2-4269-9B74-7888A90F7884}
 	EndGlobalSection
 EndGlobal

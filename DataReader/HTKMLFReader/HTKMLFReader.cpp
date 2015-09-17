@@ -658,7 +658,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void HTKMLFReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples /*= requestDataSize*/)
         {
             assert(subsetNum < numSubsets);
-            assert(this->SupportsDistributedMBRead() || ((subsetNum == 0) && (numSubsets == 1)));
+            assert(((subsetNum == 0) && (numSubsets == 1)) || this->SupportsDistributedMBRead());
 
             m_mbSize = mbSize;
 
