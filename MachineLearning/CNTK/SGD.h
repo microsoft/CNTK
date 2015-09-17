@@ -2429,7 +2429,7 @@ protected:
         float factor = 0; 
         int   nTotalSamples = nSamplesSinceLastSync; 
         g_mpi->AllReduce(&nTotalSamples, 1);
-        if (nTotalSamples < 0)
+        if (nTotalSamples <= 0)
         {
             // prepare for overflow 
             factor = 1.0f / g_mpi->NumNodesInUse(); 
