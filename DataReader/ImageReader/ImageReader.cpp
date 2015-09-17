@@ -268,7 +268,7 @@ public:
 
     void Apply(cv::Mat& mat)
     {
-        assert(m_meanImg.size() == cv::Size(0, 0) || (m_meanImg.size() == mat.size() && m_meanImg.channels()));
+        assert(m_meanImg.size() == cv::Size(0, 0) || (m_meanImg.size() == mat.size() && m_meanImg.channels() == mat.channels()));
 
         // REVIEW alexeyk: check type conversion (float/double).
         if (m_meanImg.size() == mat.size())

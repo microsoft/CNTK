@@ -32,7 +32,7 @@ public:
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
     bool DataEnd(EndDataType endDataType) override;
 
-    size_t NumberSlicesInEachRecurrentIter() override { return 0; }
+    size_t NumberSlicesInEachRecurrentIter() override { return 1; }
     void SetSentenceSegBatch(Matrix<float>&, vector<MinibatchPackingFlag>&) override { };
 
     void SetRandomSeed(unsigned int seed) override;
