@@ -53,9 +53,13 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <CudaCodeGen>$(CNTK_CUDA_CODEGEN_DEBUG)</CudaCodeGen>
+    <CudaCodeGen Condition="'$(CudaCodeGen)'==''">compute_20,compute_20</CudaCodeGen>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <CudaCodeGen>$(CNTK_CUDA_CODEGEN_RELEASE)</CudaCodeGen>
+    <CudaCodeGen Condition="'$(CudaCodeGen)'==''">compute_20,sm_20;compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;</CudaCodeGen>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -80,6 +84,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <GenerateLineInfo>true</GenerateLineInfo>
       <AdditionalCompilerOptions>/WX</AdditionalCompilerOptions>
+      <CodeGeneration>$(CudaCodeGen)</CodeGeneration>
     </CudaCompile>
     <PostBuildEvent>
       <Command>xcopy /D /I /Y "$(CudaPath)\bin\cudart64_*.dll" $(OutputPath)</Command>
@@ -93,9 +98,6 @@
     </ClCompile>
     <Link>
     </Link>
-    <CudaCompile>
-      <CodeGeneration>compute_20,compute_20;compute_35,sm_35</CodeGeneration>
-    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -112,7 +114,6 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <CudaCompile>
-      <CodeGeneration>compute_20,sm_20;compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;</CodeGeneration>
       <FastMath>true</FastMath>
       <GPUDebugInfo>false</GPUDebugInfo>
       <HostDebugInfo>false</HostDebugInfo>
