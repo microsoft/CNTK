@@ -2219,8 +2219,6 @@ template<class ElemType>
                 epochEvalErrors[i] = localEpochEvalErrors(0, i);
         }
 
-        UninitDistGradAgg();
-
 
         if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
         {
