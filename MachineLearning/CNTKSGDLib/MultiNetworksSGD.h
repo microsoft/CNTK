@@ -69,6 +69,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using SGDBase::m_prevChosenMinibatchSize;
         using SGDBase::UpdateWeights;
         using SGDBase::GetCheckPointFileNameForEpoch;
+        using SGDBase::GetTrainCriterionNodes;
+        using SGDBase::GetEvalCriterionNodes;
 
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
