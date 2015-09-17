@@ -624,7 +624,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
     // initialize a ComputationNetwork from a ConfigRecord
     template<>
-    /*static*/ shared_ptr<Object> Microsoft::MSR::ScriptableObjects::MakeRuntimeObject<ComputationNetwork>(const IConfigRecordPtr configp)
+    /*static*/ shared_ptr<Object> MakeRuntimeObject<ComputationNetwork>(const IConfigRecordPtr configp)
     {
         let & config = *configp;
 
