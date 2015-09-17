@@ -14,7 +14,7 @@
 #include <string>
 #include <regex>
 #include <set>
-#include <hash_map>
+#include <unordered_map>
 #include <stdint.h>
 #include <limits.h>
 #include <wchar.h>
@@ -374,7 +374,7 @@ template<class ENTRY, class WORDSEQUENCE>
 class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
 {
     wstring curpath;                                    // for error messages
-    hash_map<std::string, size_t> statelistmap;   // for state <=> index
+    std::unordered_map<std::string, size_t> statelistmap;   // for state <=> index
 
     void strtok (char * s, const char * delim, vector<char*> & toks)
     {

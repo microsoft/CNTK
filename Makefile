@@ -52,7 +52,7 @@ CXX = mpic++
 
 INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib BrainScript
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
-CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror
+CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -Wno-error=literal-suffix
 LIBPATH:=
 LIBS:=
 LDFLAGS:=
