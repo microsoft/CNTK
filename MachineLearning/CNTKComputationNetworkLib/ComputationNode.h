@@ -442,7 +442,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     private:
         // Recursive part of EnumerateNodes().
-        void EnumerateNodesR(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, boolean recurrent)
+        void EnumerateNodesR(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool recurrent)
         {
             if (visited.find(shared_from_this()) == visited.end())      // do not include a node twice
             {
@@ -537,7 +537,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // create list such that children are evaluated before their parents
         // Unbeknownst to the name of the function, it also updates the m_needGradient flags (set if children are set).
         // TODO: when is this called vs. the other?
-        virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, boolean recurrent)
+        virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool recurrent)
         {
             if (visited.find(shared_from_this()) == visited.end())  //not visited
             {
