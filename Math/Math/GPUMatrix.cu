@@ -2981,6 +2981,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // 1. Sort by values (descending) with corresponding row/col indexes.
         // 2. Sort by col indices (ascending) with corresponding values/row indices.
         // Indices are stored as 64-bit ints where low 32 bits represent column and high 32 bits - row index.
+        // On the second pass only first 32 bits of the index are used in sorting, so SortPairs has
+        // begin_bit and end_bit set accordingly.
 
         CUDA_LONG celt = static_cast<CUDA_LONG>(GetNumElements());
         ElemType* inVal = us.m_pArray;
