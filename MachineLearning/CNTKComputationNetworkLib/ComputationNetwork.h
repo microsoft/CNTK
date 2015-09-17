@@ -611,6 +611,8 @@ public:
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedEvaluate = false;
 
+        // pass #slices and MB layout to all nodes
+        // TODO: in the future, these will be different on different nodes
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
             // TODO: nbrSlices set once to the same value for all nodes each evaluation--is it ever changed later?
@@ -622,8 +624,10 @@ public:
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
             // TODO: is this the frame-by-frame evaluation? Why is there no comment here??
-            EvaluateLoop(allNodes, (*nodeIter));
+            // evaluate all recurrence that hangs off this first
+            EvaluateLoop(allNodes, *nodeIter);
 
+            // now do the whole batch (unless it's already done)
             if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
             {
 #ifdef DISPLAY_DEBUG

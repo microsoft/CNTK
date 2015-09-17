@@ -127,6 +127,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // evaluate only N frames at time index timeIdxInSeq
         // Normally, N is 1 or it spans the entire minibatch.
         virtual void EvaluateThisNode(const FrameRange &) = 0;
+        // evaluate a node--this calls EvaluateThisNode() and MaskToZeroWhenLabelAndFeatureMissing() if needed
+        // TODO: name this better--which is the main entry point?
         virtual void EvaluateThisNodeGivenInputs() = 0;
         virtual void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
 
