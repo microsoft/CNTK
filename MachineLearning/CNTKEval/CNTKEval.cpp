@@ -10,11 +10,15 @@
 #define EVAL_EXPORTS  // creating the exports here
 #include "Eval.h"
 #include "CNTKEval.h"
+#include "CPUMatrix.h"  // for SetNumThreads()
 #include "SimpleOutputWriter.h"
 #ifdef LEAKDETECT
 #include <vld.h> // leak detection
 #endif
 #include "BestGpu.h"
+
+// TODO: Get rid of this global
+Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -45,7 +49,6 @@ void CNTKEval<ElemType>::Init(const std::string& config)
     }
     size_t nThread = m_config("numCPUThreads", "1");
     CPUMatrix<ElemType>::SetNumThreads(nThread);    
-        
 }
 
 // Destroy - cleanup and remove this class

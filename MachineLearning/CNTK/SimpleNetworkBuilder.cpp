@@ -2296,10 +2296,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         File fstream(dbnModelFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
 
         if (!CheckDbnTag(fstream, "DBN\n"))
-            throw std::runtime_error("Error reading DBN file - did not find expected tag DBN\n");
+            RuntimeError("Error reading DBN file - did not find expected tag DBN\n");
         fstream >> comment;
         if (!CheckDbnTag(fstream, "BDBN"))
-            throw std::runtime_error("Error reading DBN file - did not find expected tag BDBN\n");
+            RuntimeError("Error reading DBN file - did not find expected tag BDBN\n");
         fstream >> version >> numLayers;
 
         Matrix<ElemType> globalMean = ReadMatrixFromDbnFile(fstream, std::string("gmean"));
@@ -2315,7 +2315,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         globalStdDev.TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
         if (!CheckDbnTag(fstream, "BNET"))
-            throw std::runtime_error("Error reading DBN file - did not find expected tag BNET\n");
+            RuntimeError("Error reading DBN file - did not find expected tag BNET\n");
 
         for (i = 0; i<numLayers; i++) //0th index is for input layer, 
         {
@@ -2403,7 +2403,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         if (!CheckDbnTag(fstream, "ENET"))
-            throw std::runtime_error("Error reading DBN file - did not find expected tag ENET\n");
+            RuntimeError("Error reading DBN file - did not find expected tag ENET\n");
         //size_t outputLayerSize =  m_layerSizes[m_layerSizes.size()-1];
 
         label = builder.Input(m_outputLayerSize, mbSize, L"labels");
@@ -2468,7 +2468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //output = builder.Softmax(output);
             //output = builder.Log(output);
 
-            scaledLogLikelihood = builder.CreateComputationNode(MinusNode<ElemType>::TypeName(), L"ScaledLogLikelihood");
+            scaledLogLikelihood = builder.CreateComputationNode(OperationNameOf(MinusNode), L"ScaledLogLikelihood");
             scaledLogLikelihood->AttachInputs(output, input);
             m_net->OutputNodes().push_back(scaledLogLikelihood);
         }
@@ -2478,7 +2478,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         if (!CheckDbnTag(fstream, "EDBN"))
-            throw std::runtime_error("Error reading DBN file - did not find expected tag ENET\n");
+            RuntimeError("Error reading DBN file - did not find expected tag ENET\n");
         return m_net;
     }
 
@@ -2490,11 +2490,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodePtr output;
         wstring nonLinearFunction = m_nonLinearFunctions[layer];
-        if (nonLinearFunction == SigmoidNode<ElemType>::TypeName())
+        if (nonLinearFunction == OperationNameOf(SigmoidNode))
             output = builder.Sigmoid(input, nodeName);
-        else if (nonLinearFunction == RectifiedLinearNode<ElemType>::TypeName())
+        else if (nonLinearFunction == OperationNameOf(RectifiedLinearNode))
             output = builder.RectifiedLinear(input, nodeName);
-        else if (nonLinearFunction == TanhNode<ElemType>::TypeName())
+        else if (nonLinearFunction == OperationNameOf(TanhNode))
             output = builder.Tanh(input, nodeName);
         else if (nonLinearFunction == L"None" || nonLinearFunction == L"none" || nonLinearFunction == L"")
         {
@@ -2503,7 +2503,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_net->RenameNode(output, nodeName);
         }
         else
-            throw std::logic_error("Unsupported nonlinear function.");
+            LogicError("Unsupported nonlinear function.");
 
         return output;
     }
@@ -2540,7 +2540,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //output = builder.NoiseContrastiveEstimation(label, input, matrix, clspostprob, (trainNodeName == L"") ? L"NoiseContrastiveEstimationNode" : trainNodeName);
             break;
         default:
-            throw std::logic_error("Unsupported training criterion.");
+            LogicError("Unsupported training criterion.");
         }
         m_net->FinalCriterionNodes().push_back(output);
 
@@ -2575,7 +2575,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 output = builder.CRF(label, tinput, trans, (evalNodeName == L"") ? L"EvalCRF" : evalNodeName);
                 break;
             default:
-                throw std::logic_error("Unsupported training criterion.");
+                LogicError("Unsupported training criterion.");
             }
             output->NeedGradient() = false;
         }

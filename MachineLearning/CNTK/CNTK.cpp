@@ -6,6 +6,8 @@
 // cn.cpp : Defines the entry point for the console application.
 //
 
+// TODO: should we split all these DoXXX() up into separate commands? Mainly to separate common vs. non-standard/special ones?
+
 #define _CRT_NONSTDC_NO_DEPRECATE   // make VS accept POSIX functions without _
 
 #include "stdafx.h"
@@ -36,17 +38,19 @@
 #include "ExperimentalNetworkBuilder.h"
 #include "SynchronousExecutionEngine.h"
 #include "ModelEditLanguage.h"
+#include "CPUMatrix.h"  // used for SetNumThreads()
 #include "SGD.h"
+#include "MPIWrapper.h"
 #include "commandArgUtil.h"
 #include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
 #include "BestGpu.h"
-#include "BrainScriptEvaluator.h"
+#include "ScriptableObjects.h"
 #include <fileutil.h>
 
 // TODO: Get rid of this global
-Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
+Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
 
 using namespace std;
 using namespace Microsoft::MSR;
@@ -165,7 +169,7 @@ void DoEvalUnroll(const ConfigParameters& config)
     net.ResetEvalTimeStamp();
 
     SimpleEvaluator<ElemType> eval(net);
-    ElemType evalEntropy;
+    double evalEntropy;
     eval.EvaluateUnroll(&testDataReader, mbSize[0], evalEntropy, path2EvalResults == L"" ? nullptr : path2EvalResults.c_str(), epochSize);
 }
 
@@ -201,7 +205,7 @@ void DoCrossValidate(const ConfigParameters& config)
         evalNodeNamesVector.push_back(evalNodeNames[i]);
     }
 
-    std::vector<std::vector<ElemType>> cvErrorResults;
+    std::vector<std::vector<double>> cvErrorResults;
     std::vector<std::wstring> cvModels;
 
     DataReader<ElemType> cvDataReader(readerConfig);
@@ -231,8 +235,7 @@ void DoCrossValidate(const ConfigParameters& config)
         SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
 
         fprintf(stderr, "model %ls --> \n", cvModelPath.c_str());
-        std::vector<ElemType> evalErrors;
-        evalErrors = eval.Evaluate(&cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
+        auto evalErrors = eval.Evaluate(&cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
         cvErrorResults.push_back(evalErrors);
 
         ::Sleep(1000 * sleepSecondsBetweenRuns);
@@ -240,11 +243,11 @@ void DoCrossValidate(const ConfigParameters& config)
 
     //find best model
     if (cvErrorResults.size() == 0)
-        throw std::logic_error("No model is evaluated.");
+        LogicError("No model is evaluated.");
 
-    std::vector<ElemType> minErrors;
+    std::vector<double> minErrors;
     std::vector<int> minErrIds;
-    std::vector<ElemType> evalErrors = cvErrorResults[0];
+    std::vector<double> evalErrors = cvErrorResults[0];
     for (int i = 0; i < evalErrors.size(); ++i)
     {
         minErrors.push_back(evalErrors[i]);
@@ -474,7 +477,7 @@ void SVDConfigFileUsage()
 
 
 }
-template<typename ElemType>
+template<class ElemType>
 void  DoParameterSVD(const ConfigParameters& config)
 {
     DEVICEID_TYPE deviceID = -1;        // use CPU for SVD 
@@ -729,15 +732,13 @@ void DoTrain(const ConfigParameters& config)
 
     if (config.Exists("NDLNetworkBuilder"))
     {
-        ConfigParameters config(config("NDLNetworkBuilder"));
-        //netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(static_cast<IComputationNetBuilder<ElemType>*>(new NDLBuilder<ElemType>(config)));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new NDLBuilder<ElemType>(config));
+        ConfigParameters ndlNetworkBuilderConfig(config("NDLNetworkBuilder"));
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new NDLBuilder<ElemType>(ndlNetworkBuilderConfig));
     }
     else if (config.Exists("SimpleNetworkBuilder"))
     {
-        ConfigParameters config(config("SimpleNetworkBuilder"));
-        //netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(static_cast<IComputationNetBuilder<ElemType>*>(new SimpleNetworkBuilder<ElemType>(config)));
-        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new SimpleNetworkBuilder<ElemType>(config));
+        ConfigParameters simpleNetworkBuilderConfig(config("SimpleNetworkBuilder"));
+        netBuilder = unique_ptr<IComputationNetBuilder<ElemType>>(new SimpleNetworkBuilder<ElemType>(simpleNetworkBuilderConfig));
     }
     else if (config.Exists("ExperimentalNetworkBuilder"))   // for testing/early access to NDL extensions
     {
@@ -1424,7 +1425,7 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
 
         delete g_mpi;
     }
-    catch (const BS::ConfigError &err)
+    catch (const ScriptableObjects::ScriptingError &err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
         err.PrintError();

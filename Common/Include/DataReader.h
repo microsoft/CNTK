@@ -22,10 +22,12 @@
 #else
 #define DATAREADER_API
 #endif
+
+#include "Basics.h"
 #include "Matrix.h"
+#include "commandArgUtil.h" // for ConfigParameters
 #include <map>
 #include <string>
-#include "Basics.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

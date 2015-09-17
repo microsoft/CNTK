@@ -25,7 +25,7 @@ namespace Microsoft {
                 void GetReleasedMatrices(vector<shared_ptr<Matrix<float>>>  * releasedMatrices) { releasedMatrices = &m_releasedFloatMatrices; }
                 void GetReleasedMatrices(vector<shared_ptr<Matrix<double>>> * releasedMatrices) { releasedMatrices = &m_releasedDoubleMatrices; }
             public:
-                template<typename ElemType>
+                template<class ElemType>
                 void Release(const shared_ptr<Matrix<ElemType>> & freeMatrix)
                 {
                     vector<shared_ptr<Matrix<float>>> * releasedMatrices;
@@ -35,7 +35,7 @@ namespace Microsoft {
                     releasedMatrices->push_back(freeMatrix);
                 }
 
-                template<typename ElemType>
+                template<class ElemType>
                 shared_ptr<Matrix<ElemType>> Request(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
                 {
                     vector<shared_ptr<Matrix<float>>> * releasedMatrices;

@@ -20,6 +20,7 @@
 
 #include "Basics.h"
 #include "Matrix.h"
+#include "File.h"   // for LoadMatrixFromTextFile()
 #include "ComputationNode.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -52,11 +53,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SaveToFile(File& fstream) const
         {
             Base::SaveToFile(fstream);
-            fstream << NeedGradient();
+            fstream << m_needGradient;
             fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
             fstream << FunctionValues();
         }
-        
+
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
             Base::LoadFromFile(fstream, modelVersion);
@@ -65,9 +66,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_needGradient;
             fstream >> rows >> cols;
 
-            //intentionally comment out to support automatic dimention inference
+            //intentionally comment out to support automatic dimension inference
             //if (rows * cols == 0) 
-            //    throw std::logic_error("This LearnableParameter dimension is 0.");
+            //    LogicError("This LearnableParameter dimension is 0.");
 
             m_functionValues.Resize(rows, cols);
             fstream >> m_functionValues;
@@ -77,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
 
-        // TODO: also move file loading here?
+        // initialize with random numbers
         void InitRandom(const bool uniformInit,
                         const unsigned long randomSeed,
                         const ElemType initValueScale,
@@ -102,16 +103,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId, true);
         }
 
+        // initialize by reading a matrix from a text file
+        void InitFromFile(const std::wstring & initFromFilePath)
+        {
+            size_t numRows = 0;
+            size_t numCols = 0;
+            auto array = File::LoadMatrixFromTextFile<ElemType>(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
+            FunctionValues().SetValue(numRows, numCols, array.data(), matrixFlagNormal, m_deviceId);
+        }
+
         virtual const std::wstring OperationName() const {return TypeName();}
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
         virtual void EvaluateThisNode() {}
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) {}
-        virtual void Validate() 
-        {
-            PrintSelfBeforeValidation();
-        }
 
         static const std::wstring TypeName() {return L"LearnableParameter";} 
 
@@ -199,7 +205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNode<ElemType>(deviceId, name)
         {
             if (rows * cols == 0)
-                throw std::logic_error("This InputValue dimension is 0.");
+                LogicError("This InputValue dimension is 0.");
 
             m_outputWidth = 1;
             m_outputHeight = rows;
@@ -214,7 +220,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t cols = numImages;
 
             if (rows * cols == 0)
-                throw std::logic_error("This InputValue dimension is 0.");
+                LogicError("This InputValue dimension is 0.");
 
             m_outputWidth = imageWidth;
             m_outputHeight = imageHeight;
@@ -237,7 +243,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows, cols;
             fstream >> rows >> cols;
             if (rows * cols == 0) 
-                throw std::logic_error("This InputValue dimension is 0.");
+                LogicError("This InputValue dimension is 0.");
 
             fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels; 
 
@@ -259,12 +265,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
-
-        virtual void Validate() 
-        {
-            PrintSelfBeforeValidation();
-            //InferImageDimsFromInputs(); //not necessary since InputValue are leafs. put it here for consistent
-        }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
@@ -416,9 +416,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             functionValues.Reshape(rows * wordsInEachSample, cols1);
         }
             
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation();
+            Base::Validate();
 
             if (Inputs(1)->FunctionValues().GetNumRows() % Inputs(0)->FunctionValues().GetNumCols() != 0)
                 throw invalid_argument("Mismatched dimention. rows in input1 must be multiples of cols in input0.");
@@ -571,12 +571,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             mTmp.SetValue(Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate()
         {
-            PrintSelfBeforeValidation(true);
+            Base::Validate();
 
             if (m_children.size() != 1)
-                throw std::logic_error("PairNetwork operation should have one input.");
+                LogicError("PairNetwork operation should have one input.");
 
             if (!(Inputs(0) == nullptr))
             {

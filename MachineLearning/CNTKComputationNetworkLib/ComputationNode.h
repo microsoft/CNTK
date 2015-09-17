@@ -5,6 +5,12 @@
 //
 #pragma once
 
+#include "Basics.h"
+#include "Matrix.h"
+#include "ScriptableObjects.h"
+
+#include "MatrixPool.h"
+
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -18,12 +24,6 @@
 #include <sstream>
 #include <iostream>
 
-#include "Basics.h"
-#include "Matrix.h"
-#include "BrainScriptObjects.h"
-
-#include "MatrixPool.h"
-
 //#define RNN_DEBUG 1
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
 
@@ -31,7 +31,7 @@
 #define NOT_IMPLEMENTED \
 {   \
     fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
-    throw std::logic_error("Not Implemented"); \
+    LogicError("Not Implemented"); \
 }
 #endif
 
@@ -60,7 +60,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: decide the name. This does contain actual members such as the node name, so it's not really a pure interface.
     // =======================================================================
 
-    class ComputationNodeBase : public BS::ComputationNodeObject, public BS::WithTag, public BS::HasName, public BS::HasToString, public std::enable_shared_from_this<ComputationNodeBase>
+    class ComputationNodeBase :
+        public ScriptableObjects::ComputationNodeObject,
+        public ScriptableObjects::WithTag, public ScriptableObjects::HasName, public ScriptableObjects::HasToString,
+        public std::enable_shared_from_this<ComputationNodeBase>
     {
     public:
         typedef shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;
@@ -90,6 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // TODO: OperationName calls static TypeName which does not match the actual type names in that the 'Node' is missing.
         virtual const std::wstring OperationName() const = 0;
+#define OperationNameOf(T) (T<float>::TypeName())    // we are templated, but for this the type param matters not. So we just pick one, and hide that fact.
 
         // TODO: make sure this does not get implemented in any of the base classes
         DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }    // TODO: remove, only used from copy constructor which will go away
@@ -126,7 +130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNodeGivenInputs() = 0;
         virtual void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
 
-        virtual void Validate() = 0;
+        virtual void /*ComputationNodeBase::*/Validate() { }
         virtual bool UnitTest() { return true; }
 
         virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs, size_t numExpected = SIZE_MAX) = 0;
@@ -280,10 +284,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_evalTimeStamp = s_timeStampCounter;
         }
 
-        //for debugging purpose
+        // implemented by ComputationNode<ElemType>
+        // for debugging purpose
         virtual void PrintSelf(bool printMatrices = false) const = 0;
 
-    protected:
+        // called in validation loop right before Validate()
         virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
         {
             fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
@@ -317,7 +322,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, ")");
             }
         }
-    public:
 
         const std::wstring& NodeName() const { return m_nodeName; }
         std::wstring& NodeName() { return m_nodeName; }
@@ -788,34 +792,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // these take ComputationNodePtr, not ComputationNodeBasePtr, as these are being overloaded by nodes
         virtual void AttachInputs(const ComputationNodePtr /*singleInput*/) 
         {
-            throw std::logic_error("This operation does not support single input.");
+            LogicError("This operation does not support single input.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*rightInput*/) 
         {
-            throw std::logic_error("This operation does not support two inputs.");
+            LogicError("This operation does not support two inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*middleInput*/, const ComputationNodePtr /*rightInput*/) 
         {
-            throw std::logic_error("This operation does not support three inputs.");
+            LogicError("This operation does not support three inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, const ComputationNodePtr /*fourthInput*/)
         {
-            throw std::logic_error("This operation does not support four inputs.");
+            LogicError("This operation does not support four inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, 
                                   const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
         {
-            throw std::logic_error("This operation does not support five inputs.");
+            LogicError("This operation does not support five inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/,
                                   const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
         {
-            throw std::logic_error("This operation does not support six inputs.");
+            LogicError("This operation does not support six inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodeBasePtr singleInput) { AttachInputs(UpCast(singleInput)); }
@@ -995,8 +999,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         */
 
-        //for debugging purpose
-        virtual void PrintSelf(bool printMatrices = false) const
+        // for debugging purpose
+        void /*ComputationNodeBase::*/PrintSelf(bool printMatrices = false) const
         {
             fprintf(stderr, "\n%ls[%lu, %lu] = %ls", NodeName().c_str(), GetNumRows(), GetNumCols(), OperationName().c_str());           
 
@@ -1255,7 +1259,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
 
     // This will provide default implementations for those two functions that will fail at runtime with a meaningful error.
-    template<typename ElemType>
+    template<class ElemType>
     class ComputationNodeNonLooping : public ComputationNode<ElemType>
     {
     public:
@@ -1277,9 +1281,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNode() = 0;
     };
 
-    // add 'typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;' at the start of each derived class, to get access to the members of ComputationNode
-    // BUGBUG: some should be protected, not public; TODO: comment here why this is needed and how to maintain it
-    // Whoever invented that insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain. [fseide]
+    // helper macro to ease access to base members in presence of C++ two-phase name lookup
+    // Add 'typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;' at the start of each derived class
+    // (some derived classes define a similar macro; there please modify the typedef for Base accordingly.)
+    // This macro imports, one by one, every member of ComputationNode into the name space of the derived class.
+    // Without this, one would have to use the name prefix, or alternatively this->, in front of all base member,
+    // because the standard does not allow the compiler to do that for you (as MSVC still kindly does).
+    // If you add new members to ComputationNode, please also add them here.
+    // This macro expects 'Base' to be the name of the base class. Please also use 'Base' outside this macro to make it less likely to accidentally call the wrong base class members.
+    // BUGBUG: some should be protected, not public
+    // Note: Whoever invented that insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain. [fseide]
 #define UsingComputationNodeMembers    \
 protected:  \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  \
@@ -1293,7 +1304,7 @@ public: \
     using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
     using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
-    using Base::OperationName; using Base::PrintNodeValuesToFile; using Base::PrintSelf; using Base::PrintSelfBeforeValidation; \
+    using Base::OperationName; using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
     using Base::SaveToFile; using Base::SetFunctionAndGradientSize; using Base::SetInput; using Base::Validate; \
 protected:  \

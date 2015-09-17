@@ -110,7 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_uniformInit = uniformInit;
             m_initValueScale = initValueScale;
             if (m_layerSizes.size() < 2)
-                throw std::invalid_argument("A network should have at least two layers (one input and one output)");
+                InvalidArgument("A network should have at least two layers (one input and one output)");
 
             if (m_deviceId == AUTOPLACEMATRIX)
                 m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
@@ -254,8 +254,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return std::string(tag) == expectedTag;
         }
 
+        // this load function allows an alternative file format of an early internal predecessor of CNTK, internally called DBN.exe
         virtual ComputationNetwork* LoadNetworkFromFile(const wstring& modelFileName, bool forceLoad = true,
-                                                                  bool bAllowNoCriterion = false, ComputationNetwork* anotherNetwork = nullptr)
+                                                        bool bAllowNoCriterion = false, ComputationNetwork* anotherNetwork = nullptr)
         {
             if (m_net->GetTotalNumberOfNodes() == 0 || forceLoad) //not built or force load
             {
@@ -329,12 +330,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int numRows, numCols;
             std::string name;
             if (!CheckDbnTag(fstream, "BMAT"))
-                throw std::runtime_error("Error reading DBN file - did not find expected tag BMAT\n");
+                RuntimeError("Error reading DBN file - did not find expected tag BMAT\n");
             //fstream.GetMarker(FileMarker::fileMarkerBeginSection, "BMAT");
             fstream >> name >> numRows >> numCols;
             if (name != expectedName)
             {
-                throw std::invalid_argument(msra::strfun::strprintf("ERROR reading pretrained DBN file, expected name %s, found name %s\n", expectedName.c_str(), name.c_str()));
+                InvalidArgument(msra::strfun::strprintf("ERROR reading pretrained DBN file, expected name %s, found name %s\n", expectedName.c_str(), name.c_str()));
             }
 
             if (numCols>1) // transpose W because dbn stores that way apparently
@@ -357,7 +358,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //d_array[i] = (ElemType)tmp;                
                 }
             if (!CheckDbnTag(fstream, "EMAT"))
-                throw std::runtime_error("Error reading DBN file - did not find expected tag EMAT\n");
+                RuntimeError("Error reading DBN file - did not find expected tag EMAT\n");
             //fstream.GetMarker(FileMarker::fileMarkerBeginSection, "EMAT");
 
             return mat;
