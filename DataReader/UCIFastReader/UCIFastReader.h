@@ -112,7 +112,7 @@ public:
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
     size_t NumberSlicesInEachRecurrentIter() { return mBlgSize; }
-    void SetSentenceSegBatch(Matrix<float> &, vector<MinibatchPackingFlag>&){};
+    void CopyMBLayoutTo(MBLayoutPtr){};
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);

@@ -1856,12 +1856,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
 
         size_t nT = actualmbsize / mToProcess.size();
-        mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
-        mtSentenceBegin.Resize(mToProcess.size(), nT);
-        mtSentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
-        m_minibatchPackingFlag.resize(nT);
-        std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-
+        m_pMBLayout->Resize(mToProcess.size(), nT);
         if (features.GetMatrixType() == MatrixType::DENSE)
         {
             features.Resize(labelInfo.dim, actualmbsize);
@@ -1889,8 +1884,6 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         }
         
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
-//        mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
-//        m_minibatchPackingFlag.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
 
         // TODO: move these two methods to startMiniBatchLoop()
         if (readerMode == ReaderMode::Class)
@@ -1964,12 +1957,12 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
         if (wrd == (int)index)
         {
             mSentenceBegin = true;
-            mtSentenceBegin.SetValue(uttPos, timePos, (ElemType)SEQUENCE_START);
-            m_minibatchPackingFlag[timePos] = MinibatchPackingFlag::SequenceStart;
+            m_pMBLayout->Reset(uttPos, timePos, MinibatchPackingFlags::SequenceStart);
         }
     }
 }
 
+// TODO: this should have been renamed to CopyMBLayoutTo(), but it had the wrong signature??
 template<class ElemType>
 void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentenceEnd)
 {
@@ -2101,14 +2094,9 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
 }
 
 template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+void BatchSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
-    DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
-    mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
-    sentenceBegin.SetValue(mtSentenceBegin);
-    mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
-
-    minibatchPackingFlag = m_minibatchPackingFlag;
+    *pMBLayout = *m_pMBLayout;
 }
 
 template<class ElemType>

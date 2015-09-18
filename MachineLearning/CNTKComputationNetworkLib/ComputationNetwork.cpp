@@ -9,15 +9,14 @@
 #include "Basics.h"
 #include "ComputationNetwork.h"
 #include "ComputationNetworkBuilder.h"  // used for load & save
-//#include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
-//#include "DecoderNode.h"
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
+#include "MPIWrapper.h"
 #include <string>
 #include <fstream>
 
@@ -250,7 +249,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             //for calculating a specific node
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = (*nodeIter);
@@ -371,7 +370,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else                            // or for calculating a specific node
         {
-            const auto & nodes = GetEvalOrder(rootNode);
+            const auto & nodes = GetEvalOrder(rootNode, false);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
@@ -470,9 +469,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // get the strong connected component from the graph
+    // This sets index, lowLink, m_visited, m_inStack
     void ComputationNetwork::getStrongSCC(const ComputationNodeBasePtr rootNode)    // TODO: method names start uppercase
     {
-                    /// notice that this graph including graphs from a parent networks if two or more networks are connected via pairnetwork node
+        /// notice that this graph including graphs from a parent networks if two or more networks are connected via PairNode
         std::unordered_set<ComputationNodeBasePtr> visited;
         std::list<ComputationNodeBasePtr> sccStack;
         size_t index = 0;
@@ -481,6 +481,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             strongSCC(rootNode, sccStack, index, loopId);
     }
 
+    // (called only from getStrongSCC())
     void ComputationNetwork::strongSCC(ComputationNodeBasePtr cur,      // TODO: method names start uppercase
                                        std::list<ComputationNodeBasePtr>& sccStack,
                                        size_t& index, size_t& loopId)
@@ -510,7 +511,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        if (cur->Getlowlink() == cur->GetIndex())
+        if (cur->Getlowlink() == cur->GetIndex())   // something special has happened   --TODO: comment what that was!!
         {
             RecurrentInfo rInfo;
             rInfo.m_loopId = loopId;
@@ -561,19 +562,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("There is infinite Loop which cannot be unrolled!!");
         }
     }
-            
-    //must be called before ValidateNetwork
+
+    // forms the recurrent loop that 'rootNode' participates in
+    // TODO: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't. Not sure why/how that's OK--won't we reassign loop ids?
+    // This sets/updates:
+    //  - 
+    // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
     void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr rootNode)
     {
-        std::vector<ComputationNodeBasePtr> sourceLoopNodes;
-
+        // ...?
         getStrongSCC(rootNode);
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, sourceLoopNodes);
-        std::list<ComputationNodeBasePtr> nodesForGrad;
 
+        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*recurrent*/);
+
+        // ??
         MergeRecurrentLoops(rootNode);
 
-        /// debug purpose
+        /// debug purpose  --TODO: <-- this comment seems incorrect; SetVisitedOrder() is basis of IsSmaller()
+        // ... where does m_recurrentInfo get set?
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
         {
             fprintf(stderr, " nodes in the recurrent loops : \n");
@@ -661,7 +667,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReorderLoops(nodes, recurrentNodes, noRecurrentNodes);
 
             m_cacheEvalOrders[rootNode] = nodes;
-            nodesForGrad = nodes;
+            std::list<ComputationNodeBasePtr> nodesForGrad = nodes;
             nodesForGrad.reverse();
             m_cacheGradientCalcOrders[rootNode] = nodesForGrad;
 
@@ -771,14 +777,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         nodes = newList;
     }
 
-    void ComputationNetwork::CollectInputAndLeanableParameters(const ComputationNodeBasePtr rootNode)
+    void ComputationNetwork::CollectInputAndLearnableParameters(const ComputationNodeBasePtr rootNode)
     {
         //not found
         if (m_inputs.find(rootNode) == m_inputs.end())
         {
             std::list<ComputationNodeBasePtr> inputs;
 
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end();
                     nodeIter++)
             {
@@ -798,8 +804,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::list<std::wstring> learnableParameterNames;
             std::list<ComputationNodeBasePtr> learnableParameters;
 
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
-            ;
+            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
+
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = (*nodeIter);
@@ -1258,7 +1264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::PlotNetworkTopology(const std::wstring outputFile) //  [1/13/2015 erw] plot network topology using dot language
     {
-        BuildAndValidateNetwork(m_evalNodes[0]);
+        BuildAndValidateSubNetwork(m_evalNodes[0]);
 
         //////////////////////////////////////////////////////////////////////////
         //	step 1.		get all the arcs in the network
