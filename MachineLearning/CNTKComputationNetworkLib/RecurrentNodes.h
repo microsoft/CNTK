@@ -1346,14 +1346,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> giWeight, ghWeight, goWeight;
                 ElemType initStateValue = m_DefaultState;
                 auto pMBLayout = make_shared<MBLayout>();
+                pMBLayout->Resize(1, nT);
                 Matrix<float> & boundary = pMBLayout->m_sentenceBoundaryFlags;
                 vector<MinibatchPackingFlags> & minibatchPackingFlags = pMBLayout->m_minibatchPackingFlags;
-                boundary.Resize(1, nT);
-                boundary.SetValue(((int) MinibatchPackingFlags::None));
                 boundary.ColumnSlice(0, 1).SetValue(((int) MinibatchPackingFlags::SequenceStart));
-
-                minibatchPackingFlags.resize(nT);
-                std::fill(minibatchPackingFlags.begin(), minibatchPackingFlags.end(), MinibatchPackingFlags::None);
                 minibatchPackingFlags[1] = MinibatchPackingFlags::SequenceStart;
                 ComputationNode<ElemType>::ResetBound(pMBLayout);
 

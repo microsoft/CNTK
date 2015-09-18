@@ -158,20 +158,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
             // revise sentence boundary and packing flags
-            Matrix<float>  newBoundary(CPUDEVICE); // TODO: change Matrix<float> to a typedef
-            size_t nMBSize = pMBLayout->GetSize(); 
+            // TODO: get rid of this explicit matrix, somehow do this with the MBLayout types
+            size_t nMBSize = pMBLayout->GetSize();
+            Matrix<float> newBoundary(CPUDEVICE);
             newBoundary.Resize(nSlices, nMBSize);
-                newBoundary.AssignRowSliceValuesOf(pMBLayout->m_sentenceBoundaryFlags, sent_start, nSlices);
-                fill(pMBLayout->m_minibatchPackingFlags.begin(), pMBLayout->m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
-                // BUGBUG? what happens with newBoundary? Does not get assigned?
+            newBoundary.AssignRowSliceValuesOf(pMBLayout->m_sentenceBoundaryFlags, sent_start, nSlices);
+            fill(pMBLayout->m_minibatchPackingFlags.begin(), pMBLayout->m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
             for (size_t nt = 0; nt < nMBSize; nt++)
             {
                 for (size_t ns = 0; ns < nSlices; ns++)
                 {
-                        if (newBoundary(ns, nt) == ((int) MinibatchPackingFlags::SequenceStart))
-                            pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceStart;
-                        if (newBoundary(ns, nt) == ((int) MinibatchPackingFlags::SequenceEnd))
-                            pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceEnd;
+                    if (newBoundary(ns, nt) == ((int)MinibatchPackingFlags::SequenceStart))
+                        pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceStart;
+                    if (newBoundary(ns, nt) == ((int)MinibatchPackingFlags::SequenceEnd))
+                        pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceEnd;
                 }
             }
         }
