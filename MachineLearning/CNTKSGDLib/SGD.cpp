@@ -4,13 +4,9 @@
 
 #include "Basics.h"
 #include "SGD.h"
-//#include "MultiNetworksSGD.h"
 #include "AllReduceDistGradAggregator.h"
-#include "MPIWrapper.h"
 
 #include <map>
-
-extern Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -80,7 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Each block now has nSlice/nProcs 
         // 
         // Correspondingly, the SentenceBoundary and PackingFlags will be revised 
-        trainDataReader->CopyMBLayoutTo(pMBLayout); // fill this
+            trainDataReader->CopyMBLayoutTo(pMBLayout); // fill this
 
         size_t rv = 0;
         size_t nOrigParallelUtts = nSlices;
@@ -165,17 +161,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<float>  newBoundary(CPUDEVICE); // TODO: change Matrix<float> to a typedef
             size_t nMBSize = pMBLayout->GetSize(); 
             newBoundary.Resize(nSlices, nMBSize);
-            newBoundary.AssignRowSliceValuesOf(pMBLayout->m_sentenceBoundaryFlags, sent_start, nSlices);
-            fill(pMBLayout->m_minibatchPackingFlags.begin(), pMBLayout->m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
-            // BUGBUG? what happens with newBoundary? Does not get assigned?
+                newBoundary.AssignRowSliceValuesOf(pMBLayout->m_sentenceBoundaryFlags, sent_start, nSlices);
+                fill(pMBLayout->m_minibatchPackingFlags.begin(), pMBLayout->m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
+                // BUGBUG? what happens with newBoundary? Does not get assigned?
             for (size_t nt = 0; nt < nMBSize; nt++)
             {
                 for (size_t ns = 0; ns < nSlices; ns++)
                 {
-                    if (newBoundary(ns, nt) == ((int) MinibatchPackingFlags::SequenceStart))
-                        pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceStart;
-                    if (newBoundary(ns, nt) == ((int) MinibatchPackingFlags::SequenceEnd))
-                        pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceEnd;
+                        if (newBoundary(ns, nt) == ((int) MinibatchPackingFlags::SequenceStart))
+                            pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceStart;
+                        if (newBoundary(ns, nt) == ((int) MinibatchPackingFlags::SequenceEnd))
+                            pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceEnd;
                 }
             }
         }
@@ -192,7 +188,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return AdaptationRegType::KL;
         else
             throw std::invalid_argument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (None | KL)");
-    }
+        }
 
     static GradientsUpdateType ParseGradUpdateType(wstring s)
     {
@@ -218,7 +214,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return ParallelizationMethod::ModelAveragingSGD;
         else
             throw std::invalid_argument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD | ModelAveragingSGD)");
-    }
+        }
 
     static LearningRateSearchAlgorithm ParseLearningRateSearchType(wstring s)
     {
@@ -234,7 +230,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::invalid_argument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
     }
 
-    template<class ElemType>
+template<class ElemType>
     SGD<ElemType>::SGD(const ConfigParameters& configSGD)
     {
         ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB", "");
@@ -920,11 +916,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (g_mpi != nullptr)
                 g_mpi->WaitAll();
 
-            if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-            {
-                // only needs to be done by one process
-                net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
-            }
+            net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
         }
 
         // first, we need to normalize the effect of nbruttsineachrecurrentiter
@@ -1018,10 +1010,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training stops.\n",
                         i + 1, learnRatePerSample, m_minLearnRate);
                 if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
-                {
-                    if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-                        net.SaveToFile(m_modelPath);
-                    }
+                    net.SaveToFile(m_modelPath);
                 break;
             }
 
@@ -1187,8 +1176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             learnRateReduced = true;
                         else
                         {
-                            if ((g_mpi == nullptr) || g_mpi->IsMainNode())
-                                net.SaveToFile(GetModelNameForEpoch(i, true));
+                            net.SaveToFile(GetModelNameForEpoch(i, true));
 
                             fprintf(stderr, "Finished training and saved final model\n\n");
                             break;
@@ -2076,7 +2064,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (ModelAveragingProcessing(nSamplesSinceLastModelSync, learnableNodes, processedSamples,
                                              secondsSinceLastSyncFinished, secondsSpentOnSync))
                 {
-                    aggregateNumSamplesWithLabel = processedSamples; 
+                    // if a sync happens, do some extra work
                     nSamplesSinceLastModelSync = 0; 
                     nSynced++;
 
@@ -2094,6 +2082,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         }
                     }
                 }
+                aggregateNumSamplesWithLabel = processedSamples;
             }
 
             timer.Stop();
@@ -2173,6 +2162,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // --- END MAIN MINIBATCH LOOP
 
+        if (useModelAveraging && (g_mpi->NumNodesInUse() > 1) )
+        {
+            // may not be synced after epoch finished, so do the sync here 
+            int residualSampels = (int)nSamplesSinceLastModelSync;
+            g_mpi->AllReduce(&residualSampels, 1);
+            totalSamplesSeen += residualSampels; 
+            totalEpochSamples += residualSampels;
+            ModelAveragingSync(nSamplesSinceLastModelSync, learnableNodes);
+            nSynced++;
+            nSamplesSinceLastModelSync = 0;
+        }
+
         if (useGradientAggregation)
         {
             epochCriterion /= float(totalEpochSamples);
@@ -2189,11 +2190,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 epochEvalErrors[i] = localEpochEvalErrors(0, i);
         }
 
-        if (useModelAveraging && (g_mpi->NumNodesInUse() > 1) && nSamplesSinceLastModelSync)
+
+        if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
         {
-            // may not be synced after epoch finished, so do the sync here 
-            ModelAveragingSync(nSamplesSinceLastModelSync, learnableNodes);
-            nSynced++;
+            // merge epochCriterion and epochEvalErrors over nodes 
+            g_mpi->AllReduce(&epochCriterion, 1);
+            g_mpi->AllReduce(epochEvalErrors);
         }
         return totalEpochSamples;
     }
@@ -2283,7 +2285,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         float factor = 0; 
         int   nTotalSamples = nSamplesSinceLastSync; 
         g_mpi->AllReduce(&nTotalSamples, 1);
-        if (nTotalSamples < 0)
+        if (nTotalSamples <= 0)
         {
             // prepare for overflow 
             factor = 1.0f / g_mpi->NumNodesInUse(); 
@@ -2464,41 +2466,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             const double prevCriterion,
                             const size_t minibatchSize)
     {
-        wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch));
-        // Saving into temporary file and then renaming it to the checkPointFileName
-        // This is a standard trick to avoid havign corrupted checkpoints files if process dies during writing
-        wstring tempFileName = checkPointFileName + L".tmp";
-
+        // In case of parallel training only the main node should we saving the checkpoint to prevent
+        // the parallel training nodes from colliding to write the same file
+        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
         {
-            File fstream(tempFileName,
-                         FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
+            wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epoch));
+            // Saving into temporary file and then renaming it to the checkPointFileName
+            // This is a standard trick to avoid havign corrupted checkpoints files if process dies during writing
+            wstring tempFileName = checkPointFileName + L".tmp";
 
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
-            fstream << totalSamplesSeen << learnRatePerSample << prevCriterion;
-            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
-
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
-            fstream << minibatchSize;
-            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EMinibatchSize");
-
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
-
-            for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
             {
-                const Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
-                fstream << smoothedGradient;
+                File fstream(tempFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
+
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
+                fstream << totalSamplesSeen << learnRatePerSample << prevCriterion;
+                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
+
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
+                fstream << minibatchSize;
+                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EMinibatchSize");
+
+                fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
+
+                for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
+                {
+                    const Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
+                    fstream << smoothedGradient;
+                }
+
+                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
+
+                fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
+
+                // Ensuring that data is written
+                fstream.Flush();
             }
 
-            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
-
-            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
-
-            // Ensuring that data is written
-            fstream.Flush();
+            renameOrDie(tempFileName, checkPointFileName);
         }
-
-        renameOrDie(tempFileName, checkPointFileName);
     }
 
     template<class ElemType>
@@ -2628,8 +2634,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "\n###### d%ls######\n", node->NodeName().c_str());
 
                 double eOrg = node->FunctionValues()(irow, icol);
-                //if (node->FunctionValues().GetDeviceId() != net.GetDeviceId())
-                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
+                node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
 
                 node->UpdateEvalTimeStamp();
 
@@ -2646,15 +2651,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // TODO: why is this value not used?
                 criterionNodes[npos]->Get00Element();
                 double eGradErr = node->GradientValues()(irow, icol);
-                //if (node->GradientValues().GetDeviceId() != net.GetDeviceId())
-                    node->GradientValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
+                node->GradientValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
 
                 double ePos = eOrg + EPSILON;
                 double eNeg = eOrg - EPSILON;
 
                 node->FunctionValues()(irow, icol) = (ElemType)ePos;
-                //if (node->FunctionValues().GetDeviceId() != net.GetDeviceId())
-                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
+                node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
 
                 node->UpdateEvalTimeStamp();
                 net.Evaluate(criterionNodes[npos]);
@@ -2663,8 +2666,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 double mbEvalCriPos = criterionNodes[npos]->Get00Element(); // TODO: make Get00Element() a function of ComputationNodeBase
 
                 node->FunctionValues()(irow, icol) = (ElemType)eNeg;
-                //if (node->FunctionValues().GetDeviceId() != net.GetDeviceId())
-                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
+                node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
 
                 node->UpdateEvalTimeStamp();
                 net.Evaluate(criterionNodes[npos]);
@@ -2674,8 +2676,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // back to its orginal parameter value
                 node->FunctionValues()(irow, icol) = (ElemType)eOrg;
-                //if (node->FunctionValues().GetDeviceId() != net.GetDeviceId())
-                    node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
+                node->FunctionValues().TransferToDeviceIfNotThere(net.GetDeviceId(), true);
 
                 // check if they are consistent
                 double eGradNum = ((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));

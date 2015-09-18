@@ -50,7 +50,7 @@
 #include <fileutil.h>
 
 // TODO: Get rid of this global
-Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
+Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
 
 using namespace std;
 using namespace Microsoft::MSR;
