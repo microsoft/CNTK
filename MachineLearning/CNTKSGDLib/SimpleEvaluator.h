@@ -129,7 +129,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
-                m_net.SetActualNbrSlicesInEachRecIter(dataReader->NumberSlicesInEachRecurrentIter());
+                m_net.SetActualNbrSlicesInEachRecurentIteration(dataReader->NumberSlicesInEachRecurrentIter());
                 dataReader->CopyMBLayoutTo(m_net.GetMBLayoutPtr());
 
                 //for now since we share the same label masking flag we call this on one node only
@@ -450,7 +450,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         LogicError("decoderTrainSetDataReader read data but encoderNet reports no data read");
 
                     (*ptr)->SetActualMiniBatchSize(actualMBSize);
-                    (*ptr)->SetActualNbrSlicesInEachRecIter((*preader)->NumberSlicesInEachRecurrentIter());
+                    (*ptr)->SetActualNbrSlicesInEachRecurentIteration((*preader)->NumberSlicesInEachRecurrentIter());
                     (*preader)->CopyMBLayoutTo((*ptr)->GetMBLayoutPtr());
 
                     const auto & pairs = (*ptr)->PairNodes();
@@ -464,7 +464,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 decoderNet->SetActualMiniBatchSize(actualMBSize);
                 if (actualMBSize == 0)
                     LogicError("decoderTrainSetDataReader read data but decoderNet reports no data read");
-                decoderNet->SetActualNbrSlicesInEachRecIter(decoderDataReader->NumberSlicesInEachRecurrentIter());
+                decoderNet->SetActualNbrSlicesInEachRecurentIteration(decoderDataReader->NumberSlicesInEachRecurrentIter());
                 decoderDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
 
                 size_t i = 0;
@@ -667,7 +667,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     (*ptr)->SetActualMiniBatchSize(actualMBSize);
                     mNutt = (*ptrreader)->NumberSlicesInEachRecurrentIter();
-                    (*ptr)->SetActualNbrSlicesInEachRecIter(mNutt);
+                    (*ptr)->SetActualNbrSlicesInEachRecurentIteration(mNutt);
                     (*ptrreader)->CopyMBLayoutTo((*ptr)->GetMBLayoutPtr());
 
                     const auto & pairs = (*ptr)->PairNodes();
@@ -679,7 +679,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
                 decoderNet->SetActualMiniBatchSize(actualMBSize);
-                decoderNet->SetActualNbrSlicesInEachRecIter(mNutt);
+                decoderNet->SetActualNbrSlicesInEachRecurentIteration(mNutt);
                 encoderDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
 
                 FindBestPathWithVariableLength(decoderNet, actualMBSize, decoderDataReader, dataWriter, outputNodes, writeNodes, decoderFeatureNodes, beam, &decoderInputMatrices, best_path);
@@ -910,7 +910,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// use reader to initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
             evalnet->SetActualMiniBatchSize(mbSize);
-            evalnet->SetActualNbrSlicesInEachRecIter(dataReader->NumberSlicesInEachRecurrentIter());
+            evalnet->SetActualNbrSlicesInEachRecurentIteration(dataReader->NumberSlicesInEachRecurrentIter());
             dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
 
             clock_t start, now;
@@ -1069,7 +1069,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// use reader to initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
             evalnet->SetActualMiniBatchSize(mbSize);
-            evalnet->SetActualNbrSlicesInEachRecIter(dataReader->NumberSlicesInEachRecurrentIter());
+            evalnet->SetActualNbrSlicesInEachRecurentIteration(dataReader->NumberSlicesInEachRecurrentIter());
 
             clock_t start, now;
             start = clock();

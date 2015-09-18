@@ -1052,20 +1052,9 @@ public:
 #define EPSILON 1e-5
 #define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
 
-// why are the following in basetypes.h?
-/**
-These macros are used for sentence segmentation information. 
-TODO: get rid of this, no need
-*/
-//#define ((int) MinibatchPackingFlags::SequenceStart) ((int) MinibatchPackingFlags::SequenceStart)
-//#define ((int) MinibatchPackingFlags::None) ((int) MinibatchPackingFlags::None)
-//#define ((int) MinibatchPackingFlags::SequenceEnd) ((int) MinibatchPackingFlags::SequenceEnd)
-//#define ((int) MinibatchPackingFlags::NoInput) ((int) MinibatchPackingFlags::NoInput)
-//#define ((int) MinibatchPackingFlags::NoFeature) ((int) MinibatchPackingFlags::NoFeature)
-//#define ((int) MinibatchPackingFlags::NoLabel) ((int) MinibatchPackingFlags::NoLabel)
-
+// why is this in basetypes.h?
 // boundary flags for a frame
-enum class MinibatchPackingFlags : unsigned char
+enum class MinibatchPackingFlags : char     // (note: not using unsigned char because these go into a matrix, and we use Matrix<char>, since we use it as a data holder)
 {
     None = 0,
     SequenceStart = 1 << 0,         // binary 0001  frame is first of an utterance

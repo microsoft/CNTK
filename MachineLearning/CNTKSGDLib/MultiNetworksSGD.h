@@ -1160,7 +1160,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t actualMBSize = encoderNet->GetActualMBSize();
 
             encoderNet->SetActualMiniBatchSize(actualMBSize);
-            encoderNet->SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
+            encoderNet->SetActualNbrSlicesInEachRecurentIteration(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
             encoderTrainSetDataReader->CopyMBLayoutTo(encoderNet->GetMBLayoutPtr());
 
             encoderNet->Evaluate(encoderEvaluationNodes[0]);
@@ -1168,7 +1168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             actualMBSize = decoderNet->GetActualMBSize();
 
             decoderNet->SetActualMiniBatchSize(actualMBSize);
-            decoderNet->SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
+            decoderNet->SetActualNbrSlicesInEachRecurentIteration(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
 
             /// not the sentence begining, because the initial hidden layer activity is from the encoder network
             decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());

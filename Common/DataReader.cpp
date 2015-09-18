@@ -259,12 +259,11 @@ template<class ElemType>
 bool DataReader<ElemType>::GetMinibatchCopy(
     std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
     std::map<std::wstring, Matrix<ElemType>*>& matrices,
-    Matrix<float>& sentenceBegin,
-    std::vector<MinibatchPackingFlags>& minibatchPackingFlags)
+    MBLayoutPtr pMBLayout)
 {
     bool ans = false;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        ans = (m_dataReader[m_ioNames[i]]->GetMinibatchCopy(uttInfo, matrices, sentenceBegin, minibatchPackingFlags) || ans);
+        ans = (m_dataReader[m_ioNames[i]]->GetMinibatchCopy(uttInfo, matrices, pMBLayout) || ans);
     return ans;
 }
 
@@ -272,12 +271,11 @@ template<class ElemType>
 bool DataReader<ElemType>::SetNetOutput(
     const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
     const Matrix<ElemType>& outputs,
-    const Matrix<float>& sentenceBegin,
-    const std::vector<MinibatchPackingFlags>& minibatchPackingFlags)
+    const MBLayoutPtr pMBLayout)
 {
     bool ans = false;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        ans = (m_dataReader[m_ioNames[i]]->SetNetOutput(uttInfo, outputs, sentenceBegin, minibatchPackingFlags) || ans);
+        ans = (m_dataReader[m_ioNames[i]]->SetNetOutput(uttInfo, outputs, pMBLayout) || ans);
     return ans;
 }
 

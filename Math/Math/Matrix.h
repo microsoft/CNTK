@@ -523,7 +523,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { }
 
         Matrix<float> m_sentenceBoundaryFlags;  // (t,stream)
-        // ^^ float -> MinibatchPackingFlags, right?
+        // ^^ float -> MinibatchPackingFlags, right? Or unsigned char; or change that to 'char' because Matrix<char> already exists
         // This matrix ^^ is always in CPU memory  --TODO: should rather be a matrix of some int
         /// conditionally point to either a pointer to that provided by network, or point to 
         /// an individual sentence boundary info, which happens if timeStep > 1 is required for PastValue node
@@ -538,7 +538,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if 0   // we have this pattern often:
         // TODO: mbSize and #slices must also move into MBLayout 
         evalnet->SetActualMiniBatchSize(mbSize);
-        evalnet->SetActualNbrSlicesInEachRecIter(dataReader->NumberSlicesInEachRecurrentIter());
+        evalnet->SetActualNbrSlicesInEachRecurentIteration(dataReader->NumberSlicesInEachRecurrentIter());
         dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
 #endif
 #if 0   // a VERY TELLING piece of code
