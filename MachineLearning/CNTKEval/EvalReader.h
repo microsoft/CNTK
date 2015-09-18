@@ -179,13 +179,9 @@ public:
 
         if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch*/
         {
-            pMBLayout->m_sentenceBoundaryFlags.SetValue(0, m_switchFrame[0], (ElemType)((int) MinibatchPackingFlags::SequenceStart));
-            pMBLayout->m_minibatchPackingFlags[m_switchFrame[0]] = MinibatchPackingFlags::SequenceStart;
+            pMBLayout->Reset(0, m_switchFrame[0], MinibatchPackingFlags::SequenceStart);
             if (m_switchFrame[0] > 0)
-            {
-                pMBLayout->m_sentenceBoundaryFlags.SetValue(0, m_switchFrame[0] - 1, (ElemType)((int) MinibatchPackingFlags::SequenceEnd));
-                pMBLayout->m_minibatchPackingFlags[m_switchFrame[0] - 1] = MinibatchPackingFlags::SequenceEnd;
-            }
+                pMBLayout->Reset(0, m_switchFrame[0] - 1, MinibatchPackingFlags::SequenceEnd);
         }
     }
 

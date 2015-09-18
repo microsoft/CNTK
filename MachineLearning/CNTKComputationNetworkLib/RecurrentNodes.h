@@ -120,32 +120,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 vector<int> numResetLeft(numRows, 0);
                 for (size_t i = 0; i < pMBLayout->GetSize(); i++)   // i = frame index (time)
                 {
-                    if (pMBLayout->m_minibatchPackingFlags[i] & (SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
+                    if (pMBLayout->Is(i, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
                     {
                         //we set timeStep-1 elements following it to be SequenceStart until met NoInput
                         for (size_t j = 0; j < numRows; j++)        // j = stream
                         {
                             //we use & since ((int) MinibatchPackingFlags::SequenceStart) may come with NoLabel
-                            if ((int)pMBLayout->m_sentenceBoundaryFlags(j, i) & ((int) SequenceStart_or_End))
+                            if (pMBLayout->Is(j, i, SequenceStart_or_End))
                                 numResetLeft[j] = m_timeStep;
-                            else if ((int)pMBLayout->m_sentenceBoundaryFlags(j, i) & ((int) MinibatchPackingFlags::NoFeature))
+                            else if (pMBLayout->Is(j, i, MinibatchPackingFlags::NoFeature))
                                 numResetLeft[j] = 0;
                         }
                     }
 
                     //now set the sequence-boundary flag
-                    bool valueChanged = false;
+                    //bool valueChanged = false;
                     for (size_t j = 0; j < numRows; j++)
                     {
                         if (numResetLeft[j]-- > 0)
                         {
-                            m_pShiftedMBLayout->m_sentenceBoundaryFlags(j, i) = (float)(((int)SequenceStart_or_End) | ((int)m_pShiftedMBLayout->m_sentenceBoundaryFlags(j, i) & ((int)MinibatchPackingFlags::NoLabel)));
-                            valueChanged = true;
+                            //m_pShiftedMBLayout->m_sentenceBoundaryFlags(j, i) = (float)(((int)SequenceStart_or_End) | ((int)m_pShiftedMBLayout->m_sentenceBoundaryFlags(j, i) & ((int)MinibatchPackingFlags::NoLabel)));
+                            m_pShiftedMBLayout->Mask(j, i, MinibatchPackingFlags::NoLabel); // keep only this flag
+                            m_pShiftedMBLayout->Set(j, i, SequenceStart_or_End);            // now implant the boundary flag
+                            //valueChanged = true;
                         }
                     }
 
-                    if (valueChanged)
-                        m_pShiftedMBLayout->m_minibatchPackingFlags[i] |= SequenceStart_or_End;
+                    //if (valueChanged)
+                    //    m_pShiftedMBLayout->m_minibatchPackingFlags[i] |= SequenceStart_or_End;
                 }
             }
         }
@@ -161,8 +163,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows());
             assert(m_pMBLayout);
 
-            const auto colBoundaryFlags = m_pShiftedMBLayout->m_sentenceBoundaryFlags.FrameSlice(FrameRange(frameRange.t(), 1)/*TODO: delete the next two parameters*/, frameRange.t(), 1);
-            ComputeInputPartialSRP(frameRange, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags, m_pShiftedMBLayout->m_minibatchPackingFlags[frameRange.t()]);
+            const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(frameRange.t());
+            ComputeInputPartialSRP(frameRange, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags.first, colBoundaryFlags.second);
         }
 
         static void WINAPI ComputeInputPartialSRP(const FrameRange & frameRange, int timeStep,
@@ -376,8 +378,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
             {
                 // TODO: call the looping version below to avoid code dup
-                const auto colBoundaryFlags = m_pShiftedMBLayout->m_sentenceBoundaryFlags.FrameSlice(FrameRange(timeIdxInSeq, 1), timeIdxInSeq, 1);
-                ComputeInputPartialSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags, m_pShiftedMBLayout->m_minibatchPackingFlags[timeIdxInSeq]);
+                const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(timeIdxInSeq);
+                ComputeInputPartialSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags.first, colBoundaryFlags.second);
             }
         }
 
@@ -390,8 +392,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
             {
                 // TODO: call the looping version below to avoid code dup
-                const auto colBoundaryFlags = m_pShiftedMBLayout->m_sentenceBoundaryFlags.FrameSlice(FrameRange(timeIdxInSeq, 1), timeIdxInSeq, 1);
-                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_pShiftedMBLayout->m_minibatchPackingFlags[timeIdxInSeq]);
+                const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(timeIdxInSeq);
+                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags.first, colBoundaryFlags.second);
             }
 
             //set the past activity to be used by next minibatch
@@ -407,8 +409,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.t() == 0 && m_historyAlreadySet == false)
                 m_delayedActivation = Inputs(0)->FunctionValues();
             
-            const auto colBoundaryFlags = m_pShiftedMBLayout->m_sentenceBoundaryFlags.FrameSlice(FrameRange(frameRange.t(), 1)/*TODO: delete the next two parameters*/, frameRange.t(), 1);
-            EvaluateThisNodeSRP(frameRange, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_pShiftedMBLayout->m_minibatchPackingFlags[frameRange.t()]);
+            const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(frameRange.t());
+            EvaluateThisNodeSRP(frameRange, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags.first, colBoundaryFlags.second);
         }
     };
 
@@ -446,8 +448,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
             {
                 // TODO: call the looping version below to avoid code dup
-                const auto colBoundaryFlags = m_pShiftedMBLayout->m_sentenceBoundaryFlags.ColumnSlice(timeIdxInSeq, 1);
-                ComputeInputPartialSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags, m_pShiftedMBLayout->m_minibatchPackingFlags[timeIdxInSeq]);
+                const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(timeIdxInSeq);
+                ComputeInputPartialSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags.first, colBoundaryFlags.second);
             }
         }
 
@@ -458,8 +460,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int nbrSamples = Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep;
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
             {
-                const auto colBoundaryFlags = m_pShiftedMBLayout->m_sentenceBoundaryFlags.ColumnSlice(timeIdxInSeq, 1);
-                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_pShiftedMBLayout->m_minibatchPackingFlags[timeIdxInSeq]);
+                const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(timeIdxInSeq);
+                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags.first, colBoundaryFlags.second);
             }
 
             //set the future activity to be used by next minibatch
@@ -473,8 +475,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.t() == Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep - 1)
                 m_delayedActivation = Inputs(0)->FunctionValues();
 
-            const auto colBoundaryFlags = m_pShiftedMBLayout->m_sentenceBoundaryFlags.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), 1);
-            EvaluateThisNodeSRP(frameRange, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_pShiftedMBLayout->m_minibatchPackingFlags[frameRange.t()]);
+            const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(frameRange.t());
+            EvaluateThisNodeSRP(frameRange, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags.first, colBoundaryFlags.second);
         }
     };
 
@@ -625,7 +627,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
                     PrepareThisErrorsBeforeBackProp(timeIdxInSeq, nT, error, stateError, grdToPrevOutput, grdToPrevState,
-                                                    m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, m_samplesInRecurrentStep, &m_pMBLayout->m_sentenceBoundaryFlags);
+                                                    m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, m_samplesInRecurrentStep, &m_pMBLayout->GetM());
 
 #ifdef DEBUG_DECODER
                     fprintf(stderr, "output error [%ld] norm = %.8e\n", timeIdxInSeq, error.FrobeniusNorm());
@@ -637,7 +639,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     grdToPrevOutput.SetValue(0);
                     grdToPrevState.SetValue(0);
 
-                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, &m_pMBLayout->m_sentenceBoundaryFlags);
+                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, &m_pMBLayout->GetM());
 
                     ComputeInputGradientWrtGates(
                         error,
@@ -666,7 +668,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     );
                     grdToObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep).SetValue(grdToObsSlice);
 
-                    PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, m_samplesInRecurrentStep, &m_pMBLayout->m_sentenceBoundaryFlags);
+                    PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, m_samplesInRecurrentStep, &m_pMBLayout->GetM());
                 }
 #ifdef DEBUG_DECODER
                 fprintf(stderr, "after error prop b_c norm = %.8e\n", Inputs(4)->FunctionValues().ColumnSlice(0, 1).FrobeniusNorm());
@@ -923,7 +925,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", t, nT);
 
             int utt_t = (int)t / m_samplesInRecurrentStep;
-            auto thisCol = m_pMBLayout->m_sentenceBoundaryFlags.ColumnSlice(utt_t, 1);
+            auto thisCol = m_pMBLayout->GetFrame(utt_t).first;
             thisCol.Reshape(1, m_samplesInRecurrentStep);
             return (int) thisCol.ColumnSlice(streamid, 1).Get00Element();
         }
@@ -1006,7 +1008,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
                     Matrix<ElemType> sliceTanhInput = tanhObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
 
-                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, &m_pMBLayout->m_sentenceBoundaryFlags);
+                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, &m_pMBLayout->GetM());
 
                     EvaluateThisNodeS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
                             sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
@@ -1056,7 +1058,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Matrix<ElemType> & state,
             const Matrix<ElemType> & pastOutput,
             const Matrix<ElemType> & pastState,
-            size_t nsamples, const ElemType & initStateValue, Matrix<float>* sentenceBegin)
+            size_t nsamples, const ElemType & initStateValue, const Matrix<float>* sentenceBegin)
         {
             size_t nRow = pastOutput.GetNumRows();
             size_t nStream = sentenceBegin->GetNumRows();
@@ -1120,7 +1122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Matrix<ElemType>& grdToPrevState,
             const Matrix<ElemType>& obs_error_from_future_minibatch,
             const Matrix<ElemType>& state_error_from_future_minibatch,
-            size_t nsamples, Matrix<float>* sentenceBegin)
+            size_t nsamples, const Matrix<float>* sentenceBegin)
         {
             int utt_t = (int)floor(timeIdxInSeq / nsamples);
             int total_utt_t = (int)floor(nT / nsamples);
@@ -1174,7 +1176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t timeIdxInSeq,
             Matrix<ElemType> & errors,
             Matrix<ElemType> & stateError,
-            size_t nsamples, Matrix<float>* sentenceBegin)
+            size_t nsamples, const Matrix<float>* sentenceBegin)
         {
             int utt_t = (int)floor(timeIdxInSeq / nsamples);
             Matrix<ElemType> colBegin(sentenceBegin->GetDeviceId());
@@ -1347,10 +1349,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ElemType initStateValue = m_DefaultState;
                 auto pMBLayout = make_shared<MBLayout>();
                 pMBLayout->Resize(1, nT);
-                Matrix<float> & boundary = pMBLayout->m_sentenceBoundaryFlags;
-                vector<MinibatchPackingFlags> & minibatchPackingFlags = pMBLayout->m_minibatchPackingFlags;
-                boundary.ColumnSlice(0, 1).SetValue(((int) MinibatchPackingFlags::SequenceStart));
-                minibatchPackingFlags[1] = MinibatchPackingFlags::SequenceStart;
+                //Matrix<float> & boundary = pMBLayout->m_sentenceBoundaryFlags;
+                //vector<MinibatchPackingFlags> & minibatchPackingFlags = pMBLayout->m_minibatchPackingFlags;
+                //boundary.ColumnSlice(0, 1).SetValue(((int) MinibatchPackingFlags::SequenceStart));
+                //minibatchPackingFlags[1] = MinibatchPackingFlags::SequenceStart;
+                pMBLayout->Set(0, 1, MinibatchPackingFlags::SequenceStart); // TODO: strange--start at frame[1] instead of [0]?
                 ComputationNode<ElemType>::ResetBound(pMBLayout);
 
                 f0 = Inputs(0)->FunctionValues();

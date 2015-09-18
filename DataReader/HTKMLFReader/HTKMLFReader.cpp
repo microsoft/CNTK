@@ -855,7 +855,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             do 
             {
-                if (m_truncated == false)
+                if (!m_truncated)
                 {
                     if (!(*m_mbiter))
                         return false;
@@ -880,10 +880,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 // entire minibatch is one utterance
                                 m_pMBLayout->Resize(1, actualmbsize);
-                                m_pMBLayout->m_sentenceBoundaryFlags.SetValue(0, 0, (float)((int)MinibatchPackingFlags::SequenceStart));
-                                m_pMBLayout->m_sentenceBoundaryFlags.SetValue(0, actualmbsize - 1, (float)((int)MinibatchPackingFlags::SequenceEnd));
-                                m_pMBLayout->m_minibatchPackingFlags.front() = MinibatchPackingFlags::SequenceStart;
-                                m_pMBLayout->m_minibatchPackingFlags.back()  = MinibatchPackingFlags::SequenceEnd;
+                                m_pMBLayout->Reset(0, 0,                MinibatchPackingFlags::SequenceStart);  // TODO: can't we use Set()?
+                                m_pMBLayout->Reset(0, actualmbsize - 1, MinibatchPackingFlags::SequenceEnd);
                                 first = false;
                             }
 
@@ -995,7 +993,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // advance to the next minibatch
                     (*m_mbiter)++;
                 }
-                else
+                else    // if (!m_truncated) else...
                 {
                     if (m_noData)
                     {
@@ -1025,17 +1023,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 m_sentenceEnd[i] = false;
                                 m_switchFrame[i] = m_mbSize+1;
                                 if (m_processedFrame[i] == 1)
-                                {
-                                    m_pMBLayout->m_sentenceBoundaryFlags.SetValue(i, 0, (float)((int)MinibatchPackingFlags::SequenceEnd));
-                                    m_pMBLayout->m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceEnd;
-                                }
+                                    m_pMBLayout->Reset(i, 0, MinibatchPackingFlags::SequenceEnd);   // TODO: shouldn't both Start and End be set? TODO: can we just use Set()?
                             }
                             else
                             {
-                                m_switchFrame[i] = 0;
                                 m_sentenceEnd[i] = true;
-                                m_pMBLayout->m_sentenceBoundaryFlags.SetValue(i, 0, (float)((int)MinibatchPackingFlags::SequenceStart));
-                                m_pMBLayout->m_minibatchPackingFlags[0] = MinibatchPackingFlags::SequenceStart;
+                                m_switchFrame[i] = 0;
+                                m_pMBLayout->Reset(i, 0, MinibatchPackingFlags::SequenceStart);
                             }
                             actualmbsize[i] = m_mbSize;
                             endFr = startFr + actualmbsize[i];
@@ -1158,15 +1152,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_processedFrame[i] += (endFr-startFr);
                             m_switchFrame[i] = actualmbsize[i];
                             if (actualmbsize[i] < m_mbSize)
-                            {
-                                m_pMBLayout->m_sentenceBoundaryFlags.SetValue(i, actualmbsize[i], (float)((int)MinibatchPackingFlags::SequenceStart));
-                                m_pMBLayout->m_minibatchPackingFlags[actualmbsize[i]] |= MinibatchPackingFlags::SequenceStart;
-                            }
+                                m_pMBLayout->Set(i, actualmbsize[i], MinibatchPackingFlags::SequenceStart); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
                             if (actualmbsize[i] == m_mbSize)
-                            {
-                                m_pMBLayout->m_sentenceBoundaryFlags.SetValue(i, actualmbsize[i] - 1, (float)((int)MinibatchPackingFlags::SequenceEnd));
-                                m_pMBLayout->m_minibatchPackingFlags[actualmbsize[i] - 1] |= MinibatchPackingFlags::SequenceEnd;
-                            }
+                                m_pMBLayout->Set(i, actualmbsize[i] - 1, MinibatchPackingFlags::SequenceEnd); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
                             startFr = m_switchFrame[i];
                             endFr = m_mbSize;
                             bool reNewSucc = ReNewBufferForMultiIO(i);
@@ -1213,8 +1201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         }
                     }
-                    typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-                    for (iter = matrices.begin();iter!=matrices.end(); iter++)
+                    for (auto iter = matrices.begin();iter!=matrices.end(); iter++)
                     {
                         // dereference matrix that corresponds to key (input/output name) and 
                         // populate based on whether its a feature or a label
@@ -1308,10 +1295,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (first)
                         {
                             m_pMBLayout->Resize(1, feat.cols());
-                            m_pMBLayout->m_sentenceBoundaryFlags.SetValue(0, 0, (ElemType)((int)MinibatchPackingFlags::SequenceStart));
-                            m_pMBLayout->m_sentenceBoundaryFlags.SetValue(0, (size_t)feat.cols() - 1, (ElemType)((int)MinibatchPackingFlags::SequenceEnd));
-                            m_pMBLayout->m_minibatchPackingFlags.front() = MinibatchPackingFlags::SequenceStart;
-                            m_pMBLayout->m_minibatchPackingFlags.back()  = MinibatchPackingFlags::SequenceEnd;
+                            m_pMBLayout->Reset(0, 0,               MinibatchPackingFlags::SequenceStart);   // TODO: can't we use Set()?
+                            m_pMBLayout->Reset(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);
                             first = false;
                         }
 

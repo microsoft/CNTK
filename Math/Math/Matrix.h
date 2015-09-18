@@ -36,6 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - RecurrentNodes access frames with a time shift, where out-of-bounds ones access a different matrix' values
     //  - RecurrentNodes iterate over individual slices--need a sub-setting constructor from a FrameRange to another?
     //  - RecurrentNodes access boundary info with a similar pattern, but boundary info has a different #streams (namely, 1)
+    // TODO: Turns out, a FrameRange is either a whole batch or a single frame.
     struct FrameRange
     {
         const size_t timeIdxInSeq;              // start frame
@@ -521,7 +522,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct MBLayout
     {   
         MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { }
-
+    private:    // one day...
         /// a matrix of n_stream x n_length
         /// n_stream is the number of streams
         /// n_length is the maximum lenght of each stream
@@ -544,13 +545,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// == 0 denotes such case is not in this frame
         vector<MinibatchPackingFlags> m_minibatchPackingFlags;
         // ^^ This is some form of aggregate of m_sentenceBoundaryFlags taken over all streams. TODO: find out the exact condition
+    public:
+
+        bool Is(size_t t, MinibatchPackingFlags f) const { return m_minibatchPackingFlags[t] & f; }
+        bool Is(size_t id, size_t t, MinibatchPackingFlags f) const { return ((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f; }
+
+        // get info for one frame; used in DelayedValueNode
+        // TODO: clean this up, we can do this more nicely
+        pair<Matrix<float>, MinibatchPackingFlags> GetFrame(size_t t) const
+        {
+            return make_pair(m_sentenceBoundaryFlags.ColumnSlice(t, 1), m_minibatchPackingFlags[t]);
+        }
+
+        // set a boundary flag
+        // This ORs the flags, i.e. it assumes that the matrix has been cleared before.
+        // NOTE: original code that calls this did not OR the matrix, but did OR the vector value. I visually checked that it was cleared before, but might have gotten it wrong.
+        void Set(size_t id, size_t t, MinibatchPackingFlags f)
+        {
+            m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) | f));
+            m_minibatchPackingFlags[t] |= f;
+        }
+        // same but not ORing  --TODO: is this distinction needed?
+        void Reset(size_t id, size_t t, MinibatchPackingFlags f)
+        {
+            m_sentenceBoundaryFlags.SetValue(id, t, (float)(int)f);
+            m_minibatchPackingFlags[t] |= f;
+        }
+        // needed in DelayedValueNodeBase
+        // TODO: this is wicked in that the matrix keeps only the NoLabel flag, while the vector keeps all (just gets ORed into)
+        void Mask(size_t id, size_t t, MinibatchPackingFlags f)
+        {
+            m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f));
+            //m_minibatchPackingFlags[t] &= f;
+        }
+
+        // for LSTMNode ony, which is deprecated, only to make it compile easily:  also used in FindBestPathWithVariableLength() and FindBestPath() in a strange way
+        Matrix<float> & GetM() { return m_sentenceBoundaryFlags; }
+        // and for DecimateMinibatchWithSentences() which should be revised
+        vector<MinibatchPackingFlags> & GetV() { return m_minibatchPackingFlags; }
 
         // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
         void Resize(size_t numStreams, size_t numFrames)
         {
             m_sentenceBoundaryFlags.Resize(numStreams, numFrames);
             m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
-            m_minibatchPackingFlags.assign(numFrames, MinibatchPackingFlags::None);
+            m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
         }
 
         // test a pre-condition  --TODO: we only resize this thing here, so this should not be necessary in the future

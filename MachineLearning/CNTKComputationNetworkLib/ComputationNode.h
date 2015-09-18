@@ -910,18 +910,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 //Matrix<ElemType> colSeg(m_pMBLayout->m_sentenceBoundaryFlags.GetDeviceId());
 
-                size_t startT = (timeIdxInSeq == (size_t)-1) ? 0 : timeIdxInSeq * nS;
+                size_t startT = (timeIdxInSeq == (size_t)-1) ? 0 : timeIdxInSeq * nS;       // TODO: misnomer; startT, endT, and utt_t are not times but columns in the packed matrix
                 size_t endT = (timeIdxInSeq == (size_t)-1) ? nT : timeIdxInSeq * nS + nS;
                 for (size_t utt_t = startT; utt_t < endT; utt_t += nS)
                 {
-                    size_t j = utt_t / nS;
+                    size_t t = utt_t / nS;
 
-                    if (m_pMBLayout->m_minibatchPackingFlags[j] & MinibatchPackingFlags::NoLabel)
+                    if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel))
                     {
-                        const auto & colSeg = m_pMBLayout->m_sentenceBoundaryFlags.ColumnSlice(j,1);
-                        for (int i = 0; i < nS; i++)
-                            if ((int)colSeg(i,0) & ((int) MinibatchPackingFlags::NoLabel))
-                                matrixToBeMasked.ColumnSlice(utt_t+i, 1).SetValue(0);
+                        for (size_t id = 0; id < nS; id++)
+                            if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
+                                matrixToBeMasked.ColumnSlice(utt_t+id, 1).SetValue(0);
                         processedExistsNoLabelorFeatureMissing = true;
                     }
                 }
