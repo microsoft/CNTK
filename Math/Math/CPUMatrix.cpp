@@ -5164,9 +5164,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // The explicit instantiation part
-    // BUGBUG: Somehow this does not export CPUMatrix<float>::SetNumThreads(int), only <double>; and that happened unexpectedly (before was both)
-    template class CPUMatrix<float>;
-    template class CPUMatrix<double>;
+    template class MATH_API CPUMatrix<float>;
+    template class MATH_API CPUMatrix<double>;
 
     // We use Matrix<char> as the backing store for QuantizedMatrix
     // Let's explicitly instantiate the methods we need for that purpose
