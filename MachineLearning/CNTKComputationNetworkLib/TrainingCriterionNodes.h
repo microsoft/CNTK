@@ -1096,13 +1096,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_pMBLayout && !m_pMBLayout->IsEmpty())
             {
+                // 't' is not a time but rather a column index that encodes (time stamp, stream)
                 size_t nS = m_pMBLayout->GetNumStreams();
-
-                Matrix<ElemType> colSeg(m_pMBLayout->m_sentenceBoundaryFlags.GetDeviceId());
-                // TODO: ^^ device id is CPUDEVICE. Enforce?
-
-                size_t j = t / nS;
-                size_t i = t % nS;
+                size_t j = t / nS;  // this is the time stamp
+                size_t i = t % nS;  // this is the stream
                 if (m_pMBLayout->m_minibatchPackingFlags[j] & MinibatchPackingFlags::NoLabel)
                 {
                     if ((int)m_pMBLayout->m_sentenceBoundaryFlags(i,j) & ((int) MinibatchPackingFlags::NoLabel))

@@ -101,31 +101,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_timeStep <= 0)
                 LogicError("timeStep should be 1 or larger");
 
-            // TODO: we now have both the original layout in m_pMBLayout and a shifted one locally here. Are they redundant? Do we need the local copy?
             Base::ResetBound(pMBLayout);
 
-            // This is a copy assignment, not a reference.
-            *m_pShiftedMBLayout = *pMBLayout;   // gets modified below
-
-            // TODO: add a comment what is happening for m_timeStep == 1
-            // TODO: comment what the shifted layout is
+            // in this node we use a post-processed version of the shared pMBLayout
+            // This is to decide which frames should be filled with default values. 
+            *m_pShiftedMBLayout = *pMBLayout;   // gets modified below (this is a copy assignment, not a reference.)
             if (m_timeStep > 1)
             {
-                //each row has a number to indicate how many values should be reset for that utterance
-                int numRows = (int)pMBLayout->GetNumStreams();
-                vector<int> numResetLeft;
-                numResetLeft.assign (numRows, 0);
-                //std::fill(numResetLeft.begin(), numResetLeft.end(), 0);
+                // modify m_pShiftedMBLayout
+                // If two utterances are packed together (S: start, E: end, N: no input) and we need to get values 2 steps in the past
+                //    S X X X E S X X X X E N N
+                // then this becomes
+                //    S S X X E S S X X X E N N
 
-                // Note: this loop direction is from PastValueNode. FutureValueNode uses this for loop:
-                //   for (int i = minibatchPackingFlags->size() - 1; i >= 0; i--) // Future
-                // The loop bodies for each 'i' are independent, so the loop order should not matter; hence, this code can be shared.
-                for (int i = 0; i < pMBLayout->GetSize(); i++)      // Past
+                size_t numRows = pMBLayout->GetNumStreams();
+
+                // each row has a number to indicate how many values should be reset for that utterance
+                vector<int> numResetLeft(numRows, 0);
+                for (size_t i = 0; i < pMBLayout->GetSize(); i++)   // i = frame index (time)
                 {
                     if (pMBLayout->m_minibatchPackingFlags[i] & (SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
                     {
                         //we set timeStep-1 elements following it to be SequenceStart until met NoInput
-                        for (int j = 0; j < numRows; j++)
+                        for (size_t j = 0; j < numRows; j++)        // j = stream
                         {
                             //we use & since ((int) MinibatchPackingFlags::SequenceStart) may come with NoLabel
                             if ((int)pMBLayout->m_sentenceBoundaryFlags(j, i) & ((int) SequenceStart_or_End))
@@ -137,7 +135,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     //now set the sequence-boundary flag
                     bool valueChanged = false;
-                    for (int j = 0; j < numRows; j++)
+                    for (size_t j = 0; j < numRows; j++)
                     {
                         if (numResetLeft[j]-- > 0)
                         {
