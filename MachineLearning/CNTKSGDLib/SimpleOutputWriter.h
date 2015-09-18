@@ -74,7 +74,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t actualMBSize = m_net.GetActualMBSize();
                 m_net.SetActualMiniBatchSize(actualMBSize);
-                m_net.SetActualNbrSlicesInEachRecIter(dataReader.NumberSlicesInEachRecurrentIter());
+                m_net.SetActualNbrSlicesInEachRecurentIteration(dataReader.NumberSlicesInEachRecurrentIter());
                 dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
 
                 for (int i=0; i<outputNodes.size(); i++)

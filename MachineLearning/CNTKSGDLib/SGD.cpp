@@ -1320,7 +1320,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t actualMBSize = net.GetActualMBSize();
             net.SetActualMiniBatchSize(actualMBSize);
-            net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+            net.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
 
             // TODO: Exactly this loop should be INSIDE ComputationNetwork--pass the nodes array instead!
@@ -1769,11 +1769,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // whole utterance.
         assert(trainSetDataReader != NULL);
         std::vector<std::vector<std::pair<wstring, size_t>>> uttInfo;
-        Matrix<float> sentenceBoundary;
-        std::vector<MinibatchPackingFlags> minibatchPackingFlags;
-        while (trainSetDataReader->GetMinibatchCopy(uttInfo, *inputMatrices,
-                                                    sentenceBoundary,
-                                                    minibatchPackingFlags))
+        auto pMBLayout = make_shared<MBLayout>();
+        while (trainSetDataReader->GetMinibatchCopy(uttInfo, *inputMatrices, pMBLayout))
         {
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
@@ -1783,13 +1780,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t actualMBSize = net.GetActualMBSize();
             net.SetActualMiniBatchSize(actualMBSize);
-            net.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+            net.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
             net.Evaluate(outputNodes[0]);   // Only evaluate the first output
             trainSetDataReader->SetNetOutput(uttInfo,
                                              dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->FunctionValues(),
-                                             sentenceBoundary,
-                                             minibatchPackingFlags);
+                                             pMBLayout);
         }
     }
 
@@ -1964,7 +1960,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     nSamplesSinceLastModelSync += actualMBSize;
                     net.SetActualMiniBatchSize(actualMBSize);
-                    net.SetActualNbrSlicesInEachRecIter(nSlices);
+                    net.SetActualNbrSlicesInEachRecurentIteration(nSlices);
 
                     if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
                     {
@@ -1987,7 +1983,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
                     {
                         refNet.SetActualMiniBatchSize(actualMBSize);
-                        refNet.SetActualNbrSlicesInEachRecIter(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+                        refNet.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
                         refNet.Evaluate(refNode);
                         Matrix<ElemType>::ScaleAndAdd((ElemType)m_adaptationRegWeight,
                                                       dynamic_pointer_cast<ComputationNode<ElemType>>(refNode)->FunctionValues(),

@@ -594,6 +594,13 @@ public:
     // TODO: rename to ForwardProp()? To make it very clear?
     void Evaluate(const ComputationNodeBasePtr rootNode)
     {
+        // checks that will disappear once we complete the refactoring. If this passes for a while, we will eliminate one
+        // If this fails, comment this out (it is safe) and tell fseide@microsoft.com.
+        if (m_pMBLayout && m_nbrSlicesInEachRecurrentIteration != m_pMBLayout->GetNumStreams())
+            LogicError("Evaluate: detected that m_nbrSlicesInEachRecurrentIteration != m_pMBLayout->GetNumStreams()");
+        if (m_pMBLayout && m_pMBLayout->GetNumFrames() != m_pMBLayout->GetSize())
+            LogicError("Evaluate: detected that m_pMBLayout->GetNumFrames() != m_pMBLayout->GetSize()");
+
         // prepare to compute with the subnetwork that this rootNode depends on, including
         //  - auto-detecting recurrent loops
         //  - calling Validate() on all nodes, which, a.o, resizes the matrices
@@ -673,7 +680,7 @@ public:
     // returns the result from SetActualMiniBatchSize(). Note GetActualMBSize() also exists but returns a value derived from the inputs dimensions
     size_t GetMaxMBSize() { return m_actMiniBSize; }
 
-    void SetActualNbrSlicesInEachRecIter(const size_t aSize)
+    void SetActualNbrSlicesInEachRecurentIteration(const size_t aSize)
     {
         m_nbrSlicesInEachRecurrentIteration = aSize;
     }

@@ -102,22 +102,22 @@ public:
 
     // Gets a copy of the minibatch for the forward computation. This can be
     // useful if some of the computation has to happen in the reader.
+    // TODO: No, there should be no computation in the reader.
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
         std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/,
-        Matrix<float>& /*sentenceBegin*/,
-        std::vector<MinibatchPackingFlags>& /*minibatchPackingFlags*/)
+        MBLayoutPtr /*data copied here*/)
     {
         return false;
     }
 
     // Sets the neural network output to the reader. This can be useful if some
     // of the computation has to happen in the reader.
+    // TODO: No, there should be no computation in the reader.
     virtual bool SetNetOutput(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
         const Matrix<ElemType>& /*outputs*/,
-        const Matrix<float>& /*sentenceBegin*/,
-        const std::vector<MinibatchPackingFlags>& /*minibatchPackingFlags*/)
+        const MBLayoutPtr)
     {
         return false;
     }
@@ -227,16 +227,14 @@ public:
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         std::map<std::wstring, Matrix<ElemType>*>& matrices,
-        Matrix<float>& sentenceBegin,
-        std::vector<MinibatchPackingFlags>& minibatchPackingFlags);
+        MBLayoutPtr);
 
     // Sets the neural network output to the reader. This can be useful if some
     // of the computation has to happen in the reader.
     virtual bool SetNetOutput(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& outputs,
-        const Matrix<float>& sentenceBegin,
-        const std::vector<MinibatchPackingFlags>& minibatchPackingFlags);
+        const MBLayoutPtr);
 
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
 
