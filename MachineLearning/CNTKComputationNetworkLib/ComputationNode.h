@@ -900,7 +900,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
-            if (m_pMBLayout && !m_pMBLayout->IsEmpty())
+            if (m_pMBLayout && !m_pMBLayout->IsAllNone())
             {
                 size_t nT = matrixToBeMasked.GetNumCols();
                 size_t nS = m_pMBLayout->GetNumStreams();

@@ -213,7 +213,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void NormalGrad(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
         ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
         ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
-       
+
+        // TODO: should Reshape() return a new Matrix object that contains a reference to the original?
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
         /// similarly to the repmat operation in matlab or octave
@@ -597,10 +598,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // these accessors were for now just collected from actual usage; need to be cleaned up once this compiles again
         size_t GetNumFrames()  const { validate(); return m_sentenceBoundaryFlags.GetNumCols(); }
-        size_t GetNumStreams() const { return IsEmpty() ? 1 : m_sentenceBoundaryFlags.GetNumRows(); }   // 1 stream if no matrix
+        size_t GetNumStreams() const { return IsAllNone() ? 1 : m_sentenceBoundaryFlags.GetNumRows(); }   // 1 stream if no matrix
         size_t GetSize() const { validate(); return m_minibatchPackingFlags.size(); }
         // ^^ TODO: add a check whether Size() == GetNumFrames(); it really should, unless I misunderstood
-        bool IsEmpty() const { validate(); return m_minibatchPackingFlags.empty(); }
+        bool IsAllNone() const { validate(); return m_minibatchPackingFlags.empty(); }
 #if 0   // we have this pattern often:
         // TODO: mbSize and #slices must also move into MBLayout 
         evalnet->SetActualMiniBatchSize(mbSize);
