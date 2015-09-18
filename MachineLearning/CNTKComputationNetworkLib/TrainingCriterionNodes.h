@@ -1100,12 +1100,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nS = m_pMBLayout->GetNumStreams();
                 size_t j = t / nS;  // this is the time stamp
                 size_t i = t % nS;  // this is the stream
-                if (m_pMBLayout->m_minibatchPackingFlags[j] & MinibatchPackingFlags::NoLabel)
+                if (m_pMBLayout->Is(j, MinibatchPackingFlags::NoLabel)) // TODO: this outer test is redundant here, no?
                 {
-                    if ((int)m_pMBLayout->m_sentenceBoundaryFlags(i,j) & ((int) MinibatchPackingFlags::NoLabel))
+                    if (m_pMBLayout->Is(i, j, MinibatchPackingFlags::NoLabel))
                     {
                         matrixToBeMasked.ColumnSlice(t,1).SetValue(0);
-
                         processedExistsNoLabelorFeatureMissing = true;
                     }
                 }

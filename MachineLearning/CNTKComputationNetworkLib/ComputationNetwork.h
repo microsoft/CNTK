@@ -250,17 +250,17 @@ public:
 
             size_t numSamplesWithoutLabel = 0;
 
-            for (size_t j = 0; j < numTimeSteps; j++)
+            for (size_t t = 0; t < numTimeSteps; t++)
             {
-                if (m_pMBLayout->m_minibatchPackingFlags[j] & MinibatchPackingFlags::NoLabel)
+                if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel))
                 {
-                    for (int i = 0; i < numSequences; i++)
+                    for (int id = 0; id < numSequences; id++)
                     {
-                        if ((int)(m_pMBLayout->m_sentenceBoundaryFlags(i, j)) & ((int) MinibatchPackingFlags::NoLabel))
+                        if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
                             numSamplesWithoutLabel++;
-                        }
                     }
                 }
+            }
 
             return numTimeSteps*numSequences - numSamplesWithoutLabel;
         }

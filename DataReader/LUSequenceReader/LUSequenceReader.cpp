@@ -724,11 +724,8 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                 if (i == mLastPosInSentence)         /// the first time instance has sentence begining
                 {
                     mSentenceBeginAt[k] = i;
-                    if (mIgnoreSentenceBeginTag == false)  /// ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
-                    {
-                        m_pMBLayout->m_sentenceBoundaryFlags.SetValue(k, j, (ElemType)((int) MinibatchPackingFlags::SequenceStart));
-                        m_pMBLayout->m_minibatchPackingFlags[j] |= MinibatchPackingFlags::SequenceStart;
-                    }
+                    if (!mIgnoreSentenceBeginTag)  /// ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
+                        m_pMBLayout->Set(k, j, MinibatchPackingFlags::SequenceStart);
                 }
 
                 if (i == m_parser.mSentenceIndex2SentenceInfo[seq].sLen - 1)
@@ -789,8 +786,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                     m_featureWordContext.push_back(tmpCxt);
 
                     m_labelIdData.push_back((LabelIdType)NULLLABEL);
-                    m_pMBLayout->m_sentenceBoundaryFlags.SetValue(k, j, (ElemType) ((int) MinibatchPackingFlags::NoInput));
-                    m_pMBLayout->m_minibatchPackingFlags[j] |= MinibatchPackingFlags::NoInput;
+                    m_pMBLayout->Set(k, j, MinibatchPackingFlags::NoInput);
                 }
 
             }
@@ -888,7 +884,7 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 
                     if (idx >= featInfo.dim)
                     {
-                        if (m_pMBLayout->m_sentenceBoundaryFlags(utt_id, utt_t) != ((int) MinibatchPackingFlags::NoInput)) /// for those obs that are for no observations
+                        if (m_pMBLayout->Is(utt_id, utt_t, MinibatchPackingFlags::NoInput)) /// for those obs that are for no observations
                             LogicError("BatchLUSequenceReader::GetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here. ");
                         continue;
                     }

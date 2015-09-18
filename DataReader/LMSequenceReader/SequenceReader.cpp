@@ -1957,8 +1957,7 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
         if (wrd == (int)index)
         {
             mSentenceBegin = true;
-            m_pMBLayout->m_sentenceBoundaryFlags.SetValue(uttPos, timePos, (float)((int) MinibatchPackingFlags::SequenceStart));
-            m_pMBLayout->m_minibatchPackingFlags[timePos] = MinibatchPackingFlags::SequenceStart;
+            m_pMBLayout->Reset(uttPos, timePos, MinibatchPackingFlags::SequenceStart);
         }
     }
 }
