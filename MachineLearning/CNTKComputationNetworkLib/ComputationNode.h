@@ -79,8 +79,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_indexInLoop(0),
             m_visited(false),
             m_inStack(false),
-            m_minibatchPackingFlag(nullptr),
-            m_sentenceSeg(nullptr),
             m_reqMultiSeqHandling(false),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name)
         {
@@ -109,6 +107,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // base class has nothing to load
         }
 
+        // float/double-independent access to the m_functionValues for a few specific use cases
+        // TODO: Not nice. This would go away if we abstracted out the matrix type as well from float/double.
         virtual size_t GetNumRows() const = 0;
         virtual size_t GetNumCols() const = 0;
         virtual void Resize(size_t rows, size_t cols) = 0;
@@ -127,6 +127,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // evaluate only N frames at time index timeIdxInSeq
         // Normally, N is 1 or it spans the entire minibatch.
         virtual void EvaluateThisNode(const FrameRange &) = 0;
+        // evaluate a node--this calls EvaluateThisNode() and MaskToZeroWhenLabelAndFeatureMissing() if needed
+        // TODO: name this better--which is the main entry point?
         virtual void EvaluateThisNodeGivenInputs() = 0;
         virtual void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
 
@@ -164,25 +166,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SetFunctionAndGradientSize(const int numSamples) = 0;
 
-        virtual void ResetBound(Matrix<float> * seg, vector<MinibatchPackingFlag> *minibatchPackingFlag)
+        virtual void ResetBound(MBLayoutPtr pMBLayout)
         {
-            assert(seg->GetNumCols() == minibatchPackingFlag->size());
-            m_sentenceSeg = seg;
-            m_minibatchPackingFlag = minibatchPackingFlag;
+            assert(pMBLayout->GetNumFrames() == pMBLayout->GetSize());  // TODO: move this check into MBLayout
+            m_pMBLayout = pMBLayout;
         }
 
-        void SetLoopId(const int id)
-        {
-            m_loopId = id;
-        }
-        void SetVisitedOrder(const int id)
-        {
-            m_visitedOrder = id;
-        }
-        void SetIndex(const size_t ind)
-        {
-            m_index = ind;
-        }
+        void SetLoopId(const int id) { m_loopId = id; }
+        void SetVisitedOrder(const int id) { m_visitedOrder = id; }
+        void SetIndex(const size_t ind) { m_index = ind; }
 
         void Setlowlink(const size_t lowlink)
         {
@@ -421,22 +413,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return true;
         }
 
-        std::list<ComputationNodeBasePtr> EnumerateNodes(const bool forwardComputation, std::vector<ComputationNodeBasePtr>& rootOfLoop)
+        // determine enumeration order for everything needed to evaluate this node (and its children)
+        // This creates a list such that children are evaluated before their parents.
+        // If !forForwardProp then the order will be reversed, suitable for backprop.
+        // The 'recurrent' version is only called from FormRecurrentLoops().
+        // Side-effects (unbeknownst to the name of the function):
+        //  - m_needGradient flags, are propagated up from children
+        //  - m_visitedOrder (only if 'recurrent' flag is set; otherwise leave untouched)
+        std::list<ComputationNodeBasePtr> EnumerateNodes(bool forForwardProp/*else get order for backprop*/, bool recurrent)
         {
-            std::list<ComputationNodeBasePtr> result;
+            std::list<ComputationNodeBasePtr> nodes;
+            std::unordered_set<ComputationNodeBasePtr> visited;
 
-            if (forwardComputation)
+            // get forward computation order
+            EnumerateNodesR(visited, nodes, recurrent);  // call into the recursive portion of this function below
+
+            // if caller wants order for backprop then reverse it
+            if (!forForwardProp)
             {
-                std::unordered_set<ComputationNodeBasePtr> visited;
-                EnumerateNodesForEval(visited, result, rootOfLoop, false);
-            }
-            else
-            {
-                result = EnumerateNodesForGradient();
+                assert(!recurrent);     // TODO: not sure if required, but currently only called this way
+
+                // TODO: comment why can't directly reverse(); what's wrong with EnumerateNodes()' result?
+                nodes.sort(IsSmaller);  // sort nodes by m_visitedOrder   --TODO: why? What about nodes with visitedOrder -1? Will they stay the same? Comment please!!!
+                nodes.reverse();        // and go backwards
             }
 
-            return result;
+            return nodes;
         }
+    private:
+        // Recursive part of EnumerateNodes().
+        void EnumerateNodesR(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool recurrent)
+        {
+            if (visited.find(shared_from_this()) == visited.end())      // do not include a node twice
+            {
+                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
+
+                // children first for function evaluation
+                if (OperationName() != L"PairNetwork" || !recurrent)    // (don't step through network-pair boundary if recurrent)
+                {
+                    for (int i = 0; i < m_children.size(); i++)
+                    {
+                        if (m_children[i])
+                            m_children[i]->EnumerateNodesR(visited, result, recurrent);
+                    }
+                }
+
+                // propagate needGradient flags upwards from leaves
+                if (!IsLeaf())
+                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
+
+                // now that all children are in list before us, put ourselves
+                result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
+
+                if (recurrent)
+                    m_visitedOrder = result.size();
+            }
+        }
+    public:
 
         std::list<ComputationNodeBasePtr> ReshuffleNodes(std::map<int, std::list<ComputationNodeBasePtr>> recurrentResult)
         {
@@ -448,22 +481,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return noRecurrentResult;
         }
 
-        std::list<ComputationNodeBasePtr> EnumerateNodes(const bool forwardComputation)
+#if 0
+        std::list<ComputationNodeBasePtr> EnumerateNodes(const bool forwardComputation, bool recurrent)
         {
-            std::list<ComputationNodeBasePtr> result;
-
             if (forwardComputation)
             {
+                std::list<ComputationNodeBasePtr> result;
                 std::unordered_set<ComputationNodeBasePtr> visited;
-                EnumerateNodesForEval(visited, result);
+                EnumerateNodesForEval(visited, result, recurrent);
+                return result;
             }
             else
-            {
-                result = EnumerateNodesForGradient();
-            }
-
-            return result;
+                return EnumerateNodesForGradient();
         }
+#endif
 
     protected:
 
@@ -478,42 +509,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             return false;
         }
-        
-        // TODO: why virtual?
-        virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result,
-                                           std::vector<ComputationNodeBasePtr>& sourceRecurrentNodePtr, const bool isFromPastOrFutureValueNode)
-        {
-            if (visited.find(shared_from_this()) == visited.end())  //not visited
-            {
-                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
-                for (int i = 0; i<m_children.size(); i++)
-                {
-                    if (m_children[i] == nullptr)
-                        continue;
-                    m_children[i]->EnumerateNodesForEval(visited, result, sourceRecurrentNodePtr,
-                                                         this->OperationName() == L"PastValue" || this->OperationName() == L"FutureValue");
-                }
-
-                //children first for function evaluation
-                if (!IsLeaf())
-                {
-                    if (ChildrenNeedGradient())  //only nodes that require gradient calculation is included in gradient calculation
-                        m_needGradient = true;
-                    else
-                        m_needGradient = false;
-                }
-
-                result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
-                this->m_visitedOrder = result.size();
-            }
-            else
-            {
-                if (!IsLeaf() && isFromPastOrFutureValueNode)
-                    sourceRecurrentNodePtr.push_back(shared_from_this());
-            }
-        }
-
+        // TODO: what does this do?
+        // As a side effect, it also propagates m_needGradient to intermediate nodes
         void ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult,
                                                      std::list<ComputationNodeBasePtr>& noRecurrentResult)
         {
@@ -522,56 +520,47 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 for (int i = 0; i<m_children.size(); i++)
-                {
                     m_children[i]->ReshuffleNodesForEvalWithRecurrentLoops(visited, recurrentResult, noRecurrentResult);
-                }
 
                 //children first for function evaluation
                 if (!IsLeaf())
-                {
-                    if (ChildrenNeedGradient())  //only nodes that require gradient calculation is included in gradient calculation
-                        m_needGradient = true;
-                    else
-                        m_needGradient = false;
-                }
+                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
                 if (LoopId() >= 0)
-                {
                     recurrentResult[LoopId()].push_back(shared_from_this());
-                }
                 else
-                {
                     noRecurrentResult.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
-                }
             }
         }
 
-        virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result)
+#if 0
+        // create list such that children are evaluated before their parents
+        // Unbeknownst to the name of the function, it also updates the m_needGradient flags (set if children are set).
+        // TODO: when is this called vs. the other?
+        virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool recurrent)
         {
             if (visited.find(shared_from_this()) == visited.end())  //not visited
             {
                 visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
+                // first put children into list, before putting ourselves
                 for (int i = 0; i<m_children.size(); i++)
-                {
-                    m_children[i]->EnumerateNodesForEval(visited, result);
-                }
+                    m_children[i]->EnumerateNodesForEval(visited, result, recurrent);
 
-                //children first for function evaluation
+                // propagate needGradient flags upwards from leaves
                 if (!IsLeaf())
-                {
-                    if (ChildrenNeedGradient())  //only nodes that require gradient calculation is included in gradient calculation
-                        m_needGradient = true;
-                    else
-                        m_needGradient = false;
-                }
+                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
+                // now that all children are in list before us, put ourselves
                 result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
             }
         }
+#endif
 
     public:
 
+        // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
+        // If this returns false, node must be evaluated to update m_functionValues.
         bool IsFuncValueOlderThanInputs() const
         {
             for (size_t i = 0; i<ChildrenSize(); i++)
@@ -587,10 +576,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ClearGradientForChildren(const int /*iActMiniBatchSize*/) = 0;
 
         typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
-        //  [1/13/2015 erw] add to enumerate all the edges 
+        // [1/13/2015 erw] add to enumerate all the edges 
+        // enumerate arcs that can be reached starting from the current node's children
+        // [in/out] visited record already visited nodes 
         void EnumerateArcs(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationArc>& arcs)
-            //  enumerate arcs that can be reached starting from the current node's children
-            //  [in/out] visited record already visited nodes 
         {
             std::list<ComputationNodeBasePtr>	tovisit;
 
@@ -610,9 +599,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             arcs.push_back(ComputationArc(curNode, curNode->m_children[i]));
 
                             if (visited.find(curNode->m_children[i]) == visited.end()) // this children has not been visited before 
-                            {
                                 tovisit.push_front(curNode->m_children[i]);		// going to visit each of the children
-                            }
                         }
                         visited.insert(curNode);
                     }
@@ -646,16 +633,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
             return name;
-        }
-
-        std::list<ComputationNodeBasePtr> EnumerateNodesForGradient()
-        {
-            std::list<ComputationNodeBasePtr>  nodes = this->EnumerateNodes(true);  //get forward computation order first
-
-            nodes.sort(IsSmaller);
-            nodes.reverse();
-
-            return nodes;
         }
 
         // TODO: These 4 functions will be completed after refactoring.
@@ -709,10 +686,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
-        Matrix<float> * m_sentenceSeg;  // TODO: this should be not a float but some integer type
-        /// conditionally point to either a pointer to that provided by network, or point to 
-        /// an indiviaul sentence boundary info, which happens if timeStep > 1 is required for PastValue node
-        vector<MinibatchPackingFlag> * m_minibatchPackingFlag;
+        MBLayoutPtr m_pMBLayout;
 
     private:
         // for loop nodes
@@ -907,9 +881,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
             colPos.SetValue(sentenceBegin); /// -1 0 1
-            colPos.InplaceTruncateBottom(SEQUENCE_START);
+            colPos.InplaceTruncateBottom(((int) MinibatchPackingFlags::SequenceStart));
             Matrix<ElemType>::Scale((ElemType)-1.0, colPos);
-            colPos += SEQUENCE_MIDDLE;
+            colPos += ((int) MinibatchPackingFlags::None);
+            // BUGBUG: ^^ What is this? colPos is a matrix, None is a flag; and it is 0
             colSeg.SetDiagonalValue(colPos);
             Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
             ones.Resize(nStateRow, nStream);
@@ -925,31 +900,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
-            if (m_sentenceSeg != nullptr && 
-                m_minibatchPackingFlag != nullptr && 
-                !m_sentenceSeg->IsEmpty() && 
-                !m_minibatchPackingFlag->size() == 0)
+            if (m_pMBLayout && !m_pMBLayout->IsEmpty())
             {
                 size_t nT = matrixToBeMasked.GetNumCols();
-                size_t nS = m_sentenceSeg->GetNumRows();
+                size_t nS = m_pMBLayout->GetNumStreams();
 
-                if (m_minibatchPackingFlag->size() != nT / nS)
-                    LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_minibatchPackingFlag should have one element for each timestep of all streams. Check feature reader. ");
+                if (m_pMBLayout->GetSize() != nT / nS)
+                    LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
 
-                //Matrix<ElemType> colSeg(m_sentenceSeg->GetDeviceId());
+                //Matrix<ElemType> colSeg(m_pMBLayout->m_sentenceBoundaryFlags.GetDeviceId());
 
-                size_t startT = (timeIdxInSeq == (size_t)-1) ? 0 : timeIdxInSeq * nS;
+                size_t startT = (timeIdxInSeq == (size_t)-1) ? 0 : timeIdxInSeq * nS;       // TODO: misnomer; startT, endT, and utt_t are not times but columns in the packed matrix
                 size_t endT = (timeIdxInSeq == (size_t)-1) ? nT : timeIdxInSeq * nS + nS;
                 for (size_t utt_t = startT; utt_t < endT; utt_t += nS)
                 {
-                    size_t j = utt_t / nS;
+                    size_t t = utt_t / nS;
 
-                    if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
+                    if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel))
                     {
-                        const auto & colSeg = m_sentenceSeg->ColumnSlice(j,1);
-                        for (int i = 0; i < nS; i++)
-                            if ((int)colSeg(i,0) & NO_LABEL)
-                                matrixToBeMasked.ColumnSlice(utt_t+i, 1).SetValue(0);
+                        for (size_t id = 0; id < nS; id++)
+                            if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
+                                matrixToBeMasked.ColumnSlice(utt_t+id, 1).SetValue(0);
                         processedExistsNoLabelorFeatureMissing = true;
                     }
                 }
@@ -961,28 +932,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /*
         virtual size_t GetNumSamplesWithLabel(const size_t numAllSamples)
         {
-            if (m_sentenceSeg != nullptr &&
-                m_minibatchPackingFlag != nullptr &&
-                !m_sentenceSeg->IsEmpty() &&
-                !m_minibatchPackingFlag->size() == 0)
+            if (m_mbLayout.m_sentenceBoundaryFlags != nullptr &&
+                m_mbLayout.m_minibatchPackingFlags != nullptr &&
+                !m_mbLayout.m_sentenceBoundaryFlags->IsEmpty() &&
+                !m_mbLayout.m_minibatchPackingFlags->size() == 0)
             {
-                size_t numTimeSteps = m_sentenceSeg->GetNumCols();
-                size_t numSequences = m_sentenceSeg->GetNumRows();
+                size_t numTimeSteps = m_mbLayout.m_sentenceBoundaryFlags->GetNumCols();
+                size_t numSequences = m_mbLayout.m_sentenceBoundaryFlags->GetNumRows();
 
-                if (m_minibatchPackingFlag->size() != numTimeSteps)
+                if (m_mbLayout.m_minibatchPackingFlags->size() != numTimeSteps)
                 {
-                    LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlag should have one element for each timestep of all streams.Check feature reader. ");
+                    LogicError("GetNumSamplesWithLabel(): m_mbLayout.m_minibatchPackingFlags should have one element for each timestep of all streams.Check feature reader. ");
                 }
 
                 size_t numSamplesWithoutLabel = 0;
 
                 for (size_t j = 0; j < numTimeSteps; j++)
                 {
-                    if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
+                    if (m_pMBLayout->m_minibatchPackingFlags[j] & MinibatchPackingFlags::NoLabel)
                     {
                         for (int i = 0; i < numSequences; i++)
                         {
-                            if ((int)(*m_sentenceSeg)(i, j) & NO_LABEL)
+                            if ((int)m_pMBLayout->m_sentenceBoundaryFlags(i, j) & ((int) MinibatchPackingFlags::NoLabel))
                             {
                                 numSamplesWithoutLabel++;
                             }
@@ -1299,8 +1270,8 @@ public: \
     using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; \
     using Base::ComputeGradientForChildren; using Base::ComputeInputPartial; using Base::ConstOnes; using Base::InferImageDimsFromInput; \
     using Base::InferImageDimsFromInputs; using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
-    using Base::DumpNodeInfo; using Base::EnumerateNodes; using Base::EnumerateNodesForEval; \
-    using Base::EnumerateNodesForGradient; using Base::EvaluateThisNode; using Base::FindChildInASet; using Base::FunctionValues; \
+    using Base::DumpNodeInfo; using Base::EnumerateNodes; \
+    using Base::EvaluateThisNode; using Base::FindChildInASet; using Base::FunctionValues; \
     using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
     using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
@@ -1311,7 +1282,7 @@ protected:  \
     using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
     using Base::m_visitedOrder; using Base::m_index; using Base::m_lowlink; using Base::m_visited; using Base::m_inStack; \
     using Base::m_indexInLoop; \
-    using Base::m_sentenceSeg; using Base::m_minibatchPackingFlag; \
+    using Base::m_pMBLayout; \
     using Base::m_reqMultiSeqHandling; using Base::UseCustomizedMultiSeqHandling; \
     using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \

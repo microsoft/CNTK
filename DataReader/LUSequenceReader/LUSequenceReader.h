@@ -266,7 +266,7 @@ private:
 public:
     vector<bool> mProcessed; 
     LUBatchLUSequenceParser<ElemType, LabelType> m_parser;
-    BatchLUSequenceReader() : mtSentenceBegin(CPUDEVICE){
+    BatchLUSequenceReader() : m_pMBLayout(make_shared<MBLayout>()){
         mLastProcssedSentenceId  = 0;
         mBlgSize = 1;
         mLastPosInSentence = 0;
@@ -301,7 +301,7 @@ public:
     size_t NumberSlicesInEachRecurrentIter();
     void SetNbrSlicesEachRecurrentIter(const size_t mz);
 
-    void SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
 
 public:
     void GetClassInfo(LabelInfo& lblInfo);
@@ -346,28 +346,11 @@ public:
     size_t mMaxSentenceLength;
     vector<int> mSentenceBeginAt;
     vector<int> mSentenceEndAt;
-    
-    /// a matrix of n_stream x n_length
-    /// n_stream is the number of streams
-    /// n_length is the maximum lenght of each stream
-    /// for example, two sentences used in parallel in one minibatch would be
-    /// [2 x 5] if the max length of one of the sentences is 5
-    /// the elements of the matrix is 0, 1, or -1, defined as SEQUENCE_START, SEQUENCE_MIDDLE, NO_INPUT in cbasetype.h 
-    /// 0 1 1 0 1
-    /// 1 0 1 0 0 
-    /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
-    /// the second data stream has two sentences, with 0 indicating begining of sentences
-    /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
-    /// frame. 
-    Matrix<float> mtSentenceBegin;
 
-    /// a matrix of 1 x n_length
-    /// 1 denotes the case that there exists sentnece begin or no_labels case in this frame
-    /// 0 denotes such case is not in this frame
-    vector<MinibatchPackingFlag> m_minibatchPackingFlag;
+    MBLayoutPtr m_pMBLayout;
 
     /// by default it is false
-    /// if true, reader will set to SEQUENCE_MIDDLE for time positions that are orignally correspond to SEQUENCE_START
+    /// if true, reader will set to ((int) MinibatchPackingFlags::None) for time positions that are orignally correspond to ((int) MinibatchPackingFlags::SequenceStart)
     /// set to true so that a current minibatch can uses state activities from the previous minibatch. 
     /// default will have truncated BPTT, which only does BPTT inside a minibatch
     bool mIgnoreSentenceBeginTag;
@@ -382,12 +365,14 @@ private:
     bool   mCheckDictionaryKeys;
     std::map<std::wstring, BatchLUSequenceReader<ElemType>*> nameToReader;
 public:
-    MultiIOBatchLUSequenceReader() {
+    MultiIOBatchLUSequenceReader()
+    {
         mCheckDictionaryKeys = true;
         nameToReader.clear();
     }
 
-    ~MultiIOBatchLUSequenceReader() {
+    ~MultiIOBatchLUSequenceReader()
+    {
         for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
         {
             delete[] p->second;
@@ -399,7 +384,7 @@ public:
 
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples);
 
-    void SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
 
     size_t NumberSlicesInEachRecurrentIter();
 

@@ -126,14 +126,25 @@ GENCODE_SM20 := -gencode arch=compute_20,code=\"sm_20,compute_20\"
 GENCODE_SM30 := -gencode arch=compute_30,code=\"sm_30,compute_30\"
 GENCODE_SM35 := -gencode arch=compute_35,code=\"sm_35,compute_35\"
 GENCODE_SM50 := -gencode arch=compute_50,code=\"sm_50,compute_50\"
-GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50)
 
 ifeq ("$(BUILDTYPE)","debug")
+  ifdef CNTK_CUDA_CODEGEN_DEBUG
+    GENCODE_FLAGS := $(CNTK_CUDA_CODEGEN_DEBUG)
+  else
+    GENCODE_FLAGS := -gencode arch=compute_20,code=\"compute_20\"
+  endif
+
   CXXFLAGS += -g
-  CUFLAGS += -O0 -G -lineinfo -gencode arch=compute_20,code=\"compute_20\"
+  CUFLAGS += -O0 -G -lineinfo  $(GENCODE_FLAGS)
 endif
 
 ifeq ("$(BUILDTYPE)","release")
+  ifdef CNTK_CUDA_CODEGEN_RELEASE
+    GENCODE_FLAGS := $(CNTK_CUDA_CODEGEN_RELEASE)
+  else
+    GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50)
+  endif
+
   CXXFLAGS += -O4
   CUFLAGS += -O3 -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif

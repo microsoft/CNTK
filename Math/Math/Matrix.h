@@ -20,6 +20,7 @@
 #include "File.h"
 #include "CommonMatrix.h"
 #include <limits.h>
+#include <memory>   // for shared_ptr
 
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -35,10 +36,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - RecurrentNodes access frames with a time shift, where out-of-bounds ones access a different matrix' values
     //  - RecurrentNodes iterate over individual slices--need a sub-setting constructor from a FrameRange to another?
     //  - RecurrentNodes access boundary info with a similar pattern, but boundary info has a different #streams (namely, 1)
+    // TODO: Turns out, a FrameRange is either a whole batch or a single frame.
     struct FrameRange
     {
         const size_t timeIdxInSeq;              // start frame
-        const size_t samplesInRecurrentStep;    // number of samples in this step
+        const size_t samplesInRecurrentStep;    // number of samples in this step       --BUGBUG: this should be part of MBLayout, not FrameRange
         // can construct from a single size_t -> a single-frame range
         //FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(0)/*FIX THIS*/{}
         FrameRange(size_t timeIdxInSeq, size_t samplesInRecurrentStep) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(samplesInRecurrentStep){}
@@ -511,4 +513,114 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     typedef Matrix<float> SingleMatrix;
     typedef Matrix<double> DoubleMatrix;
+
+    // TODO: move this to an appropriate place and name it properly
+    // MBLayout -- layout information of minibatch
+    // Currently this is to bind the two somewhat inconsistent boundary flags and packing flags.
+    // Once that is unified, we can clean it up further. For now, it's just moving the data members.
+    // This should probably also contain m_actualNbrSlicesInEachRecIter (which should be node-dependent).
+    struct MBLayout
+    {   
+        MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { }
+    private:    // one day...
+        /// a matrix of n_stream x n_length
+        /// n_stream is the number of streams
+        /// n_length is the maximum lenght of each stream
+        /// for example, two sentences used in parallel in one minibatch would be
+        /// [2 x 5] if the max length of one of the sentences is 5
+        /// the elements of the matrix is 0, 1, or -1, defined as ((int) MinibatchPackingFlags::SequenceStart), ((int) MinibatchPackingFlags::None), ((int) MinibatchPackingFlags::NoInput) in cbasetype.h 
+        /// 0 1 1 0 1
+        /// 1 0 1 0 0 
+        /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
+        /// the second data stream has two sentences, with 0 indicating begining of sentences
+        /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
+        /// frame. 
+        Matrix<float> m_sentenceBoundaryFlags;  // (t,stream)
+        // ^^ float -> MinibatchPackingFlags, right? Or unsigned char; or change that to 'char' because Matrix<char> already exists
+        // This matrix ^^ is always in CPU memory  --TODO: should rather be a matrix of some int
+        /// conditionally point to either a pointer to that provided by network, or point to 
+        /// an individual sentence boundary info, which happens if timeStep > 1 is required for PastValue node
+        /// a matrix of 1 x n_length
+        /// != 0 denotes the case that there exists sentence begin or no_labels case in this frame
+        /// == 0 denotes such case is not in this frame
+        vector<MinibatchPackingFlags> m_minibatchPackingFlags;
+        // ^^ This is some form of aggregate of m_sentenceBoundaryFlags taken over all streams. TODO: find out the exact condition
+    public:
+
+        bool Is(size_t t, MinibatchPackingFlags f) const { return m_minibatchPackingFlags[t] & f; }
+        bool Is(size_t id, size_t t, MinibatchPackingFlags f) const { return ((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f; }
+
+        // get info for one frame; used in DelayedValueNode
+        // TODO: clean this up, we can do this more nicely
+        pair<Matrix<float>, MinibatchPackingFlags> GetFrame(size_t t) const
+        {
+            return make_pair(m_sentenceBoundaryFlags.ColumnSlice(t, 1), m_minibatchPackingFlags[t]);
+        }
+
+        // set a boundary flag
+        // This ORs the flags, i.e. it assumes that the matrix has been cleared before.
+        // NOTE: original code that calls this did not OR the matrix, but did OR the vector value. I visually checked that it was cleared before, but might have gotten it wrong.
+        void Set(size_t id, size_t t, MinibatchPackingFlags f)
+        {
+            m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) | f));
+            m_minibatchPackingFlags[t] |= f;
+        }
+        // same but not ORing  --TODO: is this distinction needed?
+        void Reset(size_t id, size_t t, MinibatchPackingFlags f)
+        {
+            m_sentenceBoundaryFlags.SetValue(id, t, (float)(int)f);
+            m_minibatchPackingFlags[t] |= f;
+        }
+        // needed in DelayedValueNodeBase
+        // TODO: this is wicked in that the matrix keeps only the NoLabel flag, while the vector keeps all (just gets ORed into)
+        void Mask(size_t id, size_t t, MinibatchPackingFlags f)
+        {
+            m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f));
+            //m_minibatchPackingFlags[t] &= f;
+        }
+
+        // for LSTMNode ony, which is deprecated, only to make it compile easily:  also used in FindBestPathWithVariableLength() and FindBestPath() in a strange way
+        Matrix<float> & GetM() { return m_sentenceBoundaryFlags; }
+        // and for DecimateMinibatchWithSentences() which should be revised
+        vector<MinibatchPackingFlags> & GetV() { return m_minibatchPackingFlags; }
+
+        // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
+        void Resize(size_t numStreams, size_t numFrames)
+        {
+            m_sentenceBoundaryFlags.Resize(numStreams, numFrames);
+            m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
+            m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
+        }
+
+        // test a pre-condition  --TODO: we only resize this thing here, so this should not be necessary in the future
+        void validate() const { if (m_minibatchPackingFlags.size() != m_sentenceBoundaryFlags.GetNumCols()) LogicError("MBLayout: GetSize() != GetNumFrames()"); }
+
+        // these accessors were for now just collected from actual usage; need to be cleaned up once this compiles again
+        size_t GetNumFrames()  const { validate(); return m_sentenceBoundaryFlags.GetNumCols(); }
+        size_t GetNumStreams() const { return IsEmpty() ? 1 : m_sentenceBoundaryFlags.GetNumRows(); }   // 1 stream if no matrix
+        size_t GetSize() const { validate(); return m_minibatchPackingFlags.size(); }
+        // ^^ TODO: add a check whether Size() == GetNumFrames(); it really should, unless I misunderstood
+        bool IsEmpty() const { validate(); return m_minibatchPackingFlags.empty(); }
+#if 0   // we have this pattern often:
+        // TODO: mbSize and #slices must also move into MBLayout 
+        evalnet->SetActualMiniBatchSize(mbSize);
+        evalnet->SetActualNbrSlicesInEachRecurentIteration(dataReader->NumberSlicesInEachRecurrentIter());
+        dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
+#endif
+#if 0   // a VERY TELLING piece of code
+        // packing flags = frame-wise or over all streams of start and end
+        for (size_t nt = 0; nt < nMBSize; nt++)
+        {
+            for (size_t ns = 0; ns < nSlices; ns++)
+            {
+                if (newBoundary(ns, nt) == ((int) MinibatchPackingFlags::SequenceStart))
+                    pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceStart;
+                if (newBoundary(ns, nt) == ((int) MinibatchPackingFlags::SequenceEnd))
+                    pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceEnd;
+            }
+        }
+#endif
+    };
+    typedef std::shared_ptr<MBLayout> MBLayoutPtr;
+
 }}}
