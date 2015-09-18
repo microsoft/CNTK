@@ -39,7 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct FrameRange
     {
         const size_t timeIdxInSeq;              // start frame
-        const size_t samplesInRecurrentStep;    // number of samples in this step
+        const size_t samplesInRecurrentStep;    // number of samples in this step       --BUGBUG: this should be part of MBLayout, not FrameRange
         // can construct from a single size_t -> a single-frame range
         //FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(0)/*FIX THIS*/{}
         FrameRange(size_t timeIdxInSeq, size_t samplesInRecurrentStep) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(samplesInRecurrentStep){}
