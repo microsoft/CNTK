@@ -16,6 +16,7 @@
 #include <vld.h> // leak detection
 #endif
 #include "BestGpu.h"
+#include "MPIWrapper.h"
 
 // TODO: Get rid of this global
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
