@@ -654,6 +654,7 @@ public:
     }
 
     // resize entire network to handle a given MB size
+    // TODO: actually it only updates nodes in m_recurrentInfo. Why? Because without recurrence, size never changes?
     // TODO: Is this always called with the result of DetermineActualMBSizeFromFeatures()? Why would it ever not?
     void SetActualMiniBatchSize(const size_t aSize)
     {
@@ -666,18 +667,27 @@ public:
             m_recurrentInfo[i].m_completedGradient = false;
         }
 
+        // resize function values and gradients of everything in m_recurrentInfo
         for (int i = 0; i < m_recurrentInfo.size(); i++)
-            for (auto nodeIter = m_recurrentInfo[i].m_recurrentNodes.begin(); nodeIter != m_recurrentInfo[i].m_recurrentNodes.end(); nodeIter++)
-                (*nodeIter)->SetFunctionAndGradientSize(m_actMiniBSize);
+            for (auto nodeIter : m_recurrentInfo[i].m_recurrentNodes)
+                nodeIter->SetFunctionAndGradientSize(m_actMiniBSize);
+    }
+
+    // it is used this way most of the time
+    size_t SetActualMiniBatchSizeFromFeatures()
+    {
+        size_t aSize = DetermineActualMBSizeFromFeatures();
+        SetActualMiniBatchSize(aSize);
+        return aSize;
     }
 
     // GetMaxMBSize - Get the maximum minibatch size that will be seen in a training run
     // returns the result from SetActualMiniBatchSize(). Note DetermineActualMBSizeFromFeatures() also exists but returns a value derived from the inputs dimensions
     size_t GetMaxMBSize() { return m_actMiniBSize; }
 
-    // always called in this pattern:
 #if 0
-    evalnet->SetActualMiniBatchSize(mbSize);
+    // always called in this pattern:
+    evalnet->SetActualMiniBatchSizeFromFeatures();
     evalnet->SetActualNbrSlicesInEachRecurentIteration(dataReader->NumberSlicesInEachRecurrentIter());
     dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
     // well... most of the time. Not in TrainOneEpoch().
@@ -1105,8 +1115,7 @@ public: // yak--used by NDLUtil. Will go away someday.
                 if (!allowFragment)
                     FormRecurrentLoops(node);
                 PrintComputationTree(node, false);
-                size_t actualMBSize = this->DetermineActualMBSizeFromFeatures();
-                this->SetActualMiniBatchSize(actualMBSize);
+                SetActualMiniBatchSizeFromFeatures();
                 ValidateSubNetwork(node);
             }
         }
@@ -1277,8 +1286,7 @@ public:
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
-                size_t actualMBSize = this->DetermineActualMBSizeFromFeatures();
-                this->SetActualMiniBatchSize(actualMBSize);
+                this->SetActualMiniBatchSizeFromFeatures();
                 if (!UnitTest(node))
                     vErrors.push_back(node->NodeName().c_str());
             }

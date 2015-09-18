@@ -127,8 +127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-                actualMBSize = m_net.DetermineActualMBSizeFromFeatures();
-                m_net.SetActualMiniBatchSize(actualMBSize);
+                actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
                 m_net.SetActualNbrSlicesInEachRecurentIteration(dataReader->NumberSlicesInEachRecurrentIter());
                 dataReader->CopyMBLayoutTo(m_net.GetMBLayoutPtr());
 
@@ -445,11 +444,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 auto preader = dataReaders.begin();
                 for (auto ptr = nets.begin(); ptr != nets.end(); ptr++, preader++)
                 {
-                    actualMBSize = (*ptr)->DetermineActualMBSizeFromFeatures();
+                    actualMBSize = (*ptr)->SetActualMiniBatchSizeFromFeatures();
                     if (actualMBSize == 0)
                         LogicError("decoderTrainSetDataReader read data but encoderNet reports no data read");
-
-                    (*ptr)->SetActualMiniBatchSize(actualMBSize);
                     (*ptr)->SetActualNbrSlicesInEachRecurentIteration((*preader)->NumberSlicesInEachRecurrentIter());
                     (*preader)->CopyMBLayoutTo((*ptr)->GetMBLayoutPtr());
 
@@ -460,10 +457,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 decoderNet = nets[iNumNets - 1];
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                actualMBSize = decoderNet->DetermineActualMBSizeFromFeatures();
+                actualMBSize = decoderNet->SetActualMiniBatchSizeFromFeatures();
                 if (actualMBSize == 0)
                     LogicError("decoderTrainSetDataReader read data but decoderNet reports no data read");
-                decoderNet->SetActualMiniBatchSize(actualMBSize);
                 decoderNet->SetActualNbrSlicesInEachRecurentIteration(decoderDataReader->NumberSlicesInEachRecurrentIter());
                 decoderDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
 
@@ -657,16 +653,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     ComputationNetwork::UpdateEvalTimeStamps(featNodes);
                 }
 
-
                 auto ptrreader = readers.begin();
                 size_t mNutt = 0;
                 for (auto ptr = nets.begin(); ptr != nets.end() - 1; ptr++, ptrreader++)
                 {
                     /// evaluate on the encoder networks
-                    actualMBSize = (*ptr)->DetermineActualMBSizeFromFeatures();
+                    actualMBSize = (*ptr)->SetActualMiniBatchSizeFromFeatures();
 
                     mNutt = (*ptrreader)->NumberSlicesInEachRecurrentIter();
-                    (*ptr)->SetActualMiniBatchSize(actualMBSize);
                     (*ptr)->SetActualNbrSlicesInEachRecurentIteration(mNutt);
                     (*ptrreader)->CopyMBLayoutTo((*ptr)->GetMBLayoutPtr());
 
@@ -771,12 +765,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
-            size_t actualMBSize = net.DetermineActualMBSizeFromFeatures();
-            net.SetActualMiniBatchSize(actualMBSize);
+            net.SetActualMiniBatchSizeFromFeatures();
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
-            {
                 net.Evaluate(*nodeIter);
-            }
 
             //mark done
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
@@ -846,8 +837,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
-                actualMBSize = m_net.DetermineActualMBSizeFromFeatures();
-                m_net.SetActualMiniBatchSize(actualMBSize);
+                actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
 
                 vector<size_t> best_path;
 
@@ -930,7 +920,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
-            evalnet->SetActualMiniBatchSize(1/*, &featureNodes*/);
+            evalnet->SetActualMiniBatchSize(1);
             for (auto ptr = featureNodes.begin(); ptr != featureNodes.end(); ptr++)
             {
                 size_t nr = (*ptr)->GetNumRows();
@@ -1097,6 +1087,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
+            // BUGBUG: This is almost certainly wrong; slice != MB size
             evalnet->SetActualMiniBatchSize(dataReader->NumberSlicesInEachRecurrentIter());
 
             double best_score = -numeric_limits<double>::infinity();
