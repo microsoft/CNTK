@@ -354,13 +354,12 @@ private:
     bool   mSentenceEnd; 
     bool   mSentenceBegin; 
 
-    Matrix<float> mtSentenceBegin; 
-    vector<MinibatchPackingFlags> m_minibatchPackingFlags;
+    MBLayoutPtr m_pMBLayout;
 
 public:
     vector<bool> mProcessed; 
     LMBatchSequenceParser<ElemType, LabelType> m_parser;
-    BatchSequenceReader() : mtSentenceBegin(CPUDEVICE)
+    BatchSequenceReader() : m_pMBLayout(make_shared<MBLayout>())
     {
         mLastProcssedSentenceId  = 0;
         mBlgSize = 1;

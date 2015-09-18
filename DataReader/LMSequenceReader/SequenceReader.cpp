@@ -1856,12 +1856,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
 
         size_t nT = actualmbsize / mToProcess.size();
-        mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
-        mtSentenceBegin.Resize(mToProcess.size(), nT);
-        mtSentenceBegin.SetValue((ElemType)((int) MinibatchPackingFlags::None));
-        /*m_mbLayout.*/m_minibatchPackingFlags.resize(nT);
-        std::fill(/*m_mbLayout.*/m_minibatchPackingFlags.begin(), /*m_mbLayout.*/m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
-
+        m_pMBLayout->Resize(mToProcess.size(), nT);
         if (features.GetMatrixType() == MatrixType::DENSE)
         {
             features.Resize(labelInfo.dim, actualmbsize);
@@ -1889,8 +1884,6 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         }
         
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
-//        mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
-//        /*m_mbLayout.*/m_minibatchPackingFlags.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
 
         // TODO: move these two methods to startMiniBatchLoop()
         if (readerMode == ReaderMode::Class)
@@ -1964,8 +1957,8 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
         if (wrd == (int)index)
         {
             mSentenceBegin = true;
-            mtSentenceBegin.SetValue(uttPos, timePos, (ElemType)((int) MinibatchPackingFlags::SequenceStart));
-            /*m_mbLayout.*/m_minibatchPackingFlags[timePos] = MinibatchPackingFlags::SequenceStart;
+            m_pMBLayout->m_sentenceBoundaryFlags.SetValue(uttPos, timePos, (float)((int) MinibatchPackingFlags::SequenceStart));
+            m_pMBLayout->m_minibatchPackingFlags[timePos] = MinibatchPackingFlags::SequenceStart;
         }
     }
 }
@@ -2104,12 +2097,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
 template<class ElemType>
 void BatchSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
-    DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
-    mtSentenceBegin.TransferFromDeviceToDevice(device, pMBLayout->m_sentenceBoundaryFlags.GetDeviceId(), true);
-    pMBLayout->m_sentenceBoundaryFlags.SetValue(mtSentenceBegin);
-    mtSentenceBegin.TransferFromDeviceToDevice(pMBLayout->m_sentenceBoundaryFlags.GetDeviceId(), device, true);
-
-    pMBLayout->m_minibatchPackingFlags = m_minibatchPackingFlags;
+    *pMBLayout = *m_pMBLayout;
 }
 
 template<class ElemType>
