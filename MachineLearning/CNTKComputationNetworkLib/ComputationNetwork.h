@@ -28,7 +28,6 @@
 #include <regex>
 #include <chrono>
 
-//#include "MatrixPool.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -183,7 +182,6 @@ public:
     // construction
     // -----------------------------------------------------------------------
 
-    // TODO: DeviceID vs. DeviceId? Use the latter throughout
     void SetDeviceId(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
     {
         if (m_deviceId == AUTOPLACEMATRIX)
@@ -260,9 +258,9 @@ public:
                     {
                         if ((int)(m_pMBLayout->m_sentenceBoundaryFlags(i, j)) & ((int) MinibatchPackingFlags::NoLabel))
                             numSamplesWithoutLabel++;
+                        }
                     }
                 }
-            }
 
             return numTimeSteps*numSequences - numSamplesWithoutLabel;
         }
@@ -1364,7 +1362,7 @@ public:
         }
     };
 
-    // note: this is called to write into our exisdting MBLayout instance
+    // note: this is called to write into our existing MBLayout instance
     const MBLayoutPtr & GetMBLayoutPtr() { return m_pMBLayout; }
 
 protected:

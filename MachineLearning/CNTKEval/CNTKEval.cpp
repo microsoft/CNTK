@@ -17,6 +17,9 @@
 #endif
 #include "BestGpu.h"
 
+// TODO: Get rid of this global
+Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>

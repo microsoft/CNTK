@@ -53,11 +53,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::SaveToFile(const std::wstring& fileName, const FileOptions fileFormat) const
     {
-       // Saving into temporary file and then renaming it to the requested fileName
-       // This is a standard trick to avoid havign corrupted model files if process dies during writing
-       wstring tmpFileName = fileName + L".tmp";
-       SaveToFileImpl(tmpFileName, fileFormat);
-       renameOrDie(tmpFileName, fileName);
+        // In case of parallel training only the main node should we saving the model to prevent
+        // the parallel training nodes from colliding to write the same file
+        if ((g_mpi == nullptr) || g_mpi->IsMainNode())
+        {
+            // Saving into temporary file and then renaming it to the requested fileName
+            // This is a standard trick to avoid havign corrupted model files if process dies during writing
+            wstring tmpFileName = fileName + L".tmp";
+            SaveToFileImpl(tmpFileName, fileFormat);
+            renameOrDie(tmpFileName, fileName);
+        }
     }
 
     // TODO: how does the file distinguish float vs double nodes?
