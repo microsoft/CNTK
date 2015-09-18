@@ -24,6 +24,10 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // -----------------------------------------------------------------------
+    /// NegateNode
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
     class NegateNode : public ComputationNode<ElemType>
     {
@@ -104,6 +108,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class NegateNode<float>; 
     template class NegateNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// SumElementsNode
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class SumElementsNode : public ComputationNode<ElemType>
@@ -194,6 +202,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class SumElementsNode<float>; 
     template class SumElementsNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// SumColumnElementsNode
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class SumColumnElementsNode : public ComputationNode<ElemType>
@@ -298,6 +310,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class SumColumnElementsNode<float>;
     template class SumColumnElementsNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// RowSliceNode
+    // -----------------------------------------------------------------------
 
     //this node is used to extract part of the input by rows as the output
     //it has to be continuous segments of rows since each column is treated as one sample
@@ -425,6 +441,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class RowSliceNode<float>; 
     template class RowSliceNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// RowStackNode
+    // -----------------------------------------------------------------------
 
     //this node is used to extract part of the input by rows as the output
     //it has to be continuous segments of rows since each column is treated as one sample
@@ -562,6 +582,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RowStackNode<float>;
     template class RowStackNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// ScaleNode
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
     class ScaleNode : public ComputationNode<ElemType>
     {
@@ -678,6 +702,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class ScaleNode<float>; 
     template class ScaleNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// TimesNode
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class TimesNode : public ComputationNode<ElemType>
@@ -848,6 +876,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class TimesNode<float>; 
     template class TimesNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// TransposeTimesNode
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
     class TransposeTimesNode : public ComputationNode<ElemType>
     {
@@ -1011,6 +1043,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class TransposeTimesNode<float>;
     template class TransposeTimesNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// ElementTimesNode
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
     class ElementTimesNode : public ComputationNode<ElemType>
     {
@@ -1127,6 +1163,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class ElementTimesNode<float>; 
     template class ElementTimesNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// RowElementTimesNode
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class RowElementTimesNode : public ComputationNode<ElemType>
@@ -1274,6 +1314,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class RowElementTimesNode<float>;
     template class RowElementTimesNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// ColumnElementTimesNode
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class ColumnElementTimesNode : public ComputationNode<ElemType>
@@ -1431,6 +1475,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class ColumnElementTimesNode<float>;
     template class ColumnElementTimesNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// PlusNode
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class PlusNode : public ComputationNode<ElemType>
@@ -1678,6 +1726,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class PlusNode<float>; 
     template class PlusNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// MinusNode
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class MinusNode : public ComputationNode<ElemType>
@@ -1961,6 +2013,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class MinusNode<float>; 
     template class MinusNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// DiagTimesNode
+    // -----------------------------------------------------------------------
+
     //The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation
     template<class ElemType>
     class DiagTimesNode : public ComputationNode<ElemType>
@@ -2109,6 +2165,10 @@ private:
 
     template class DiagTimesNode<float>; 
     template class DiagTimesNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// CosDistanceNode
+    // -----------------------------------------------------------------------
 
     //The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation
     template<class ElemType>
@@ -2329,6 +2389,9 @@ private:
     template class CosDistanceNode<float>; 
     template class CosDistanceNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// KhatriRaoProductNode
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class KhatriRaoProductNode : public ComputationNode<ElemType>
@@ -2469,11 +2532,14 @@ private:
     template class KhatriRaoProductNode<float>; 
     template class KhatriRaoProductNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// CosDistanceWithNegativeSamplesNode
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
     class CosDistanceWithNegativeSamplesNode : public ComputationNode<ElemType>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosDistanceWithNegativeSamplesNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -2743,6 +2809,10 @@ private:
     template class CosDistanceWithNegativeSamplesNode<float>;
     template class CosDistanceWithNegativeSamplesNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// TransposeNode
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
     class TransposeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
@@ -2838,6 +2908,10 @@ private:
 
     template class TransposeNode<float>;
     template class TransposeNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// StrideTimesNode
+    // -----------------------------------------------------------------------
 
     /**
     Has a stride in particular dimensions of left matrix when doing times operation. 

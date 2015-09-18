@@ -67,10 +67,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using SGDBase::m_numMBsToShowResult;
         using SGDBase::m_gradientCheckSigDigit;
         using SGDBase::m_prevChosenMinibatchSize;
-        using SGDBase::GetTrainCriterionNodes;
-        using SGDBase::GetEvalCriterionNodes;
         using SGDBase::UpdateWeights;
         using SGDBase::GetCheckPointFileNameForEpoch;
+        using SGDBase::GetTrainCriterionNodes;
+        using SGDBase::GetEvalCriterionNodes;
 
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 
@@ -551,7 +551,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 for (auto ptr = pairNodes[i]->begin(); ptr != pairNodes[i]->end(); ptr++)
-                    nets[i]->BuildAndValidateNetwork(*ptr);
+                    nets[i]->BuildAndValidateSubNetwork(*ptr);
             }
 
 
@@ -822,7 +822,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputationNetwork* encoderNet = nets[0];
             ComputationNetwork* decoderNet = nets[1];
-            DEVICEID_TYPE device = encoderNet->GetDeviceID();
+            DEVICEID_TYPE device = encoderNet->GetDeviceId();
             Matrix<ElemType> historyMat(device);
 
             double readTimeInMBs = 0, ComputeTimeInMBs = 0;
@@ -842,8 +842,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numEvalNodes = epochEvalErrors.size();
 
             // NOTE: the following two local matrices are not used in PTask path
-            Matrix<ElemType> localEpochCriterion(1, 2, decoderNet->GetDeviceID()); //assume only one training criterion node for each epoch
-            Matrix<ElemType> localEpochEvalErrors(1, numEvalNodes, decoderNet->GetDeviceID());
+            Matrix<ElemType> localEpochCriterion(1, 2, decoderNet->GetDeviceId()); //assume only one training criterion node for each epoch
+            Matrix<ElemType> localEpochEvalErrors(1, numEvalNodes, decoderNet->GetDeviceId());
 
             localEpochCriterion.SetValue(0);
             localEpochEvalErrors.SetValue(0);
@@ -897,8 +897,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
                 //                    decoderTrainSetDataReader->SetSentenceBegin(false);
-                //                    decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet->m_sentenceSeg);
-                //                    decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet->m_sentenceBegin);
+                //                    decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->m_mbLayout.m_sentenceBoundaryFlags);
+                //                    decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->m_sentenceBegin);
 
                 if (m_doGradientCheck)
                 {
@@ -1160,18 +1160,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t actualMBSize = encoderNet->GetActualMBSize();
 
             encoderNet->SetActualMiniBatchSize(actualMBSize);
-            encoderNet->SetActualNbrSlicesInEachRecIter(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
-            encoderTrainSetDataReader->SetSentenceSegBatch(encoderNet->SentenceBoundary(), encoderNet->MinibatchPackingFlags());
+            encoderNet->SetActualNbrSlicesInEachRecurentIteration(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
+            encoderTrainSetDataReader->CopyMBLayoutTo(encoderNet->GetMBLayoutPtr());
 
             encoderNet->Evaluate(encoderEvaluationNodes[0]);
 
             actualMBSize = decoderNet->GetActualMBSize();
 
             decoderNet->SetActualMiniBatchSize(actualMBSize);
-            decoderNet->SetActualNbrSlicesInEachRecIter(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
+            decoderNet->SetActualNbrSlicesInEachRecurentIteration(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
 
             /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-            decoderTrainSetDataReader->SetSentenceSegBatch(decoderNet->SentenceBoundary(), decoderNet->MinibatchPackingFlags());
+            decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
 
             if (decoderCriterionNodes.size() == 0 && decoderEvaluationNodes.size() == 0)
             {

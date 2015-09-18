@@ -172,23 +172,16 @@ public:
             sentenceEnd[i] = m_switchFrame[i];
         }
     }
-    void SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
     {
         assert(m_switchFrame.size() == 1);        
-        sentenceBegin.Resize(1, m_mbSize);
-        minibatchPackingFlag.resize(m_mbSize);
-        sentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
-        std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None); 
+        pMBLayout->Resize(1, m_mbSize);
 
         if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch*/
         {
-            sentenceBegin.SetValue(0, m_switchFrame[0], (ElemType)SEQUENCE_START); 
-            minibatchPackingFlag[m_switchFrame[0]] = MinibatchPackingFlag::SequenceStart; 
+            pMBLayout->Reset(0, m_switchFrame[0], MinibatchPackingFlags::SequenceStart);
             if (m_switchFrame[0] > 0)
-            {
-                sentenceBegin.SetValue(0, m_switchFrame[0] - 1, (ElemType)SEQUENCE_END); 
-                minibatchPackingFlag[m_switchFrame[0] - 1] = MinibatchPackingFlag::SequenceEnd;
-            }
+                pMBLayout->Reset(0, m_switchFrame[0] - 1, MinibatchPackingFlags::SequenceEnd);
         }
     }
 
@@ -196,9 +189,7 @@ public:
     {
         m_switchFrame.resize(boundaryInfo.size());
         for (size_t i = 0; i < m_switchFrame.size(); i ++)
-        {
             m_switchFrame[i] = boundaryInfo[i];
-        }
     }
 
     void SetRandomSeed(int) { NOT_IMPLEMENTED;  }
