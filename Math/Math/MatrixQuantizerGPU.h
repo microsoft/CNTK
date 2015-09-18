@@ -1,7 +1,7 @@
 #pragma once
 
-#include "QuantizedMatrix.h"
 #include "MatrixQuantizer.h"
+#include "QuantizedMatrix.h"
 #include "ColumnQuantizer.h"
 #include "GPUMatrix.h"
 #ifndef CPUONLY
