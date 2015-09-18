@@ -175,10 +175,7 @@ public:
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
     {
         assert(m_switchFrame.size() == 1);        
-        pMBLayout->m_sentenceBoundaryFlags.Resize(1, m_mbSize);
-        pMBLayout->m_minibatchPackingFlags.resize(m_mbSize);
-        pMBLayout->m_sentenceBoundaryFlags.SetValue((ElemType)((int) MinibatchPackingFlags::None));
-        std::fill(pMBLayout->m_minibatchPackingFlags.begin(), pMBLayout->m_minibatchPackingFlags.end(), MinibatchPackingFlags::None);
+        pMBLayout->Resize(1, m_mbSize);
 
         if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch*/
         {

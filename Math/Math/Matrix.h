@@ -522,19 +522,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {   
         MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { }
 
+        /// a matrix of n_stream x n_length
+        /// n_stream is the number of streams
+        /// n_length is the maximum lenght of each stream
+        /// for example, two sentences used in parallel in one minibatch would be
+        /// [2 x 5] if the max length of one of the sentences is 5
+        /// the elements of the matrix is 0, 1, or -1, defined as ((int) MinibatchPackingFlags::SequenceStart), ((int) MinibatchPackingFlags::None), ((int) MinibatchPackingFlags::NoInput) in cbasetype.h 
+        /// 0 1 1 0 1
+        /// 1 0 1 0 0 
+        /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
+        /// the second data stream has two sentences, with 0 indicating begining of sentences
+        /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
+        /// frame. 
         Matrix<float> m_sentenceBoundaryFlags;  // (t,stream)
         // ^^ float -> MinibatchPackingFlags, right? Or unsigned char; or change that to 'char' because Matrix<char> already exists
         // This matrix ^^ is always in CPU memory  --TODO: should rather be a matrix of some int
         /// conditionally point to either a pointer to that provided by network, or point to 
         /// an individual sentence boundary info, which happens if timeStep > 1 is required for PastValue node
+        /// a matrix of 1 x n_length
+        /// != 0 denotes the case that there exists sentence begin or no_labels case in this frame
+        /// == 0 denotes such case is not in this frame
         vector<MinibatchPackingFlags> m_minibatchPackingFlags;
+        // ^^ This is some form of aggregate of m_sentenceBoundaryFlags taken over all streams. TODO: find out the exact condition
+
+        // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
+        void Resize(size_t numStreams, size_t numFrames)
+        {
+            m_sentenceBoundaryFlags.Resize(numStreams, numFrames);
+            m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
+            m_minibatchPackingFlags.assign(numFrames, MinibatchPackingFlags::None);
+        }
+
+        // test a pre-condition  --TODO: we only resize this thing here, so this should not be necessary in the future
+        void validate() const { if (m_minibatchPackingFlags.size() != m_sentenceBoundaryFlags.GetNumCols()) LogicError("MBLayout: GetSize() != GetNumFrames()"); }
 
         // these accessors were for now just collected from actual usage; need to be cleaned up once this compiles again
-        size_t GetNumFrames()  const { return m_sentenceBoundaryFlags.GetNumCols(); }
-        size_t GetNumStreams() const { return m_sentenceBoundaryFlags.GetNumRows(); }
-        size_t GetSize() const { return m_minibatchPackingFlags.size(); }
+        size_t GetNumFrames()  const { validate(); return m_sentenceBoundaryFlags.GetNumCols(); }
+        size_t GetNumStreams() const { return IsEmpty() ? 1 : m_sentenceBoundaryFlags.GetNumRows(); }   // 1 stream if no matrix
+        size_t GetSize() const { validate(); return m_minibatchPackingFlags.size(); }
         // ^^ TODO: add a check whether Size() == GetNumFrames(); it really should, unless I misunderstood
-        bool IsEmpty() const { return m_sentenceBoundaryFlags.IsEmpty() || m_minibatchPackingFlags.size() == 0; }
+        bool IsEmpty() const { validate(); return m_minibatchPackingFlags.empty(); }
 #if 0   // we have this pattern often:
         // TODO: mbSize and #slices must also move into MBLayout 
         evalnet->SetActualMiniBatchSize(mbSize);
