@@ -27,35 +27,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildNetworkFromDescription(ComputationNetwork* encoderNet)
     {
         size_t mbSize = 1;
+        ComputationNetwork* net = nullptr;
 
         if (m_rnnType == SIMPLERNN)
-            return BuildSimpleRNN(mbSize);
+            net = BuildSimpleRNN(mbSize);
         if (m_rnnType == LSTM)
-            return BuildLSTMNetworkFromDescription(mbSize);
+            net = BuildLSTMNetworkFromDescription(mbSize);
         if (m_rnnType == CLASSLSTM)
-            return BuildCLASSLSTMNetworkFromDescription(mbSize);
+            net = BuildCLASSLSTMNetworkFromDescription(mbSize);
         if (m_rnnType == NCELSTM)
-            return BuildNCELSTMNetworkFromDescription(mbSize);
+            net = BuildNCELSTMNetworkFromDescription(mbSize);
         if (m_rnnType == CLASSLM)
-            return BuildClassEntropyNetwork(mbSize);
+            net = BuildClassEntropyNetwork(mbSize);
         if (m_rnnType == LBLM)
-            return BuildLogBilinearNetworkFromDescription(mbSize);
+            net = BuildLogBilinearNetworkFromDescription(mbSize);
         if (m_rnnType == NPLM)
-            return BuildNeuralProbNetworkFromDescription(mbSize);
+            net = BuildNeuralProbNetworkFromDescription(mbSize);
         if (m_rnnType == CLSTM)
-            return BuildConditionalLSTMNetworkFromDescription(mbSize);
+            net = BuildConditionalLSTMNetworkFromDescription(mbSize);
         if (m_rnnType == RCRF)
-            return BuildSeqTrnLSTMNetworkFromDescription(mbSize);
+            net = BuildSeqTrnLSTMNetworkFromDescription(mbSize);
         if (m_rnnType == LSTMENCODER)
-            return BuildLSTMEncoderNetworkFromDescription(mbSize);
+            net = BuildLSTMEncoderNetworkFromDescription(mbSize);
         if (m_rnnType == UNIDIRECTIONALLSTM)
-            return BuildUnidirectionalLSTMNetworksFromDescription(mbSize);
+            net = BuildUnidirectionalLSTMNetworksFromDescription(mbSize);
         if (m_rnnType == BIDIRECTIONALLSTM)
-            return BuildBiDirectionalLSTMNetworksFromDescription(mbSize);
+            net = BuildBiDirectionalLSTMNetworksFromDescription(mbSize);
         if (m_rnnType == ALIGNMENTSIMILARITYGENERATOR)
-            return BuildAlignmentDecoderNetworkFromDescription(encoderNet, mbSize);
+            net = BuildAlignmentDecoderNetworkFromDescription(encoderNet, mbSize);
         if (m_rnnType == ALIGNMENTSIMILARITYGFORWARDDECODER)
-            return BuildAlignmentForwardDecoderNetworkFromDescription(encoderNet, mbSize);
+            net = BuildAlignmentForwardDecoderNetworkFromDescription(encoderNet, mbSize);
+        else
+            net = BuildSimpleDNN();
+
+        net->ValidateNetwork(false, true);
+        return net;
+    }
+
+    template<class ElemType>
+    ComputationNetwork* SimpleNetworkBuilder<ElemType>::BuildSimpleDNN()
+    {
 
         ComputationNetworkBuilder<ElemType> builder(*m_net);
         if (m_net->GetTotalNumberOfNodes() < 1) //not built yet
