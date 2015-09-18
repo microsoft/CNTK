@@ -393,7 +393,7 @@ public:
                     return current;
             }
             // or any other closing brace? That's an error.
-            else if (closingBraces.find(brace) != string::npos)
+            else if (brace != '"' && closingBraces.find(brace) != string::npos)
                 RuntimeError("unmatched bracket found in parameters");
             // found another opening brace, push it on the stack
             else
