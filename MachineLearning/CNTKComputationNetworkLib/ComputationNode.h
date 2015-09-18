@@ -142,6 +142,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         const std::vector<ComputationNodeBasePtr> & GetChildren() const { return m_children; }
 
+        const size_t ParentSize() const { return m_parents.size(); }
+        void ClearParents() { m_parents.clear(); }
+        void AddParent(ComputationNodeBasePtr pNode) { m_parents.push_back(pNode); }
+        inline ComputationNodeBasePtr Parent(const size_t parentIndex) const
+        {
+#ifdef DEBUG // profile shows this is range check very expensive in release mode, skip it  
+            if (parentIndex >= m_parents.size())
+                InvalidArgument("parentIndex is out of range.");
+#endif
+            return m_parents[parentIndex];
+        }
+
         // TODO: is this always just called with deviceId == m_deviceId?
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) = 0;
 
@@ -368,6 +380,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeGradientForChildren(const size_t timeIdxInSeq) = 0;
 
+        virtual void ComputeGradient(const size_t timeIdxInSeq = -1) = 0;
+
         // TODO: some evaluation method to be abstracted, but types don't match
 
     protected:
@@ -582,6 +596,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual void ClearGradientForChildren(const int /*iActMiniBatchSize*/) = 0;
+        virtual void ClearGradient(const bool clearExistingGradientValue) = 0;
 
         typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
         //  [1/13/2015 erw] add to enumerate all the edges 
@@ -655,35 +670,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return nodes;
         }
 
-        // TODO: These 4 functions will be completed after refactoring.
         //request matrices needed to do node function value evaluation
-        virtual void RequestEvalMatrices(MatrixPool& matrixPool)
-        {
-            matrixPool;
-        }
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool) = 0;
 
         //release temp matrices that are only used by forward computation
         //don't release matrices that need to be used in the gradient computation
-        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool)
-        {
-            matrixPool;
-        }
+        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool) = 0;
 
         //request matrices that are needed for gradient computation
-        virtual void RequestGradientMatrices(MatrixPool& matrixPool, const int numParents)
-        {
-            matrixPool; numParents;
-        }
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) = 0;
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseGradientMatrices(MatrixPool& matrixPool)
-        {
-            matrixPool;
-        }
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) = 0;
 
     protected:
         // data members
         std::vector<ComputationNodeBasePtr> m_children;
+        std::vector<ComputationNodeBasePtr> m_parents; //m_parents are dynamically determined based on the root node you want to compute
+        std::vector<bool> m_childrenGradientComputed; //used to indicate which child's gradient has been computed.
 
         DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
@@ -738,9 +742,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: Once we switch to VS 2015, we shall use inheriting constructors, i.e. we can delete all those redundant constructor forwards in each ComputationNode derivate
         // TODO: verify that we initialize all members (e.g. m_needGradient was missing before)
         ComputationNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeBase(deviceId, name),
-            m_functionValues(deviceId),
-            m_gradientValues(deviceId)
+            ComputationNodeBase(deviceId, name), m_functionValues(nullptr), m_gradientValues(nullptr)
         {
             InitRecurrentNode();
             ResetEvalTimeStamp();   // bring it into defined state
@@ -754,7 +756,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         template<class C, class... _Types> static inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
         {
             auto p = make_shared<C>(deviceId, name, forward<_Types>(_Args)...);     // creates objects, esp. assigns deviceId to matrices, but otherwise does nothing
-            p->MoveMatricesToDevice(deviceId);                                      // this is a virtual call, i.e. it will handle extra matrices an object might own
+
+            //disable this line. Instead we should make sure matrices are allocated at the right device
+            //p->MoveMatricesToDevice(deviceId);                                      // this is a virtual call, i.e. it will handle extra matrices an object might own
             return p;
         }
 
@@ -787,17 +791,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // these take ComputationNodePtr, not ComputationNodeBasePtr, as these are being overloaded by nodes
-        virtual void AttachInputs(const ComputationNodePtr /*singleInput*/) 
+        virtual void AttachInputs(const ComputationNodePtr /*singleInput*/)
         {
             LogicError("This operation does not support single input.");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*rightInput*/) 
+        virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*rightInput*/)
         {
             LogicError("This operation does not support two inputs.");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*middleInput*/, const ComputationNodePtr /*rightInput*/) 
+        virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*middleInput*/, const ComputationNodePtr /*rightInput*/)
         {
             LogicError("This operation does not support three inputs.");
         }
@@ -807,16 +811,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("This operation does not support four inputs.");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, 
-                                  const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
+        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/,
+            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
         {
             LogicError("This operation does not support five inputs.");
         }
 
         virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/,
-                                  const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
+            const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
         {
             LogicError("This operation does not support six inputs.");
+        }
+
+        //request matrices needed to do node function value evaluation
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        {
+            RequestMatrixFromPool(m_functionValues, matrixPool);
+        }
+
+        //release temp matrices that are only used by forward computation
+        //don't release matrices that need to be used in the gradient computation
+        virtual void ReleaseMatricesAfterEval(MatrixPool& /*matrixPool*/)
+        {
+        }
+
+        //request matrices that are needed for gradient computation
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        {
+            RequestMatrixFromPool(m_gradientValues, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        {
+            if (!IsLeaf() && !RequiresPreCompute())
+            {
+                ReleaseMatrixToPool(m_gradientValues, matrixPool);
+                //ReleaseMatrixToPool(m_functionValues, matrixPool);
+            }
         }
 
         virtual void AttachInputs(const ComputationNodeBasePtr singleInput) { AttachInputs(UpCast(singleInput)); }
@@ -835,8 +867,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //making them virtual so that nodes that only copy values from it's children (e.g., dropout) can be efficient in evaluation
-        virtual const Matrix<ElemType>& FunctionValues() const {return m_functionValues;}
-        virtual Matrix<ElemType>& FunctionValues() { return m_functionValues;}
+        virtual const Matrix<ElemType>& FunctionValues() const { return *m_functionValues; }
+        virtual Matrix<ElemType>& FunctionValues() { return *m_functionValues; }
 
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
 
@@ -845,7 +877,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // we format it like "name : type rows x cols ( args )"
             wstring result = /*TidyName*/(NodeName()) + L" : " + OperationName();
-            result.append(msra::strfun::wstrprintf(L" %d x %d", (int)m_functionValues.GetNumRows(), (int)m_functionValues.GetNumCols()));
+            result.append(msra::strfun::wstrprintf(L" %d x %d", (int)m_functionValues->GetNumRows(), (int)m_functionValues->GetNumCols()));
             if (m_children.empty()) result.append(L" ()");
             else
             {
@@ -864,13 +896,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return result;
         }
 
-        virtual void SetFunctionAndGradientSize(const int numSamples) 
+        virtual void SetFunctionAndGradientSize(const int numSamples)
         {
-            size_t numRows = m_functionValues.GetNumRows();
+            size_t numRows = m_functionValues->GetNumRows();
             if (numRows > 0 && numSamples > 0)
             {
-                m_functionValues.Resize(numRows, numSamples); 
-                m_gradientValues.Resize(numRows, numSamples); 
+                m_functionValues->Resize(numRows, numSamples);
+                m_gradientValues->Resize(numRows, numSamples);
             }
         }
 
@@ -879,7 +911,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNode();
 
             if (!UseCustomizedMultiSeqHandling())
-                MaskToZeroWhenLabelAndFeatureMissing(m_functionValues);
+                MaskToZeroWhenLabelAndFeatureMissing(FunctionValues());
         }
 
         /*implement*/void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
@@ -887,7 +919,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNode(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep));
 
             if (!UseCustomizedMultiSeqHandling())
-                MaskToZeroWhenLabelAndFeatureMissing(m_functionValues, timeIdxInSeq);
+                MaskToZeroWhenLabelAndFeatureMissing(FunctionValues(), timeIdxInSeq);
         }
 
         static void WINAPI SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
@@ -918,13 +950,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         reset to error signals to 0 for any elements without labele
         */
-        bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t timeIdxInSeq=(size_t)-1)
+        bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t timeIdxInSeq = (size_t)-1)
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
-            if (m_sentenceSeg != nullptr && 
-                m_minibatchPackingFlag != nullptr && 
-                !m_sentenceSeg->IsEmpty() && 
+            if (m_sentenceSeg != nullptr &&
+                m_minibatchPackingFlag != nullptr &&
+                !m_sentenceSeg->IsEmpty() &&
                 !m_minibatchPackingFlag->size() == 0)
             {
                 size_t nT = matrixToBeMasked.GetNumCols();
@@ -943,10 +975,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
                     {
-                        const auto & colSeg = m_sentenceSeg->ColumnSlice(j,1);
+                        const auto & colSeg = m_sentenceSeg->ColumnSlice(j, 1);
                         for (int i = 0; i < nS; i++)
-                            if ((int)colSeg(i,0) & NO_LABEL)
-                                matrixToBeMasked.ColumnSlice(utt_t+i, 1).SetValue(0);
+                        if ((int)colSeg(i, 0) & NO_LABEL)
+                            matrixToBeMasked.ColumnSlice(utt_t + i, 1).SetValue(0);
                         processedExistsNoLabelorFeatureMissing = true;
                     }
                 }
@@ -958,73 +990,73 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /*
         virtual size_t GetNumSamplesWithLabel(const size_t numAllSamples)
         {
-            if (m_sentenceSeg != nullptr &&
-                m_minibatchPackingFlag != nullptr &&
-                !m_sentenceSeg->IsEmpty() &&
-                !m_minibatchPackingFlag->size() == 0)
-            {
-                size_t numTimeSteps = m_sentenceSeg->GetNumCols();
-                size_t numSequences = m_sentenceSeg->GetNumRows();
+        if (m_sentenceSeg != nullptr &&
+        m_minibatchPackingFlag != nullptr &&
+        !m_sentenceSeg->IsEmpty() &&
+        !m_minibatchPackingFlag->size() == 0)
+        {
+        size_t numTimeSteps = m_sentenceSeg->GetNumCols();
+        size_t numSequences = m_sentenceSeg->GetNumRows();
 
-                if (m_minibatchPackingFlag->size() != numTimeSteps)
-                {
-                    LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlag should have one element for each timestep of all streams.Check feature reader. ");
-                }
+        if (m_minibatchPackingFlag->size() != numTimeSteps)
+        {
+        LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlag should have one element for each timestep of all streams.Check feature reader. ");
+        }
 
-                size_t numSamplesWithoutLabel = 0;
+        size_t numSamplesWithoutLabel = 0;
 
-                for (size_t j = 0; j < numTimeSteps; j++)
-                {
-                    if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
-                    {
-                        for (int i = 0; i < numSequences; i++)
-                        {
-                            if ((int)(*m_sentenceSeg)(i, j) & NO_LABEL)
-                            {
-                                numSamplesWithoutLabel++;
-                            }
-                        }
-                    }
-                }
+        for (size_t j = 0; j < numTimeSteps; j++)
+        {
+        if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
+        {
+        for (int i = 0; i < numSequences; i++)
+        {
+        if ((int)(*m_sentenceSeg)(i, j) & NO_LABEL)
+        {
+        numSamplesWithoutLabel++;
+        }
+        }
+        }
+        }
 
-                return numTimeSteps*numSequences - numSamplesWithoutLabel;
-            }
-            else
-            {
-                return numAllSamples;
-            }
+        return numTimeSteps*numSequences - numSamplesWithoutLabel;
+        }
+        else
+        {
+        return numAllSamples;
+        }
         }
         */
 
         // for debugging purpose
         void /*ComputationNodeBase::*/PrintSelf(bool printMatrices = false) const
         {
-            fprintf(stderr, "\n%ls[%lu, %lu] = %ls", NodeName().c_str(), GetNumRows(), GetNumCols(), OperationName().c_str());           
+            fprintf(stderr, "\n%ls[%lu, %lu] = %ls", NodeName().c_str(), GetNumRows(), GetNumCols(), OperationName().c_str());
 
             if (!IsLeaf())
             {
-                fprintf(stderr, "(");           
-                for (size_t i=0; i<ChildrenSize(); i++)
+                fprintf(stderr, "(");
+                for (size_t i = 0; i<ChildrenSize(); i++)
                 {
                     if (i > 0)
-                        fprintf(stderr, ", ");           
-                    fprintf(stderr, "%ls[%lu, %lu]", m_children[i] ? m_children[i]->NodeName().c_str():L"NULL", m_children[i]->GetNumRows(), m_children[i]->GetNumCols());
+                        fprintf(stderr, ", ");
+                    fprintf(stderr, "%ls[%lu, %lu]", m_children[i] ? m_children[i]->NodeName().c_str() : L"NULL", m_children[i]->GetNumRows(), m_children[i]->GetNumCols());
                 }
-                fprintf(stderr, ")");           
+                fprintf(stderr, ")");
             }
 
             if (printMatrices)
             {
-                fprintf (stderr, "\n    $$$$ Function Values\n");
+                fprintf(stderr, "\n    $$$$ Function Values\n");
                 FunctionValues().Print("FunctionValue");
 
-                fprintf (stderr, "\n    $$$$ Gradient Values\n");
+                fprintf(stderr, "\n    $$$$ Gradient Values\n");
                 GradientValues().Print("GradientValue");
             }
         }
 
-        const Matrix<ElemType>& GradientValues() const { return m_gradientValues; }
-        Matrix<ElemType>& GradientValues() { return m_gradientValues; }
+        const Matrix<ElemType>& GradientValues() const { return *m_gradientValues; }
+        Matrix<ElemType>& GradientValues() { return *m_gradientValues; }
 
         // up-cast to make life easier
         static ComputationNodePtr UpCast(ComputationNodeBasePtr inode)
@@ -1044,7 +1076,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return UpCast(m_children[childIndex]);
         }
 
-        /*implement*/void SetInput(const size_t childIndex, const ComputationNodeBasePtr inode)
+        virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr inode)
         {
             const ComputationNodePtr node = UpCast(inode);
 
@@ -1062,7 +1094,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[childIndex] = node;
         }
 
-        /*implement*/void ComputeGradientForChildren()
+        //if existing gradient values need to be cleared it needs to be done separately
+        //this is to make it consistent with the per sample version to avoid setting samples to 0 one by one
+        //if timeIdxInSeq = -1 we treat it as batch
+        virtual void ComputeGradient(const size_t timeIdxInSeq = -1)
+        {
+            //no need to compute gradient at all if NeedGradient is false
+            if (!NeedGradient())
+            {
+                return;
+            }
+
+            if (ParentSize() == 0)  // root node
+            {
+                assert(timeIdxInSeq == (size_t)-1);  //should not be used in a loop
+                GradientValues().Resize(1, 1);
+                GradientValues().SetValue(1);
+            }
+            else
+            {
+                //call each parent's ComputeInputPartial function
+                for (int i = 0; i < ParentSize(); i++)
+                {
+                    ComputationNodePtr pNode = UpCast(m_parents[i]);
+                    bool inLoop = !(timeIdxInSeq == (size_t)-1);
+
+                    if (!(pNode->UseCustomizedMultiSeqHandling()))
+                        pNode->MaskToZeroWhenLabelAndFeatureMissing(pNode->GradientValues());
+
+                    int j = pNode->GetChildIdForGradientComputation(shared_from_this(), inLoop);
+
+                    if (!inLoop)
+                    {
+                        pNode->ComputeInputPartial(j);
+                    }
+                    else
+                    {
+                        pNode->ComputeInputPartial(j, FrameRange(timeIdxInSeq, m_samplesInRecurrentStep));
+                    }
+                }
+            }
+        }
+
+
+        virtual void ComputeGradientForChildren()
         {
             // batch is done only for feed-forward nodes
             if (HasLoop()) 
@@ -1071,7 +1146,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i=0; i<m_children.size(); i++)
             {
                 if (!UseCustomizedMultiSeqHandling())
-                    MaskToZeroWhenLabelAndFeatureMissing(m_gradientValues);
+                    MaskToZeroWhenLabelAndFeatureMissing(GradientValues());
 
                 ComputationNodePtr child = Inputs(i);
                 if (child->NeedGradient())
@@ -1094,12 +1169,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        /*implement*/void ComputeGradientForChildren(const size_t timeIdxInSeq)
+        virtual void ComputeGradientForChildren(const size_t timeIdxInSeq)
         {
             for (size_t i=0; i<m_children.size(); i++)
             {
                 if (!UseCustomizedMultiSeqHandling())
-                    MaskToZeroWhenLabelAndFeatureMissing(m_gradientValues, timeIdxInSeq);
+                    MaskToZeroWhenLabelAndFeatureMissing(GradientValues(), timeIdxInSeq);
 
                 ComputationNodePtr child = Inputs(i);
                 if (child->NeedGradient())
@@ -1124,16 +1199,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i=0; i<m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
-                if (child->NeedGradient())
+                child->ClearGradient(true);
+            }
+        }
+
+        virtual void ClearGradient(const bool clearExistingGradientValue)
+        {
+            if (NeedGradient())
+            {
+                ClearChildGradientComputationFlag();
+
+                if (clearExistingGradientValue)
                 {
-                    if(child->GradientValues().GetMatrixType() == DENSE) 
+                    GradientValues().Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+                    if (GradientValues().GetMatrixType() == DENSE)
                     {
-                        child->GradientValues().Resize(child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
-                        child->GradientValues().SetValue(0); 
+                        GradientValues().SetValue(0);
                     }
                     else
                     {
-                        child->GradientValues().Reset();
+                        GradientValues().Reset();
                     }
                 }
             }
@@ -1159,6 +1244,54 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
+
+        //m_childrenGradientComputed is a flag to indicate which child has been computed. 
+        //this is needed because the same child can be the child of node multiple times, e.g, Y=X*X
+        void ClearChildGradientComputationFlag()
+        {
+            m_childrenGradientComputed.resize(ChildrenSize());
+
+            for (int i = 0; i < ChildrenSize(); i++)
+                m_childrenGradientComputed[i] = false;
+        }
+
+        //decide which child to compute based on the child pointer passed in and the flag which a child has been computed
+        int GetChildIdForGradientComputation(ComputationNodeBasePtr n, const bool inLoop)
+        {
+            for (int i = 0; i < ChildrenSize(); i++)
+            {
+                if (m_children[i] == n && (inLoop || !m_childrenGradientComputed[i]))
+                {
+                    m_childrenGradientComputed[i] = true;
+                    return i;
+                }
+            }
+
+            LogicError("GetChildIdForGradientComputation: cannot find a matched child node that has not been computed yet.\n");
+            return -1; //should not go here
+        }
+
+        void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
+        {
+            if (matrixPtr == nullptr)
+            {
+                matrixPtr = matrixPool.Request<ElemType>(m_deviceId);
+            }
+        }
+
+        void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
+        {
+            assert(matrixPtr != nullptr);
+            matrixPool.Release<ElemType>(matrixPtr);
+        }
+
+        void CreateMatrixIfNull(shared_ptr<Matrix<ElemType>>& matrixPtr)
+        {
+            if (matrixPtr == nullptr)
+            {
+                matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
+            }
+        }
 
         //to be called by derived classed if that class needs to print node values
         void PrintNodeValuesToFile(const bool printValues, File& fstream) const
@@ -1239,7 +1372,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     protected:
 
-        Matrix<ElemType> m_functionValues, m_gradientValues;
+        shared_ptr<Matrix<ElemType>> m_functionValues, m_gradientValues;
 
         static std::map<size_t, std::map<size_t, Matrix<ElemType>*>> s_constOnes;
     };

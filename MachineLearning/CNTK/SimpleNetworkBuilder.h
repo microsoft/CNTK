@@ -283,6 +283,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     protected:
 
+        ComputationNetwork* BuildSimpleDNN();
+
         ComputationNetwork* BuildSimpleRNN(size_t mbSize = 1);
 
         ComputationNetwork* BuildClassEntropyNetwork(size_t mbSize = 1);

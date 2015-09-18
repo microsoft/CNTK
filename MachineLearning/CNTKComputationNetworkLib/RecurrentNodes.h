@@ -39,7 +39,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_reqMultiSeqHandling = true;
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
-            m_functionValues.Resize(row_size, col_size);
+            CreateMatrixIfNull(m_functionValues);
+            m_functionValues->Resize(row_size, col_size);
             m_delayedActivation.Resize(row_size, col_size);
             m_historyAlreadySet = false;    // PastValueNode only
         }
@@ -59,11 +60,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_timeStep = (int)timeStep;
 
-            m_functionValues.SetValue(m_initialActivationValue);
+            m_functionValues->SetValue(m_initialActivationValue);
             m_delayedActivation.SetValue(m_initialActivationValue);
 
-            m_gradientValues.Resize(row_size, col_size);
-            m_gradientValues.SetValue(0.0f);
+            //m_gradientValues->Resize(row_size, col_size);
+            //m_gradientValues->SetValue(0.0f);
         }
     public:
         void SaveToFile(File& fstream) const
@@ -156,7 +157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0)
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
 
-            assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows());
+            assert(m_functionValues->GetNumRows() == GradientValues().GetNumRows());
             assert(m_sentenceSeg != nullptr);
             assert(m_minibatchPackingFlag != nullptr);
 
@@ -389,7 +390,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // TODO: call the looping version below to avoid code dup
                 Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.FrameSlice(FrameRange(timeIdxInSeq, 1), timeIdxInSeq, 1);
-                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
+                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, FunctionValues(), m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
             }
 
             //set the past activity to be used by next minibatch
@@ -407,7 +408,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_delayedActivation = Inputs(0)->FunctionValues();
             
             Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.FrameSlice(FrameRange(frameRange.t(), 1)/*TODO: delete the next two parameters*/, frameRange.t(), 1);
-            EvaluateThisNodeSRP(frameRange, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
+            EvaluateThisNodeSRP(frameRange, m_timeStep, FunctionValues(), m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
         }
     };
 
@@ -458,7 +459,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
             {
                 Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.ColumnSlice(timeIdxInSeq, 1);
-                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
+                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, FunctionValues(), m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[timeIdxInSeq]);
             }
 
             //set the future activity to be used by next minibatch
@@ -474,7 +475,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_delayedActivation = Inputs(0)->FunctionValues();
 
             Matrix<ElemType> colBoundaryFlags = m_boundaryInfo.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), 1);
-            EvaluateThisNodeSRP(frameRange, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
+            EvaluateThisNodeSRP(frameRange, m_timeStep, FunctionValues(), m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags, m_shiftedMinibatchPackingFlag[frameRange.t()]);
         }
     };
 
@@ -1464,8 +1465,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const short deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_functionValues.HasNoElements());
-            m_gradientValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_gradientValues.HasNoElements());
+            m_functionValues->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_functionValues->HasNoElements());
+            m_gradientValues->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_gradientValues->HasNoElements());
             grdToObs.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             grdToInputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             grdToForgetGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);

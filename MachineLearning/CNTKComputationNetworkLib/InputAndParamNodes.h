@@ -47,7 +47,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputWidth = 1;
             m_outputHeight = rows;
             m_outputChannels = 1;
-            m_functionValues.Resize(rows, cols);
+            CreateMatrixIfNull(m_functionValues);
+            m_functionValues->Resize(rows, cols);
         }
 
         virtual void SaveToFile(File& fstream) const
@@ -70,8 +71,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //if (rows * cols == 0) 
             //    LogicError("This LearnableParameter dimension is 0.");
 
-            m_functionValues.Resize(rows, cols);
-            fstream >> m_functionValues;
+            CreateMatrixIfNull(m_functionValues);
+            m_functionValues->Resize(rows, cols);
+            fstream >> FunctionValues();
 
             m_outputWidth = 1;
             m_outputHeight = rows;
@@ -88,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // the random seed offset is set via the "randomSeedOffset" parameter in config
             if (initOnCPUOnly)
-                m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
+                m_functionValues->TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE, true);
             if (uniformInit)
             {
                 ElemType randRange = 0.05f * initValueScale; //initValueScale/sqrt(inputSize);
@@ -100,7 +102,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 FunctionValues().SetGaussianRandomValue(0, randInitstd, randomSeed);
             }
             if (initOnCPUOnly)
-                m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId, true);
+                m_functionValues->TransferToDeviceIfNotThereAndNotAutoPlace(m_deviceId, true);
         }
 
         // initialize by reading a matrix from a text file
@@ -133,7 +135,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             PrintNodeValuesToFile(printValues, fstream);
         }
-    };
+   };
 
     //WARNING: Don't use SparseLearnableParameter yet since the current version assumes the parameter is dense instead of sparse
     //WARNING: After the right implementation is put here we need to turn it on in NetworkDescriptionLangauge.cpp
@@ -143,23 +145,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
             LearnableParameter<ElemType>(deviceId, name)
         {
-            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
+            CreateMatrixIfNull(m_gradientValues);
+            m_gradientValues->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
         }
+
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, size_t size) :
             LearnableParameter<ElemType>(deviceId, name, rows, cols)
         {
-            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
-            m_gradientValues.Resize(rows, cols, size);
+            CreateMatrixIfNull(m_gradientValues);
+            m_gradientValues->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
+            m_gradientValues->Resize(rows, cols, size);
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
             LearnableParameter<ElemType>::LoadFromFile(fstream, modelVersion);
-            m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);       // TODO: needed? Constructor already sets this
-            m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            CreateMatrixIfNull(m_gradientValues);
+            m_gradientValues->Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -176,10 +182,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(size_t rows, size_t cols, bool isSparse)
         {
             m_isSparse = isSparse;
+            CreateMatrixIfNull(m_functionValues);
             if (isSparse)
                 ConvertToSparseMatrix();
 
-            m_functionValues.Resize(rows, cols);
+            m_functionValues->Resize(rows, cols);
             m_needGradient = false;
         }
     public:
@@ -247,10 +254,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels; 
 
+            CreateMatrixIfNull(m_functionValues);
             if (m_isSparse)
                 ConvertToSparseMatrix();
 
-            m_functionValues.Resize(rows, cols);
+            m_functionValues->Resize(rows, cols);
             m_needGradient = false;
         }
 
@@ -274,14 +282,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             sprintf(str, "[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
             fstream << string(str);        
         }
+
     private:
         bool m_isSparse = false;
         void ConvertToSparseMatrix()
         {
-            size_t rows = m_functionValues.GetNumRows();
-            size_t cols = m_functionValues.GetNumCols();
-            m_functionValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
-            m_functionValues.Resize(rows, cols); //SwitchToMatrixType does not reserve information right now.
+            size_t rows = m_functionValues->GetNumRows();
+            size_t cols = m_functionValues->GetNumCols();
+            m_functionValues->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
+            m_functionValues->Resize(rows, cols); //SwitchToMatrixType does not reserve information right now.
         }
     };
 
@@ -385,7 +394,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
             Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
         }
@@ -514,7 +523,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Init(size_t row_size, size_t col_size)
         {
             m_reqMultiSeqHandling = true;
-            m_functionValues.Resize(row_size, col_size);
+            CreateMatrixIfNull(m_functionValues);
+            m_functionValues->Resize(row_size, col_size);
         }
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
@@ -527,8 +537,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNode<ElemType>(deviceId, name)
         {
             Init(row_size, col_size);
-            m_gradientValues.Resize(row_size, col_size);
-            m_gradientValues.SetValue(0.0f);
+            CreateMatrixIfNull(m_gradientValues);
+            m_gradientValues->Resize(row_size, col_size);
+            m_gradientValues->SetValue(0.0f);
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
@@ -552,7 +563,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (inputIndex > 0)
                 InvalidArgument("Delay operation only takes one input.");
-            assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
+            assert(m_functionValues->GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues->GetNumRows() for loop dimension
             assert(m_sentenceSeg != nullptr);
 
             Matrix<ElemType> mTmp = Inputs(inputIndex)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
@@ -562,7 +573,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()
         {
-            m_functionValues.SetValue(Inputs(0)->FunctionValues());
+            m_functionValues->SetValue(Inputs(0)->FunctionValues());
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)

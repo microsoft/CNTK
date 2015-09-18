@@ -205,6 +205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // further initializations
             m_hasComputed = false;
+            CreateMatrixIfNull(m_functionValues);
         }
 
         virtual bool HasComputed() const = 0;
@@ -216,14 +217,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::SaveToFile(fstream);
             fstream << m_hasComputed;
-            fstream << m_functionValues;
+            fstream << FunctionValues();
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_hasComputed;
-            fstream >> m_functionValues;
+            fstream >> FunctionValues();
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
@@ -541,7 +542,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //only feature (input0) and output needs to be sliced
             Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep,
                                                                                         m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep,
+            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep,
                                                                              m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
@@ -693,7 +694,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             //only feature (input0) and output needs to be sliced
             Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
@@ -852,14 +853,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::SaveToFile(fstream);
             fstream << m_hasComputed;
-            fstream << m_functionValues;
+            fstream << FunctionValues();
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion)
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_hasComputed;
-            fstream >> m_functionValues;
+            fstream >> FunctionValues();
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
@@ -985,7 +986,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
     #if NANCHECK
-            m_functionValues.HasNan("TimeReverse");
+            m_functionValues->HasNan("TimeReverse");
     #endif
     #if DUMPOUTPUT
             functionValues.Print("TimeReverseNode");
