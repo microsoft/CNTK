@@ -174,7 +174,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-                ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(inputIndex)->GradientValues());
+                Base::MaskToZeroWhenLabelAndFeatureMissing(Inputs(inputIndex)->GradientValues());
             }
         }
 
@@ -503,7 +503,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
+            Base::MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
@@ -599,7 +599,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
+            Base::MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
@@ -1090,8 +1090,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         reset to error signals to 0 for any elements without labels
         */
-        // TODO: This has overlap with ComputationNode::MaskToZeroWhenLabelAndFeatureMissing(), should call that instead.
-        bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t t)
+        // TODO: This has overlap with ComputationNode::MaskToZeroWhenLabelAndFeatureMissing(), should call that instead. Note: This one does only one stream, while Base:: one does all streams.
+        bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t t) const
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
