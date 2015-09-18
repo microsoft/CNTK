@@ -1306,8 +1306,7 @@ template<class ElemType>
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
             ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-            size_t actualMBSize = net.DetermineActualMBSizeFromFeatures();
-            net.SetActualMiniBatchSize(actualMBSize);
+            net.SetActualMiniBatchSizeFromFeatures();
             net.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
 
@@ -1766,8 +1765,7 @@ template<class ElemType>
             if (outputNodes.empty())
                 LogicError("no output node was found.");
 
-            size_t actualMBSize = net.DetermineActualMBSizeFromFeatures();
-            net.SetActualMiniBatchSize(actualMBSize);
+            net.SetActualMiniBatchSizeFromFeatures();
             net.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
             net.Evaluate(outputNodes[0]);   // Only evaluate the first output
@@ -1943,22 +1941,22 @@ template<class ElemType>
                     }
                 }
 
-                actualMBSize = net.DetermineActualMBSizeFromFeatures();
+                actualMBSize = net.SetActualMiniBatchSizeFromFeatures();
                 if (actualMBSize != 0)
                 {
-                    nSamplesSinceLastModelSync += actualMBSize;
-                    net.SetActualMiniBatchSize(actualMBSize);
-                    net.SetActualNbrSlicesInEachRecurentIteration(nSlices);
-
                     if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
                     {
+                        net.SetActualNbrSlicesInEachRecurentIteration(nSlices);
                         *net.GetMBLayoutPtr() = *pMBLayout;
                         // TODO: ^^ we should just pass pointers; this current code is semantically identical to before the change to MBLayout
                     }
                     else
                     {
+                        net.SetActualNbrSlicesInEachRecurentIteration(nSlices);
                         trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
                     }
+
+                    nSamplesSinceLastModelSync += actualMBSize;
 
                     ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                     ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
