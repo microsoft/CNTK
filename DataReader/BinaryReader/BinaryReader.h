@@ -421,7 +421,7 @@ public:
 
     size_t NumberSlicesInEachRecurrentIter() { return 1 ;} 
     void SetNbrSlicesEachRecurrentIter(const size_t) { };
-    void SetSentenceSegBatch(Matrix<float> &/*sentenceBegin*/, vector<MinibatchPackingFlag>& /*sentenceExistsBeginOrNoLabels*/) {};
+    void CopyMBLayoutTo(MBLayoutPtr) {};
 
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<typename BinaryReader<ElemType>::LabelIdType, typename BinaryReader<ElemType>::LabelType>& labelMapping);

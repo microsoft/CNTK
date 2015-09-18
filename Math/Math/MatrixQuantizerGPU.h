@@ -1,8 +1,8 @@
 #pragma once
 
+#include "QuantizedMatrix.h"
 #include "MatrixQuantizer.h"
 #include "ColumnQuantizer.h"
-#include "QuantizedMatrix.h"
 #include "GPUMatrix.h"
 #ifndef CPUONLY
 #include <cuda_runtime_api.h>

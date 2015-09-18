@@ -418,5 +418,3 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef CPUMatrix<double> CPUDoubleMatrix;
 
 }}}
-
-

@@ -242,10 +242,10 @@ bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType
 }
 
 template<class ElemType>
-void DataReader<ElemType>::SetSentenceSegBatch(Matrix<float> &sentenceEnd, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+void DataReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReader[m_ioNames[i]]->SetSentenceSegBatch(sentenceEnd, minibatchPackingFlag);
+        m_dataReader[m_ioNames[i]]->CopyMBLayoutTo(pMBLayout);
 }
 
 template<class ElemType>
@@ -259,12 +259,11 @@ template<class ElemType>
 bool DataReader<ElemType>::GetMinibatchCopy(
     std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
     std::map<std::wstring, Matrix<ElemType>*>& matrices,
-    Matrix<float>& sentenceBegin,
-    std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
+    MBLayoutPtr pMBLayout)
 {
     bool ans = false;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        ans = (m_dataReader[m_ioNames[i]]->GetMinibatchCopy(uttInfo, matrices, sentenceBegin, minibatchPackingFlag) || ans);
+        ans = (m_dataReader[m_ioNames[i]]->GetMinibatchCopy(uttInfo, matrices, pMBLayout) || ans);
     return ans;
 }
 
@@ -272,12 +271,11 @@ template<class ElemType>
 bool DataReader<ElemType>::SetNetOutput(
     const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
     const Matrix<ElemType>& outputs,
-    const Matrix<float>& sentenceBegin,
-    const std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
+    const MBLayoutPtr pMBLayout)
 {
     bool ans = false;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        ans = (m_dataReader[m_ioNames[i]]->SetNetOutput(uttInfo, outputs, sentenceBegin, minibatchPackingFlag) || ans);
+        ans = (m_dataReader[m_ioNames[i]]->SetNetOutput(uttInfo, outputs, pMBLayout) || ans);
     return ans;
 }
 
