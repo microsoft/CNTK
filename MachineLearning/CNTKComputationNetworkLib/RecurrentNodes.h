@@ -1105,7 +1105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType>::Multiply(state.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() - nsamples, nsamples), false, colSeg, false, newPrevState);
             }
 
-            ComputationNode<ElemType>::SetToInitStateValueForResetSeg(sentenceBegin->ColumnSlice(utt_t, 1), nStream, initStateValue, newPrevState);
+            Base::SetToInitStateValueForResetSeg(sentenceBegin->ColumnSlice(utt_t, 1), nStream, initStateValue, newPrevState);
 
             slicePrevOutput.ColumnSlice(0, nsamples).SetValue(newPrevOutput);
             slicePrevState.ColumnSlice(0, nsamples).SetValue(newPrevState);
@@ -1354,7 +1354,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //boundary.ColumnSlice(0, 1).SetValue(((int) MinibatchPackingFlags::SequenceStart));
                 //minibatchPackingFlags[1] = MinibatchPackingFlags::SequenceStart;
                 pMBLayout->Set(0, 1, MinibatchPackingFlags::SequenceStart); // TODO: strange--start at frame[1] instead of [0]?
-                ComputationNode<ElemType>::ResetBound(pMBLayout);
+                Base::ResetBound(pMBLayout);
 
                 f0 = Inputs(0)->FunctionValues();
                 f1 = Inputs(1)->FunctionValues();

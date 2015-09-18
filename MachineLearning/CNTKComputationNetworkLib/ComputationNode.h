@@ -896,9 +896,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         reset to error signals to 0 for any elements without labele
         */
-        bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t timeIdxInSeq=(size_t)-1)
+        bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t timeIdxInSeq=(size_t)-1) const
         {
-            bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
+            bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed
 
             if (m_pMBLayout && !m_pMBLayout->IsAllNone())
             {
@@ -907,8 +907,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (m_pMBLayout->GetSize() != nT / nS)
                     LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
-
-                //Matrix<ElemType> colSeg(m_pMBLayout->m_sentenceBoundaryFlags.GetDeviceId());
 
                 size_t startT = (timeIdxInSeq == (size_t)-1) ? 0 : timeIdxInSeq * nS;       // TODO: misnomer; startT, endT, and utt_t are not times but columns in the packed matrix
                 size_t endT = (timeIdxInSeq == (size_t)-1) ? nT : timeIdxInSeq * nS + nS;
