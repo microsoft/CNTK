@@ -238,9 +238,10 @@ public:
     // TODO: describe what this function does
     //this is a temp solution since some nodes such as plus can be just aggregate of two scalar values 
     //in which case the packing info is not available (and not meaningful) for them
+    // TODO: Does this belong into MBLayout?
     size_t GetNumSamplesWithLabel(const size_t numAllSamples)
     {
-        if (!m_pMBLayout->IsEmpty())
+        if (!m_pMBLayout->IsAllNone())
         {
             size_t numTimeSteps = m_pMBLayout->GetNumFrames();
             size_t numSequences = m_pMBLayout->GetNumStreams();

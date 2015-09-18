@@ -1090,11 +1090,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         reset to error signals to 0 for any elements without labels
         */
+        // TODO: This has overlap with ComputationNode::MaskToZeroWhenLabelAndFeatureMissing(), should call that instead.
         bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t t)
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
-            if (m_pMBLayout && !m_pMBLayout->IsEmpty())
+            if (m_pMBLayout && !m_pMBLayout->IsAllNone())
             {
                 // 't' is not a time but rather a column index that encodes (time stamp, stream)
                 size_t nS = m_pMBLayout->GetNumStreams();
