@@ -515,11 +515,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef Matrix<float> SingleMatrix;
     typedef Matrix<double> DoubleMatrix;
 
-    // TODO: move this to an appropriate place and name it properly
     // MBLayout -- layout information of minibatch
     // Currently this is to bind the two somewhat inconsistent boundary flags and packing flags.
-    // Once that is unified, we can clean it up further. For now, it's just moving the data members.
+    // Once that is unified, we can clean it up further. For now, it's just moving the data members and encapsulating access to them where possible.
     // This should probably also contain m_actualNbrSlicesInEachRecIter (which should be node-dependent).
+    // TODO: move this to an appropriate place and name it properly
+    // NOTE: This class represents an abstraction of an originally distributed/code-duped way of defining and accessing the MB layout.
+    //       The code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
+    //       Some wackiness below is explained by this.
+    // TODO: frame-randoized MBs are now represented as one stream of many frames. This is wrong; they should be one-frame utterances with many streams. Once we fully abstract out Data access, this can be changed easily.
     struct MBLayout
     {   
         MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { }

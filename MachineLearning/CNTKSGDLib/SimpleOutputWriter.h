@@ -72,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-                size_t actualMBSize = m_net.GetActualMBSize();
+                size_t actualMBSize = m_net.DetermineActualMBSizeFromFeatures();      // TODO: should this be dataReader.DetermineActualMBSizeFromFeatures()?
                 m_net.SetActualMiniBatchSize(actualMBSize);
                 m_net.SetActualNbrSlicesInEachRecurentIteration(dataReader.NumberSlicesInEachRecurrentIter());
                 dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
@@ -154,7 +154,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
-                size_t actualMBSize = m_net.GetActualMBSize();
+                size_t actualMBSize = m_net.DetermineActualMBSizeFromFeatures();
                 m_net.SetActualMiniBatchSize(actualMBSize);
                 dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
 

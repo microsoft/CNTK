@@ -193,7 +193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
 
-        size_t actualMBSize = GetActualMBSize();
+        size_t actualMBSize = DetermineActualMBSizeFromFeatures();
         SetActualMiniBatchSize(actualMBSize);
 
         if (requireValidation)
