@@ -1306,7 +1306,7 @@ template<class ElemType>
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
             ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-            size_t actualMBSize = net.GetActualMBSize();
+            size_t actualMBSize = net.DetermineActualMBSizeFromFeatures();
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
@@ -1766,7 +1766,7 @@ template<class ElemType>
             if (outputNodes.empty())
                 LogicError("no output node was found.");
 
-            size_t actualMBSize = net.GetActualMBSize();
+            size_t actualMBSize = net.DetermineActualMBSizeFromFeatures();
             net.SetActualMiniBatchSize(actualMBSize);
             net.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
@@ -1943,7 +1943,7 @@ template<class ElemType>
                     }
                 }
 
-                actualMBSize = net.GetActualMBSize();
+                actualMBSize = net.DetermineActualMBSizeFromFeatures();
                 if (actualMBSize != 0)
                 {
                     nSamplesSinceLastModelSync += actualMBSize;
@@ -1972,6 +1972,7 @@ template<class ElemType>
                     {
                         refNet.SetActualMiniBatchSize(actualMBSize);
                         refNet.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+                        // TODO: not setting MBLayout?
                         refNet.Evaluate(refNode);
                         Matrix<ElemType>::ScaleAndAdd((ElemType)m_adaptationRegWeight,
                                                       dynamic_pointer_cast<ComputationNode<ElemType>>(refNode)->FunctionValues(),

@@ -80,7 +80,7 @@ public:
         m_randomSeedOffset = 0;
         m_actMiniBSize = 0;
         SetDeviceId(deviceId);
-        m_nbrSlicesInEachRecurrentIteration = 1;
+        m_nbrSlicesInEachRecurrentIterationx = 1;
     }
 
     virtual ~ComputationNetwork()
@@ -199,7 +199,10 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    size_t GetActualMBSize()
+    // determine the actual MB size from the feature nodes
+    // This returns max number of columns over the feature nodes.
+    // Note that if we have multiple slices, MB size != #frames.
+    size_t DetermineActualMBSizeFromFeatures() const
     {
         size_t actualMBSize = 0;
 
@@ -555,7 +558,7 @@ public:
             for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                 (*nodeIter)->SetFunctionAndGradientSize(m_actMiniBSize);
 
-            int iMBSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
+            int iMBSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIterationx;
 
             if (m_recurrentInfo[iLoopId].m_isForwardLoop)
             {
@@ -595,9 +598,9 @@ public:
     {
         // checks that will disappear once we complete the refactoring. If this passes for a while, we will eliminate one
         // If this fails, comment this out (it is safe) and tell fseide@microsoft.com.
-        if (m_pMBLayout && m_nbrSlicesInEachRecurrentIteration != m_pMBLayout->GetNumStreams())
+        if (m_nbrSlicesInEachRecurrentIterationx != m_pMBLayout->GetNumStreams())
             LogicError("Evaluate: detected that m_nbrSlicesInEachRecurrentIteration != m_pMBLayout->GetNumStreams()");
-        if (m_pMBLayout && m_pMBLayout->GetNumFrames() != m_pMBLayout->GetSize())
+        if (m_pMBLayout->GetNumFrames() != m_pMBLayout->GetSize())
             LogicError("Evaluate: detected that m_pMBLayout->GetNumFrames() != m_pMBLayout->GetSize()");
 
         // prepare to compute with the subnetwork that this rootNode depends on, including
@@ -622,7 +625,7 @@ public:
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
             // TODO: nbrSlices set once to the same value for all nodes each evaluation--is it ever changed later?
-            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
+            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIterationx);
             if ((*nodeIter)->ReqMultiSeqHandling())
                 (*nodeIter)->ResetBound(m_pMBLayout);
         }
@@ -650,7 +653,9 @@ public:
         }
     }
 
-    void SetActualMiniBatchSize(const size_t aSize, vector<ComputationNodeBasePtr>* featNodes = nullptr)
+    // resize entire network to handle a given MB size
+    // TODO: Is this always called with the result of DetermineActualMBSizeFromFeatures()? Why would it ever not?
+    void SetActualMiniBatchSize(const size_t aSize)
     {
         m_actMiniBSize = (int) aSize;
 
@@ -664,24 +669,22 @@ public:
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             for (auto nodeIter = m_recurrentInfo[i].m_recurrentNodes.begin(); nodeIter != m_recurrentInfo[i].m_recurrentNodes.end(); nodeIter++)
                 (*nodeIter)->SetFunctionAndGradientSize(m_actMiniBSize);
-
-        if (featNodes)
-        {
-            for (auto ptr = featNodes->begin(); ptr != featNodes->end(); ptr++)
-            {
-                size_t nr = (*ptr)->GetNumRows();
-                (*ptr)->Resize(nr, aSize);
-            }
-        }
     }
 
     // GetMaxMBSize - Get the maximum minibatch size that will be seen in a training run
-    // returns the result from SetActualMiniBatchSize(). Note GetActualMBSize() also exists but returns a value derived from the inputs dimensions
+    // returns the result from SetActualMiniBatchSize(). Note DetermineActualMBSizeFromFeatures() also exists but returns a value derived from the inputs dimensions
     size_t GetMaxMBSize() { return m_actMiniBSize; }
 
+    // always called in this pattern:
+#if 0
+    evalnet->SetActualMiniBatchSize(mbSize);
+    evalnet->SetActualNbrSlicesInEachRecurentIteration(dataReader->NumberSlicesInEachRecurrentIter());
+    dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
+    // well... most of the time. Not in TrainOneEpoch().
+#endif
     void SetActualNbrSlicesInEachRecurentIteration(const size_t aSize)
     {
-        m_nbrSlicesInEachRecurrentIteration = aSize;
+        m_nbrSlicesInEachRecurrentIterationx = aSize;
     }
 
     void ComputeGradientLoop(std::list<ComputationNodeBasePtr>& /*allNodes*/, const ComputationNodeBasePtr startNode)
@@ -692,14 +695,14 @@ public:
         {
             if (m_recurrentInfo[iLoopId].m_completedGradient == false)
             {
-                int mbSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
+                int mbSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIterationx;
                 if (m_recurrentInfo[iLoopId].m_isForwardLoop)
                 {
                     for (int timeIndex = mbSize - 1; timeIndex >= 0; timeIndex--)
                     {
                         for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                         {
-                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration); // TODO: move to FrameRange object
+                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIterationx); // TODO: move to FrameRange object
                             (*nodeIter)->ComputeGradientForChildren(timeIndex);
                         }
                     }
@@ -710,7 +713,7 @@ public:
                     {
                         for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                         {
-                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
+                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIterationx);
                             (*nodeIter)->ComputeGradientForChildren(timeIndex);
                         }
                     }
@@ -856,9 +859,10 @@ public:
         return m_learnableParameters[rootNode];
     }
 
-    inline std::vector<ComputationNodeBasePtr> & FeatureNodes()        { return m_features;      }
-    inline std::vector<ComputationNodeBasePtr> & LabelNodes()          { return m_labels;        }
-    inline std::vector<ComputationNodeBasePtr> & FinalCriterionNodes() { return m_finalCriteria; }
+    inline       std::vector<ComputationNodeBasePtr> & FeatureNodes()        { return m_features; }
+    inline const std::vector<ComputationNodeBasePtr> & FeatureNodes() const  { return m_features; }
+    inline       std::vector<ComputationNodeBasePtr> & LabelNodes()          { return m_labels; }
+    inline       std::vector<ComputationNodeBasePtr> & FinalCriterionNodes() { return m_finalCriteria; }
 
     inline std::vector<ComputationNodeBasePtr> CriterionNodesFrom(const wstring & criterionNodeName)
     {
@@ -1101,7 +1105,7 @@ public: // yak--used by NDLUtil. Will go away someday.
                 if (!allowFragment)
                     FormRecurrentLoops(node);
                 PrintComputationTree(node, false);
-                size_t actualMBSize = this->GetActualMBSize();
+                size_t actualMBSize = this->DetermineActualMBSizeFromFeatures();
                 this->SetActualMiniBatchSize(actualMBSize);
                 ValidateSubNetwork(node);
             }
@@ -1273,7 +1277,7 @@ public:
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
-                size_t actualMBSize = this->GetActualMBSize();
+                size_t actualMBSize = this->DetermineActualMBSizeFromFeatures();
                 this->SetActualMiniBatchSize(actualMBSize);
                 if (!UnitTest(node))
                     vErrors.push_back(node->NodeName().c_str());
@@ -1559,7 +1563,7 @@ protected:
     MBLayoutPtr m_pMBLayout;
 
     int m_actMiniBSize;
-    size_t m_nbrSlicesInEachRecurrentIteration;
+    size_t m_nbrSlicesInEachRecurrentIterationx;
 
     // main node holder
     std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes
