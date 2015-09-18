@@ -7,6 +7,9 @@
 //
 
 #include "stdafx.h"
+#ifdef _WIN32
+#include <objbase.h>
+#endif
 #include "basetypes.h"
 
 #include "htkfeatio.h"                  // for reading HTK features
