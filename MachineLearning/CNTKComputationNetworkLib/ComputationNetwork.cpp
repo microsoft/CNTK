@@ -16,8 +16,12 @@
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
+#include "MPIWrapper.h"
 #include <string>
 #include <fstream>
+
+// TODO: Get rid of this global
+Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
