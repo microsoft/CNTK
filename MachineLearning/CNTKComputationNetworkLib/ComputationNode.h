@@ -256,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note: only used in one place, SimpleEvaluator.h PreComputeActivityAtTime().
         // The member is, however, read out at 284 places inside nodes,
         // most of the time as
-        // FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep)
+        // FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences())
         // This expression will be turned into a function call to right here, so that we compute this only at one place
         // and can also handle the full-minibatch case.
         // Let us try to get this member out of this class altogether; it belongs elsewhere.
@@ -861,7 +861,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /*implement*/void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
         {
-            EvaluateThisNode(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep));
+            EvaluateThisNode(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
 
             if (!UseCustomizedMultiSeqHandling())
                 MaskToZeroWhenLabelAndFeatureMissing(m_functionValues, timeIdxInSeq);
@@ -1081,7 +1081,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         (msra::strfun::utf8 (child->OperationName())).c_str(),
                         (msra::strfun::utf8 (child->NodeName())).c_str());
 #endif              
-                    ComputeInputPartial(i, FrameRange(timeIdxInSeq, m_samplesInRecurrentStep)); //this computes partial wrt to the child and sums the gradient value in the child
+                    ComputeInputPartial(i, FrameRange(timeIdxInSeq, GetNumParallelSequences())); //this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
                 else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, 

@@ -330,15 +330,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 0)  //left derivative
             {
-                Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
 
                 ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
             }
             else  //right derivative
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
+                Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
 
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
             }
@@ -384,8 +384,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
+            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
 
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
         }
@@ -555,8 +555,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues.GetNumRows() for loop dimension
             assert(m_pMBLayout);
 
-            Matrix<ElemType> mTmp = Inputs(inputIndex)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep), mTmp);
+            Matrix<ElemType> mTmp = Inputs(inputIndex)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
+            Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), mTmp);
         }
 
         virtual void EvaluateThisNode()
@@ -566,8 +566,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
-            Matrix<ElemType> mTmp = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            mTmp.SetValue(Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
+            Matrix<ElemType> mTmp = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
+            mTmp.SetValue(Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()));
         }
 
         virtual void /*ComputationNodeBase::*/Validate()
