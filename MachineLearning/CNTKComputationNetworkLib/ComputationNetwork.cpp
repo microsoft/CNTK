@@ -738,15 +738,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         std::list<ComputationNodeBasePtr> vTmp;
         std::list<ComputationNodeBasePtr> vRecurrentTmp;
-        //int  prevId = -1;
-        vector<bool> accessed;
-        accessed.assign(m_recurrentInfo.size(), false);
+        vector<bool> accessed(m_recurrentInfo.size(), false);
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            const vector<ComputationNodeBasePtr>* pRecurrentNodesDummy;
-            int iId = FindInRecurrentLoops(*nodeIter, pRecurrentNodesDummy);
-            if (iId >= 0)
+            const RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);
+            if (recInfo)
             {
+                int iId = recInfo->m_loopId;
                 if (!accessed[iId])
                 {
                     newList.insert(newList.end(),

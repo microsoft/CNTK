@@ -516,44 +516,16 @@ public:
     // find if node is part of a recurrent loop; and return the loop id
     // If found then return a pointer to the list of nodes of this loop.
     // TODO: This should just return &m_recurrentInfo of the matching loop, or nullptr if no match. If needed, m_recurrentInfo knows its loop id.
-    int FindInRecurrentLoops(const ComputationNodeBasePtr node, const vector<ComputationNodeBasePtr>* & pRecurrentNodes) const
+    RecurrentInfo * FindInRecurrentLoops(const ComputationNodeBasePtr node)
     {
         // look in all recurrent loops of the network
-        for (const auto & iter : m_recurrentInfo)
-        {
+        for (auto & iter : m_recurrentInfo)
             if (std::find(iter.m_recurrentNodes.begin(), iter.m_recurrentNodes.end(), node) != iter.m_recurrentNodes.end())
-            {
-                // found
-                pRecurrentNodes = &iter.m_recurrentNodesForForward;
-                return iter.m_loopId;
-            }
-        }
-        return -1;  // not part of a recurrent loop
+                return &iter;
+        return nullptr;  // not part of a recurrent loop
     }
-
-#if 0
-    int FindInRecurrentLoops(const ComputationNodeBasePtr startNode) const
-    {
-        int iFound = -1;
-
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
-        {
-            if (std::find((*iter).m_recurrentNodes.begin(), (*iter).m_recurrentNodes.end(), startNode) != (*iter).m_recurrentNodes.end())
-            {
-                iFound = (*iter).m_loopId;
-                break;
-            }
-        }
-
-        return iFound;
-    }
-#endif
 
     bool IsFuncValueOlderThanInputs(const std::vector<ComputationNodeBasePtr>& recurrentNodes);
-
-    void EvaluateLoop(const ComputationNodeBasePtr startNode)
-    {
-    }
 
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
 
@@ -602,47 +574,47 @@ public:
         {
             // --- first, evaluate all recurrence that hangs off this
 
-            const std::vector<ComputationNodeBasePtr>* pRecurrentNodes;             // set of nodes that participate in same loop as current node, if any
-            int iLoopId = FindInRecurrentLoops(*nodeIter, pRecurrentNodes);   // check if this node participates in a recurrent loop
+            RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);   // check if this node participates in a recurrent loop
 
-            if (iLoopId != -1 && IsFuncValueOlderThanInputs(*pRecurrentNodes) && m_recurrentInfo[iLoopId].m_completedEvaluate == false)
+            if (recInfo && IsFuncValueOlderThanInputs(recInfo->m_recurrentNodesForForward) && !recInfo->m_completedEvaluate)
             {
+                const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
                 // node participates in a recurrent loop: process the loop frame by frame
-                for (auto nodeIter = pRecurrentNodes->begin(); nodeIter != pRecurrentNodes->end(); nodeIter++)
-                    (*nodeIter)->SetFunctionAndGradientSize(m_actualMBSize);
+                for (auto & nodeIter : recurrentNodes)
+                    nodeIter->SetFunctionAndGradientSize(m_actualMBSize);
     
                 const size_t T = m_actualMBSize / GetNumParallelSequences();
 
                 // for every time step run through all nodes in this particular loop
-                if (m_recurrentInfo[iLoopId].m_isForwardLoop)
+                if (recInfo->m_isForwardLoop)
                 {
-                    for (size_t timeIndex = 0; timeIndex < T; timeIndex ++)
+                    for (size_t t = 0; t < T; t ++)
                     {
-                        for (auto nodeIter = pRecurrentNodes->begin(); nodeIter != pRecurrentNodes->end(); nodeIter++)
+                        for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
-                            (*nodeIter)->EvaluateThisNodeGivenInputs(timeIndex);
+                            (*nodeIter)->EvaluateThisNodeGivenInputs(t);
                             (*nodeIter)->UpdateEvalTimeStamp();
                         }
                     } 
                 }
                 else
                 {
-                    for (size_t timeIndex = T - 1; timeIndex --> 0; )
+                    for (size_t t = T - 1; t --> 0; )
                     {
-                        for (auto nodeIter = pRecurrentNodes->begin(); nodeIter != pRecurrentNodes->end(); nodeIter++)
+                        for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
-                            (*nodeIter)->EvaluateThisNodeGivenInputs(timeIndex);
+                            (*nodeIter)->EvaluateThisNodeGivenInputs(t);
                             (*nodeIter)->UpdateEvalTimeStamp();
                         }
                     }
                 }
     
-                m_recurrentInfo[iLoopId].m_completedEvaluate = true;
+                recInfo->m_completedEvaluate = true;
             }
 
             // --- second, do the whole batch (unless it's already done)
 
-            else if (iLoopId == -1 && (*nodeIter)->IsFuncValueOlderThanInputs())
+            else if (!recInfo && (*nodeIter)->IsFuncValueOlderThanInputs())
             {
 #ifdef DISPLAY_DEBUG
                 fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
@@ -715,42 +687,6 @@ public:
             LogicError("VerifyActualNumParallelSequences: mismatching MB size in MBLayout");
     }
 
-    void ComputeGradientLoop(std::list<ComputationNodeBasePtr>& /*allNodes*/, const ComputationNodeBasePtr startNode)
-    {
-        const std::vector<ComputationNodeBasePtr>* pRecurrentNodes;
-        int iLoopId = FindInRecurrentLoops(startNode, pRecurrentNodes);
-        if (iLoopId != -1)
-        {
-            if (m_recurrentInfo[iLoopId].m_completedGradient == false)
-            {
-                size_t T = m_actualMBSize / GetNumParallelSequences();
-                if (m_recurrentInfo[iLoopId].m_isForwardLoop)
-                {
-                    for (size_t timeIndex = T; timeIndex --> 0; )
-                    {
-                        for (auto nodeIter = pRecurrentNodes->rbegin(); nodeIter != pRecurrentNodes->rend(); ++nodeIter)
-                        {
-                            (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences()); // TODO: move to FrameRange object
-                            (*nodeIter)->ComputeGradientForChildren(timeIndex);
-                        }
-                    }
-                }
-                else
-                {
-                    for (size_t timeIndex = 0; timeIndex < T; timeIndex++)
-                    {
-                        for (auto nodeIter = pRecurrentNodes->rbegin(); nodeIter != pRecurrentNodes->rend(); ++nodeIter)
-                        {
-                            (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
-                            (*nodeIter)->ComputeGradientForChildren(timeIndex);
-                        }
-                    }
-                }
-
-                m_recurrentInfo[iLoopId].m_completedGradient = true;
-            }
-        }
-    }
 
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
     // TODO: pass a set of nodes instead of only one
@@ -786,6 +722,7 @@ public:
         if (rootGradientInitValue != nullptr)
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
 
+        // process nodes in pre-determined order
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
 #ifdef DISPLAY_DEBUG
@@ -793,7 +730,43 @@ public:
                         (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
                         (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
 #endif
-            ComputeGradientLoop(allNodes, *nodeIter);
+            // --- first, perform recurrent loops if this node participates in one
+
+            RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);
+            if (recInfo)
+            {
+                if (recInfo->m_completedGradient == false)
+                {
+                    const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+                    size_t T = m_actualMBSize / GetNumParallelSequences();
+                    if (recInfo->m_isForwardLoop)
+                    {
+                        for (size_t t = T; t--> 0;)
+                        {
+                            for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                            {
+                                (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
+                                (*nodeIter)->ComputeGradientForChildren(t);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for (size_t t = 0; t < T; t++)
+                        {
+                            for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                            {
+                                (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
+                                (*nodeIter)->ComputeGradientForChildren(t);
+                            }
+                        }
+                    }
+
+                    recInfo->m_completedGradient = true;
+                }
+            }
+
+            // --- second, do whole-batch operation if not recurrent
 
             (*nodeIter)->ComputeGradientForChildren();
         }
@@ -1237,10 +1210,10 @@ public:
 
         std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
 
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        for (auto & nodeIter : nodes)
         {
-            (*nodeIter)->RequestEvalMatrices(m_matrixPool);
-            (*nodeIter)->ReleaseMatricesAfterEval(m_matrixPool);
+            nodeIter->RequestEvalMatrices(m_matrixPool);
+            nodeIter->ReleaseMatricesAfterEval(m_matrixPool);
         }
     }
 
@@ -1251,9 +1224,9 @@ public:
 
         std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
 
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        for (auto & nodeIter : nodes)
         {
-            std::vector<ComputationNodeBasePtr> children = (*nodeIter)->GetChildren();
+            std::vector<ComputationNodeBasePtr> children = nodeIter->GetChildren();
             for (int i = 0; i < children.size(); i++)
                 numParents[children[i]] ++;
         }
@@ -1264,20 +1237,19 @@ public:
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedGradient = false;
 
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+        for (auto & nodeIter : allNodes)
         {
-            const std::vector<ComputationNodeBasePtr>* pRecurrentNodes;
-            int iLoopId = FindInRecurrentLoops(*nodeIter, pRecurrentNodes);
-            if (iLoopId != -1 && m_recurrentInfo[iLoopId].m_completedGradient == false)
+            RecurrentInfo * recInfo = FindInRecurrentLoops(nodeIter);
+            if (recInfo && !recInfo->m_completedGradient)
             {
-                for (auto nodeIterInLoop = pRecurrentNodes->rbegin(); nodeIterInLoop != pRecurrentNodes->rend(); ++nodeIterInLoop)
-                    AllocateGradientMatricesForChildren(*nodeIterInLoop, numParents);
-                m_recurrentInfo[iLoopId].m_completedGradient = true;
+                for (auto nodeIterInLoop : recInfo->m_recurrentNodesForForward)
+                    AllocateGradientMatricesForChildren(nodeIterInLoop, numParents);
+                recInfo->m_completedGradient = true;
             }
             else
-                AllocateGradientMatricesForChildren(*nodeIter, numParents);
+                AllocateGradientMatricesForChildren(nodeIter, numParents);
 
-            (*nodeIter)->ReleaseGradientMatrices(m_matrixPool);
+            nodeIter->ReleaseGradientMatrices(m_matrixPool);
         }
     }
 
@@ -1337,9 +1309,9 @@ public:
 
         std::list<ComputationNodeBasePtr>&  nodes = GetEvalOrder(rootNode, false);
 
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-        if (!(*nodeIter)->UnitTest())
-            return false;
+        for (auto & nodeIter : nodes)
+            if (!nodeIter->UnitTest())
+                return false;
 
         fprintf(stderr, "\n\n");
 
