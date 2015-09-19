@@ -824,6 +824,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 MaskToZeroWhenLabelAndFeatureMissing(m_functionValues, timeIdxInSeq);
         }
 
+#if 0   // (this function cannot be used currently since sentenceBegin is not a Matrix<ElemType> anymore; only affects LSTMNode which is no longer used)
         static void WINAPI SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
                                                           size_t nStream, ElemType initStateValue, Matrix<ElemType>& newprevstate)
         {
@@ -849,6 +850,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// add default state value if it is for reset
             Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, newprevstate);  /// += [0 initStateValue 0 ]
         }
+#endif
 
         /**
         reset to error signals to 0 for any elements without labele
