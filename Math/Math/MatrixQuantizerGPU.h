@@ -1,7 +1,7 @@
 #pragma once
 
+#include "QuantizedMatrix.h"    // TODO: strangely, this must be included first, although it is the first thing MatrixQuantizer.h includes. Without, nvcc fails.
 #include "MatrixQuantizer.h"
-#include "QuantizedMatrix.h"
 #include "ColumnQuantizer.h"
 #include "GPUMatrix.h"
 #ifndef CPUONLY
