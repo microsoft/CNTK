@@ -832,22 +832,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
 
-            if ((rows0 == 0 || cols1 == 0 ) && this->LoopId() < 0)
+            if ((rows0 == 0 || cols1 == 0 ) && this->GetLoopId() < 0)
                 throw logic_error("Times operation: Inputs(0)->FunctionValues().GetNumRows() and Inputs(1)->FunctionValues().GetNumCols() should not be 0 since it cannot be automatically inferred");
 
             // TODO: use dynamic_pointer_cast
             // TODO: why should these nodes even care whether their inputs are LearnableParmaeters? If needed, can the base class do this?
-            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && this->LoopId() < 0)
+            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && this->GetLoopId() < 0)
                 Inputs(0)->FunctionValues().Resize(rows0, rows1);
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
                 Inputs(1)->FunctionValues().Resize(cols0, cols1);
 
-            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())&& this->LoopId() < 0)
+            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())&& this->GetLoopId() < 0)
                 LogicError("Times operation: One of the operants has 0 elements.");
 
             //cols0 and rows1 may have been changed so don't use them in the following check
-            if ((Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumCols()) && this->LoopId() < 0)
+            if ((Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumCols()) && this->GetLoopId() < 0)
             {
                 LogicError("The Matrix dimension in the Times operation does not match.");
             }
@@ -1000,20 +1000,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
 
-            if ((rows0 == 0 || cols1 == 0) && this->LoopId() < 0)
+            if ((rows0 == 0 || cols1 == 0) && this->GetLoopId() < 0)
                 throw logic_error("TransposeTimes operation: Inputs(0)->FunctionValues().GetNumRows() and Inputs(1)->FunctionValues().GetNumCols() should not be 0 since it cannot be automatically inferred");
 
-            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && this->LoopId() < 0)
+            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && this->GetLoopId() < 0)
                 Inputs(0)->FunctionValues().Resize(rows0, rows1);
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
                 Inputs(1)->FunctionValues().Resize(cols0, cols1);
 
-            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->LoopId() < 0)
+            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->GetLoopId() < 0)
                 LogicError("TransposeTimes operation: One of the operants has 0 elements.");
 
             //cols0 and rows1 may have been changed so don't use them in the following check
-            if ((Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows()) && this->LoopId() < 0)
+            if ((Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows()) && this->GetLoopId() < 0)
             {
                 LogicError("The Matrix dimension in the TransposeTimes operation does not match.");
             }
@@ -1679,7 +1679,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(index)->FunctionValues().Resize(rows, cols);
             }
 
-            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->LoopId() < 0)
+            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->GetLoopId() < 0)
                 LogicError("Plus operation: one of the operants has 0 element.");
 
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
@@ -1689,7 +1689,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 !((rows0 == 1 || rows1 == 1) && cols0 == cols1) && //one is row vec
                 !(  (cols0 > cols1 && cols0 % cols1 == 0) || 
                     (cols0 == 1 && rows1 % rows0 == 0) || 
-                    (cols1 == 1 && rows0 % rows1 == 0))) && this->LoopId() < 0) //one is col vec with divisable rows, including scalar
+                    (cols1 == 1 && rows0 % rows1 == 0))) && this->GetLoopId() < 0) //one is col vec with divisable rows, including scalar
             {
                 LogicError("The Matrix dimension in the Plus operation does not match.");
             }       

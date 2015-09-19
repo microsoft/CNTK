@@ -75,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_samplesInRecurrentStep(1),
             m_visitedOrder(-1),
             m_index(-1),
-            m_lowlink(-1),
+            m_lowLink(-1),
             m_indexInLoop(0),
             m_visited(false),
             m_inStack(false),
@@ -172,79 +172,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_pMBLayout = pMBLayout;
         }
 
-        void SetLoopId(const int id) { m_loopId = id; }
-        void SetVisitedOrder(const int id) { m_visitedOrder = id; }
-        void SetIndex(const size_t ind) { m_index = ind; }
-
-        void Setlowlink(const size_t lowlink)
-        {
-            m_lowlink = lowlink;
-        }
-
-        void SetVisited(const bool visited)
-        {
-            m_visited = visited;
-        }
-
-        void SetInStack(const bool instack)
-        {
-            m_inStack = instack;
-        }
-
-        void SetIndexInLoop(const size_t index)
-        {
-            m_indexInLoop = index;
-        }
-
-        void clearCache()
+        void ClearCache()
         {
             m_loopId = -1;
             m_visitedOrder = -1;
             m_index = -1;
-            m_lowlink = -1;
+            m_lowLink = -1;
             m_indexInLoop = 0;
             m_visited = false;
             m_inStack = false;
         }
 
-        size_t GetIndex() const
-        {
-            return m_index;
-        }
+        void SetLoopId(const int id) { m_loopId = id; }
+        int GetLoopId() const { return m_loopId; }
 
-        size_t GetVisitedOrder() const
-        {
-            return m_visitedOrder;
-        }
+        void SetVisitedOrder(const int id) { m_visitedOrder = id; }
+        size_t GetVisitedOrder() const { return m_visitedOrder; }
 
-        size_t Getlowlink() const
-        {
-            return m_lowlink;
-        }
+        void SetIndex(const size_t ind) { m_index = ind; }
+        size_t GetIndex() const { return m_index; }
 
-        size_t GetIndexInLoop() const
-        {
-            return m_indexInLoop;
-        }
+        void SetLowLink(const size_t lowlink) { m_lowLink = lowlink; }
+        size_t GetLowLink() const { return m_lowLink; }
 
-        std::wstring GetName() const
-        {
-            return m_nodeName;
-        }
+        void SetVisited(const bool visited) { m_visited = visited; }
+        bool IsVisisted() const { return m_visited; }
 
-        bool isVisisted() const
-        {
-            return m_visited;
-        }
+        void SetInStack(const bool instack) { m_inStack = instack; }
+        bool IsInStack() const { return m_inStack; }
 
-        bool isInStack() const
-        {
-            return m_inStack;
-        }
-        int LoopId() const
-        {
-            return m_loopId;
-        }
+        void SetIndexInLoop(const size_t index) { m_indexInLoop = index; }
+        size_t GetIndexInLoop() const { return m_indexInLoop; }
+
+        std::wstring GetName() const { return m_nodeName; }
 
         // temporary function that is called to verify stuff is called as I think it is. Delete if this does not fire for a while.
         void VerifyNumParallelSequences(size_t bsz)
@@ -523,8 +483,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!IsLeaf())
                     m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
-                if (LoopId() >= 0)
-                    recurrentResult[LoopId()].push_back(shared_from_this());
+                if (GetLoopId() >= 0)
+                    recurrentResult[GetLoopId()].push_back(shared_from_this());
                 else
                     noRecurrentResult.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
             }
@@ -679,7 +639,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// the order in reverse graph. 
         int m_visitedOrder;
         int m_index;
-        int m_lowlink;          // TODO: comment this, as it is not obvious
+        int m_lowLink;          // TODO: comment this, as it is not obvious
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
@@ -1275,7 +1235,7 @@ public: \
     using Base::SaveToFile; using Base::SetFunctionAndGradientSize; using Base::SetInput; using Base::Validate; \
 protected:  \
     using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
-    using Base::m_visitedOrder; using Base::m_index; using Base::m_lowlink; using Base::m_visited; using Base::m_inStack; \
+    using Base::m_visitedOrder; using Base::m_index; using Base::m_lowLink; using Base::m_visited; using Base::m_inStack; \
     using Base::m_indexInLoop; \
     using Base::m_pMBLayout; \
     using Base::m_reqMultiSeqHandling; using Base::UseCustomizedMultiSeqHandling; using Base::GetNumParallelSequences; \
