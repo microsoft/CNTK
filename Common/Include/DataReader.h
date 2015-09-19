@@ -78,9 +78,9 @@ public:
     }
 
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
-    virtual size_t NumberSlicesInEachRecurrentIter() = 0; 
+    virtual size_t GetNumParallelSequences() = 0; 
     virtual int GetSentenceEndIdFromOutputLabel() { return -1; };
-    virtual void SetNbrSlicesEachRecurrentIter(const size_t sz) { mBlgSize = sz; };
+    virtual void SetNumParallelSequences(const size_t sz) { mBlgSize = sz; };
     virtual bool RequireSentenceSeg() { return false; };
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; };
     virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
@@ -198,7 +198,7 @@ public:
     // returns - true if there are more minibatches, false if no more minibatchs remain
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    size_t NumberSlicesInEachRecurrentIter();
+    size_t GetNumParallelSequences();
     int GetSentenceEndIdFromOutputLabel();
 
     // GetLabelMapping - Gets the label mapping from integer index to label type 

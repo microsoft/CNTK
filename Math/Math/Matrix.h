@@ -518,7 +518,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // MBLayout -- layout information of minibatch
     // Currently this is to bind the two somewhat inconsistent boundary flags and packing flags.
     // Once that is unified, we can clean it up further. For now, it's just moving the data members and encapsulating access to them where possible.
-    // This should probably also contain m_actualNbrSlicesInEachRecIter (which should be node-dependent).
+    // This should probably also contain m_actualNumParallelSequencesInEachRecIter (which should be node-dependent).
     // TODO: move this to an appropriate place and name it properly
     // NOTE: This class represents an abstraction of an originally distributed/code-duped way of defining and accessing the MB layout.
     //       The code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
@@ -598,19 +598,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // test a pre-condition  --TODO: we only resize this thing here, so this should not be necessary in the future
-        void validate() const { if (m_minibatchPackingFlags.size() != m_sentenceBoundaryFlags.GetNumCols()) LogicError("MBLayout: GetSize() != GetNumFrames()"); }
+        void validate() const { if (m_minibatchPackingFlags.size() != m_sentenceBoundaryFlags.GetNumCols()) LogicError("MBLayout: GetSize() != GetNumTimeSteps()"); }
 
         // these accessors were for now just collected from actual usage; need to be cleaned up once this compiles again
-        size_t GetNumFrames()  const { validate(); return m_sentenceBoundaryFlags.GetNumCols(); }
-        size_t GetNumStreams() const { return IsAllNone() ? 1 : m_sentenceBoundaryFlags.GetNumRows(); }   // 1 stream if no matrix
+        size_t GetNumTimeSteps()  const { validate(); return m_sentenceBoundaryFlags.GetNumCols(); }
+        size_t GetNumParallelSequences() const { return IsAllNone() ? 1 : m_sentenceBoundaryFlags.GetNumRows(); }   // 1 stream if no matrix
         size_t GetSize() const { validate(); return m_minibatchPackingFlags.size(); }
-        // ^^ TODO: add a check whether Size() == GetNumFrames(); it really should, unless I misunderstood
+        // ^^ TODO: add a check whether Size() == GetNumTimeSteps(); it really should, unless I misunderstood
         bool IsAllNone() const { validate(); return m_minibatchPackingFlags.empty(); }
 #if 0   // we have this pattern often:
         // TODO: mbSize and #slices must also move into MBLayout 
         evalnet->SetActualMiniBatchSize(mbSize);
-        evalnet->SetActualNbrSlicesInEachRecurentIteration(dataReader->NumberSlicesInEachRecurrentIter());
         dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
+        evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
 #endif
 #if 0   // a VERY TELLING piece of code
         // packing flags = frame-wise or over all streams of start and end

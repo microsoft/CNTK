@@ -630,7 +630,7 @@ size_t RoundUp(size_t value, size_t size)
 }
 
 template<class ElemType>
-void UCIFastReader<ElemType>::SetNbrSlicesEachRecurrentIter(const size_t sz) 
+void UCIFastReader<ElemType>::SetNumParallelSequences(const size_t sz) 
 {
     mBlgSize = sz; 
     if (mOneLinePerFile)

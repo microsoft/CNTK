@@ -168,7 +168,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ResetBound(MBLayoutPtr pMBLayout)
         {
-            assert(pMBLayout->GetNumFrames() == pMBLayout->GetSize());  // TODO: move this check into MBLayout
+            assert(pMBLayout->GetNumTimeSteps() == pMBLayout->GetSize());  // TODO: move this check into MBLayout
             m_pMBLayout = pMBLayout;
         }
 
@@ -248,7 +248,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // TODO: these two will disappear once the information is correctly held in a FrameRange record
         // This is called at 3 places; two are directly before ComputeGradientForChildren().
-        void SetNbrSlicesInEachRecurrentIteration(size_t bsz)
+        void SetNumParallelSequences(size_t bsz)
         {
             m_samplesInRecurrentStep = bsz;
         }
@@ -260,7 +260,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This expression will be turned into a function call to right here, so that we compute this only at one place
         // and can also handle the full-minibatch case.
         // Let us try to get this member out of this class altogether; it belongs elsewhere.
-        size_t GetNbrSlicesInEachRecurrentIteration() const
+        size_t GetNumParallelSequences() const
         {
             return m_samplesInRecurrentStep;
         }
@@ -903,7 +903,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_pMBLayout && !m_pMBLayout->IsAllNone())
             {
                 size_t nT = matrixToBeMasked.GetNumCols();
-                size_t nS = m_pMBLayout->GetNumStreams();
+                size_t nS = m_pMBLayout->GetNumParallelSequences();
 
                 if (m_pMBLayout->GetSize() != nT / nS)
                     LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");

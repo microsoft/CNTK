@@ -114,7 +114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // then this becomes
                 //    S S X X E S S X X X E N N
 
-                size_t numRows = pMBLayout->GetNumStreams();
+                size_t numRows = pMBLayout->GetNumParallelSequences();
 
                 // each row has a number to indicate how many values should be reset for that utterance
                 vector<int> numResetLeft(numRows, 0);

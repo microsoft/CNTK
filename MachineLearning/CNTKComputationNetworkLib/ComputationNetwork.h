@@ -80,7 +80,6 @@ public:
         m_randomSeedOffset = 0;
         m_actMiniBSize = 0;
         SetDeviceId(deviceId);
-        m_nbrSlicesInEachRecurrentIterationx = 1;
     }
 
     virtual ~ComputationNetwork()
@@ -246,8 +245,8 @@ public:
     {
         if (!m_pMBLayout->IsAllNone())
         {
-            size_t numTimeSteps = m_pMBLayout->GetNumFrames();
-            size_t numSequences = m_pMBLayout->GetNumStreams();
+            size_t numTimeSteps = m_pMBLayout->GetNumTimeSteps();
+            size_t numSequences = m_pMBLayout->GetNumParallelSequences();
 
             if (m_pMBLayout->GetSize() != numTimeSteps)
                 LogicError("GetNumSamplesWithLabel(): m_pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams.Check feature reader. ");
@@ -558,7 +557,7 @@ public:
             for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                 (*nodeIter)->SetFunctionAndGradientSize(m_actMiniBSize);
 
-            int iMBSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIterationx;
+            int iMBSize = m_actMiniBSize / GetNumParallelSequences();
 
             if (m_recurrentInfo[iLoopId].m_isForwardLoop)
             {
@@ -598,10 +597,10 @@ public:
     {
         // checks that will disappear once we complete the refactoring. If this passes for a while, we will eliminate one
         // If this fails, comment this out (it is safe) and tell fseide@microsoft.com.
-        if (m_nbrSlicesInEachRecurrentIterationx != m_pMBLayout->GetNumStreams())
-            LogicError("Evaluate: detected that m_nbrSlicesInEachRecurrentIteration != m_pMBLayout->GetNumStreams()");
-        if (m_pMBLayout->GetNumFrames() != m_pMBLayout->GetSize())
-            LogicError("Evaluate: detected that m_pMBLayout->GetNumFrames() != m_pMBLayout->GetSize()");
+        if (GetNumParallelSequences() != m_pMBLayout->GetNumParallelSequences())
+            LogicError("Evaluate: detected that m_nbrSlicesInEachRecurrentIteration != m_pMBLayout->GetNumParallelSequences()");
+        if (m_pMBLayout->GetNumTimeSteps() != m_pMBLayout->GetSize())
+            LogicError("Evaluate: detected that m_pMBLayout->GetNumTimeSteps() != m_pMBLayout->GetSize()");
 
         // prepare to compute with the subnetwork that this rootNode depends on, including
         //  - auto-detecting recurrent loops
@@ -625,7 +624,7 @@ public:
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
             // TODO: nbrSlices set once to the same value for all nodes each evaluation--is it ever changed later?
-            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIterationx);
+            (*nodeIter)->SetNumParallelSequences(GetNumParallelSequences());
             if ((*nodeIter)->ReqMultiSeqHandling())
                 (*nodeIter)->ResetBound(m_pMBLayout);
         }
@@ -688,13 +687,25 @@ public:
 #if 0
     // always called in this pattern:
     evalnet->SetActualMiniBatchSizeFromFeatures();
-    evalnet->SetActualNbrSlicesInEachRecurentIteration(dataReader->NumberSlicesInEachRecurrentIter());
     dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
+    evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
     // well... most of the time. Not in TrainOneEpoch().
-#endif
-    void SetActualNbrSlicesInEachRecurentIteration(const size_t aSize)
+    void SetActualNumParallelSequencesInEachRecurentIteration(const size_t aSize)
     {
-        m_nbrSlicesInEachRecurrentIterationx = aSize;
+        m_nbrSlicesInEachRecurrentIteration() = aSize;   // TODO: this has to go
+    }
+#endif
+    size_t GetNumParallelSequences() const
+    {
+        return m_pMBLayout->GetNumParallelSequences();
+    }
+    // temporary function: Call this after CopyMBLayoutTo(evalnet->GetMBLayoutPtr()) to ensure everything is consistent as expected
+    // It is actually called after every CopyMBLayoutTo() in the entire system (except for multi-reader CopyMBLayoutTo() itself).
+    // Remove this function after a few weeks of not firing.
+    void VerifyActualNumParallelSequences(const size_t aSize)
+    {
+        if (GetNumParallelSequences() != aSize)
+            LogicError("VerifyActualNumParallelSequences: mismatching MB size in MBLayout");
     }
 
     void ComputeGradientLoop(std::list<ComputationNodeBasePtr>& /*allNodes*/, const ComputationNodeBasePtr startNode)
@@ -705,14 +716,14 @@ public:
         {
             if (m_recurrentInfo[iLoopId].m_completedGradient == false)
             {
-                int mbSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIterationx;
+                int mbSize = m_actMiniBSize / GetNumParallelSequences();
                 if (m_recurrentInfo[iLoopId].m_isForwardLoop)
                 {
                     for (int timeIndex = mbSize - 1; timeIndex >= 0; timeIndex--)
                     {
                         for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                         {
-                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIterationx); // TODO: move to FrameRange object
+                            (*nodeIter)->SetNumParallelSequences(GetNumParallelSequences()); // TODO: move to FrameRange object
                             (*nodeIter)->ComputeGradientForChildren(timeIndex);
                         }
                     }
@@ -723,7 +734,7 @@ public:
                     {
                         for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                         {
-                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIterationx);
+                            (*nodeIter)->SetNumParallelSequences(GetNumParallelSequences());
                             (*nodeIter)->ComputeGradientForChildren(timeIndex);
                         }
                     }
@@ -1571,7 +1582,6 @@ protected:
     MBLayoutPtr m_pMBLayout;
 
     int m_actMiniBSize;
-    size_t m_nbrSlicesInEachRecurrentIterationx;
 
     // main node holder
     std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes
