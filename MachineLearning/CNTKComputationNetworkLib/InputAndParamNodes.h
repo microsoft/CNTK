@@ -112,6 +112,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FunctionValues().SetValue(numRows, numCols, array.data(), matrixFlagNormal, m_deviceId);
         }
 
+        void ReviseFromFile(const std::wstring & reviseFromFilePath)
+        {
+            size_t numRows = 0; 
+            size_t numCols = 0; 
+            auto array = File::LoadMatrixFromTextFile<ElemType>(msra::strfun::utf8(reviseFromFilePath), numRows, numCols); // TODO: change pathname to wstring
+            size_t nRows = m_functionValues.GetNumRows(); 
+            size_t nCols = m_functionValues.GetNumCols(); 
+
+            if (numRows != nRows || numCols != nCols)
+            {
+                RuntimeError("Error in ReviseFromFile for node %ls using file %ls:  original size (%d x %d) vs current size (%d x %d)",
+                    m_nodeName.c_str(), reviseFromFilePath.c_str(), nRows, nCols, numRows, numCols);
+            }
+
+            FunctionValues().SetValue(numRows, numCols, array.data(), matrixFlagNormal, m_deviceId);
+            
+        }
+
         virtual const std::wstring OperationName() const {return TypeName();}
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
