@@ -1158,14 +1158,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             )
         {
             encoderNet->SetActualMiniBatchSizeFromFeatures();
-            encoderNet->SetActualNbrSlicesInEachRecurentIteration(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
             encoderTrainSetDataReader->CopyMBLayoutTo(encoderNet->GetMBLayoutPtr());
+            encoderNet->VerifyActualNumParallelSequences(encoderTrainSetDataReader->GetNumParallelSequences());
 
             encoderNet->Evaluate(encoderEvaluationNodes[0]);
 
             decoderNet->SetActualMiniBatchSizeFromFeatures();
-            decoderNet->SetActualNbrSlicesInEachRecurentIteration(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
             decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
+            decoderNet->VerifyActualNumParallelSequences(decoderTrainSetDataReader->GetNumParallelSequences());
             /// not the sentence begining, because the initial hidden layer activity is from the encoder network
 
             if (decoderCriterionNodes.size() == 0 && decoderEvaluationNodes.size() == 0)

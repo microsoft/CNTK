@@ -1812,7 +1812,7 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
 }
 
 template<class ElemType>
-size_t BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
+size_t BatchSequenceReader<ElemType>::GetNumParallelSequences()
 {
     size_t sz = mToProcess.size();
     if (sz == 0)

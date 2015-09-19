@@ -1607,6 +1607,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!m_framemode)
                 *pMBLayout = *m_pMBLayout;
+            // TODO: what about frame mode? Should we create a dummy one? Or Clear() it? Reader should not know what ComputationNetworks' defaults are.
         }
 
 

@@ -62,7 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //evaluate with minibatches
             dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
-            dataReader.SetNbrSlicesEachRecurrentIter(1);
+            dataReader.SetNumParallelSequences(1);
 
             size_t totalEpochSamples = 0;
             std::map<std::wstring, void *, nocase_compare> outputMatrices;
@@ -73,8 +73,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
                 size_t actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
-                m_net.SetActualNbrSlicesInEachRecurentIteration(dataReader.NumberSlicesInEachRecurrentIter());
                 dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
+                m_net.VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {
@@ -155,6 +155,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
                 dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
+                m_net.VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());  // TODO: This was added by my (fseide) but UNTESTED. If this fails, comment out and let me know.
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {

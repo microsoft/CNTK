@@ -920,18 +920,18 @@ template<class ElemType>
         }
 
         // first, we need to normalize the effect of nbruttsineachrecurrentiter
-        if (trainSetDataReader->NumberSlicesInEachRecurrentIter() > 1 && m_needToNormalizeLRByParallUtterance)
+        if (trainSetDataReader->GetNumParallelSequences() > 1 && m_needToNormalizeLRByParallUtterance)
         {
             for (auto& x : m_learningRatesPerSample)
-                x /= (float)trainSetDataReader->NumberSlicesInEachRecurrentIter();
+                x /= (float)trainSetDataReader->GetNumParallelSequences();
         }
         
         // first, we need to normalize the effect of nbruttsineachrecurrentiter for momemtum
-        if (trainSetDataReader->NumberSlicesInEachRecurrentIter() > 1 && m_needToNormalizeMomentumByParallUtterance)
+        if (trainSetDataReader->GetNumParallelSequences() > 1 && m_needToNormalizeMomentumByParallUtterance)
         {
             for (auto& x : m_momentumPerSample)
-                x = (float)pow(x, 1.0 / trainSetDataReader->NumberSlicesInEachRecurrentIter());
-            }
+                x = (float)pow(x, 1.0 / trainSetDataReader->GetNumParallelSequences());
+        }
 
         bool learnRateInitialized = false;
         if (startEpoch > 0)
@@ -1047,8 +1047,8 @@ template<class ElemType>
             }
             
             actualMinibatchSize = chosenMinibatchSize;
-            if (trainSetDataReader->NumberSlicesInEachRecurrentIter() > 1 && m_needToNormalizeMomentumByParallUtterance)
-                actualMinibatchSize = chosenMinibatchSize * trainSetDataReader->NumberSlicesInEachRecurrentIter();
+            if (trainSetDataReader->GetNumParallelSequences() > 1 && m_needToNormalizeMomentumByParallUtterance)
+                actualMinibatchSize = chosenMinibatchSize * trainSetDataReader->GetNumParallelSequences();
 
             fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
                     i + 1, learnRatePerSample, MomentumPerMB(m_momentumPerSample[i], actualMinibatchSize));
@@ -1307,8 +1307,8 @@ template<class ElemType>
             ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
             net.SetActualMiniBatchSizeFromFeatures();
-            net.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
+            net.VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
 
             // TODO: Exactly this loop should be INSIDE ComputationNetwork--pass the nodes array instead!
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
@@ -1766,8 +1766,8 @@ template<class ElemType>
                 LogicError("no output node was found.");
 
             net.SetActualMiniBatchSizeFromFeatures();
-            net.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
             trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
+            net.VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
             net.Evaluate(outputNodes[0]);   // Only evaluate the first output
             trainSetDataReader->SetNetOutput(uttInfo,
                                              dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->FunctionValues(),
@@ -1922,7 +1922,7 @@ template<class ElemType>
             size_t actualMBSize = 0;
             if (wasDataRead)
             {
-                size_t nSlices = trainSetDataReader->NumberSlicesInEachRecurrentIter();
+                size_t nSlices = trainSetDataReader->GetNumParallelSequences();
                 MBLayoutPtr pMBLayout;
                 if (!useDistributedMBReading && useParallelTrain)
                 {
@@ -1946,14 +1946,14 @@ template<class ElemType>
                 {
                     if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
                     {
-                        net.SetActualNbrSlicesInEachRecurentIteration(nSlices);
                         *net.GetMBLayoutPtr() = *pMBLayout;
                         // TODO: ^^ we should just pass pointers; this current code is semantically identical to before the change to MBLayout
+                        net.VerifyActualNumParallelSequences(nSlices);
                     }
                     else
                     {
-                        net.SetActualNbrSlicesInEachRecurentIteration(nSlices);
                         trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
+                        net.VerifyActualNumParallelSequences(nSlices);
                     }
 
                     nSamplesSinceLastModelSync += actualMBSize;
@@ -1969,8 +1969,9 @@ template<class ElemType>
                     if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
                     {
                         refNet.SetActualMiniBatchSize(actualMBSize);
-                        refNet.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
-                        // TODO: not setting MBLayout?
+                        *refNet.GetMBLayoutPtr() = *net.GetMBLayoutPtr();       // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
+                        refNet.VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
+
                         refNet.Evaluate(refNode);
                         Matrix<ElemType>::ScaleAndAdd((ElemType)m_adaptationRegWeight,
                                                       dynamic_pointer_cast<ComputationNode<ElemType>>(refNode)->FunctionValues(),
