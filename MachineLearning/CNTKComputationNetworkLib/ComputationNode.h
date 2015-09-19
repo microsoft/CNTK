@@ -318,7 +318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeGradientForChildren() = 0;
 
-        virtual void ComputeGradientForChildren(const size_t timeIdxInSeq) = 0;
+        virtual void ComputeGradientForChildren(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
 
         // TODO: some evaluation method to be abstracted, but types don't match
 
@@ -825,7 +825,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
-            size_t nStream, ElemType initStateValue, Matrix<ElemType>& newprevstate)
+                                                          size_t nStream, ElemType initStateValue, Matrix<ElemType>& newprevstate)
         {
             Matrix<ElemType> colSeg(sentenceBegin.GetDeviceId());
             colSeg.Resize(nStream, nStream);
