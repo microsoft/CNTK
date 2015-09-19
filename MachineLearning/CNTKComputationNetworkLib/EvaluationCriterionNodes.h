@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("ErrorPrediction operation: one of the operants has 0 element.");
 
             if (((!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match size
-                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()) )) && Inputs(0)->LoopId() < 0)
+                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()) )) && Inputs(0)->GetLoopId() < 0)
             {
                 LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
             }       
