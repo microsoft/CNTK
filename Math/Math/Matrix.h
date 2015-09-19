@@ -608,6 +608,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // if we have no matrix/vector, this means no frame has any flag set
         // We still can have a number of rows in this case.
         bool IsAllNone() const { validate(); return m_minibatchPackingFlags.empty(); }
+        void SetAllNone() { Resize(0, 0); }
 
 #if 0   // we have this pattern often:
         // TODO: mbSize and #slices must also move into MBLayout 
