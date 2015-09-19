@@ -539,10 +539,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep,
-                                                                                        m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep,
-                                                                             m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
+            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
 
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
@@ -692,8 +690,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
+            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
 
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
@@ -839,13 +837,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             assert(m_memory.GetNumCols() > 0);
 
-            //FunctionValues().Resize(m_memory.GetNumRows(), m_samplesInRecurrentStep);
+            //FunctionValues().Resize(m_memory.GetNumRows(), GetNumParallelSequences());
             FunctionValues().Resize(m_memory.GetNumRows(), frameRange.NumCols());   // extra space for one time step
             if (frameRange.t() == 0)    // for first frame, check that we got all in memory  --TODO: is this comment correct? How about going backwards?
-                assert(FunctionValues().FrameSlice(FrameRange(0, m_samplesInRecurrentStep)/*TODO: delete the next two parameters*/, 0, m_samplesInRecurrentStep).FrobeniusNorm() == m_memory.FrameSlice(FrameRange(0, m_samplesInRecurrentStep)/*TODO: delete the next two parameters*/, 0, m_samplesInRecurrentStep).FrobeniusNorm());
-                //assert(FunctionValues().ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm() == m_memory.ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm());
-            FunctionValues().SetValue(m_memory.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
-            assert(FunctionValues().GetNumCols() == m_samplesInRecurrentStep);
+                assert(FunctionValues().FrameSlice(FrameRange(0, GetNumParallelSequences())/*TODO: delete the next two parameters*/, 0, GetNumParallelSequences()).FrobeniusNorm() == m_memory.FrameSlice(FrameRange(0, GetNumParallelSequences())/*TODO: delete the next two parameters*/, 0, GetNumParallelSequences()).FrobeniusNorm());
+                //assert(FunctionValues().ColumnSlice(0, GetNumParallelSequences()).FrobeniusNorm() == m_memory.ColumnSlice(0, GetNumParallelSequences()).FrobeniusNorm());
+            FunctionValues().SetValue(m_memory.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()));
+            assert(FunctionValues().GetNumCols() == GetNumParallelSequences());
         }
 
         virtual void SaveToFile(File& fstream)  const
@@ -934,7 +932,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0)
                 InvalidArgument("TimeReverse operation only takes one input.");
             ComputationNodePtr child = Inputs(inputIndex);
-            ComputeInputPartialS(GradientValues(), child->GradientValues(), m_samplesInRecurrentStep);
+            ComputeInputPartialS(GradientValues(), child->GradientValues(), GetNumParallelSequences());
         }
 
         static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues, int nSamples)
@@ -967,7 +965,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_hasComputed == false)
             {
-                EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
+                EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), GetNumParallelSequences());
                 m_memory.SetValue(FunctionValues());
             }
         }

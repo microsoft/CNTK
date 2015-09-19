@@ -1237,8 +1237,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FunctionValues().SetValue(0.0);
             Matrix<ElemType> funcVal = FunctionValues();
 
-            size_t nstep = ncol / m_samplesInRecurrentStep;
-            for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
+            size_t nstep = ncol / GetNumParallelSequences();
+            for (size_t i = 0; i < GetNumParallelSequences(); i++)
             {
                 Matrix<ElemType> postProbSlice = mPostProb.ColumnSlice(i * nstep, nstep);
                 Matrix<ElemType> alphaSlice = mAlpha.ColumnSlice(i * nstep, nstep);
@@ -1269,9 +1269,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (inputIndex == 2)
             {
                 size_t ncol = mAlpha.GetNumCols();
-                size_t nstep = ncol / m_samplesInRecurrentStep;
+                size_t nstep = ncol / GetNumParallelSequences();
                 assert(Inputs(inputIndex)->GradientValues().GetNumElements() > 0);
-                for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
+                for (size_t i = 0; i < GetNumParallelSequences(); i++)
                 {
                     ErrorSignalToTransitionNode(
                         Inputs(0)->FunctionValues().ColumnSlice(i * nstep, nstep),

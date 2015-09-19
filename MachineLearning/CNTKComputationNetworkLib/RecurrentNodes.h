@@ -374,12 +374,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0) // TODO: is this check necessary here? Can this be a generic check in the base class?
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
 
-            int nbrSamples = GradientValues().GetNumCols() / m_samplesInRecurrentStep; 
+            int nbrSamples = GradientValues().GetNumCols() / GetNumParallelSequences(); 
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
             {
                 // TODO: call the looping version below to avoid code dup
                 const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(timeIdxInSeq);
-                ComputeInputPartialSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags.first, colBoundaryFlags.second);
+                ComputeInputPartialSRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags.first, colBoundaryFlags.second);
             }
         }
 
@@ -388,12 +388,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             assert(m_timeStep > 0);
 
-            int nbrSamples = Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep;
+            int nbrSamples = Inputs(0)->FunctionValues().GetNumCols() / GetNumParallelSequences();
             for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
             {
                 // TODO: call the looping version below to avoid code dup
                 const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(timeIdxInSeq);
-                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags.first, colBoundaryFlags.second);
+                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags.first, colBoundaryFlags.second);
             }
 
             //set the past activity to be used by next minibatch
@@ -444,12 +444,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0)
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
 
-            int nbrSamples = GradientValues().GetNumCols() / m_samplesInRecurrentStep;
+            int nbrSamples = GradientValues().GetNumCols() / GetNumParallelSequences();
             for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
             {
                 // TODO: call the looping version below to avoid code dup
                 const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(timeIdxInSeq);
-                ComputeInputPartialSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags.first, colBoundaryFlags.second);
+                ComputeInputPartialSRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags.first, colBoundaryFlags.second);
             }
         }
 
@@ -457,11 +457,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             assert(m_timeStep > 0);
 
-            int nbrSamples = Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep;
+            int nbrSamples = Inputs(0)->FunctionValues().GetNumCols() / GetNumParallelSequences();
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
             {
                 const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(timeIdxInSeq);
-                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags.first, colBoundaryFlags.second);
+                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags.first, colBoundaryFlags.second);
             }
 
             //set the future activity to be used by next minibatch
@@ -472,7 +472,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             assert(m_pMBLayout);
 
-            if (frameRange.t() == Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep - 1)
+            if (frameRange.t() == Inputs(0)->FunctionValues().GetNumCols() / GetNumParallelSequences() - 1)
                 m_delayedActivation = Inputs(0)->FunctionValues();
 
             const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(frameRange.t());
@@ -592,8 +592,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> slicePrevOutput(m_deviceId), slicePrevState(m_deviceId);
                 Matrix<ElemType> grdToPrevOutput(m_deviceId), grdToPrevState(m_deviceId);
                 Matrix<ElemType> stateError(m_deviceId);
-                slicePrevState.Resize(outputDim, m_samplesInRecurrentStep);
-                slicePrevOutput.Resize(outputDim, m_samplesInRecurrentStep);
+                slicePrevState.Resize(outputDim, GetNumParallelSequences());
+                slicePrevOutput.Resize(outputDim, GetNumParallelSequences());
                 slicePrevOutput.SetValue(0);
 
                 stateError.Resize(slicePrevState.GetNumRows(), slicePrevState.GetNumCols());
@@ -603,21 +603,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 grdToPrevOutput.SetValue(0);
                 grdToPrevState.SetValue(0);
 
-                for (int timeIdxInSeq = nT - m_samplesInRecurrentStep; timeIdxInSeq >= 0; timeIdxInSeq -= m_samplesInRecurrentStep)
+                for (int timeIdxInSeq = nT - GetNumParallelSequences(); timeIdxInSeq >= 0; timeIdxInSeq -= GetNumParallelSequences())
                 {
-                    FrameRange frameRange(timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceOutput = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceState = m_State.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
+                    FrameRange frameRange(timeIdxInSeq, GetNumParallelSequences());
+                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
+                    Matrix<ElemType> sliceOutput = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
+                    Matrix<ElemType> sliceState = m_State.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
 
-                    Matrix<ElemType> sliceGi = m_Gi.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceGf = m_Gf.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceGo = m_Go.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGi = m_Gi.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
+                    Matrix<ElemType> sliceGf = m_Gf.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
+                    Matrix<ElemType> sliceGo = m_Go.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
 
-                    Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceTanhObs = tanhObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
+                    Matrix<ElemType> sliceTanhObs = tanhObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
 
-                    Matrix<ElemType> error = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep);
+                    Matrix<ElemType> error = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
 
                     Matrix<ElemType> grdToObsSlice(this->m_deviceId);
 
@@ -627,7 +627,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
                     PrepareThisErrorsBeforeBackProp(timeIdxInSeq, nT, error, stateError, grdToPrevOutput, grdToPrevState,
-                                                    m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, m_samplesInRecurrentStep, &m_pMBLayout->GetM());
+                                                    m_obs_error_from_future_minibatch, m_state_error_from_future_minibatch, GetNumParallelSequences(), &m_pMBLayout->GetM());
 
 #ifdef DEBUG_DECODER
                     fprintf(stderr, "output error [%ld] norm = %.8e\n", timeIdxInSeq, error.FrobeniusNorm());
@@ -639,7 +639,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     grdToPrevOutput.SetValue(0);
                     grdToPrevState.SetValue(0);
 
-                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, &m_pMBLayout->GetM());
+                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, GetNumParallelSequences(), m_DefaultState, &m_pMBLayout->GetM());
 
                     ComputeInputGradientWrtGates(
                         error,
@@ -666,9 +666,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         grdToPrevState,
                         m_tempMatrix
                     );
-                    grdToObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, m_samplesInRecurrentStep).SetValue(grdToObsSlice);
+                    grdToObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences()).SetValue(grdToObsSlice);
 
-                    PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, m_samplesInRecurrentStep, &m_pMBLayout->GetM());
+                    PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, GetNumParallelSequences(), &m_pMBLayout->GetM());
                 }
 #ifdef DEBUG_DECODER
                 fprintf(stderr, "after error prop b_c norm = %.8e\n", Inputs(4)->FunctionValues().ColumnSlice(0, 1).FrobeniusNorm());
@@ -917,16 +917,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         */
         int GetSegInfo(size_t t, size_t streamid)
         {
-            if (streamid >= m_samplesInRecurrentStep)
-                LogicError("GetSegInfo: stream id %d is larger than the number of streams %d", streamid, m_samplesInRecurrentStep);
+            if (streamid >= GetNumParallelSequences())
+                LogicError("GetSegInfo: stream id %d is larger than the number of streams %d", streamid, GetNumParallelSequences());
 
             size_t nT = Inputs(0)->FunctionValues().GetNumCols();
             if (t >= nT)
                 LogicError("GetSegInfo: time %d times is larger than the total number of observations %d", t, nT);
 
-            int utt_t = (int)t / m_samplesInRecurrentStep;
+            int utt_t = (int)t / GetNumParallelSequences();
             auto thisCol = m_pMBLayout->GetFrame(utt_t).first;
-            thisCol.Reshape(1, m_samplesInRecurrentStep);
+            thisCol.Reshape(1, GetNumParallelSequences());
             return (int) thisCol.ColumnSlice(streamid, 1).Get00Element();
         }
 
@@ -939,12 +939,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t outputDim = Inputs(1)->FunctionValues().GetNumRows();
             
             // save the hidden activities and output for the next minibatch
-            mLastOutput.Resize(outputDim, m_samplesInRecurrentStep);
-            mLastState.Resize(outputDim, m_samplesInRecurrentStep);
+            mLastOutput.Resize(outputDim, GetNumParallelSequences());
+            mLastState.Resize(outputDim, GetNumParallelSequences());
 
-            for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
+            for (size_t i = 0; i < GetNumParallelSequences(); i++)
             {
-                for (int t = nT - m_samplesInRecurrentStep + i; t >= 0; t -= m_samplesInRecurrentStep)
+                for (int t = nT - GetNumParallelSequences() + i; t >= 0; t -= GetNumParallelSequences())
                 {
                     if (GetSegInfo(t, i) == ((int) MinibatchPackingFlags::None))
                     {
@@ -977,14 +977,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 tanhObs.Resize(outputDim, nT);
                 tanhObs.SetValue(NAN);  // set to this extrem value so, if anything wrong in later procedure, problems can be easily spotted. 
 
-                if (m_PastState.IsEmpty() || m_PastState.GetNumCols() != m_samplesInRecurrentStep)
+                if (m_PastState.IsEmpty() || m_PastState.GetNumCols() != GetNumParallelSequences())
                 {
-                    m_PastState.Resize(outputDim, m_samplesInRecurrentStep);
+                    m_PastState.Resize(outputDim, GetNumParallelSequences());
                     m_PastState.SetValue(m_DefaultState);
                 }
-                if (m_PastOutput.IsEmpty() || m_PastOutput.GetNumCols() != m_samplesInRecurrentStep)
+                if (m_PastOutput.IsEmpty() || m_PastOutput.GetNumCols() != GetNumParallelSequences())
                 {
-                    m_PastOutput.Resize(outputDim, m_samplesInRecurrentStep);
+                    m_PastOutput.Resize(outputDim, GetNumParallelSequences());
                 }
 
 #ifdef DEBUG_DECODER
@@ -994,21 +994,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     fprintf(stderr, "LSTM node %ls past state norm = %.8e\n", this->NodeName().c_str(), m_PastState.FrobeniusNorm());
 #endif
 
-                for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += m_samplesInRecurrentStep)
+                for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += GetNumParallelSequences())
                 {
-                    FrameRange frameRange(timeIdxInSeq, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceOutput = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceState = m_State.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
+                    FrameRange frameRange(timeIdxInSeq, GetNumParallelSequences());
+                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
+                    Matrix<ElemType> sliceOutput = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
+                    Matrix<ElemType> sliceState = m_State.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
 
-                    Matrix<ElemType> sliceGi = m_Gi.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceGf = m_Gf.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceGo = m_Go.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceGi = m_Gi.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
+                    Matrix<ElemType> sliceGf = m_Gf.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
+                    Matrix<ElemType> sliceGo = m_Go.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
 
-                    Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceTanhInput = tanhObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
+                    Matrix<ElemType> sliceTanhInput = tanhObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
 
-                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, m_samplesInRecurrentStep, m_DefaultState, &m_pMBLayout->GetM());
+                    PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, GetNumParallelSequences(), m_DefaultState, &m_pMBLayout->GetM());
 
                     EvaluateThisNodeS(Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(4)->FunctionValues(),
                             sliceObs, mSlicePrevOutput, mSlicePrevState, sliceOutput, sliceState, sliceGi, sliceGf, sliceGo, sliceTanhState, sliceTanhInput, m_tempMatrix);
