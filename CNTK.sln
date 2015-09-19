@@ -252,6 +252,90 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DoublePrecision", "DoublePr
 		Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml = Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "KaldiReader", "KaldiReader", "{3E9C89B1-C045-4F42-92B2-F9FFFFC2DBD4}"
+	ProjectSection(SolutionItems) = preProject
+		DataReader\KaldiReader\basetypes.h = DataReader\KaldiReader\basetypes.h
+		DataReader\KaldiReader\basetypes.old.h = DataReader\KaldiReader\basetypes.old.h
+		DataReader\KaldiReader\biggrowablevectors.h = DataReader\KaldiReader\biggrowablevectors.h
+		DataReader\KaldiReader\chunkevalsource.h = DataReader\KaldiReader\chunkevalsource.h
+		DataReader\KaldiReader\DataReader.cpp = DataReader\KaldiReader\DataReader.cpp
+		DataReader\KaldiReader\DataWriter.cpp = DataReader\KaldiReader\DataWriter.cpp
+		DataReader\KaldiReader\dllmain.cpp = DataReader\KaldiReader\dllmain.cpp
+		DataReader\KaldiReader\fileutil.cpp = DataReader\KaldiReader\fileutil.cpp
+		DataReader\KaldiReader\fileutil.h = DataReader\KaldiReader\fileutil.h
+		DataReader\KaldiReader\fileutil.old.h = DataReader\KaldiReader\fileutil.old.h
+		DataReader\KaldiReader\htkfeatio.h = DataReader\KaldiReader\htkfeatio.h
+		DataReader\KaldiReader\HTKMLFReader.cpp = DataReader\KaldiReader\HTKMLFReader.cpp
+		DataReader\KaldiReader\HTKMLFReader.h = DataReader\KaldiReader\HTKMLFReader.h
+		DataReader\KaldiReader\HTKMLFWriter.cpp = DataReader\KaldiReader\HTKMLFWriter.cpp
+		DataReader\KaldiReader\HTKMLFWriter.h = DataReader\KaldiReader\HTKMLFWriter.h
+		DataReader\KaldiReader\latticearchive.cpp = DataReader\KaldiReader\latticearchive.cpp
+		DataReader\KaldiReader\latticearchive.h = DataReader\KaldiReader\latticearchive.h
+		DataReader\KaldiReader\latticestorage.h = DataReader\KaldiReader\latticestorage.h
+		DataReader\KaldiReader\minibatchiterator.h = DataReader\KaldiReader\minibatchiterator.h
+		DataReader\KaldiReader\minibatchsourcehelpers.h = DataReader\KaldiReader\minibatchsourcehelpers.h
+		DataReader\KaldiReader\msra_mgram.h = DataReader\KaldiReader\msra_mgram.h
+		DataReader\KaldiReader\numahelpers.h = DataReader\KaldiReader\numahelpers.h
+		DataReader\KaldiReader\pplhelpers.h = DataReader\KaldiReader\pplhelpers.h
+		DataReader\KaldiReader\readaheadsource.h = DataReader\KaldiReader\readaheadsource.h
+		DataReader\KaldiReader\rollingwindowsource.h = DataReader\KaldiReader\rollingwindowsource.h
+		DataReader\KaldiReader\simple_checked_arrays.h = DataReader\KaldiReader\simple_checked_arrays.h
+		DataReader\KaldiReader\simplesenonehmm.h = DataReader\KaldiReader\simplesenonehmm.h
+		DataReader\KaldiReader\simplethread.h = DataReader\KaldiReader\simplethread.h
+		DataReader\KaldiReader\ssefloat4.h = DataReader\KaldiReader\ssefloat4.h
+		DataReader\KaldiReader\ssematrix.h = DataReader\KaldiReader\ssematrix.h
+		DataReader\KaldiReader\stdafx.cpp = DataReader\KaldiReader\stdafx.cpp
+		DataReader\KaldiReader\stdafx.h = DataReader\KaldiReader\stdafx.h
+		DataReader\KaldiReader\targetver.h = DataReader\KaldiReader\targetver.h
+		DataReader\KaldiReader\utterancesource.h = DataReader\KaldiReader\utterancesource.h
+		DataReader\KaldiReader\utterancesourcemulti.h = DataReader\KaldiReader\utterancesourcemulti.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Kaldi2Reader", "Kaldi2Reader", "{C70E1572-20FF-496C-A0A9-10AA6755A07C}"
+	ProjectSection(SolutionItems) = preProject
+		DataReader\Kaldi2Reader\basetypes.h = DataReader\Kaldi2Reader\basetypes.h
+		DataReader\Kaldi2Reader\biggrowablevectors.h = DataReader\Kaldi2Reader\biggrowablevectors.h
+		DataReader\Kaldi2Reader\chunkevalsource.h = DataReader\Kaldi2Reader\chunkevalsource.h
+		DataReader\Kaldi2Reader\DataReader.cpp = DataReader\Kaldi2Reader\DataReader.cpp
+		DataReader\Kaldi2Reader\DataWriter.cpp = DataReader\Kaldi2Reader\DataWriter.cpp
+		DataReader\Kaldi2Reader\dllmain.cpp = DataReader\Kaldi2Reader\dllmain.cpp
+		DataReader\Kaldi2Reader\DOCUMENTATION.txt = DataReader\Kaldi2Reader\DOCUMENTATION.txt
+		DataReader\Kaldi2Reader\fileutil.cpp = DataReader\Kaldi2Reader\fileutil.cpp
+		DataReader\Kaldi2Reader\fileutil.h = DataReader\Kaldi2Reader\fileutil.h
+		DataReader\Kaldi2Reader\htkfeatio.h = DataReader\Kaldi2Reader\htkfeatio.h
+		DataReader\Kaldi2Reader\htkfeatio_utils.h = DataReader\Kaldi2Reader\htkfeatio_utils.h
+		DataReader\Kaldi2Reader\HTKMLFReader.cpp = DataReader\Kaldi2Reader\HTKMLFReader.cpp
+		DataReader\Kaldi2Reader\HTKMLFReader.h = DataReader\Kaldi2Reader\HTKMLFReader.h
+		DataReader\Kaldi2Reader\HTKMLFWriter.cpp = DataReader\Kaldi2Reader\HTKMLFWriter.cpp
+		DataReader\Kaldi2Reader\HTKMLFWriter.h = DataReader\Kaldi2Reader\HTKMLFWriter.h
+		DataReader\Kaldi2Reader\kaldi.h = DataReader\Kaldi2Reader\kaldi.h
+		DataReader\Kaldi2Reader\KaldiSequenceTrainingDerivative.cpp = DataReader\Kaldi2Reader\KaldiSequenceTrainingDerivative.cpp
+		DataReader\Kaldi2Reader\KaldiSequenceTrainingDerivative.h = DataReader\Kaldi2Reader\KaldiSequenceTrainingDerivative.h
+		DataReader\Kaldi2Reader\latticearchive.cpp = DataReader\Kaldi2Reader\latticearchive.cpp
+		DataReader\Kaldi2Reader\latticearchive.h = DataReader\Kaldi2Reader\latticearchive.h
+		DataReader\Kaldi2Reader\latticestorage.h = DataReader\Kaldi2Reader\latticestorage.h
+		DataReader\Kaldi2Reader\minibatchiterator.h = DataReader\Kaldi2Reader\minibatchiterator.h
+		DataReader\Kaldi2Reader\minibatchsourcehelpers.h = DataReader\Kaldi2Reader\minibatchsourcehelpers.h
+		DataReader\Kaldi2Reader\msra_mgram.h = DataReader\Kaldi2Reader\msra_mgram.h
+		DataReader\Kaldi2Reader\notes.txt = DataReader\Kaldi2Reader\notes.txt
+		DataReader\Kaldi2Reader\numahelpers.h = DataReader\Kaldi2Reader\numahelpers.h
+		DataReader\Kaldi2Reader\pplhelpers.h = DataReader\Kaldi2Reader\pplhelpers.h
+		DataReader\Kaldi2Reader\readaheadsource.h = DataReader\Kaldi2Reader\readaheadsource.h
+		DataReader\Kaldi2Reader\rollingwindowsource.h = DataReader\Kaldi2Reader\rollingwindowsource.h
+		DataReader\Kaldi2Reader\simple_checked_arrays.h = DataReader\Kaldi2Reader\simple_checked_arrays.h
+		DataReader\Kaldi2Reader\simplesenonehmm.h = DataReader\Kaldi2Reader\simplesenonehmm.h
+		DataReader\Kaldi2Reader\simplethread.h = DataReader\Kaldi2Reader\simplethread.h
+		DataReader\Kaldi2Reader\ssefloat4.h = DataReader\Kaldi2Reader\ssefloat4.h
+		DataReader\Kaldi2Reader\ssematrix.h = DataReader\Kaldi2Reader\ssematrix.h
+		DataReader\Kaldi2Reader\stdafx.cpp = DataReader\Kaldi2Reader\stdafx.cpp
+		DataReader\Kaldi2Reader\stdafx.h = DataReader\Kaldi2Reader\stdafx.h
+		DataReader\Kaldi2Reader\targetver.h = DataReader\Kaldi2Reader\targetver.h
+		DataReader\Kaldi2Reader\UtteranceDerivativeBuffer.cpp = DataReader\Kaldi2Reader\UtteranceDerivativeBuffer.cpp
+		DataReader\Kaldi2Reader\UtteranceDerivativeBuffer.h = DataReader\Kaldi2Reader\UtteranceDerivativeBuffer.h
+		DataReader\Kaldi2Reader\UtteranceDerivativeComputationInterface.h = DataReader\Kaldi2Reader\UtteranceDerivativeComputationInterface.h
+		DataReader\Kaldi2Reader\utterancesourcemulti.h = DataReader\Kaldi2Reader\utterancesourcemulti.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -368,5 +452,7 @@ Global
 		{B6725C9F-A6D2-4269-9B74-7888A90F7884} = {5E666C53-2D82-49C9-9127-3FDDC321C741}
 		{B27DD434-EECD-4EE0-A03B-1150EB87258E} = {B6725C9F-A6D2-4269-9B74-7888A90F7884}
 		{A4884465-CFBB-4A64-A9DE-690E1A63EF7E} = {B6725C9F-A6D2-4269-9B74-7888A90F7884}
+		{3E9C89B1-C045-4F42-92B2-F9FFFFC2DBD4} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
+		{C70E1572-20FF-496C-A0A9-10AA6755A07C} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
 	EndGlobalSection
 EndGlobal
