@@ -743,10 +743,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         accessed.assign(m_recurrentInfo.size(), false);
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            int iId = FindInRecurrentLoop(*nodeIter);
+            const vector<ComputationNodeBasePtr>* pRecurrentNodesDummy;
+            int iId = FindInRecurrentLoops(*nodeIter, pRecurrentNodesDummy);
             if (iId >= 0)
             {
-
                 if (!accessed[iId])
                 {
                     newList.insert(newList.end(),
