@@ -75,7 +75,7 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) :
-        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())
+        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>()), m_pMBNoLayout(make_shared<MBLayout>())
     {
         m_randomSeedOffset = 0;
         m_actMiniBSize = 0;
@@ -595,12 +595,10 @@ public:
     // TODO: rename to ForwardProp()? To make it very clear?
     void Evaluate(const ComputationNodeBasePtr rootNode)
     {
-        // checks that will disappear once we complete the refactoring. If this passes for a while, we will eliminate one
-        // If this fails, comment this out (it is safe) and tell fseide@microsoft.com.
-        if (GetNumParallelSequences() != m_pMBLayout->GetNumParallelSequences())
-            LogicError("Evaluate: detected that m_nbrSlicesInEachRecurrentIteration != m_pMBLayout->GetNumParallelSequences()");
-        if (m_pMBLayout->GetNumTimeSteps() != m_pMBLayout->GetSize())
-            LogicError("Evaluate: detected that m_pMBLayout->GetNumTimeSteps() != m_pMBLayout->GetSize()");
+        // We have a matching layout structure that matches pMBLayout in number of sequences while not having any flags set.
+        // This is used for nodes that do not need recurrent processing, but can be done in batch.
+        // TODO: Does it harm if we have flags, for those that can be done in batch? I.e. why don't we just always provide flags?
+        m_pMBNoLayout->Resize(m_pMBLayout->GetNumParallelSequences(), 0);   // TODO: this is not nice, but we currently have no trigger to detect changes in layout
 
         // prepare to compute with the subnetwork that this rootNode depends on, including
         //  - auto-detecting recurrent loops
@@ -623,10 +621,11 @@ public:
         // TODO: in the future, these will be different on different nodes
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
-            // TODO: nbrSlices set once to the same value for all nodes each evaluation--is it ever changed later?
-            (*nodeIter)->SetNumParallelSequences(GetNumParallelSequences());
             if ((*nodeIter)->ReqMultiSeqHandling())
                 (*nodeIter)->ResetBound(m_pMBLayout);
+            else
+                (*nodeIter)->ResetBound(m_pMBNoLayout);
+            (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
         }
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
@@ -723,7 +722,7 @@ public:
                     {
                         for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                         {
-                            (*nodeIter)->SetNumParallelSequences(GetNumParallelSequences()); // TODO: move to FrameRange object
+                            (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences()); // TODO: move to FrameRange object
                             (*nodeIter)->ComputeGradientForChildren(timeIndex);
                         }
                     }
@@ -734,7 +733,7 @@ public:
                     {
                         for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                         {
-                            (*nodeIter)->SetNumParallelSequences(GetNumParallelSequences());
+                            (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
                             (*nodeIter)->ComputeGradientForChildren(timeIndex);
                         }
                     }
@@ -1580,6 +1579,7 @@ protected:
     // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
     MBLayoutPtr m_pMBLayout;
+    MBLayoutPtr m_pMBNoLayout;  // this one is a dummy, passed when no layout is available/should be used
 
     int m_actMiniBSize;
 

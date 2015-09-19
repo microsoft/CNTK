@@ -246,23 +246,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_loopId;
         }
 
-        // TODO: these two will disappear once the information is correctly held in a FrameRange record
-        // This is called at 3 places; two are directly before ComputeGradientForChildren().
-        void SetNumParallelSequences(size_t bsz)
+        // temporary function that is called to verify stuff is called as I think it is. Delete if this does not fire for a while.
+        void VerifyNumParallelSequences(size_t bsz)
         {
-            m_samplesInRecurrentStep = bsz;
+            //m_samplesInRecurrentStep = bsz;
+            if (bsz != m_pMBLayout->GetNumParallelSequences())
+                LogicError("VerifyNumParallelSequences: value inconsistent with MB layout");
         }
 
-        // Note: only used in one place, SimpleEvaluator.h PreComputeActivityAtTime().
-        // The member is, however, read out at 284 places inside nodes,
-        // most of the time as
+        // This is used at 284 places inside nodes, most of the time as
         // FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences())
-        // This expression will be turned into a function call to right here, so that we compute this only at one place
-        // and can also handle the full-minibatch case.
-        // Let us try to get this member out of this class altogether; it belongs elsewhere.
         size_t GetNumParallelSequences() const
         {
-            return m_samplesInRecurrentStep;
+            //return m_samplesInRecurrentStep;
+            return m_pMBLayout->GetNumParallelSequences();
         }
 
         int64_t UpdateEvalTimeStamp()
@@ -682,7 +679,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// the order in reverse graph. 
         int m_visitedOrder;
         int m_index;
-        int m_lowlink;
+        int m_lowlink;          // TODO: comment this, as it is not obvious
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
@@ -1281,7 +1278,7 @@ protected:  \
     using Base::m_visitedOrder; using Base::m_index; using Base::m_lowlink; using Base::m_visited; using Base::m_inStack; \
     using Base::m_indexInLoop; \
     using Base::m_pMBLayout; \
-    using Base::m_reqMultiSeqHandling; using Base::UseCustomizedMultiSeqHandling; \
+    using Base::m_reqMultiSeqHandling; using Base::UseCustomizedMultiSeqHandling; using Base::GetNumParallelSequences; \
     using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
     using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; using Base::s_timeStampCounter; \
