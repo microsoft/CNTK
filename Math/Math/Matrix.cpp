@@ -1005,8 +1005,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const ElemType v)
     {
-        if (IsEmpty())
-            throw std::logic_error("SetValue: Matrix is empty.");
+        if (IsEmpty())  // if empty then we are done
+            return;
+            //throw std::logic_error("SetValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1020,8 +1021,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const DeviceBoundNumber<ElemType>& db_number)
     {
-        if (IsEmpty())
-            throw std::logic_error("SetValue: Matrix is empty.");        
+        if (IsEmpty())  // if empty then we are done
+            return;
+            //throw std::logic_error("SetValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,

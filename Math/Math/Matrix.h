@@ -602,10 +602,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // these accessors were for now just collected from actual usage; need to be cleaned up once this compiles again
         size_t GetNumTimeSteps()  const { validate(); return m_sentenceBoundaryFlags.GetNumCols(); }
-        size_t GetNumParallelSequences() const { return IsAllNone() ? 1 : m_sentenceBoundaryFlags.GetNumRows(); }   // 1 stream if no matrix
+        size_t GetNumParallelSequences() const { return (m_sentenceBoundaryFlags.GetNumRows() == 0) ? 1 : m_sentenceBoundaryFlags.GetNumRows(); }   // 1 stream if no matrix
         size_t GetSize() const { validate(); return m_minibatchPackingFlags.size(); }
-        // ^^ TODO: add a check whether Size() == GetNumTimeSteps(); it really should, unless I misunderstood
+
+        // if we have no matrix/vector, this means no frame has any flag set
+        // We still can have a number of rows in this case.
         bool IsAllNone() const { validate(); return m_minibatchPackingFlags.empty(); }
+
 #if 0   // we have this pattern often:
         // TODO: mbSize and #slices must also move into MBLayout 
         evalnet->SetActualMiniBatchSize(mbSize);
