@@ -592,6 +592,30 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             netNdlFrom->cn->RenameNode(node, nodeName.second);
         }
     }
+    else if (EqualInsensitive(name, "ReviseParameter"))
+    {
+        typedef LearnableParameter<ElemType> LearnableParameterNode;
+        if (params.size() != 2)
+            RuntimeError("Invalid number of parameters: Valid parameters are: ReviseParameter(nodeName, nodeParametersInASCIIPathName)");
+        std::string nodeName = params[0];
+        std::string paramPath = params[1];
+
+        NetNdl<ElemType>* netNdl; 
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
+
+        for (auto pNodes : nodes)
+        {
+            if (pNodes->OperationName() != LearnableParameter<ElemType>::TypeName())
+            {
+                fprintf(stderr, "WARNING: you want to change the parameter of node (%ls), but it is not a learnable parameter (it is a %ls node). Skipping this node\n",
+                    pNodes->NodeName().c_str(), pNodes->OperationName().c_str());
+                continue;
+            }
+            shared_ptr<LearnableParameterNode> pParamNode = std::dynamic_pointer_cast<LearnableParameterNode>(pNodes);
+            pParamNode->ReviseFromFile(msra::strfun::mbstowcs(paramPath));
+            fprintf(stderr, "Revise node %ls using parameter file %s\n", pNodes->NodeName().c_str(), paramPath.c_str());
+        }
+    }
     else
     {
         RuntimeError("Unknown Editor function %s", name.c_str());
