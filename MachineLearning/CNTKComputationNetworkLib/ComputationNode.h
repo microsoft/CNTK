@@ -128,7 +128,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Normally, N is 1 or it spans the entire minibatch.
         virtual void EvaluateThisNode(const FrameRange &) = 0;
         // evaluate a node--this calls EvaluateThisNode() and MaskToZeroWhenLabelAndFeatureMissing() if needed
-        // TODO: name this better--which is the main entry point?
+        // this is the main entry point for Network; while EvaluateThisNode() is the virtual call into specific node implementation
         virtual void EvaluateThisNodeGivenInputs() = 0;
         virtual void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
 
@@ -655,8 +655,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // ComputationNode -- abstract base class for computation nodes parameterized by float vs. double
     // =======================================================================
 
-    // TODO: number of inputs should be a template parameter! SIZE_MAX for those that take variable numvber
-
     template<class ElemType>
     class ComputationNode : public ComputationNodeBase //Abstract Class that cannot be instantiated
     {
@@ -768,10 +766,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_children[i] = UpCast(inputs[i]);      // (this checks the type)
         }
 
-        //making them virtual so that nodes that only copy values from it's children (e.g., dropout) can be efficient in evaluation
-        virtual const Matrix<ElemType>& FunctionValues() const {return m_functionValues;}
-        virtual Matrix<ElemType>& FunctionValues() { return m_functionValues;}
-
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
 
         // TODO: similar to DumpInfo; used by ExperimentalNetworkBuilder test implementation
@@ -808,14 +802,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        /*implement*/ void EvaluateThisNodeGivenInputs()
+        /*implement*/void EvaluateThisNodeGivenInputs()
         {
-            EvaluateThisNode();
+            EvaluateThisNode();     // this is a call to the virtual function that implements the actual operation
 
             if (!UseCustomizedMultiSeqHandling())
                 MaskToZeroWhenLabelAndFeatureMissing(m_functionValues);
         }
 
+        // TODO: use a FrameRange arg, then unify with above
+        // TODO: do we even need this extra function? Should Node know about this masking business, or is that the job of Network?
+        // TODO: rename this to make it more clear what this function does
         /*implement*/void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
         {
             EvaluateThisNode(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
@@ -853,8 +850,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
         /**
-        reset to error signals to 0 for any elements without labele
+        reset to error signals to 0 for any elements without labels
         */
+        // TODO: use a FrameRange instead of timeIdxSeq
         bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t timeIdxInSeq=(size_t)-1) const
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed
@@ -954,9 +952,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        const Matrix<ElemType>& GradientValues() const { return m_gradientValues; }
-        Matrix<ElemType>& GradientValues() { return m_gradientValues; }
-
         // up-cast to make life easier
         static ComputationNodePtr UpCast(ComputationNodeBasePtr inode)
         {
@@ -985,14 +980,52 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // expand the inputs to exist up to the desired index
             while (childIndex >= m_children.size())
-            {
-                m_children.push_back(NULL);
-            }
+                m_children.push_back(nullptr);
 
             // set the input value
             m_children[childIndex] = node;
         }
 
+        //making them virtual so that nodes that only copy values from it's children (e.g., dropout) can be efficient in evaluation
+        virtual const Matrix<ElemType>& FunctionValues() const { return m_functionValues; }
+        virtual Matrix<ElemType>& FunctionValues() { return m_functionValues; }
+
+        const Matrix<ElemType>& GradientValues() const { return m_gradientValues; }
+        Matrix<ElemType>& GradientValues() { return m_gradientValues; }
+
+        // function to access any input and output, value and gradient, whole batch or single frame
+        // Note: This returns an object, not a reference. That object is a column slice, i.e. a small object that just points into another object.
+        // TODO: remove FrameRange::samplesInRecurrentStep from FrameRange, as it belongs into pMBLayout. Hence this function that binds both together.
+        // Note: This is not used anywhere yet, only a sketch how we may further abstract timing.
+#define INDEX_OUT SIZE_MAX
+#define SEQUENCE_ALL SIZE_MAX
+        enum ValueOrGradient { VAL, GRAD };
+        Matrix<ElemType> DataSlice(size_t index/*input index or OUT*/,
+                                   ValueOrGradient valueOrGradient/*as it says*/,
+                                   FrameRange frameRange/*select frame or entire batch*/, size_t sequence = SEQUENCE_ALL/*SEQUENCE_ALL is the normal case*/)
+        {
+            ComputationNode<ElemType> * node = (index == INDEX_OUT) ? this : Inputs(index).get();
+            Matrix<ElemType> & data = (valueOrGradient == VAL) ? node->FunctionValues() : node->GradientValues();
+            if (frameRange.IsAllFrames())
+            {
+                if (sequence == SEQUENCE_ALL)
+                    return data.ColumnSlice(0, data.GetNumCols());
+                else
+                    LogicError("DataSlice: sequence index only supported when accessing individual frame"); // (not needed; doable but more involved, requiring a reshape)
+            }
+            else
+            {
+                size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
+                size_t startColumn = frameRange.t() * numParallelSequences;
+                if (sequence == SEQUENCE_ALL)
+                    return data.ColumnSlice(startColumn, numParallelSequences);
+                else
+                    return data.ColumnSlice(startColumn + sequence, 1);
+            }
+            // TODO:
+        }
+
+        // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
         /*implement*/void ComputeGradientForChildren()
         {
             // batch is done only for feed-forward nodes
@@ -1024,7 +1057,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif              
             }
         }
-
+        
+        // TODO: use a FrameRange here as well, then unify with above
         /*implement*/void ComputeGradientForChildren(const size_t timeIdxInSeq)
         {
             for (size_t i=0; i<m_children.size(); i++)
