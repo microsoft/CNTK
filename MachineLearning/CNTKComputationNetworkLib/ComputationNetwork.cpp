@@ -126,9 +126,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling");
-        fstream << m_nodesReqMultiSeqHandling.size();
-        for (size_t i = 0; i<m_nodesReqMultiSeqHandling.size(); i++)
-            fstream << m_nodesReqMultiSeqHandling[i]->NodeName();
+        fstream << m_requestNodesMultiSeqHandling.size();
+        for (size_t i = 0; i<m_requestNodesMultiSeqHandling.size(); i++)
+            fstream << m_requestNodesMultiSeqHandling[i]->NodeName();
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
@@ -326,11 +326,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return false;
     }
 
+    // Some nodes always need m_reqMultiSeqHandling; those set it themselves. Basically RecurrentNode only currently (besides PairNode and LSTMNode).
+    // Some nodes need it to be set xxx.
     // TODO: comment on who owns this flag. Is it entirely owned by Network?
     // Or should the 4 node types below know?
-    void ComputationNetwork::SetNodesReqMultiSeqHandling()
+    void ComputationNetwork::SetRequestNodesMultiSeqHandling()
     {
-        for (auto & node : m_nodesReqMultiSeqHandling)
+        for (auto & node : m_requestNodesMultiSeqHandling)  // this set is defined in NDL; here we propagate that into the actual nodes' flags, except for a few where it makes no sense (avoid user error)
         {
             //SumElements node will generate a scalar value and so it should never require special handling
             //TransposeNode will change the size of columns and so it should also not included for special handling
@@ -1018,7 +1020,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i<num; i++)
                 {
                     fstream >> nodeName;
-                    m_nodesReqMultiSeqHandling.push_back(GetNodeFromName(nodeName));
+                    m_requestNodesMultiSeqHandling.push_back(GetNodeFromName(nodeName));
                 }
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
             }
@@ -1160,7 +1162,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // critera
         fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_finalCriteria);
         // nodes that requires multi sequence handling 
-        fstream << FormSpecialNodes(dotcfg.m_nodesReqMultiSeqHandlingStyle, m_nodesReqMultiSeqHandling);            
+        fstream << FormSpecialNodes(dotcfg.m_nodesReqMultiSeqHandlingStyle, m_requestNodesMultiSeqHandling);            
         // pre-compute nodes
         fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
         // PastValue nodes
@@ -1203,7 +1205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         line.clear();
         for (const auto & x : m_finalCriteria)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        for (const auto & x : m_nodesReqMultiSeqHandling)
+        for (const auto & x : m_requestNodesMultiSeqHandling)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
         for (const auto & x : m_outputNodes)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
