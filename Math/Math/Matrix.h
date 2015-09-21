@@ -503,8 +503,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // ^^ This is some form of aggregate of m_sentenceBoundaryFlags taken over all streams. TODO: find out the exact condition
     public:
 
-        bool Is(size_t t, MinibatchPackingFlags f) const { return m_minibatchPackingFlags[t] & f; }
-        bool Is(size_t id, size_t t, MinibatchPackingFlags f) const { return ((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f; }
+        bool Is(size_t t, MinibatchPackingFlags f) const { return (m_minibatchPackingFlags[t] & f) != 0; }
+        bool Is(size_t id, size_t t, MinibatchPackingFlags f) const { return (((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f) != 0; }
 
         // get info for one frame; used in DelayedValueNode
         // TODO: clean this up, we can do this more nicely

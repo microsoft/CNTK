@@ -1043,7 +1043,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> softMax_t = softMax.ColumnSlice(sz, nbr_wrd);
                 Matrix<ElemType> logSoftMax_t = logSoftmax.ColumnSlice(sz, nbr_wrd);
 
-                if (curNode->MaskToZeroWhenLabelAndFeatureMissing(logSoftMax_t, t) == false)
+                if (!curNode->MaskToZeroWhenLabelAndFeatureMissing(logSoftMax_t, t))
                 {
                     Matrix<ElemType> obs = inputs.ColumnSlice(t, 1);  /// e.g., 200 x 1
                     obs.Reshape(1, nRow);  /// 1 x 200
@@ -1065,7 +1065,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 /// add the class log posterior probability
-                if (curNode->MaskToZeroWhenLabelAndFeatureMissing(clsLogSoftmax, t) == false)
+                if (!curNode->MaskToZeroWhenLabelAndFeatureMissing(clsLogSoftmax, t))
                 {
                     try{
                         Matrix<ElemType>::AddElementToElement(clsLogSoftmax, c_t, t, functionValues, 0, 0);
@@ -1095,7 +1095,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
-            if (m_pMBLayout && !m_pMBLayout->IsAllNone())
+            if (!m_pMBLayout->IsAllNone())
             {
                 // 't' is not a time but rather a column index that encodes (time stamp, stream)
                 size_t nS = m_pMBLayout->GetNumParallelSequences();

@@ -625,6 +625,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
         bool m_reqMultiSeqHandling;  // indicates whether the results of operation should be masked to handle the cases that the utterances have different lengths when grouped together as a minibatch.
+        // ^^ This decides whether the node gets passed the full layout with flags or only the one without flags
+        //    and this is only ever tested in MaskToZeroWhenLabelAndFeatureMissing(), of which two versions exist, one in ComputationNode and one in ClassBasedCrossEntropyWithSoftmaxNode
+        // TODO: rename this to reflect that it affects only masking
         size_t m_inputWidth, m_inputHeight, m_inputChannels;  //how to interpret each column in the input as an image
         size_t m_outputWidth, m_outputHeight, m_outputChannels;  //how to interpret each column in the output as an image
 
@@ -806,7 +809,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             EvaluateThisNode();     // this is a call to the virtual function that implements the actual operation
 
-            if (!UseCustomizedMultiSeqHandling())
+            if (!UseCustomizedMultiSeqHandling())       // this means the node does it by itself; if not, we do it for the node
                 MaskToZeroWhenLabelAndFeatureMissing(m_functionValues);
         }
 
@@ -857,7 +860,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed
 
-            if (m_pMBLayout && !m_pMBLayout->IsAllNone())
+            if (!m_pMBLayout->IsAllNone())
             {
                 size_t nT = matrixToBeMasked.GetNumCols();
                 size_t nS = m_pMBLayout->GetNumParallelSequences();
@@ -871,10 +874,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     size_t t = utt_t / nS;
 
-                    if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel))
+                    if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeatures))
                     {
                         for (size_t id = 0; id < nS; id++)
-                            if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
+                            if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeatures))
                                 matrixToBeMasked.ColumnSlice(utt_t+id, 1).SetValue(0);
                         processedExistsNoLabelorFeatureMissing = true;
                     }
@@ -1212,6 +1215,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SetErrorsFromFutureMinibatch(Matrix<ElemType>&) {}
 
         // indicatess whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
+        // defined by training/eval criteria (and the soon-to-be-deprecated PairNode, LSTMNode)
         virtual bool UseCustomizedMultiSeqHandling() { return false; }
 
     protected:

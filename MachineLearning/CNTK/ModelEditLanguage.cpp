@@ -472,7 +472,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 case melPropMultiSeqHandling:
                 {
                     bool set = params[2];
-                    SetProperty(node, cn->NodesReqMultiSeqHandling(), set);
+                    SetProperty(node, cn->RequestNodesMultiSeqHandling(), set);
                     break;
                 }
                 case melPropEvaluation:

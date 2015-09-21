@@ -529,7 +529,7 @@ public:
 
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
 
-    void SetNodesReqMultiSeqHandling();
+    void SetRequestNodesMultiSeqHandling();
 
     // MAIN ENTRY POINT for evaluation (forward prop)
     // TODO: pass a set of nodes instead of only one
@@ -876,10 +876,10 @@ public:
         return std::vector<ComputationNodeBasePtr> { node };
     }
 
-    inline std::vector<ComputationNodeBasePtr> & NodesReqMultiSeqHandling() { return m_nodesReqMultiSeqHandling; }
-    inline std::vector<ComputationNodeBasePtr> & EvaluationNodes()          { return m_evalNodes; }
-    inline std::vector<ComputationNodeBasePtr> & OutputNodes()              { return m_outputNodes; }
-    inline std::vector<ComputationNodeBasePtr> & PairNodes()                { return m_pairNodes; }
+    inline std::vector<ComputationNodeBasePtr> & RequestNodesMultiSeqHandling() { return m_requestNodesMultiSeqHandling; }  // user-specified list 'NodesReqMultiSeqHandling' (NDL and MEL create/modify this list)
+    inline std::vector<ComputationNodeBasePtr> & EvaluationNodes()              { return m_evalNodes; }
+    inline std::vector<ComputationNodeBasePtr> & OutputNodes()                  { return m_outputNodes; }
+    inline std::vector<ComputationNodeBasePtr> & PairNodes()                    { return m_pairNodes; }
 
     inline std::vector<RecurrentInfo> & RecurrentNodes() { return m_recurrentInfo; }
 
@@ -1181,7 +1181,7 @@ public:
         CollectInputAndLearnableParameters(rootNode);
 
         //
-        SetNodesReqMultiSeqHandling();
+        SetRequestNodesMultiSeqHandling();
     }
 
     //this function will need to be called before actual validation and execution to 
@@ -1549,10 +1549,10 @@ protected:
     std::vector<ComputationNodeBasePtr> m_evalNodes;
     std::vector<ComputationNodeBasePtr> m_outputNodes;
     std::vector<ComputationNodeBasePtr> m_pairNodes; /// nodes for the children network to pair
-    std::vector<ComputationNodeBasePtr> m_nodesReqMultiSeqHandling;
+    std::vector<ComputationNodeBasePtr> m_requestNodesMultiSeqHandling;
     vector<std::vector<ComputationNodeBasePtr>*> GetAllNodeGroups()    // get all groups to allow to iterate over all of them ...continue
     {
-        return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_nodesReqMultiSeqHandling };
+        return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_requestNodesMultiSeqHandling };
     }
 
     std::vector<RecurrentInfo> m_recurrentInfo;     // [index--TODO: comment what this is indexed with]
