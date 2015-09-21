@@ -206,9 +206,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this one differs in the starting condition
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) = 0;
 
-        static void WINAPI EvaluateThisNodeSRP(const FrameRange & frameRange, const int timeStep,
-                                               Matrix<ElemType>& functionValues, const Matrix<ElemType>& delayedActivation, const Matrix<ElemType>& inputFunctionValues,
-                                               const ElemType & initStateValue, const Matrix<float> & colBoundaryFlags, const MinibatchPackingFlags minibatchPackingFlags)
+        void EvaluateThisNodeSRP(const FrameRange & frameRange, const int timeStep,
+                                 Matrix<ElemType>& functionValues, const Matrix<ElemType>& delayedActivation, const Matrix<ElemType>& inputFunctionValues,
+                                 const ElemType & initStateValue, const Matrix<float> & colBoundaryFlags, const MinibatchPackingFlags minibatchPackingFlags)
         {
             size_t timeIdxInSeq = frameRange.t();
             size_t mNbr = frameRange.NumCols();
@@ -225,7 +225,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 d = (int)functionValues.Mod((float)delayedIndex, (float)delayedActivation.GetNumCols());
             // this can point to the past activity of the previous minibatch
 
-            Matrix<ElemType> out = functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq * mNbr, mNbr);
+            Matrix<ElemType> out = DataSlice(OUTPUT, VALUE, frameRange);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
 
             if (minibatchPackingFlags & SequenceStart_or_End)
