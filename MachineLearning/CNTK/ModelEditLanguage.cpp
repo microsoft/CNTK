@@ -345,7 +345,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // process outstanding NDL scripts ensuring that the inputs have all been resolved
         ProcessNDLScript(netNdlFrom, ndlPassResolve); 
-        for (auto node : nodeTo)
+        for (auto & node : nodeTo)
         {
             node->SetInput(inputNum, nodeFrom[0]);
         }
@@ -442,7 +442,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         ProcessNDLScript(netNdl, ndlPassInitial, false);
 
         ComputationNetwork* cn = netNdl->cn;
-        for (auto node : nodes)
+        for (auto & node : nodes)
         {
             switch(prop)
             {
@@ -524,7 +524,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         // make sure all NDL links have been resolved
         ProcessNDLScript(netNdl, ndlPassResolve);
 
-        for (auto node : nodes)
+        for (auto & node : nodes)
         {
             switch(prop)
             {
@@ -562,7 +562,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
             if (nodes.size() < 1)
                 RuntimeError("Delete must have at least one target, %s doesn't represent any items", params[i].c_str());
-            for (auto node : nodes)
+            for (const auto & node : nodes)
             {
                 netNdl->cn->DeleteNode(node->NodeName());
             }
@@ -603,7 +603,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         NetNdl<ElemType>* netNdl; 
         vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
 
-        for (auto pNodes : nodes)
+        for (auto & pNodes : nodes)
         {
             if (pNodes->OperationName() != LearnableParameter<ElemType>::TypeName())
             {
