@@ -326,9 +326,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return false;
     }
 
+    // TODO: comment on who owns this flag. Is it entirely owned by Network?
+    // Or should the 4 node types below know?
     void ComputationNetwork::SetNodesReqMultiSeqHandling()
     {
-        for (auto node : m_nodesReqMultiSeqHandling)
+        for (auto & node : m_nodesReqMultiSeqHandling)
         {
             //SumElements node will generate a scalar value and so it should never require special handling
             //TransposeNode will change the size of columns and so it should also not included for special handling
@@ -343,11 +345,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //if a typical criterion node is used as the training criterion node we assume it requires multiseq handling 
         //this is for backward compatibility
-        for (auto node : m_finalCriteria)
+        for (auto & node : m_finalCriteria)
             if (IsTypicalCriterionNode(node))
                 node->SetReqMultiSeqHandlingTo(true);
 
-        for (auto node : m_evalNodes)
+        for (auto & node : m_evalNodes)
             if (IsTypicalCriterionNode(node))
                 node->SetReqMultiSeqHandlingTo(true);
     }
@@ -408,8 +410,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::ClearCalcOrderCaches()
     {
-        for (auto it : m_cacheEvalOrders)
-            for (auto iter2 : m_cacheEvalOrders[it.first])
+        for (auto & it : m_cacheEvalOrders)
+            for (auto & iter2 : m_cacheEvalOrders[it.first])
                 iter2->ClearCache();
         m_cacheEvalOrders.clear();
         m_cacheGradientCalcOrders.clear();
@@ -681,7 +683,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         DetermineLoopTypes();
         
-        for (auto iter : nodes)
+        for (auto & iter : nodes)
             iter->ClearCache();
     }
 
@@ -1097,7 +1099,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         wstring str = style;
 
-        for (auto x : specialNodes)
+        for (const auto & x : specialNodes)
             str = str + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
         return str + L"; \n";
     }
@@ -1112,7 +1114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // get precompute node
         std::vector<ComputationNodeBasePtr> PreComputedNodes;
         std::vector<ComputationNodeBasePtr> allnodes = GetAllNodes();
-        for (auto n : allnodes)
+        for (const auto & n : allnodes)
         {
             if (n->RequiresPreCompute())
                 PreComputedNodes.push_back(n);
@@ -1120,7 +1122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // get PastValue node
         std::vector<ComputationNodeBasePtr> pastValueNodes;
-        for (auto n : allnodes)
+        for (const auto & n : allnodes)
         {
             if (n->OperationName() == OperationNameOf(PastValueNode) || n->OperationName() == L"Delay")
                 pastValueNodes.push_back(n);
@@ -1128,14 +1130,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // get FuturetValue node
         std::vector<ComputationNodeBasePtr> futureValueNodes;
-        for (auto n : allnodes)
+        for (const auto & n : allnodes)
         {
             if (n->OperationName() == OperationNameOf(FutureValueNode))
                 futureValueNodes.push_back(n);
         }
         // get learnableParameters
         std::vector<ComputationNodeBasePtr> learnableParameters;
-        for (auto n : allnodes)
+        for (const auto & n : allnodes)
         {
             if (n->OperationName() == OperationNameOf(LearnableParameter))
                 learnableParameters.push_back(n);
@@ -1173,7 +1175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //////////////////////////////////////////////////////////////////////////
         fstream << L"\n// add labels and operation name\n";
         wstring line;
-        for (auto x : allnodes)
+        for (const auto & x : allnodes)
         {
             line.clear();
             size_t nrows = x->GetNumRows();
@@ -1191,25 +1193,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream << L"subgraph {\n";
         fstream << L"\t\t rank=source ; ";
         line.clear();
-        for (auto x : m_features)
-        {
+        for (const auto & x : m_features)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        }
         fstream << line << L"\n}\n";
 
         // subgraph eval/output/criteria
         fstream << L"subgraph {\n";
         fstream << L"\t\t rank=sink ; ";
         line.clear();
-        for (auto x : m_finalCriteria)
+        for (const auto & x : m_finalCriteria)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        for (auto x : m_nodesReqMultiSeqHandling)
+        for (const auto & x : m_nodesReqMultiSeqHandling)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        for (auto x : m_outputNodes)
+        for (const auto & x : m_outputNodes)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        for (auto x : m_pairNodes)
+        for (const auto & x : m_pairNodes)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        for (auto x : m_evalNodes)
+        for (const auto & x : m_evalNodes)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 
         fstream << line << L"\n}\n";
@@ -1294,7 +1294,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         vector<pair<vector<wstring>, float>> nodeGroups;
         wregex NameFilter;
 
-        for (auto e : SVDConfig)
+        for (const auto & e : SVDConfig)
         {
             wstring regexStr = e.first;
             float keepRatio = e.second;
@@ -1336,7 +1336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr,
                     "--------------------------------------------------------------------------------------------\n");
 
-            for (auto name : group.first)
+            for (const auto & name : group.first)
             {
                 if (m_nameToNodeMap.find(name) == m_nameToNodeMap.end())
                 {

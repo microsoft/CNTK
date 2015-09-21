@@ -687,7 +687,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
             // traverse children: append them to the end of the work list
             let children = node->GetChildren();
-            for (auto child : children)
+            for (auto & child : children)
                 workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
         }
 

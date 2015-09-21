@@ -577,7 +577,7 @@ public:
     {
         vector<NDLNode<ElemType>*> result;
         std::string empty;
-        for (auto symbol : m_symbols)
+        for (auto & symbol : m_symbols)
         {
             NDLNode<ElemType>* node = symbol.second;
             std::string value = node->GetOptionalParameter(optParamName, empty);

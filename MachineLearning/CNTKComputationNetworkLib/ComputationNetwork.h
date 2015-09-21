@@ -647,7 +647,7 @@ public:
 
         // resize function values and gradients of everything in m_recurrentInfo
         for (int i = 0; i < m_recurrentInfo.size(); i++)
-            for (auto nodeIter : m_recurrentInfo[i].m_recurrentNodes)
+            for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
                 nodeIter->SetFunctionAndGradientSize(m_actualMBSize);
     }
 
@@ -1242,7 +1242,7 @@ public:
             RecurrentInfo * recInfo = FindInRecurrentLoops(nodeIter);
             if (recInfo && !recInfo->m_completedGradient)
             {
-                for (auto nodeIterInLoop : recInfo->m_recurrentNodesForForward)
+                for (auto & nodeIterInLoop : recInfo->m_recurrentNodesForForward)
                     AllocateGradientMatricesForChildren(nodeIterInLoop, numParents);
                 recInfo->m_completedGradient = true;
             }
@@ -1273,7 +1273,7 @@ public:
         // first give criteria nodes as root node
         if (FinalCriterionNodes().size() > 0)
         {
-            for (auto node : FinalCriterionNodes())
+            for (auto & node : FinalCriterionNodes())
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
@@ -1287,7 +1287,7 @@ public:
         // now output nodes
         if (OutputNodes().size() > 0)
         {
-            for (auto node : OutputNodes())
+            for (auto & node : OutputNodes())
             if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());
         }
@@ -1296,7 +1296,7 @@ public:
         // now evaluation nodes
         if (EvaluationNodes().size() > 0)
         {
-            for (auto node : EvaluationNodes())
+            for (auto & node : EvaluationNodes())
             if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());
         }
