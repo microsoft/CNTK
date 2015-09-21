@@ -230,7 +230,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return pNode;
     }
 
-    void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr rootNode)
+    void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode)
     {
         //find nodes from all available nodes
         if (rootNode == nullptr)
@@ -257,7 +257,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // non-static version needed because it accesses m_randomSeedOffset
     // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
-    template<class ElemType> void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr node, const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly)
+    template<class ElemType> void ComputationNetwork::InitLearnableParameters(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const ElemType initValueScale, bool initOnCPUOnly)
     {
         auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
         learnableParameterNode->InitRandom(uniformInit, randomSeed + GetRandomSeedOffset(), initValueScale, initOnCPUOnly);
@@ -349,7 +349,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->SetReqMultiSeqHandlingTo(true);
     }
 
-    template<class N> void ComputationNetwork::GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequirePreComputation, const ComputationNodeBasePtr rootNode, bool checkComputed)
+    template<class N> void ComputationNetwork::GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequirePreComputation, const ComputationNodeBasePtr& rootNode, bool checkComputed)
     {
         if (rootNode == nullptr)        // find nodes from all available nodes
         {
@@ -382,7 +382,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //return list of nodes that require precomputation and not precomputed yet.
     // TODO: name has a grammar error, fix
-    std::list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringPreComputation(const ComputationNodeBasePtr rootNode, bool checkComputed)
+    std::list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringPreComputation(const ComputationNodeBasePtr& rootNode, bool checkComputed)
     {
         std::list<ComputationNodeBasePtr> nodesRequirePreComputation;
         GetNodesRequiringX<PreComputedNode<float>>(nodesRequirePreComputation, rootNode, checkComputed);
@@ -392,7 +392,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //return list of nodes that require precomputation and not precomputed yet.
     // TODO: name has grammar error, fix
-    std::list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringBatchMode(const ComputationNodeBasePtr rootNode, bool checkComputed)
+    std::list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringBatchMode(const ComputationNodeBasePtr& rootNode, bool checkComputed)
     {
         std::list<ComputationNodeBasePtr> nodesRequirePreComputation;
         GetNodesRequiringX<BatchModeNode<float>>(nodesRequirePreComputation, rootNode, checkComputed);
@@ -412,7 +412,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_cacheGradientCalcOrders.clear();
     }
 
-    void ComputationNetwork::MergeRecurrentLoops(const ComputationNodeBasePtr /*rootNode*/)
+    void ComputationNetwork::MergeRecurrentLoops(const ComputationNodeBasePtr& /*rootNode*/)
     {
         /// merge loops if they have the same source node
         std::vector<RecurrentInfo> m_recurrentInfoTmp;
@@ -465,7 +465,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // get the strong connected component from the graph
-    void ComputationNetwork::getStrongSCC(const ComputationNodeBasePtr rootNode)    // TODO: method names start uppercase
+    void ComputationNetwork::getStrongSCC(const ComputationNodeBasePtr& rootNode)    // TODO: method names start uppercase
     {
                     /// notice that this graph including graphs from a parent networks if two or more networks are connected via pairnetwork node
         std::unordered_set<ComputationNodeBasePtr> visited;
@@ -558,7 +558,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
             
     //must be called before ValidateNetwork
-    void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr rootNode)
+    void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode)
     {
         std::vector<ComputationNodeBasePtr> sourceLoopNodes;
 
@@ -766,7 +766,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         nodes = newList;
     }
 
-    void ComputationNetwork::CollectInputAndLeanableParameters(const ComputationNodeBasePtr rootNode)
+    void ComputationNetwork::CollectInputAndLeanableParameters(const ComputationNodeBasePtr& rootNode)
     {
         //not found
         if (m_inputs.find(rootNode) == m_inputs.end())
@@ -823,7 +823,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    /*static*/void ComputationNetwork::SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed)
+    /*static*/void ComputationNetwork::SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed)
     {
         if (dropoutRate != prevDropoutRate)
         {
@@ -842,7 +842,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    /*static*/void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples)
+    /*static*/void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples)
     {
         fprintf(stderr, "Set Max Temp Mem Size For Convolution Nodes to %lu samples.\n", maxTempMemSizeInSamples);
         std::list<ComputationNodeBasePtr> convolutionNodes = net.GetNodesWithType(OperationNameOf(ConvolutionNode), criterionNode);
@@ -1427,14 +1427,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         RebuildNetwork(m_finalCriteria[0]);
     }
 
-    template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
+    template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<float>(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig);
-    template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
+    template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
 
-    template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
+    template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<double>(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig);
-    template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
+    template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
 
 }}}

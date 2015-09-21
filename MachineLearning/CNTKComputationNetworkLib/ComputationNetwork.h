@@ -96,7 +96,7 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    static bool IsSmaller(const ComputationNodeBasePtr lhs, const ComputationNodeBasePtr rhs)
+    static bool IsSmaller(const ComputationNodeBasePtr& lhs, const ComputationNodeBasePtr& rhs)
     {
         return lhs->GetVisitedOrder() < rhs->GetVisitedOrder();
     }
@@ -122,7 +122,7 @@ public:
             File fstream(outputFile,
                          FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
-            const ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
+            const ComputationNodeBasePtr& nodePtr = GetNodeFromName(nodeName);
             nodePtr->DumpNodeInfo(printValues, fstream);
         }
         else  //node name is not found, dump all nodes
@@ -231,7 +231,7 @@ public:
 
 #pragma region Network Modification
 
-    void SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr rootNode = nullptr);
+    void SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode = nullptr);
 
     // -----------------------------------------------------------------------
     // evaluation
@@ -278,7 +278,7 @@ public:
     // non-static version needed because it accesses m_randomSeedOffset
     // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
     template<class ElemType>
-    void InitLearnableParameters(const ComputationNodeBasePtr node,
+    void InitLearnableParameters(const ComputationNodeBasePtr& node,
                                  const bool uniformInit,
                                  const unsigned long randomSeed,
                                  const ElemType initValueScale,
@@ -355,12 +355,12 @@ public:
     // -----------------------------------------------------------------------
 
     template<typename N>
-    static shared_ptr<N> AsNodePtr(const ComputationNodeBasePtr & inode)
+    static shared_ptr<N> AsNodePtr(const ComputationNodeBasePtr&  inode)
     {
         return dynamic_pointer_cast<N>(inode);
     }
     template<typename N>
-    static bool IsNodePtr(const ComputationNodeBasePtr & inode)
+    static bool IsNodePtr(const ComputationNodeBasePtr& inode)
     {
         return AsNodePtr<N>(inode) != nullptr;
     }
@@ -513,7 +513,7 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    int FindInRecurrentLoop(const ComputationNodeBasePtr startNode, vector<ComputationNodeBasePtr>& recurrentNodes)
+    int FindInRecurrentLoop(const ComputationNodeBasePtr& startNode, vector<ComputationNodeBasePtr>& recurrentNodes)
     {
         int iFound = -1;
 
@@ -530,7 +530,7 @@ public:
         return iFound;
     }
 
-    int FindInRecurrentLoop(const ComputationNodeBasePtr startNode)
+    int FindInRecurrentLoop(const ComputationNodeBasePtr& startNode)
     {
         int iFound = -1;
 
@@ -548,7 +548,7 @@ public:
 
     bool IsFuncValueOlderThanInputs(const std::vector<ComputationNodeBasePtr>& recurrentNodes);
 
-    void EvaluateLoop(std::list<ComputationNodeBasePtr>& /*allNodes*/, const ComputationNodeBasePtr startNode)
+    void EvaluateLoop(std::list<ComputationNodeBasePtr>& /*allNodes*/, const ComputationNodeBasePtr& startNode)
     {
         std::vector<ComputationNodeBasePtr> recurrentNodes;
         int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
@@ -593,7 +593,7 @@ public:
     // MAIN ENTRY POINT for evaluation (forward prop)
     // TODO: pass a set of nodes instead of only one
     // TODO: rename to ForwardProp()? To make it very clear?
-    void Evaluate(const ComputationNodeBasePtr rootNode)
+    void Evaluate(const ComputationNodeBasePtr& rootNode)
     {
         BuildAndValidateNetwork(rootNode);
 
@@ -670,7 +670,7 @@ public:
         m_nbrSlicesInEachRecurrentIteration = aSize;
     }
 
-    void ComputeGradientLoop(const bool clearExistingGradientValue, const ComputationNodeBasePtr startNode)
+    void ComputeGradientLoop(const bool clearExistingGradientValue, const ComputationNodeBasePtr& startNode)
     {
         std::vector<ComputationNodeBasePtr> recurrentNodes;
         int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
@@ -714,7 +714,7 @@ public:
     }
 
 
-    //void ComputeGradientLoop(std::list<ComputationNodeBasePtr>& /*allNodes*/, const ComputationNodeBasePtr startNode)
+    //void ComputeGradientLoop(std::list<ComputationNodeBasePtr>& /*allNodes*/, const ComputationNodeBasePtr& startNode)
     //{
     //    std::vector<ComputationNodeBasePtr> recurrentNodes;
     //    int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
@@ -755,7 +755,7 @@ public:
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
     // TODO: pass a set of nodes instead of only one
     template<class ElemType>
-    void ComputeGradient(const ComputationNodeBasePtr rootNode,
+    void ComputeGradient(const ComputationNodeBasePtr& rootNode,
         bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
         const Matrix<ElemType>* rootGradientInitValue = nullptr,
         bool clearExistingGradientValue = true,
@@ -818,7 +818,7 @@ public:
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
     // TODO: pass a set of nodes instead of only one
     template<class ElemType>
-    void ComputeGradient(const ComputationNodeBasePtr rootNode, 
+    void ComputeGradient(const ComputationNodeBasePtr& rootNode, 
                          bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
                          const Matrix<ElemType>* rootGradientInitValue = nullptr,
                          bool bClearGradient = true,
@@ -869,7 +869,7 @@ public:
     */
 
     //for debugging purpose
-    void PrintComputationTree(const ComputationNodeBasePtr rootNode,
+    void PrintComputationTree(const ComputationNodeBasePtr& rootNode,
                               const bool forwardCompute,
                               const bool printMatrices = false)
     {
@@ -901,14 +901,14 @@ public:
     // a few more helpers
     static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes);
     template<class ElemType> // TODO: dropoutRate change to double
-    static void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
-    static void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples);
+    static void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
+    static void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------
     // network editing
     // -----------------------------------------------------------------------
 
-    void RenameNode(const ComputationNodeBasePtr node, const std::wstring newNodeName)
+    void RenameNode(const ComputationNodeBasePtr& node, const std::wstring newNodeName)
     {
         // TODO: check if new name exists
         m_nameToNodeMap.erase(node->NodeName());
@@ -928,7 +928,7 @@ public:
         ClearCalcOrderCaches();
     }
 
-    void RebuildNetwork(const ComputationNodeBasePtr rootNode)
+    void RebuildNetwork(const ComputationNodeBasePtr& rootNode)
     {
         ClearCaches();
         BuildAndValidateNetwork(rootNode);
@@ -938,14 +938,14 @@ public:
     // node-group access
     // -----------------------------------------------------------------------
 
-    std::list<ComputationNodeBasePtr> & InputNodes(const ComputationNodeBasePtr rootNode, bool bNoBuild = false)
+    std::list<ComputationNodeBasePtr> & InputNodes(const ComputationNodeBasePtr& rootNode, bool bNoBuild = false)
     {
         if (bNoBuild == false)
             BuildAndValidateNetwork(rootNode);
         return m_inputs[rootNode];
     }
 
-    std::list<ComputationNodeBasePtr> & LearnableNodes(const ComputationNodeBasePtr rootNode)
+    std::list<ComputationNodeBasePtr> & LearnableNodes(const ComputationNodeBasePtr& rootNode)
     {
         BuildAndValidateNetwork(rootNode);
         return m_learnableParameters[rootNode];
@@ -1147,7 +1147,7 @@ public:
         return nodes;
     }
 
-    std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr rootNode = nullptr)
+    std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr& rootNode = nullptr)
     {
         std::list<ComputationNodeBasePtr> nodesWithType;
 
@@ -1177,14 +1177,14 @@ public:
     }
 
 private:
-    template<class N> void GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequirePreComputation, const ComputationNodeBasePtr rootNode, bool checkComputed);
+    template<class N> void GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequirePreComputation, const ComputationNodeBasePtr& rootNode, bool checkComputed);
 public:
     //return list of nodes that require precomputation and not precomputed yet.
     // TODO: name has a grammar error, fix
-    std::list<ComputationNodeBasePtr> GetNodesRequiringPreComputation(const ComputationNodeBasePtr rootNode = nullptr, bool checkComputed = true);
+    std::list<ComputationNodeBasePtr> GetNodesRequiringPreComputation(const ComputationNodeBasePtr& rootNode = nullptr, bool checkComputed = true);
     //return list of nodes that require precomputation and not precomputed yet.
     // TODO: name has grammar error, fix
-    std::list<ComputationNodeBasePtr> GetNodesRequiringBatchMode(const ComputationNodeBasePtr rootNode = nullptr, bool checkComputed = true);
+    std::list<ComputationNodeBasePtr> GetNodesRequiringBatchMode(const ComputationNodeBasePtr& rootNode = nullptr, bool checkComputed = true);
 
     // -----------------------------------------------------------------------
     // evaluation
@@ -1206,7 +1206,9 @@ public:
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
-                PrintComputationTree(node, false);
+#ifdef DEBUG
+                //PrintComputationTree(node, false);
+#endif
                 size_t actualMBSize = this->GetActualMBSize();
                 this->SetActualMiniBatchSize(actualMBSize);
                 ValidateNetwork(node);
@@ -1244,24 +1246,45 @@ public:
         }
     }
 
-    void ValidateNetwork(const ComputationNodeBasePtr rootNode)
+    void ValidateNetwork(const ComputationNodeBasePtr& rootNode)
     {
         fprintf(stderr, "\n\nValidating node %ls \n", rootNode->NodeName().c_str());
 
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
 
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        for (int i = 0; i < m_recurrentInfo.size(); i++)
+            m_recurrentInfo[i].m_completedEvaluate = false;
+
+        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
-            (*nodeIter)->PrintSelfBeforeValidation(true);   // TODO: only called with 'true/*allowNulls*/' from PairNetworkNode and DelayedValueNode
-            (*nodeIter)->Validate();
+            if ((*nodeIter)->HasLoop())
+            {
+                std::vector<ComputationNodeBasePtr> recurrentNodes;
+                int iLoopId = FindInRecurrentLoop((*nodeIter), recurrentNodes);
+                if (iLoopId != -1 && m_recurrentInfo[iLoopId].m_completedEvaluate == false)
+                {
+                    for (auto nodeLoopIter = recurrentNodes.begin(); nodeLoopIter != recurrentNodes.end(); nodeLoopIter++)
+                    {
+                        (*nodeLoopIter)->PrintSelfBeforeValidation(true);
+                        (*nodeLoopIter)->Validate();
+                    }
+
+                    m_recurrentInfo[iLoopId].m_completedEvaluate = true;
+                }
+            }
+            else
+            {
+                (*nodeIter)->PrintSelfBeforeValidation(true);
+                (*nodeIter)->Validate();
+            }
         }
 
         fprintf(stderr, "\n\n");
     }
 
-    void BuildAndValidateNetwork(const ComputationNodeBasePtr rootNode)
+    void BuildAndValidateNetwork(const ComputationNodeBasePtr& rootNode)
     {
-        const ComputationNodeBasePtr key = rootNode;
+        const ComputationNodeBasePtr& key = rootNode;
 
         //not found
         if (m_built.find(key) == m_built.end())
@@ -1304,17 +1327,41 @@ public:
     {
         FormRecurrentLoops(rootNode);
 
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
 
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        for (int i = 0; i < m_recurrentInfo.size(); i++)
+            m_recurrentInfo[i].m_completedEvaluate = false;
+
+        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
-            (*nodeIter)->RequestMatricesBeforeEval(m_matrixPool);
-            (*nodeIter)->ReleaseMatricesAfterEval(m_matrixPool);
+            if ((*nodeIter)->HasLoop())
+            {
+                std::vector<ComputationNodeBasePtr> recurrentNodes;
+                int iLoopId = FindInRecurrentLoop((*nodeIter), recurrentNodes);
+                assert(iLoopId != -1);
+                if (m_recurrentInfo[iLoopId].m_completedEvaluate == false)
+                {
+                    for (auto nodeLoopIter = recurrentNodes.begin(); nodeLoopIter != recurrentNodes.end(); nodeLoopIter++)
+                    {
+                        (*nodeLoopIter)->RequestMatricesBeforeEval(m_matrixPool);
+                        (*nodeLoopIter)->ReleaseMatricesAfterEval(m_matrixPool);
+                    }
+
+                    m_recurrentInfo[iLoopId].m_completedEvaluate = true;
+                }
+            }
+            else
+            {
+                (*nodeIter)->RequestMatricesBeforeEval(m_matrixPool);
+                (*nodeIter)->ReleaseMatricesAfterEval(m_matrixPool); 
+            }
         }
     }
 
     void AllocateGradientMatrices(ComputationNodeBasePtr rootNode)
     {
+        FormRecurrentLoops(rootNode);
+
         PopulateParents(rootNode);
 
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
@@ -1424,7 +1471,7 @@ public:
         return vErrors.empty();
     }
 
-    bool UnitTest(const ComputationNodeBasePtr rootNode)
+    bool UnitTest(const ComputationNodeBasePtr& rootNode)
     {
         fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
 
@@ -1521,16 +1568,16 @@ protected:
     // TODO: Can this be moved to a separate class, or at least a separate CPP?
 
     void ClearCalcOrderCaches();
-    void MergeRecurrentLoops(const ComputationNodeBasePtr /*rootNode*/);
+    void MergeRecurrentLoops(const ComputationNodeBasePtr& /*rootNode*/);
     // get the strong connected component from the graph
-    void getStrongSCC(const ComputationNodeBasePtr rootNode);    // TODO: method names start uppercase
+    void getStrongSCC(const ComputationNodeBasePtr& rootNode);    // TODO: method names start uppercase
     void strongSCC(ComputationNodeBasePtr cur, std::list<ComputationNodeBasePtr>& sccStack, size_t& index, size_t& loopId);     // TODO: method names start uppercase
     void getLoopForwordOrder(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);   // TODO: method name
     //must be called before ValidateNetwork
-    void FormRecurrentLoops(const ComputationNodeBasePtr rootNode);
+    void FormRecurrentLoops(const ComputationNodeBasePtr& rootNode);
     void DetermineLoopTypes();
     void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr> & /*noRecurrentNodes*/);
-    void CollectInputAndLeanableParameters(const ComputationNodeBasePtr rootNode);
+    void CollectInputAndLeanableParameters(const ComputationNodeBasePtr& rootNode);
 
     // -----------------------------------------------------------------------
     // node creation
@@ -1542,7 +1589,7 @@ public:
 
     // add a node to m_nameToNodeMap[], which is our node holder
     // Duplicate node names are rejected.
-    ComputationNodeBasePtr AddNodeToNet(const ComputationNodeBasePtr nodePtr)
+    ComputationNodeBasePtr AddNodeToNet(const ComputationNodeBasePtr& nodePtr)
     {
         //found
         // TODO: use .insert() and test result.second == false means not inserted since already exists
@@ -1573,7 +1620,7 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    void ClearGradientForAllNodes(const ComputationNodeBasePtr rootNode)
+    void ClearGradientForAllNodes(const ComputationNodeBasePtr& rootNode)
     {
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
@@ -1587,7 +1634,7 @@ public:
             m_recurrentInfo[i].m_completedGradient = false;
     }
 
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr rootNode)
+    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode)
     {
         if (!rootNode)
             LogicError("rootNode is pointing to a nullptr.");
@@ -1595,7 +1642,7 @@ public:
         return GetCalcOrder(rootNode, m_cacheEvalOrders, true);
     }
 
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr rootNode,
+    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode,
                                                     std::vector<ComputationNodeBasePtr>& recurrentNodes)
     {
         if (!rootNode)
@@ -1604,7 +1651,7 @@ public:
         return GetCalcOrder(rootNode, m_cacheEvalOrders, true, recurrentNodes);
     }
 
-    std::list<ComputationNodeBasePtr>& GetGradientCalcOrder(const ComputationNodeBasePtr rootNode)
+    std::list<ComputationNodeBasePtr>& GetGradientCalcOrder(const ComputationNodeBasePtr& rootNode)
     {
         if (!rootNode)
             LogicError("rootNode is pointing to a nullptr.");
@@ -1615,7 +1662,7 @@ public:
 protected:
 
     //this will determine the parents for each node. Parents info will be used by the gradient computation
-    void PopulateParents(const ComputationNodeBasePtr rootNode)
+    void PopulateParents(const ComputationNodeBasePtr& rootNode)
     {
         std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
 
@@ -1633,11 +1680,11 @@ protected:
         }
     }
 
-    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
+    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr& rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
                                                            const bool forwardCompute)
     {
-        const ComputationNodeBasePtr key = rootNode;
+        const ComputationNodeBasePtr& key = rootNode;
 
         //not found
         if (orderMap.find(key) == orderMap.end())
@@ -1646,12 +1693,12 @@ protected:
         return orderMap[key];
     }
 
-    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
+    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr& rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
                                                            const bool forwardCompute,
                                                            std::vector<ComputationNodeBasePtr> & rootRecurrentNodes)
     {
-        const ComputationNodeBasePtr key = rootNode;
+        const ComputationNodeBasePtr& key = rootNode;
         std::list<ComputationNodeBasePtr> listNodes;
 
         //not found
