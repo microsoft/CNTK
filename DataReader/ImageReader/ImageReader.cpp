@@ -37,7 +37,7 @@ public:
 class CropTransform : public ITransform
 {
 public:
-    CropTransform(unsigned int seed) : m_rng(seed)
+    CropTransform(unsigned int seed) : m_seed(seed)
     {
     }
 
@@ -70,6 +70,9 @@ public:
 
     void Apply(cv::Mat& mat)
     {
+        auto seed = m_seed;
+        auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
+
         double ratio = 1;
         switch (m_jitterType)
         {
@@ -77,15 +80,17 @@ public:
             ratio = m_cropRatioMin;
             break;
         case RatioJitterType::UniRatio:
-            ratio = UniRealT(m_cropRatioMin, m_cropRatioMax)(m_rng);
+            ratio = UniRealT(m_cropRatioMin, m_cropRatioMax)(*rng);
             assert(m_cropRatioMin <= ratio && ratio < m_cropRatioMax);
             break;
         default:
             RuntimeError("Jitter type currently not implemented.");
         }
-        mat = mat(GetCropRect(m_cropType, mat.rows, mat.cols, ratio));
-        if (m_hFlip && std::bernoulli_distribution()(m_rng))
+        mat = mat(GetCropRect(m_cropType, mat.rows, mat.cols, ratio, *rng));
+        if (m_hFlip && std::bernoulli_distribution()(*rng))
             cv::flip(mat, mat, 1);
+        
+        m_rngs.push(std::move(rng));
     }
 
 private:
@@ -130,7 +135,7 @@ private:
         RuntimeError("Invalid jitter type: %s.", src.c_str());
     }
 
-    cv::Rect GetCropRect(CropType type, int crow, int ccol, double cropRatio)
+    cv::Rect GetCropRect(CropType type, int crow, int ccol, double cropRatio, std::mt19937& rng)
     {
         assert(crow > 0);
         assert(ccol > 0);
@@ -146,8 +151,8 @@ private:
             yOff = (crow - cropSize) / 2;
             break;
         case CropType::Random:
-            xOff = UniIntT(0, ccol - cropSize)(m_rng);
-            yOff = UniIntT(0, crow - cropSize)(m_rng);
+            xOff = UniIntT(0, ccol - cropSize)(rng);
+            yOff = UniIntT(0, crow - cropSize)(rng);
             break;
         default:
             assert(false);
@@ -159,8 +164,8 @@ private:
     }
 
 private:
-    // REVIEW alexeyk: currently not thread safe. Engines are expensive to create.
-    std::mt19937 m_rng;
+    unsigned int m_seed;
+    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
 
     CropType m_cropType;
     double m_cropRatioMin;
@@ -172,7 +177,7 @@ private:
 class ScaleTransform : public ITransform
 {
 public:
-    ScaleTransform(int dataType, unsigned int seed) : m_dataType(dataType), m_rng(seed)
+    ScaleTransform(int dataType, unsigned int seed) : m_dataType(dataType), m_seed(seed)
     {
         assert(m_dataType == CV_32F || m_dataType == CV_64F);
 
@@ -211,15 +216,21 @@ public:
         if (mat.type() != CV_MAKETYPE(m_dataType, m_imgChannels))
             mat.convertTo(mat, m_dataType);
 
+        auto seed = m_seed;
+        auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
+
         assert(m_interp.size() > 0);
         cv::resize(mat, mat, cv::Size(static_cast<int>(m_imgWidth), static_cast<int>(m_imgHeight)), 0, 0, 
-            m_interp[UniIntT(0, static_cast<int>(m_interp.size()) - 1)(m_rng)]);
+            m_interp[UniIntT(0, static_cast<int>(m_interp.size()) - 1)(*rng)]);
+
+        m_rngs.push(std::move(rng));
     }
 
 private:
     using UniIntT = std::uniform_int_distribution<int>;
-    // REVIEW alexeyk: currently not thread safe. Engines are expensive to create.
-    std::mt19937 m_rng;
+
+    unsigned int m_seed;
+    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
 
     int m_dataType;
 
