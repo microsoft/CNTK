@@ -881,7 +881,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 FrameRange frameRange(t, 1);    // TODO: change to frameRange over a whole MB with a sequence index. BUGBUG: below code will break until this is fixed
                 /// compute prb - 1 and prb
-                Matrix<ElemType> lbl_t = Inputs(0)->DataSlice(VALUE, frameRange/*TODO: delete this:*/.Check(t, 1), m_pMBLayout);
+                Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(t, 1), m_pMBLayout);
                 size_t c_t = (size_t)lbl_t(1, 0);
                 size_t lft_bnd = (size_t)lbl_t(2, 0);
                 size_t rgt_bnd = (size_t)lbl_t(3, 0);
@@ -890,14 +890,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     continue;
 
                 Matrix<ElemType> input_weight_t = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);
-                Matrix<ElemType> obs = Inputs(1)->DataSlice(VALUE, frameRange/*TODO: delete this:*/.Check(t, 1), m_pMBLayout);
+                Matrix<ElemType> obs = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(t, 1), m_pMBLayout);
                 Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
                 Matrix<ElemType> grd_to_cls_prob = m_clsLogSoftmax.FrameSlice(frameRange/*TODO: delete this:*/.Check(t, 1), m_pMBLayout);
 
                 switch (inputIndex){
                 case 1:
                     /// gradient to input
-                    grd_t = Inputs(1)->DataSlice(GRADIENT, frameRange/*TODO: delete this:*/.Check(t, 1), m_pMBLayout);
+                    grd_t = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(t, 1), m_pMBLayout);
                     ComputeInputPartialRight(input_weight_t, grd_t, grd_to_soft_max_input);
                     break;
                 case 2:
@@ -906,7 +906,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     ComputeInputPartialLeft(obs, grd_to_wgt_t, grd_to_soft_max_input);
                     break;
                 case 3:
-                    grd_t = Inputs(3)->DataSlice(GRADIENT, frameRange/*TODO: delete this:*/.Check(t, 1), m_pMBLayout);
+                    grd_t = Inputs(3)->GradientSlice(frameRange/*TODO: delete this:*/.Check(t, 1), m_pMBLayout);
                     grd_t.SetValue(m_clsSoftmax.FrameSlice(frameRange/*TODO: delete this:*/.Check(t, 1), m_pMBLayout));
                     ComputeCEPartialToSoftmaxInputs(grd_t, GradientValues(), c_t);
                     break;
@@ -947,7 +947,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     FrameRange frameRange(t, 1);
                     /// compute prb - 1 and prb
-                    Matrix<ElemType> lbl_t = Inputs(0)->DataSlice(VALUE, frameRange/*TODO: delete this:*/.Check(t, 1), m_pMBLayout);
+                    Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(t, 1), m_pMBLayout);
                     size_t y_t = (size_t)lbl_t(0, 0);
                     size_t lft_bnd = (size_t)lbl_t(2, 0);
                     size_t rgt_bnd = (size_t)lbl_t(3, 0);

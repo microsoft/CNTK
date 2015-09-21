@@ -997,18 +997,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note: This returns an object, not a reference. That object is a column slice, i.e. a small object that just points into another object.
         // TODO: remove FrameRange::samplesInRecurrentStep from FrameRange, as it belongs into pMBLayout. Hence this function that binds both together.
         // Note: This is not used anywhere yet, only a sketch how we may further abstract timing.
-        // TODO: move sequence into FrameRange object
-#define SEQUENCE_ALL SIZE_MAX
-        enum ValueOrGradient { VALUE, GRADIENT };
-        Matrix<ElemType> DataSlice(ValueOrGradient valueOrGradient/*as it says*/,
+        Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
                                    const FrameRange & frameRange/*select frame or entire batch*/,
-                                   const MBLayoutPtr &, // DELETE THIS after refactoring; it's a dummy left-over
-                                   size_t sequence = SEQUENCE_ALL/*SEQUENCE_ALL is the normal case*/)
+                                   const MBLayoutPtr &) // DELETE THIS after refactoring; it's a dummy left-over)
         {
-            Matrix<ElemType> & data = (valueOrGradient == VALUE) ? FunctionValues() : GradientValues();
+            auto sequence = SIZE_MAX;
             if (frameRange.IsAllFrames())
             {
-                if (sequence == SEQUENCE_ALL)
+                if (sequence == SIZE_MAX)
                     return data.ColumnSlice(0, data.GetNumCols());
                 else
                     LogicError("DataSlice: sequence index only supported when accessing individual frame"); // (not needed; doable but more involved, requiring a reshape)
@@ -1019,12 +1015,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (numParallelSequences != frameRange.samplesInRecurrentStep)
                     LogicError("DataSlice: inconsistent samplesInRecurrentStep");   // TODO: this will go away when we remove this memebr from FrameRange
                 size_t startColumn = frameRange.t() * numParallelSequences;
-                if (sequence == SEQUENCE_ALL)
+                if (sequence == SIZE_MAX)
                     return data.ColumnSlice(startColumn, numParallelSequences);
                 else
                     return data.ColumnSlice(startColumn + sequence, 1);
             }
-            // TODO:
+        }
+        enum ValueOrGradient { VALUE, GRADIENT };
+        Matrix<ElemType> DataSlice(ValueOrGradient valueOrGradient/*as it says*/,
+            const FrameRange & frameRange/*select frame or entire batch*/,
+            const MBLayoutPtr &) // DELETE THIS after refactoring; it's a dummy left-over)
+        {
+            Matrix<ElemType> & data = (valueOrGradient == VALUE) ? FunctionValues() : GradientValues();
+            return DataSlice(data, frameRange, m_pMBLayout);
+        }
+        Matrix<ElemType> ValueSlice(const FrameRange & frameRange/*select frame or entire batch*/,
+            const MBLayoutPtr &) // DELETE THIS after refactoring; it's a dummy left-over)
+        {
+            return DataSlice(FunctionValues(), frameRange, m_pMBLayout);
+        }
+        Matrix<ElemType> GradientSlice(const FrameRange & frameRange/*select frame or entire batch*/,
+            const MBLayoutPtr &) // DELETE THIS after refactoring; it's a dummy left-over)
+        {
+            return DataSlice(GradientValues(), frameRange, m_pMBLayout);
         }
 
         // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
