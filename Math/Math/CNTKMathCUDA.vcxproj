@@ -24,7 +24,7 @@
     </SccProvider>
     <ProjectName>CNTKMathCUDA</ProjectName>
     <CudaPath>$(CUDA_PATH_V7_0)</CudaPath>
-    <CudaToolkitCustomDir>$(CUDA_PATH)</CudaToolkitCustomDir>
+    <CudaToolkitCustomDir>$(CudaPath)</CudaToolkitCustomDir>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup>
