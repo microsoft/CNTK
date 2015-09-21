@@ -349,13 +349,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex == 0)  //left derivative
             {
                 Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout);
-                Matrix<ElemType> sliceInput1Value = DataSlice(1, VALUE, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout);
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->DataSlice(VALUE, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout);
 
                 ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
             }
             else  //right derivative
             {
-                Matrix<ElemType> sliceInput1Grad = DataSlice(1, GRADIENT, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout);
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->DataSlice(GRADIENT, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout);
                 Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout);
 
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
@@ -402,7 +402,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
-            Matrix<ElemType> sliceInput1Value = DataSlice(1, VALUE, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout);
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->DataSlice(VALUE, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout);
             Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout);
 
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
@@ -585,7 +585,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
             Matrix<ElemType> mTmp = FunctionValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout);
-            mTmp.SetValue(DataSlice(0, VALUE, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout));
+            mTmp.SetValue(Inputs(0)->DataSlice(VALUE, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout));
         }
 
         virtual void /*ComputationNodeBase::*/Validate()
