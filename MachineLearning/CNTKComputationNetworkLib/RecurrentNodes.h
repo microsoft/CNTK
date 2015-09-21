@@ -225,7 +225,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 d = (int)functionValues.Mod((float)delayedIndex, (float)delayedActivation.GetNumCols());
             // this can point to the past activity of the previous minibatch
 
-            Matrix<ElemType> out = DataSlice(VALUE, frameRange, m_pMBLayout);
+            Matrix<ElemType> out = ValueSlice(frameRange, m_pMBLayout);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
 
             if (minibatchPackingFlags & SequenceStart_or_End)
@@ -606,8 +606,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int timeIdxInSeq = nT - GetNumParallelSequences(); timeIdxInSeq >= 0; timeIdxInSeq -= GetNumParallelSequences())
                 {
                     FrameRange frameRange(timeIdxInSeq, GetNumParallelSequences());
-                    Matrix<ElemType> sliceObs = Inputs(0)->DataSlice(VALUE, frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
-                    Matrix<ElemType> sliceOutput = FunctionValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceObs = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceOutput = ValueSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
                     Matrix<ElemType> sliceState = m_State.FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
 
                     Matrix<ElemType> sliceGi = m_Gi.FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
@@ -617,7 +617,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
                     Matrix<ElemType> sliceTanhObs = tanhObs.FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
 
-                    Matrix<ElemType> error = GradientValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> error = GradientSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
 
                     Matrix<ElemType> grdToObsSlice(this->m_deviceId);
 
@@ -997,8 +997,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += GetNumParallelSequences())
                 {
                     FrameRange frameRange(timeIdxInSeq, GetNumParallelSequences());
-                    Matrix<ElemType> sliceObs = Inputs(0)->DataSlice(VALUE, frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
-                    Matrix<ElemType> sliceOutput = FunctionValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceObs = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceOutput = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
                     Matrix<ElemType> sliceState = m_State.FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
 
                     Matrix<ElemType> sliceGi = m_Gi.FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);

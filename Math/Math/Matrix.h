@@ -601,7 +601,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //      FrameRange frameRange(t, 1);
     //    using a different #sequences. Solve by treating all frames as one sequence (in FrameRange)
     //  - ReshapeNode:
-    //      Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep), m_pMBLayout);
+    //      Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep), m_pMBLayout);
     //    using a differeren #sequences. Find out what this really means.
     struct FrameRange
     {
