@@ -606,18 +606,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int timeIdxInSeq = nT - GetNumParallelSequences(); timeIdxInSeq >= 0; timeIdxInSeq -= GetNumParallelSequences())
                 {
                     FrameRange frameRange(timeIdxInSeq, GetNumParallelSequences());
-                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
-                    Matrix<ElemType> sliceOutput = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
-                    Matrix<ElemType> sliceState = m_State.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
+                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceOutput = FunctionValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceState = m_State.FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
 
-                    Matrix<ElemType> sliceGi = m_Gi.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
-                    Matrix<ElemType> sliceGf = m_Gf.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
-                    Matrix<ElemType> sliceGo = m_Go.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
+                    Matrix<ElemType> sliceGi = m_Gi.FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceGf = m_Gf.FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceGo = m_Go.FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
 
-                    Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
-                    Matrix<ElemType> sliceTanhObs = tanhObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
+                    Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceTanhObs = tanhObs.FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
 
-                    Matrix<ElemType> error = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences());
+                    Matrix<ElemType> error = GradientValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout);
 
                     Matrix<ElemType> grdToObsSlice(this->m_deviceId);
 
@@ -666,7 +666,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         grdToPrevState,
                         m_tempMatrix
                     );
-                    grdToObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, timeIdxInSeq, GetNumParallelSequences()).SetValue(grdToObsSlice);
+                    grdToObs.FrameSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences()), m_pMBLayout).SetValue(grdToObsSlice);
 
                     PrepareErrors(timeIdxInSeq, grdToPrevOutput, grdToPrevState, GetNumParallelSequences(), &m_pMBLayout->GetM());
                 }
@@ -997,16 +997,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += GetNumParallelSequences())
                 {
                     FrameRange frameRange(timeIdxInSeq, GetNumParallelSequences());
-                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
-                    Matrix<ElemType> sliceOutput = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
-                    Matrix<ElemType> sliceState = m_State.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
+                    Matrix<ElemType> sliceObs = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceOutput = FunctionValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceState = m_State.FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
 
-                    Matrix<ElemType> sliceGi = m_Gi.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
-                    Matrix<ElemType> sliceGf = m_Gf.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
-                    Matrix<ElemType> sliceGo = m_Go.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
+                    Matrix<ElemType> sliceGi = m_Gi.FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceGf = m_Gf.FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceGo = m_Go.FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
 
-                    Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
-                    Matrix<ElemType> sliceTanhInput = tanhObs.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t(), GetNumParallelSequences());
+                    Matrix<ElemType> sliceTanhState = tanhState.FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
+                    Matrix<ElemType> sliceTanhInput = tanhObs.FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences()), m_pMBLayout);
 
                     PrepareHistory(timeIdxInSeq, mSlicePrevOutput, mSlicePrevState, FunctionValues(), m_State, m_PastOutput, m_PastState, GetNumParallelSequences(), m_DefaultState, &m_pMBLayout->GetM());
 
