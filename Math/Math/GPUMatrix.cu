@@ -485,6 +485,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUMatrix<ElemType>::~GPUMatrix(void)
     {
         Clear();
+        if (m_workspace != nullptr)
+            delete m_workspace;
     }
 
     template<class ElemType>
@@ -2950,7 +2952,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise, int topK, GPUMatrix<ElemType>& workspace) const
+    void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise, int topK) const
     {
         if (IsEmpty())
             throw std::logic_error("VectorMax: Matrix is empty.");
@@ -3005,9 +3007,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cbtemp = ctemp * sizeof(ElemType);
         // ElemType count needed to store indices, accounting for natural alignment for uint64_t type.
         size_t cidx = ((celt + 1) * sizeof(uint64_t) - 1 + sizeof(ElemType) - 1) / sizeof(ElemType);
+        // Prepare temp workspace.
+        auto deviceId = m_computeDevice;
+        assert(m_workspace != nullptr);
+        auto workspace = m_workspace->pop_or_create([deviceId]() { return std::make_unique<GPUMatrix<ElemType>>(deviceId); });
         // Resize to store: output values for the 1st and 2nd passes, input indices, output indices, and temp storage.
-        workspace.Resize(m, 2 * n + (2 * cidx + ctemp + m - 1) / m);
-        outVal1 = workspace.m_pArray;
+        workspace->Resize(m, 2 * n + (2 * cidx + ctemp + m - 1) / m);
+        outVal1 = workspace->m_pArray;
         outVal2 = outVal1 + celt;
         inIdx = reinterpret_cast<uint64_t*>(outVal2 + celt);
         // Align indices pointer if needed.
@@ -3016,7 +3022,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             reinterpret_cast<uint8_t*&>(inIdx) += sizeof(uint64_t) - cbAlign;
         outIdx = inIdx + celt;
         void* ptmp = outIdx + celt;
-        assert(reinterpret_cast<ElemType*>(reinterpret_cast<uint8_t*>(ptmp) + cbtemp) <= workspace.m_pArray + workspace.GetNumElements());
+        assert(reinterpret_cast<ElemType*>(reinterpret_cast<uint8_t*>(ptmp) + cbtemp) <= workspace->m_pArray + workspace->GetNumElements());
 
         // Initialize indices.
         const int ThreadsPerBlock = 128;
@@ -3032,6 +3038,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cblock = (topK * n + ThreadsPerBlock - 1) / ThreadsPerBlock;
         _copyTopKResults<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, outVal2, maxIndexes.m_pArray, maxValues.m_pArray, m, n, topK);
 
+        m_workspace->push(std::move(workspace));
 #ifndef _DEBUG
         UNUSED(err);
 #endif

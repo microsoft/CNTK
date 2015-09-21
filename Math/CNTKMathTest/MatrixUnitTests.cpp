@@ -845,10 +845,9 @@ namespace CNTKMathTest
                 Matrix<float> actual(3, 2, src, matrixFlagNormal, deviceId);
                 Matrix<float> actualIdx(deviceId);
                 Matrix<float> actualVal(deviceId);
-                Matrix<float> temp(deviceId);
 
                 int topK = 2;
-                actual.VectorMax(actualIdx, actualVal, true, topK, temp);
+                actual.VectorMax(actualIdx, actualVal, true, topK);
                 Assert::IsTrue(actualIdx.IsEqualTo(expIdx));
                 Assert::IsTrue(actualVal.IsEqualTo(expVal));
             }
