@@ -97,6 +97,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
                 }       
+            if (((!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&  //match size
+                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()))) && Inputs(0)->GetLoopId() < 0)
+            {
+                LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
+            }
 
             Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
