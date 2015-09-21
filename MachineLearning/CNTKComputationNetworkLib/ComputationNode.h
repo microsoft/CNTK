@@ -998,17 +998,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: remove FrameRange::samplesInRecurrentStep from FrameRange, as it belongs into pMBLayout. Hence this function that binds both together.
         // Note: This is not used anywhere yet, only a sketch how we may further abstract timing.
         // TODO: move sequence into FrameRange object
-        enum Index : size_t { OUTPUT = SIZE_MAX };
 #define SEQUENCE_ALL SIZE_MAX
         enum ValueOrGradient { VALUE, GRADIENT };
-        Matrix<ElemType> DataSlice(size_t index/*input index or OUT*/,
-                                   ValueOrGradient valueOrGradient/*as it says*/,
+        Matrix<ElemType> DataSlice(ValueOrGradient valueOrGradient/*as it says*/,
                                    const FrameRange & frameRange/*select frame or entire batch*/,
                                    const MBLayoutPtr &, // DELETE THIS after refactoring; it's a dummy left-over
                                    size_t sequence = SEQUENCE_ALL/*SEQUENCE_ALL is the normal case*/)
         {
-            ComputationNode<ElemType> * node = (index == OUTPUT) ? this : Inputs(index).get();
-            Matrix<ElemType> & data = (valueOrGradient == VALUE) ? node->FunctionValues() : node->GradientValues();
+            Matrix<ElemType> & data = (valueOrGradient == VALUE) ? FunctionValues() : GradientValues();
             if (frameRange.IsAllFrames())
             {
                 if (sequence == SEQUENCE_ALL)
@@ -1280,7 +1277,7 @@ protected:  \
     using Base::m_indexInLoop; \
     using Base::m_pMBLayout; \
     using Base::m_reqMultiSeqHandling; using Base::UseCustomizedMultiSeqHandling; using Base::GetNumParallelSequences; \
-    using Base::DataSlice; using Base::OUTPUT; using Base::VALUE; using Base::GRADIENT; \
+    using Base::DataSlice; using Base::VALUE; using Base::GRADIENT; \
     using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
     using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; using Base::s_timeStampCounter; \
