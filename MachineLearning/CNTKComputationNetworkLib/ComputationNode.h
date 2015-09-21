@@ -127,7 +127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // evaluate only N frames at time index timeIdxInSeq
         // Normally, N is 1 or it spans the entire minibatch.
         virtual void EvaluateThisNode(const FrameRange &) = 0;
-        // evaluate a node--this calls EvaluateThisNode() and MaskToZeroWhenLabelAndFeatureMissing() if needed
+        // evaluate a node--this calls EvaluateThisNode() and MaskMissingColumnsToZero() if needed
         // this is the main entry point for Network; while EvaluateThisNode() is the virtual call into specific node implementation
         virtual void EvaluateThisNodeGivenInputs() = 0;
         virtual void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
@@ -626,7 +626,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
         bool m_reqMultiSeqHandling;  // indicates whether the results of operation should be masked to handle the cases that the utterances have different lengths when grouped together as a minibatch.
         // ^^ This decides whether the node gets passed the full layout with flags or only the one without flags
-        //    and this is only ever tested in MaskToZeroWhenLabelAndFeatureMissing(), of which two versions exist, one in ComputationNode and one in ClassBasedCrossEntropyWithSoftmaxNode
+        //    and this is only ever tested in MaskMissingColumnsToZero(), of which two versions exist, one in ComputationNode and one in ClassBasedCrossEntropyWithSoftmaxNode
         // TODO: rename this to reflect that it affects only masking
         size_t m_inputWidth, m_inputHeight, m_inputChannels;  //how to interpret each column in the input as an image
         size_t m_outputWidth, m_outputHeight, m_outputChannels;  //how to interpret each column in the output as an image
@@ -810,7 +810,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNode();     // this is a call to the virtual function that implements the actual operation
 
             if (!UseCustomizedMultiSeqHandling())       // this means the node does it by itself; if not, we do it for the node
-                MaskToZeroWhenLabelAndFeatureMissing(m_functionValues);
+                MaskMissingColumnsToZero(m_functionValues);
         }
 
         // TODO: use a FrameRange arg, then unify with above
@@ -821,7 +821,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNode(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
 
             if (!UseCustomizedMultiSeqHandling())
-                MaskToZeroWhenLabelAndFeatureMissing(m_functionValues, timeIdxInSeq);
+                MaskMissingColumnsToZero(m_functionValues, timeIdxInSeq);
         }
 
 #if 0   // (this function cannot be used currently since sentenceBegin is not a Matrix<ElemType> anymore; only affects LSTMNode which is no longer used)
@@ -855,30 +855,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         reset to error signals to 0 for any elements without labels
         */
-        // TODO: use a FrameRange instead of timeIdxSeq
-        bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t timeIdxInSeq=(size_t)-1) const
+        // This sets MB columns to 0 that have the NoLabel or NoFeature flag set.
+        // This happens as a result of packing multiple sequences for parallel processing--there will be some gaps, which are flagged by these flags.
+        // Nodes that operate in 'map' style (input(j) -> output(j) independently) can ignore this; it will be garbage-in-garbage-out.
+        // However, nodes that 'reduce' minibatches (e.g. computing the sum of all frames across all sequences) must deal with the garbage.
+        // This function sets those to 0, assuming that now they can be reduced without affecting the result.
+        // This function can operate on the whole range or on a selected single frame and/or a single sequence.
+        bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX) const
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed
 
             if (!m_pMBLayout->IsAllNone())
             {
-                size_t nT = matrixToBeMasked.GetNumCols();
+                size_t nT = m_pMBLayout->GetNumTimeSteps();
                 size_t nS = m_pMBLayout->GetNumParallelSequences();
 
-                if (m_pMBLayout->GetSize() != nT / nS)
-                    LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
+                if (matrixToBeMasked.GetNumCols() != nT * nS)
+                    LogicError("MaskMissingColumnsToZero: m_pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
 
-                size_t startT = (timeIdxInSeq == (size_t)-1) ? 0 : timeIdxInSeq * nS;       // TODO: misnomer; startT, endT, and utt_t are not times but columns in the packed matrix
-                size_t endT = (timeIdxInSeq == (size_t)-1) ? nT : timeIdxInSeq * nS + nS;
-                for (size_t utt_t = startT; utt_t < endT; utt_t += nS)
+                size_t startT = (timeIdxInSeq == SIZE_MAX) ?  0 : timeIdxInSeq;
+                size_t endT   = (timeIdxInSeq == SIZE_MAX) ? nT : timeIdxInSeq + 1;
+
+                size_t startS = (seqIndex == SIZE_MAX) ?  0 : seqIndex;
+                size_t endS   = (seqIndex == SIZE_MAX) ? nS : seqIndex + 1;
+
+                for (size_t t = startT; t < endT; t++)
                 {
-                    size_t t = utt_t / nS;
-
-                    if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeatures))
+                    if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeature))
                     {
-                        for (size_t id = 0; id < nS; id++)
-                            if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeatures))
-                                matrixToBeMasked.ColumnSlice(utt_t+id, 1).SetValue(0);
+                        for (size_t id = startS; id < endS; id++)
+                            if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeature))
+                                matrixToBeMasked.ColumnSlice(t * nS  +  id, 1).SetValue(0);
                         processedExistsNoLabelorFeatureMissing = true;
                     }
                 }
@@ -1050,7 +1057,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i=0; i<m_children.size(); i++)
             {
                 if (!UseCustomizedMultiSeqHandling())
-                    MaskToZeroWhenLabelAndFeatureMissing(m_gradientValues);
+                    MaskMissingColumnsToZero(m_gradientValues);
 
                 ComputationNodePtr child = Inputs(i);
                 if (child->NeedGradient())
@@ -1079,7 +1086,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i=0; i<m_children.size(); i++)
             {
                 if (!UseCustomizedMultiSeqHandling())
-                    MaskToZeroWhenLabelAndFeatureMissing(m_gradientValues, timeIdxInSeq);
+                    MaskMissingColumnsToZero(m_gradientValues, timeIdxInSeq);
 
                 ComputationNodePtr child = Inputs(i);
                 if (child->NeedGradient())

@@ -60,7 +60,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& leftMinusRight, ComputationNodePtr curNode)  
         {
             leftMinusRight.AssignDifferenceOf(inputFunctionValues0, inputFunctionValues1);
-            curNode->MaskToZeroWhenLabelAndFeatureMissing(leftMinusRight);  //we are fine since it will only be called with full minibatch.
+            curNode->MaskMissingColumnsToZero(leftMinusRight);  //we are fine since it will only be called with full minibatch.
             ElemType v = leftMinusRight.FrobeniusNorm();
             functionValues.Resize(1,1);
             functionValues.SetValue(v*v/2);
@@ -174,7 +174,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-                Base::MaskToZeroWhenLabelAndFeatureMissing(Inputs(inputIndex)->GradientValues());
+                Base::MaskMissingColumnsToZero(Inputs(inputIndex)->GradientValues());
             }
         }
 
@@ -221,7 +221,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
             softmaxOfRight.SetValue(logSoftmaxOfRight);
             softmaxOfRight.InplaceExp();
-            curNode->MaskToZeroWhenLabelAndFeatureMissing(logSoftmaxOfRight); //we are fine here since it will be called only with full minibatch
+            curNode->MaskMissingColumnsToZero(logSoftmaxOfRight); //we are fine here since it will be called only with full minibatch
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logSoftmaxOfRight);
             functionValues*=(-1);
 #if NANCHECK
@@ -363,7 +363,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, ComputationNodePtr curNode)
         {
             leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
-            curNode->MaskToZeroWhenLabelAndFeatureMissing(leftDivRight);
+            curNode->MaskMissingColumnsToZero(leftDivRight);
             Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
         }
 
@@ -377,7 +377,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             logOfRight.SetValue(inputFunctionValues1);
             logOfRight.InplaceLog();
-            curNode->MaskToZeroWhenLabelAndFeatureMissing(logOfRight);
+            curNode->MaskMissingColumnsToZero(logOfRight);
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logOfRight);
             functionValues*=(-1);
 #if NANCHECK
@@ -503,7 +503,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            Base::MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
+            Base::MaskMissingColumnsToZero(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
@@ -599,7 +599,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            Base::MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
+            Base::MaskMissingColumnsToZero(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
@@ -1043,7 +1043,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> softMax_t = softMax.ColumnSlice(sz, nbr_wrd);
                 Matrix<ElemType> logSoftMax_t = logSoftmax.ColumnSlice(sz, nbr_wrd);
 
-                if (!curNode->MaskToZeroWhenLabelAndFeatureMissing(logSoftMax_t, t))
+                if (!curNode->MaskMissingColumnsToZero(logSoftMax_t, t))
                 {
                     Matrix<ElemType> obs = inputs.ColumnSlice(t, 1);  /// e.g., 200 x 1
                     obs.Reshape(1, nRow);  /// 1 x 200
@@ -1065,7 +1065,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 /// add the class log posterior probability
-                if (!curNode->MaskToZeroWhenLabelAndFeatureMissing(clsLogSoftmax, t))
+                if (!curNode->MaskMissingColumnsToZero(clsLogSoftmax, t))
                 {
                     try{
                         Matrix<ElemType>::AddElementToElement(clsLogSoftmax, c_t, t, functionValues, 0, 0);
@@ -1090,28 +1090,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         reset to error signals to 0 for any elements without labels
         */
-        // TODO: This has overlap with ComputationNode::MaskToZeroWhenLabelAndFeatureMissing(), should call that instead. Note: This one does only one stream, while Base:: one does all streams.
-        bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t t) const
+        // BUGBUG: the layout should be that of matrixToBeMasked, not of 'this'
+        bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const size_t j) const
         {
+            size_t nS = m_pMBLayout->GetNumParallelSequences();
+            size_t t = j / nS;  // this is the time stamp
+            size_t id = j % nS;  // this is the stream
+            return Base::MaskMissingColumnsToZero(matrixToBeMasked, t, id);
+#if 0       // old version prior to merging with Base version
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
             if (!m_pMBLayout->IsAllNone())
             {
-                // 't' is not a time but rather a column index that encodes (time stamp, stream)
-                size_t nS = m_pMBLayout->GetNumParallelSequences();
-                size_t j = t / nS;  // this is the time stamp
-                size_t i = t % nS;  // this is the stream
-                if (m_pMBLayout->Is(j, MinibatchPackingFlags::NoLabel)) // TODO: this outer test is redundant here, no?
+                if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel)) // TODO: this outer test is redundant here, no?
                 {
-                    if (m_pMBLayout->Is(i, j, MinibatchPackingFlags::NoLabel))
+                    if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
                     {
-                        matrixToBeMasked.ColumnSlice(t,1).SetValue(0);
+                        matrixToBeMasked.ColumnSlice(t * nS + id,1).SetValue(0);
                         processedExistsNoLabelorFeatureMissing = true;
                     }
                 }
             }
 
             return processedExistsNoLabelorFeatureMissing;
+#endif
         }
 
         /**
