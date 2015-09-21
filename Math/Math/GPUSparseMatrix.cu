@@ -2401,8 +2401,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma endregion Helper Functions
 
-    template class GPUSparseMatrix<float>; 
-    template class GPUSparseMatrix<double>;    
+    template class MATH_API GPUSparseMatrix<float>; 
+    template class MATH_API GPUSparseMatrix<double>;
 
     // We use Matrix<char> as the backing store for QuantizedMatrix
     // Let's explciitly instantiate the methods we need for that purpose
