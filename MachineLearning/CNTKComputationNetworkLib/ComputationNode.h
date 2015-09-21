@@ -986,7 +986,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[childIndex] = node;
         }
 
-        //making them virtual so that nodes that only copy values from it's children (e.g., dropout) can be efficient in evaluation
+        // these are overridden by DropoutNode, ReshapeNode, and RowRepeatNode to optimize for the trivial case that those don't do anything
+        // TODO: lots of nodes read out m_functionValues directly--was that a bug or intentional? They have now been changed to ValueSlice(), i.e. would pick it up
         virtual const Matrix<ElemType>& FunctionValues() const { return m_functionValues; }
         virtual Matrix<ElemType>& FunctionValues() { return m_functionValues; }
 
@@ -998,8 +999,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: remove FrameRange::samplesInRecurrentStep from FrameRange, as it belongs into pMBLayout. Hence this function that binds both together.
         // Note: This is not used anywhere yet, only a sketch how we may further abstract timing.
         Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
-                                   const FrameRange & frameRange/*select frame or entire batch*/,
-                                   const MBLayoutPtr &) // DELETE THIS after refactoring; it's a dummy left-over)
+                                   const FrameRange & frameRange/*select frame or entire batch*/)
         {
             auto sequence = SIZE_MAX;
             if (frameRange.IsAllFrames())
@@ -1023,21 +1023,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         enum ValueOrGradient { VALUE, GRADIENT };
         Matrix<ElemType> DataSlice(ValueOrGradient valueOrGradient/*as it says*/,
-            const FrameRange & frameRange/*select frame or entire batch*/,
-            const MBLayoutPtr &) // DELETE THIS after refactoring; it's a dummy left-over)
+            const FrameRange & frameRange/*select frame or entire batch*/)
         {
             Matrix<ElemType> & data = (valueOrGradient == VALUE) ? FunctionValues() : GradientValues();
-            return DataSlice(data, frameRange, m_pMBLayout);
+            return DataSlice(data, frameRange);
         }
-        Matrix<ElemType> ValueSlice(const FrameRange & frameRange/*select frame or entire batch*/,
-            const MBLayoutPtr &) // DELETE THIS after refactoring; it's a dummy left-over)
+        Matrix<ElemType> ValueSlice(const FrameRange & frameRange/*select frame or entire batch*/)
         {
-            return DataSlice(FunctionValues(), frameRange, m_pMBLayout);
+            return DataSlice(FunctionValues(), frameRange);
         }
-        Matrix<ElemType> GradientSlice(const FrameRange & frameRange/*select frame or entire batch*/,
-            const MBLayoutPtr &) // DELETE THIS after refactoring; it's a dummy left-over)
+        Matrix<ElemType> GradientSlice(const FrameRange & frameRange/*select frame or entire batch*/)
         {
-            return DataSlice(GradientValues(), frameRange, m_pMBLayout);
+            return DataSlice(GradientValues(), frameRange);
         }
 
         // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation

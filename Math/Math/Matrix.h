@@ -601,7 +601,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //      FrameRange frameRange(t, 1);
     //    using a different #sequences. Solve by treating all frames as one sequence (in FrameRange)
     //  - ReshapeNode:
-    //      Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep), m_pMBLayout);
+    //      Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep, m_pMBLayout));
     //    using a differeren #sequences. Find out what this really means.
     struct FrameRange
     {
@@ -623,9 +623,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t NumCols(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); VerifyMBLayout(pMBLayout); return pMBLayout->GetNumParallelSequences(); }
         bool IsAllFrames() const { return samplesInRecurrentStep == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
 
-        const FrameRange & Check(size_t expectedStartColumn, size_t expectedNumCols) const
+        const FrameRange & Check(size_t expectedStartColumn, size_t expectedNumCols, const shared_ptr<MBLayout> & pMBLayout) const
         {
-            if (!IsAllFrames() && expectedStartColumn != StartColumn() || expectedNumCols != NumCols())
+            if (!IsAllFrames() && (samplesInRecurrentStep != pMBLayout->GetNumParallelSequences() || expectedStartColumn != StartColumn(pMBLayout) || expectedNumCols != NumCols(pMBLayout)))
                 LogicError("FrameSlice: FrameRange object gives different range than original explicit code. Logic is borked.");
             return *this;
         }
