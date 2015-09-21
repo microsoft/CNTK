@@ -1411,6 +1411,25 @@ int wmain(int argc, wchar_t* argv[])
                 logpath += L"_";
                 logpath += (wstring)command[i];
             }
+
+            // append datetime to log filename
+            {
+                // bugbug - this probably assumes us english locale
+                char sdate[9];
+                _strdate_s(sdate);
+                std::replace(sdate, sdate + 9, '/', '-');
+                std::replace(sdate, sdate + 9, ':', '-');
+                logpath.append(s2ws(sdate));
+
+                logpath.append(L"_");
+
+                char stime[9];
+                _strtime_s(stime);
+                std::replace(stime, stime + 9, '/', '-');
+                std::replace(stime, stime + 9, ':', '-');
+                logpath.append(s2ws(stime));
+            }
+
             logpath += L".log";
             if (mpiNumProcesses > 1)
             {
