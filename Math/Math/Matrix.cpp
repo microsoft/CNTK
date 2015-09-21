@@ -773,6 +773,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // special convenience function to apply ColumnSlice() to getting a frame range
+#if 0
     // It assumes that columns are frames, and returns a sub-range.
     // TODO: decide whether this belongs here or elsewhere
     // TODO: remove this one, as it does not take #slices explicitly, which will be needed in the future
@@ -788,6 +789,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("FrameSlice: FrameRange object gives different range than original explicit code. Logic is borked.");
         return ColumnSlice(frameRange.StartColumn(), frameRange.NumCols());
     }
+#endif
     template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::FrameSlice(const FrameRange & frameRange, const shared_ptr<MBLayout> & pMBLayout) const
     {

@@ -146,7 +146,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
 
         // special convenience function to apply ColumnSlice() to getting a frame range
-        Matrix<ElemType> FrameSlice(const struct FrameRange & frameRange, size_t expectedStartColumn, size_t expectedNumCols) const;
+        //Matrix<ElemType> FrameSlice(const struct FrameRange & frameRange, size_t expectedStartColumn, size_t expectedNumCols) const;
         Matrix<ElemType> FrameSlice(const struct FrameRange & frameRange, const shared_ptr<struct MBLayout> & pMBLayout) const;
 
         // difference between AssignColumnSlice and SetColumnSlice 
@@ -596,6 +596,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - RecurrentNodes iterate over individual slices--need a sub-setting constructor from a FrameRange to another?
     //  - RecurrentNodes access boundary info with a similar pattern, but boundary info has a different #streams (namely, 1)
     // TODO: This will in the future be able to hold sub-ranges for nested loops as well.
+    // BUGBUG: These are currently broken and will need to be fixed:
+    //  - ClassBasedCrossEntropyWithSoftmaxNode:
+    //      FrameRange frameRange(t, 1);
+    //    using a different #sequences. Solve by treating all frames as one sequence (in FrameRange)
+    //  - ReshapeNode:
+    //      Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep), m_pMBLayout);
+    //    using a differeren #sequences. Find out what this really means.
     struct FrameRange
     {
         const size_t timeIdxInSeq;              // start frame
@@ -615,6 +622,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t StartColumn(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); VerifyMBLayout(pMBLayout); return timeIdxInSeq * pMBLayout->GetNumParallelSequences(); }
         size_t NumCols(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); VerifyMBLayout(pMBLayout); return pMBLayout->GetNumParallelSequences(); }
         bool IsAllFrames() const { return samplesInRecurrentStep == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
+
+        const FrameRange & Check(size_t expectedStartColumn, size_t expectedNumCols) const
+        {
+            if (!IsAllFrames() && expectedStartColumn != StartColumn() || expectedNumCols != NumCols())
+                LogicError("FrameSlice: FrameRange object gives different range than original explicit code. Logic is borked.");
+            return *this;
+        }
     private:
         FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
         void operator=(const FrameRange &);
