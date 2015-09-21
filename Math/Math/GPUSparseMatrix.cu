@@ -418,7 +418,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDACALL(cudaDeviceCanAccessPeer(&canAccessPeer, to_id, m_computeDevice));
             if (canAccessPeer)
             {
-                CUDACALL(cudaDeviceEnablePeerAccess(m_computeDevice, 0));
+                cudaError_t cudaStatus = cudaDeviceEnablePeerAccess(m_computeDevice, 0);
+                if (cudaStatus != cudaErrorPeerAccessAlreadyEnabled)
+                {
+                    CUDACALL(cudaStatus);
+                }
                 CUDACALL(cudaMemcpyPeer(d_dst, to_id, m_pArray, m_computeDevice, m_totalBufferSizeAllocated));
             }
             else
