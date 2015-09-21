@@ -1003,7 +1003,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         enum ValueOrGradient { VALUE, GRADIENT };
         Matrix<ElemType> DataSlice(size_t index/*input index or OUT*/,
                                    ValueOrGradient valueOrGradient/*as it says*/,
-                                   const FrameRange & frameRange/*select frame or entire batch*/, size_t sequence = SEQUENCE_ALL/*SEQUENCE_ALL is the normal case*/)
+                                   const FrameRange & frameRange/*select frame or entire batch*/,
+                                   const MBLayoutPtr &, // DELETE THIS after refactoring; it's a dummy left-over
+                                   size_t sequence = SEQUENCE_ALL/*SEQUENCE_ALL is the normal case*/)
         {
             ComputationNode<ElemType> * node = (index == OUTPUT) ? this : Inputs(index).get();
             Matrix<ElemType> & data = (valueOrGradient == VALUE) ? node->FunctionValues() : node->GradientValues();
