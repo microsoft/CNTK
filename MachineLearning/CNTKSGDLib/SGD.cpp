@@ -2402,7 +2402,7 @@ template<class ElemType>
         }
         else if (adpType == GradientsUpdateType::FSAdaGrad)
         {
-            smoothedGradient.FSAdagrad(actualMBSize, gradientValues, functionValues, learnRatePerSample, momentum);
+            smoothedGradient.FSAdagrad(actualMBSize, gradientValues, functionValues, (ElemType)learnRatePerSample, (ElemType)momentum);
         }
         else if (adpType == GradientsUpdateType::RmsProp)
         {
