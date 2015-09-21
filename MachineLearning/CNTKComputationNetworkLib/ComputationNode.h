@@ -997,15 +997,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note: This returns an object, not a reference. That object is a column slice, i.e. a small object that just points into another object.
         // TODO: remove FrameRange::samplesInRecurrentStep from FrameRange, as it belongs into pMBLayout. Hence this function that binds both together.
         // Note: This is not used anywhere yet, only a sketch how we may further abstract timing.
-#define INDEX_OUT SIZE_MAX
+        // TODO: move sequence into FrameRange object
+        enum Index : size_t { OUTPUT = SIZE_MAX };
 #define SEQUENCE_ALL SIZE_MAX
-        enum ValueOrGradient { VAL, GRAD };
+        enum ValueOrGradient { VALUE, GRADIENT };
         Matrix<ElemType> DataSlice(size_t index/*input index or OUT*/,
                                    ValueOrGradient valueOrGradient/*as it says*/,
-                                   FrameRange frameRange/*select frame or entire batch*/, size_t sequence = SEQUENCE_ALL/*SEQUENCE_ALL is the normal case*/)
+                                   const FrameRange & frameRange/*select frame or entire batch*/, size_t sequence = SEQUENCE_ALL/*SEQUENCE_ALL is the normal case*/)
         {
-            ComputationNode<ElemType> * node = (index == INDEX_OUT) ? this : Inputs(index).get();
-            Matrix<ElemType> & data = (valueOrGradient == VAL) ? node->FunctionValues() : node->GradientValues();
+            ComputationNode<ElemType> * node = (index == OUTPUT) ? this : Inputs(index).get();
+            Matrix<ElemType> & data = (valueOrGradient == VALUE) ? node->FunctionValues() : node->GradientValues();
             if (frameRange.IsAllFrames())
             {
                 if (sequence == SEQUENCE_ALL)
@@ -1015,7 +1016,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
+                size_t numParallelSequences = m_pMBLayout->GetNumParallelSequences();
+                if (numParallelSequences != frameRange.samplesInRecurrentStep)
+                    LogicError("DataSlice: inconsistent samplesInRecurrentStep");   // TODO: this will go away when we remove this memebr from FrameRange
                 size_t startColumn = frameRange.t() * numParallelSequences;
                 if (sequence == SEQUENCE_ALL)
                     return data.ColumnSlice(startColumn, numParallelSequences);
