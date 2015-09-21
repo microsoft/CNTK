@@ -173,7 +173,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     {
         LogicError("SequenceReader::ReadClassInfo unk symbol %s is not in vocabulary file", mUnk.c_str());
     } else
-        fprintf(stderr, "debughtx unkId is %d\n", word4idx.find(mUnk.c_str()));
+        fprintf(stderr, "debughtx unkId is %d\n", word4idx[mUnk.c_str()]);
     fprintf(stderr, "debughtx ---LMHTXSequenceReader end---\n");
 }
 
