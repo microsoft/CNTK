@@ -504,6 +504,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         bool Is(size_t t, MinibatchPackingFlags f) const { return (m_minibatchPackingFlags[t] & f) != 0; }
+        // TODO: swap id and t; t is the more important parameter
         bool Is(size_t id, size_t t, MinibatchPackingFlags f) const { return (((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f) != 0; }
 
         // get info for one frame; used in DelayedValueNode
