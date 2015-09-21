@@ -85,7 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ~ComputationNodeBase(){}
         virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
 
-        virtual void CopyTo(const ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
+        virtual void CopyTo(const ComputationNodeBasePtr& node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
         virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) = 0;
 
         // TODO: OperationName calls static TypeName which does not match the actual type names in that the 'Node' is missing.
@@ -131,12 +131,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual bool UnitTest() { return true; }
 
         virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs, size_t numExpected = SIZE_MAX) = 0;
-        virtual void AttachInputs(const ComputationNodeBasePtr /*singleInput*/) = 0;
-        virtual void AttachInputs(const ComputationNodeBasePtr /*leftInput*/, const ComputationNodeBasePtr /*rightInput*/) = 0;
-        virtual void AttachInputs(const ComputationNodeBasePtr /*leftInput*/, const ComputationNodeBasePtr /*middleInput*/, const ComputationNodeBasePtr /*rightInput*/) = 0;
-        virtual void AttachInputs(const ComputationNodeBasePtr /*firstInput*/, const ComputationNodeBasePtr /*secondInput*/, const ComputationNodeBasePtr /*thirdInput*/, const ComputationNodeBasePtr /*fourthInput*/) = 0;
-        virtual void AttachInputs(const ComputationNodeBasePtr /*firstInput*/, const ComputationNodeBasePtr /*secondInput*/, const ComputationNodeBasePtr /*thirdInput*/, const ComputationNodeBasePtr /*fourthInput*/, const ComputationNodeBasePtr /*fifthInput*/) = 0;
-        virtual void AttachInputs(const ComputationNodeBasePtr /*firstInput*/, const ComputationNodeBasePtr /*secondInput*/, const ComputationNodeBasePtr /*thirdInput*/, const ComputationNodeBasePtr /*fourthInput*/, const ComputationNodeBasePtr /*fifthInput*/, const ComputationNodeBasePtr /* sixthInput */) = 0;
+        virtual void AttachInputs(const ComputationNodeBasePtr& /*singleInput*/) = 0;
+        virtual void AttachInputs(const ComputationNodeBasePtr& /*leftInput*/, const ComputationNodeBasePtr& /*rightInput*/) = 0;
+        virtual void AttachInputs(const ComputationNodeBasePtr& /*leftInput*/, const ComputationNodeBasePtr& /*middleInput*/, const ComputationNodeBasePtr& /*rightInput*/) = 0;
+        virtual void AttachInputs(const ComputationNodeBasePtr& /*firstInput*/, const ComputationNodeBasePtr& /*secondInput*/, const ComputationNodeBasePtr& /*thirdInput*/, const ComputationNodeBasePtr& /*fourthInput*/) = 0;
+        virtual void AttachInputs(const ComputationNodeBasePtr& /*firstInput*/, const ComputationNodeBasePtr& /*secondInput*/, const ComputationNodeBasePtr& /*thirdInput*/, const ComputationNodeBasePtr& /*fourthInput*/, const ComputationNodeBasePtr& /*fifthInput*/) = 0;
+        virtual void AttachInputs(const ComputationNodeBasePtr& /*firstInput*/, const ComputationNodeBasePtr& /*secondInput*/, const ComputationNodeBasePtr& /*thirdInput*/, const ComputationNodeBasePtr& /*fourthInput*/, const ComputationNodeBasePtr& /*fifthInput*/, const ComputationNodeBasePtr& /* sixthInput */) = 0;
 
         virtual void DetachInputs() { m_children.clear(); }
 
@@ -144,7 +144,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         const size_t ParentSize() const { return m_parents.size(); }
         void ClearParents() { m_parents.clear(); }
-        void AddParent(ComputationNodeBasePtr pNode) { m_parents.push_back(pNode); }
+        void AddParent(const ComputationNodeBasePtr& pNode) { m_parents.push_back(pNode); }
         inline ComputationNodeBasePtr Parent(const size_t parentIndex) const
         {
 #ifdef DEBUG // profile shows this is range check very expensive in release mode, skip it  
@@ -374,7 +374,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         const size_t ChildrenSize() const { return m_children.size(); }
 
-        virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr node) = 0;
+        virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr& node) = 0;
 
         virtual void ComputeGradientForChildren() = 0;
 
@@ -409,12 +409,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
 
-        static bool IsSmaller(const ComputationNodeBasePtr lhs, const ComputationNodeBasePtr rhs)
+        static bool IsSmaller(const ComputationNodeBasePtr& lhs, const ComputationNodeBasePtr& rhs)
         {
             return lhs->m_visitedOrder < rhs->m_visitedOrder;
         }
 
-        bool IsEqualTo(const ComputationNodeBasePtr other) const //this will be used to determine whehter two nodes are the same
+        bool IsEqualTo(const ComputationNodeBasePtr& other) const //this will be used to determine whehter two nodes are the same
         {
             if (OperationName() != other->OperationName() || m_children.size() != other->m_children.size())
                 return false;
@@ -846,17 +846,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!IsLeaf() && !RequiresPreCompute())
             {
-                ReleaseMatrixToPool(m_gradientValues, matrixPool);
+                if (m_gradientValues->GetMatrixType() != SPARSE)  //since we don't have a sparse pool yet
+                    ReleaseMatrixToPool(m_gradientValues, matrixPool);
+
                 //ReleaseMatrixToPool(m_functionValues, matrixPool);
             }
         }
 
-        virtual void AttachInputs(const ComputationNodeBasePtr singleInput) { AttachInputs(UpCast(singleInput)); }
-        virtual void AttachInputs(const ComputationNodeBasePtr leftInput, const ComputationNodeBasePtr rightInput) { AttachInputs(UpCast(leftInput), UpCast(rightInput)); }
-        virtual void AttachInputs(const ComputationNodeBasePtr leftInput, const ComputationNodeBasePtr middleInput, const ComputationNodeBasePtr rightInput) { AttachInputs(UpCast(leftInput), UpCast(middleInput), UpCast(rightInput)); }
-        virtual void AttachInputs(const ComputationNodeBasePtr firstInput, const ComputationNodeBasePtr secondInput, const ComputationNodeBasePtr thirdInput, const ComputationNodeBasePtr fourthInput) { AttachInputs(UpCast(firstInput), UpCast(secondInput), UpCast(thirdInput), UpCast(fourthInput)); }
-        virtual void AttachInputs(const ComputationNodeBasePtr firstInput, const ComputationNodeBasePtr secondInput, const ComputationNodeBasePtr thirdInput, const ComputationNodeBasePtr fourthInput, const ComputationNodeBasePtr fifthInput) { AttachInputs(UpCast(firstInput), UpCast(secondInput), UpCast(thirdInput), UpCast(fourthInput), UpCast(fifthInput)); }
-        virtual void AttachInputs(const ComputationNodeBasePtr firstInput, const ComputationNodeBasePtr secondInput, const ComputationNodeBasePtr thirdInput, const ComputationNodeBasePtr fourthInput, const ComputationNodeBasePtr fifthInput, const ComputationNodeBasePtr sixthInput) { AttachInputs(UpCast(firstInput), UpCast(secondInput), UpCast(thirdInput), UpCast(fourthInput), UpCast(fifthInput), UpCast(sixthInput)); }
+        virtual void AttachInputs(const ComputationNodeBasePtr& singleInput) { AttachInputs(UpCast(singleInput)); }
+        virtual void AttachInputs(const ComputationNodeBasePtr& leftInput, const ComputationNodeBasePtr& rightInput) { AttachInputs(UpCast(leftInput), UpCast(rightInput)); }
+        virtual void AttachInputs(const ComputationNodeBasePtr& leftInput, const ComputationNodeBasePtr& middleInput, const ComputationNodeBasePtr& rightInput) { AttachInputs(UpCast(leftInput), UpCast(middleInput), UpCast(rightInput)); }
+        virtual void AttachInputs(const ComputationNodeBasePtr& firstInput, const ComputationNodeBasePtr& secondInput, const ComputationNodeBasePtr& thirdInput, const ComputationNodeBasePtr& fourthInput) { AttachInputs(UpCast(firstInput), UpCast(secondInput), UpCast(thirdInput), UpCast(fourthInput)); }
+        virtual void AttachInputs(const ComputationNodeBasePtr& firstInput, const ComputationNodeBasePtr& secondInput, const ComputationNodeBasePtr& thirdInput, const ComputationNodeBasePtr& fourthInput, const ComputationNodeBasePtr& fifthInput) { AttachInputs(UpCast(firstInput), UpCast(secondInput), UpCast(thirdInput), UpCast(fourthInput), UpCast(fifthInput)); }
+        virtual void AttachInputs(const ComputationNodeBasePtr& firstInput, const ComputationNodeBasePtr& secondInput, const ComputationNodeBasePtr& thirdInput, const ComputationNodeBasePtr& fourthInput, const ComputationNodeBasePtr& fifthInput, const ComputationNodeBasePtr& sixthInput) { AttachInputs(UpCast(firstInput), UpCast(secondInput), UpCast(thirdInput), UpCast(fourthInput), UpCast(fifthInput), UpCast(sixthInput)); }
         virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs, size_t numExpected = SIZE_MAX)
         {
             if (numExpected != SIZE_MAX && numExpected != inputs.size())
@@ -1076,7 +1078,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return UpCast(m_children[childIndex]);
         }
 
-        virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr inode)
+        virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode)
         {
             const ComputationNodePtr node = UpCast(inode);
 
@@ -1313,7 +1315,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     public:
-        /*implement*/void CopyTo(const ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const
+        /*implement*/void CopyTo(const ComputationNodeBasePtr& node, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             CopyTo(UpCast(node), newName, flags);
         }
@@ -1343,8 +1345,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_outputHeight = m_outputHeight;
                 node->m_outputChannels = m_outputChannels;
 
-                node->m_functionValues = m_functionValues; 
-                node->m_gradientValues = m_gradientValues;
+                *node->m_functionValues = *m_functionValues; 
+                *node->m_gradientValues = *m_gradientValues;
 
                 node->m_reqMultiSeqHandling = m_reqMultiSeqHandling;
             }

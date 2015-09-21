@@ -23,9 +23,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+
         SquareErrorNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
-            m_leftMinusRight(deviceId)
+            ComputationNodeNonLooping<ElemType>(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -37,9 +37,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InvalidArgument("SquareError criteria only takes two inputs.");
 
             if (inputIndex == 0)  //left derivative
-                ComputeInputPartialLeft(Inputs(0)->GradientValues(), GradientValues(), m_leftMinusRight);
+                ComputeInputPartialLeft(Inputs(0)->GradientValues(), GradientValues(), *m_leftMinusRight);
             else
-                ComputeInputPartialRight(Inputs(1)->GradientValues(), GradientValues(), m_leftMinusRight);
+                ComputeInputPartialRight(Inputs(1)->GradientValues(), GradientValues(), *m_leftMinusRight);
         }
 
         static void WINAPI ComputeInputPartialLeft(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& leftMinusRight)  
@@ -54,7 +54,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_leftMinusRight, shared_from_this());
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), *m_leftMinusRight, shared_from_this());
         }
 
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& leftMinusRight, ComputationNodePtr curNode)  
@@ -102,7 +102,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
 
             FunctionValues().Resize(1,1);
-            m_leftMinusRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            //m_leftMinusRight->Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             InferImageDimsFromInputs(); 
         }
 
@@ -125,7 +125,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_leftMinusRight.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_leftMinusRight->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -134,13 +134,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<SquareErrorNode<ElemType>>(nodeP);
-                node->m_leftMinusRight = m_leftMinusRight;
+                *node->m_leftMinusRight = *m_leftMinusRight;
             }
         }
+
+        //request matrices needed to do node function value evaluation
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeEval(matrixPool);
+            RequestMatrixFromPool(m_leftMinusRight, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            ReleaseMatrixToPool(m_leftMinusRight, matrixPool);
+        }
+
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
+
     private:
-        Matrix<ElemType> m_leftMinusRight;
+        shared_ptr<Matrix<ElemType>> m_leftMinusRight;
     };
 
     template class SquareErrorNode<float>; 
@@ -154,8 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
-            m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
+            ComputationNodeNonLooping<ElemType>(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -169,11 +184,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
-                ComputeInputPartialLeft(m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
+                ComputeInputPartialLeft(*m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
             }
             else
             {
-                ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
+                ComputeInputPartialRight(*m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
                 ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(inputIndex)->GradientValues());
             }
         }
@@ -212,7 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, shared_from_this());
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), *m_softmaxOfRight, *m_logSoftmaxOfRight, shared_from_this());
         }
 
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, 
@@ -272,8 +287,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FunctionValues().Resize(1,1);
             InferImageDimsFromInputs(); 
 
-            m_logSoftmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_softmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            //m_logSoftmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            //m_softmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
@@ -296,8 +311,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_logSoftmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_softmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_logSoftmaxOfRight->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_softmaxOfRight->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -306,15 +321,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<CrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
-                node->m_logSoftmaxOfRight = m_logSoftmaxOfRight;
-                node->m_softmaxOfRight = m_softmaxOfRight;
+                *node->m_logSoftmaxOfRight = *m_logSoftmaxOfRight;
+                *node->m_softmaxOfRight = *m_softmaxOfRight;
             }
         }
+
+        //request matrices needed to do node function value evaluation
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeEval(matrixPool);
+            RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
+            RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+            ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+        }
+
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
     protected:
-        Matrix<ElemType> m_logSoftmaxOfRight;
-        Matrix<ElemType> m_softmaxOfRight;       
+        shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
+        shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
     };
 
     template class CrossEntropyWithSoftmaxNode<float>; 
@@ -329,8 +361,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CrossEntropyNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
-            m_logOfRight(deviceId), m_leftDivRight(deviceId)
+            ComputationNodeNonLooping<ElemType>(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -344,11 +375,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
-                ComputeInputPartialLeft(m_logOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
+                ComputeInputPartialLeft(*m_logOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
             }
             else
             {
-                ComputeInputPartialRight(m_leftDivRight, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), shared_from_this());
+                ComputeInputPartialRight(*m_leftDivRight, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), shared_from_this());
             }
         }
 
@@ -369,7 +400,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(right_i))
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_logOfRight, shared_from_this());
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), *m_logOfRight, shared_from_this());
         }
 
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, 
@@ -421,8 +452,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
 
             FunctionValues().Resize(1,1);
-            m_logOfRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            m_leftDivRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
+            //m_logOfRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
+            //m_leftDivRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             InferImageDimsFromInputs(); 
         }
 
@@ -446,8 +477,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_logOfRight.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_leftDivRight.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_logOfRight->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -456,17 +486,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<CrossEntropyNode<ElemType>>(nodeP);
-                node->m_logOfRight = m_logOfRight;
-                node->m_leftDivRight = m_leftDivRight;
+                *node->m_logOfRight = *m_logOfRight;
+                *node->m_leftDivRight = *m_leftDivRight;
             }
         }
+
+        //request matrices needed to do node function value evaluation
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeEval(matrixPool);
+            RequestMatrixFromPool(m_logOfRight, matrixPool);
+        }
+
+        //request matrices that are needed for gradient computation
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            RequestMatrixFromPool(m_leftDivRight, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            ReleaseMatrixToPool(m_logOfRight, matrixPool);
+            ReleaseMatrixToPool(m_leftDivRight, matrixPool);
+        }
+
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
     private:
         // matrix value passed from evaluate to computePartial
-        Matrix<ElemType> m_logOfRight;
+        shared_ptr<Matrix<ElemType>> m_logOfRight;
         // temporary
-        Matrix<ElemType> m_leftDivRight;
+        shared_ptr<Matrix<ElemType>> m_leftDivRight;
     };
 
     template class CrossEntropyNode<float>; 
@@ -478,9 +531,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+
         MatrixL1RegNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
-            m_gradientOfL1Norm(deviceId)
+            ComputationNodeNonLooping<ElemType>(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -491,7 +544,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex != 0)
                 InvalidArgument("MatrixL1RegNode only has one input.");
 
-            ComputeInputPartialS(m_gradientOfL1Norm, Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues());
+            ComputeInputPartialS(*m_gradientOfL1Norm, Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues());
         }
 
         static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientOfL1Norm, 
@@ -526,7 +579,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("MatrixL1Reg operation: the input node has 0 element.");
 
             FunctionValues().Resize(1,1);
-            m_gradientOfL1Norm.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            //m_gradientOfL1Norm.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             InferImageDimsFromInputs(); 
         }
 
@@ -548,7 +601,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_gradientOfL1Norm.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_gradientOfL1Norm->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -557,13 +610,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<MatrixL1RegNode<ElemType>>(nodeP);
-                node->m_gradientOfL1Norm = m_gradientOfL1Norm;
+                *node->m_gradientOfL1Norm = *m_gradientOfL1Norm;
             }
         }
+
+        //request matrices that are needed for gradient computation
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            RequestMatrixFromPool(m_gradientOfL1Norm, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            ReleaseMatrixToPool(m_gradientOfL1Norm, matrixPool);
+        }
+
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
     private:
-        Matrix<ElemType> m_gradientOfL1Norm;    // temporary
+        shared_ptr<Matrix<ElemType>> m_gradientOfL1Norm;    // temporary
     };
 
     template class MatrixL1RegNode<float>; 
@@ -575,9 +643,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+
         MatrixL2RegNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
-            m_temp(deviceId)
+            ComputationNodeNonLooping<ElemType>(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -643,12 +711,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
-    private:
-        Matrix<ElemType> m_temp;
     };
 
     template class MatrixL2RegNode<float>; 
@@ -665,6 +730,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+
         NoiseContrastiveEstimationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_logSoftmax(deviceId),

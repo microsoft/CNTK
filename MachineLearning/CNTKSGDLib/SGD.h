@@ -183,7 +183,7 @@ protected:
     // return a reasonable initial learning rate based on the initial mbsize
     double SearchForBestLearnRate(ComputationNetwork& net,
                                   ComputationNetwork& refNet,
-                                  const ComputationNodeBasePtr refNode, const int epochNumber,
+                                  const ComputationNodeBasePtr& refNode, const int epochNumber,
                                   const double curLearnRate,
                                   IDataReader<ElemType>* trainSetDataReader,
                                   const std::vector<ComputationNodeBasePtr> & featureNodes,
@@ -198,7 +198,7 @@ protected:
 
     void TrainOneMiniEpochAndReloadModel(ComputationNetwork& net,
                                          ComputationNetwork& refNet,
-                                         const ComputationNodeBasePtr refNode, const int epochNumber,
+                                         const ComputationNodeBasePtr& refNode, const int epochNumber,
                                          const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
                                          const double learnRatePerSample,
                                          const size_t minibatchSize,
@@ -216,7 +216,7 @@ protected:
 
     size_t AdaptiveMinibatchSizing(ComputationNetwork& net,
                                    ComputationNetwork& refNet,
-                                   const ComputationNodeBasePtr refNode,
+                                   const ComputationNodeBasePtr& refNode,
                                    const int epochNumber,
                                    const size_t numFramesToUseInSearch,
                                    IDataReader<ElemType>* trainSetDataReader,
@@ -235,7 +235,7 @@ protected:
     // speculatively train with various MB sizes; then picks the best
     size_t SearchForBestMinibatchSize(ComputationNetwork& net,
                                       ComputationNetwork& refNet,
-                                      const ComputationNodeBasePtr refNode,
+                                      const ComputationNodeBasePtr& refNode,
                                       const int epochNumber,
                                       const size_t numFramesToUseInSearch,
                                       IDataReader<ElemType>* trainSetDataReader,
@@ -258,7 +258,7 @@ protected:
 
     size_t TrainOneEpoch(ComputationNetwork& net,
                          ComputationNetwork& refNet,
-                         const ComputationNodeBasePtr refNode,
+                         const ComputationNodeBasePtr& refNode,
                          const int epochNumber,
                          const size_t epochSize,
                          IDataReader<ElemType>* trainSetDataReader,
@@ -297,7 +297,7 @@ public:
 
 protected:
     // UpdateWeights - update the weights in
-    void UpdateWeights(const ComputationNodeBasePtr node,
+    void UpdateWeights(const ComputationNodeBasePtr& node,
                        Matrix<ElemType>& smoothedGradient,
                        const double learnRatePerSample,
                        const double momentumPerSample,

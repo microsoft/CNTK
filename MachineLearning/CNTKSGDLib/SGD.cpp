@@ -1364,7 +1364,7 @@ template<class ElemType>
     template<class ElemType>
     double SGD<ElemType>::SearchForBestLearnRate(ComputationNetwork& net,
                                     ComputationNetwork& refNet,
-                                    const ComputationNodeBasePtr refNode, const int epochNumber,
+                                    const ComputationNodeBasePtr& refNode, const int epochNumber,
                                   const double curLearnRate,
                                     IDataReader<ElemType>* trainSetDataReader,
                                     const std::vector<ComputationNodeBasePtr> & featureNodes,
@@ -1526,7 +1526,7 @@ template<class ElemType>
     template<class ElemType>
     void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetwork& net,
                                          ComputationNetwork& refNet,
-                                         const ComputationNodeBasePtr refNode, const int epochNumber,
+                                         const ComputationNodeBasePtr& refNode, const int epochNumber,
                                          const size_t epochSize, IDataReader<ElemType>* trainSetDataReader,
                                          const double learnRatePerSample,
                                          const size_t minibatchSize,
@@ -1579,7 +1579,7 @@ template<class ElemType>
     template<class ElemType>
     size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetwork& net,
                                    ComputationNetwork& refNet,
-                                   const ComputationNodeBasePtr refNode,
+                                   const ComputationNodeBasePtr& refNode,
                                    const int epochNumber,
                                    const size_t numFramesToUseInSearch,
                                    IDataReader<ElemType>* trainSetDataReader,
@@ -1683,7 +1683,7 @@ template<class ElemType>
     template<class ElemType>
     size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetwork& net,
                                       ComputationNetwork& refNet,
-                                      const ComputationNodeBasePtr refNode,
+                                      const ComputationNodeBasePtr& refNode,
                                       const int epochNumber,
                                       const size_t numFramesToUseInSearch,
                                       IDataReader<ElemType>* trainSetDataReader,
@@ -1838,7 +1838,7 @@ template<class ElemType>
     template<class ElemType>
     size_t SGD<ElemType>::TrainOneEpoch(ComputationNetwork& net,
                          ComputationNetwork& refNet,
-                         const ComputationNodeBasePtr refNode,
+                         const ComputationNodeBasePtr& refNode,
                          const int epochNumber,
                          const size_t epochSize,
                          IDataReader<ElemType>* trainSetDataReader,
@@ -2444,7 +2444,7 @@ template<class ElemType>
 
     // UpdateWeights - update the weights in
     template<class ElemType>
-    void SGD<ElemType>::UpdateWeights(const ComputationNodeBasePtr node,
+    void SGD<ElemType>::UpdateWeights(const ComputationNodeBasePtr& node,
                        Matrix<ElemType>& smoothedGradient,
                        const double learnRatePerSample,
                        const double momentumPerSample,
