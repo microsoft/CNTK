@@ -312,6 +312,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return false;
     }
 
+    // note: all of these have NodeDoesItsOwnCustomizedMissingColumnsMasking() returning true
     bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
     {
         if (nodePtr->OperationName() == OperationNameOf(SquareErrorNode) ||
@@ -336,23 +337,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //SumElements node will generate a scalar value and so it should never require special handling
             //TransposeNode will change the size of columns and so it should also not included for special handling
             //their child node should instead
+#if 0
             if (node->OperationName() != OperationNameOf(SumElementsNode) &&
                 node->OperationName() != OperationNameOf(TransposeNode) &&
                 node->OperationName() != OperationNameOf(MeanNode) &&
                 node->OperationName() != OperationNameOf(InvStdDevNode) 
                 )
                 node->SetMaskMissingColumnsToZero();
+#else
+            if (node->OperationName() == OperationNameOf(SumElementsNode) ||
+                node->OperationName() == OperationNameOf(TransposeNode) ||
+                node->OperationName() == OperationNameOf(MeanNode) |
+                node->OperationName() == OperationNameOf(InvStdDevNode))
+            {
+                RuntimeError("SetRequestNodesMultiSeqHandling: NodesReqMultiSeqHandling cannot be used with operation '%ls'\nIn the past, CNTK silently fixed this; now please change your NDL instead", node->OperationName().c_str());
+            }
+            node->SetMaskMissingColumnsToZero();
+#endif
         }
 
-        //if a typical criterion node is used as the training criterion node we assume it requires multiseq handling 
-        //this is for backward compatibility
+        // if a typical criterion node is used as the training criterion node we assume it requires multiseq handling 
+        // this is for backward compatibility
+        // All of these have NodeDoesItsOwnCustomizedMissingColumnsMasking() return true, i.e. they will not have MaskMissingColumnsToZero() auto-called from Network.
+        // Hence, instead of setting the flag, we just ensure that this is true.
         for (auto & node : m_finalCriteria)
             if (IsTypicalCriterionNode(node))
-                node->SetMaskMissingColumnsToZero();
+                //node->SetMaskMissingColumnsToZero();
+                if (!node->NodeDoesItsOwnCustomizedMissingColumnsMasking())
+                    LogicError("criterion %ls's NodeDoesItsOwnCustomizedMissingColumnsMasking() function must return true", node->OperationName().c_str());
 
         for (auto & node : m_evalNodes)
             if (IsTypicalCriterionNode(node))
-                node->SetMaskMissingColumnsToZero();
+                //node->SetMaskMissingColumnsToZero();
+                if (!node->NodeDoesItsOwnCustomizedMissingColumnsMasking())
+                    LogicError("criterion %ls's NodeDoesItsOwnCustomizedMissingColumnsMasking() function must return true", node->OperationName().c_str());
     }
 
     template<class N> void ComputationNetwork::GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequirePreComputation, const ComputationNodeBasePtr rootNode, bool checkComputed)
