@@ -75,7 +75,7 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) :
-        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>()), m_pMBNoLayout(make_shared<MBLayout>())
+        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())//, m_pMBNoLayout(make_shared<MBLayout>())
     {
         m_randomSeedOffset = 0;
         m_actualMBSize = 0;
@@ -539,7 +539,7 @@ public:
         // We have a matching layout structure that matches pMBLayout in number of sequences while not having any flags set.
         // This is used for nodes that do not need recurrent processing, but can be done in batch.
         // TODO: Does it harm if we have flags, for those that can be done in batch? I.e. why don't we just always provide flags?
-        m_pMBNoLayout->Resize(m_pMBLayout->GetNumParallelSequences(), 0);   // TODO: this is not nice, but we currently have no trigger to detect changes in layout
+        //m_pMBNoLayout->Resize(m_pMBLayout->GetNumParallelSequences(), 0);   // TODO: this is not nice, but we currently have no trigger to detect changes in layout
 
         // prepare to compute with the subnetwork that this rootNode depends on, including
         //  - auto-detecting recurrent loops
@@ -566,10 +566,10 @@ public:
             // MaskMissingColumnsToZero() will test whether the layout is all none, and then skip.
             // This is the only place where SetMBLayout() is ever called on a node. Hence, we could test NeedToMaskMissingColumnsToZero() instead.
             // Note that NeedToMaskMissingColumnsToZero() is true only where it is necessary; that is, most node have it set to false (since most nodes can just map garbage-in-garbage-out).
-            if ((*nodeIter)->NeedToMaskMissingColumnsToZero())
+            //if ((*nodeIter)->NeedToMaskMissingColumnsToZero())
                 (*nodeIter)->SetMBLayout(m_pMBLayout);
-            else
-                (*nodeIter)->SetMBLayout(m_pMBNoLayout);
+            //else
+            //    (*nodeIter)->SetMBLayout(m_pMBNoLayout);
             (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
         }
 
