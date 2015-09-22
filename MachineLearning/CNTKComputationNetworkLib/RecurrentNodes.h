@@ -96,12 +96,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"DelayedValue"; }
 
         //Set sentence boundary information according to a specified time step. 
-        virtual void ResetBound(MBLayoutPtr pMBLayout)
+        virtual void SetMBLayout(MBLayoutPtr pMBLayout)
         {
             if (m_timeStep <= 0)
                 LogicError("timeStep should be 1 or larger");
 
-            Base::ResetBound(pMBLayout);
+            Base::SetMBLayout(pMBLayout);
 
             // in this node we use a post-processed version of the shared pMBLayout
             // This is to decide which frames should be filled with default values. 
@@ -1353,7 +1353,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //boundary.ColumnSlice(0, 1).SetValue(((int) MinibatchPackingFlags::SequenceStart));
                 //minibatchPackingFlags[1] = MinibatchPackingFlags::SequenceStart;
                 pMBLayout->Set(0, 1, MinibatchPackingFlags::SequenceStart); // TODO: strange--start at frame[1] instead of [0]?
-                Base::ResetBound(pMBLayout);
+                Base::SetMBLayout(pMBLayout);
 
                 f0 = Inputs(0)->FunctionValues();
                 f1 = Inputs(1)->FunctionValues();

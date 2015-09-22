@@ -564,12 +564,12 @@ public:
         {
             // TODO: we should just always set the real layout; the nodes themselves should know to ignore it based on NeedToMaskMissingColumnsToZero()
             // MaskMissingColumnsToZero() will test whether the layout is all none, and then skip.
-            // This is the only place where ResetBound() is ever called on a node. Hence, we could test NeedToMaskMissingColumnsToZero() instead.
+            // This is the only place where SetMBLayout() is ever called on a node. Hence, we could test NeedToMaskMissingColumnsToZero() instead.
             // Note that NeedToMaskMissingColumnsToZero() is true only where it is necessary; that is, most node have it set to false (since most nodes can just map garbage-in-garbage-out).
             if ((*nodeIter)->NeedToMaskMissingColumnsToZero())
-                (*nodeIter)->ResetBound(m_pMBLayout);
+                (*nodeIter)->SetMBLayout(m_pMBLayout);
             else
-                (*nodeIter)->ResetBound(m_pMBNoLayout);
+                (*nodeIter)->SetMBLayout(m_pMBNoLayout);
             (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
         }
 
