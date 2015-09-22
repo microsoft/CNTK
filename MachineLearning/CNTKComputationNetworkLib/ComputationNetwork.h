@@ -75,7 +75,7 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) :
-        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>()), m_pMBNoLayout(make_shared<MBLayout>())
+        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())//, m_pMBNoLayout(make_shared<MBLayout>())
     {
         m_randomSeedOffset = 0;
         m_actualMBSize = 0;
@@ -529,7 +529,7 @@ public:
 
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
 
-    void SetNodesReqMultiSeqHandling();
+    void SetRequestNodesMultiSeqHandling();
 
     // MAIN ENTRY POINT for evaluation (forward prop)
     // TODO: pass a set of nodes instead of only one
@@ -539,7 +539,7 @@ public:
         // We have a matching layout structure that matches pMBLayout in number of sequences while not having any flags set.
         // This is used for nodes that do not need recurrent processing, but can be done in batch.
         // TODO: Does it harm if we have flags, for those that can be done in batch? I.e. why don't we just always provide flags?
-        m_pMBNoLayout->Resize(m_pMBLayout->GetNumParallelSequences(), 0);   // TODO: this is not nice, but we currently have no trigger to detect changes in layout
+        //m_pMBNoLayout->Resize(m_pMBLayout->GetNumParallelSequences(), 0);   // TODO: this is not nice, but we currently have no trigger to detect changes in layout
 
         // prepare to compute with the subnetwork that this rootNode depends on, including
         //  - auto-detecting recurrent loops
@@ -562,10 +562,14 @@ public:
         // TODO: in the future, these will be different on different nodes; and probably should be propagated by nodes themselves, like functionValues
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
-            if ((*nodeIter)->ReqMultiSeqHandling())
-                (*nodeIter)->ResetBound(m_pMBLayout);
-            else
-                (*nodeIter)->ResetBound(m_pMBNoLayout);
+            // TODO: we should just always set the real layout; the nodes themselves should know to ignore it based on NeedToMaskMissingColumnsToZero()
+            // MaskMissingColumnsToZero() will test whether the layout is all none, and then skip.
+            // This is the only place where SetMBLayout() is ever called on a node. Hence, we could test NeedToMaskMissingColumnsToZero() instead.
+            // Note that NeedToMaskMissingColumnsToZero() is true only where it is necessary; that is, most node have it set to false (since most nodes can just map garbage-in-garbage-out).
+            //if ((*nodeIter)->NeedToMaskMissingColumnsToZero())
+                (*nodeIter)->SetMBLayout(m_pMBLayout);
+            //else
+            //    (*nodeIter)->SetMBLayout(m_pMBNoLayout);
             (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
         }
 
@@ -647,7 +651,7 @@ public:
 
         // resize function values and gradients of everything in m_recurrentInfo
         for (int i = 0; i < m_recurrentInfo.size(); i++)
-            for (auto nodeIter : m_recurrentInfo[i].m_recurrentNodes)
+            for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
                 nodeIter->SetFunctionAndGradientSize(m_actualMBSize);
     }
 
@@ -876,10 +880,10 @@ public:
         return std::vector<ComputationNodeBasePtr> { node };
     }
 
-    inline std::vector<ComputationNodeBasePtr> & NodesReqMultiSeqHandling() { return m_nodesReqMultiSeqHandling; }
-    inline std::vector<ComputationNodeBasePtr> & EvaluationNodes()          { return m_evalNodes; }
-    inline std::vector<ComputationNodeBasePtr> & OutputNodes()              { return m_outputNodes; }
-    inline std::vector<ComputationNodeBasePtr> & PairNodes()                { return m_pairNodes; }
+    inline std::vector<ComputationNodeBasePtr> & RequestNodesMultiSeqHandling() { return m_requestNodesMultiSeqHandling; }  // user-specified list 'NodesReqMultiSeqHandling' (NDL and MEL create/modify this list)
+    inline std::vector<ComputationNodeBasePtr> & EvaluationNodes()              { return m_evalNodes; }
+    inline std::vector<ComputationNodeBasePtr> & OutputNodes()                  { return m_outputNodes; }
+    inline std::vector<ComputationNodeBasePtr> & PairNodes()                    { return m_pairNodes; }
 
     inline std::vector<RecurrentInfo> & RecurrentNodes() { return m_recurrentInfo; }
 
@@ -1181,7 +1185,7 @@ public:
         CollectInputAndLearnableParameters(rootNode);
 
         //
-        SetNodesReqMultiSeqHandling();
+        SetRequestNodesMultiSeqHandling();
     }
 
     //this function will need to be called before actual validation and execution to 
@@ -1242,7 +1246,7 @@ public:
             RecurrentInfo * recInfo = FindInRecurrentLoops(nodeIter);
             if (recInfo && !recInfo->m_completedGradient)
             {
-                for (auto nodeIterInLoop : recInfo->m_recurrentNodesForForward)
+                for (auto & nodeIterInLoop : recInfo->m_recurrentNodesForForward)
                     AllocateGradientMatricesForChildren(nodeIterInLoop, numParents);
                 recInfo->m_completedGradient = true;
             }
@@ -1273,7 +1277,7 @@ public:
         // first give criteria nodes as root node
         if (FinalCriterionNodes().size() > 0)
         {
-            for (auto node : FinalCriterionNodes())
+            for (auto & node : FinalCriterionNodes())
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
@@ -1287,7 +1291,7 @@ public:
         // now output nodes
         if (OutputNodes().size() > 0)
         {
-            for (auto node : OutputNodes())
+            for (auto & node : OutputNodes())
             if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());
         }
@@ -1296,7 +1300,7 @@ public:
         // now evaluation nodes
         if (EvaluationNodes().size() > 0)
         {
-            for (auto node : EvaluationNodes())
+            for (auto & node : EvaluationNodes())
             if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());
         }
@@ -1367,6 +1371,8 @@ public:
     };
 
     // note: this is called to write into our existing MBLayout instance
+    // TODO: This is broken. Instead, we should pass this from the reader, or better, do batching inside here.
+    //       The problem is that we cannot post-process. E.g. is the layout guaranteed to reflect the minibatch size, in the case of no recurrence??
     const MBLayoutPtr & GetMBLayoutPtr() { return m_pMBLayout; }
 
 protected:
@@ -1549,10 +1555,10 @@ protected:
     std::vector<ComputationNodeBasePtr> m_evalNodes;
     std::vector<ComputationNodeBasePtr> m_outputNodes;
     std::vector<ComputationNodeBasePtr> m_pairNodes; /// nodes for the children network to pair
-    std::vector<ComputationNodeBasePtr> m_nodesReqMultiSeqHandling;
+    std::vector<ComputationNodeBasePtr> m_requestNodesMultiSeqHandling;
     vector<std::vector<ComputationNodeBasePtr>*> GetAllNodeGroups()    // get all groups to allow to iterate over all of them ...continue
     {
-        return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_nodesReqMultiSeqHandling };
+        return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_requestNodesMultiSeqHandling };
     }
 
     std::vector<RecurrentInfo> m_recurrentInfo;     // [index--TODO: comment what this is indexed with]

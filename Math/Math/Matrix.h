@@ -25,43 +25,6 @@
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // there is a version down there of ColumnSlice() that abstracts the number of streams
-    // TODO: This may not belong here, but having it in ComputeNode would require syntax changes, while having it as a member here only requires a local find-replace. Let's make it work first, then decide how to refactor.
-    // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure
-    // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
-    // TODO: GetNumParallelSequences() should be subsumed here & removed from nodes
-    // TODO: Where this design currently breaks:
-    //  - BatchModeNodes must access GetNumParallelSequences(), yet operate on the whole sequence
-    //  - likewise, LSTMNode does its own iteration, hence needs access to GetNumParallelSequences() or NumCols() in the whole-batch iterator
-    //  - RecurrentNodes access frames with a time shift, where out-of-bounds ones access a different matrix' values
-    //  - RecurrentNodes iterate over individual slices--need a sub-setting constructor from a FrameRange to another?
-    //  - RecurrentNodes access boundary info with a similar pattern, but boundary info has a different #streams (namely, 1)
-    // TODO: Turns out, a FrameRange is either a whole batch or a single frame.
-    struct FrameRange
-    {
-        const size_t timeIdxInSeq;              // start frame
-        const size_t samplesInRecurrentStep;    // number of samples in this step       --BUGBUG: this should be part of MBLayout, not FrameRange
-        // can construct from a single size_t -> a single-frame range
-        //FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(0)/*FIX THIS*/{}
-        FrameRange(size_t timeIdxInSeq, size_t samplesInRecurrentStep) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(samplesInRecurrentStep){}
-        // or without arguments -> entire minibatch / no frame-range
-        FrameRange() : timeIdxInSeq(0), samplesInRecurrentStep(SIZE_MAX) {}
-        // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
-        // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).
-        size_t t() const { EnsureNotAllFrames(); return timeIdxInSeq; }
-        // multi-frame slice case: these two get startFrame and numFrames
-        size_t StartColumn() const { EnsureNotAllFrames(); return timeIdxInSeq * samplesInRecurrentStep; }
-        size_t NumCols() const { EnsureNotAllFrames(); return samplesInRecurrentStep; }
-        bool IsAllFrames() const { return samplesInRecurrentStep == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
-    private:
-        FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
-        void operator=(const FrameRange &);
-        void EnsureNotAllFrames() const
-        {
-            if (IsAllFrames())
-                LogicError("FrameRange::t() called when frame range refers to whole minibatch");
-        }
-    };
 
     enum CurrentDataLocation
     {
@@ -184,19 +147,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
 
         // special convenience function to apply ColumnSlice() to getting a frame range
-        // It assumes that columns are frames, and returns a sub-range.
-        // TODO: decide whether this belongs here or elsewhere
-        Matrix<ElemType> FrameSlice(const FrameRange & frameRange
-            // TODO: temporary only until this has been tested to work:
-            , size_t expectedStartColumn, size_t expectedNumCols
-            ) const
-        {
-            if (frameRange.IsAllFrames()) return ColumnSlice(0, GetNumCols());  // TODO: can we just return a reference to ourselves? --ownership problem
-            // TODO: temporary only until this has been tested to work:
-            if (expectedStartColumn != frameRange.StartColumn() || expectedNumCols != frameRange.NumCols())
-                LogicError("FrameSlice: FrameRange object gives different range than original explicit code. Logic is borked.");
-            return ColumnSlice(frameRange.StartColumn(), frameRange.NumCols());
-        }
+        //Matrix<ElemType> FrameSlice(const struct FrameRange & frameRange, size_t expectedStartColumn, size_t expectedNumCols) const;
+        Matrix<ElemType> FrameSlice(const struct FrameRange & frameRange, const shared_ptr<struct MBLayout> & pMBLayout) const;
 
         // difference between AssignColumnSlice and SetColumnSlice 
         // AssignColumnSlice :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, startColumn: startColumn+numCols-1) 
@@ -553,8 +505,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // ^^ This is some form of aggregate of m_sentenceBoundaryFlags taken over all streams. TODO: find out the exact condition
     public:
 
-        bool Is(size_t t, MinibatchPackingFlags f) const { return m_minibatchPackingFlags[t] & f; }
-        bool Is(size_t id, size_t t, MinibatchPackingFlags f) const { return ((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f; }
+        bool Is(size_t t, MinibatchPackingFlags f) const { return (m_minibatchPackingFlags[t] & f) != 0; }
+        // TODO: swap id and t; t is the more important parameter
+        bool Is(size_t id, size_t t, MinibatchPackingFlags f) const { return (((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f) != 0; }
 
         // get info for one frame; used in DelayedValueNode
         // TODO: clean this up, we can do this more nicely
@@ -632,5 +585,66 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
     };
     typedef std::shared_ptr<MBLayout> MBLayoutPtr;
+    // there is a version down there of ColumnSlice() that abstracts the number of streams
+    // TODO: This may not belong here, but having it in ComputeNode would require syntax changes, while having it as a member here only requires a local find-replace. Let's make it work first, then decide how to refactor.
+    // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure
+    // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
+    // TODO: GetNumParallelSequences() should be subsumed here & removed from nodes
+    // TODO: We should also have a FrameRange that selects a single sequence instead of all.
+    // TODO: Where this design currently breaks:
+    //  - BatchModeNodes must access GetNumParallelSequences(), yet operate on the whole sequence
+    //  - likewise, LSTMNode does its own iteration, hence needs access to GetNumParallelSequences() or NumCols() in the whole-batch iterator
+    //  - RecurrentNodes access frames with a time shift, where out-of-bounds ones access a different matrix' values
+    //  - RecurrentNodes iterate over individual slices--need a sub-setting constructor from a FrameRange to another?
+    //  - RecurrentNodes access boundary info with a similar pattern, but boundary info has a different #streams (namely, 1)
+    // TODO: This will in the future be able to hold sub-ranges for nested loops as well.
+    // BUGBUG: These are currently broken and will need to be fixed:
+    //  - ClassBasedCrossEntropyWithSoftmaxNode:
+    //      FrameRange frameRange(t, 1);
+    //    using a different #sequences. Solve by treating all frames as one sequence (in FrameRange)
+    //  - ReshapeNode:
+    //      Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep, m_pMBLayout));
+    //    using a differeren #sequences. Find out what this really means.
+    struct FrameRange
+    {
+        const size_t timeIdxInSeq;              // start frame
+        const size_t samplesInRecurrentStep;    // number of samples in this step       --BUGBUG: this should be part of MBLayout, not FrameRange
+        // can construct from a single size_t -> a single-frame range
+        //FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(0)/*FIX THIS*/{}
+        FrameRange(size_t timeIdxInSeq, size_t samplesInRecurrentStep) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(samplesInRecurrentStep){}
+        // or without arguments -> entire minibatch / no frame-range
+        FrameRange() : timeIdxInSeq(0), samplesInRecurrentStep(SIZE_MAX/*all frames (map)*/) {}
+        // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
+        // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).
+        size_t t() const { EnsureNotAllFrames(); return timeIdxInSeq; }
+        // multi-frame slice case: these two get startFrame and numFrames
+        size_t StartColumn() const { EnsureNotAllFrames(); return timeIdxInSeq * samplesInRecurrentStep; }
+        size_t NumCols() const { EnsureNotAllFrames(); return samplesInRecurrentStep; }
+        // TODO: remove these ^^ two in favor of these vv
+        size_t StartColumn(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); VerifyMBLayout(pMBLayout); return timeIdxInSeq * pMBLayout->GetNumParallelSequences(); }
+        size_t NumCols(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); VerifyMBLayout(pMBLayout); return pMBLayout->GetNumParallelSequences(); }
+        bool IsAllFrames() const { return samplesInRecurrentStep == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
+
+        const FrameRange & Check(size_t expectedStartColumn, size_t expectedNumCols, const shared_ptr<MBLayout> & pMBLayout) const
+        {
+            if (!IsAllFrames() && (samplesInRecurrentStep != pMBLayout->GetNumParallelSequences() || expectedStartColumn != StartColumn(pMBLayout) || expectedNumCols != NumCols(pMBLayout)))
+                LogicError("FrameSlice: FrameRange object gives different range than original explicit code. Logic is borked.");
+            return *this;
+        }
+    private:
+        FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
+        void operator=(const FrameRange &);
+        void EnsureNotAllFrames() const
+        {
+            if (IsAllFrames())
+                LogicError("FrameRange::t() called when frame range refers to whole minibatch");
+        }
+        // TODO: this will go away once we remove samplesInRecurrentStep from this class
+        void VerifyMBLayout(const shared_ptr<MBLayout> & pMBLayout) const
+        {
+            if (pMBLayout->GetNumParallelSequences() != samplesInRecurrentStep)
+                LogicError("VerifyMBLayout: MBLayout inconsistent with local copy of samplesInRecurrentStep");
+        }
+    };
 
 }}}

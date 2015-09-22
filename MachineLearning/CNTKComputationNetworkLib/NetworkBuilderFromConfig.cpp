@@ -677,7 +677,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 else if (!_wcsnicmp(tag.c_str(), L"eval", 4))       net->EvaluationNodes().push_back(node);     // eval*
                 else if (tag == L"output")                          net->OutputNodes().push_back(node);
                 else if (tag == L"pair")                            net->PairNodes().push_back(node);           // TODO: I made this up; the original code in SynchronousExecutionEngine did not have this
-                else if (tag == L"multiseq")                        net->NodesReqMultiSeqHandling().push_back(node);
+                else if (tag == L"multiseq")                        net->RequestNodesMultiSeqHandling().push_back(node);
                 else if (!tag.empty())
                     RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
                 // TODO: are there nodes without tag? Where do they go?
@@ -687,7 +687,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
             // traverse children: append them to the end of the work list
             let children = node->GetChildren();
-            for (auto child : children)
+            for (auto & child : children)
                 workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
         }
 

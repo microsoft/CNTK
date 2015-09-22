@@ -1272,7 +1272,7 @@ void MultiIOBatchLUSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayou
     /// run for each reader
     vector<size_t> col;
     size_t rows = 0, cols = 0;
-    for (auto p : mReader)
+    for (const auto & p : mReader)
     {
         p.second->CopyMBLayoutTo(pMBLayout);
         if (rows == 0)
