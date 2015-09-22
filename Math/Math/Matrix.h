@@ -25,6 +25,7 @@
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+
     enum CurrentDataLocation
     {
         NONE, CPU, GPU, BOTH
@@ -163,6 +164,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: all these scalars should be passed as doubles and cast down inside
         void NormalGrad(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
         ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
+        void FSAdagrad(size_t mbSize, Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
         ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
         // TODO: should Reshape() return a new Matrix object that contains a reference to the original?
@@ -583,7 +585,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
     };
     typedef std::shared_ptr<MBLayout> MBLayoutPtr;
-
     // there is a version down there of ColumnSlice() that abstracts the number of streams
     // TODO: This may not belong here, but having it in ComputeNode would require syntax changes, while having it as a member here only requires a local find-replace. Let's make it work first, then decide how to refactor.
     // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure

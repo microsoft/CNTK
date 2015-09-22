@@ -199,8 +199,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return GradientsUpdateType::AdaGrad;
         else if (s == L"rmsprop")
             return GradientsUpdateType::RmsProp;
+        else if (s == L"fsadagrad")
+            return GradientsUpdateType::FSAdaGrad;
         else
-            throw std::invalid_argument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (None | AdaGrad | RmsProp )");
+            throw std::invalid_argument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (None | AdaGrad | RmsProp | FSAdaGrad )");
     }
 
     static ParallelizationMethod ParseParallelizationMethod(wstring s)
@@ -2390,12 +2392,17 @@ template<class ElemType>
                                         (ElemType)learnRatePerSample, (ElemType)momentum);
         }
         else if (adpType == GradientsUpdateType::AdaGrad ||
-                (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType() == MatrixType::SPARSE))
+                (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType() == MatrixType::SPARSE) ||
+                (adpType == GradientsUpdateType::FSAdaGrad && gradientValues.GetMatrixType() == MatrixType::SPARSE))
         {
             //rmsprop for sparse is not implemented yet, delegate it with adagrad
 
             double aveMultiplier = smoothedGradient.Adagrad(gradientValues, needAveMultiplier);
             Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
+        }
+        else if (adpType == GradientsUpdateType::FSAdaGrad)
+        {
+            smoothedGradient.FSAdagrad(actualMBSize, gradientValues, functionValues, (ElemType)learnRatePerSample, (ElemType)momentum);
         }
         else if (adpType == GradientsUpdateType::RmsProp)
         {

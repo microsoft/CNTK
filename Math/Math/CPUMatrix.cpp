@@ -1118,6 +1118,57 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
+                                        CPUMatrix<ElemType>& functionValues,
+                                        ElemType learnRatePerSample,
+                                        ElemType momentum,
+                                        ElemType adaWeight,
+                                        ElemType adaMul)
+    {
+        size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+        if (IsEmpty() || (GetNumCols() < numColsNeeded))
+        {
+            Resize(gradients.GetNumRows(), numColsNeeded);
+            SetValue(0.0);
+        }
+
+        assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+
+        size_t n = gradients.GetNumElements();
+        ElemType* grad = gradients.m_pArray;
+        ElemType* smoothAda = m_pArray;
+        ElemType* smoothMom = m_pArray + n;
+        ElemType* val = functionValues.m_pArray;
+#pragma omp parallel for
+        // TODO: Unroll 4-times for better performance leveraging vectorization
+        for (long i = 0; i < n; i++)
+        {
+            ElemType g = grad[i];
+            ElemType adaSqr = adaWeight * smoothAda[i] + (1.0f - adaWeight) * g * g;
+            smoothAda[i] = adaSqr;
+            if (adaSqr != 0.0f)
+            {
+                ElemType ada = sqrt(adaSqr);
+                ElemType w = adaMul * ((ElemType)1.0 / ada);
+
+                if (w > 10.0f)
+                    w = 10.0f;
+                g *= w;
+            }
+
+            if (momentum > 0.0f)
+            {
+                g = momentum * smoothMom[i] + (1.0f - momentum) * g;
+                smoothMom[i] = g;
+            }
+
+            g *= learnRatePerSample;
+            val[i] -= g;
+        }
+    }
+
+    template<class ElemType>
     ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
         ElemType RMS_GAMMA,
         ElemType RMS_WGT_INC,

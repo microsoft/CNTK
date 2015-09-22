@@ -43,7 +43,8 @@ enum class GradientsUpdateType : int
 {
     None,
     AdaGrad,
-    RmsProp
+    RmsProp,
+    FSAdaGrad
 };
 
 // TODO: While currently combining these methods is not supported,
