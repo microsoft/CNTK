@@ -1324,18 +1324,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::FSAdagrad(size_t mbSize, Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum)
     {
-        // REVEW alexeyk: hardcoded for now, taken from DBN. Naming is the same as in DBN.
+        // TODO: The values of 'adagradT' and 'targetadagradavdenom' are currently hardcoded constants taken from DBN (empirically determined). 
+        // These should be made configurable if needed
         const size_t adagradT = 2 * 3600 * 100;
+        const ElemType targetadagradavdenom = 0.0025; // 1/400 magic constant
         const ElemType adagradkeepweight = static_cast<ElemType>(exp(-1.0 * mbSize / adagradT));
 
-        const ElemType targetadagradavdenom = 0.0025; // 1/400 magic constant
         static ElemType aggadagradsqrframes = 0;
         aggadagradsqrframes = adagradkeepweight * aggadagradsqrframes + (1.0f - adagradkeepweight) * mbSize;
         const ElemType targetadagradavdenom_x_sqrtadagradsqrframes = static_cast<ElemType>(targetadagradavdenom * sqrt(aggadagradsqrframes));
 
         DISPATCH_MATRIX_ON_FLAG(&gradients,
             &gradients,
-            SetDataLocation(CPU),
+            m_CPUMatrix->FSAdagrad(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, learnRatePerSample, momentum, adagradkeepweight, targetadagradavdenom_x_sqrtadagradsqrframes); SetDataLocation(CPU),
             m_GPUMatrix->FSAdagrad(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, learnRatePerSample, momentum, adagradkeepweight, targetadagradavdenom_x_sqrtadagradsqrframes); SetDataLocation(GPU),
             NOT_IMPLEMENTED,
             NOT_IMPLEMENTED
