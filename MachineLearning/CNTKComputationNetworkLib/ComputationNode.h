@@ -222,6 +222,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_pMBLayout->GetNumParallelSequences();
         }
 
+        // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
+        // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNode, LSTMNode)
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return false; }
+
         int64_t UpdateEvalTimeStamp()
         {
             m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);    // TODO: does this really need to be atomic? We are not multi-threaded
@@ -1223,10 +1227,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// these two are used to pass gradients from future minibatch
         virtual void GetErrorsToPreviousMinibatch(Matrix<ElemType>&) {}
         virtual void SetErrorsFromFutureMinibatch(Matrix<ElemType>&) {}
-
-        // indicatess whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
-        // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNode, LSTMNode)
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return false; }
 
     protected:
 
