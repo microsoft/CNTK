@@ -335,12 +335,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
-        {
-            Base::ReleaseMatricesAfterGradientComp(matrixPool);
-            ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
-            ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
-        }
+        //virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        //{
+        //    Base::ReleaseMatricesAfterGradientComp(matrixPool);
+        //    ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+        //    ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+        //}
 
     protected:
         virtual bool UseCustomizedMultiSeqHandling() { return true; }
