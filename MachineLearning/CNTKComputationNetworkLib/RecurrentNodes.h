@@ -161,16 +161,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
 
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows());
-            assert(m_pMBLayout);
 
-            const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(frameRange.t());
-            ComputeInputPartialSRP(frameRange, m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags.first, colBoundaryFlags.second);
+            ComputeInputPartialRP(frameRange);
         }
 
-        static void WINAPI ComputeInputPartialSRP(const FrameRange & frameRange, int timeStep,
-                                                  Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
-                                                  const Matrix<float>& colBoundaryFlags, MinibatchPackingFlags minibatchPackingFlags)
+        void ComputeInputPartialRP(const FrameRange & frameRange)
         {
+            // this is the result of refactoring; feel free to clean up further:
+            int timeStep = m_timeStep;
+            Matrix<ElemType>& inputGradientValues = Inputs(0)->GradientValues();
+            const Matrix<ElemType>& gradientValues = GradientValues();
+            const auto frameLayout = m_pShiftedMBLayout->GetFrame(frameRange.t());
+            const Matrix<float>& colBoundaryFlags = frameLayout.first;
+            const MinibatchPackingFlags & minibatchPackingFlags = frameLayout.second;
+
             size_t timeIdxInSeq = frameRange.t();
             size_t mNbr = frameRange.NumCols();
             assert(timeIdxInSeq >= 0);
@@ -206,10 +210,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this one differs in the starting condition
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) = 0;
 
-        void EvaluateThisNodeSRP(const FrameRange & frameRange, const int timeStep,
-                                 Matrix<ElemType>& functionValues, const Matrix<ElemType>& delayedActivation, const Matrix<ElemType>& inputFunctionValues,
-                                 const ElemType & initStateValue, const Matrix<float> & colBoundaryFlags, const MinibatchPackingFlags minibatchPackingFlags)
+        void EvaluateThisNodeRP(const FrameRange & frameRange)
         {
+            // this is the result of refactoring; feel free to clean up further
+            const int timeStep = m_timeStep;
+            Matrix<ElemType>& functionValues = m_functionValues;
+            const Matrix<ElemType>& delayedActivation = m_delayedActivation;
+            const Matrix<ElemType>& inputFunctionValues = Inputs(0)->FunctionValues();
+            const ElemType & initStateValue = m_initialActivationValue;
+            const auto colBoundaryFlags1 = m_pShiftedMBLayout->GetFrame(frameRange.t());
+            const Matrix<float> & colBoundaryFlags = colBoundaryFlags1.first;
+            const MinibatchPackingFlags & minibatchPackingFlags = colBoundaryFlags1.second;
+
             size_t timeIdxInSeq = frameRange.t();
             size_t mNbr = frameRange.NumCols();
             assert(timeStep > 0);
@@ -346,7 +358,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define UsingDelayedValueNodeMembers UsingComputationNodeMembers; \
     using Base::m_initialActivationValue; using Base::m_delayedActivation; using Base::m_timeStep; \
     using Base::m_pShiftedMBLayout; using Base::m_historyAlreadySet; \
-    using Base::ComputeInputPartialSRP; using Base::EvaluateThisNodeSRP
+    using Base::ComputeInputPartialRP; using Base::EvaluateThisNodeRP
 
     // =======================================================================
     // PastValueNode -- delay node
@@ -375,12 +387,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
 
             int nbrSamples = GradientValues().GetNumCols() / GetNumParallelSequences(); 
+            // TODO: call the looping version below to avoid code dup
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
-            {
-                // TODO: call the looping version below to avoid code dup
-                const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(timeIdxInSeq);
-                ComputeInputPartialSRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags.first, colBoundaryFlags.second);
-            }
+                ComputeInputPartialRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
         }
 
         // TODO: why is this loop not in th underlying execution engine? This node should not have to know about this.
@@ -389,12 +398,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(m_timeStep > 0);
 
             int nbrSamples = Inputs(0)->FunctionValues().GetNumCols() / GetNumParallelSequences();
+            // TODO: call the looping version below to avoid code dup
             for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
-            {
-                // TODO: call the looping version below to avoid code dup
-                const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(timeIdxInSeq);
-                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags.first, colBoundaryFlags.second);
-            }
+                EvaluateThisNodeRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
 
             //set the past activity to be used by next minibatch
             m_delayedActivation = Inputs(0)->FunctionValues();
@@ -409,8 +415,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.t() == 0 && m_historyAlreadySet == false)
                 m_delayedActivation = Inputs(0)->FunctionValues();
             
-            const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(frameRange.t());
-            EvaluateThisNodeSRP(frameRange, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags.first, colBoundaryFlags.second);
+            EvaluateThisNodeRP(frameRange);
         }
     };
 
@@ -445,12 +450,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
 
             int nbrSamples = GradientValues().GetNumCols() / GetNumParallelSequences();
+            // TODO: call the looping version below to avoid code dup
             for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
-            {
-                // TODO: call the looping version below to avoid code dup
-                const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(timeIdxInSeq);
-                ComputeInputPartialSRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()), m_timeStep, Inputs(0)->GradientValues(), GradientValues(), colBoundaryFlags.first, colBoundaryFlags.second);
-            }
+                ComputeInputPartialRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
         }
 
         virtual void EvaluateThisNode()
@@ -459,10 +461,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             int nbrSamples = Inputs(0)->FunctionValues().GetNumCols() / GetNumParallelSequences();
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
-            {
-                const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(timeIdxInSeq);
-                EvaluateThisNodeSRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()), m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags.first, colBoundaryFlags.second);
-            }
+                EvaluateThisNodeRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
 
             //set the future activity to be used by next minibatch
             m_delayedActivation = Inputs(0)->FunctionValues();
@@ -475,8 +474,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.t() == Inputs(0)->FunctionValues().GetNumCols() / GetNumParallelSequences() - 1)
                 m_delayedActivation = Inputs(0)->FunctionValues();
 
-            const auto colBoundaryFlags = m_pShiftedMBLayout->GetFrame(frameRange.t());
-            EvaluateThisNodeSRP(frameRange, m_timeStep, m_functionValues, m_delayedActivation, Inputs(0)->FunctionValues(), m_initialActivationValue, colBoundaryFlags.first, colBoundaryFlags.second);
+            EvaluateThisNodeRP(frameRange);
         }
     };
 
