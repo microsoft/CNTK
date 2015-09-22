@@ -1054,6 +1054,28 @@ public:
 
 // why is this in basetypes.h?
 // boundary flags for a frame
+// (note for refactoring:) This is currently used by
+//  - RecurrentNodes: SetMBLayout(), ComputeInputPartialSRP(), EvaluateThisNodeSRP(),    .. check SentenceBegin_or_End
+//    (plus PastValueNode and FutureValueNode base class template parameter)
+//  - SimpleEvaluator.h: FindBestPath(), FindBestPathWithVariableLength()   --doing a bad hack, pretending MBs of 1 frame
+// deprecated:
+//  - LSTMNode
+// through ComputationNode::MaskMissingColumnsToZero():
+//  - nodes where the user explicitly requested masking (NeedToMaskMissingColumnsToZero() == true)
+//  - ComputeGradientForChildren()
+//  - all training and evaluation criterion nodes   .. TODO: double-confirm it's all Training nodes; but those also have NodeDoesItsOwnCustomizedMissingColumnsMasking() == true
+// in core classes:
+//  - ComputationNetwork: GetNumSamplesWithLabel(), MaskMissingColumnsToZero()  --both are cheap in case of no flags set
+//  - Matrix.h
+//  - SGD::DecimateMinibatchWithSentences() (should be done differently)
+// and readers that generate the flags:
+//  - HTKMLFReader::GetMinibatchToTrainOrTest()
+//  - BatchLUSequenceReader::EnsureDataAvailable(), GetMinibatch(), DataEnd()
+//  - EvalReader::CopyMBLayoutTo()
+//  - BatchSequenceReader::SetSentenceBegin()
+// others:
+//  - MathPerformanceTests.cpp
+// ==> conclusion: safe to ALWAYS pass the full layout, will not be inefficient
 enum class MinibatchPackingFlags : char     // (note: not using unsigned char because these go into a matrix, and we use Matrix<char>, since we use it as a data holder)
 {
     None = 0,
