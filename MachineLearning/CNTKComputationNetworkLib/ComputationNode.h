@@ -810,7 +810,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             EvaluateThisNode();     // this is a call to the virtual function that implements the actual operation
 
-            if (!UseCustomizedMultiSeqHandling())       // this means the node does it by itself; if not, we do it for the node
+            if (!NodeDoesItsOwnCustomizedMissingColumnsMasking())       // this means the node does it by itself; if not, we do it for the node
                 MaskMissingColumnsToZero(m_functionValues);
         }
 
@@ -821,7 +821,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             EvaluateThisNode(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
 
-            if (!UseCustomizedMultiSeqHandling())
+            if (!NodeDoesItsOwnCustomizedMissingColumnsMasking())
                 MaskMissingColumnsToZero(m_functionValues, timeIdxInSeq);
         }
 
@@ -1059,7 +1059,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (size_t i=0; i<m_children.size(); i++)
             {
-                if (!UseCustomizedMultiSeqHandling())
+                if (!NodeDoesItsOwnCustomizedMissingColumnsMasking())
                     MaskMissingColumnsToZero(m_gradientValues);
 
                 ComputationNodePtr child = Inputs(i);
@@ -1088,7 +1088,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (size_t i=0; i<m_children.size(); i++)
             {
-                if (!UseCustomizedMultiSeqHandling())
+                if (!NodeDoesItsOwnCustomizedMissingColumnsMasking())
                     MaskMissingColumnsToZero(m_gradientValues, timeIdxInSeq);
 
                 ComputationNodePtr child = Inputs(i);
@@ -1225,8 +1225,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SetErrorsFromFutureMinibatch(Matrix<ElemType>&) {}
 
         // indicatess whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
-        // defined by training/eval criteria (and the soon-to-be-deprecated PairNode, LSTMNode)
-        virtual bool UseCustomizedMultiSeqHandling() { return false; }
+        // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNode, LSTMNode)
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return false; }
 
     protected:
 
@@ -1300,7 +1300,7 @@ protected:  \
     using Base::m_visitedOrder; using Base::m_index; using Base::m_lowLink; using Base::m_visited; using Base::m_inStack; \
     using Base::m_indexInLoop; \
     using Base::m_pMBLayout; \
-    using Base::m_maskMissingColumnsToZero; using Base::UseCustomizedMultiSeqHandling; using Base::GetNumParallelSequences; \
+    using Base::m_maskMissingColumnsToZero; using Base::NodeDoesItsOwnCustomizedMissingColumnsMasking; using Base::GetNumParallelSequences; \
     using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::SetMaskMissingColumnsToZero; \
     using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \

@@ -138,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         Matrix<ElemType> m_leftMinusRight;
     };
@@ -311,7 +311,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
         Matrix<ElemType> m_logSoftmaxOfRight;
         Matrix<ElemType> m_softmaxOfRight;       
@@ -461,7 +461,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         // matrix value passed from evaluate to computePartial
         Matrix<ElemType> m_logOfRight;
@@ -561,7 +561,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         Matrix<ElemType> m_gradientOfL1Norm;    // temporary
     };
@@ -646,7 +646,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         Matrix<ElemType> m_temp;
     };
@@ -825,7 +825,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_grdToSoftMaxInput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
@@ -1176,7 +1176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_grdToSoftMaxInput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
@@ -1494,7 +1494,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         Matrix<ElemType> mAlpha;    // TODO: m_Alpha etc.
         Matrix<ElemType> mBeta;
@@ -1600,7 +1600,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[2] = prediction;
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     };
 
     template class DummyCriterionNode<float>; 

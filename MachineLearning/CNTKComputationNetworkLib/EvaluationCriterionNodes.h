@@ -141,7 +141,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
     private:
         Matrix<ElemType> m_maxIndexes0, m_maxIndexes1;
