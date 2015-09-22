@@ -166,7 +166,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SetFunctionAndGradientSize(const int numSamples) = 0;
 
-        virtual void ResetBound(MBLayoutPtr pMBLayout)
+        virtual void SetMBLayout(MBLayoutPtr pMBLayout)
         {
             assert(pMBLayout->GetNumTimeSteps() == pMBLayout->GetSize());  // TODO: move this check into MBLayout
             m_pMBLayout = pMBLayout;
@@ -810,7 +810,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             EvaluateThisNode();     // this is a call to the virtual function that implements the actual operation
 
-            if (!NodeDoesItsOwnCustomizedMissingColumnsMasking())       // this means the node does it by itself; if not, we do it for the node
+            if (NeedToMaskMissingColumnsToZero() && !NodeDoesItsOwnCustomizedMissingColumnsMasking())       // this means the node does it by itself; if not, we do it for the node
                 MaskMissingColumnsToZero(m_functionValues);
         }
 
@@ -821,7 +821,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             EvaluateThisNode(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
 
-            if (!NodeDoesItsOwnCustomizedMissingColumnsMasking())
+            if (NeedToMaskMissingColumnsToZero() && !NodeDoesItsOwnCustomizedMissingColumnsMasking())
                 MaskMissingColumnsToZero(m_functionValues, timeIdxInSeq);
         }
 
@@ -866,7 +866,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note that existing 'reduce' style operations--the criterion nodes and gradient computation--already call this.
         bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX) const
         {
-            bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed
+            bool foundLabelOrFeatureMissing = false; /// set to true if either nolabel or feature missing is processed
 
             if (!m_pMBLayout->IsAllNone())
             {
@@ -889,12 +889,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         for (size_t id = startS; id < endS; id++)
                             if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeature))
                                 matrixToBeMasked.ColumnSlice(t * nS  +  id, 1).SetValue(0);
-                        processedExistsNoLabelorFeatureMissing = true;
+                        foundLabelOrFeatureMissing = true;
                     }
                 }
             }
 
-            return processedExistsNoLabelorFeatureMissing;
+            return foundLabelOrFeatureMissing;
         }
 
         /*
@@ -1059,7 +1059,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (size_t i=0; i<m_children.size(); i++)
             {
-                if (!NodeDoesItsOwnCustomizedMissingColumnsMasking())
+                if (NeedToMaskMissingColumnsToZero() && !NodeDoesItsOwnCustomizedMissingColumnsMasking())
                     MaskMissingColumnsToZero(m_gradientValues);
 
                 ComputationNodePtr child = Inputs(i);
@@ -1088,7 +1088,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (size_t i=0; i<m_children.size(); i++)
             {
-                if (!NodeDoesItsOwnCustomizedMissingColumnsMasking())
+                if (NeedToMaskMissingColumnsToZero() && !NodeDoesItsOwnCustomizedMissingColumnsMasking())
                     MaskMissingColumnsToZero(m_gradientValues, timeIdxInSeq);
 
                 ComputationNodePtr child = Inputs(i);

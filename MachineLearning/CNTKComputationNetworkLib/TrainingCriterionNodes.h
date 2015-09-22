@@ -1098,7 +1098,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t id = j % nS;  // this is the stream
             return Base::MaskMissingColumnsToZero(matrixToBeMasked, t, id);
 #if 0       // old version prior to merging with Base version
-            bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
+            bool foundLabelOrFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
             if (!m_pMBLayout->IsAllNone())
             {
@@ -1107,12 +1107,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
                     {
                         matrixToBeMasked.ColumnSlice(t * nS + id,1).SetValue(0);
-                        processedExistsNoLabelorFeatureMissing = true;
+                        foundLabelOrFeatureMissing = true;
                     }
                 }
             }
 
-            return processedExistsNoLabelorFeatureMissing;
+            return foundLabelOrFeatureMissing;
 #endif
         }
 
