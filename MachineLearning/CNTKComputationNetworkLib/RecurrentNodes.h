@@ -36,7 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         void Init(size_t row_size, size_t col_size, ElemType initialActivationValue = (ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
-            SetReqMultiSeqHandlingTo(true);
+            SetMaskMissingColumnsToZero();
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
             m_functionValues.Resize(row_size, col_size);
@@ -517,7 +517,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_use_errors_from_future_minibatch(false),
             m_DefaultState((ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
-            SetReqMultiSeqHandlingTo(true);
+            SetMaskMissingColumnsToZero();
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }

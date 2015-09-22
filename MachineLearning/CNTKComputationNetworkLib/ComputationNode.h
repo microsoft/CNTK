@@ -79,7 +79,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_indexInLoop(0),
             m_visited(false),
             m_inStack(false),
-            m_reqMultiSeqHandling(false),
+            m_maskMissingColumnsToZero(false),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name)
         {
         }
@@ -279,8 +279,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool& NeedGradient() { return m_needGradient; }
         const bool& NeedGradient() const { return m_needGradient; }
 
-        void SetReqMultiSeqHandlingTo(const bool v) { m_reqMultiSeqHandling = v; }
-        bool ReqMultiSeqHandling() const { return m_reqMultiSeqHandling; }
+        void SetMaskMissingColumnsToZero() { m_maskMissingColumnsToZero = true; }
+        bool NeedToMaskMissingColumnsToZero() const { return m_maskMissingColumnsToZero; }
 
         void InitRecurrentNode()    // this initialization says that this node is not inside a loop
         {
@@ -624,10 +624,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
-        bool m_reqMultiSeqHandling;  // indicates whether the results of operation should be masked to handle the cases that the utterances have different lengths when grouped together as a minibatch.
+        bool m_maskMissingColumnsToZero;  // indicates whether the results of operation should be masked to handle the cases that the utterances have different lengths when grouped together as a minibatch.
         // ^^ This decides whether the node gets passed the full layout with flags or only the one without flags
         //    and this is only ever tested in MaskMissingColumnsToZero(), of which two versions exist, one in ComputationNode and one in ClassBasedCrossEntropyWithSoftmaxNode
-        // TODO: rename this to reflect that it affects only masking
+        // Pertinent reduction operations (criterion nodes and gradient computation) always perform masking.
+        // Hence, this flag is only needed for special use cases where regular matrix ops are used for a 'reduce' operation.
         size_t m_inputWidth, m_inputHeight, m_inputChannels;  //how to interpret each column in the input as an image
         size_t m_outputWidth, m_outputHeight, m_outputChannels;  //how to interpret each column in the output as an image
 
@@ -861,6 +862,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // However, nodes that 'reduce' minibatches (e.g. computing the sum of all frames across all sequences) must deal with the garbage.
         // This function sets those to 0, assuming that now they can be reduced without affecting the result.
         // This function can operate on the whole range or on a selected single frame and/or a single sequence.
+        // It is indirectly guarded by the m_maskMissingColumnsToZero flag, which, if false, will install a layout with IsAllNone() to be true. TODO: we better always install the same layout, and instead test m_maskMissingColumnsToZero here.
+        // Note that existing 'reduce' style operations--the criterion nodes and gradient computation--already call this.
         bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX) const
         {
             bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed
@@ -1200,7 +1203,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_functionValues = m_functionValues; 
                 node->m_gradientValues = m_gradientValues;
 
-                node->m_reqMultiSeqHandling = m_reqMultiSeqHandling;
+                node->m_maskMissingColumnsToZero = m_maskMissingColumnsToZero;
             }
         }
 
@@ -1297,8 +1300,8 @@ protected:  \
     using Base::m_visitedOrder; using Base::m_index; using Base::m_lowLink; using Base::m_visited; using Base::m_inStack; \
     using Base::m_indexInLoop; \
     using Base::m_pMBLayout; \
-    using Base::m_reqMultiSeqHandling; using Base::UseCustomizedMultiSeqHandling; using Base::GetNumParallelSequences; \
-    using Base::DataSlice; using Base::VALUE; using Base::GRADIENT; \
+    using Base::m_maskMissingColumnsToZero; using Base::UseCustomizedMultiSeqHandling; using Base::GetNumParallelSequences; \
+    using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::SetMaskMissingColumnsToZero; \
     using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
     using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; using Base::s_timeStampCounter; \
