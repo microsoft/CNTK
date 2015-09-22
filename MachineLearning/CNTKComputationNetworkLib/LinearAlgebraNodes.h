@@ -447,6 +447,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     //this node is used to extract part of the input by rows as the output
+    // TODO: Really? RowStack indicates something different.
     //it has to be continuous segments of rows since each column is treated as one sample
     template<class ElemType>
     class RowStackNode : public ComputationNode<ElemType>
@@ -466,7 +467,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeChildren)
             {
                 node->m_children = m_children;
-                node->m_startRowIndeces = m_startRowIndeces;
+                node->m_startRowIndices = m_startRowIndices;
                 node->m_inputMatrices = m_inputMatrices;
             }
         }
@@ -478,7 +479,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (inputIndex >= ChildrenSize())
                 InvalidArgument("RowStack-ComputeInputPartial: inputIndex out of range.");
-            ComputeInputPartialS(Inputs(inputIndex)->GradientValues(), GradientValues(), m_startRowIndeces[inputIndex], m_startRowIndeces[inputIndex + 1] - m_startRowIndeces[inputIndex]);
+            ComputeInputPartialS(Inputs(inputIndex)->GradientValues(), GradientValues(), m_startRowIndices[inputIndex], m_startRowIndices[inputIndex + 1] - m_startRowIndices[inputIndex]);
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
@@ -489,7 +490,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_startRowIndeces[inputIndex], m_startRowIndeces[inputIndex+1] - m_startRowIndeces[inputIndex]);
+            ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_startRowIndices[inputIndex], m_startRowIndices[inputIndex+1] - m_startRowIndices[inputIndex]);
         }
 
         static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t startIndex, const size_t numRows)
@@ -509,7 +510,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(sliceFunctionValues, m_inputMatrices, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
+        // TODO: change to FrameRange
+        void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
         {
             functionValues.AssignRowStackValuesOf(inputMatrices, sliceStartCol, sliceNumCols);
 #if NANCHECK
@@ -528,11 +530,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("RowStack operation: the input node is NULL.");
 
             size_t numCols = Inputs(0)->FunctionValues().GetNumCols();
-            m_startRowIndeces.resize(ChildrenSize()+1);
+            m_startRowIndices.resize(ChildrenSize()+1);
             m_inputMatrices.resize(ChildrenSize());
 
             size_t totalRows = 0;
-            m_startRowIndeces[0] = 0;
+            m_startRowIndices[0] = 0;
 
             for (int i = 0; i < ChildrenSize(); i++)
             {
@@ -549,7 +551,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 totalRows += numRows;
                 m_inputMatrices[i] = &childMatrix;
-                m_startRowIndeces[i + 1] = m_startRowIndeces[i] + numRows;
+                m_startRowIndices[i + 1] = m_startRowIndices[i] + numRows;
             }
 
             FunctionValues().Resize(totalRows, numCols);
@@ -575,7 +577,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        std::vector<size_t> m_startRowIndeces; //start row number in the stacked matrix of each input (child)
+        std::vector<size_t> m_startRowIndices; //start row number in the stacked matrix of each input (child)
         std::vector<const Matrix<ElemType>*> m_inputMatrices;
     };
 
