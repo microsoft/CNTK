@@ -562,7 +562,11 @@ public:
         // TODO: in the future, these will be different on different nodes; and probably should be propagated by nodes themselves, like functionValues
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
-            if ((*nodeIter)->ReqMultiSeqHandling())
+            // TODO: we should just always set the real layout; the nodes themselves should know to ignore it based on NeedToMaskMissingColumnsToZero()
+            // MaskMissingColumnsToZero() will test whether the layout is all none, and then skip.
+            // This is the only place where ResetBound() is ever called on a node. Hence, we could test NeedToMaskMissingColumnsToZero() instead.
+            // Note that NeedToMaskMissingColumnsToZero() is true only where it is necessary; that is, most node have it set to false (since most nodes can just map garbage-in-garbage-out).
+            if ((*nodeIter)->NeedToMaskMissingColumnsToZero())
                 (*nodeIter)->ResetBound(m_pMBLayout);
             else
                 (*nodeIter)->ResetBound(m_pMBNoLayout);

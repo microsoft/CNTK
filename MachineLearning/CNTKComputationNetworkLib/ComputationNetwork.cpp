@@ -326,10 +326,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return false;
     }
 
-    // Some nodes always need m_reqMultiSeqHandling; those set it themselves. Basically RecurrentNode only currently (besides PairNode and LSTMNode).
-    // Some nodes need it to be set xxx.
-    // TODO: comment on who owns this flag. Is it entirely owned by Network?
-    // Or should the 4 node types below know?
+    // transfer user-specified request for masking to the indivudal nodes
+    // This is only needed if users explicitly perform reduce-like operations.
+    // It makes no sense for some nodes, so we skip those.
     void ComputationNetwork::SetRequestNodesMultiSeqHandling()
     {
         for (auto & node : m_requestNodesMultiSeqHandling)  // this set is defined in NDL; here we propagate that into the actual nodes' flags, except for a few where it makes no sense (avoid user error)
@@ -342,18 +341,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->OperationName() != OperationNameOf(MeanNode) &&
                 node->OperationName() != OperationNameOf(InvStdDevNode) 
                 )
-                node->SetReqMultiSeqHandlingTo(true);
+                node->SetMaskMissingColumnsToZero();
         }
 
         //if a typical criterion node is used as the training criterion node we assume it requires multiseq handling 
         //this is for backward compatibility
         for (auto & node : m_finalCriteria)
             if (IsTypicalCriterionNode(node))
-                node->SetReqMultiSeqHandlingTo(true);
+                node->SetMaskMissingColumnsToZero();
 
         for (auto & node : m_evalNodes)
             if (IsTypicalCriterionNode(node))
-                node->SetReqMultiSeqHandlingTo(true);
+                node->SetMaskMissingColumnsToZero();
     }
 
     template<class N> void ComputationNetwork::GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequirePreComputation, const ComputationNodeBasePtr rootNode, bool checkComputed)
