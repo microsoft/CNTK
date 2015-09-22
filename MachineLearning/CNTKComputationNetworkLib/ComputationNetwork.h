@@ -1371,6 +1371,8 @@ public:
     };
 
     // note: this is called to write into our existing MBLayout instance
+    // TODO: This is broken. Instead, we should pass this from the reader, or better, do batching inside here.
+    //       The problem is that we cannot post-process. E.g. is the layout guaranteed to reflect the minibatch size, in the case of no recurrence??
     const MBLayoutPtr & GetMBLayoutPtr() { return m_pMBLayout; }
 
 protected:
