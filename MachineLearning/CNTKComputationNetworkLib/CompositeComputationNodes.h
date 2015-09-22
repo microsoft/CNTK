@@ -1068,7 +1068,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() 
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() 
         { 
            return true; 
         }

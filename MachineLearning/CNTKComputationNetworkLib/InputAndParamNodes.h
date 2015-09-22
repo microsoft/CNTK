@@ -634,7 +634,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static const std::wstring TypeName() { return L"PairNetwork"; }
 protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
     };
 
