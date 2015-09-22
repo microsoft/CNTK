@@ -1123,7 +1123,16 @@ __global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, 
         smoothAda[idx] = adaSqr;
         if (adaSqr != 0.0f)
         {
-            ElemType w = adaMul * rsqrtf(adaSqr);
+            ElemType w;
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                w = adaMul * rsqrt(adaSqr);
+            }
+            else
+            {
+                w = adaMul * rsqrtf(adaSqr);
+            }
+
             if (w > 10.0f)
                 w = 10.0f;
             g *= w;
