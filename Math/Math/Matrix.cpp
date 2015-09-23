@@ -1386,6 +1386,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
     {
+        // TODO: should this function test whether the size is changing, and skip if it isn't? We have at least one explicit test for this code calling this (recurrent node)
         DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
             this,
             m_CPUMatrix->Resize(numRows, numCols, growOnly),

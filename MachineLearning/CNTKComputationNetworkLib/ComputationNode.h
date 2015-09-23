@@ -166,11 +166,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SetFunctionAndGradientSize(const int numSamples) = 0;
 
-        virtual void SetMBLayout(MBLayoutPtr pMBLayout)
-        {
-            assert(pMBLayout->GetNumTimeSteps() == pMBLayout->GetSize());  // TODO: move this check into MBLayout
-            m_pMBLayout = pMBLayout;
-        }
+        // this function is overridden by DelayedValueNode in order to pre-compute a shifted version for internal use
+        virtual void SetMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
+        MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
 
         void ClearCache()
         {
