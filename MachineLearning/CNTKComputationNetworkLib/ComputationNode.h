@@ -46,10 +46,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     enum CopyNodeFlags
     {
-        copyNodeNull = 0, // invalid value
-        copyNodeValue=1, // copy everything but the children links
-        copyNodeChildren=2, // only copy over children links
-        copyNodeAll=3, // copy everything
+        copyNodeNull = 0,               // invalid value
+        copyNodeValue=1,                // copy everything but the children links
+        copyNodeChildren=2,             // only copy over children links
+        copyNodeAll=3,                  // copy everything
         copyNodeChildrenCrossNetwork=4, // allow a cross network child copy
     };
 
@@ -86,7 +86,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ~ComputationNodeBase(){}
         virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
 
-        virtual void CopyTo(const ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
+        virtual void CopyTo(const ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            if (OperationName() != node->OperationName())
+                RuntimeError("Cannot copy from one node type to another node type");
+            if (flags & CopyNodeFlags::copyNodeChildren)
+            {
+                node->m_children = m_children;
+            }
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                node->m_deviceId = m_deviceId;
+                node->m_needGradient = m_needGradient;
+                node->m_nodeName = newName;
+                node->m_evalTimeStamp = m_evalTimeStamp;
+
+                //node->m_hasloop = m_hasloop;
+                node->SetLoop(HasLoop());
+
+                node->m_inputWidth = m_inputWidth;
+                node->m_inputHeight = m_inputHeight;
+                node->m_inputChannels = m_inputChannels;
+
+                node->m_outputWidth = m_outputWidth;
+                node->m_outputHeight = m_outputHeight;
+                node->m_outputChannels = m_outputChannels;
+
+                node->m_maskMissingColumnsToZero = m_maskMissingColumnsToZero;
+            }
+        }
         virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) = 0;
 
         // TODO: OperationName calls static TypeName which does not match the actual type names in that the 'Node' is missing.
@@ -290,8 +318,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // only called from SetRequestNodesMultiSeqHandling() (which is in turn called from BuildAndValidateSubNetwork())
         // and from the deprecated LSTMNode and PairNode
         // TODO: remove this flag, instead call it based on testing the user flag directly
-        void SetMaskMissingColumnsToZero() { m_maskMissingColumnsToZero = true; }
+        void SetMaskMissingColumnsToZero()
+        {
+            if (NodeDoesItsOwnCustomizedMissingColumnsMasking())
+                RuntimeError("SetMaskMissingColumnsToZero: do not explicitly specify NodesReqMultiSeqHandling for operation '%ls', as this operation does it implicitly already.\nIn the past, CNTK silently fixed this; now please change your NDL instead.", OperationName().c_str());
+            m_maskMissingColumnsToZero = true;
+        }
+    protected:
         bool NeedToMaskMissingColumnsToZero() const { return m_maskMissingColumnsToZero; }
+    public:
 
         void InitRecurrentNode()    // this initialization says that this node is not inside a loop
         {
@@ -635,11 +670,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
-        bool m_maskMissingColumnsToZero;  // indicates whether the results of operation should be masked to handle the cases that the utterances have different lengths when grouped together as a minibatch.
-        // ^^ This decides whether the node gets passed the full layout with flags or only the one without flags
-        //    and this is only ever tested in MaskMissingColumnsToZero(), of which two versions exist, one in ComputationNode and one in ClassBasedCrossEntropyWithSoftmaxNode
-        // Pertinent reduction operations (criterion nodes and gradient computation) always perform masking.
-        // Hence, this flag is only needed for special use cases where regular matrix ops are used for a 'reduce' operation.
         size_t m_inputWidth, m_inputHeight, m_inputChannels;  //how to interpret each column in the input as an image
         size_t m_outputWidth, m_outputHeight, m_outputChannels;  //how to interpret each column in the output as an image
 
@@ -663,6 +693,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         // for loop nodes
         bool m_hasloop;
+
+        bool m_maskMissingColumnsToZero;  // indicates whether user requested that the results of operation should be masked to handle the cases that the utterances have different lengths when grouped together as a minibatch.
+        // The obvious cases--recurrence, training criterion, and parameter gradients--are already handled automatically.
+        // The user must only set this flag for special cases where current CNTK does not do stuff right.
+        // Once we handle inconsistent layouts, this will go away.
     };
     typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
@@ -821,7 +856,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             EvaluateThisNode();     // this is a call to the virtual function that implements the actual operation
 
-            if (NeedToMaskMissingColumnsToZero() && !NodeDoesItsOwnCustomizedMissingColumnsMasking())       // this means the node does it by itself; if not, we do it for the node
+            if (NeedToMaskMissingColumnsToZero())       // this means the node does it by itself; if not, we do it for the node
                 MaskMissingColumnsToZero(m_functionValues);
         }
 
@@ -832,7 +867,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             EvaluateThisNode(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
 
-            if (NeedToMaskMissingColumnsToZero() && !NodeDoesItsOwnCustomizedMissingColumnsMasking())
+            if (NeedToMaskMissingColumnsToZero())
                 MaskMissingColumnsToZero(m_functionValues, timeIdxInSeq);
         }
 
@@ -1068,11 +1103,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (HasLoop()) 
                 return;
 
-            for (size_t i=0; i<m_children.size(); i++)
-            {
-                if (NeedToMaskMissingColumnsToZero() && !NodeDoesItsOwnCustomizedMissingColumnsMasking())
-                    MaskMissingColumnsToZero(m_gradientValues);
+            if (NeedToMaskMissingColumnsToZero())
+                MaskMissingColumnsToZero(m_gradientValues);
 
+            for (size_t i = 0; i<m_children.size(); i++)
+            {
                 ComputationNodePtr child = Inputs(i);
                 if (child->NeedGradient())
                 {
@@ -1099,7 +1134,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (size_t i=0; i<m_children.size(); i++)
             {
-                if (NeedToMaskMissingColumnsToZero() && !NodeDoesItsOwnCustomizedMissingColumnsMasking())
+                if (NeedToMaskMissingColumnsToZero())
                     MaskMissingColumnsToZero(m_gradientValues, timeIdxInSeq);
 
                 ComputationNodePtr child = Inputs(i);
@@ -1187,34 +1222,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         virtual void CopyTo(const ComputationNodePtr node, const std::wstring& newName, const CopyNodeFlags flags) const
         {
-            if (OperationName() != node->OperationName())
-                RuntimeError("Cannot copy from one node type to another node type");
-            if (flags & CopyNodeFlags::copyNodeChildren)
-            {
-                node->m_children = m_children;
-            }
+            ComputationNodeBase::CopyTo(node, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                node->m_deviceId = m_deviceId;
-                node->m_needGradient = m_needGradient;
-                node->m_nodeName = newName;
-                node->m_evalTimeStamp = m_evalTimeStamp;
-
-                //node->m_hasloop = m_hasloop;
-                node->SetLoop(HasLoop());
-
-                node->m_inputWidth = m_inputWidth;
-                node->m_inputHeight = m_inputHeight;
-                node->m_inputChannels = m_inputChannels;
-
-                node->m_outputWidth = m_outputWidth;
-                node->m_outputHeight = m_outputHeight;
-                node->m_outputChannels = m_outputChannels;
-
                 node->m_functionValues = m_functionValues; 
                 node->m_gradientValues = m_gradientValues;
-
-                node->m_maskMissingColumnsToZero = m_maskMissingColumnsToZero;
             }
         }
 
@@ -1304,10 +1316,8 @@ public: \
     using Base::SaveToFile; using Base::SetFunctionAndGradientSize; using Base::SetInput; using Base::Validate; \
 protected:  \
     using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
-    using Base::m_visitedOrder; using Base::m_index; using Base::m_lowLink; using Base::m_visited; using Base::m_inStack; \
-    using Base::m_indexInLoop; \
-    using Base::m_pMBLayout; \
-    using Base::m_maskMissingColumnsToZero; using Base::NodeDoesItsOwnCustomizedMissingColumnsMasking; using Base::GetNumParallelSequences; \
+    using Base::m_visitedOrder; using Base::m_index; using Base::m_lowLink; using Base::m_visited; using Base::m_inStack; using Base::m_indexInLoop; \
+    using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::SetMaskMissingColumnsToZero; \
     using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
