@@ -75,12 +75,11 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) :
-        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())
+        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())//, m_pMBNoLayout(make_shared<MBLayout>())
     {
         m_randomSeedOffset = 0;
-        m_actMiniBSize = 0;
+        m_actualMBSize = 0;
         SetDeviceId(deviceId);
-        m_nbrSlicesInEachRecurrentIteration = 1;
     }
 
     virtual ~ComputationNetwork()
@@ -199,7 +198,10 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    size_t GetActualMBSize()
+    // determine the actual MB size from the feature nodes
+    // This returns max number of columns over the feature nodes.
+    // Note that if we have multiple slices, MB size != #frames.
+    size_t DetermineActualMBSizeFromFeatures() const
     {
         size_t actualMBSize = 0;
 
@@ -238,12 +240,13 @@ public:
     // TODO: describe what this function does
     //this is a temp solution since some nodes such as plus can be just aggregate of two scalar values 
     //in which case the packing info is not available (and not meaningful) for them
+    // TODO: Does this belong into MBLayout?
     size_t GetNumSamplesWithLabel(const size_t numAllSamples)
     {
-        if (!m_pMBLayout->IsEmpty())
+        if (!m_pMBLayout->IsAllNone())
         {
-            size_t numTimeSteps = m_pMBLayout->GetNumFrames();
-            size_t numSequences = m_pMBLayout->GetNumStreams();
+            size_t numTimeSteps = m_pMBLayout->GetNumTimeSteps();
+            size_t numSequences = m_pMBLayout->GetNumParallelSequences();
 
             if (m_pMBLayout->GetSize() != numTimeSteps)
                 LogicError("GetNumSamplesWithLabel(): m_pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams.Check feature reader. ");
@@ -510,94 +513,33 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    int FindInRecurrentLoop(const ComputationNodeBasePtr startNode, vector<ComputationNodeBasePtr>& recurrentNodes)
+    // find if node is part of a recurrent loop; and return the loop id
+    // If found then return a pointer to the list of nodes of this loop.
+    // TODO: This should just return &m_recurrentInfo of the matching loop, or nullptr if no match. If needed, m_recurrentInfo knows its loop id.
+    RecurrentInfo * FindInRecurrentLoops(const ComputationNodeBasePtr node)
     {
-        int iFound = -1;
-
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
-        {
-            if (std::find((*iter).m_recurrentNodes.begin(), (*iter).m_recurrentNodes.end(), startNode) != (*iter).m_recurrentNodes.end())
-            {
-                iFound = (*iter).m_loopId;
-                recurrentNodes = (*iter).m_recurrentNodesForForward;
-                break;
-            }
-        }
-
-        return iFound;
-    }
-
-    int FindInRecurrentLoop(const ComputationNodeBasePtr startNode)
-    {
-        int iFound = -1;
-
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
-        {
-            if (std::find((*iter).m_recurrentNodes.begin(), (*iter).m_recurrentNodes.end(), startNode) != (*iter).m_recurrentNodes.end())
-            {
-                iFound = (*iter).m_loopId;
-                break;
-            }
-        }
-
-        return iFound;
+        // look in all recurrent loops of the network
+        for (auto & iter : m_recurrentInfo)
+            if (std::find(iter.m_recurrentNodes.begin(), iter.m_recurrentNodes.end(), node) != iter.m_recurrentNodes.end())
+                return &iter;
+        return nullptr;  // not part of a recurrent loop
     }
 
     bool IsFuncValueOlderThanInputs(const std::vector<ComputationNodeBasePtr>& recurrentNodes);
 
-    void EvaluateLoop(std::list<ComputationNodeBasePtr>& /*allNodes*/, const ComputationNodeBasePtr startNode)
-    {
-        std::vector<ComputationNodeBasePtr> recurrentNodes;
-        int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
-        if (iLoopId != -1 && IsFuncValueOlderThanInputs(recurrentNodes) && m_recurrentInfo[iLoopId].m_completedEvaluate == false)
-        {
-            for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
-                (*nodeIter)->SetFunctionAndGradientSize(m_actMiniBSize);
-
-            int iMBSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
-
-            if (m_recurrentInfo[iLoopId].m_isForwardLoop)
-            {
-                for (int timeIndex = 0; timeIndex < iMBSize; timeIndex ++)
-                {
-                    for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
-                    {
-                        (*nodeIter)->EvaluateThisNodeGivenInputs(timeIndex);
-                        (*nodeIter)->UpdateEvalTimeStamp();
-                    }
-                } 
-            }
-            else
-            {
-                for (int timeIndex = iMBSize-1; timeIndex >= 0; timeIndex--)
-                {
-                    for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
-                    {
-                        (*nodeIter)->EvaluateThisNodeGivenInputs(timeIndex);
-                        (*nodeIter)->UpdateEvalTimeStamp();
-                    }
-                }
-            }
-
-            m_recurrentInfo[iLoopId].m_completedEvaluate = true;
-        }
-    }
-
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
 
-    void SetNodesReqMultiSeqHandling();
+    void SetRequestNodesMultiSeqHandling();
 
     // MAIN ENTRY POINT for evaluation (forward prop)
     // TODO: pass a set of nodes instead of only one
     // TODO: rename to ForwardProp()? To make it very clear?
     void Evaluate(const ComputationNodeBasePtr rootNode)
     {
-        // checks that will disappear once we complete the refactoring. If this passes for a while, we will eliminate one
-        // If this fails, comment this out (it is safe) and tell fseide@microsoft.com.
-        if (m_pMBLayout && m_nbrSlicesInEachRecurrentIteration != m_pMBLayout->GetNumStreams())
-            LogicError("Evaluate: detected that m_nbrSlicesInEachRecurrentIteration != m_pMBLayout->GetNumStreams()");
-        if (m_pMBLayout && m_pMBLayout->GetNumFrames() != m_pMBLayout->GetSize())
-            LogicError("Evaluate: detected that m_pMBLayout->GetNumFrames() != m_pMBLayout->GetSize()");
+        // We have a matching layout structure that matches pMBLayout in number of sequences while not having any flags set.
+        // This is used for nodes that do not need recurrent processing, but can be done in batch.
+        // TODO: Does it harm if we have flags, for those that can be done in batch? I.e. why don't we just always provide flags?
+        //m_pMBNoLayout->Resize(m_pMBLayout->GetNumParallelSequences(), 0);   // TODO: this is not nice, but we currently have no trigger to detect changes in layout
 
         // prepare to compute with the subnetwork that this rootNode depends on, including
         //  - auto-detecting recurrent loops
@@ -617,23 +559,66 @@ public:
             m_recurrentInfo[i].m_completedEvaluate = false;
 
         // pass #slices and MB layout to all nodes
-        // TODO: in the future, these will be different on different nodes
+        // TODO: in the future, these will be different on different nodes; and probably should be propagated by nodes themselves, like functionValues
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
-            // TODO: nbrSlices set once to the same value for all nodes each evaluation--is it ever changed later?
-            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
-            if ((*nodeIter)->ReqMultiSeqHandling())
-                (*nodeIter)->ResetBound(m_pMBLayout);
+            // TODO: we should just always set the real layout; the nodes themselves should know to ignore it based on NeedToMaskMissingColumnsToZero()
+            // MaskMissingColumnsToZero() will test whether the layout is all none, and then skip.
+            // This is the only place where SetMBLayout() is ever called on a node. Hence, we could test NeedToMaskMissingColumnsToZero() instead.
+            // Note that NeedToMaskMissingColumnsToZero() is true only where it is necessary; that is, most node have it set to false (since most nodes can just map garbage-in-garbage-out).
+            //if ((*nodeIter)->NeedToMaskMissingColumnsToZero())
+                (*nodeIter)->SetMBLayout(m_pMBLayout);
+            //else
+            //    (*nodeIter)->SetMBLayout(m_pMBNoLayout);
+            (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
         }
 
+        // traverse all nodes in the pre-determined evaluation order
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
-            // TODO: is this the frame-by-frame evaluation? Why is there no comment here??
-            // evaluate all recurrence that hangs off this first
-            EvaluateLoop(allNodes, *nodeIter);
+            // --- first, evaluate all recurrence that hangs off this
 
-            // now do the whole batch (unless it's already done)
-            if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
+            RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);   // check if this node participates in a recurrent loop
+
+            if (recInfo && IsFuncValueOlderThanInputs(recInfo->m_recurrentNodesForForward) && !recInfo->m_completedEvaluate)
+            {
+                const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+                // node participates in a recurrent loop: process the loop frame by frame
+                for (auto & nodeIter : recurrentNodes)
+                    nodeIter->SetFunctionAndGradientSize(m_actualMBSize);
+    
+                const size_t T = m_actualMBSize / GetNumParallelSequences();
+
+                // for every time step run through all nodes in this particular loop
+                if (recInfo->m_isForwardLoop)
+                {
+                    for (size_t t = 0; t < T; t ++)
+                    {
+                        for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+                        {
+                            (*nodeIter)->EvaluateThisNodeGivenInputs(t);
+                            (*nodeIter)->UpdateEvalTimeStamp();
+                        }
+                    } 
+                }
+                else
+                {
+                    for (size_t t = T - 1; t --> 0; )
+                    {
+                        for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+                        {
+                            (*nodeIter)->EvaluateThisNodeGivenInputs(t);
+                            (*nodeIter)->UpdateEvalTimeStamp();
+                        }
+                    }
+                }
+    
+                recInfo->m_completedEvaluate = true;
+            }
+
+            // --- second, do the whole batch (unless it's already done)
+
+            else if (!recInfo && (*nodeIter)->IsFuncValueOlderThanInputs())
             {
 #ifdef DISPLAY_DEBUG
                 fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
@@ -649,9 +634,13 @@ public:
         }
     }
 
-    void SetActualMiniBatchSize(const size_t aSize, vector<ComputationNodeBasePtr>* featNodes = nullptr)
+    // resize entire network to handle a given MB size
+    // TODO: actually it only updates nodes in m_recurrentInfo. Why? Because without recurrence, size never changes?
+    // TODO: Is this always called with the result of DetermineActualMBSizeFromFeatures()? Why would it ever not?
+    // TODO: the network should know this by itself, no?
+    void SetActualMiniBatchSize(const size_t aSize)
     {
-        m_actMiniBSize = (int) aSize;
+        m_actualMBSize = (int) aSize;
 
         // assume that all nodes in recurrent loops need to be reset to aSize minibatch size, so need to reset the following
         for (int i = 0; i < m_recurrentInfo.size(); i++)
@@ -660,65 +649,48 @@ public:
             m_recurrentInfo[i].m_completedGradient = false;
         }
 
+        // resize function values and gradients of everything in m_recurrentInfo
         for (int i = 0; i < m_recurrentInfo.size(); i++)
-            for (auto nodeIter = m_recurrentInfo[i].m_recurrentNodes.begin(); nodeIter != m_recurrentInfo[i].m_recurrentNodes.end(); nodeIter++)
-                (*nodeIter)->SetFunctionAndGradientSize(m_actMiniBSize);
+            for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
+                nodeIter->SetFunctionAndGradientSize(m_actualMBSize);
+    }
 
-        if (featNodes)
-        {
-            for (auto ptr = featNodes->begin(); ptr != featNodes->end(); ptr++)
-            {
-                size_t nr = (*ptr)->GetNumRows();
-                (*ptr)->Resize(nr, aSize);
-            }
-        }
+    // it is used this way most of the time
+    size_t SetActualMiniBatchSizeFromFeatures()
+    {
+        size_t aSize = DetermineActualMBSizeFromFeatures();
+        SetActualMiniBatchSize(aSize);
+        return aSize;
     }
 
     // GetMaxMBSize - Get the maximum minibatch size that will be seen in a training run
-    // returns the result from SetActualMiniBatchSize(). Note GetActualMBSize() also exists but returns a value derived from the inputs dimensions
-    size_t GetMaxMBSize() { return m_actMiniBSize; }
+    // returns the result from SetActualMiniBatchSize(). Note DetermineActualMBSizeFromFeatures() also exists but returns a value derived from the inputs dimensions
+    size_t GetMaxMBSize() { return m_actualMBSize; }
 
-    void SetActualNbrSlicesInEachRecurentIteration(const size_t aSize)
+#if 0
+    // always called in this pattern:
+    evalnet->SetActualMiniBatchSizeFromFeatures();
+    dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
+    evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
+    // well... most of the time. Not in TrainOneEpoch().
+    void SetActualNumParallelSequencesInEachRecurentIteration(const size_t aSize)
     {
-        m_nbrSlicesInEachRecurrentIteration = aSize;
+        m_nbrSlicesInEachRecurrentIteration() = aSize;   // TODO: this has to go
+    }
+#endif
+    size_t GetNumParallelSequences() const
+    {
+        return m_pMBLayout->GetNumParallelSequences();
+    }
+    // temporary function: Call this after CopyMBLayoutTo(evalnet->GetMBLayoutPtr()) to ensure everything is consistent as expected
+    // It is actually called after every CopyMBLayoutTo() in the entire system (except for multi-reader CopyMBLayoutTo() itself).
+    // Remove this function after a few weeks of not firing.
+    void VerifyActualNumParallelSequences(const size_t aSize)
+    {
+        if (GetNumParallelSequences() != aSize)
+            LogicError("VerifyActualNumParallelSequences: mismatching MB size in MBLayout");
     }
 
-    void ComputeGradientLoop(std::list<ComputationNodeBasePtr>& /*allNodes*/, const ComputationNodeBasePtr startNode)
-    {
-        std::vector<ComputationNodeBasePtr> recurrentNodes;
-        int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
-        if (iLoopId != -1)
-        {
-            if (m_recurrentInfo[iLoopId].m_completedGradient == false)
-            {
-                int mbSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
-                if (m_recurrentInfo[iLoopId].m_isForwardLoop)
-                {
-                    for (int timeIndex = mbSize - 1; timeIndex >= 0; timeIndex--)
-                    {
-                        for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
-                        {
-                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration); // TODO: move to FrameRange object
-                            (*nodeIter)->ComputeGradientForChildren(timeIndex);
-                        }
-                    }
-                }
-                else
-                {
-                    for (int timeIndex = 0; timeIndex < mbSize; timeIndex++)
-                    {
-                        for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
-                        {
-                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
-                            (*nodeIter)->ComputeGradientForChildren(timeIndex);
-                        }
-                    }
-                }
-
-                m_recurrentInfo[iLoopId].m_completedGradient = true;
-            }
-        }
-    }
 
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
     // TODO: pass a set of nodes instead of only one
@@ -734,6 +706,7 @@ public:
             RuntimeError("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
 
         //run forward pass first
+        // TODO: feels out of place; can't we stick for ForwardProp()/BackwardProp()?
         Evaluate(rootNode);
 
         // TODO: comment what the purpose of this is
@@ -753,6 +726,7 @@ public:
         if (rootGradientInitValue != nullptr)
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
 
+        // process nodes in pre-determined order
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
 #ifdef DISPLAY_DEBUG
@@ -760,7 +734,43 @@ public:
                         (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
                         (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
 #endif
-            ComputeGradientLoop(allNodes, *nodeIter);
+            // --- first, perform recurrent loops if this node participates in one
+
+            RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);
+            if (recInfo)
+            {
+                if (recInfo->m_completedGradient == false)
+                {
+                    const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+                    size_t T = m_actualMBSize / GetNumParallelSequences();
+                    if (recInfo->m_isForwardLoop)
+                    {
+                        for (size_t t = T; t--> 0;)
+                        {
+                            for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                            {
+                                (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
+                                (*nodeIter)->ComputeGradientForChildren(t);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for (size_t t = 0; t < T; t++)
+                        {
+                            for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                            {
+                                (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
+                                (*nodeIter)->ComputeGradientForChildren(t);
+                            }
+                        }
+                    }
+
+                    recInfo->m_completedGradient = true;
+                }
+            }
+
+            // --- second, do whole-batch operation if not recurrent
 
             (*nodeIter)->ComputeGradientForChildren();
         }
@@ -855,9 +865,10 @@ public:
         return m_learnableParameters[rootNode];
     }
 
-    inline std::vector<ComputationNodeBasePtr> & FeatureNodes()        { return m_features;      }
-    inline std::vector<ComputationNodeBasePtr> & LabelNodes()          { return m_labels;        }
-    inline std::vector<ComputationNodeBasePtr> & FinalCriterionNodes() { return m_finalCriteria; }
+    inline       std::vector<ComputationNodeBasePtr> & FeatureNodes()        { return m_features; }
+    inline const std::vector<ComputationNodeBasePtr> & FeatureNodes() const  { return m_features; }
+    inline       std::vector<ComputationNodeBasePtr> & LabelNodes()          { return m_labels; }
+    inline       std::vector<ComputationNodeBasePtr> & FinalCriterionNodes() { return m_finalCriteria; }
 
     inline std::vector<ComputationNodeBasePtr> CriterionNodesFrom(const wstring & criterionNodeName)
     {
@@ -869,10 +880,10 @@ public:
         return std::vector<ComputationNodeBasePtr> { node };
     }
 
-    inline std::vector<ComputationNodeBasePtr> & NodesReqMultiSeqHandling() { return m_nodesReqMultiSeqHandling; }
-    inline std::vector<ComputationNodeBasePtr> & EvaluationNodes()          { return m_evalNodes; }
-    inline std::vector<ComputationNodeBasePtr> & OutputNodes()              { return m_outputNodes; }
-    inline std::vector<ComputationNodeBasePtr> & PairNodes()                { return m_pairNodes; }
+    inline std::vector<ComputationNodeBasePtr> & RequestNodesMultiSeqHandling() { return m_requestNodesMultiSeqHandling; }  // user-specified list 'NodesReqMultiSeqHandling' (NDL and MEL create/modify this list)
+    inline std::vector<ComputationNodeBasePtr> & EvaluationNodes()              { return m_evalNodes; }
+    inline std::vector<ComputationNodeBasePtr> & OutputNodes()                  { return m_outputNodes; }
+    inline std::vector<ComputationNodeBasePtr> & PairNodes()                    { return m_pairNodes; }
 
     inline std::vector<RecurrentInfo> & RecurrentNodes() { return m_recurrentInfo; }
 
@@ -1100,8 +1111,7 @@ public: // yak--used by NDLUtil. Will go away someday.
                 if (!allowFragment)
                     FormRecurrentLoops(node);
                 PrintComputationTree(node, false);
-                size_t actualMBSize = this->GetActualMBSize();
-                this->SetActualMiniBatchSize(actualMBSize);
+                SetActualMiniBatchSizeFromFeatures();
                 ValidateSubNetwork(node);
             }
         }
@@ -1175,7 +1185,7 @@ public:
         CollectInputAndLearnableParameters(rootNode);
 
         //
-        SetNodesReqMultiSeqHandling();
+        SetRequestNodesMultiSeqHandling();
     }
 
     //this function will need to be called before actual validation and execution to 
@@ -1204,10 +1214,10 @@ public:
 
         std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
 
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        for (auto & nodeIter : nodes)
         {
-            (*nodeIter)->RequestEvalMatrices(m_matrixPool);
-            (*nodeIter)->ReleaseMatricesAfterEval(m_matrixPool);
+            nodeIter->RequestEvalMatrices(m_matrixPool);
+            nodeIter->ReleaseMatricesAfterEval(m_matrixPool);
         }
     }
 
@@ -1218,9 +1228,9 @@ public:
 
         std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
 
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        for (auto & nodeIter : nodes)
         {
-            std::vector<ComputationNodeBasePtr> children = (*nodeIter)->GetChildren();
+            std::vector<ComputationNodeBasePtr> children = nodeIter->GetChildren();
             for (int i = 0; i < children.size(); i++)
                 numParents[children[i]] ++;
         }
@@ -1231,20 +1241,19 @@ public:
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedGradient = false;
 
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+        for (auto & nodeIter : allNodes)
         {
-            std::vector<ComputationNodeBasePtr> recurrentNodes;
-            int iLoopId = FindInRecurrentLoop(*nodeIter, recurrentNodes);
-            if (iLoopId != -1 && m_recurrentInfo[iLoopId].m_completedGradient == false)
+            RecurrentInfo * recInfo = FindInRecurrentLoops(nodeIter);
+            if (recInfo && !recInfo->m_completedGradient)
             {
-                for (auto nodeIterInLoop = recurrentNodes.rbegin(); nodeIterInLoop != recurrentNodes.rend(); ++nodeIterInLoop)
-                    AllocateGradientMatricesForChildren(*nodeIterInLoop, numParents);
-                m_recurrentInfo[iLoopId].m_completedGradient = true;
+                for (auto & nodeIterInLoop : recInfo->m_recurrentNodesForForward)
+                    AllocateGradientMatricesForChildren(nodeIterInLoop, numParents);
+                recInfo->m_completedGradient = true;
             }
             else
-                AllocateGradientMatricesForChildren(*nodeIter, numParents);
+                AllocateGradientMatricesForChildren(nodeIter, numParents);
 
-            (*nodeIter)->ReleaseGradientMatrices(m_matrixPool);
+            nodeIter->ReleaseGradientMatrices(m_matrixPool);
         }
     }
 
@@ -1268,12 +1277,11 @@ public:
         // first give criteria nodes as root node
         if (FinalCriterionNodes().size() > 0)
         {
-            for (auto node : FinalCriterionNodes())
+            for (auto & node : FinalCriterionNodes())
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
-                size_t actualMBSize = this->GetActualMBSize();
-                this->SetActualMiniBatchSize(actualMBSize);
+                this->SetActualMiniBatchSizeFromFeatures();
                 if (!UnitTest(node))
                     vErrors.push_back(node->NodeName().c_str());
             }
@@ -1283,7 +1291,7 @@ public:
         // now output nodes
         if (OutputNodes().size() > 0)
         {
-            for (auto node : OutputNodes())
+            for (auto & node : OutputNodes())
             if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());
         }
@@ -1292,7 +1300,7 @@ public:
         // now evaluation nodes
         if (EvaluationNodes().size() > 0)
         {
-            for (auto node : EvaluationNodes())
+            for (auto & node : EvaluationNodes())
             if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());
         }
@@ -1305,9 +1313,9 @@ public:
 
         std::list<ComputationNodeBasePtr>&  nodes = GetEvalOrder(rootNode, false);
 
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-        if (!(*nodeIter)->UnitTest())
-            return false;
+        for (auto & nodeIter : nodes)
+            if (!nodeIter->UnitTest())
+                return false;
 
         fprintf(stderr, "\n\n");
 
@@ -1363,6 +1371,8 @@ public:
     };
 
     // note: this is called to write into our existing MBLayout instance
+    // TODO: This is broken. Instead, we should pass this from the reader, or better, do batching inside here.
+    //       The problem is that we cannot post-process. E.g. is the layout guaranteed to reflect the minibatch size, in the case of no recurrence??
     const MBLayoutPtr & GetMBLayoutPtr() { return m_pMBLayout; }
 
 protected:
@@ -1452,7 +1462,7 @@ public:
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            (*nodeIter)->ClearGradientForChildren(m_actMiniBSize);
+            (*nodeIter)->ClearGradientForChildren(m_actualMBSize);
 
         //for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
         //    (*nodeIter).m_completedGradient = false;
@@ -1545,10 +1555,10 @@ protected:
     std::vector<ComputationNodeBasePtr> m_evalNodes;
     std::vector<ComputationNodeBasePtr> m_outputNodes;
     std::vector<ComputationNodeBasePtr> m_pairNodes; /// nodes for the children network to pair
-    std::vector<ComputationNodeBasePtr> m_nodesReqMultiSeqHandling;
+    std::vector<ComputationNodeBasePtr> m_requestNodesMultiSeqHandling;
     vector<std::vector<ComputationNodeBasePtr>*> GetAllNodeGroups()    // get all groups to allow to iterate over all of them ...continue
     {
-        return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_nodesReqMultiSeqHandling };
+        return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_requestNodesMultiSeqHandling };
     }
 
     std::vector<RecurrentInfo> m_recurrentInfo;     // [index--TODO: comment what this is indexed with]
@@ -1556,9 +1566,9 @@ protected:
     // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
     MBLayoutPtr m_pMBLayout;
+    MBLayoutPtr m_pMBNoLayout;  // this alternative one is passed when no layout is available/should be used
 
-    int m_actMiniBSize;
-    size_t m_nbrSlicesInEachRecurrentIteration;
+    int m_actualMBSize;         // current MB size in columns --note: this is not #frames, if we have multiple parallel sequences, cf. MBLayout
 
     // main node holder
     std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes

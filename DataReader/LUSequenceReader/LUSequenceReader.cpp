@@ -799,7 +799,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
 }
 
 template<class ElemType>
-size_t BatchLUSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
+size_t BatchLUSequenceReader<ElemType>::GetNumParallelSequences()
 {
     size_t sz = (mSentenceBeginAt.size() == 0)?mBlgSize : mSentenceBeginAt.size();
     if (mSentenceBeginAt.size() == 0)
@@ -814,7 +814,7 @@ size_t BatchLUSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::SetNbrSlicesEachRecurrentIter(const size_t mz)
+void BatchLUSequenceReader<ElemType>::SetNumParallelSequences(const size_t mz)
 {
     mBlgSize = mz;
 }
@@ -1272,23 +1272,23 @@ void MultiIOBatchLUSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayou
     /// run for each reader
     vector<size_t> col;
     size_t rows = 0, cols = 0;
-    for (auto p : mReader)
+    for (const auto & p : mReader)
     {
         p.second->CopyMBLayoutTo(pMBLayout);
         if (rows == 0)
-            rows = pMBLayout->GetNumStreams();
-        else if (rows != pMBLayout->GetNumStreams())
+            rows = pMBLayout->GetNumParallelSequences();
+        else if (rows != pMBLayout->GetNumParallelSequences())
             LogicError("multiple streams for LU sequence reader must have the same number of rows for sentence begining");
-        size_t this_col = pMBLayout->GetNumFrames();
+        size_t this_col = pMBLayout->GetNumTimeSteps();
         col.push_back(this_col);
         cols += this_col;
     }
 }
 
 template<class ElemType>
-size_t MultiIOBatchLUSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
+size_t MultiIOBatchLUSequenceReader<ElemType>::GetNumParallelSequences()
 {
-    return mReader.begin()->second->NumberSlicesInEachRecurrentIter();
+    return mReader.begin()->second->GetNumParallelSequences();
 }
 
 template<class ElemType>

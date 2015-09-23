@@ -126,9 +126,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling");
-        fstream << m_nodesReqMultiSeqHandling.size();
-        for (size_t i = 0; i<m_nodesReqMultiSeqHandling.size(); i++)
-            fstream << m_nodesReqMultiSeqHandling[i]->NodeName();
+        fstream << m_requestNodesMultiSeqHandling.size();
+        for (size_t i = 0; i<m_requestNodesMultiSeqHandling.size(); i++)
+            fstream << m_requestNodesMultiSeqHandling[i]->NodeName();
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
 
         fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
@@ -193,8 +193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
 
-        size_t actualMBSize = GetActualMBSize();
-        SetActualMiniBatchSize(actualMBSize);
+        SetActualMiniBatchSizeFromFeatures();
 
         if (requireValidation)
             ValidateNetwork();
@@ -313,6 +312,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return false;
     }
 
+    // note: all of these have NodeDoesItsOwnCustomizedMissingColumnsMasking() returning true
     bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
     {
         if (nodePtr->OperationName() == OperationNameOf(SquareErrorNode) ||
@@ -327,30 +327,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return false;
     }
 
-    void ComputationNetwork::SetNodesReqMultiSeqHandling()
+    // transfer user-specified request for masking to the indivudal nodes
+    // This is only needed if users explicitly perform reduce-like operations.
+    // It makes no sense for some nodes, so we skip those.
+    void ComputationNetwork::SetRequestNodesMultiSeqHandling()
     {
-        for (auto node : m_nodesReqMultiSeqHandling)
+        for (auto & node : m_requestNodesMultiSeqHandling)  // this set is defined in NDL; here we propagate that into the actual nodes' flags, except for a few where it makes no sense (avoid user error)
         {
             //SumElements node will generate a scalar value and so it should never require special handling
             //TransposeNode will change the size of columns and so it should also not included for special handling
             //their child node should instead
+#if 0
             if (node->OperationName() != OperationNameOf(SumElementsNode) &&
                 node->OperationName() != OperationNameOf(TransposeNode) &&
                 node->OperationName() != OperationNameOf(MeanNode) &&
                 node->OperationName() != OperationNameOf(InvStdDevNode) 
                 )
-                node->SetReqMultiSeqHandlingTo(true);
+                node->SetMaskMissingColumnsToZero();
+#else
+            if (node->OperationName() == OperationNameOf(SumElementsNode) ||
+                node->OperationName() == OperationNameOf(TransposeNode) ||
+                node->OperationName() == OperationNameOf(MeanNode) |
+                node->OperationName() == OperationNameOf(InvStdDevNode))
+            {
+                RuntimeError("SetRequestNodesMultiSeqHandling: NodesReqMultiSeqHandling cannot be used with operation '%ls'\nIn the past, CNTK silently fixed this; now please change your NDL instead", node->OperationName().c_str());
+            }
+            node->SetMaskMissingColumnsToZero();
+#endif
         }
 
-        //if a typical criterion node is used as the training criterion node we assume it requires multiseq handling 
-        //this is for backward compatibility
-        for (auto node : m_finalCriteria)
+        // if a typical criterion node is used as the training criterion node we assume it requires multiseq handling 
+        // this is for backward compatibility
+        // All of these have NodeDoesItsOwnCustomizedMissingColumnsMasking() return true, i.e. they will not have MaskMissingColumnsToZero() auto-called from Network.
+        // Hence, instead of setting the flag, we just ensure that this is true.
+        for (auto & node : m_finalCriteria)
             if (IsTypicalCriterionNode(node))
-                node->SetReqMultiSeqHandlingTo(true);
+                //node->SetMaskMissingColumnsToZero();
+                if (!node->NodeDoesItsOwnCustomizedMissingColumnsMasking())
+                    LogicError("criterion %ls's NodeDoesItsOwnCustomizedMissingColumnsMasking() function must return true", node->OperationName().c_str());
 
-        for (auto node : m_evalNodes)
+        for (auto & node : m_evalNodes)
             if (IsTypicalCriterionNode(node))
-                node->SetReqMultiSeqHandlingTo(true);
+                //node->SetMaskMissingColumnsToZero();
+                if (!node->NodeDoesItsOwnCustomizedMissingColumnsMasking())
+                    LogicError("criterion %ls's NodeDoesItsOwnCustomizedMissingColumnsMasking() function must return true", node->OperationName().c_str());
     }
 
     template<class N> void ComputationNetwork::GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequirePreComputation, const ComputationNodeBasePtr rootNode, bool checkComputed)
@@ -409,9 +429,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ComputationNetwork::ClearCalcOrderCaches()
     {
-        for (std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>::iterator it = m_cacheEvalOrders.begin(); it != m_cacheEvalOrders.end(); ++it)
-            for (auto iter2 = m_cacheEvalOrders[it->first].begin(); iter2 != m_cacheEvalOrders[it->first].end(); iter2++)
-                (*iter2)->clearCache();
+        for (auto & it : m_cacheEvalOrders)
+            for (auto & iter2 : m_cacheEvalOrders[it.first])
+                iter2->ClearCache();
         m_cacheEvalOrders.clear();
         m_cacheGradientCalcOrders.clear();
     }
@@ -420,15 +440,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         /// merge loops if they have the same source node
         std::vector<RecurrentInfo> m_recurrentInfoTmp;
-                    if (m_recurrentInfo.size() <= 1)
-                        return; 
+        if (m_recurrentInfo.size() <= 1)
+            return;
 
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
         {
             if (m_recurrentInfoTmp.size() == 0)
             {
                 RecurrentInfo rInfo;
-                            rInfo.Copy(*iter); 
+                rInfo.Copy(*iter);
                 m_recurrentInfoTmp.push_back(rInfo);
             }
             else
@@ -477,7 +497,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::list<ComputationNodeBasePtr> sccStack;
         size_t index = 0;
         size_t loopId = 0;
-        if (rootNode->isVisisted() == false)
+        if (rootNode->IsVisisted() == false)
             strongSCC(rootNode, sccStack, index, loopId);
     }
 
@@ -487,7 +507,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                        size_t& index, size_t& loopId)
     {
         cur->SetIndex(index);
-        cur->Setlowlink(index);
+        cur->SetLowLink(index);
         index++;
 
         cur->SetVisited(true);
@@ -499,19 +519,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // pairnetwork is the socket from other network, so ignore its children, which are in the other networks
             for (int i = 0; i < cur->ChildrenSize(); i++)
             {
-                if (cur->GetChildren()[i]->isVisisted() == false)
+                if (cur->GetChildren()[i]->IsVisisted() == false)
                 {
                     strongSCC(cur->GetChildren()[i], sccStack, index, loopId);
-                    cur->Setlowlink(min(cur->Getlowlink(), cur->GetChildren()[i]->Getlowlink()));
+                    cur->SetLowLink(min(cur->GetLowLink(), cur->GetChildren()[i]->GetLowLink()));
                 }
-                else if (cur->GetChildren()[i]->isInStack())
+                else if (cur->GetChildren()[i]->IsInStack())
                 {
-                    cur->Setlowlink(min(cur->Getlowlink(), cur->GetChildren()[i]->Getlowlink()));
+                    cur->SetLowLink(min(cur->GetLowLink(), cur->GetChildren()[i]->GetLowLink()));
                 }
             }
         }
 
-        if (cur->Getlowlink() == cur->GetIndex())   // something special has happened   --TODO: comment what that was!!
+        if (cur->GetLowLink() == cur->GetIndex())   // something special has happened   --TODO: comment what that was!!
         {
             RecurrentInfo rInfo;
             rInfo.m_loopId = loopId;
@@ -550,7 +570,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 cur->OperationName() != OperationNameOf(FutureValueNode))
             {
                 for (size_t i = 0; i < cur->ChildrenSize(); i++)
-                    if (cur->GetChildren()[i]->LoopId() == cur->LoopId())
+                    if (cur->GetChildren()[i]->GetLoopId() == cur->GetLoopId())
                         getLoopForwordOrder(visited, recStack, nodesStack, cur->GetChildren()[i]);
             }
             recStack.erase(cur);
@@ -627,7 +647,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     ComputationNodeBasePtr nodeRecIter = (*iter).m_recurrentNodes[j];
                     for (size_t i = 0; i < nodeRecIter->ChildrenSize(); i++)
                     {
-                        if (nodeRecIter->GetChildren()[i]->LoopId() == nodeRecIter->LoopId() && 
+                        if (nodeRecIter->GetChildren()[i]->GetLoopId() == nodeRecIter->GetLoopId() && 
                             nodeRecIter->OperationName() != OperationNameOf(PastValueNode) &&
                             nodeRecIter->OperationName() != OperationNameOf(FutureValueNode))     // TODO: test for type RecurrentNode instead?
                         {
@@ -682,8 +702,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         DetermineLoopTypes();
         
-        for (auto iter = nodes.begin(); iter != nodes.end(); iter++)
-            (*iter)->clearCache();
+        for (auto & iter : nodes)
+            iter->ClearCache();
     }
 
     void ComputationNetwork::DetermineLoopTypes()
@@ -739,15 +759,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         std::list<ComputationNodeBasePtr> vTmp;
         std::list<ComputationNodeBasePtr> vRecurrentTmp;
-        //int  prevId = -1;
-        vector<bool> accessed;
-        accessed.assign(m_recurrentInfo.size(), false);
+        vector<bool> accessed(m_recurrentInfo.size(), false);
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            int iId = FindInRecurrentLoop(*nodeIter);
-            if (iId >= 0)
+            const RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);
+            if (recInfo)
             {
-
+                int iId = recInfo->m_loopId;
                 if (!accessed[iId])
                 {
                     newList.insert(newList.end(),
@@ -1019,7 +1037,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i<num; i++)
                 {
                     fstream >> nodeName;
-                    m_nodesReqMultiSeqHandling.push_back(GetNodeFromName(nodeName));
+                    m_requestNodesMultiSeqHandling.push_back(GetNodeFromName(nodeName));
                 }
                 fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
             }
@@ -1100,7 +1118,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         wstring str = style;
 
-        for (auto x : specialNodes)
+        for (const auto & x : specialNodes)
             str = str + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
         return str + L"; \n";
     }
@@ -1115,7 +1133,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // get precompute node
         std::vector<ComputationNodeBasePtr> PreComputedNodes;
         std::vector<ComputationNodeBasePtr> allnodes = GetAllNodes();
-        for (auto n : allnodes)
+        for (const auto & n : allnodes)
         {
             if (n->RequiresPreCompute())
                 PreComputedNodes.push_back(n);
@@ -1123,7 +1141,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // get PastValue node
         std::vector<ComputationNodeBasePtr> pastValueNodes;
-        for (auto n : allnodes)
+        for (const auto & n : allnodes)
         {
             if (n->OperationName() == OperationNameOf(PastValueNode) || n->OperationName() == L"Delay")
                 pastValueNodes.push_back(n);
@@ -1131,14 +1149,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // get FuturetValue node
         std::vector<ComputationNodeBasePtr> futureValueNodes;
-        for (auto n : allnodes)
+        for (const auto & n : allnodes)
         {
             if (n->OperationName() == OperationNameOf(FutureValueNode))
                 futureValueNodes.push_back(n);
         }
         // get learnableParameters
         std::vector<ComputationNodeBasePtr> learnableParameters;
-        for (auto n : allnodes)
+        for (const auto & n : allnodes)
         {
             if (n->OperationName() == OperationNameOf(LearnableParameter))
                 learnableParameters.push_back(n);
@@ -1161,7 +1179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // critera
         fstream << FormSpecialNodes(dotcfg.m_CriteriaStyle, m_finalCriteria);
         // nodes that requires multi sequence handling 
-        fstream << FormSpecialNodes(dotcfg.m_nodesReqMultiSeqHandlingStyle, m_nodesReqMultiSeqHandling);            
+        fstream << FormSpecialNodes(dotcfg.m_nodesReqMultiSeqHandlingStyle, m_requestNodesMultiSeqHandling);            
         // pre-compute nodes
         fstream << FormSpecialNodes(dotcfg.m_PrecomputingNodeStyle, PreComputedNodes);
         // PastValue nodes
@@ -1176,7 +1194,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //////////////////////////////////////////////////////////////////////////
         fstream << L"\n// add labels and operation name\n";
         wstring line;
-        for (auto x : allnodes)
+        for (const auto & x : allnodes)
         {
             line.clear();
             size_t nrows = x->GetNumRows();
@@ -1194,25 +1212,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream << L"subgraph {\n";
         fstream << L"\t\t rank=source ; ";
         line.clear();
-        for (auto x : m_features)
-        {
+        for (const auto & x : m_features)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        }
         fstream << line << L"\n}\n";
 
         // subgraph eval/output/criteria
         fstream << L"subgraph {\n";
         fstream << L"\t\t rank=sink ; ";
         line.clear();
-        for (auto x : m_finalCriteria)
+        for (const auto & x : m_finalCriteria)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        for (auto x : m_nodesReqMultiSeqHandling)
+        for (const auto & x : m_requestNodesMultiSeqHandling)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        for (auto x : m_outputNodes)
+        for (const auto & x : m_outputNodes)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        for (auto x : m_pairNodes)
+        for (const auto & x : m_pairNodes)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
-        for (auto x : m_evalNodes)
+        for (const auto & x : m_evalNodes)
             line = line + msra::strfun::wstrprintf(L"\"%ls\" ", x->GetName().c_str());
 
         fstream << line << L"\n}\n";
@@ -1297,7 +1313,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         vector<pair<vector<wstring>, float>> nodeGroups;
         wregex NameFilter;
 
-        for (auto e : SVDConfig)
+        for (const auto & e : SVDConfig)
         {
             wstring regexStr = e.first;
             float keepRatio = e.second;
@@ -1339,7 +1355,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr,
                     "--------------------------------------------------------------------------------------------\n");
 
-            for (auto name : group.first)
+            for (const auto & name : group.first)
             {
                 if (m_nameToNodeMap.find(name) == m_nameToNodeMap.end())
                 {

@@ -199,8 +199,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return GradientsUpdateType::AdaGrad;
         else if (s == L"rmsprop")
             return GradientsUpdateType::RmsProp;
+        else if (s == L"fsadagrad")
+            return GradientsUpdateType::FSAdaGrad;
         else
-            throw std::invalid_argument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (None | AdaGrad | RmsProp )");
+            throw std::invalid_argument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (None | AdaGrad | RmsProp | FSAdaGrad )");
     }
 
     static ParallelizationMethod ParseParallelizationMethod(wstring s)
@@ -920,18 +922,18 @@ template<class ElemType>
         }
 
         // first, we need to normalize the effect of nbruttsineachrecurrentiter
-        if (trainSetDataReader->NumberSlicesInEachRecurrentIter() > 1 && m_needToNormalizeLRByParallUtterance)
+        if (trainSetDataReader->GetNumParallelSequences() > 1 && m_needToNormalizeLRByParallUtterance)
         {
             for (auto& x : m_learningRatesPerSample)
-                x /= (float)trainSetDataReader->NumberSlicesInEachRecurrentIter();
+                x /= (float)trainSetDataReader->GetNumParallelSequences();
         }
         
         // first, we need to normalize the effect of nbruttsineachrecurrentiter for momemtum
-        if (trainSetDataReader->NumberSlicesInEachRecurrentIter() > 1 && m_needToNormalizeMomentumByParallUtterance)
+        if (trainSetDataReader->GetNumParallelSequences() > 1 && m_needToNormalizeMomentumByParallUtterance)
         {
             for (auto& x : m_momentumPerSample)
-                x = (float)pow(x, 1.0 / trainSetDataReader->NumberSlicesInEachRecurrentIter());
-            }
+                x = (float)pow(x, 1.0 / trainSetDataReader->GetNumParallelSequences());
+        }
 
         bool learnRateInitialized = false;
         if (startEpoch > 0)
@@ -1047,8 +1049,8 @@ template<class ElemType>
             }
             
             actualMinibatchSize = chosenMinibatchSize;
-            if (trainSetDataReader->NumberSlicesInEachRecurrentIter() > 1 && m_needToNormalizeMomentumByParallUtterance)
-                actualMinibatchSize = chosenMinibatchSize * trainSetDataReader->NumberSlicesInEachRecurrentIter();
+            if (trainSetDataReader->GetNumParallelSequences() > 1 && m_needToNormalizeMomentumByParallUtterance)
+                actualMinibatchSize = chosenMinibatchSize * trainSetDataReader->GetNumParallelSequences();
 
             fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
                     i + 1, learnRatePerSample, MomentumPerMB(m_momentumPerSample[i], actualMinibatchSize));
@@ -1306,10 +1308,9 @@ template<class ElemType>
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
             ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-            size_t actualMBSize = net.GetActualMBSize();
-            net.SetActualMiniBatchSize(actualMBSize);
-            net.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+            net.SetActualMiniBatchSizeFromFeatures();
             trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
+            net.VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
 
             // TODO: Exactly this loop should be INSIDE ComputationNetwork--pass the nodes array instead!
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
@@ -1766,10 +1767,9 @@ template<class ElemType>
             if (outputNodes.empty())
                 LogicError("no output node was found.");
 
-            size_t actualMBSize = net.GetActualMBSize();
-            net.SetActualMiniBatchSize(actualMBSize);
-            net.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+            net.SetActualMiniBatchSizeFromFeatures();
             trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
+            net.VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
             net.Evaluate(outputNodes[0]);   // Only evaluate the first output
             trainSetDataReader->SetNetOutput(uttInfo,
                                              dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->FunctionValues(),
@@ -1924,7 +1924,7 @@ template<class ElemType>
             size_t actualMBSize = 0;
             if (wasDataRead)
             {
-                size_t nSlices = trainSetDataReader->NumberSlicesInEachRecurrentIter();
+                size_t nSlices = trainSetDataReader->GetNumParallelSequences();
                 MBLayoutPtr pMBLayout;
                 if (!useDistributedMBReading && useParallelTrain)
                 {
@@ -1943,22 +1943,22 @@ template<class ElemType>
                     }
                 }
 
-                actualMBSize = net.GetActualMBSize();
+                actualMBSize = net.SetActualMiniBatchSizeFromFeatures();
                 if (actualMBSize != 0)
                 {
-                    nSamplesSinceLastModelSync += actualMBSize;
-                    net.SetActualMiniBatchSize(actualMBSize);
-                    net.SetActualNbrSlicesInEachRecurentIteration(nSlices);
-
                     if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
                     {
                         *net.GetMBLayoutPtr() = *pMBLayout;
                         // TODO: ^^ we should just pass pointers; this current code is semantically identical to before the change to MBLayout
+                        net.VerifyActualNumParallelSequences(nSlices);
                     }
                     else
                     {
                         trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
+                        net.VerifyActualNumParallelSequences(nSlices);
                     }
+
+                    nSamplesSinceLastModelSync += actualMBSize;
 
                     ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                     ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
@@ -1970,8 +1970,16 @@ template<class ElemType>
                     // TODO: currently only support one node regularization
                     if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
                     {
-                        refNet.SetActualMiniBatchSize(actualMBSize);
-                        refNet.SetActualNbrSlicesInEachRecurentIteration(trainSetDataReader->NumberSlicesInEachRecurrentIter());
+#if 1
+                        size_t actualMBSize2 = refNet.SetActualMiniBatchSizeFromFeatures();
+                        if (actualMBSize2 != actualMBSize)
+                            LogicError("TrainOneEpoch: refNet has different MB size than main net??");
+#else
+                        refNet.SetActualMiniBatchSize(actualMBSize);            // TODO: SetActualMiniBatchSizeFromFeatures() should have the same result, no?
+#endif
+                        *refNet.GetMBLayoutPtr() = *net.GetMBLayoutPtr();       // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
+                        refNet.VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
+
                         refNet.Evaluate(refNode);
                         Matrix<ElemType>::ScaleAndAdd((ElemType)m_adaptationRegWeight,
                                                       dynamic_pointer_cast<ComputationNode<ElemType>>(refNode)->FunctionValues(),
@@ -2384,12 +2392,17 @@ template<class ElemType>
                                         (ElemType)learnRatePerSample, (ElemType)momentum);
         }
         else if (adpType == GradientsUpdateType::AdaGrad ||
-                (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType() == MatrixType::SPARSE))
+                (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType() == MatrixType::SPARSE) ||
+                (adpType == GradientsUpdateType::FSAdaGrad && gradientValues.GetMatrixType() == MatrixType::SPARSE))
         {
             //rmsprop for sparse is not implemented yet, delegate it with adagrad
 
             double aveMultiplier = smoothedGradient.Adagrad(gradientValues, needAveMultiplier);
             Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
+        }
+        else if (adpType == GradientsUpdateType::FSAdaGrad)
+        {
+            smoothedGradient.FSAdagrad(actualMBSize, gradientValues, functionValues, (ElemType)learnRatePerSample, (ElemType)momentum);
         }
         else if (adpType == GradientsUpdateType::RmsProp)
         {

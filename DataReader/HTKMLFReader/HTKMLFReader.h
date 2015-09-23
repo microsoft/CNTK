@@ -89,8 +89,8 @@ private:
 
     bool ReNewBufferForMultiIO(size_t i);
 
-    size_t NumberSlicesInEachRecurrentIter() { return m_numberOfuttsPerMinibatch ;} 
-    void SetNbrSlicesEachRecurrentIter(const size_t) { };
+    size_t GetNumParallelSequences() { return m_numberOfuttsPerMinibatch; } 
+    void SetNumParallelSequences(const size_t) { };
 
      void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels);
 
