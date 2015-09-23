@@ -393,7 +393,7 @@ public:
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     bool EnsureDataAvailable(size_t mbStartSample);
-    size_t NumberSlicesInEachRecurrentIter();
+    size_t GetNumParallelSequences();
 
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
     void CopyMBLayoutTo(MBLayoutPtr);

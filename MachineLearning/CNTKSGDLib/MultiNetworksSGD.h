@@ -880,7 +880,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!bContinueDecoding)
                     break;
 
-                size_t actualMBSize = decoderNet->GetActualMBSize();
+                size_t actualMBSize = decoderNet->DetermineActualMBSizeFromFeatures();
                 if (actualMBSize == 0)
                     LogicError("decoderTrainSetDataReader read data but decoderNet reports no data read");
 
@@ -1157,21 +1157,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>& localEpochEvalErrors
             )
         {
-            size_t actualMBSize = encoderNet->GetActualMBSize();
-
-            encoderNet->SetActualMiniBatchSize(actualMBSize);
-            encoderNet->SetActualNbrSlicesInEachRecurentIteration(encoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
+            encoderNet->SetActualMiniBatchSizeFromFeatures();
             encoderTrainSetDataReader->CopyMBLayoutTo(encoderNet->GetMBLayoutPtr());
+            encoderNet->VerifyActualNumParallelSequences(encoderTrainSetDataReader->GetNumParallelSequences());
 
             encoderNet->Evaluate(encoderEvaluationNodes[0]);
 
-            actualMBSize = decoderNet->GetActualMBSize();
-
-            decoderNet->SetActualMiniBatchSize(actualMBSize);
-            decoderNet->SetActualNbrSlicesInEachRecurentIteration(decoderTrainSetDataReader->NumberSlicesInEachRecurrentIter());
-
-            /// not the sentence begining, because the initial hidden layer activity is from the encoder network
+            decoderNet->SetActualMiniBatchSizeFromFeatures();
             decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
+            decoderNet->VerifyActualNumParallelSequences(decoderTrainSetDataReader->GetNumParallelSequences());
+            /// not the sentence begining, because the initial hidden layer activity is from the encoder network
 
             if (decoderCriterionNodes.size() == 0 && decoderEvaluationNodes.size() == 0)
             {

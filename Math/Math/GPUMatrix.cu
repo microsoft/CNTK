@@ -298,7 +298,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDA_CALL(cudaDeviceCanAccessPeer(&canAccessPeer, to_id, m_computeDevice));
             if (canAccessPeer)
             {
-                CUDA_CALL(cudaDeviceEnablePeerAccess(m_computeDevice, 0));
+                cudaError_t cudaStatus = cudaDeviceEnablePeerAccess(m_computeDevice, 0);
+                if (cudaStatus != cudaErrorPeerAccessAlreadyEnabled)
+                {
+                    CUDA_CALL(cudaStatus);
+                }
                 CUDA_CALL(cudaMemcpyPeer(d_dst,to_id,m_pArray,m_computeDevice,sizeof(ElemType)*m_numRows*m_numCols));  
             }
             else
@@ -1271,6 +1275,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUBLAS_CALL(cublasDasum(cuHandle, (CUDA_LONG)n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
             return (ElemType)aveMultiplier / n;
         }
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
+                                        GPUMatrix<ElemType>& functionValues, 
+                                        ElemType learnRatePerSample,
+                                        ElemType momentum,
+                                        ElemType adaWeight,
+                                        ElemType adaMul)
+    {
+        size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+        if (IsEmpty() || (GetNumCols() < numColsNeeded))
+        {
+            Resize(gradients.GetNumRows(), numColsNeeded);
+            SetValue(0.0);
+        }
+
+        assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+
+        size_t n = gradients.GetNumElements();
+        int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
+        _fsadagrad<ElemType><<<blocksPerGrid, threadsPerBlock>>>(n, gradients.m_pArray, m_pArray, m_pArray + n, functionValues.m_pArray,
+                                                                 learnRatePerSample, momentum, adaWeight, adaMul);
     }
 
     template<class ElemType>

@@ -184,7 +184,7 @@ public:
     ~LUSequenceReader(){};
     void StartMinibatchLoop(size_t , size_t , size_t = requestDataSize) {};
 
-    void SetNbrSlicesEachRecurrentIter(const size_t /*mz*/) {};
+    void SetNumParallelSequences(const size_t /*mz*/) {};
     void SentenceEnd(std::vector<size_t> &/*sentenceEnd*/) {};
 
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
@@ -298,8 +298,8 @@ public:
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
     bool EnsureDataAvailable(size_t mbStartSample);
-    size_t NumberSlicesInEachRecurrentIter();
-    void SetNbrSlicesEachRecurrentIter(const size_t mz);
+    size_t GetNumParallelSequences();
+    void SetNumParallelSequences(const size_t mz);
 
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
 
@@ -386,7 +386,7 @@ public:
 
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
 
-    size_t NumberSlicesInEachRecurrentIter();
+    size_t GetNumParallelSequences();
 
     void Init(const ConfigParameters& readerConfig);
 

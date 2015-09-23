@@ -161,9 +161,9 @@ public:
         return true;
     }
 
-    size_t NumberSlicesInEachRecurrentIter() {return 1;}
+    size_t GetNumParallelSequences() { return 1; }
 
-    void SetNbrSlicesEachRecurrentIter(const size_t ) {}
+    void SetNumParallelSequences(const size_t ) {}
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd)
     {
         sentenceEnd.resize(m_switchFrame.size());

@@ -48,8 +48,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             inputFunctionValues0.VectorMax(maxIndexes0, maxValues, true);
             inputFunctionValues1.VectorMax(maxIndexes1, maxValues, true);
-            curNode->MaskToZeroWhenLabelAndFeatureMissing(maxIndexes0); //we are fine since it will only be called with full minibatch
-            curNode->MaskToZeroWhenLabelAndFeatureMissing(maxIndexes1);
+            curNode->MaskMissingColumnsToZero(maxIndexes0); //we are fine since it will only be called with full minibatch
+            curNode->MaskMissingColumnsToZero(maxIndexes1);
             functionValues.AssignNumOfDiff(maxIndexes0, maxIndexes1);
         #if NANCHECK
             functionValues.HasNan("ErrorPrediction");
@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("ErrorPrediction operation: one of the operants has 0 element.");
 
             if (((!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match size
-                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()) )) && Inputs(0)->LoopId() < 0)
+                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()) )) && Inputs(0)->GetLoopId() < 0)
             {
                 LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
             }       
@@ -141,7 +141,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
     private:
         Matrix<ElemType> m_maxIndexes0, m_maxIndexes1;

@@ -772,6 +772,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return slice;
     }
 
+    // special convenience function to apply ColumnSlice() to getting a frame range
+#if 0
+    // It assumes that columns are frames, and returns a sub-range.
+    // TODO: decide whether this belongs here or elsewhere
+    // TODO: remove this one, as it does not take #slices explicitly, which will be needed in the future
+    template<class ElemType>
+    Matrix<ElemType> Matrix<ElemType>::FrameSlice(const FrameRange & frameRange
+        // TODO: temporary only until this has been tested to work:
+        , size_t expectedStartColumn, size_t expectedNumCols
+        ) const
+    {
+        if (frameRange.IsAllFrames()) return ColumnSlice(0, GetNumCols());  // TODO: can we just return a reference to ourselves? --ownership problem
+        // TODO: temporary only until this has been tested to work:
+        if (expectedStartColumn != frameRange.StartColumn() || expectedNumCols != frameRange.NumCols())
+            LogicError("FrameSlice: FrameRange object gives different range than original explicit code. Logic is borked.");
+        return ColumnSlice(frameRange.StartColumn(), frameRange.NumCols());
+    }
+#endif
+    template<class ElemType>
+    Matrix<ElemType> Matrix<ElemType>::FrameSlice(const FrameRange & frameRange, const shared_ptr<MBLayout> & pMBLayout) const
+    {
+        if (frameRange.IsAllFrames()) return ColumnSlice(0, GetNumCols());  // TODO: can we just return a reference to ourselves? --ownership problem
+        return ColumnSlice(frameRange.StartColumn(pMBLayout), frameRange.NumCols(pMBLayout));
+    }
+
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
     {            
@@ -1005,8 +1030,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const ElemType v)
     {
-        if (IsEmpty())
-            throw std::logic_error("SetValue: Matrix is empty.");
+        if (IsEmpty())  // if empty then we are done
+            return;
+            //throw std::logic_error("SetValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1020,8 +1046,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const DeviceBoundNumber<ElemType>& db_number)
     {
-        if (IsEmpty())
-            throw std::logic_error("SetValue: Matrix is empty.");        
+        if (IsEmpty())  // if empty then we are done
+            return;
+            //throw std::logic_error("SetValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1292,6 +1319,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
 
         return aveMultiplier;
+    }
+
+    template<class ElemType>
+    void Matrix<ElemType>::FSAdagrad(size_t mbSize, Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum)
+    {
+        // TODO: The values of 'adagradT' and 'targetadagradavdenom' are currently hardcoded constants taken from DBN (empirically determined). 
+        // These should be made configurable if needed
+        const size_t adagradT = 2 * 3600 * 100;
+        const ElemType targetadagradavdenom = 0.0025; // 1/400 magic constant
+        const ElemType adagradkeepweight = static_cast<ElemType>(exp(-1.0 * mbSize / adagradT));
+
+        static ElemType aggadagradsqrframes = 0;
+        aggadagradsqrframes = adagradkeepweight * aggadagradsqrframes + (1.0f - adagradkeepweight) * mbSize;
+        const ElemType targetadagradavdenom_x_sqrtadagradsqrframes = static_cast<ElemType>(targetadagradavdenom * sqrt(aggadagradsqrframes));
+
+        DISPATCH_MATRIX_ON_FLAG(&gradients,
+            &gradients,
+            m_CPUMatrix->FSAdagrad(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, learnRatePerSample, momentum, adagradkeepweight, targetadagradavdenom_x_sqrtadagradsqrframes); SetDataLocation(CPU),
+            m_GPUMatrix->FSAdagrad(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, learnRatePerSample, momentum, adagradkeepweight, targetadagradavdenom_x_sqrtadagradsqrframes); SetDataLocation(GPU),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
     }
 
     template<class ElemType>

@@ -75,11 +75,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_samplesInRecurrentStep(1),
             m_visitedOrder(-1),
             m_index(-1),
-            m_lowlink(-1),
+            m_lowLink(-1),
             m_indexInLoop(0),
             m_visited(false),
             m_inStack(false),
-            m_reqMultiSeqHandling(false),
+            m_maskMissingColumnsToZero(false),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name)
         {
         }
@@ -127,8 +127,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // evaluate only N frames at time index timeIdxInSeq
         // Normally, N is 1 or it spans the entire minibatch.
         virtual void EvaluateThisNode(const FrameRange &) = 0;
-        // evaluate a node--this calls EvaluateThisNode() and MaskToZeroWhenLabelAndFeatureMissing() if needed
-        // TODO: name this better--which is the main entry point?
+        // evaluate a node--this calls EvaluateThisNode() and MaskMissingColumnsToZero() if needed
+        // this is the main entry point for Network; while EvaluateThisNode() is the virtual call into specific node implementation
         virtual void EvaluateThisNodeGivenInputs() = 0;
         virtual void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
 
@@ -166,104 +166,65 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SetFunctionAndGradientSize(const int numSamples) = 0;
 
-        virtual void ResetBound(MBLayoutPtr pMBLayout)
+        virtual void SetMBLayout(MBLayoutPtr pMBLayout)
         {
-            assert(pMBLayout->GetNumFrames() == pMBLayout->GetSize());  // TODO: move this check into MBLayout
+            assert(pMBLayout->GetNumTimeSteps() == pMBLayout->GetSize());  // TODO: move this check into MBLayout
             m_pMBLayout = pMBLayout;
         }
 
-        void SetLoopId(const int id) { m_loopId = id; }
-        void SetVisitedOrder(const int id) { m_visitedOrder = id; }
-        void SetIndex(const size_t ind) { m_index = ind; }
-
-        void Setlowlink(const size_t lowlink)
-        {
-            m_lowlink = lowlink;
-        }
-
-        void SetVisited(const bool visited)
-        {
-            m_visited = visited;
-        }
-
-        void SetInStack(const bool instack)
-        {
-            m_inStack = instack;
-        }
-
-        void SetIndexInLoop(const size_t index)
-        {
-            m_indexInLoop = index;
-        }
-
-        void clearCache()
+        void ClearCache()
         {
             m_loopId = -1;
             m_visitedOrder = -1;
             m_index = -1;
-            m_lowlink = -1;
+            m_lowLink = -1;
             m_indexInLoop = 0;
             m_visited = false;
             m_inStack = false;
         }
 
-        size_t GetIndex() const
+        void SetLoopId(const int id) { m_loopId = id; }
+        int GetLoopId() const { return m_loopId; }
+
+        void SetVisitedOrder(const int id) { m_visitedOrder = id; }
+        size_t GetVisitedOrder() const { return m_visitedOrder; }
+
+        void SetIndex(const size_t ind) { m_index = ind; }
+        size_t GetIndex() const { return m_index; }
+
+        void SetLowLink(const size_t lowlink) { m_lowLink = lowlink; }
+        size_t GetLowLink() const { return m_lowLink; }
+
+        void SetVisited(const bool visited) { m_visited = visited; }
+        bool IsVisisted() const { return m_visited; }
+
+        void SetInStack(const bool instack) { m_inStack = instack; }
+        bool IsInStack() const { return m_inStack; }
+
+        void SetIndexInLoop(const size_t index) { m_indexInLoop = index; }
+        size_t GetIndexInLoop() const { return m_indexInLoop; }
+
+        std::wstring GetName() const { return m_nodeName; }
+
+        // temporary function that is called to verify stuff is called as I think it is. Delete if this does not fire for a while.
+        void VerifyNumParallelSequences(size_t bsz)
         {
-            return m_index;
+            //m_samplesInRecurrentStep = bsz;
+            if (bsz != m_pMBLayout->GetNumParallelSequences())
+                LogicError("VerifyNumParallelSequences: value inconsistent with MB layout");
         }
 
-        size_t GetVisitedOrder() const
+        // This is used at 284 places inside nodes, most of the time as
+        // FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout)
+        size_t GetNumParallelSequences() const
         {
-            return m_visitedOrder;
+            //return m_samplesInRecurrentStep;
+            return m_pMBLayout->GetNumParallelSequences();
         }
 
-        size_t Getlowlink() const
-        {
-            return m_lowlink;
-        }
-
-        size_t GetIndexInLoop() const
-        {
-            return m_indexInLoop;
-        }
-
-        std::wstring GetName() const
-        {
-            return m_nodeName;
-        }
-
-        bool isVisisted() const
-        {
-            return m_visited;
-        }
-
-        bool isInStack() const
-        {
-            return m_inStack;
-        }
-        int LoopId() const
-        {
-            return m_loopId;
-        }
-
-        // TODO: these two will disappear once the information is correctly held in a FrameRange record
-        // This is called at 3 places; two are directly before ComputeGradientForChildren().
-        void SetNbrSlicesInEachRecurrentIteration(size_t bsz)
-        {
-            m_samplesInRecurrentStep = bsz;
-        }
-
-        // Note: only used in one place, SimpleEvaluator.h PreComputeActivityAtTime().
-        // The member is, however, read out at 284 places inside nodes,
-        // most of the time as
-        // FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep)
-        // This expression will be turned into a function call to right here, so that we compute this only at one place
-        // and can also handle the full-minibatch case.
-        // Let us try to get this member out of this class altogether; it belongs elsewhere.
-        size_t GetNbrSlicesInEachRecurrentIteration() const
-        {
-            return m_samplesInRecurrentStep;
-        }
+        // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
+        // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNode, LSTMNode)
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return false; }
 
         int64_t UpdateEvalTimeStamp()
         {
@@ -322,8 +283,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool& NeedGradient() { return m_needGradient; }
         const bool& NeedGradient() const { return m_needGradient; }
 
-        void SetReqMultiSeqHandlingTo(const bool v) { m_reqMultiSeqHandling = v; }
-        bool ReqMultiSeqHandling() const { return m_reqMultiSeqHandling; }
+        void SetMaskMissingColumnsToZero() { m_maskMissingColumnsToZero = true; }
+        bool NeedToMaskMissingColumnsToZero() const { return m_maskMissingColumnsToZero; }
 
         void InitRecurrentNode()    // this initialization says that this node is not inside a loop
         {
@@ -361,7 +322,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeGradientForChildren() = 0;
 
-        virtual void ComputeGradientForChildren(const size_t timeIdxInSeq) = 0;
+        virtual void ComputeGradientForChildren(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
 
         // TODO: some evaluation method to be abstracted, but types don't match
 
@@ -526,8 +487,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!IsLeaf())
                     m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
-                if (LoopId() >= 0)
-                    recurrentResult[LoopId()].push_back(shared_from_this());
+                if (GetLoopId() >= 0)
+                    recurrentResult[GetLoopId()].push_back(shared_from_this());
                 else
                     noRecurrentResult.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
             }
@@ -667,7 +628,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
-        bool m_reqMultiSeqHandling;  // indicates whether the results of operation should be masked to handle the cases that the utterances have different lengths when grouped together as a minibatch.
+        bool m_maskMissingColumnsToZero;  // indicates whether the results of operation should be masked to handle the cases that the utterances have different lengths when grouped together as a minibatch.
+        // ^^ This decides whether the node gets passed the full layout with flags or only the one without flags
+        //    and this is only ever tested in MaskMissingColumnsToZero(), of which two versions exist, one in ComputationNode and one in ClassBasedCrossEntropyWithSoftmaxNode
+        // Pertinent reduction operations (criterion nodes and gradient computation) always perform masking.
+        // Hence, this flag is only needed for special use cases where regular matrix ops are used for a 'reduce' operation.
         size_t m_inputWidth, m_inputHeight, m_inputChannels;  //how to interpret each column in the input as an image
         size_t m_outputWidth, m_outputHeight, m_outputChannels;  //how to interpret each column in the output as an image
 
@@ -682,7 +647,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// the order in reverse graph. 
         int m_visitedOrder;
         int m_index;
-        int m_lowlink;
+        int m_lowLink;          // TODO: comment this, as it is not obvious
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
@@ -697,8 +662,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
     // ComputationNode -- abstract base class for computation nodes parameterized by float vs. double
     // =======================================================================
-
-    // TODO: number of inputs should be a template parameter! SIZE_MAX for those that take variable numvber
 
     template<class ElemType>
     class ComputationNode : public ComputationNodeBase //Abstract Class that cannot be instantiated
@@ -811,10 +774,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_children[i] = UpCast(inputs[i]);      // (this checks the type)
         }
 
-        //making them virtual so that nodes that only copy values from it's children (e.g., dropout) can be efficient in evaluation
-        virtual const Matrix<ElemType>& FunctionValues() const {return m_functionValues;}
-        virtual Matrix<ElemType>& FunctionValues() { return m_functionValues;}
-
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
 
         // TODO: similar to DumpInfo; used by ExperimentalNetworkBuilder test implementation
@@ -851,24 +810,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        /*implement*/ void EvaluateThisNodeGivenInputs()
+        /*implement*/void EvaluateThisNodeGivenInputs()
         {
-            EvaluateThisNode();
+            EvaluateThisNode();     // this is a call to the virtual function that implements the actual operation
 
-            if (!UseCustomizedMultiSeqHandling())
-                MaskToZeroWhenLabelAndFeatureMissing(m_functionValues);
+            if (NeedToMaskMissingColumnsToZero() && !NodeDoesItsOwnCustomizedMissingColumnsMasking())       // this means the node does it by itself; if not, we do it for the node
+                MaskMissingColumnsToZero(m_functionValues);
         }
 
+        // TODO: use a FrameRange arg, then unify with above
+        // TODO: do we even need this extra function? Should Node know about this masking business, or is that the job of Network?
+        // TODO: rename this to make it more clear what this function does
         /*implement*/void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
         {
-            EvaluateThisNode(FrameRange(timeIdxInSeq, m_samplesInRecurrentStep));
+            EvaluateThisNode(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
 
-            if (!UseCustomizedMultiSeqHandling())
-                MaskToZeroWhenLabelAndFeatureMissing(m_functionValues, timeIdxInSeq);
+            if (NeedToMaskMissingColumnsToZero() && !NodeDoesItsOwnCustomizedMissingColumnsMasking())
+                MaskMissingColumnsToZero(m_functionValues, timeIdxInSeq);
         }
 
+#if 0   // (this function cannot be used currently since sentenceBegin is not a Matrix<ElemType> anymore; only affects LSTMNode which is no longer used)
         static void WINAPI SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
-            size_t nStream, ElemType initStateValue, Matrix<ElemType>& newprevstate)
+                                                          size_t nStream, ElemType initStateValue, Matrix<ElemType>& newprevstate)
         {
             Matrix<ElemType> colSeg(sentenceBegin.GetDeviceId());
             colSeg.Resize(nStream, nStream);
@@ -892,41 +855,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// add default state value if it is for reset
             Matrix<ElemType>::MultiplyAndWeightedAdd(initStateValue, ones, false, colSeg, false, 1.0, newprevstate);  /// += [0 initStateValue 0 ]
         }
+#endif
 
         /**
-        reset to error signals to 0 for any elements without labele
+        reset to error signals to 0 for any elements without labels
         */
-        bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t timeIdxInSeq=(size_t)-1)
+        // This sets MB columns to 0 that have the NoLabel or NoFeature flag set.
+        // This happens as a result of packing multiple sequences for parallel processing--there will be some gaps, which are flagged by these flags.
+        // Nodes that operate in 'map' style (input(j) -> output(j) independently) can ignore this; it will be garbage-in-garbage-out.
+        // However, nodes that 'reduce' minibatches (e.g. computing the sum of all frames across all sequences) must deal with the garbage.
+        // This function sets those to 0, assuming that now they can be reduced without affecting the result.
+        // This function can operate on the whole range or on a selected single frame and/or a single sequence.
+        // It is indirectly guarded by the m_maskMissingColumnsToZero flag, which, if false, will install a layout with IsAllNone() to be true. TODO: we better always install the same layout, and instead test m_maskMissingColumnsToZero here.
+        // Note that existing 'reduce' style operations--the criterion nodes and gradient computation--already call this.
+        bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX) const
         {
-            bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
+            bool foundLabelOrFeatureMissing = false; /// set to true if either nolabel or feature missing is processed
 
-            if (m_pMBLayout && !m_pMBLayout->IsEmpty())
+            if (!m_pMBLayout->IsAllNone())
             {
-                size_t nT = matrixToBeMasked.GetNumCols();
-                size_t nS = m_pMBLayout->GetNumStreams();
+                size_t nT = m_pMBLayout->GetNumTimeSteps();
+                size_t nS = m_pMBLayout->GetNumParallelSequences();
 
-                if (m_pMBLayout->GetSize() != nT / nS)
-                    LogicError("MaskToZeroWhenLabelAndFeatureMissing: m_pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
+                if (matrixToBeMasked.GetNumCols() != nT * nS)
+                    LogicError("MaskMissingColumnsToZero: m_pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
 
-                //Matrix<ElemType> colSeg(m_pMBLayout->m_sentenceBoundaryFlags.GetDeviceId());
+                size_t startT = (timeIdxInSeq == SIZE_MAX) ?  0 : timeIdxInSeq;
+                size_t endT   = (timeIdxInSeq == SIZE_MAX) ? nT : timeIdxInSeq + 1;
 
-                size_t startT = (timeIdxInSeq == (size_t)-1) ? 0 : timeIdxInSeq * nS;       // TODO: misnomer; startT, endT, and utt_t are not times but columns in the packed matrix
-                size_t endT = (timeIdxInSeq == (size_t)-1) ? nT : timeIdxInSeq * nS + nS;
-                for (size_t utt_t = startT; utt_t < endT; utt_t += nS)
+                size_t startS = (seqIndex == SIZE_MAX) ?  0 : seqIndex;
+                size_t endS   = (seqIndex == SIZE_MAX) ? nS : seqIndex + 1;
+
+                for (size_t t = startT; t < endT; t++)
                 {
-                    size_t t = utt_t / nS;
-
-                    if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel))
+                    if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeature))
                     {
-                        for (size_t id = 0; id < nS; id++)
-                            if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
-                                matrixToBeMasked.ColumnSlice(utt_t+id, 1).SetValue(0);
-                        processedExistsNoLabelorFeatureMissing = true;
+                        for (size_t id = startS; id < endS; id++)
+                            if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeature))
+                                matrixToBeMasked.ColumnSlice(t * nS  +  id, 1).SetValue(0);
+                        foundLabelOrFeatureMissing = true;
                     }
                 }
             }
 
-            return processedExistsNoLabelorFeatureMissing;
+            return foundLabelOrFeatureMissing;
         }
 
         /*
@@ -997,9 +969,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        const Matrix<ElemType>& GradientValues() const { return m_gradientValues; }
-        Matrix<ElemType>& GradientValues() { return m_gradientValues; }
-
         // up-cast to make life easier
         static ComputationNodePtr UpCast(ComputationNodeBasePtr inode)
         {
@@ -1028,14 +997,64 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // expand the inputs to exist up to the desired index
             while (childIndex >= m_children.size())
-            {
-                m_children.push_back(NULL);
-            }
+                m_children.push_back(nullptr);
 
             // set the input value
             m_children[childIndex] = node;
         }
 
+        // these are overridden by DropoutNode, ReshapeNode, and RowRepeatNode to optimize for the trivial case that those don't do anything
+        // TODO: lots of nodes read out m_functionValues directly--was that a bug or intentional? They have now been changed to ValueSlice(), i.e. would pick it up
+        virtual const Matrix<ElemType>& FunctionValues() const { return m_functionValues; }
+        virtual Matrix<ElemType>& FunctionValues() { return m_functionValues; }
+
+        const Matrix<ElemType>& GradientValues() const { return m_gradientValues; }
+        Matrix<ElemType>& GradientValues() { return m_gradientValues; }
+
+        // function to access any input and output, value and gradient, whole batch or single frame
+        // Note: This returns an object, not a reference. That object is a column slice, i.e. a small object that just points into another object.
+        // TODO: remove FrameRange::samplesInRecurrentStep from FrameRange, as it belongs into pMBLayout. Hence this function that binds both together.
+        // Note: This is not used anywhere yet, only a sketch how we may further abstract timing.
+        Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
+                                   const FrameRange & frameRange/*select frame or entire batch*/)
+        {
+            auto sequence = SIZE_MAX;
+            if (frameRange.IsAllFrames())
+            {
+                if (sequence == SIZE_MAX)
+                    return data.ColumnSlice(0, data.GetNumCols());
+                else
+                    LogicError("DataSlice: sequence index only supported when accessing individual frame"); // (not needed; doable but more involved, requiring a reshape)
+            }
+            else
+            {
+                size_t numParallelSequences = m_pMBLayout->GetNumParallelSequences();
+                if (numParallelSequences != frameRange.samplesInRecurrentStep)
+                    LogicError("DataSlice: inconsistent samplesInRecurrentStep");   // TODO: this will go away when we remove this memebr from FrameRange
+                size_t startColumn = frameRange.t() * numParallelSequences;
+                if (sequence == SIZE_MAX)
+                    return data.ColumnSlice(startColumn, numParallelSequences);
+                else
+                    return data.ColumnSlice(startColumn + sequence, 1);
+            }
+        }
+        enum ValueOrGradient { VALUE, GRADIENT };
+        Matrix<ElemType> DataSlice(ValueOrGradient valueOrGradient/*as it says*/,
+            const FrameRange & frameRange/*select frame or entire batch*/)
+        {
+            Matrix<ElemType> & data = (valueOrGradient == VALUE) ? FunctionValues() : GradientValues();
+            return DataSlice(data, frameRange);
+        }
+        Matrix<ElemType> ValueSlice(const FrameRange & frameRange/*select frame or entire batch*/)
+        {
+            return DataSlice(FunctionValues(), frameRange);
+        }
+        Matrix<ElemType> GradientSlice(const FrameRange & frameRange/*select frame or entire batch*/)
+        {
+            return DataSlice(GradientValues(), frameRange);
+        }
+
+        // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
         /*implement*/void ComputeGradientForChildren()
         {
             // batch is done only for feed-forward nodes
@@ -1044,8 +1063,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (size_t i=0; i<m_children.size(); i++)
             {
-                if (!UseCustomizedMultiSeqHandling())
-                    MaskToZeroWhenLabelAndFeatureMissing(m_gradientValues);
+                if (NeedToMaskMissingColumnsToZero() && !NodeDoesItsOwnCustomizedMissingColumnsMasking())
+                    MaskMissingColumnsToZero(m_gradientValues);
 
                 ComputationNodePtr child = Inputs(i);
                 if (child->NeedGradient())
@@ -1067,13 +1086,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif              
             }
         }
-
+        
+        // TODO: use a FrameRange here as well, then unify with above
         /*implement*/void ComputeGradientForChildren(const size_t timeIdxInSeq)
         {
             for (size_t i=0; i<m_children.size(); i++)
             {
-                if (!UseCustomizedMultiSeqHandling())
-                    MaskToZeroWhenLabelAndFeatureMissing(m_gradientValues, timeIdxInSeq);
+                if (NeedToMaskMissingColumnsToZero() && !NodeDoesItsOwnCustomizedMissingColumnsMasking())
+                    MaskMissingColumnsToZero(m_gradientValues, timeIdxInSeq);
 
                 ComputationNodePtr child = Inputs(i);
                 if (child->NeedGradient())
@@ -1083,7 +1103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         (msra::strfun::utf8 (child->OperationName())).c_str(),
                         (msra::strfun::utf8 (child->NodeName())).c_str());
 #endif              
-                    ComputeInputPartial(i, FrameRange(timeIdxInSeq, m_samplesInRecurrentStep)); //this computes partial wrt to the child and sums the gradient value in the child
+                    ComputeInputPartial(i, FrameRange(timeIdxInSeq, GetNumParallelSequences())); //this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
                 else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, 
@@ -1187,7 +1207,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_functionValues = m_functionValues; 
                 node->m_gradientValues = m_gradientValues;
 
-                node->m_reqMultiSeqHandling = m_reqMultiSeqHandling;
+                node->m_maskMissingColumnsToZero = m_maskMissingColumnsToZero;
             }
         }
 
@@ -1207,9 +1227,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// these two are used to pass gradients from future minibatch
         virtual void GetErrorsToPreviousMinibatch(Matrix<ElemType>&) {}
         virtual void SetErrorsFromFutureMinibatch(Matrix<ElemType>&) {}
-
-        // indicatess whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
-        virtual bool UseCustomizedMultiSeqHandling() { return false; }
 
     protected:
 
@@ -1280,10 +1297,11 @@ public: \
     using Base::SaveToFile; using Base::SetFunctionAndGradientSize; using Base::SetInput; using Base::Validate; \
 protected:  \
     using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
-    using Base::m_visitedOrder; using Base::m_index; using Base::m_lowlink; using Base::m_visited; using Base::m_inStack; \
+    using Base::m_visitedOrder; using Base::m_index; using Base::m_lowLink; using Base::m_visited; using Base::m_inStack; \
     using Base::m_indexInLoop; \
     using Base::m_pMBLayout; \
-    using Base::m_reqMultiSeqHandling; using Base::UseCustomizedMultiSeqHandling; \
+    using Base::m_maskMissingColumnsToZero; using Base::NodeDoesItsOwnCustomizedMissingColumnsMasking; using Base::GetNumParallelSequences; \
+    using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::SetMaskMissingColumnsToZero; \
     using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
     using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; using Base::s_timeStampCounter; \

@@ -1607,6 +1607,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!m_framemode)
                 *pMBLayout = *m_pMBLayout;
+            else
+                pMBLayout->SetAllNone();    // no flags in frame mode
         }
 
 
