@@ -2096,7 +2096,7 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
 template<class ElemType>
 void BatchSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
-    *pMBLayout = *m_pMBLayout;
+    pMBLayout->CopyFrom(m_pMBLayout);
 }
 
 template<class ElemType>

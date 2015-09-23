@@ -103,7 +103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // in this node we use a post-processed version of the shared pMBLayout
             // This is to decide which frames should be filled with default values. 
-            *m_pShiftedMBLayout = *m_pMBLayout;   // copy it; it gets modified below (this is a copy assignment, not a reference.)
+            m_pShiftedMBLayout->CopyFrom(m_pMBLayout);      // it gets modified below
             if (m_timeStep > 1)
             {
                 // modify m_pShiftedMBLayout
@@ -1379,7 +1379,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //boundary.ColumnSlice(0, 1).SetValue(((int) MinibatchPackingFlags::SequenceStart));
                 //minibatchPackingFlags[1] = MinibatchPackingFlags::SequenceStart;
                 pMBLayout->Set(0, 1, MinibatchPackingFlags::SequenceStart); // TODO: strange--start at frame[1] instead of [0]?
-                Base::SetMBLayout(pMBLayout);
+                Base::LinkToMBLayout(pMBLayout);
 
                 f0 = Inputs(0)->FunctionValues();
                 f1 = Inputs(1)->FunctionValues();

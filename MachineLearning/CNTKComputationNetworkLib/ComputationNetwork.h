@@ -75,7 +75,7 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) :
-        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())//, m_pMBNoLayout(make_shared<MBLayout>())
+        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())
     {
         m_randomSeedOffset = 0;
         m_actualMBSize = 0;
@@ -558,14 +558,9 @@ public:
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedEvaluate = false;
 
-        // pass #slices and MB layout to all nodes
-        // TODO: in the future, these will be different on different nodes; and probably should be propagated by nodes themselves, like functionValues
+        // (left-over from refactoring: now we only verify that stuff is consistent)
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-        {
-            // TODO: these layout pointers only declare a sharing structure for layouts. No need to set them up every minibatch.
-            (*nodeIter)->SetMBLayout(m_pMBLayout);
             (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
-        }
 
         // traverse all nodes in the pre-determined evaluation order
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
@@ -1159,6 +1154,8 @@ private:
         {
             (*nodeIter)->PrintSelfBeforeValidation();
             (*nodeIter)->Validate();
+            // also install the layout pointer  --TODO: to support inconsistent layouts, this will in the future be done by Validate()
+            (*nodeIter)->LinkToMBLayout(m_pMBLayout);
         }
 
         fprintf(stderr, "\n\n");
@@ -1564,7 +1561,7 @@ protected:
 
     // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
-    MBLayoutPtr m_pMBLayout;
+    MBLayoutPtr m_pMBLayout;    // note that this must be installed before doing anything that needs it (default leaves a nullptr)
     MBLayoutPtr m_pMBNoLayout;  // this alternative one is passed when no layout is available/should be used
 
     int m_actualMBSize;         // current MB size in columns --note: this is not #frames, if we have multiple parallel sequences, cf. MBLayout
