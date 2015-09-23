@@ -49,21 +49,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
         {
                 Init(1, 1);
-            }
+        }
         DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
             ComputationNode<ElemType>(deviceId, name),
             m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
         {
-                Init(row_size, col_size, initialActivationValue);
+            Init(row_size, col_size, initialActivationValue);
 
-                m_timeStep = (int)timeStep;
+            m_timeStep = (int)timeStep;
 
-                m_functionValues.SetValue(m_initialActivationValue);
-                m_delayedActivation.SetValue(m_initialActivationValue);
+            m_functionValues.SetValue(m_initialActivationValue);
+            m_delayedActivation.SetValue(m_initialActivationValue);
 
-                m_gradientValues.Resize(row_size, col_size);
-                m_gradientValues.SetValue(0.0f);
-            }
+            m_gradientValues.Resize(row_size, col_size);
+            m_gradientValues.SetValue(0.0f);
+        }
     public:
         void SaveToFile(File& fstream) const
         {
@@ -94,17 +94,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"DelayedValue"; }
 
-        //Set sentence boundary information according to a specified time step. 
-        virtual void SetMBLayout(MBLayoutPtr pMBLayout)
+    private:
+        // cache a post-processed version of m_pMBLayout (depends on the actual minibatch)
+        void CacheMBLayout()
         {
-            Base::SetMBLayout(pMBLayout);
-
             if (m_timeStep <= 0)
                 LogicError("timeStep should be 1 or larger");
 
             // in this node we use a post-processed version of the shared pMBLayout
             // This is to decide which frames should be filled with default values. 
-            *m_pShiftedMBLayout = *pMBLayout;   // gets modified below (this is a copy assignment, not a reference.)
+            *m_pShiftedMBLayout = *m_pMBLayout;   // copy it; it gets modified below (this is a copy assignment, not a reference.)
             if (m_timeStep > 1)
             {
                 // modify m_pShiftedMBLayout
@@ -113,21 +112,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // then this becomes
                 //    S S X X E S S X X X E N N
 
-                size_t numRows = pMBLayout->GetNumParallelSequences();
+                size_t numRows = m_pMBLayout->GetNumParallelSequences();
 
                 // each row has a number to indicate how many values should be reset for that utterance
                 vector<int> numResetLeft(numRows, 0);
-                for (size_t i = 0; i < pMBLayout->GetSize(); i++)   // i = frame index (time)
+                for (size_t i = 0; i < m_pMBLayout->GetSize(); i++)   // i = frame index (time)
                 {
-                    if (pMBLayout->Is(i, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
+                    if (m_pMBLayout->Is(i, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
                     {
                         //we set timeStep-1 elements following it to be SequenceStart until met NoInput
                         for (size_t j = 0; j < numRows; j++)        // j = stream
                         {
                             //we use & since ((int) MinibatchPackingFlags::SequenceStart) may come with NoLabel
-                            if (pMBLayout->Is(j, i, SequenceStart_or_End))
+                            if (m_pMBLayout->Is(j, i, SequenceStart_or_End))
                                 numResetLeft[j] = m_timeStep;
-                            else if (pMBLayout->Is(j, i, MinibatchPackingFlags::NoFeature))
+                            else if (m_pMBLayout->Is(j, i, MinibatchPackingFlags::NoFeature))
                                 numResetLeft[j] = 0;
                         }
                     }
@@ -150,23 +149,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
         }
+    public:
 
-        // this one differs in loop direction
-#if 1
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/)
-        {
-            LogicError("ComputeInputPartial: This function cannot be called in whole-batch mode. The ComputationNetwork must unroll the loop and call it with individual frames.");
-        }
-#else
-        virtual void ComputeInputPartial(const size_t inputIndex) = 0;
-#endif
-
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex != 0) // TODO: this friendly error message should come out of Validate()
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
+
+            // special case: DelayedValueNodes may be used outside of loops
+            // TODO: this should be a bulk operation; this implementation is a quick hack
+            int dir = direction;    // (this avoids a 'conditional expression is constant' warning)
             if (frameRange.IsAllFrames())
-                LogicError("ComputeInputPartial: This function cannot be called in whole-batch mode. The ComputationNetwork must unroll the loop and call it with individual frames.");
+            {
+                // recursive call to ourselves
+                if (dir < 0) for (size_t t = GetNumTimeSteps(); t --> 0; )
+                    ComputeInputPartial(inputIndex, FrameRange(t, GetNumParallelSequences()));
+                else for (size_t t = 0; t < m_pMBLayout->GetNumTimeSteps(); t++)
+                    ComputeInputPartial(inputIndex, FrameRange(t, GetNumParallelSequences()));
+                return;
+            }
 
             size_t t = frameRange.t();
 
@@ -209,26 +210,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        // this one differs in loop direction
-#if 1
-        virtual void EvaluateThisNode()
-        {
-            LogicError("EvaluateThisNode: This function cannot be called in whole-batch mode. The ComputationNetwork must unroll the loop and call it with individual frames.");
-        }
-#else
-        virtual void EvaluateThisNode() = 0;
-#endif
-
-        // this one differs in the starting condition
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) = 0;
-
-        void EvaluateThisNodeRP(const FrameRange & frameRange, bool isFirstFrame)
+        virtual void EvaluateThisNode(const FrameRange & frameRange) override
         {
             assert(m_pMBLayout);
 
+            // special case: DelayedValueNodes may be used outside of loops
+            // TODO: this should be a bulk operation; this implementation is a quick hack
+            int dir = direction;    // (this avoids a 'conditional expression is constant' warning)
             if (frameRange.IsAllFrames())
-                LogicError("EvaluateThisNodeRP: This function cannot be called in whole-batch mode. The ComputationNetwork must unroll the loop and call it with individual frames.");
+            {
+                // recursive call to ourselves
+                if (dir < 0) for (size_t t = 0; t < m_pMBLayout->GetNumTimeSteps(); t++)
+                    EvaluateThisNode(FrameRange(t, GetNumParallelSequences()));
+                else for (size_t t = GetNumTimeSteps(); t--> 0; )
+                    EvaluateThisNode(FrameRange(t, GetNumParallelSequences()));
+                return;
+            }
+
             size_t t = frameRange.t();
+
+            // starting condition
+            bool isFirstFrame = dir < 0 ? t == 0 : t == Inputs(0)->GetNumTimeSteps() - 1;
+
+            // first time for this minibatch: update our post-prcoessed version of the layout
+            if (isFirstFrame)
+                CacheMBLayout();
 
             // reset past activation as it reached to the begining of a minibatch
             // the node pointed hasn't yet updated, so it is the past activation 
@@ -243,7 +249,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //MinibatchPackingFlags minibatchPackingFlags = frameLayout.second;
 
             size_t mNbr = m_pMBLayout->GetNumParallelSequences();
-            if (mNbr != frameRange.NumCols()) LogicError("EvaluateThisNodeRP: inconsistency between m_pMBLayout->GetNumParallelSequences() and frameRange.NumCols()");
+            if (mNbr != frameRange.NumCols()) LogicError("EvaluateThisNode: inconsistency between m_pMBLayout->GetNumParallelSequences() and frameRange.NumCols()");
             assert(m_timeStep > 0);
             if (m_functionValues.GetNumRows() != inputFunctionValues.GetNumRows() || m_functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
             {
@@ -381,8 +387,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define UsingDelayedValueNodeMembers UsingComputationNodeMembers; \
     using Base::m_initialActivationValue; using Base::m_delayedActivation; using Base::m_timeStep; \
-    using Base::m_pShiftedMBLayout; using Base::m_historyAlreadySet; \
-    /*using Base::ComputeInputPartialRP;*/ using Base::EvaluateThisNodeRP
+    using Base::m_pShiftedMBLayout; using Base::m_historyAlreadySet;
 
     // =======================================================================
     // PastValueNode -- delay node
@@ -433,10 +438,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 #endif
 
+#if 0
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)  
         {
             EvaluateThisNodeRP(frameRange, frameRange.t() == 0);
         }
+#endif
     };
 
     template class PastValueNode<float>; 
@@ -491,11 +498,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 #endif
 
+#if 0
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
             //EvaluateThisNodeRP(frameRange, frameRange.t() == Inputs(0)->FunctionValues().GetNumCols() / GetNumParallelSequences() - 1);
-            EvaluateThisNodeRP(frameRange, frameRange.t() == Inputs(0)->GetMBLayout()->GetNumTimeSteps() - 1);
+            EvaluateThisNodeRP(frameRange, frameRange.t() == Inputs(0)->GetNumTimeSteps() - 1);
         }
+#endif
     };
 
     template class FutureValueNode<float>;

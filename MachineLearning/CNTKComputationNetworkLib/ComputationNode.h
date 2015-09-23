@@ -166,8 +166,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SetFunctionAndGradientSize(const int numSamples) = 0;
 
-        // this function is overridden by DelayedValueNode in order to pre-compute a shifted version for internal use
-        virtual void SetMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
+        void SetMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
         MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
 
         void ClearCache()
@@ -216,8 +215,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout)
         size_t GetNumParallelSequences() const
         {
-            //return m_samplesInRecurrentStep;
             return m_pMBLayout->GetNumParallelSequences();
+        }
+
+        size_t GetNumTimeSteps() const
+        {
+            if (!m_pMBLayout)       // TODO: or should this function simply be invalid to call if we have no layout? E.g. a LearnableParameter has no time steps
+                return GetNumParallelSequences();
+            else if (m_pMBLayout->IsAllNone())
+                return GetNumCols() / GetNumParallelSequences();
+            else if (m_pMBLayout->GetNumTimeSteps() * GetNumParallelSequences() != GetNumCols())
+                LogicError("GetNumTimeSteps: inconsistency between layout and actual number of columns");
+            // TODO: ^^ much of this should go away, as in the future, the layout will always correctly know the #samples
+            return m_pMBLayout->GetNumTimeSteps();
         }
 
         // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.

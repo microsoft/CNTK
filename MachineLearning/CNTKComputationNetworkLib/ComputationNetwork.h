@@ -562,9 +562,7 @@ public:
         // TODO: in the future, these will be different on different nodes; and probably should be propagated by nodes themselves, like functionValues
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
-            // TODO: SetMBLayout is a virtual function, with only one use: recurrent nodes cache a modified copy of the layout.
-            //       Should be changed such that layout is set only once during validation, and cached layout is picked up upon setting minibatch size, or something.
-            //       Really needs to be picked up by the Eval call, but inside a frame loop there will be more than one call
+            // TODO: these layout pointers only declare a sharing structure for layouts. No need to set them up every minibatch.
             (*nodeIter)->SetMBLayout(m_pMBLayout);
             (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
         }
