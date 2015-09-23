@@ -298,7 +298,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            PrintSelfBeforeValidation(true/*allowNulls*/);
+            PrintSelfBeforeValidation();
 
             if (m_children.size() != 1)
                 LogicError("PastValue and FutureValue operations take one input.");

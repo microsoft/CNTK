@@ -531,7 +531,7 @@ public:
 
     void SetRequestNodesMultiSeqHandling();
 
-    // MAIN ENTRY POINT for evaluation (forward prop)
+    // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
     // TODO: pass a set of nodes instead of only one
     // TODO: rename to ForwardProp()? To make it very clear?
     void Evaluate(const ComputationNodeBasePtr rootNode)
@@ -562,14 +562,10 @@ public:
         // TODO: in the future, these will be different on different nodes; and probably should be propagated by nodes themselves, like functionValues
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
-            // TODO: we should just always set the real layout; the nodes themselves should know to ignore it based on NeedToMaskMissingColumnsToZero()
-            // MaskMissingColumnsToZero() will test whether the layout is all none, and then skip.
-            // This is the only place where SetMBLayout() is ever called on a node. Hence, we could test NeedToMaskMissingColumnsToZero() instead.
-            // Note that NeedToMaskMissingColumnsToZero() is true only where it is necessary; that is, most node have it set to false (since most nodes can just map garbage-in-garbage-out).
-            //if ((*nodeIter)->NeedToMaskMissingColumnsToZero())
-                (*nodeIter)->SetMBLayout(m_pMBLayout);
-            //else
-            //    (*nodeIter)->SetMBLayout(m_pMBNoLayout);
+            // TODO: SetMBLayout is a virtual function, with only one use: recurrent nodes cache a modified copy of the layout.
+            //       Should be changed such that layout is set only once during validation, and cached layout is picked up upon setting minibatch size, or something.
+            //       Really needs to be picked up by the Eval call, but inside a frame loop there will be more than one call
+            (*nodeIter)->SetMBLayout(m_pMBLayout);
             (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
         }
 
@@ -584,9 +580,10 @@ public:
             {
                 const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
                 // node participates in a recurrent loop: process the loop frame by frame
+                // TODO: move this out of the loop, always do it; gives nodes change to update internal cached layout
                 for (auto & nodeIter : recurrentNodes)
                     nodeIter->SetFunctionAndGradientSize(m_actualMBSize);
-    
+
                 const size_t T = m_actualMBSize / GetNumParallelSequences();
 
                 // for every time step run through all nodes in this particular loop
@@ -1149,6 +1146,9 @@ public: // yak--used by NDLUtil. Will go away someday.
 private:
 
     // validate sub-network needed to evalute a specific output node
+    // This calls Validate() on every node.
+    // This is called lazily but once only per node until next ClearCache()
+    // TODO: I can't see a clear pattern when ClearCache() is called. E.g. at the start of each epoch? Or never in normal operation (init only at construction)?
     // Note: under some circumstances, one must call FormRecurrentNodes() on this node before calling this. TODO: Not clear which ones.
     // TODO: ^^ is this really needed? Can we just call it inside?
     void ValidateSubNetwork(const ComputationNodeBasePtr rootNode)
@@ -1159,7 +1159,7 @@ private:
 
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            (*nodeIter)->PrintSelfBeforeValidation(true);   // TODO: only called with 'true/*allowNulls*/' from PairNetworkNode and DelayedValueNodeBase
+            (*nodeIter)->PrintSelfBeforeValidation();
             (*nodeIter)->Validate();
         }
 
@@ -1167,7 +1167,8 @@ private:
     }
 public:
     // prepares the network for computation
-    // Done lazily, called for every minibatch's invocation of EvaluateNode().
+    // Done lazily, called for every minibatch's invocation of EvaluateNode(), but memoizing which nodes were done already.
+    // BUGBUG? Lazy triggers on the root node. I.e. for two different root nodes (training, eval), it validates twice.
     void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode)
     {
         const auto inserted = m_built.insert(rootNode).second;  // remember we built it
