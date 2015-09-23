@@ -240,7 +240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void PrintSelf(bool printMatrices = false) const = 0;
 
         // called in validation loop right before Validate()
-        virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
+        virtual void PrintSelfBeforeValidation() const
         {
             fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
 
@@ -255,12 +255,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     if (child == nullptr)
                     {
-                        if (allowNulls)
-                        {
-                            fprintf(stderr, "NULL");
-                            continue;
-                        }
-                        throw runtime_error("One of the children is missing.");
+                        fprintf(stderr, "NULL");
+                        continue;
                     }
 
 
