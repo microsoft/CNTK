@@ -166,7 +166,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SetFunctionAndGradientSize(const int numSamples) = 0;
 
-        void SetMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
+        void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
         MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
 
         void ClearCache()

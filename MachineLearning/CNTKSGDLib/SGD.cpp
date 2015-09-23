@@ -1948,8 +1948,7 @@ template<class ElemType>
                 {
                     if (!useDistributedMBReading && useParallelTrain && trainSetDataReader->RequireSentenceSeg())
                     {
-                        *net.GetMBLayoutPtr() = *pMBLayout;
-                        // TODO: ^^ we should just pass pointers; this current code is semantically identical to before the change to MBLayout
+                        net.GetMBLayoutPtr()->CopyFrom(pMBLayout);
                         net.VerifyActualNumParallelSequences(nSlices);
                     }
                     else
@@ -1977,7 +1976,7 @@ template<class ElemType>
 #else
                         refNet.SetActualMiniBatchSize(actualMBSize);            // TODO: SetActualMiniBatchSizeFromFeatures() should have the same result, no?
 #endif
-                        *refNet.GetMBLayoutPtr() = *net.GetMBLayoutPtr();       // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
+                        refNet.GetMBLayoutPtr()->CopyFrom(net.GetMBLayoutPtr());       // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
                         refNet.VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
 
                         refNet.Evaluate(refNode);
