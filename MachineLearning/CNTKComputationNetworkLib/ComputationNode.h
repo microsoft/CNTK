@@ -283,6 +283,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool& NeedGradient() { return m_needGradient; }
         const bool& NeedGradient() const { return m_needGradient; }
 
+        // only called from SetRequestNodesMultiSeqHandling() (which is in turn called from BuildAndValidateSubNetwork())
+        // and from the deprecated LSTMNode and PairNode
+        // TODO: remove this flag, instead call it based on testing the user flag directly
         void SetMaskMissingColumnsToZero() { m_maskMissingColumnsToZero = true; }
         bool NeedToMaskMissingColumnsToZero() const { return m_maskMissingColumnsToZero; }
 

@@ -36,7 +36,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         void Init(size_t row_size, size_t col_size, ElemType initialActivationValue = (ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
-            SetMaskMissingColumnsToZero();
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
             m_functionValues.Resize(row_size, col_size);
@@ -157,6 +156,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
+            // TODO: (1) Mask.. should take a FrameRange; and (2) why not mask inside the loop?
+            if (frameRange.IsAllFrames())
+                MaskMissingColumnsToZero(m_gradientValues);
+            else
+                MaskMissingColumnsToZero(m_gradientValues, frameRange.t());
+
             if (inputIndex > 0)
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
 
@@ -235,7 +240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int d = delayedIndex;
             if (d < 0 || d >= inputFunctionValues.GetNumCols())
                 d = (int)functionValues.Mod((float)delayedIndex, (float)delayedActivation.GetNumCols());
-            // this can point to the past activity of the previous minibatch
+            // this can point to the past activation of the previous minibatch
 
             Matrix<ElemType> out = ValueSlice(frameRange);
             Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
@@ -386,7 +391,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0) // TODO: is this check necessary here? Can this be a generic check in the base class?
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
 
-            int nbrSamples = GradientValues().GetNumCols() / GetNumParallelSequences(); 
+            // TODO: why not mask inside the loop?
+            MaskMissingColumnsToZero(m_gradientValues);
+
+            int nbrSamples = GradientValues().GetNumCols() / GetNumParallelSequences();
             // TODO: call the looping version below to avoid code dup
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
                 ComputeInputPartialRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
@@ -402,20 +410,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
                 EvaluateThisNodeRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
 
-            //set the past activity to be used by next minibatch
+            //set the past activation to be used by next minibatch
             m_delayedActivation = Inputs(0)->FunctionValues();
+
+            MaskMissingColumnsToZero(m_functionValues);
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)  
         {
-            // reset past activity as it reached to the begining of a minibatch
-            // the node pointed hasn't yet updated, so it is the past activity 
+            // reset past activation as it reached to the begining of a minibatch
+            // the node pointed hasn't yet updated, so it is the past activation 
             assert(m_pMBLayout);
 
             if (frameRange.t() == 0 && m_historyAlreadySet == false)
                 m_delayedActivation = Inputs(0)->FunctionValues();
             
             EvaluateThisNodeRP(frameRange);
+
+            MaskMissingColumnsToZero(m_functionValues, frameRange.t()); // TODO: make this take a FrameRange
         }
     };
 
@@ -449,6 +461,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0)
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
 
+            // TODO: why not mask inside the loop?
+            MaskMissingColumnsToZero(m_gradientValues);
+
             int nbrSamples = GradientValues().GetNumCols() / GetNumParallelSequences();
             // TODO: call the looping version below to avoid code dup
             for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
@@ -463,8 +478,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
                 EvaluateThisNodeRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
 
-            //set the future activity to be used by next minibatch
+            //set the future activation to be used by next minibatch
             m_delayedActivation = Inputs(0)->FunctionValues();
+
+            MaskMissingColumnsToZero(m_functionValues);
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
@@ -475,6 +492,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_delayedActivation = Inputs(0)->FunctionValues();
 
             EvaluateThisNodeRP(frameRange);
+
+            MaskMissingColumnsToZero(m_functionValues, frameRange.t()); // TODO: make this take a FrameRange
         }
     };
 
@@ -515,7 +534,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_use_errors_from_future_minibatch(false),
             m_DefaultState((ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
-            SetMaskMissingColumnsToZero();
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
