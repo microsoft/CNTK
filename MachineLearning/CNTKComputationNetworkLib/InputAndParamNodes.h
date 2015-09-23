@@ -530,7 +530,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
         void Init(size_t row_size, size_t col_size)
         {
-            SetMaskMissingColumnsToZero();
             m_functionValues.Resize(row_size, col_size);
         }
     public:
