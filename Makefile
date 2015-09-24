@@ -52,7 +52,7 @@ CXX = mpic++
 
 INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib BrainScript
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
-CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror
+CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -Wno-error=literal-suffix
 LIBPATH:=
 LIBS:=
 LDFLAGS:=
@@ -328,14 +328,14 @@ KALDIREADER:=$(LIBDIR)/KaldiReader.so
 ALL+=$(KALDIREADER)
 SRC+=$(KALDIREADER_SRC)
 
-$(KALDIREADER): $(KALDIREADER_OBJ)
+$(KALDIREADER): $(KALDIREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
 
 KALDIWRITER:=$(LIBDIR)/KaldiWriter.so
 ALL+=$(KALDIWRITER)
 
-$(KALDIWRITER): $(KALDIREADER_OBJ)
+$(KALDIWRITER): $(KALDIREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
@@ -354,7 +354,7 @@ KALDI2READER:=$(LIBDIR)/Kaldi2Reader.so
 ALL+=$(KALDI2READER)
 SRC+=$(KALDI2READER_SRC)
 
-$(KALDI2READER): $(KALDI2READER_OBJ)
+$(KALDI2READER): $(KALDI2READER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
 

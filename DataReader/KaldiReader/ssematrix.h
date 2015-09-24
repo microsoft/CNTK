@@ -278,7 +278,7 @@ public:
                          bool addtoresult, const float thisscale, const float weight)
     {
         assert (a.size() == b.size());
-        assert ((15 & (int) &a[0]) == 0); assert ((15 & (int) &b[0]) == 0);   // enforce SSE alignment
+        assert ((15 & (long) &a[0]) == 0); assert ((15 & (long) &b[0]) == 0);   // enforce SSE alignment
 
         size_t nlong = (a.size() + 3) / 4; // number of SSE elements
         const msra::math::float4 * pa = (const msra::math::float4 *) &a[0];
@@ -313,9 +313,9 @@ public:
         // for (size_t k = 0; k < 4; k++)
         //     dotprod (row, const_array_ref<float> (&cols4[k * cols4stride], cols4stride), usij[k * usijstride]);
 
-        assert ((15 & (int) &row[0]) == 0);
-        assert ((15 & (int) &cols4[0]) == 0);
-        assert ((15 & (int) &cols4[cols4stride]) == 0);
+        assert ((15 & (long) &row[0]) == 0);
+        assert ((15 & (long) &cols4[0]) == 0);
+        assert ((15 & (long) &cols4[cols4stride]) == 0);
         //assert (cols4stride * 4 == cols4.size());     // (passed in one vector with 4 columns stacked on top of each other)
         //assert (row.size() * 4 == cols4.size());  // this assert is no longer appropriate because of further breaking into blocks
 
@@ -1152,7 +1152,7 @@ public:
         foreach_coord (i, j, us)
             if (std::isnan (us(i,j)))
             {
-                fprintf (stderr, "hasnan: NaN detected at %s (%d,%d)\n", name, i, j);
+                fprintf (stderr, "hasnan: NaN detected at %s (%zd,%zd)\n", name, i, j);
                 return true;
             }
 #endif
@@ -1257,12 +1257,13 @@ public:
 
 template<class ssematrixbase> class ssematrix : public ssematrixbase
 {
+    using base_t = ssematrixbase;
     // helpers for SSE-compatible memory allocation
 #ifdef __MSC_VER
-    static __declspec(noreturn) void failed (size_t nbytes) { static/*not thread-safe--for diagnostics only*/ char buf[80] = { 0 }; sprintf_s (buf, "allocation of SSE vector failed (%d bytes)", nbytes); throw std::bad_exception (buf); }
+    static __declspec(noreturn) void failed (size_t nbytes) { static/*not thread-safe--for diagnostics only*/ char buf[80] = { 0 }; sprintf_s (buf, sizeof(buf), "allocation of SSE vector failed (%d bytes)", nbytes); throw std::bad_exception (buf); }
 #endif
 #ifdef __unix__
-    static void failed (size_t nbytes) { static/*not thread-safe--for diagnostics only*/ char buf[80] = { 0 }; sprintf_s (buf, "allocation of SSE vector failed (%d bytes)", nbytes); throw std::bad_exception (); }
+    static void failed (size_t nbytes) { static/*not thread-safe--for diagnostics only*/ char buf[80] = { 0 }; sprintf_s (buf, sizeof(buf), "allocation of SSE vector failed (%zd bytes)", nbytes); throw std::bad_exception (); }
 #endif
 #if 0   // TODO: move to separate header file numahelpers.h
     template<typename T> static T * new_sse (size_t nbytes) { T * pv = (T *) msra::numa::malloc (nbytes * sizeof (T), 16); if (pv) return pv; failed (nbytes * sizeof (T)); }
@@ -1286,18 +1287,18 @@ template<class ssematrixbase> class ssematrix : public ssematrixbase
     };
 public:
     // construction
-    ssematrix() { clear(); }
-    ssematrix (size_t n, size_t m) { clear(); resize (n, m); }
-    ssematrix (size_t n) { clear(); resize (n, 1); }  // vector
-    ssematrix (const ssematrix & other) { clear(); assign (other); }
-    ssematrix (const ssematrixbase & other) { clear(); assign (other); }
+    ssematrix() { base_t::clear(); }
+    ssematrix (size_t n, size_t m) { base_t::clear(); resize (n, m); }
+    ssematrix (size_t n) { base_t::clear(); resize (n, 1); }  // vector
+    ssematrix (const ssematrix & other) { base_t::clear(); assign (other); }
+    ssematrix (const ssematrixbase & other) { base_t::clear(); assign (other); }
     ssematrix (ssematrix && other) { this->move (other); }
-    ssematrix (const std::vector<float> & other) { clear(); resize (other.size(), 1); foreach_index (k, other) (*this)[k] = other[k]; }
+    ssematrix (const std::vector<float> & other) { base_t::clear(); resize (other.size(), 1); foreach_index (k, other) (*this)[k] = other[k]; }
 
     // construct elementwise with a function f(i,j)
     template<typename FUNCTION> ssematrix (size_t n, size_t m, const FUNCTION & f)
     {
-        clear();
+        base_t::clear();
         resize (n, m);
         auto & us = *this;
         foreach_coord (i, j, us)
@@ -1349,7 +1350,7 @@ public:
     void resizeonce (size_t n, size_t m)
     {
 #if 1   // BUGBUG: at end of epoch, resizes are OK... so we log but allow them
-        if (!empty() && (n != this->numrows || m != this->numcols))
+        if (!base_t::empty() && (n != this->numrows || m != this->numcols))
             fprintf (stderr, "resizeonce: undesired resize from %d x %d to %d x %d\n", this->numrows, this->numcols, n, m);
         resize (n, m);
 #else
@@ -1431,8 +1432,8 @@ public:
     }
 
     // paging support (used in feature source)
-    void topagefile (FILE * f) const { if (!empty()) fwriteOrDie (this->p, sizeinpagefile(), 1, f); }
-    void frompagefile (FILE * f) { if (!empty()) freadOrDie (this->p, sizeinpagefile(), 1, f); }
+    void topagefile (FILE * f) const { if (!base_t::empty()) fwriteOrDie (this->p, sizeinpagefile(), 1, f); }
+    void frompagefile (FILE * f) { if (!base_t::empty()) freadOrDie (this->p, sizeinpagefile(), 1, f); }
     size_t sizeinpagefile() const { return this->colstride * this->numcols * sizeof (*(this->p)); }
 
     // getting a one-column sub-view on this

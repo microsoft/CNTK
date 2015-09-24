@@ -178,7 +178,7 @@ public:
           timegetbatch (0), timechecklattice (0)
     {
         firstvalidepochstartframe = source.firstvalidglobalts (epochstartframe); // epochstartframe may fall between utterance boundaries; this gets us the first valid boundary
-        fprintf (stderr, "minibatchiterator: epoch %d: frames [%d..%d] (first utterance at frame %d) with %d datapasses\n",
+        fprintf (stderr, "minibatchiterator: epoch %zd: frames [%zd..%zd] (first utterance at frame %zd) with %zd datapasses\n",
                  epoch, epochstartframe, epochendframe, firstvalidepochstartframe, datapasses);
         mbstartframe = firstvalidepochstartframe;
         datapass = 0;
@@ -196,7 +196,7 @@ public:
           timegetbatch (0), timechecklattice (0)
     {
         firstvalidepochstartframe = source.firstvalidglobalts (epochstartframe); // epochstartframe may fall between utterance boundaries; this gets us the first valid boundary
-        fprintf (stderr, "minibatchiterator: epoch %d: frames [%d..%d] (first utterance at frame %d) with %d datapasses\n",
+        fprintf (stderr, "minibatchiterator: epoch %zd: frames [%zd..%zd] (first utterance at frame %zd) with %zd datapasses\n",
                  epoch, epochstartframe, epochendframe, firstvalidepochstartframe, datapasses);
         mbstartframe = firstvalidepochstartframe;
         datapass = 0;
@@ -222,7 +222,7 @@ public:
         {
             mbstartframe = firstvalidepochstartframe;
             datapass++;
-            fprintf (stderr, "\nminibatchiterator: entering %d-th repeat pass through the data\n", datapass+1);
+            fprintf (stderr, "\nminibatchiterator: entering %zd-th repeat pass through the data\n", datapass+1);
         }
         fillorclear();
     }
