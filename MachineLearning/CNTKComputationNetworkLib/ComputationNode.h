@@ -192,7 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
         }
 
-        virtual void SetFunctionAndGradientMBSize(const int numSamples) = 0;
+        virtual void SetFunctionAndGradientMBSize(size_t numSamples) = 0;
 
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
         MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
@@ -845,7 +845,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // BUGBUG: This should only change nodes that emit minibatches, but not e.g. parameters or criterion nodes
         //         Cannot be solved by overrides, since parameters may combine before being applied, and nodes won't know
         // virtual, but currently only overridden by GMMLogLikelihoodNode (which allocates some internal temp memory)
-        virtual void SetFunctionAndGradientMBSize(const int numSamples)
+        virtual void SetFunctionAndGradientMBSize(size_t numSamples)
         {
             size_t numRows = m_functionValues.GetNumRows();
             if (numRows > 0 && numSamples > 0)

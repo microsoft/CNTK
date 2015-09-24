@@ -587,7 +587,7 @@ public:
                 // TODO: move this out of the loop, always do it; gives nodes change to update internal cached layout
                 //       ^^ not that simple, since some should not be scaled, such as parameters and criterion nodes
                 for (auto & nodeIter : recurrentNodes)
-                    nodeIter->SetFunctionAndGradientMBSize((int)m_actualMBSize);
+                    nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize);
 
                 const size_t T = m_actualMBSize / GetNumParallelSequences();
 
