@@ -391,6 +391,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        // helper function to infer the MBLayout for this node from inputs, for the *standard case*
+        // the standard case is:
+        //  - all inputs must share the same layout (e.g. adding two minibatches)
+        //  - with the exception of NULL layouts (e.g. TimesNode)
+        //  - all layouts may be NULL (e.g. W' = W * Exp(Stabilizer))
+        //  - if there are more than one different layouts involved, this function will fail
+        void InferMBLayoutFromInputsForStandardCase()
+        {
+            //wstring name = NodeName(); name;
+            //fprintf(stderr, "\nDetermining Layout --> %ls:", name.c_str());
+            MBLayoutPtr pMBLayout;  // starts with NULL layout
+            for (auto child : m_children)
+            {
+                //wstring cname = child->NodeName(); cname;
+                //fprintf(stderr, "  %ls(%s)", cname.c_str(), child->m_pMBLayout ? "." : "NULL");
+                if (!child)                         // node not set yet (DelayedValueNodeBase seems to allow this)--BUGBUG: Then this function won't operate correctly.
+                    ;
+                else if (!child->m_pMBLayout)       // NULL layout (typical for parameter nodes)
+                    ;
+                else if (!pMBLayout)                // first non-NULL layout: just copy it
+                    pMBLayout = child->m_pMBLayout;
+                else if (!(*pMBLayout == *child->m_pMBLayout)) // got a layout--compare whether it is the same
+                    RuntimeError("InferMBLayoutFromInputsForStandardCase: found inconsistent layout in node '%ls', mismatch detected for child '%ls'", NodeName().c_str(), child->NodeName().c_str());
+            }
+            //fprintf(stderr, "  --> (%s)\n", pMBLayout ? "." : "NULL");
+            // all are consistent: install it
+            LinkToMBLayout(pMBLayout);
+        }
+
     public:
 
         static bool IsSmaller(const ComputationNodeBasePtr lhs, const ComputationNodeBasePtr rhs)
@@ -917,7 +946,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             bool foundLabelOrFeatureMissing = false; /// set to true if either nolabel or feature missing is processed
 
-            if (!m_pMBLayout->IsAllNone())
+            if (m_pMBLayout && !m_pMBLayout->IsAllNone())
             {
                 size_t nT = m_pMBLayout->GetNumTimeSteps();
                 size_t nS = m_pMBLayout->GetNumParallelSequences();
@@ -1308,7 +1337,7 @@ protected:  \
 public: \
     using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; \
     using Base::ComputeGradientForChildren; using Base::ComputeInputPartial; using Base::ConstOnes; using Base::InferImageDimsFromInput; \
-    using Base::InferImageDimsFromInputs; using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
+    using Base::InferMBLayoutFromInputsForStandardCase; using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::EvaluateThisNode; using Base::FindChildInASet; using Base::FunctionValues; \
     using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \

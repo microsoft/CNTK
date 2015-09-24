@@ -299,14 +299,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // validate sub-network needed to evalute a specific output node
-    // This calls Validate() on every node in evaluation order (allowing to propagate things forwards through the net)
+    // This calls Validate() on every node in evaluation order (allowing to propagate things forwards through the net).
     // This is called lazily but once only per node until next ClearCache().
+    // This also sets up MBLayout links.
     // TODO: I can't see a clear pattern when ClearCache() is called. E.g. at the start of each epoch? Or never in normal operation (init only at construction)?
     // Note: under some circumstances, one must call FormRecurrentNodes() on this node before calling this. TODO: Not clear which ones.
     // TODO: ^^ is this really needed? Can we just call it inside?
     void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr rootNode)
     {
         fprintf(stderr, "\n\nValidating node %ls \n", rootNode->NodeName().c_str());
+
+        // set up MBLayout links of inputs (all others get propagated upwards through Validate())
+        // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
+        for (auto node : InputNodes(rootNode))
+            node->LinkToMBLayout(m_pMBLayout);
 
         std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
 
@@ -315,13 +321,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto node = *nodeIter;
             node->PrintSelfBeforeValidation();
             node->Validate();
-            // also install the layout pointer
-            // install the layout pointer  --TODO: to support inconsistent layouts, this will in the future be done by Validate()
-            // TODO: fix this w.r.t. learnable parameters etc.
-            node->LinkToMBLayout(m_pMBLayout);
         }
 
         fprintf(stderr, "\n\n");
+
+        // logging the non-default-layout nodes
+        vector<ComputationNodeBasePtr> nonDefaultNodes;
+        for (auto node : nodes)
+        {
+            if (!(node->GetMBLayout() == m_pMBLayout))
+                nonDefaultNodes.push_back(node);
+        }
+        if (!nonDefaultNodes.empty())
+        {
+            fprintf(stderr, "\n\n%d out of %d nodes do not share the minibatch layout with the input data.\n", nonDefaultNodes.size(), nodes.size());
+            //for (auto node : nonDefaultNodes)
+            //    fprintf(stderr, "    %ls\n", node->NodeName().c_str());
+            //fprintf(stderr, "\n\n");
+        }
     }
 
     // prepares the network for computation

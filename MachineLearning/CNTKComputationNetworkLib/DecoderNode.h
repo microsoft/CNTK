@@ -164,7 +164,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         };
 
-        /// need to feed in quesudo label data, which tells the decoder what is the begining
+        /// need to feed in pseudo label data, which tells the decoder what is the beginning
         /// and ending output symbol. these symbols will constrain the search space
         virtual void /*ComputationNodeBase::*/Validate()
         {
@@ -181,6 +181,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
             }
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
