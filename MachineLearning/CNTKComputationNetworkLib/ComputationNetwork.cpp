@@ -334,7 +334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         if (!nonDefaultNodes.empty())
         {
-            fprintf(stderr, "\n\n%d out of %d nodes do not share the minibatch layout with the input data.\n", nonDefaultNodes.size(), nodes.size());
+            fprintf(stderr, "\n\n%d out of %d nodes do not share the minibatch layout with the input data.\n", (int)nonDefaultNodes.size(), (int)nodes.size());
             //for (auto node : nonDefaultNodes)
             //    fprintf(stderr, "    %ls\n", node->NodeName().c_str());
             //fprintf(stderr, "\n\n");
