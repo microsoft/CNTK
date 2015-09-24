@@ -309,13 +309,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 1)
                 LogicError("PastValue and FutureValue operations take one input.");
 
-            if (!(Inputs(0) == nullptr))
+            if (!(Inputs(0) == nullptr))    // TODO: what is this special case for? For the case that the node has not been hooked up yet?
             {
-                size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(),
-                    cols0 = Inputs(0)->FunctionValues().GetNumCols();
+                size_t rows0 = Inputs(0)->FunctionValues().GetNumRows();
+                size_t cols0 = Inputs(0)->FunctionValues().GetNumCols();
 
                 if (rows0 > 0 && cols0 > 0) FunctionValues().Resize(rows0, cols0);
             }
+            InferMBLayoutFromInputsForStandardCase();  // BUGBUG: if Inputs(0) can be nullptr, then this will fail
             InferImageDimsFromInputs();
         }
 
@@ -1309,6 +1310,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 5)
                 LogicError("LSTMNode requires four inputs.");
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
             if (Inputs(0)->FunctionValues().GetMatrixType() == SPARSE)

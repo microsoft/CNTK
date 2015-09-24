@@ -96,6 +96,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -181,6 +182,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("SumElements operation: the input node has 0 element.");
 
             FunctionValues().Resize(1, 1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
 
@@ -276,6 +278,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("SumColumnElements operation: the input node has 0 element.");
 
             FunctionValues().Resize(1, Inputs(0)->FunctionValues().GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -416,6 +419,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
 
             FunctionValues().Resize(m_numRows, Inputs(0)->FunctionValues().GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -555,6 +559,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             FunctionValues().Resize(totalRows, numCols);
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -685,6 +690,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             //left Node must be a scalar
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -830,7 +836,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 2) 
                 LogicError("Times operation requires two inputs.");
 
-            //support automatic dimention inference for learnable parameters
+            //support automatic dimension inference for learnable parameters
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
 
@@ -845,21 +851,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
                 Inputs(1)->FunctionValues().Resize(cols0, cols1);
 
-            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())&& this->GetLoopId() < 0)
+            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->GetLoopId() < 0)
                 LogicError("Times operation: One of the operants has 0 elements.");
 
             //cols0 and rows1 may have been changed so don't use them in the following check
             if ((Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumCols()) && this->GetLoopId() < 0)
-            {
                 LogicError("The Matrix dimension in the Times operation does not match.");
-            }
             FunctionValues().Resize(rows0, cols1);
+
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
         virtual void InferImageDimsFromInputs()  
         {
-            InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
+            InferImageDimsFromInput(1, false); //the second one is the input since it's columnwise
 
             //after multiplication the structure is lost
             m_outputWidth = 1;
@@ -998,7 +1004,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 2)
                 LogicError("TransposeTimes operation requires two inputs.");
 
-            //support automatic dimention inference for learnable parameters
+            //support automatic dimension inference for learnable parameters
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
 
@@ -1020,6 +1026,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("The Matrix dimension in the TransposeTimes operation does not match.");
             }
             FunctionValues().Resize(cols0, cols1);
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -1144,6 +1151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("The Matrix<ElemType> dimension in the ElementTimes operation does not match.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -1288,6 +1296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("RowElementTimes: Either the second operand is not a row vector or the number of columns of operands does not match.");
 
             FunctionValues().Resize(rows0, cols0);
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -1449,6 +1458,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("ColumnElementTimes: Either the second operand is not a column vector or the number of rows of operands does not match.");
 
             FunctionValues().Resize(rows0, cols0);
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -1664,7 +1674,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 2) 
                 LogicError("Plus operation requires two inputs.");
 
-            //if dimention not specified we assume two operants' dimentions should be the same
+            //if dimension not specified we assume two operants' dimensions should be the same
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
@@ -1697,6 +1707,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
 
             FunctionValues().Resize(max(rows0, rows1), max(cols0,cols1) );
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -1952,7 +1963,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 2) 
                 LogicError("Minus operation requires two inputs.");
 
-            //if dimention is missing make the two operatants to have same size
+            //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
@@ -1983,6 +1994,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
 
             FunctionValues().Resize(max(rows0, rows1), max(cols0,cols1) );
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -2104,7 +2116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_children.size() != 2) 
                 LogicError("DiagTimes operation requires two inputs.");
 
-            //if dimention not specified we assume two operants' dimentions should match
+            //if dimension not specified we assume two operants' dimensions should match
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0 && Inputs(1)->FunctionValues().GetNumRows() != 0)
             {
                 Inputs(0)->FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), 1);
@@ -2128,6 +2140,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_innerproduct.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             m_rightGradient.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -2310,7 +2323,7 @@ private:
             if (m_children.size() != 2) 
                 LogicError("CosDistance operation requires two inputs.");
 
-            //if dimention is missing make the two operatants to have same size
+            //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
@@ -2336,6 +2349,7 @@ private:
 
             FunctionValues().Resize(1, Inputs(1)->FunctionValues().GetNumCols());
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -2485,7 +2499,7 @@ private:
             if (m_children.size() != 2) 
                 LogicError("KhatriRaoProduct operation requires two inputs.");
 
-            //support automatic dimention inference for learnable parameters
+            //support automatic dimension inference for learnable parameters
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
 
@@ -2508,6 +2522,7 @@ private:
             }
 
             FunctionValues().Resize(rows0 * rows1, Inputs(0)->FunctionValues().GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -2722,7 +2737,7 @@ private:
             if (m_children.size() != 4)
                 LogicError("CosDistanceWithNegativeSamples operation requires 4 inputs.");
 
-            //if dimention is missing make the two operatants to have same size
+            //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
@@ -2751,6 +2766,7 @@ private:
 
             FunctionValues().Resize(negNumber + 1, Inputs(1)->FunctionValues().GetNumCols());
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -2888,6 +2904,7 @@ private:
 
             FunctionValues().Resize(cols0, rows0);
             mOnes = Matrix<ElemType>::Ones(rows0, rows0, m_deviceId);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
 
@@ -3227,7 +3244,7 @@ private:
             if (m_children.size() != 3)
                 LogicError("StrideTimes operation requires three inputs.");
 
-            //support automatic dimention inference for learnable parameters
+            //support automatic dimension inference for learnable parameters
             if (Inputs(2)->FunctionValues().GetNumElements() != 1)
                 LogicError("StrideTimes : input(2) should be a single element matrix");
 
@@ -3258,6 +3275,7 @@ private:
                 FunctionValues().Resize(rows0, cols1);
             }
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 

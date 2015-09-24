@@ -4123,7 +4123,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert (m>0 && n>0 && len>0); //converting from size_t to int may cause overflow
             assert ((int)c.GetNumRows() == m && (int)c.GetNumCols() == n);
             if ((int)c.GetNumRows() != m || (int)c.GetNumCols() != n)
-                throw std::invalid_argument("Dimention of matrix c does not match dimention of matrix a.");
+                throw std::invalid_argument("Dimension of matrix c does not match dimension of matrix a.");
 
             if (sizeof(ElemType) == sizeof(double))
             {

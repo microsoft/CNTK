@@ -516,6 +516,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // ^^ This is some form of aggregate of m_sentenceBoundaryFlags taken over all streams. TODO: find out the exact condition
     public:
 
+        // compare whether two layouts are the same
+        bool operator==(const MBLayout & other) const
+        {
+            // for now just check the object identity
+            // TODO: in the future, we also need to compare the content; and we need to define "equal", e.g. w.r.t. missing features
+            return this == &other;
+        }
+
         bool Is(size_t t, MinibatchPackingFlags f) const { return (m_minibatchPackingFlags[t] & f) != 0; }
         // TODO: swap id and t; t is the more important parameter
         bool Is(size_t id, size_t t, MinibatchPackingFlags f) const { return (((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f) != 0; }

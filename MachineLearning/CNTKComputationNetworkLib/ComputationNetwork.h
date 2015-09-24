@@ -254,7 +254,7 @@ public:
     // TODO: Does this belong into MBLayout?
     size_t GetNumSamplesWithLabel(const size_t numAllSamples)
     {
-        if (!m_pMBLayout->IsAllNone())
+        if (m_pMBLayout && !m_pMBLayout->IsAllNone())
         {
             size_t numTimeSteps = m_pMBLayout->GetNumTimeSteps();
             size_t numSequences = m_pMBLayout->GetNumParallelSequences();
@@ -570,8 +570,9 @@ public:
             m_recurrentInfo[i].m_completedEvaluate = false;
 
         // (left-over from refactoring: now we only verify that stuff is consistent)
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
+        for (auto node : allNodes)
+            if (node->GetMBLayout())
+                node->VerifyNumParallelSequences(GetNumParallelSequences());
 
         // traverse all nodes in the pre-determined evaluation order
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
