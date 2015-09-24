@@ -1513,23 +1513,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
         {
             Matrix<ElemType>& data = *matrices[iter->first];
-            if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+            if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::real)
             {
-                size_t id = m_featureNameToIdMap[iter->first];
-                size_t dim = m_featureNameToDimMap[iter->first];
+                size_t id = m_featureNameToIdMap.at(iter->first);
+                size_t dim = m_featureNameToDimMap.at(iter->first);
                 assert(id < featureBuffer.size());
                 data.SetValue(dim, size, featureBuffer[id] , matrixFlagNormal);
             }
-            else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
+            else if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::category)
             {
-                size_t id = m_labelNameToIdMap[iter->first];
-                size_t dim = m_labelNameToDimMap[iter->first];
+                size_t id = m_labelNameToIdMap.at(iter->first);
+                size_t dim = m_labelNameToDimMap.at(iter->first);
                 assert(id < labelBuffer.size());
                 data.SetValue(dim, size, labelBuffer[id], matrixFlagNormal);
             }
             else if (m_doMinibatchBuffering)
             {
-                if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerDeriv)
+                if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::readerDeriv)
                 {
                     if (data.GetNumCols()
                         != m_currentMBSize * m_numberOfuttsPerMinibatch)
@@ -1539,7 +1539,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     data.SetValue(0);
                 }
-                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerObj)
+                else if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::readerObj)
                 {
                     if (data.GetNumCols() != 1)
                     {
@@ -1768,7 +1768,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_noData = true;
                 }
                 fprintf(stderr, "WARNING: Utterance \"%S\" has length longer "
-                    "than the %d, skipping it.\n",
+                    "than the %zd, skipping it.\n",
                     m_uttInfo[i][0].first.c_str(), m_maxUtteranceLength);
                 return ReNewBufferForMultiIO(i);
             }

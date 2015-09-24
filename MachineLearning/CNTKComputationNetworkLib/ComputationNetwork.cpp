@@ -14,8 +14,7 @@
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
-//#include "DecoderNode.h"
-
+#include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
 #include "MPIWrapper.h"
@@ -350,7 +349,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #else
             if (node->OperationName() == OperationNameOf(SumElementsNode) ||
                 node->OperationName() == OperationNameOf(TransposeNode) ||
-                node->OperationName() == OperationNameOf(MeanNode) |
+                node->OperationName() == OperationNameOf(MeanNode) ||
                 node->OperationName() == OperationNameOf(InvStdDevNode))
             {
                 RuntimeError("SetRequestNodesMultiSeqHandling: NodesReqMultiSeqHandling cannot be used with operation '%ls'\nIn the past, CNTK silently fixed this; now please change your NDL instead", node->OperationName().c_str());
@@ -504,6 +503,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             strongSCC(rootNode, sccStack, index, loopId);
     }
 
+    // (called only from getStrongSCC())
     void ComputationNetwork::strongSCC(ComputationNodeBasePtr cur,      // TODO: method names start uppercase
                                        std::list<ComputationNodeBasePtr>& sccStack,
                                        size_t& index, size_t& loopId)

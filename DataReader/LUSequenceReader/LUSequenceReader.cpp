@@ -705,39 +705,27 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         if (mMaxSentenceLength > m_mbSize)
             throw std::runtime_error("LUSequenceReader : minibatch size needs to be large enough to accomodate the longest sentence");
 
-        /// reset sentenceending index to NO_INPUT, which is negative
-        mSentenceEndAt.assign(mSentenceEndAt.size(), NO_INPUT);
+        /// reset sentence-end index to ((int) MinibatchPackingFlags::NoInput), which is negative
+        mSentenceEndAt.assign(mSentenceEndAt.size(), ((int) MinibatchPackingFlags::NoInput));
 
         /**
-        mtSentenceBegin : a matrix with [Ns x T]
+        m_pMBLayout->m_sentenceBoundaryFlags : a matrix with [Ns x T]
         the first row is 0/1 bit for wether corresponding frame has sentence beginining/no_label for any of streams
         0 : no such case
         1 : case exists
         */
-        mtSentenceBegin.Resize(mToProcess.size(), mMaxSentenceLength);
-        mtSentenceBegin.SetValue((ElemType) SEQUENCE_MIDDLE);
-        DEVICEID_TYPE sentenceSegDeviceId = mtSentenceBegin.GetDeviceId();
-        mtSentenceBegin.TransferFromDeviceToDevice(sentenceSegDeviceId, CPUDEVICE, true, false, false);
-
-        m_minibatchPackingFlag.resize(mMaxSentenceLength);
-        std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-
+        m_pMBLayout->Resize(mToProcess.size(), mMaxSentenceLength);
         for (i = (int)mLastPosInSentence; j < (int)mMaxSentenceLength; i++, j++)
         {
             for (int k = 0; k < mToProcess.size(); k++)
             {
                 size_t seq = mToProcess[k];
 
-                if (
-                    i == mLastPosInSentence         /// the first time instance has sentence begining
-                    )
+                if (i == mLastPosInSentence)         /// the first time instance has sentence begining
                 {
                     mSentenceBeginAt[k] = i;
-                    if (mIgnoreSentenceBeginTag == false)  /// ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
-                    {
-                        mtSentenceBegin.SetValue(k, j, (ElemType)SEQUENCE_START);
-                        m_minibatchPackingFlag[j] |= MinibatchPackingFlag::SequenceStart;
-                    }
+                    if (!mIgnoreSentenceBeginTag)  /// ignore sentence begin, this is used for decoder network reader, which carries activities from the encoder networks
+                        m_pMBLayout->Set(k, j, MinibatchPackingFlags::SequenceStart);
                 }
 
                 if (i == m_parser.mSentenceIndex2SentenceInfo[seq].sLen - 1)
@@ -798,23 +786,20 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
                     m_featureWordContext.push_back(tmpCxt);
 
                     m_labelIdData.push_back((LabelIdType)NULLLABEL);
-                    mtSentenceBegin.SetValue(k, j, (ElemType) NO_INPUT);
-                    m_minibatchPackingFlag[j] |= MinibatchPackingFlag::NoInput;
+                    m_pMBLayout->Set(k, j, MinibatchPackingFlags::NoInput);
                 }
 
             }
         }
 
         mLastPosInSentence = (i == mMaxSentenceLength)?0:i;
-
-        mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, sentenceSegDeviceId, true, false, false);
     }
 
     return bDataIsThere;
 }
 
 template<class ElemType>
-size_t BatchLUSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
+size_t BatchLUSequenceReader<ElemType>::GetNumParallelSequences()
 {
     size_t sz = (mSentenceBeginAt.size() == 0)?mBlgSize : mSentenceBeginAt.size();
     if (mSentenceBeginAt.size() == 0)
@@ -829,7 +814,7 @@ size_t BatchLUSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::SetNbrSlicesEachRecurrentIter(const size_t mz)
+void BatchLUSequenceReader<ElemType>::SetNumParallelSequences(const size_t mz)
 {
     mBlgSize = mz;
 }
@@ -899,10 +884,8 @@ bool BatchLUSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix
 
                     if (idx >= featInfo.dim)
                     {
-                        if (mtSentenceBegin(utt_id, utt_t) != NO_INPUT) /// for those obs that are for no observations
-                        {
+                        if (m_pMBLayout->Is(utt_id, utt_t, MinibatchPackingFlags::NoInput)) /// for those obs that are for no observations
                             LogicError("BatchLUSequenceReader::GetMinibatch observation is larger than its dimension but no_labels sign is not used to indicate that this observation has no labels. Possible reason is a bug in EnsureDataAvailable or a bug here. ");
-                        }
                         continue;
                     }
 
@@ -984,14 +967,9 @@ size_t BatchLUSequenceReader<ElemType>::GetLabelOutput(std::map<std::wstring,
 }
 
 template<class ElemType>
-void BatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+void BatchLUSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
-    DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
-    mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
-    sentenceBegin.SetValue(mtSentenceBegin); 
-    mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
-
-    minibatchPackingFlag = m_minibatchPackingFlag;
+    pMBLayout->CopyFrom(m_pMBLayout);
 }
 
 template<class ElemType>
@@ -1046,10 +1024,8 @@ bool BatchLUSequenceReader<ElemType>::DataEnd(EndDataType endDataType)
         ret = true;
         for (size_t i = 0; i < mToProcess.size(); i++)
         {
-            if (mSentenceEndAt[i] == NO_INPUT)
-            {
+            if (mSentenceEndAt[i] == ((int) MinibatchPackingFlags::NoInput))
                 LogicError("BatchLUSequenceReader: minibatch should be large enough to accomodate the longest sentence");
-            }
             size_t k = mToProcess[i];
             mProcessed[k] = true;
         }
@@ -1291,29 +1267,28 @@ void MultiIOBatchLUSequenceReader<ElemType>::StartMinibatchLoop(size_t mbSize, s
 }
 
 template<class ElemType>
-void MultiIOBatchLUSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+void MultiIOBatchLUSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
     /// run for each reader
     vector<size_t> col;
     size_t rows = 0, cols = 0;
-    for (typename map<wstring, BatchLUSequenceReader<ElemType>*>::iterator p = mReader.begin(); p != mReader.end(); p++)
+    for (const auto & p : mReader)
     {
-        (p->second)->SetSentenceSegBatch(sentenceBegin, minibatchPackingFlag);
+        p.second->CopyMBLayoutTo(pMBLayout);
         if (rows == 0)
-            rows = sentenceBegin.GetNumRows();
-        else
-            if (rows != sentenceBegin.GetNumRows())
-                LogicError("multiple streams for LU sequence reader must have the same number of rows for sentence begining");
-        size_t this_col = sentenceBegin.GetNumCols();
+            rows = pMBLayout->GetNumParallelSequences();
+        else if (rows != pMBLayout->GetNumParallelSequences())
+            LogicError("multiple streams for LU sequence reader must have the same number of rows for sentence begining");
+        size_t this_col = pMBLayout->GetNumTimeSteps();
         col.push_back(this_col);
         cols += this_col;
     }
 }
 
 template<class ElemType>
-size_t MultiIOBatchLUSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
+size_t MultiIOBatchLUSequenceReader<ElemType>::GetNumParallelSequences()
 {
-    return mReader.begin()->second->NumberSlicesInEachRecurrentIter();
+    return mReader.begin()->second->GetNumParallelSequences();
 }
 
 template<class ElemType>

@@ -419,10 +419,9 @@ public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    size_t NumberSlicesInEachRecurrentIter() { return 1 ;} 
-    void SetNbrSlicesEachRecurrentIter(const size_t) { };
-    void SetSentenceSegBatch(Matrix<float> &/*sentenceBegin*/, vector<MinibatchPackingFlag>& /*sentenceExistsBeginOrNoLabels*/) {};
-
+    size_t GetNumParallelSequences() { return 1 ;} 
+    void SetNumParallelSequences(const size_t) { };
+    void CopyMBLayoutTo(MBLayoutPtr) {};
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<typename BinaryReader<ElemType>::LabelIdType, typename BinaryReader<ElemType>::LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);

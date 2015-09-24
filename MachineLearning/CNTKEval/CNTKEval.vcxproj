@@ -53,12 +53,14 @@
     <IncludePath>..\CNTKSGDLib;..\CNTKComputationNetworkLib;..\..\Math\Math;..\..\Common\Include;..\..\BrainScript;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>..\CNTKComputationNetworkLib;..\..\Math\Math;C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(CUDA_PATH)\lib\$(Platform);$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(Platform)</LibraryPath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <TargetName>CNTKEval</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>..\CNTKSGDLib;..\CNTKComputationNetworkLib;..\..\Math\Math;..\..\Common\Include;..\..\BrainScript;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;..\..\DataReader\HTKMLFReader;$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>..\CNTKComputationNetworkLib;..\..\Math\Math;C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(CUDA_PATH)\lib\$(Platform);$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(Platform)</LibraryPath>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <TargetName>CNTKEval</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -74,9 +76,9 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>CNTKComputationNetworkLib.lib; CNTKMathDll.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>CNTKComputationNetworkLib.lib; CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(Configuration)\; "c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
-      <DelayLoadDLLs>CNTKMathDll.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>CNTKMath.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>
@@ -104,10 +106,10 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>CNTKComputationNetworkLib.lib; CNTKMathDll.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>CNTKComputationNetworkLib.lib; CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(Configuration)\; "c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
       <Profile>true</Profile>
-      <DelayLoadDLLs>CNTKMathDll.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>CNTKMath.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
       <Command>if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>

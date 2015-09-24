@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <unordered_map>
 #include "basetypes.h"                  // for attempt()
 #include "htkfeatio.h"                  // for htkmlfreader
 #include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)
@@ -113,7 +114,7 @@ class minibatchutterancesource : public minibatchsource
                 if (featdim == 0)
                 {
                     reader.getinfo (utteranceset[0].parsedpath, featkind, featdim, sampperiod);
-                    fprintf (stderr, "requiredata: determined feature kind as %d-dimensional '%s' with frame shift %.1f ms\n", featdim, featkind.c_str(), sampperiod / 1e4);
+                    fprintf (stderr, "requiredata: determined feature kind as %zd-dimensional '%s' with frame shift %.1f ms\n", featdim, featkind.c_str(), sampperiod / 1e4);
                 }
                 // read all utterances; if they are in the same archive, htkfeatreader will be efficient in not closing the file
                 frames.resize (featdim, totalframes);
@@ -130,7 +131,7 @@ class minibatchutterancesource : public minibatchsource
                         latticesource.getlattices (utteranceset[i].key(), lattices[i], uttframes.cols());
                 }
                 //fprintf (stderr, "\n");
-                fprintf (stderr, "requiredata: %d utterances read\n", utteranceset.size());
+                fprintf (stderr, "requiredata: %zd utterances read\n", utteranceset.size());
             }
             catch (...)
             {
@@ -199,7 +200,7 @@ class minibatchutterancesource : public minibatchsource
         }
     };
     std::vector<utteranceref> randomizedutterancerefs;          // [pos] randomized utterance ids
-    std::hash_map<size_t,size_t> randomizedutteranceposmap;     // [globalts] -> pos lookup table
+    std::unordered_map<size_t,size_t> randomizedutteranceposmap;     // [globalts] -> pos lookup table
     struct positionchunkwindow       // chunk window required in memory when at a certain position, for controlling paging
     {
         std::vector<chunk>::iterator definingchunk;       // the chunk in randomizedchunks[] that defined the utterance position of this utterance
@@ -297,7 +298,7 @@ public:
                 throw std::runtime_error ("minibatchutterancesource: utterances < 2 frames not supported");
             if (uttframes > frameref::maxframesperutterance)
             {
-                fprintf (stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
+                fprintf (stderr, "minibatchutterancesource: skipping %d-th file (%zd frames) because it exceeds max. frames (%zd) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
                 continue;
             }
 
@@ -331,7 +332,7 @@ public:
                 size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size()-1].firstframe + labseq[labseq.size()-1].numframes);
                 if (labframes != uttframes)
                 {
-                    fprintf (stderr, " [duration mismatch (%d in label vs. %d in feat file), skipping %S]", labframes, uttframes, key.c_str());
+                    fprintf (stderr, " [duration mismatch (%zd in label vs. %zd in feat file), skipping %S]", labframes, uttframes, key.c_str());
                     nomlf++;
                     continue;   // skip this utterance at all
                 }
@@ -360,7 +361,7 @@ public:
                 throw std::logic_error (msra::strfun::strprintf ("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
             assert (labels.empty() || classids.size() == _totalframes + utteranceset.size());
         }
-        fprintf (stderr, " %d frames in %d out of %d utterances; %d classes\n", _totalframes, utteranceset.size(),infiles.size(), numclasses);
+        fprintf (stderr, " %zd frames in %zd out of %zd utterances; %zd classes\n", _totalframes, utteranceset.size(),infiles.size(), numclasses);
         if (!labels.empty())
             foreach_index (i, utteranceset)
         {
@@ -369,7 +370,7 @@ public:
         }
         if (nomlf + nolat > 0)
         {
-            fprintf (stderr, "minibatchutterancesource: out of %d files, %d files not found in label set and %d have no lattice\n", infiles.size(), nomlf, nolat);
+            fprintf (stderr, "minibatchutterancesource: out of %zd files, %zd files not found in label set and %zd have no lattice\n", infiles.size(), nomlf, nolat);
             if (nomlf + nolat > infiles.size() / 2)
                 throw std::runtime_error ("minibatchutterancesource: too many files not found in label set--assuming broken configuration\n");
         }
@@ -397,7 +398,7 @@ public:
             // TODO: above push_back does not actually 'move' because the internal push_back does not accept that
         }
         numutterances = utteranceset.size();
-        fprintf (stderr, "minibatchutterancesource: %d utterances grouped into %d chunks, av. chunk size: %.1f utterances, %.1f frames\n",
+        fprintf (stderr, "minibatchutterancesource: %zd utterances grouped into %zd chunks, av. chunk size: %.1f utterances, %.1f frames\n",
                  numutterances, allchunks.size(), numutterances / (double) allchunks.size(), _totalframes / (double) allchunks.size());
         // Now utterances are stored exclusively in allchunks[]. They are never referred to by a sequential utterance id at this point, only by chunk/within-chunk index.
 
@@ -462,7 +463,7 @@ private:
             return sweep;
 
         currentsweep = sweep;
-        fprintf (stderr, "lazyrandomization: re-randomizing for sweep %d in %s mode\n", currentsweep, framemode ? "frame" : "utterance");
+        fprintf (stderr, "lazyrandomization: re-randomizing for sweep %zd in %s mode\n", currentsweep, framemode ? "frame" : "utterance");
 
         const size_t sweepts = sweep * _totalframes;     // first global frame index for this sweep
 
@@ -749,7 +750,7 @@ private:
         if (!chunkdata.isinram())
             return;       // already out
 
-        fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n",
+        fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %zd (frame range [%zd..%zd]), %zd resident in RAM\n",
                  k, randomizedchunks[k].globalts, randomizedchunks[k].globalte()-1, chunksinram-1);
         chunkdata.releasedata();
         chunksinram--;
@@ -768,7 +769,7 @@ private:
         if (chunkdata.isinram())
             return false;
 
-        fprintf (stderr, "requirerandomizedchunk: paging in randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n", chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
+        fprintf (stderr, "requirerandomizedchunk: paging in randomized chunk %zd (frame range [%zd..%zd]), %zd resident in RAM\n", chunkindex, chunk.globalts, chunk.globalte()-1, chunksinram+1);
         msra::util::attempt (5, [&]()   // (reading from network)
         {
             chunkdata.requiredata (featkind, featdim, sampperiod, this->lattices);
@@ -858,7 +859,7 @@ public:
             transcripts.clear();
 
             // return these utterances
-            fprintf (stderr, "getbatch: getting utterances %d..%d (%d frames out of %d requested) in sweep %d\n", spos, epos -1, mbframes, framesrequested, sweep);
+            fprintf (stderr, "getbatch: getting utterances %zd..%zd (%zd frames out of %zd requested) in sweep %zd\n", spos, epos -1, mbframes, framesrequested, sweep);
             size_t tspos = 0;   // relative start of utterance 'pos' within the returned minibatch
             for (size_t pos = spos; pos < epos; pos++)
             {
@@ -922,7 +923,7 @@ public:
             const size_t lastchunk = chunkforframepos (globalte-1);
             const size_t windowbegin = randomizedchunks[firstchunk].windowbegin;
             const size_t windowend = randomizedchunks[lastchunk].windowend;
-            fprintf (stderr, "getbatch: getting randomized frames [%d..%d] (%d frames out of %d requested) in sweep %d; chunks [%d..%d] -> chunk window [%d..%d)\n",
+            fprintf (stderr, "getbatch: getting randomized frames [%zd..%zd] (%zd frames out of %zd requested) in sweep %zd; chunks [%zd..%zd] -> chunk window [%zd..%zd)\n",
                      globalts, globalte, mbframes, framesrequested, sweep, firstchunk, lastchunk, windowbegin, windowend);
             // release all data outside, and page in all data inside
             for (size_t k = 0; k < windowbegin; k++)

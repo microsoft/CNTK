@@ -22,6 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     wstring standardFunctions =
         L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
+        L"Debug(value, say = '', enabled = true) = new Debug [ /*macro arg values*/ ] \n"
         L"Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] \n"
         L"Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] \n"
         L"Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] \n"
@@ -64,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
         L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
         L"RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]\n"
-        L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input /*plus the function args*/ ]\n"
+        L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, needGradient = false, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input /*plus the function args*/ ]\n"
         L"ConvolutionNode(weightNode, inputValueNode, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode) /*plus the function args*/ ]\n"
         L"MaxPoolingNode(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = input /*plus the function args*/ ]\n"
         L"AveragePoolingNode(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, tag='') = new ComputationNode [ operation = 'AveragePoolingNode' ; inputs = input /*plus the function args*/ ]\n"

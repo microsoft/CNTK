@@ -1463,7 +1463,7 @@ int wmain(int argc, wchar_t* argv[])    // wmain wrapper that reports Win32 exce
     }
     __except (1/*EXCEPTION_EXECUTE_HANDLER, see excpt.h--not using constant to avoid Windows header in here*/)
     {
-        fprintf (stderr, "dbn: Win32 exception caught\n");
+        fprintf (stderr, "CNTK: Win32 exception caught (such an access violation or a stack overflow)\n");  // TODO: separate out these two into a separate message
         fflush (stderr);
         exit (EXIT_FAILURE);
     }

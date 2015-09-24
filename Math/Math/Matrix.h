@@ -479,10 +479,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // NOTE: This class represents an abstraction of an originally distributed/code-duped way of defining and accessing the MB layout.
     //       The code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
     //       Some wackiness below is explained by this.
-    // TODO: frame-randoized MBs are now represented as one stream of many frames. This is wrong; they should be one-frame utterances with many streams. Once we fully abstract out Data access, this can be changed easily.
+    // TODO: frame-randomized MBs are now represented as one stream of many frames. This is wrong; they should be one-frame utterances with many streams. Once we fully abstract out Data access, this can be changed easily.
     struct MBLayout
     {   
+        typedef std::shared_ptr<MBLayout> MBLayoutPtr;
+
         MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { }
+
+        // copy the content of another MBLayoutPtr over
+        // Use this instead of actual assignment to make it super-obvious that this is not copying the pointer but actual content. The pointer is kept fixed.
+        void CopyFrom(const MBLayoutPtr & other)
+        {
+            *this = *other;
+        }
+    private:
+        MBLayout & operator=(const MBLayout &) = default;   // make this private --use CopyFrom() instead, which makes it very clear that it's copying content, not copying the reference
     private:    // one day...
         /// a matrix of n_stream x n_length
         /// n_stream is the number of streams
@@ -587,8 +598,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 #endif
     };
-    typedef std::shared_ptr<MBLayout> MBLayoutPtr;
-    // there is a version down there of ColumnSlice() that abstracts the number of streams
+    typedef MBLayout::MBLayoutPtr MBLayoutPtr;
+
+    // there is a version of ColumnSlice() in ComputationNode that abstracts the number of streams
     // TODO: This may not belong here, but having it in ComputeNode would require syntax changes, while having it as a member here only requires a local find-replace. Let's make it work first, then decide how to refactor.
     // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure
     // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.

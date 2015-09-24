@@ -169,7 +169,7 @@ static inline std::wstring removeExtension (std::wstring const& filename)
 {
     //std::wstring::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
     //return pivot == filename.rend() ? filename: std::wstring(filename.begin(), pivot.base()-1);
-    int lastindex = filename.find_first_of(".");
+    int lastindex = filename.find_first_of(L".");
     return filename.substr(0,lastindex);
 
 }
