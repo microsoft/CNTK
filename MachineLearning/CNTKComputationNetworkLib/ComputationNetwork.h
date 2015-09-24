@@ -75,10 +75,10 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) :
+        m_randomSeedOffset(0),
+        m_actualMBSize(0),
         m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())
     {
-        m_randomSeedOffset = 0;
-        m_actualMBSize = 0;
         SetDeviceId(deviceId);
     }
 
@@ -585,8 +585,9 @@ public:
                 const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
                 // node participates in a recurrent loop: process the loop frame by frame
                 // TODO: move this out of the loop, always do it; gives nodes change to update internal cached layout
+                //       ^^ not that simple, since some should not be scaled, such as parameters and criterion nodes
                 for (auto & nodeIter : recurrentNodes)
-                    nodeIter->SetFunctionAndGradientSize(m_actualMBSize);
+                    nodeIter->SetFunctionAndGradientMBSize((int)m_actualMBSize);
 
                 const size_t T = m_actualMBSize / GetNumParallelSequences();
 
@@ -635,13 +636,11 @@ public:
         }
     }
 
-    // resize entire network to handle a given MB size
-    // TODO: actually it only updates nodes in m_recurrentInfo. Why? Because without recurrence, size never changes?
-    // TODO: Is this always called with the result of DetermineActualMBSizeFromFeatures()? Why would it ever not?
-    // TODO: the network should know this by itself, no?
-    void PropagateActualMiniBatchSize(const size_t aSize)
+    // propagate the features' MB size to all nodes of the network
+    // TODO: only resizes nodes participating in recurrent loops ... but can't just resize all since that would also hit, for example, parameter or criterion nodes
+    size_t SetActualMiniBatchSizeFromFeatures()
     {
-        m_actualMBSize = (int) aSize;
+        m_actualMBSize = DetermineActualMBSizeFromFeatures();
 
         // assume that all nodes in recurrent loops need to be reset to aSize minibatch size, so need to reset the following
         for (int i = 0; i < m_recurrentInfo.size(); i++)
@@ -653,15 +652,9 @@ public:
         // resize function values and gradients of everything in m_recurrentInfo
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
-                nodeIter->SetFunctionAndGradientSize(m_actualMBSize);
-    }
+                nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize);
 
-    // it is used this way most of the time
-    size_t SetActualMiniBatchSizeFromFeatures()
-    {
-        size_t aSize = DetermineActualMBSizeFromFeatures();
-        PropagateActualMiniBatchSize(aSize);
-        return aSize;
+        return m_actualMBSize;
     }
 
     // GetMaxMBSize - Get the maximum minibatch size that will be seen in a training run
@@ -1469,7 +1462,7 @@ public:
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            (*nodeIter)->ClearGradientForChildren(m_actualMBSize);
+            (*nodeIter)->ClearGradientForChildren((int)m_actualMBSize);
 
         //for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
         //    (*nodeIter).m_completedGradient = false;
@@ -1575,7 +1568,7 @@ protected:
     MBLayoutPtr m_pMBLayout;    // note that this must be installed before doing anything that needs it (default leaves a nullptr)
     MBLayoutPtr m_pMBNoLayout;  // this alternative one is passed when no layout is available/should be used
 
-    int m_actualMBSize;         // current MB size in columns --note: this is not #frames, if we have multiple parallel sequences, cf. MBLayout
+    size_t m_actualMBSize;      // current MB size in columns --note: this is not #frames, if we have multiple parallel sequences, cf. MBLayout
 
     // main node holder
     std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes
