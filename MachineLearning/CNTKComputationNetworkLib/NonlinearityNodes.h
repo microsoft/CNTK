@@ -857,9 +857,9 @@ virtual const std::wstring OperationName() const { return TypeName(); }
                 featureGradientValues.AddWithRowSliceValuesOf(temp, i*featureSize, featureSize);
         }
 
-        virtual void SetFunctionAndGradientSize(const int numSamples)
+        virtual void SetFunctionAndGradientMBSize(size_t numSamples)
         {
-            ComputationNode<ElemType>::SetFunctionAndGradientSize(numSamples);
+            Base::SetFunctionAndGradientMBSize(numSamples);
 
             size_t numComponents = Inputs(0)->FunctionValues().GetNumRows();
             size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();

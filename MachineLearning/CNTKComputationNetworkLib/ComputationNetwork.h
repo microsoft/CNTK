@@ -75,10 +75,10 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) :
-        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())//, m_pMBNoLayout(make_shared<MBLayout>())
+        m_randomSeedOffset(0),
+        m_actualMBSize(0),
+        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())
     {
-        m_randomSeedOffset = 0;
-        m_actualMBSize = 0;
         SetDeviceId(deviceId);
     }
 
@@ -210,6 +210,17 @@ public:
             actualMBSize = max(actualMBSize, (*nodeIter)->GetNumCols());
 
         return actualMBSize;
+    }
+
+    // a helper function for some places that like to hack the features directly
+    // This is for a few places (FindBestPath stuff) that don't follow the normal pattern but instead called the old SetFeaturesMiniBatchSize() function with a value of their choosing.
+    // This is now changed in that they must actually resize the features, and then the system takes it from here.
+    // UNTESTED stopgap. Most likely places that are never used.
+    void ResizeAllFeatureNodes(size_t cols)
+    {
+        auto & featureNodes = this->FeatureNodes();
+        for (auto nodeIter = featureNodes.begin(); nodeIter != featureNodes.end(); nodeIter++)
+            (*nodeIter)->Resize((*nodeIter)->GetNumRows(), cols);
     }
 
     // -----------------------------------------------------------------------
@@ -531,7 +542,7 @@ public:
 
     void SetRequestNodesMultiSeqHandling();
 
-    // MAIN ENTRY POINT for evaluation (forward prop)
+    // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
     // TODO: pass a set of nodes instead of only one
     // TODO: rename to ForwardProp()? To make it very clear?
     void Evaluate(const ComputationNodeBasePtr rootNode)
@@ -558,20 +569,9 @@ public:
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedEvaluate = false;
 
-        // pass #slices and MB layout to all nodes
-        // TODO: in the future, these will be different on different nodes; and probably should be propagated by nodes themselves, like functionValues
+        // (left-over from refactoring: now we only verify that stuff is consistent)
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-        {
-            // TODO: we should just always set the real layout; the nodes themselves should know to ignore it based on NeedToMaskMissingColumnsToZero()
-            // MaskMissingColumnsToZero() will test whether the layout is all none, and then skip.
-            // This is the only place where SetMBLayout() is ever called on a node. Hence, we could test NeedToMaskMissingColumnsToZero() instead.
-            // Note that NeedToMaskMissingColumnsToZero() is true only where it is necessary; that is, most node have it set to false (since most nodes can just map garbage-in-garbage-out).
-            //if ((*nodeIter)->NeedToMaskMissingColumnsToZero())
-                (*nodeIter)->SetMBLayout(m_pMBLayout);
-            //else
-            //    (*nodeIter)->SetMBLayout(m_pMBNoLayout);
             (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
-        }
 
         // traverse all nodes in the pre-determined evaluation order
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
@@ -584,9 +584,11 @@ public:
             {
                 const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
                 // node participates in a recurrent loop: process the loop frame by frame
+                // TODO: move this out of the loop, always do it; gives nodes change to update internal cached layout
+                //       ^^ not that simple, since some should not be scaled, such as parameters and criterion nodes
                 for (auto & nodeIter : recurrentNodes)
-                    nodeIter->SetFunctionAndGradientSize(m_actualMBSize);
-    
+                    nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize);
+
                 const size_t T = m_actualMBSize / GetNumParallelSequences();
 
                 // for every time step run through all nodes in this particular loop
@@ -634,13 +636,11 @@ public:
         }
     }
 
-    // resize entire network to handle a given MB size
-    // TODO: actually it only updates nodes in m_recurrentInfo. Why? Because without recurrence, size never changes?
-    // TODO: Is this always called with the result of DetermineActualMBSizeFromFeatures()? Why would it ever not?
-    // TODO: the network should know this by itself, no?
-    void SetActualMiniBatchSize(const size_t aSize)
+    // propagate the features' MB size to all nodes of the network
+    // TODO: only resizes nodes participating in recurrent loops ... but can't just resize all since that would also hit, for example, parameter or criterion nodes
+    size_t SetActualMiniBatchSizeFromFeatures()
     {
-        m_actualMBSize = (int) aSize;
+        m_actualMBSize = DetermineActualMBSizeFromFeatures();
 
         // assume that all nodes in recurrent loops need to be reset to aSize minibatch size, so need to reset the following
         for (int i = 0; i < m_recurrentInfo.size(); i++)
@@ -652,19 +652,13 @@ public:
         // resize function values and gradients of everything in m_recurrentInfo
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
-                nodeIter->SetFunctionAndGradientSize(m_actualMBSize);
-    }
+                nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize);
 
-    // it is used this way most of the time
-    size_t SetActualMiniBatchSizeFromFeatures()
-    {
-        size_t aSize = DetermineActualMBSizeFromFeatures();
-        SetActualMiniBatchSize(aSize);
-        return aSize;
+        return m_actualMBSize;
     }
 
     // GetMaxMBSize - Get the maximum minibatch size that will be seen in a training run
-    // returns the result from SetActualMiniBatchSize(). Note DetermineActualMBSizeFromFeatures() also exists but returns a value derived from the inputs dimensions
+    // returns the result from PropagateActualMiniBatchSize(). Note DetermineActualMBSizeFromFeatures() also exists but returns a value derived from the inputs dimensions
     size_t GetMaxMBSize() { return m_actualMBSize; }
 
 #if 0
@@ -1149,6 +1143,9 @@ public: // yak--used by NDLUtil. Will go away someday.
 private:
 
     // validate sub-network needed to evalute a specific output node
+    // This calls Validate() on every node.
+    // This is called lazily but once only per node until next ClearCache()
+    // TODO: I can't see a clear pattern when ClearCache() is called. E.g. at the start of each epoch? Or never in normal operation (init only at construction)?
     // Note: under some circumstances, one must call FormRecurrentNodes() on this node before calling this. TODO: Not clear which ones.
     // TODO: ^^ is this really needed? Can we just call it inside?
     void ValidateSubNetwork(const ComputationNodeBasePtr rootNode)
@@ -1159,15 +1156,18 @@ private:
 
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            (*nodeIter)->PrintSelfBeforeValidation(true);   // TODO: only called with 'true/*allowNulls*/' from PairNetworkNode and DelayedValueNodeBase
+            (*nodeIter)->PrintSelfBeforeValidation();
             (*nodeIter)->Validate();
+            // also install the layout pointer  --TODO: to support inconsistent layouts, this will in the future be done by Validate()
+            (*nodeIter)->LinkToMBLayout(m_pMBLayout);
         }
 
         fprintf(stderr, "\n\n");
     }
 public:
     // prepares the network for computation
-    // Done lazily, called for every minibatch's invocation of EvaluateNode().
+    // Done lazily, called for every minibatch's invocation of EvaluateNode(), but memoizing which nodes were done already.
+    // BUGBUG? Lazy triggers on the root node. I.e. for two different root nodes (training, eval), it validates twice.
     void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode)
     {
         const auto inserted = m_built.insert(rootNode).second;  // remember we built it
@@ -1462,7 +1462,7 @@ public:
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            (*nodeIter)->ClearGradientForChildren(m_actualMBSize);
+            (*nodeIter)->ClearGradientForChildren((int)m_actualMBSize);
 
         //for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
         //    (*nodeIter).m_completedGradient = false;
@@ -1565,10 +1565,10 @@ protected:
 
     // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
-    MBLayoutPtr m_pMBLayout;
+    MBLayoutPtr m_pMBLayout;    // note that this must be installed before doing anything that needs it (default leaves a nullptr)
     MBLayoutPtr m_pMBNoLayout;  // this alternative one is passed when no layout is available/should be used
 
-    int m_actualMBSize;         // current MB size in columns --note: this is not #frames, if we have multiple parallel sequences, cf. MBLayout
+    size_t m_actualMBSize;      // current MB size in columns --note: this is not #frames, if we have multiple parallel sequences, cf. MBLayout
 
     // main node holder
     std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes

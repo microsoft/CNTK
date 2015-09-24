@@ -347,7 +347,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #else
             if (node->OperationName() == OperationNameOf(SumElementsNode) ||
                 node->OperationName() == OperationNameOf(TransposeNode) ||
-                node->OperationName() == OperationNameOf(MeanNode) |
+                node->OperationName() == OperationNameOf(MeanNode) ||
                 node->OperationName() == OperationNameOf(InvStdDevNode))
             {
                 RuntimeError("SetRequestNodesMultiSeqHandling: NodesReqMultiSeqHandling cannot be used with operation '%ls'\nIn the past, CNTK silently fixed this; now please change your NDL instead", node->OperationName().c_str());
