@@ -182,12 +182,12 @@ do
             fi
             default_path_list="$optarg $default_path_list"
             ;;
-        --cuda)
-            if test x$optarg = yes || test x$optarg = no
+        --cuda*)
+            if test x$optarg = xyes || test x$optarg = xno
             then
                 enable_cuda=$optarg
             else
-                echo "Invalid value for --cuda"
+                echo "Invalid value for --cuda $optarg"
                 show_help
                 exit
             fi
