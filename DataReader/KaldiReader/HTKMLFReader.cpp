@@ -1593,7 +1593,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void HTKMLFReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
         {
             if (!m_framemode)
-                *pMBLayout = *m_pMBLayout;
+                pMBLayout->CopyFrom(m_pMBLayout);
+            else
+                pMBLayout->SetAllNone();    // no flags in frame mode
         }
 
     // GetFileConfigNames - determine the names of the features and labels sections in the config file
