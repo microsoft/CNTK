@@ -212,6 +212,17 @@ public:
         return actualMBSize;
     }
 
+    // a helper function for some places that like to hack the features directly
+    // This is for a few places (FindBestPath stuff) that don't follow the normal pattern but instead called the old SetFeaturesMiniBatchSize() function with a value of their choosing.
+    // This is now changed in that they must actually resize the features, and then the system takes it from here.
+    // UNTESTED stopgap. Most likely places that are never used.
+    void ResizeAllFeatureNodes(size_t cols)
+    {
+        auto & featureNodes = this->FeatureNodes();
+        for (auto nodeIter = featureNodes.begin(); nodeIter != featureNodes.end(); nodeIter++)
+            (*nodeIter)->Resize((*nodeIter)->GetNumRows(), cols);
+    }
+
     // -----------------------------------------------------------------------
     // serialization
     // -----------------------------------------------------------------------
@@ -628,7 +639,7 @@ public:
     // TODO: actually it only updates nodes in m_recurrentInfo. Why? Because without recurrence, size never changes?
     // TODO: Is this always called with the result of DetermineActualMBSizeFromFeatures()? Why would it ever not?
     // TODO: the network should know this by itself, no?
-    void SetActualMiniBatchSize(const size_t aSize)
+    void PropagateActualMiniBatchSize(const size_t aSize)
     {
         m_actualMBSize = (int) aSize;
 
@@ -649,12 +660,12 @@ public:
     size_t SetActualMiniBatchSizeFromFeatures()
     {
         size_t aSize = DetermineActualMBSizeFromFeatures();
-        SetActualMiniBatchSize(aSize);
+        PropagateActualMiniBatchSize(aSize);
         return aSize;
     }
 
     // GetMaxMBSize - Get the maximum minibatch size that will be seen in a training run
-    // returns the result from SetActualMiniBatchSize(). Note DetermineActualMBSizeFromFeatures() also exists but returns a value derived from the inputs dimensions
+    // returns the result from PropagateActualMiniBatchSize(). Note DetermineActualMBSizeFromFeatures() also exists but returns a value derived from the inputs dimensions
     size_t GetMaxMBSize() { return m_actualMBSize; }
 
 #if 0

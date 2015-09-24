@@ -1969,15 +1969,15 @@ template<class ElemType>
                     // TODO: currently only support one node regularization
                     if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
                     {
-#if 1
-                        size_t actualMBSize2 = refNet.SetActualMiniBatchSizeFromFeatures();
-                        if (actualMBSize2 != actualMBSize)
-                            LogicError("TrainOneEpoch: refNet has different MB size than main net??");
-#else
-                        refNet.SetActualMiniBatchSize(actualMBSize);            // TODO: SetActualMiniBatchSizeFromFeatures() should have the same result, no?
+#if 0
+                        refNet.ResizeAllFeatureNodes(actualMBSize);
 #endif
+                        size_t actualMBSize2 = refNet.SetActualMiniBatchSizeFromFeatures();
                         refNet.GetMBLayoutPtr()->CopyFrom(net.GetMBLayoutPtr());       // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
                         refNet.VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
+
+                        if (actualMBSize2 != actualMBSize)
+                            LogicError("TrainOneEpoch: refNet has different MB size than main net??");
 
                         refNet.Evaluate(refNode);
                         Matrix<ElemType>::ScaleAndAdd((ElemType)m_adaptationRegWeight,
