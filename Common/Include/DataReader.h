@@ -28,6 +28,7 @@
 #include "commandArgUtil.h" // for ConfigParameters
 #include <map>
 #include <string>
+#include "minibatchiterator.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -78,15 +79,17 @@ public:
     }
 
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
-    virtual size_t NumberSlicesInEachRecurrentIter() = 0; 
+	virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap) = 0;
+	virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm) = 0;
+    virtual size_t GetNumParallelSequences() = 0; 
     virtual int GetSentenceEndIdFromOutputLabel() { return -1; };
-    virtual void SetNbrSlicesEachRecurrentIter(const size_t sz) { mBlgSize = sz; };
+    virtual void SetNumParallelSequences(const size_t sz) { mBlgSize = sz; };
     virtual bool RequireSentenceSeg() { return false; };
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; };
     virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
     virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
     virtual bool DataEnd(EndDataType) { NOT_IMPLEMENTED; };
-    virtual void SetSentenceSegBatch(Matrix<float>&, vector<MinibatchPackingFlag>& ) { NOT_IMPLEMENTED; };
+    virtual void CopyMBLayoutTo(MBLayoutPtr) { NOT_IMPLEMENTED; };
     virtual void SetRandomSeed(unsigned seed = 0) { m_seed = seed; };
     virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&) { return false; }
     virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>*) { }
@@ -102,22 +105,22 @@ public:
 
     // Gets a copy of the minibatch for the forward computation. This can be
     // useful if some of the computation has to happen in the reader.
+    // TODO: No, there should be no computation in the reader.
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
         std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/,
-        Matrix<float>& /*sentenceBegin*/,
-        std::vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
+        MBLayoutPtr /*data copied here*/)
     {
         return false;
     }
 
     // Sets the neural network output to the reader. This can be useful if some
     // of the computation has to happen in the reader.
+    // TODO: No, there should be no computation in the reader.
     virtual bool SetNetOutput(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& /*uttInfo*/,
         const Matrix<ElemType>& /*outputs*/,
-        const Matrix<float>& /*sentenceBegin*/,
-        const std::vector<MinibatchPackingFlag>& /*minibatchPackingFlag*/)
+        const MBLayoutPtr)
     {
         return false;
     }
@@ -197,8 +200,10 @@ public:
     //             [out] each matrix resized if necessary containing data. 
     // returns - true if there are more minibatches, false if no more minibatchs remain
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+	virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap);
+	virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm);
 
-    size_t NumberSlicesInEachRecurrentIter();
+    size_t GetNumParallelSequences();
     int GetSentenceEndIdFromOutputLabel();
 
     // GetLabelMapping - Gets the label mapping from integer index to label type 
@@ -227,18 +232,16 @@ public:
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         std::map<std::wstring, Matrix<ElemType>*>& matrices,
-        Matrix<float>& sentenceBegin,
-        std::vector<MinibatchPackingFlag>& minibatchPackingFlag);
+        MBLayoutPtr);
 
     // Sets the neural network output to the reader. This can be useful if some
     // of the computation has to happen in the reader.
     virtual bool SetNetOutput(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& outputs,
-        const Matrix<float>& sentenceBegin,
-        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag);
+        const MBLayoutPtr);
 
-    void SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
 
     void SetRandomSeed(int);
 

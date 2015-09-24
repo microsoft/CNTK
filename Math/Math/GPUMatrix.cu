@@ -298,7 +298,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDA_CALL(cudaDeviceCanAccessPeer(&canAccessPeer, to_id, m_computeDevice));
             if (canAccessPeer)
             {
-                CUDA_CALL(cudaDeviceEnablePeerAccess(m_computeDevice, 0));
+                cudaError_t cudaStatus = cudaDeviceEnablePeerAccess(m_computeDevice, 0);
+                if (cudaStatus != cudaErrorPeerAccessAlreadyEnabled)
+                {
+                    CUDA_CALL(cudaStatus);
+                }
                 CUDA_CALL(cudaMemcpyPeer(d_dst,to_id,m_pArray,m_computeDevice,sizeof(ElemType)*m_numRows*m_numCols));  
             }
             else
@@ -1012,6 +1016,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;
         CUDA_CALL(cudaMemcpy(m_pArray+LocateColumn(colInd),colPointer,sizeof(ElemType)*m_numRows,cudaMemcpyHostToDevice));
     }
+	template<class ElemType>
+	void GPUMatrix<ElemType>::SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd)
+	{
+		if (IsEmpty())
+			throw std::logic_error("SetColumn: Matrix is empty.");
+		if (valMat.GetNumCols() != 1)
+			throw std::logic_error("SetColumn: only support one column matrix now.");
+		CUDA_CALL(cudaMemcpy(m_pArray + LocateColumn(colInd), valMat.m_pArray, sizeof(ElemType)*m_numRows, cudaMemcpyDeviceToDevice));
+	}
+	/*template<class ElemType>
+	void GPUMatrix<ElemType>::SetColumn(const ElemType val, size_t colInd)
+	{
+		if (IsEmpty())
+			throw std::logic_error("SetColumn: Matrix is empty.");
+		CUDA_CALL(cudaMemset(m_pArray + LocateColumn(colInd), val, sizeof(ElemType)*m_numRows));
+	}*/
 
     template<class ElemType>
     void GPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& deepCopyFrom)
@@ -1271,6 +1291,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUBLAS_CALL(cublasDasum(cuHandle, (CUDA_LONG)n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
             return (ElemType)aveMultiplier / n;
         }
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
+                                        GPUMatrix<ElemType>& functionValues, 
+                                        ElemType learnRatePerSample,
+                                        ElemType momentum,
+                                        ElemType adaWeight,
+                                        ElemType adaMul)
+    {
+        size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+        if (IsEmpty() || (GetNumCols() < numColsNeeded))
+        {
+            Resize(gradients.GetNumRows(), numColsNeeded);
+            SetValue(0.0);
+        }
+
+        assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+
+        size_t n = gradients.GetNumElements();
+        int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
+        _fsadagrad<ElemType><<<blocksPerGrid, threadsPerBlock>>>(n, gradients.m_pArray, m_pArray, m_pArray + n, functionValues.m_pArray,
+                                                                 learnRatePerSample, momentum, adaWeight, adaMul);
     }
 
     template<class ElemType>
@@ -4036,6 +4080,77 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		return *this;
 	}
 
+	//sequence training
+	template<class ElemType>
+	GPUMatrix<ElemType>& GPUMatrix<ElemType>::DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType & threshhold)
+	{
+		if (IsEmpty())
+			throw std::logic_error("DropFrame: Matrix is empty.");
+
+		PrepareDevice();
+
+		long N = (long)GetNumCols(); //one kernel per column
+		int blocksPerGrid = (int)ceil(N*1.0 / threadsPerBlock);
+		cudaEvent_t done = nullptr;
+		if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+		_DropFrame << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, label.m_pArray, gamma.m_pArray, threshhold, (long)m_numCols, (long)m_numRows);
+
+		// check
+		/*cudaThreadSynchronize();
+
+		// check for error
+		cudaError_t error = cudaGetLastError();
+		if (error != cudaSuccess)
+		{
+		// print the CUDA error message and exit
+		printf("CUDA error: %s\n", cudaGetErrorString(error));
+
+		}*/
+
+
+		if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+		if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+		if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+		return *this;
+	}
+
+	template<class ElemType>
+	GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label,
+		const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha)
+	{
+		if (IsEmpty())
+			throw std::logic_error("AssignSequenceError: Matrix is empty.");
+
+		PrepareDevice();
+
+		cudaEvent_t done = nullptr;
+		if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+		long N = (LONG64)label.GetNumElements();
+		int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+		_AssignSequenceError << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(hsmoothingWeight, m_pArray, label.m_pArray,
+			dnnoutput.m_pArray, gamma.m_pArray, alpha, N);
+		//_DropFrame << <N, 1, 0, t_stream >> >(m_pArray, label.m_pArray, gamma.m_pArray, threshhold, (long)m_numCols, (long)m_numRows);
+
+		// check
+		/*cudaThreadSynchronize();
+
+		// check for error
+		cudaError_t error = cudaGetLastError();
+		if (error != cudaSuccess)
+		{
+		// print the CUDA error message and exit
+		printf("CUDA error: %s\n", cudaGetErrorString(error));
+
+		}*/
+
+
+		if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+		if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+		if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+		return *this;
+	}
 
 
 #pragma endregion Static BLAS Functions

@@ -87,8 +87,9 @@ public:
     std::vector<int> senoneid2transPindex;      // or -1 if ambiguous
     std::vector<int> senoneid2stateindex;       // 0..2, or -1 if ambiguous
 
-    // construct from model files
-    simplesenonehmm (const std::wstring & cdphonetyingpath, const std::wstring & statelistpath, const std::wstring & transPpath)
+	//zhaorui load from file, add a null construct function
+	simplesenonehmm() {}
+	void loadfromfile(const std::wstring & cdphonetyingpath, const std::wstring & statelistpath, const std::wstring & transPpath)
     {
         if (cdphonetyingpath.empty())   // no tying info specified --just leave an empty object
             return;

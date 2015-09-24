@@ -263,7 +263,7 @@ public:
 
             // this is the *.W = L2.W case
             // We want to find all the destination existing matches and then assign the in node to all of them
-            for (auto node : nodesOut)
+            for (const auto & node : nodesOut)
             {
                 std::wstring nodeOutName = node->NodeName();
                 GenNameValue value(nodeIn, nodeOutName);

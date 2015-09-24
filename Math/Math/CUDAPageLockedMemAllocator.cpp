@@ -30,7 +30,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaFreeHost(p) || "Free in CUDAPageLockedMemAllocator failed";
     }
 
-    int CUDAPageLockedMemAllocator::GetDeviceID() const
+    int CUDAPageLockedMemAllocator::GetDeviceId() const
     {
         return m_deviceID;
     }
@@ -40,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
     }
 
-    int CUDAPageLockedMemAllocator::GetDeviceID() const
+    int CUDAPageLockedMemAllocator::GetDeviceId() const
     {
         return -1;
     }

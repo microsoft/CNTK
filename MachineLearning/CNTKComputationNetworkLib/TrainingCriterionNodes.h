@@ -13,6 +13,7 @@
 #include <memory>
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
+#include "gammacalculation.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
     //note: to save computation the gradient may be scaled by an constant. 
@@ -60,7 +61,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& leftMinusRight, ComputationNodePtr curNode)  
         {
             leftMinusRight.AssignDifferenceOf(inputFunctionValues0, inputFunctionValues1);
-            curNode->MaskToZeroWhenLabelAndFeatureMissing(leftMinusRight);  //we are fine since it will only be called with full minibatch.
+            curNode->MaskMissingColumnsToZero(leftMinusRight);  //we are fine since it will only be called with full minibatch.
             ElemType v = leftMinusRight.FrobeniusNorm();
             functionValues.Resize(1,1);
             functionValues.SetValue(v*v/2);
@@ -138,7 +139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         Matrix<ElemType> m_leftMinusRight;
     };
@@ -174,7 +175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-                ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(inputIndex)->GradientValues());
+                Base::MaskMissingColumnsToZero(Inputs(inputIndex)->GradientValues());
             }
         }
 
@@ -221,7 +222,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
             softmaxOfRight.SetValue(logSoftmaxOfRight);
             softmaxOfRight.InplaceExp();
-            curNode->MaskToZeroWhenLabelAndFeatureMissing(logSoftmaxOfRight); //we are fine here since it will be called only with full minibatch
+            curNode->MaskMissingColumnsToZero(logSoftmaxOfRight); //we are fine here since it will be called only with full minibatch
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logSoftmaxOfRight);
             functionValues*=(-1);
 #if NANCHECK
@@ -311,7 +312,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
         Matrix<ElemType> m_logSoftmaxOfRight;
         Matrix<ElemType> m_softmaxOfRight;       
@@ -363,7 +364,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, ComputationNodePtr curNode)
         {
             leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
-            curNode->MaskToZeroWhenLabelAndFeatureMissing(leftDivRight);
+            curNode->MaskMissingColumnsToZero(leftDivRight);
             Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
         }
 
@@ -377,7 +378,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             logOfRight.SetValue(inputFunctionValues1);
             logOfRight.InplaceLog();
-            curNode->MaskToZeroWhenLabelAndFeatureMissing(logOfRight);
+            curNode->MaskMissingColumnsToZero(logOfRight);
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logOfRight);
             functionValues*=(-1);
 #if NANCHECK
@@ -461,7 +462,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         // matrix value passed from evaluate to computePartial
         Matrix<ElemType> m_logOfRight;
@@ -503,7 +504,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
+            Base::MaskMissingColumnsToZero(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
@@ -561,7 +562,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         Matrix<ElemType> m_gradientOfL1Norm;    // temporary
     };
@@ -599,7 +600,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()  
         {
-            ComputationNode<ElemType>::MaskToZeroWhenLabelAndFeatureMissing(Inputs(0)->FunctionValues());
+            Base::MaskMissingColumnsToZero(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
@@ -646,7 +647,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         Matrix<ElemType> m_temp;
     };
@@ -825,7 +826,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_grdToSoftMaxInput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
@@ -879,9 +880,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t sz = 0;
             for (size_t t = 0; t < nT; t++)
             {
-                FrameRange frameRange(t, 1);
+                FrameRange frameRange(t, 1);    // TODO: change to frameRange over a whole MB with a sequence index. BUGBUG: below code will break until this is fixed
                 /// compute prb - 1 and prb
-                Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
+                Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(t, 1, m_pMBLayout));
                 size_t c_t = (size_t)lbl_t(1, 0);
                 size_t lft_bnd = (size_t)lbl_t(2, 0);
                 size_t rgt_bnd = (size_t)lbl_t(3, 0);
@@ -890,14 +891,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     continue;
 
                 Matrix<ElemType> input_weight_t = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);
-                Matrix<ElemType> obs = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
+                Matrix<ElemType> obs = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(t, 1, m_pMBLayout));
                 Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
-                Matrix<ElemType> grd_to_cls_prob = m_clsLogSoftmax.FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
+                Matrix<ElemType> grd_to_cls_prob = DataSlice(m_clsLogSoftmax, frameRange/*TODO: delete this:*/.Check(t, 1, m_pMBLayout));
 
                 switch (inputIndex){
                 case 1:
                     /// gradient to input
-                    grd_t = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
+                    grd_t = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(t, 1, m_pMBLayout));
                     ComputeInputPartialRight(input_weight_t, grd_t, grd_to_soft_max_input);
                     break;
                 case 2:
@@ -906,8 +907,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     ComputeInputPartialLeft(obs, grd_to_wgt_t, grd_to_soft_max_input);
                     break;
                 case 3:
-                    grd_t = Inputs(3)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
-                    grd_t.SetValue(m_clsSoftmax.FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1));
+                    grd_t = Inputs(3)->GradientSlice(frameRange/*TODO: delete this:*/.Check(t, 1, m_pMBLayout));
+                    grd_t.SetValue(DataSlice(m_clsSoftmax, frameRange/*TODO: delete this:*/.Check(t, 1, m_pMBLayout)));
                     ComputeCEPartialToSoftmaxInputs(grd_t, GradientValues(), c_t);
                     break;
                 default:
@@ -947,7 +948,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     FrameRange frameRange(t, 1);
                     /// compute prb - 1 and prb
-                    Matrix<ElemType> lbl_t = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, t, 1);
+                    Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(t, 1, m_pMBLayout));
                     size_t y_t = (size_t)lbl_t(0, 0);
                     size_t lft_bnd = (size_t)lbl_t(2, 0);
                     size_t rgt_bnd = (size_t)lbl_t(3, 0);
@@ -1043,7 +1044,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> softMax_t = softMax.ColumnSlice(sz, nbr_wrd);
                 Matrix<ElemType> logSoftMax_t = logSoftmax.ColumnSlice(sz, nbr_wrd);
 
-                if (curNode->MaskToZeroWhenLabelAndFeatureMissing(logSoftMax_t, t) == false)
+                if (!curNode->MaskMissingColumnsToZero(logSoftMax_t, t))
                 {
                     Matrix<ElemType> obs = inputs.ColumnSlice(t, 1);  /// e.g., 200 x 1
                     obs.Reshape(1, nRow);  /// 1 x 200
@@ -1065,7 +1066,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 /// add the class log posterior probability
-                if (curNode->MaskToZeroWhenLabelAndFeatureMissing(clsLogSoftmax, t) == false)
+                if (!curNode->MaskMissingColumnsToZero(clsLogSoftmax, t))
                 {
                     try{
                         Matrix<ElemType>::AddElementToElement(clsLogSoftmax, c_t, t, functionValues, 0, 0);
@@ -1090,31 +1091,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         reset to error signals to 0 for any elements without labels
         */
-        bool MaskToZeroWhenLabelAndFeatureMissing(Matrix<ElemType>& matrixToBeMasked, const size_t t)
+        // BUGBUG: the layout should be that of matrixToBeMasked, not of 'this'
+        bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const size_t j) const
         {
-            bool processedExistsNoLabelorFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
+            size_t nS = m_pMBLayout->GetNumParallelSequences();
+            size_t t = j / nS;  // this is the time stamp
+            size_t id = j % nS;  // this is the stream
+            return Base::MaskMissingColumnsToZero(matrixToBeMasked, t, id);
+#if 0       // old version prior to merging with Base version
+            bool foundLabelOrFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
 
-            if (m_sentenceSeg != nullptr && m_minibatchPackingFlag != nullptr 
-                && !m_sentenceSeg->IsEmpty() && !m_minibatchPackingFlag->size() == 0)
+            if (!m_pMBLayout->IsAllNone())
             {
-                size_t nS = m_sentenceSeg->GetNumRows();
-
-                Matrix<ElemType> colSeg(m_sentenceSeg->GetDeviceId());
-
-                size_t j = t / nS;
-                size_t i = t % nS;
-                if ((*m_minibatchPackingFlag)[j] & MinibatchPackingFlag::NoLabel)
+                if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel)) // TODO: this outer test is redundant here, no?
                 {
-                    if ((int)(*m_sentenceSeg)(i,j) & NO_LABEL)
+                    if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
                     {
-                        matrixToBeMasked.ColumnSlice(t,1).SetValue(0);
-
-                        processedExistsNoLabelorFeatureMissing = true;
+                        matrixToBeMasked.ColumnSlice(t * nS + id,1).SetValue(0);
+                        foundLabelOrFeatureMissing = true;
                     }
                 }
             }
 
-            return processedExistsNoLabelorFeatureMissing;
+            return foundLabelOrFeatureMissing;
+#endif
         }
 
         /**
@@ -1177,7 +1177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_grdToSoftMaxInput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
         Matrix<ElemType> m_logSoftmax;
         Matrix<ElemType> m_softMax;
@@ -1240,8 +1240,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FunctionValues().SetValue(0.0);
             Matrix<ElemType> funcVal = FunctionValues();
 
-            size_t nstep = ncol / m_samplesInRecurrentStep;
-            for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
+            size_t nstep = ncol / GetNumParallelSequences();
+            for (size_t i = 0; i < GetNumParallelSequences(); i++)
             {
                 Matrix<ElemType> postProbSlice = mPostProb.ColumnSlice(i * nstep, nstep);
                 Matrix<ElemType> alphaSlice = mAlpha.ColumnSlice(i * nstep, nstep);
@@ -1272,9 +1272,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (inputIndex == 2)
             {
                 size_t ncol = mAlpha.GetNumCols();
-                size_t nstep = ncol / m_samplesInRecurrentStep;
+                size_t nstep = ncol / GetNumParallelSequences();
                 assert(Inputs(inputIndex)->GradientValues().GetNumElements() > 0);
-                for (size_t i = 0; i < m_samplesInRecurrentStep; i++)
+                for (size_t i = 0; i < GetNumParallelSequences(); i++)
                 {
                     ErrorSignalToTransitionNode(
                         Inputs(0)->FunctionValues().ColumnSlice(i * nstep, nstep),
@@ -1495,7 +1495,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     private:
         Matrix<ElemType> mAlpha;    // TODO: m_Alpha etc.
         Matrix<ElemType> mBeta;
@@ -1601,10 +1601,304 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[2] = prediction;
         }
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     };
 
     template class DummyCriterionNode<float>; 
     template class DummyCriterionNode<double>;
 
+	//discriminative sequence training criteria 
+	template<class ElemType>
+	class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>
+	{
+		typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+	public:
+		virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+
+		SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name)
+			: ComputationNodeNonLooping<ElemType>(deviceId, name)
+			, m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_maskOfFramedrop(deviceId)
+		{
+		}
+		
+
+		virtual const std::wstring OperationName() const { return TypeName(); }
+		static const std::wstring TypeName() { return L"SequenceWithSoftmax"; }
+
+		/**
+		compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
+		*/
+		virtual void ComputeInputPartial(const size_t inputIndex)
+		{
+			//auto t_start_time = Timer::MilliSecondElapsed();
+			if (inputIndex > 2)
+				InvalidArgument("SequenceWithSoftmaxNode criterion only takes three inputs.");
+
+			//left Node must be a scalar
+			if (inputIndex == 0)  //left derivative
+			{
+				ComputeInputPartialLeft(m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
+			}
+			else if (inputIndex == 1)
+			{
+				ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_gammaFromLattice,
+					m_hsmoothingWeight, m_frameDropThresh);
+				Base::MaskMissingColumnsToZero(Inputs(inputIndex)->GradientValues());
+			}
+			else if (inputIndex == 2)
+			{
+				Inputs(inputIndex)->NeedGradient() = false;
+				Inputs(inputIndex)->GradientValues().SetValue(0.0);
+			}
+			else
+				throw std::runtime_error("SequenceWithSoftmaxNode criterion only takes with respect to label, DNN output and log likelihood.");
+			//auto t_end_time = Timer::MilliSecondElapsed();
+
+			//m_partialtime += (t_end_time - t_start_time);
+		}
+
+		
+		static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
+			const Matrix<ElemType>& gradientValues)
+		{
+#if DUMPOUTPUT
+			logSoftmaxOfRight.Print("SequenceWithSoftmaxNode Partial-logSoftmaxOfRight");
+			gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
+			inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-in");
+#endif
+
+			Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
+#if DUMPOUTPUT
+			inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-out");
+#endif
+
+		}
+
+		static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
+			Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType> &gammaFromLattice,
+			const ElemType &hsmoothingWeight, const ElemType &frameDropThresh)
+		{
+#if DUMPOUTPUT
+			softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
+			inputFunctionValues.Print("SequenceWithSoftmaxNode Partial-inputFunctionValues");
+			gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
+			inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
+#endif  
+			
+			inputGradientValues.AssignSequenceError(hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());			
+			inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, frameDropThresh);	
+			
+
+#if DUMPOUTPUT
+			inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
+#endif
+		}
+
+		virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
+		{
+			//auto t_start_time = Timer::MilliSecondElapsed();
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, m_gammaFromLattice, m_lattice, m_GammaCal,
+				m_uids, m_boundaries,  m_pMBLayout, m_extrauttmap, m_doreferencealign);
+		}
+
+		
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1,
+			const Matrix<ElemType>& inputFunctionValues2, Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& gammafromlattice,
+			std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> &lattices, msra::lattices::GammaCalculation<ElemType> &GammaCal, std::vector<size_t> & uids,
+			std::vector<size_t> & boundaries,  MBLayoutPtr pMBLayout, std::vector<size_t> &extrauttmap, bool doReferenceAlign)
+		{
+			//softmax 
+
+			logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
+			softmaxOfRight.SetValue(logSoftmaxOfRight);
+			softmaxOfRight.InplaceExp();
+
+			
+            size_t sequenceNum = pMBLayout->GetNumParallelSequences();
+			gammafromlattice.SwitchToMatrixType(softmaxOfRight.GetMatrixType(), softmaxOfRight.GetFormat(), false);
+			gammafromlattice.Resize(softmaxOfRight.GetNumRows(), softmaxOfRight.GetNumCols());
+			//DecideAndMoveToRightDevice(a, *this);
+			//SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+			//gamma value,            
+            GammaCal.calgammaformb(functionValues, lattices, inputFunctionValues2, inputFunctionValues0, gammafromlattice, uids, boundaries, sequenceNum, pMBLayout, extrauttmap, doReferenceAlign);
+			
+#if NANCHECK
+			functionValues.HasNan("SequenceWithSoftmaxNode");
+#endif
+#if DUMPOUTPUT
+			functionValues.Print("SequenceWithSoftmaxNode");
+#endif
+			/*for (long i = 0; i < lattices.size(), i++)
+			{
+			lattices[i]->second.forwardbackward()
+			}*/
+		}
+
+		virtual void Validate()
+		{
+			Base::Validate();
+
+			if (m_children.size() != 3)
+				LogicError("SequenceWithSoftmaxNode criterion requires three inputs.");
+
+			if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
+				LogicError("SequenceWithSoftmaxNode criterion requires the first input to be the label.");
+
+			//we may release the constraint that the first operant is an inputValue later so the following code should be kept
+			size_t index = 0;
+			if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
+			{
+				size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
+				size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
+				Inputs(index)->FunctionValues().Resize(rows, cols);
+			}
+
+			index = 1;
+			if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
+			{
+				size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
+				size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
+				Inputs(index)->FunctionValues().Resize(rows, cols);
+			}
+
+			if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()  || Inputs(2)->FunctionValues().HasNoElements() )
+				LogicError("SequenceWithSoftmaxNode operation: one of the operants has 0 element.");
+
+			if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&  //match size
+				Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&
+				Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() &&
+				Inputs(1)->FunctionValues().GetNumCols() == Inputs(2)->FunctionValues().GetNumCols()))
+			{
+				LogicError("The Matrix<ElemType>  dimension in the SequenceWithSoftmaxNode operation does not match.");
+			}
+
+			FunctionValues().Resize(1, 1);
+			InferImageDimsFromInputs();
+
+			m_logSoftmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+			m_softmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+			m_gammaFromLattice.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+			m_maskOfFramedrop.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+			if (m_hmm.hmms.size() > 0)
+				m_GammaCal.init(m_hmm, m_deviceId);
+			m_gammatime = 0;
+			m_partialtime = 0;
+		}
+
+		virtual void InferImageDimsFromInputs()
+		{
+			InferImageDimsFromInput(0, false);
+
+			m_outputChannels = 1;
+			m_outputWidth = 1;
+			m_outputHeight = 1;
+		}
+
+		//leftNode should be the empirical
+		virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood)
+		{
+			m_children.resize(3);
+			m_children[0] = label;
+			m_children[1] = prediction;
+			m_children[2] = loglikelihood;
+			loglikelihood->NeedGradient() = false;
+		}
+
+		virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+		{
+			Base::MoveMatricesToDevice(deviceId);			
+			m_logSoftmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace( deviceId, true);
+			m_softmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace( deviceId, true);
+			m_gammaFromLattice.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+			m_maskOfFramedrop.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);			
+		}
+
+		virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+		{
+			Base::CopyTo(nodeP, newName, flags);
+			
+
+			if (flags & CopyNodeFlags::copyNodeValue)
+			{
+				auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(nodeP);
+
+				node->m_logSoftmaxOfRight = m_logSoftmaxOfRight;
+				node->m_softmaxOfRight = m_softmaxOfRight;
+				node->m_gammaFromLattice = m_gammaFromLattice;
+				node->m_maskOfFramedrop = m_maskOfFramedrop;
+				node->m_hsmoothingWeight = m_hsmoothingWeight;
+				node->m_frameDropThresh = m_frameDropThresh;
+				node->m_doreferencealign = m_doreferencealign;
+			}
+		}
+
+		
+
+		std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> * getLatticePtr()
+		{
+			return &m_lattice;
+		}
+
+		std::vector<size_t> * getuidprt()
+		{
+			return &m_uids;
+		}
+
+		std::vector<size_t> * getboundaryprt()
+		{
+			return &m_boundaries;
+		}
+		std::vector<size_t> * getextrauttmap()
+		{
+			return &m_extrauttmap;
+		}
+		msra::asr::simplesenonehmm *gethmm()
+		{
+			return &m_hmm;
+		}
+
+		void SetSmoothWeight(const ElemType hsmoothingWeight)
+		{
+			m_hsmoothingWeight = hsmoothingWeight;
+		}
+		void SetFrameDropThresh(const ElemType frameDropThresh)
+		{
+			m_frameDropThresh = frameDropThresh;
+		}
+
+		void SetRefrencealign(const bool dorefrencealign)
+		{
+			m_doreferencealign = dorefrencealign;
+		}
+		void gettime(unsigned long long &gammatime, unsigned long long &partialtime)
+		{
+			gammatime = m_gammatime;
+			partialtime = m_partialtime;
+		}
+	protected:
+		virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
+		Matrix<ElemType> m_logSoftmaxOfRight;
+		Matrix<ElemType> m_softmaxOfRight;
+		Matrix<ElemType> m_gammaFromLattice;
+		Matrix<ElemType> m_maskOfFramedrop;
+		ElemType m_frameDropThresh;
+		ElemType m_hsmoothingWeight;
+		bool m_doreferencealign;
+		std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> m_lattice;
+		msra::asr::simplesenonehmm m_hmm;
+		msra::lattices::GammaCalculation<ElemType> m_GammaCal;
+		std::vector<size_t> m_uids;
+		std::vector<size_t> m_boundaries;
+		std::vector<size_t> m_extrauttmap;
+
+		unsigned long long m_gammatime;
+		unsigned long long m_partialtime;
+
+
+	};
+
+
+
+	template class SequenceWithSoftmaxNode<float>;
+	template class SequenceWithSoftmaxNode<double>;
 }}}

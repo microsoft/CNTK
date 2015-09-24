@@ -53,7 +53,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SquareError,
         ClassCrossEntropyWithSoftmax,
         NCECrossEntropyWithSoftmax,
-        CRF
+        CRF,
+		SequenceWithSoftmax
     };
 
     enum class EvalCriterion : int
@@ -63,7 +64,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SquareError,
         ErrorPrediction,
         ClassCrossEntropyWithSoftmax,
-
+		SequenceWithSoftmax,
         NCECrossEntropyWithSoftmax,
         CRF
     };
@@ -115,7 +116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_deviceId == AUTOPLACEMATRIX)
                 m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
 
-            m_net->SetDeviceID(m_deviceId);
+            m_net->SetDeviceId(m_deviceId);
             if (m_deviceId < 0)
                 fprintf(stderr, "SimpleNetworkBuilder Using CPU\n");
             else
