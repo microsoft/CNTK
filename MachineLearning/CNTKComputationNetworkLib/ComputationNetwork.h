@@ -1141,52 +1141,10 @@ public: // yak--used by NDLUtil. Will go away someday.
         }
     }
 private:
-
-    // validate sub-network needed to evalute a specific output node
-    // This calls Validate() on every node.
-    // This is called lazily but once only per node until next ClearCache()
-    // TODO: I can't see a clear pattern when ClearCache() is called. E.g. at the start of each epoch? Or never in normal operation (init only at construction)?
-    // Note: under some circumstances, one must call FormRecurrentNodes() on this node before calling this. TODO: Not clear which ones.
-    // TODO: ^^ is this really needed? Can we just call it inside?
-    void ValidateSubNetwork(const ComputationNodeBasePtr rootNode)
-    {
-        fprintf(stderr, "\n\nValidating node %ls \n", rootNode->NodeName().c_str());
-
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
-
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-        {
-            (*nodeIter)->PrintSelfBeforeValidation();
-            (*nodeIter)->Validate();
-            // also install the layout pointer  --TODO: to support inconsistent layouts, this will in the future be done by Validate()
-            (*nodeIter)->LinkToMBLayout(m_pMBLayout);
-        }
-
-        fprintf(stderr, "\n\n");
-    }
+    void ValidateSubNetwork(const ComputationNodeBasePtr rootNode);
 public:
     // prepares the network for computation
-    // Done lazily, called for every minibatch's invocation of EvaluateNode(), but memoizing which nodes were done already.
-    // BUGBUG? Lazy triggers on the root node. I.e. for two different root nodes (training, eval), it validates twice.
-    void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode)
-    {
-        const auto inserted = m_built.insert(rootNode).second;  // remember we built it
-        if (!inserted)
-            return;                                             // already done
-
-        // detect recurrent loops for this root node (more loops will be detected inside ValidateSubNetwork())
-        // TODO: not nice--why not always call this in ValidateSubNetwork() only?
-        FormRecurrentLoops(rootNode);
-
-        //
-        ValidateSubNetwork(rootNode);
-
-        //
-        CollectInputAndLearnableParameters(rootNode);
-
-        //
-        SetRequestNodesMultiSeqHandling();
-    }
+    void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
 
     //this function will need to be called before actual validation and execution to 
     //predetermine how to share matrices to reduce memory usage.
@@ -1580,8 +1538,8 @@ private:    // TODO: make all private that can be made private
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheEvalOrders;
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheGradientCalcOrders;
 
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputs;                 // [out node] -> all input nodes
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_learnableParameters;    // [out node] -> all parameter nodes
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputs;                 // [out node] -> all input nodes feeding into out node
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_learnableParameters;    // [out node] -> all parameter nodes feeding into out node
 
     // pool for matrices that can be shared across nodes
     // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?
