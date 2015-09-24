@@ -471,9 +471,6 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                     // inputs /*one*/, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0
                     node = New<ReshapeNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRows"], (size_t)config[L"imageWidth"], (size_t)config[L"imageHeight"], (size_t)config[L"imageChannels"]);
                     node->NeedGradient() = config[L"needGradient"];
-                    //nodePtr = m_net.Reshape(NULL, num_rows, img_width, img_height, img_channels, name);
-                    // BUGBUG: ^^ how to implement this?? We got no network here. What is this for?
-                    LogicError("ReshapeNode not working with BS because init code needs access to network which we don't haveyet--to be fixed elsewhere");
                 }
 #if 0
                 else if (cnNodeType == OperationNameOf(ConvolutionNode))

@@ -36,7 +36,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         void Init(size_t row_size, size_t col_size, ElemType initialActivationValue = (ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
-            SetMaskMissingColumnsToZero();
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
             m_functionValues.Resize(row_size, col_size);
@@ -49,7 +48,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNode<ElemType>(deviceId, name),
             m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
         {
-            Init(1, 1);
+                Init(1, 1);
         }
         DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
             ComputationNode<ElemType>(deviceId, name),
@@ -95,17 +94,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"DelayedValue"; }
 
-        //Set sentence boundary information according to a specified time step. 
-        virtual void SetMBLayout(MBLayoutPtr pMBLayout)
+    private:
+        // cache a post-processed version of m_pMBLayout (depends on the actual minibatch)
+        void CacheMBLayout()
         {
             if (m_timeStep <= 0)
                 LogicError("timeStep should be 1 or larger");
 
-            Base::SetMBLayout(pMBLayout);
-
             // in this node we use a post-processed version of the shared pMBLayout
             // This is to decide which frames should be filled with default values. 
-            *m_pShiftedMBLayout = *pMBLayout;   // gets modified below (this is a copy assignment, not a reference.)
+            m_pShiftedMBLayout->CopyFrom(m_pMBLayout);      // it gets modified below
             if (m_timeStep > 1)
             {
                 // modify m_pShiftedMBLayout
@@ -114,21 +112,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // then this becomes
                 //    S S X X E S S X X X E N N
 
-                size_t numRows = pMBLayout->GetNumParallelSequences();
+                size_t numRows = m_pMBLayout->GetNumParallelSequences();
 
                 // each row has a number to indicate how many values should be reset for that utterance
                 vector<int> numResetLeft(numRows, 0);
-                for (size_t i = 0; i < pMBLayout->GetSize(); i++)   // i = frame index (time)
+                for (size_t i = 0; i < m_pMBLayout->GetSize(); i++)   // i = frame index (time)
                 {
-                    if (pMBLayout->Is(i, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
+                    if (m_pMBLayout->Is(i, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
                     {
                         //we set timeStep-1 elements following it to be SequenceStart until met NoInput
                         for (size_t j = 0; j < numRows; j++)        // j = stream
                         {
                             //we use & since ((int) MinibatchPackingFlags::SequenceStart) may come with NoLabel
-                            if (pMBLayout->Is(j, i, SequenceStart_or_End))
+                            if (m_pMBLayout->Is(j, i, SequenceStart_or_End))
                                 numResetLeft[j] = m_timeStep;
-                            else if (pMBLayout->Is(j, i, MinibatchPackingFlags::NoFeature))
+                            else if (m_pMBLayout->Is(j, i, MinibatchPackingFlags::NoFeature))
                                 numResetLeft[j] = 0;
                         }
                     }
@@ -151,45 +149,52 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
         }
+    public:
 
-        // this one differs in loop direction
-        virtual void ComputeInputPartial(const size_t inputIndex) = 0;
-
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex > 0)
+            if (inputIndex != 0) // TODO: this friendly error message should come out of Validate()
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
+
+            // special case: DelayedValueNodes may be used outside of loops
+            // TODO: this should be a bulk operation; this implementation is a quick hack
+            int dir = direction;    // (this avoids a 'conditional expression is constant' warning)
+            if (frameRange.IsAllFrames())
+            {
+                // recursive call to ourselves
+                if (dir < 0) for (size_t t = GetNumTimeSteps(); t --> 0; )
+                    ComputeInputPartial(inputIndex, FrameRange(t, GetNumParallelSequences()));
+                else for (size_t t = 0; t < m_pMBLayout->GetNumTimeSteps(); t++)
+                    ComputeInputPartial(inputIndex, FrameRange(t, GetNumParallelSequences()));
+                return;
+            }
+
+            size_t t = frameRange.t();
 
             assert(m_functionValues.GetNumRows() == GradientValues().GetNumRows());
 
-            ComputeInputPartialRP(frameRange);
-        }
-
-        void ComputeInputPartialRP(const FrameRange & frameRange)
-        {
             // this is the result of refactoring; feel free to clean up further:
-            int timeStep = m_timeStep;
             Matrix<ElemType>& inputGradientValues = Inputs(0)->GradientValues();
-            const Matrix<ElemType>& gradientValues = GradientValues();
-            const auto frameLayout = m_pShiftedMBLayout->GetFrame(frameRange.t());
-            const Matrix<float>& colBoundaryFlags = frameLayout.first;
-            const MinibatchPackingFlags & minibatchPackingFlags = frameLayout.second;
+            //const auto frameLayout = m_pShiftedMBLayout->GetFrame(t);
+            //const Matrix<float>& colBoundaryFlags = frameLayout.first;
+            //MinibatchPackingFlags minibatchPackingFlags = frameLayout.second;
 
-            size_t timeIdxInSeq = frameRange.t();
-            size_t mNbr = frameRange.NumCols();
-            assert(timeIdxInSeq >= 0);
-            if (timeIdxInSeq + direction * timeStep >= 0 && timeIdxInSeq + direction * timeStep < gradientValues.GetNumCols())
+            Base::MaskMissingColumnsToZero(m_gradientValues, t);
+
+            // TODO: change this to FrameRange/GradientSlice()
+            size_t mNbr = m_pMBLayout->GetNumParallelSequences();
+            if (mNbr != frameRange.NumCols()) LogicError("ComputeInputPartial: inconsistency between m_pMBLayout->GetNumParallelSequences() and frameRange.NumCols()");
+            if (t + direction * m_timeStep >= 0 && t + direction * m_timeStep < m_gradientValues.GetNumCols())
             {
                 // if there is a bondary in this frame, we treat each stream separately; otherwise we do all in one go
-                if (minibatchPackingFlags & (SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
+                if (m_pShiftedMBLayout->Is(t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
                 {
-                    for (int i = 0; i < mNbr; i++)
+                    for (int id = 0; id < mNbr; id++)
                     {
-                        if (! ((int)colBoundaryFlags(i,0) & ((int) SequenceStart_or_End)) &&
-                            ! ((int)colBoundaryFlags(i,0) & ((int) MinibatchPackingFlags::NoFeature)))
+                        if (!m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))    // don't propagate boundary frames or gaps
                         {
-                            Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + direction * timeStep)*mNbr + i, 1);
-                            Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
+                            Matrix<ElemType> to = inputGradientValues.ColumnSlice((t + direction * m_timeStep)*mNbr + id, 1);
+                            Matrix<ElemType> frm = m_gradientValues.ColumnSlice(t * mNbr + id, 1);
                             to += frm;
                         }
                     }
@@ -197,63 +202,84 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
-                    Matrix<ElemType> frm = gradientValues.ColumnSlice(timeIdxInSeq * mNbr, mNbr);
-                    Matrix<ElemType> to = inputGradientValues.ColumnSlice((timeIdxInSeq + direction * timeStep)*mNbr, mNbr);
+                    // TODO: can we use GradientSlice() here?
+                    Matrix<ElemType> frm = m_gradientValues.ColumnSlice(t * mNbr, mNbr);
+                    Matrix<ElemType> to = inputGradientValues.ColumnSlice((t + direction * m_timeStep)*mNbr, mNbr);
                     to += frm;
                 }
             }
         }
 
-        // this one differs in loop direction
-        virtual void EvaluateThisNode() = 0;
-
-        // this one differs in the starting condition
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) = 0;
-
-        void EvaluateThisNodeRP(const FrameRange & frameRange)
+        virtual void EvaluateThisNode(const FrameRange & frameRange) override
         {
-            // this is the result of refactoring; feel free to clean up further
-            const int timeStep = m_timeStep;
-            Matrix<ElemType>& functionValues = m_functionValues;
-            const Matrix<ElemType>& delayedActivation = m_delayedActivation;
-            const Matrix<ElemType>& inputFunctionValues = Inputs(0)->FunctionValues();
-            const ElemType & initStateValue = m_initialActivationValue;
-            const auto colBoundaryFlags1 = m_pShiftedMBLayout->GetFrame(frameRange.t());
-            const Matrix<float> & colBoundaryFlags = colBoundaryFlags1.first;
-            const MinibatchPackingFlags & minibatchPackingFlags = colBoundaryFlags1.second;
+            assert(m_pMBLayout);
 
-            size_t timeIdxInSeq = frameRange.t();
-            size_t mNbr = frameRange.NumCols();
-            assert(timeStep > 0);
-            if (functionValues.GetNumRows() != inputFunctionValues.GetNumRows() || functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
+            // special case: DelayedValueNodes may be used outside of loops
+            // TODO: this should be a bulk operation; this implementation is a quick hack
+            int dir = direction;    // (this avoids a 'conditional expression is constant' warning)
+            if (frameRange.IsAllFrames())
             {
-                // TODO: do we need this test^^ ? Resize() should test by itself
-                functionValues.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
+                // recursive call to ourselves
+                if (dir < 0) for (size_t t = 0; t < m_pMBLayout->GetNumTimeSteps(); t++)
+                    EvaluateThisNode(FrameRange(t, GetNumParallelSequences()));
+                else for (size_t t = GetNumTimeSteps(); t--> 0; )
+                    EvaluateThisNode(FrameRange(t, GetNumParallelSequences()));
+                return;
             }
 
-            int delayedIndex = (int)(timeIdxInSeq + direction * timeStep) * mNbr;
+            size_t t = frameRange.t();
+
+            // starting condition
+            bool isFirstFrame = dir < 0 ? t == 0 : t == Inputs(0)->GetNumTimeSteps() - 1;
+
+            // first time for this minibatch: update our post-prcoessed version of the layout
+            if (isFirstFrame)
+                CacheMBLayout();
+
+            // reset past activation as it reached to the begining of a minibatch
+            // the node pointed hasn't yet updated, so it is the past activation 
+            if (isFirstFrame && m_historyAlreadySet == false)
+                m_delayedActivation = Inputs(0)->FunctionValues();
+            // TODO: don't we need to set m_historyAlreadySet now?
+
+            // this is the result of refactoring; feel free to clean up further
+            const Matrix<ElemType>& inputFunctionValues = Inputs(0)->FunctionValues();
+            //const auto frameLayout = m_pShiftedMBLayout->GetFrame(t);
+            //const Matrix<float> & colBoundaryFlags = frameLayout.first;
+            //MinibatchPackingFlags minibatchPackingFlags = frameLayout.second;
+
+            size_t mNbr = m_pMBLayout->GetNumParallelSequences();
+            if (mNbr != frameRange.NumCols()) LogicError("EvaluateThisNode: inconsistency between m_pMBLayout->GetNumParallelSequences() and frameRange.NumCols()");
+            assert(m_timeStep > 0);
+            if (m_functionValues.GetNumRows() != inputFunctionValues.GetNumRows() || m_functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
+            {
+                // TODO: do we need this test^^ ? Resize() should test by itself
+                m_functionValues.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
+            }
+
+            int delayedIndex = (int)(t + direction * m_timeStep) * mNbr;
             int d = delayedIndex;
             if (d < 0 || d >= inputFunctionValues.GetNumCols())
-                d = (int)functionValues.Mod((float)delayedIndex, (float)delayedActivation.GetNumCols());
-            // this can point to the past activity of the previous minibatch
+                d = (int)m_functionValues.Mod((float)delayedIndex, (float)m_delayedActivation.GetNumCols());
+            // this can point to the past activation of the previous minibatch
 
-            Matrix<ElemType> out = ValueSlice(frameRange);
-            Matrix<ElemType> inp((DEVICEID_TYPE)functionValues.GetDeviceId());
+            Matrix<ElemType> inp((DEVICEID_TYPE)m_functionValues.GetDeviceId());
 
-            if (minibatchPackingFlags & SequenceStart_or_End)
+            // TODO: change this to FrameRange/GradientSlice()
+            if (m_pShiftedMBLayout->Is(t, SequenceStart_or_End))
             {
-                for (int i = 0; i < mNbr; i++)
+                for (int id = 0; id < mNbr; id++)
                 {
-                    out = functionValues.ColumnSlice(timeIdxInSeq * mNbr + i, 1);
+                    Matrix<ElemType> out = m_functionValues.ColumnSlice(t * mNbr + id, 1);
 
-                    if ((int)colBoundaryFlags(i,0) & ((int) SequenceStart_or_End))
-                        out.SetValue(initStateValue);
+                    if (m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End))
+                        out.SetValue(m_initialActivationValue);
                     else
                     {
                         if (delayedIndex < 0 || delayedIndex >= inputFunctionValues.GetNumCols())
-                            inp = delayedActivation.ColumnSlice(d + i, 1);
+                            inp = m_delayedActivation.ColumnSlice(d + id, 1);
                         else
-                            inp = inputFunctionValues.ColumnSlice(d + i, 1);
+                            inp = inputFunctionValues.ColumnSlice(d + id, 1);
 
                         out.SetValue(inp);
                     }
@@ -261,23 +287,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
+                Matrix<ElemType> out = ValueSlice(frameRange);
+
                 if (delayedIndex < 0 || delayedIndex >= inputFunctionValues.GetNumCols())
-                    inp = delayedActivation.ColumnSlice(d, mNbr);
+                    inp = m_delayedActivation.ColumnSlice(d, mNbr);
                 else
                     inp = inputFunctionValues.ColumnSlice(d, mNbr);
 
                 out.SetValue(inp);
             }
+
+            Base::MaskMissingColumnsToZero(m_functionValues, t); // TODO: make this take a FrameRange
         }
 
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
 
-            PrintSelfBeforeValidation(true/*allowNulls*/);
+            PrintSelfBeforeValidation();
 
             if (m_children.size() != 1)
-                LogicError("PastValue operation should have one input.");
+                LogicError("PastValue and FutureValue operations take one input.");
 
             if (!(Inputs(0) == nullptr))
             {
@@ -322,7 +352,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetTimeStep(const int val)
         {
             if (val <= 0)
-                LogicError("timeStep must be > 0.");    // TODO: then make 'val' a size_t please?
+                LogicError("m_timeStep must be > 0.");    // TODO: then make 'val' a size_t please?
             m_timeStep = val;
         }
 
@@ -357,8 +387,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define UsingDelayedValueNodeMembers UsingComputationNodeMembers; \
     using Base::m_initialActivationValue; using Base::m_delayedActivation; using Base::m_timeStep; \
-    using Base::m_pShiftedMBLayout; using Base::m_historyAlreadySet; \
-    using Base::ComputeInputPartialRP; using Base::EvaluateThisNodeRP
+    using Base::m_pShiftedMBLayout; using Base::m_historyAlreadySet;
 
     // =======================================================================
     // PastValueNode -- delay node
@@ -380,18 +409,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"PastValue"; }
 
-        // TODO: can we have the scheduler drive this?
+#if 0
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 0) // TODO: is this check necessary here? Can this be a generic check in the base class?
                 InvalidArgument("PastValue and FutureValue operations only take one input.");
 
-            int nbrSamples = GradientValues().GetNumCols() / GetNumParallelSequences(); 
+            int nbrSamples = GradientValues().GetNumCols() / GetNumParallelSequences();
             // TODO: call the looping version below to avoid code dup
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
                 ComputeInputPartialRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
         }
+#endif
 
+#if 0
         // TODO: why is this loop not in th underlying execution engine? This node should not have to know about this.
         virtual void EvaluateThisNode()  
         {
@@ -402,21 +433,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
                 EvaluateThisNodeRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
 
-            //set the past activity to be used by next minibatch
+            //set the past activation to be used by next minibatch
             m_delayedActivation = Inputs(0)->FunctionValues();
         }
+#endif
 
+#if 0
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)  
         {
-            // reset past activity as it reached to the begining of a minibatch
-            // the node pointed hasn't yet updated, so it is the past activity 
-            assert(m_pMBLayout);
-
-            if (frameRange.t() == 0 && m_historyAlreadySet == false)
-                m_delayedActivation = Inputs(0)->FunctionValues();
-            
-            EvaluateThisNodeRP(frameRange);
+            EvaluateThisNodeRP(frameRange, frameRange.t() == 0);
         }
+#endif
     };
 
     template class PastValueNode<float>; 
@@ -444,6 +471,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"FutureValue"; }
 
+#if 0
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 0)
@@ -454,7 +482,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
                 ComputeInputPartialRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
         }
+#endif
 
+#if 0
         virtual void EvaluateThisNode()
         {
             assert(m_timeStep > 0);
@@ -463,19 +493,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
                 EvaluateThisNodeRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
 
-            //set the future activity to be used by next minibatch
+            //set the future activation to be used by next minibatch
             m_delayedActivation = Inputs(0)->FunctionValues();
         }
+#endif
 
+#if 0
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
-            assert(m_pMBLayout);
-
-            if (frameRange.t() == Inputs(0)->FunctionValues().GetNumCols() / GetNumParallelSequences() - 1)
-                m_delayedActivation = Inputs(0)->FunctionValues();
-
-            EvaluateThisNodeRP(frameRange);
+            //EvaluateThisNodeRP(frameRange, frameRange.t() == Inputs(0)->FunctionValues().GetNumCols() / GetNumParallelSequences() - 1);
+            EvaluateThisNodeRP(frameRange, frameRange.t() == Inputs(0)->GetNumTimeSteps() - 1);
         }
+#endif
     };
 
     template class FutureValueNode<float>;
@@ -515,7 +544,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_use_errors_from_future_minibatch(false),
             m_DefaultState((ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
-            SetMaskMissingColumnsToZero();
         }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -1351,7 +1379,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //boundary.ColumnSlice(0, 1).SetValue(((int) MinibatchPackingFlags::SequenceStart));
                 //minibatchPackingFlags[1] = MinibatchPackingFlags::SequenceStart;
                 pMBLayout->Set(0, 1, MinibatchPackingFlags::SequenceStart); // TODO: strange--start at frame[1] instead of [0]?
-                Base::SetMBLayout(pMBLayout);
+                Base::LinkToMBLayout(pMBLayout);
 
                 f0 = Inputs(0)->FunctionValues();
                 f1 = Inputs(1)->FunctionValues();
