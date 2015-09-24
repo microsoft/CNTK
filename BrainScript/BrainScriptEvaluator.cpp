@@ -746,11 +746,37 @@ namespace Microsoft { namespace MSR { namespace BS {
     static ConfigurableRuntimeType MakeRuntimeTypeConstructor()
     {
         ConfigurableRuntimeType rtInfo;
-        rtInfo.construct = [](const IConfigRecordPtr config) // lambda to construct
+        rtInfo.construct = [](const IConfigRecordPtr & config) // lambda to construct
         {
             return MakeRuntimeObject<C>(config);
         };
         rtInfo.isConfigRecord = is_base_of<IConfigRecord, C>::value;
+        return rtInfo;
+    }
+
+
+    // Debug is a special class that just dumps its argument's value to log and then returns that value
+    struct Debug { };   // fake class type to get the template below trigger
+    template<>
+    static ConfigurableRuntimeType MakeRuntimeTypeConstructor<Debug>()
+    {
+        ConfigurableRuntimeType rtInfo;
+        rtInfo.construct = [](const IConfigRecordPtr & configp)
+        {
+            let & config = *configp;
+            let value = config[L"value"];
+            bool enabled = config[L"enabled"];
+            if (enabled)
+            {
+                wstring say = config[L"say"];
+                if (!say.empty())
+                    fprintf(stderr, "%ls\n", say.c_str());
+                let str = value.Is<String>() ? value : FormatConfigValue(value, L""); // convert to string (without formatting information)
+                fprintf(stderr, "%ls\n", str.c_str());
+            }
+            return value;
+        };
+        rtInfo.isConfigRecord = false;
         return rtInfo;
     }
 
@@ -767,6 +793,8 @@ namespace Microsoft { namespace MSR { namespace BS {
             // Actions
             DefineRuntimeType(PrintAction),
             DefineRuntimeType(FailAction),
+            // Special
+            DefineRuntimeType(Debug),
         };
 
         // first check our own internal types
