@@ -1336,8 +1336,9 @@ protected:  \
         /* TODO: move NewThis() here  */ \
 public: \
     using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; \
-    using Base::ComputeGradientForChildren; using Base::ComputeInputPartial; using Base::ConstOnes; using Base::InferImageDimsFromInput; \
-    using Base::InferMBLayoutFromInputsForStandardCase; using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
+    using Base::ComputeGradientForChildren; using Base::ComputeInputPartial; using Base::ConstOnes; \
+    using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
+    using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::EvaluateThisNode; using Base::FindChildInASet; using Base::FunctionValues; \
     using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
