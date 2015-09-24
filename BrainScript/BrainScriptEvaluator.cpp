@@ -758,7 +758,7 @@ namespace Microsoft { namespace MSR { namespace BS {
     // Debug is a special class that just dumps its argument's value to log and then returns that value
     struct Debug { };   // fake class type to get the template below trigger
     template<>
-    static ConfigurableRuntimeType MakeRuntimeTypeConstructor<Debug>()
+    /*static*/ ConfigurableRuntimeType MakeRuntimeTypeConstructor<Debug>()
     {
         ConfigurableRuntimeType rtInfo;
         rtInfo.construct = [](const IConfigRecordPtr & configp)
