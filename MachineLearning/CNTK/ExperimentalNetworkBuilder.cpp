@@ -22,6 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     wstring standardFunctions =
         L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
+        L"Debug(value, say = '', enabled = true) = new Debug [ /*macro arg values*/ ] \n"
         L"Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] \n"
         L"Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] \n"
         L"Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] \n"
