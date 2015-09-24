@@ -969,7 +969,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             do 
             {
-				if (!m_truncated && !m_fullutt)
+				if (!m_truncated )
                 {
                     if (!(*m_mbiter))
                         return false;
@@ -1115,14 +1115,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
                         {
                             if (m_processedFrame[i] != m_toProcess[i])
-                            {
                                 endEpoch = false;
-                            }
                         }
                         if(endEpoch)
-                        {
                             return false;
-                        }
                     }
                     size_t numOfFea = m_featuresBufferMultiIO.size();
                     size_t numOfLabel = m_labelsBufferMultiIO.size();
@@ -1136,7 +1132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         size_t endFr = 0;
                         if ((m_processedFrame[i] + m_mbSize) < m_toProcess[i])
                         {
-                            if(m_processedFrame[i] > 0)
+                            if (m_processedFrame[i] > 0)
                             {
                                 m_sentenceEnd[i] = false;
                                 m_switchFrame[i] = m_mbSize+1;
@@ -1183,9 +1179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j=startFr,k=0; j < endFr; j++,k++) // column major, so iterate columns in outside loop
                                         {
                                             for (int d = 0; d < dim; d++)
-                                            {
                                                 m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i][j * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
-                                            }
                                         }
                                     }
                                 }
@@ -1203,9 +1197,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     for (size_t j = startFr,k=0; j < endFr; j++,k++)
                                     {
                                         for (int d = 0; d < dim; d++)
-                                        {
                                             m_labelsBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i][j * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
-                                        }
                                     }
                                 }
                             }
@@ -1267,9 +1259,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     for (size_t j = startFr,k=0; j < endFr; j++,k++)
                                     {
                                         for (int d = 0; d < dim; d++)
-                                        {
                                             m_labelsBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i][j * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
-                                        }
                                     }
                                 }
                             }
@@ -1305,9 +1295,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j=startFr,k=0; j < endFr; j++,k++) // column major, so iterate columns in outside loop
                                         {
                                             for (int d = 0; d < dim; d++)
-                                            {
                                                 m_featuresBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i][k * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
-                                            }
                                         }
                                     }
                                 }
@@ -1318,9 +1306,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     for (size_t j = startFr,k=0; j < endFr; j++,k++)
                                     {
                                         for (int d = 0; d < dim; d++)
-                                        {
                                             m_labelsBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i][k * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
-                                        }
                                     }
                                 }
                             }
@@ -1347,9 +1333,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
                         }
                     }
-                    skip=false;
+                    skip = false;
                 }
-				else if (!m_truncated && m_fullutt)  //truncated = true, fullutt = true
+				else if (m_truncated && m_fullutt)  //truncated = true, fullutt = true
 				{
 					m_extraLatticeBufferMultiUtt.clear();
 					m_extraLabelsIDBufferMultiUtt.clear();
@@ -1948,16 +1934,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             sentenceEnd.resize(m_switchFrame.size());
             for (size_t i = 0; i < m_switchFrame.size() ; i++)
-            {
                 sentenceEnd[i] = m_switchFrame[i];
-            }
         }
 
     template<class ElemType>
         void HTKMLFReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
         {
             if (!m_framemode)
-                *pMBLayout = *m_pMBLayout;
+                pMBLayout->CopyFrom(m_pMBLayout);
             else
                 pMBLayout->SetAllNone();    // no flags in frame mode
         }

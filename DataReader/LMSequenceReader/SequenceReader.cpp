@@ -655,7 +655,7 @@ void SequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, int& class
         LogicError("SequenceReader::ReadClassInfo the actual number of words %d is smaller than the specified vocabulary size %d. Check if labelDim is too large. ", idx4class.size(), nwords);
     }
     std::vector<double> counts(idx4cnt.size());
-    for (auto p : idx4cnt)
+    for (const auto & p : idx4cnt)
         counts[p.first] = (double)p.second;
     m_noiseSampler = noiseSampler<long>(counts);
 
@@ -689,7 +689,7 @@ void SequenceReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
                 found = true;
         }
         FindConfigNames(readerConfig, "wfile", names);
-        for (auto name : names)
+        for (const auto & name : names)
         {
             ConfigParameters config = readerConfig(name);
             filesList.push_back(config("wfile"));
@@ -714,7 +714,7 @@ void SequenceReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
             // now get the section names for map and category types
             std::map<std::wstring, SectionType, nocase_compare> sections;
             m_cachingWriter->GetSections(sections);
-            for (auto pair : sections)
+            for (const auto & pair : sections)
             {
                 // TODO: we would need to add a sequenceMap type here as well
                 // or maybe change to heirarchal name (i.e. root.labelIn.map)
@@ -1812,7 +1812,7 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
 }
 
 template<class ElemType>
-size_t BatchSequenceReader<ElemType>::NumberSlicesInEachRecurrentIter()
+size_t BatchSequenceReader<ElemType>::GetNumParallelSequences()
 {
     size_t sz = mToProcess.size();
     if (sz == 0)
@@ -1856,12 +1856,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
 
         size_t nT = actualmbsize / mToProcess.size();
-        mtSentenceBegin.TransferFromDeviceToDevice(mtSentenceBegin.GetDeviceId(), CPUDEVICE);
-        mtSentenceBegin.Resize(mToProcess.size(), nT);
-        mtSentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
-        m_minibatchPackingFlag.resize(nT);
-        std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-
+        m_pMBLayout->Resize(mToProcess.size(), nT);
         if (features.GetMatrixType() == MatrixType::DENSE)
         {
             features.Resize(labelInfo.dim, actualmbsize);
@@ -1889,8 +1884,6 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         }
         
         features.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false,false, false);
-//        mtSentenceBegin.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
-//        m_minibatchPackingFlag.TransferFromDeviceToDevice(CPUDEVICE, featureDeviceId, false, false, false);
 
         // TODO: move these two methods to startMiniBatchLoop()
         if (readerMode == ReaderMode::Class)
@@ -1964,12 +1957,12 @@ void BatchSequenceReader<ElemType>::SetSentenceBegin(int wrd, int uttPos, int ti
         if (wrd == (int)index)
         {
             mSentenceBegin = true;
-            mtSentenceBegin.SetValue(uttPos, timePos, (ElemType)SEQUENCE_START);
-            m_minibatchPackingFlag[timePos] = MinibatchPackingFlag::SequenceStart;
+            m_pMBLayout->Reset(uttPos, timePos, MinibatchPackingFlags::SequenceStart);
         }
     }
 }
 
+// TODO: this should have been renamed to CopyMBLayoutTo(), but it had the wrong signature??
 template<class ElemType>
 void BatchSequenceReader<ElemType>::SetSentenceSegBatch(vector<size_t> &sentenceEnd)
 {
@@ -2101,14 +2094,9 @@ void BatchSequenceReader<ElemType>::GetLabelOutput(std::map < std::wstring,
 }
 
 template<class ElemType>
-void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+void BatchSequenceReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
-    DEVICEID_TYPE device = mtSentenceBegin.GetDeviceId();
-    mtSentenceBegin.TransferFromDeviceToDevice(device, sentenceBegin.GetDeviceId(), true);
-    sentenceBegin.SetValue(mtSentenceBegin);
-    mtSentenceBegin.TransferFromDeviceToDevice(sentenceBegin.GetDeviceId(), device, true);
-
-    minibatchPackingFlag = m_minibatchPackingFlag;
+    pMBLayout->CopyFrom(m_pMBLayout);
 }
 
 template<class ElemType>

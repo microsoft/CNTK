@@ -106,7 +106,6 @@ private:
 
     size_t GetNumParallelSequences() { return m_numberOfuttsPerMinibatch; } 
     void SetNumParallelSequences(const size_t) { };
-
      void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels,
 		 std::vector<std::wstring>& hmms, std::vector<std::wstring>& lattices);
     
@@ -173,7 +172,7 @@ public:
     {
     }
     virtual void Init(const ConfigParameters& config);
-    virtual void Destroy() {delete this;}
+    virtual void Destroy() { delete this; }
     virtual ~HTKMLFReader();
 
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
@@ -191,15 +190,15 @@ public:
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
-    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
+    virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
 	virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap);
 	virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm);
 
     virtual bool DataEnd(EndDataType endDataType);
     void CopyMBLayoutTo(MBLayoutPtr);
     void SetSentenceEndInBatch(vector<size_t> &/*sentenceEnd*/);
-    void SetSentenceEnd(int /*actualMbSize*/){};
-    void SetRandomSeed(int){ NOT_IMPLEMENTED };
+    void SetSentenceEnd(int /*actualMbSize*/) { };
+    void SetRandomSeed(int) { NOT_IMPLEMENTED };
 
     bool RequireSentenceSeg() { return !m_framemode; }; 
 };

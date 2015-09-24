@@ -30,9 +30,9 @@ void SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
 
     Matrix<ElemType> colPos(sentenceBegin.GetDeviceId());
     colPos.SetValue(sentenceBegin); /// -1 0 1
-    colPos.InplaceTruncateBottom(SEQUENCE_START);
+    colPos.InplaceTruncateBottom((int)MinibatchPackingFlags::SequenceStart);
     Matrix<ElemType>::Scale((ElemType)-1.0, colPos); 
-    colPos += SEQUENCE_MIDDLE;
+    colPos += (int)MinibatchPackingFlags::None;
     colSeg.SetDiagonalValue(colPos);  
     Matrix<ElemType> ones(sentenceBegin.GetDeviceId());
     ones.Resize(nStateRow, nStream);
@@ -63,7 +63,7 @@ void rnnEvaluateThisNodeSRP(Matrix<ElemType>& functionValues, size_t mNbr, Matri
             colSeg.Resize(mNbr, mNbr);
             colSeg.SetValue(0);
             colSegPastActivity.SetValue(colBegin);
-            colSegPastActivity.InplaceTruncateBottom(SEQUENCE_START);
+            colSegPastActivity.InplaceTruncateBottom((int)MinibatchPackingFlags::SequenceStart);
             colSeg.SetDiagonalValue(colSegPastActivity);
             Matrix<ElemType>::Multiply(inp, false, colSeg, false, out);
             ElemType initStateValue = (ElemType) 0.1;

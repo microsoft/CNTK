@@ -1104,7 +1104,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (wrong)
                         {
                             char serr[2048];
-                            sprintf_s((char*)serr, 2048, "Decoder %ls Numeric gradient = %e, Error BP gradient = %e", node->NodeName().c_str(), static_cast<double>(grdNum), static_cast<double>(grdErr));
+                            sprintf((char*)serr, "Decoder %ls Numeric gradient = %e, Error BP gradient = %e", node->NodeName().c_str(), static_cast<double>(grdNum), static_cast<double>(grdErr));
                             fprintf(stdout, "%s\n", serr);
                             verror_msgs.push_back(serr);
                         }

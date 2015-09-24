@@ -16,6 +16,7 @@
 #include <vld.h> // leak detection
 #endif
 #include "BestGpu.h"
+#include "MPIWrapper.h"
 
 // TODO: Get rid of this global
 Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
@@ -47,8 +48,8 @@ void CNTKEval<ElemType>::Init(const std::string& config)
         std::wstring path = m_config("modelPath");
         LoadModel(path);
     }
-    size_t nThread = m_config("numCPUThreads", "1");
-    CPUMatrix<ElemType>::SetNumThreads(nThread);    
+    size_t nThreads = m_config("numCPUThreads", "1");
+    CPUMatrix<ElemType>::SetNumThreads(nThreads);
 }
 
 // Destroy - cleanup and remove this class
@@ -137,7 +138,7 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
     vector<wstring> outNodeNames;
 
     ConfigParameters config;
-    //config["deviceId"] = to_string(m_net->GetDeviceID());
+    //config["deviceId"] = to_string(m_net->GetDeviceId());
 
     // create the reader if necessary
     if (m_reader == nullptr)

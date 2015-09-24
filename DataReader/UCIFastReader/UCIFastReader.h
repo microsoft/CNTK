@@ -111,8 +111,8 @@ public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    size_t NumberSlicesInEachRecurrentIter() { return mBlgSize; }
-    void SetSentenceSegBatch(Matrix<float> &, vector<MinibatchPackingFlag>&){};
+    size_t GetNumParallelSequences() { return mBlgSize; }
+    void CopyMBLayoutTo(MBLayoutPtr){};
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
@@ -120,7 +120,7 @@ public:
     virtual bool DataEnd(EndDataType endDataType);
     void SetSentenceSegBatch(Matrix<float>&, Matrix<ElemType>&) { };
 
-    void SetNbrSlicesEachRecurrentIter(const size_t sz);
+    void SetNumParallelSequences(const size_t sz);
 
     void SetRandomSeed(int) { NOT_IMPLEMENTED;  }
 };

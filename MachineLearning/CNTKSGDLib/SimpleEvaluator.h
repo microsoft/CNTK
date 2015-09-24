@@ -669,13 +669,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         (*ptr)->Evaluate(*ptr2);
                 }
 
-                vector<size_t> best_path;
-
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                decoderNet->SetActualMiniBatchSize(actualMBSize);
+                decoderNet->ResizeAllFeatureNodes(actualMBSize);
+                decoderNet->SetActualMiniBatchSizeFromFeatures();
                 encoderDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
                 decoderNet->VerifyActualNumParallelSequences(mNutt);
 
+                vector<size_t> best_path;
                 FindBestPathWithVariableLength(decoderNet, actualMBSize, decoderDataReader, dataWriter, outputNodes, writeNodes, decoderFeatureNodes, beam, &decoderInputMatrices, best_path);
 
                 totalEpochSamples += actualMBSize;
@@ -893,15 +893,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             priority_queue<Token<ElemType>> from_queue, to_queue;
             vector<double> evalResults;
 
-            size_t mbSize;
-            mbSize = evalnet->DetermineActualMBSizeFromFeatures();
-            size_t maxMbSize = 2 * mbSize;
 
             /// use reader to initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
-            evalnet->SetActualMiniBatchSize(mbSize);
+            size_t mbSize = evalnet->SetActualMiniBatchSizeFromFeatures();
             dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
             evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
+
+            size_t maxMbSize = 2 * mbSize;
 
             clock_t start, now;
             start = clock();
@@ -920,14 +919,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
-            evalnet->SetActualMiniBatchSize(1);
             for (auto ptr = featureNodes.begin(); ptr != featureNodes.end(); ptr++)
             {
                 size_t nr = (*ptr)->GetNumRows();
                 (*ptr)->Resize(nr, 1);
             }
+            // TODO: ^^ this is the same as ResizeAllFeatureNodes() if featureNodes == evalnet.FeatureNodes(). Is it?
+            evalnet->SetActualMiniBatchSizeFromFeatures();
 
-            dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
+            dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());  // TODO: should this be one column only?
             /// need to set the sentence begining segmentation info
             evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::SequenceStart));
 
@@ -1058,16 +1058,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<double> evalResults;
 
             size_t mbSize = inputLength;
+            /// use reader to initialize evalnet's sentence start information to let it know that this
+            /// is the beginning of sentence
+            evalnet->ResizeAllFeatureNodes(mbSize);
+            evalnet->SetActualMiniBatchSizeFromFeatures();
+            // TODO: not setting MBLayout?
+            evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
+            // TODO: This is UNTESTED; if it fails, change ^^ this back to SetActual...()
+
             size_t maxMbSize = 3 * mbSize;
 #ifdef DEBUG
             maxMbSize = 2;
 #endif
-            /// use reader to initialize evalnet's sentence start information to let it know that this
-            /// is the beginning of sentence
-            evalnet->SetActualMiniBatchSize(mbSize);
-            // TODO: not setting MBLayout?
-            evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
-            // TODO: This is UNTESTED; if it fails, change ^^ this back to SetActual...()
 
             clock_t start, now;
             start = clock();
@@ -1089,7 +1091,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
             // BUGBUG: This is almost certainly wrong; slice != MB size
-            evalnet->SetActualMiniBatchSize(dataReader->GetNumParallelSequences());
+            //evalnet->SetActualMiniBatchSize(dataReader->GetNumParallelSequences());
+            evalnet->ResizeAllFeatureNodes(1);
+            evalnet->SetActualMiniBatchSizeFromFeatures();
 
             double best_score = -numeric_limits<double>::infinity();
             double best_score_so_far = -numeric_limits<double>::infinity();
