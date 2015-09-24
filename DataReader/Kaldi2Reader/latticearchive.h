@@ -22,7 +22,6 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
-#include <hash_map>
 #include <unordered_map>
 #include <algorithm>        // for find()
 #include "simplesenonehmm.h"
@@ -62,7 +61,7 @@ class lattice
         size_t impliedspunitid : 31;        // id of implied last unit (intended as /sp/); only used in V2
         size_t hasacscores : 1;             // if 1 then ac scores are embedded
 
-        header_v1_v2() : numnodes (0), numedges (0), lmf (1.0f), wp (0.0f), frameduration (0.01/*assumption*/), numframes (0), impliedspunitid (SIZE_MAX), hasacscores (1) { }
+        header_v1_v2() : numnodes (0), numedges (0), lmf (1.0f), wp (0.0f), frameduration (0.01/*assumption*/), numframes (0), impliedspunitid ((size_t(1) << 31)-1), hasacscores (1) { }
     };
     header_v1_v2 info;                         // information about the lattice
     static const unsigned int NOEDGE = 0xffffff;    // 24 bits
@@ -509,7 +508,7 @@ public:
             }
         };
 
-        typedef aligninfo aligninfo;        // now we can access it as htkmlfwordsequence::aligninfo although it comes from some totally other corner of the system
+        using aligninfo_t = aligninfo;        // now we can access it as htkmlfwordsequence::aligninfo although it comes from some totally other corner of the system
 
         std::vector<word> words;
         std::vector<aligninfo> align;
@@ -1080,7 +1079,7 @@ class archive
 
     mutable size_t currentarchiveindex;             // which archive is open
     mutable auto_file_ptr f;                        // cached archive file handle of currentarchiveindex
-    hash_map<std::wstring,latticeref> toc;          // [key] -> (file, offset)  --table of content (.toc file)
+    std::unordered_map<std::wstring,latticeref> toc;          // [key] -> (file, offset)  --table of content (.toc file)
 public:
     // construct = open the archive
     //archive() : currentarchiveindex (SIZE_MAX) {}
