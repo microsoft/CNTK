@@ -31,6 +31,7 @@ private:
     vector<bool> m_sentenceEnd;
     bool m_readAhead;
     bool m_truncated;
+	bool m_fullutt;              //read full utterance every time
     bool m_framemode;
     vector<size_t> m_processedFrame;
     intargvector m_numberOfuttsPerMinibatchForAllEpochs;
@@ -39,6 +40,9 @@ private:
     size_t m_mbSize;
     vector<size_t> m_toProcess;
     vector<size_t> m_switchFrame;
+	vector<size_t> m_validFrame;       //valid frame number in each channel
+	vector<size_t> m_extraUttsPerMinibatch;
+	size_t m_extraUttNum;
     bool m_noData;
     bool m_trainOrTest; // if false, in file writing mode
     using LabelType = typename IDataReader<ElemType>::LabelType;
@@ -60,6 +64,15 @@ private:
     std::vector<size_t> m_featuresBufferAllocatedMultiIO;
     std::vector<std::shared_ptr<ElemType>> m_labelsBufferMultiIO;
     std::vector<size_t> m_labelsBufferAllocatedMultiIO;
+	//for lattice uids and phoneboundaries
+	std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>  m_latticeBufferMultiUtt;
+	std::vector<std::vector<size_t>> m_labelsIDBufferMultiUtt;
+	std::vector<std::vector<size_t>> m_phoneboundaryIDBufferMultiUtt;
+	std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>  m_extraLatticeBufferMultiUtt;
+	std::vector<std::vector<size_t>> m_extraLabelsIDBufferMultiUtt;
+	std::vector<std::vector<size_t>> m_extraPhoneboundaryIDBufferMultiUtt;
+	//hmm 
+	msra::asr::simplesenonehmm m_hset;
 
     std::map<std::wstring,size_t> m_featureNameToIdMap;
     std::map<std::wstring,size_t> m_labelNameToIdMap;
@@ -82,6 +95,8 @@ private:
     void PrepareForWriting(const ConfigParameters& config);
     
     bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>&matrices);
+	bool GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, std::vector<size_t> &extrauttmap);
+	void fillOneUttDataforParallelmode(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t startFr, size_t framenum, size_t channelIndex, size_t sourceChannelIndex);
     bool GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>&matrices);
     
     void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize);
@@ -89,11 +104,11 @@ private:
 
     bool ReNewBufferForMultiIO(size_t i);
 
-    size_t NumberSlicesInEachRecurrentIter() { return m_numberOfuttsPerMinibatch ;} 
-    void SetNbrSlicesEachRecurrentIter(const size_t) { };
+    size_t GetNumParallelSequences() { return m_numberOfuttsPerMinibatch; } 
+    void SetNumParallelSequences(const size_t) { };
 
-     void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels);
-
+     void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels,
+		 std::vector<std::wstring>& hmms, std::vector<std::wstring>& lattices);
     
     size_t ReadLabelToTargetMappingFile (const std::wstring& labelToTargetMappingFile, const std::wstring& labelListFile, std::vector<std::vector<ElemType>>& labelToTargetMap);
     
@@ -111,7 +126,7 @@ private:
     {
         if (m_cudaAllocator != nullptr)
         {
-            if (m_cudaAllocator->GetDeviceID() != deviceID)
+            if (m_cudaAllocator->GetDeviceId() != deviceID)
             {
                 delete m_cudaAllocator;
                 m_cudaAllocator = nullptr;
@@ -145,31 +160,17 @@ private:
     }
 
 public:
-    /// a matrix of n_stream x n_length
-    /// n_stream is the number of streams
-    /// n_length is the maximum lenght of each stream
-    /// for example, two sentences used in parallel in one minibatch would be
-    /// [2 x 5] if the max length of one of the sentences is 5
-    /// the elements of the matrix is 0, 1, or -1, defined as SEQUENCE_START, SEQUENCE_MIDDLE, NO_INPUT in cbasetype.h 
-    /// 0 1 1 0 1
-    /// 1 0 1 0 0 
-    /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
-    /// the second data stream has two sentences, with 0 indicating begining of sentences
-    /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
-    /// frame. 
-    Matrix<float> m_sentenceBegin;
-
-    /// a matrix of 1 x n_length
-    /// 1 denotes the case that there exists sentnece begin or no_labels case in this frame
-    /// 0 denotes such case is not in this frame
-    vector<MinibatchPackingFlag> m_minibatchPackingFlag;
+    MBLayoutPtr m_pMBLayout;
 
     /// by default it is false
-    /// if true, reader will set to SEQUENCE_MIDDLE for time positions that are orignally correspond to SEQUENCE_START
+    /// if true, reader will set to ((int) MinibatchPackingFlags::None) for time positions that are orignally correspond to ((int) MinibatchPackingFlags::SequenceStart)
     /// set to true so that a current minibatch can uses state activities from the previous minibatch. 
     /// default will have truncated BPTT, which only does BPTT inside a minibatch
     bool mIgnoreSentenceBeginTag;
-    HTKMLFReader() : m_sentenceBegin(CPUDEVICE) {
+    // TODO: this ^^ does not seem to belong here.
+
+    HTKMLFReader() : m_pMBLayout(make_shared<MBLayout>())
+    {
     }
     virtual void Init(const ConfigParameters& config);
     virtual void Destroy() {delete this;}
@@ -182,7 +183,7 @@ public:
 
     virtual bool SupportsDistributedMBRead() const override
     {
-        return ((m_frameSource != nullptr) && m_frameSource->supportsbatchsubsetting());
+        return m_frameSource && m_frameSource->supportsbatchsubsetting();
     }
 
     virtual void StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize) override;
@@ -191,9 +192,11 @@ public:
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
+	virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap);
+	virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm);
 
     virtual bool DataEnd(EndDataType endDataType);
-    void SetSentenceSegBatch(Matrix<float> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
+    void CopyMBLayoutTo(MBLayoutPtr);
     void SetSentenceEndInBatch(vector<size_t> &/*sentenceEnd*/);
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetRandomSeed(int){ NOT_IMPLEMENTED };

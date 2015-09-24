@@ -622,7 +622,7 @@ private:
                                std::vector<msra::math::ssematrixbase *> & abcs, littlematrixheap & matrixheap, 
                                const bool returnsenoneids,
                                std::vector<float> & edgeacscores, const msra::math::ssematrixbase & logLLs,
-                               edgealignments & thisedgealignments, backpointers & thisbackpointers) const;
+							   edgealignments & thisedgealignments, backpointers & thisbackpointers, array_ref<size_t> & uids, const_array_ref<size_t> bounds) const;
 
     double forwardbackwardlatticesMBR (const std::vector<float> &  edgeacscores, const msra::asr::simplesenonehmm & hset,
                                        const std::vector<double> & logalphas, const std::vector<double> & logbetas,
@@ -970,8 +970,8 @@ public:
         struct parallelstateimpl * pimpl;
         bool cpumode;
     public:
-        parallelstate();
-        ~parallelstate();
+		parallelstate();
+		~parallelstate();
         bool enabled() const { return pimpl != NULL; }; // true if functions in here are available or not
         void copyalignments(edgealignments & edgealignments);
         void entercomputation (const class msra::asr::simplesenonehmm & hmms, const mbrclassdefinition mbrclassdef);    // pass models in (to GPU)
@@ -981,13 +981,19 @@ public:
         const size_t getsilunitid ();
         void getedgeacscores (std::vector<float> & edgeacscores);
         void getedgealignments (std::vector<unsigned short> & edgealignments);
+		//to work with CNTK's GPU memory
+		void setmode(bool cpumode/*, size_t DeviceId*/);
+		void release(bool cpumode);		
+		void setloglls(const float * loglls, size_t numrowls, size_t numcols);
+		void allocateloglls(size_t numrowls, size_t numcols);
+		void getgamma(float * loglls, size_t numrows, size_t numcols);
     };
 
     // forward-backward function
     // Note: logLLs and posteriors may be the same matrix (aliased).
     double forwardbackward (parallelstate & parallelstate, const class msra::math::ssematrixbase & logLLs, const class msra::asr::simplesenonehmm & hmms,
                             class msra::math::ssematrixbase & result, class msra::math::ssematrixbase & errorsignalbuf,
-                            const float lmf, const float wp, const float amf, const float boostingfactor, const bool sMBRmode, const_array_ref<size_t> uids = const_array_ref<size_t>(),
+							const float lmf, const float wp, const float amf, const float boostingfactor, const bool sMBRmode, array_ref<size_t> uids, const_array_ref<size_t> bounds = const_array_ref<size_t>(),
                             const_array_ref<htkmlfwordsequence::word> transcript = const_array_ref<htkmlfwordsequence::word>(), const std::vector<float> & transcriptunigrams = std::vector<float>()) const;
 
     wstring key;        // (keep our own name (key) so we can identify ourselves for diagnostics messages)

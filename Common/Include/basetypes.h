@@ -187,6 +187,31 @@ static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono:
 
 namespace msra { namespace basetypes {
 
+	//sequence training
+	class auto_timer
+	{
+		LARGE_INTEGER freq, start;
+		auto_timer(const auto_timer &); void operator= (const auto_timer &);
+	public:
+		auto_timer()
+		{
+			if (!QueryPerformanceFrequency(&freq)) // count ticks per second
+				throw std::runtime_error("auto_timer: QueryPerformanceFrequency failure");
+			QueryPerformanceCounter(&start);
+		}
+		operator double() const     // each read gives time elapsed since start, in seconds
+		{
+			LARGE_INTEGER end;
+			QueryPerformanceCounter(&end);
+			return (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+		}
+		void show(const std::string & msg) const
+		{
+			double elapsed = *this;
+			fprintf(stderr, "%s: %.6f ms\n", msg.c_str(), elapsed * 1000.0);
+		}
+	};
+
 // class ARRAY -- std::vector with array-bounds checking
 // VS 2008 and above do this, so there is no longer a need for this.
 
@@ -1052,43 +1077,56 @@ public:
 #define EPSILON 1e-5
 #define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
 
-// why are the following in basetypes.h?
-/**
-These macros are used for sentence segmentation information. 
-*/
-#define SEQUENCE_START ((int) MinibatchPackingFlag::SequenceStart)
-#define SEQUENCE_MIDDLE ((int) MinibatchPackingFlag::None)
-#define SEQUENCE_END ((int) MinibatchPackingFlag::SequenceEnd)
-#define NO_INPUT ((int) MinibatchPackingFlag::NoInput)
-#define NO_FEATURE ((int) MinibatchPackingFlag::NoFeature)
-#define NO_LABEL ((int) MinibatchPackingFlag::NoLabel)
-
-enum class MinibatchPackingFlag : unsigned char
+// why is this in basetypes.h?
+// boundary flags for a frame
+// (note for refactoring:) This is currently used by
+//  - RecurrentNodes: SetMBLayout(), ComputeInputPartialSRP(), EvaluateThisNodeSRP(),    .. check SentenceBegin_or_End
+//    (plus PastValueNode and FutureValueNode base class template parameter)
+//  - SimpleEvaluator.h: FindBestPath(), FindBestPathWithVariableLength()   --doing a bad hack, pretending MBs of 1 frame
+// deprecated:
+//  - LSTMNode
+// through ComputationNode::MaskMissingColumnsToZero():
+//  - nodes where the user explicitly requested masking (NeedToMaskMissingColumnsToZero() == true)
+//  - ComputeGradientForChildren()
+//  - all training and evaluation criterion nodes   .. TODO: double-confirm it's all Training nodes; but those also have NodeDoesItsOwnCustomizedMissingColumnsMasking() == true
+// in core classes:
+//  - ComputationNetwork: GetNumSamplesWithLabel(), MaskMissingColumnsToZero()  --both are cheap in case of no flags set
+//  - Matrix.h
+//  - SGD::DecimateMinibatchWithSentences() (should be done differently)
+// and readers that generate the flags:
+//  - HTKMLFReader::GetMinibatchToTrainOrTest()
+//  - BatchLUSequenceReader::EnsureDataAvailable(), GetMinibatch(), DataEnd()
+//  - EvalReader::CopyMBLayoutTo()
+//  - BatchSequenceReader::SetSentenceBegin()
+// others:
+//  - MathPerformanceTests.cpp
+// ==> conclusion: safe to ALWAYS pass the full layout, will not be inefficient
+enum class MinibatchPackingFlags : char     // (note: not using unsigned char because these go into a matrix, and we use Matrix<char>, since we use it as a data holder)
 {
     None = 0,
-    SequenceStart = 1 << 0,   //binary 0001
-    SequenceEnd = 1 << 1,   //binary 0010
-    NoFeature = 1 << 2,      //binary 0100
-    NoLabel = 1 << 3,      //binary 1000
+    SequenceStart = 1 << 0,         // binary 0001  frame is first of an utterance
+    SequenceEnd = 1 << 1,           // binary 0010  frame is last of an utterance
+    NoFeature = 1 << 2,             // binary 0100  frame has no feature (e.g. a gap due to BPTT)
+    NoLabel = 1 << 3,               // binary 1000  frame has no label
 
-    NoInput = NoFeature | NoLabel, //when we refactorize reader, NoInput will no longer needed
+    NoInput = NoFeature | NoLabel,  // when we refactorize reader, NoInput will no longer needed
     SequenceStartOrNoFeature = SequenceStart | NoFeature,
     SequenceEndOrNoFeature = SequenceEnd | NoFeature,
     SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
 };
 
-inline MinibatchPackingFlag operator| (MinibatchPackingFlag a, MinibatchPackingFlag b)
+inline MinibatchPackingFlags operator| (MinibatchPackingFlags a, MinibatchPackingFlags b)
 {
-    return static_cast<MinibatchPackingFlag>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
+    return static_cast<MinibatchPackingFlags>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
 }
 
-inline MinibatchPackingFlag& operator|= (MinibatchPackingFlag& a, MinibatchPackingFlag b)
+inline MinibatchPackingFlags& operator|= (MinibatchPackingFlags& a, MinibatchPackingFlags b)
 {
     a = a | b;
     return a;
 }
 
-inline bool operator& (MinibatchPackingFlag a, MinibatchPackingFlag b)
+inline bool operator& (MinibatchPackingFlags a, MinibatchPackingFlags b)
 {
     return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
 }
@@ -1099,4 +1137,20 @@ static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
     return l.second > r.second;
 }
 
+//sequence training 
+// ----------------------------------------------------------------------------
+// frequently missing Win32 functions
+// ----------------------------------------------------------------------------
+
+// strerror() for Win32 error codes
+static inline std::wstring FormatWin32Error(DWORD error)
+{
+	wchar_t buf[1024] = { 0 };
+	::FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM, "", error, 0, buf, sizeof (buf) / sizeof (*buf) - 1, NULL);
+	std::wstring res(buf);
+	// eliminate newlines (and spaces) from the end
+	size_t last = res.find_last_not_of(L" \t\r\n");
+	if (last != std::string::npos) res.erase(last + 1, res.length());
+	return res;
+}
 #endif    // _BASETYPES_

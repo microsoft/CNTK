@@ -465,13 +465,16 @@ namespace msra { namespace dbn {
 
         bool getbatch (const size_t globalts, const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
             std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts, 
-            std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs)
+			std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs, std::vector<std::vector<size_t>> & sentendmark,
+			std::vector<std::vector<size_t>> & phoneboundaries)
         {
             // for single input/output set size to be 1 and run old getbatch
             feat.resize(1);
             uids.resize(1);
             //transcripts.resize(1);
             //latticepairs.resize(1);
+			sentendmark.resize(1);
+			phoneboundaries.resize(1);
             return getbatch(globalts, framesrequested, feat[0], uids[0], transcripts, latticepairs);
         }
 
@@ -742,7 +745,8 @@ namespace msra { namespace dbn {
         // This function is NOT thread-safe (due to caching of random sequence).
         bool getbatch (const size_t globalts, const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
             std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts, 
-            std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs)
+			std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs, std::vector<std::vector<size_t>> & sentendmark,
+			std::vector<std::vector<size_t>> & phoneboundaries)
         {
 
             auto_timer timergetbatch;
@@ -765,6 +769,8 @@ namespace msra { namespace dbn {
 
             feat.resize(pframes.size());
             uids.resize(classids.size());
+			sentendmark.resize(classids.size());
+			phoneboundaries.resize(classids.size());
             foreach_index(i, feat)
             {
                 size_t leftextent, rightextent;

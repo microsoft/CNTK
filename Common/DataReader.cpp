@@ -110,7 +110,7 @@ DataReader<ElemType>::DataReader(const ConfigParameters& config)
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
         m_dataReader[m_ioNames[i]]->Init(m_configure[m_ioNames[i]]);
-        m_dataReader[m_ioNames[i]]->SetNbrSlicesEachRecurrentIter(mNbrUttPerMinibatch);
+        m_dataReader[m_ioNames[i]]->SetNumParallelSequences(mNbrUttPerMinibatch);
     }
 }
 
@@ -191,9 +191,9 @@ bool DataReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
         if (nbr > 0)
-            m_dataReader[m_ioNames[i]]->SetNbrSlicesEachRecurrentIter(nbr);
+            m_dataReader[m_ioNames[i]]->SetNumParallelSequences(nbr);
         bRet &= m_dataReader[m_ioNames[i]]->GetMinibatch(matrices);
-        thisNbr = m_dataReader[m_ioNames[i]]->NumberSlicesInEachRecurrentIter();
+        thisNbr = m_dataReader[m_ioNames[i]]->GetNumParallelSequences();
         if (nbr > 0 && thisNbr != nbr)
             LogicError("DataReader<ElemType>::GetMinibatch: The specified number of utterances per minibatch is not consistent to the actual number of utterances per minibatch");
         nbr = thisNbr;
@@ -201,17 +201,47 @@ bool DataReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     return bRet;
 }
 
+// GetMinibatch4SE - Get the next minibatch for SE training, including lattice, labels and phone boundary
+// latticeinput - lattice for each utterances in this minibatch
+// uids - lables stored in size_t vector instead of ElemType matrix
+// boundary - phone boundaries
+// returns - true if there are more minibatches, false if no more minibatchs remain
 template<class ElemType>
-size_t DataReader<ElemType>::NumberSlicesInEachRecurrentIter()
+bool DataReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap)
+{
+	bool bRet = true;
+	for (size_t i = 0; i < m_ioNames.size(); i++)
+	{
+		bRet &= m_dataReader[m_ioNames[i]]->GetMinibatch4SE(latticeinput, uids, boundaries, extrauttmap);
+	}
+	return bRet;
+}
+
+// GetHmmData - Get the HMM definition for SE training
+// hmm - HMM definition 
+// returns - true if succeed 
+template<class ElemType>
+bool DataReader<ElemType>::GetHmmData(msra::asr::simplesenonehmm * hmm)
+{
+	bool bRet = true;
+	for (size_t i = 0; i < m_ioNames.size(); i++)
+	{
+		bRet &= m_dataReader[m_ioNames[i]]->GetHmmData(hmm);
+	}
+	return bRet;	
+}
+
+template<class ElemType>
+size_t DataReader<ElemType>::GetNumParallelSequences()
 {
     size_t nNbr = 0; 
     for (size_t i = 0; i < m_ioNames.size(); i++)
     {
         IDataReader<ElemType> * ptr = m_dataReader[m_ioNames[i]];
         if (nNbr == 0)
-            nNbr = ptr->NumberSlicesInEachRecurrentIter();
-        if (nNbr != ptr->NumberSlicesInEachRecurrentIter())
-            LogicError("NumberSlicesInEachRecurrentIter: number of slices in each minibatch not consistent for these streams");
+            nNbr = ptr->GetNumParallelSequences();
+        if (nNbr != ptr->GetNumParallelSequences())
+            LogicError("GetNumParallelSequences: number of slices in each minibatch not consistent for these streams");
     }
     return nNbr;
 }
@@ -242,10 +272,11 @@ bool DataReader<ElemType>::GetProposalObs(std::map<std::wstring, Matrix<ElemType
 }
 
 template<class ElemType>
-void DataReader<ElemType>::SetSentenceSegBatch(Matrix<float> &sentenceEnd, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+void DataReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
 {
+    // BUGBUG: This copies all data reader's layout info on top of each other, keeping only the last one; likely not what was intended.
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        m_dataReader[m_ioNames[i]]->SetSentenceSegBatch(sentenceEnd, minibatchPackingFlag);
+        m_dataReader[m_ioNames[i]]->CopyMBLayoutTo(pMBLayout);
 }
 
 template<class ElemType>
@@ -259,12 +290,11 @@ template<class ElemType>
 bool DataReader<ElemType>::GetMinibatchCopy(
     std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
     std::map<std::wstring, Matrix<ElemType>*>& matrices,
-    Matrix<float>& sentenceBegin,
-    std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
+    MBLayoutPtr pMBLayout)
 {
     bool ans = false;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        ans = (m_dataReader[m_ioNames[i]]->GetMinibatchCopy(uttInfo, matrices, sentenceBegin, minibatchPackingFlag) || ans);
+        ans = (m_dataReader[m_ioNames[i]]->GetMinibatchCopy(uttInfo, matrices, pMBLayout) || ans);
     return ans;
 }
 
@@ -272,12 +302,11 @@ template<class ElemType>
 bool DataReader<ElemType>::SetNetOutput(
     const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
     const Matrix<ElemType>& outputs,
-    const Matrix<float>& sentenceBegin,
-    const std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
+    const MBLayoutPtr pMBLayout)
 {
     bool ans = false;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        ans = (m_dataReader[m_ioNames[i]]->SetNetOutput(uttInfo, outputs, sentenceBegin, minibatchPackingFlag) || ans);
+        ans = (m_dataReader[m_ioNames[i]]->SetNetOutput(uttInfo, outputs, pMBLayout) || ans);
     return ans;
 }
 

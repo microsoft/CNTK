@@ -1118,6 +1118,57 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
+                                        CPUMatrix<ElemType>& functionValues,
+                                        ElemType learnRatePerSample,
+                                        ElemType momentum,
+                                        ElemType adaWeight,
+                                        ElemType adaMul)
+    {
+        size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+        if (IsEmpty() || (GetNumCols() < numColsNeeded))
+        {
+            Resize(gradients.GetNumRows(), numColsNeeded);
+            SetValue(0.0);
+        }
+
+        assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+
+        size_t n = gradients.GetNumElements();
+        ElemType* grad = gradients.m_pArray;
+        ElemType* smoothAda = m_pArray;
+        ElemType* smoothMom = m_pArray + n;
+        ElemType* val = functionValues.m_pArray;
+#pragma omp parallel for
+        // TODO: Unroll 4-times for better performance leveraging vectorization
+        for (long i = 0; i < n; i++)
+        {
+            ElemType g = grad[i];
+            ElemType adaSqr = adaWeight * smoothAda[i] + (1.0f - adaWeight) * g * g;
+            smoothAda[i] = adaSqr;
+            if (adaSqr != 0.0f)
+            {
+                ElemType ada = sqrt(adaSqr);
+                ElemType w = adaMul * ((ElemType)1.0 / ada);
+
+                if (w > 10.0f)
+                    w = 10.0f;
+                g *= w;
+            }
+
+            if (momentum > 0.0f)
+            {
+                g = momentum * smoothMom[i] + (1.0f - momentum) * g;
+                smoothMom[i] = g;
+            }
+
+            g *= learnRatePerSample;
+            val[i] -= g;
+        }
+    }
+
+    template<class ElemType>
     ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
         ElemType RMS_GAMMA,
         ElemType RMS_WGT_INC,
@@ -5136,6 +5187,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     };
+	template<class ElemType>
+	CPUMatrix<ElemType>& CPUMatrix<ElemType>::DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType & threshhold)
+	{
+		auto& us = *this;
+		if (us.GetNumCols() != gamma.GetNumCols() || us.GetNumRows() != gamma.GetNumRows())
+			throw std::logic_error("DropFrame: target matrix is not in the same size as gamm matrix.");
+
+#pragma omp parallel for
+		foreach_column(j, label)
+		{
+
+			bool dropframe = false;
+			foreach_row(i, label)
+			{
+				if (fabs(label(i, j) - 1.0f) < 0.1)
+				{
+					if (gamma(i, j) < threshhold)
+						dropframe = true;
+					break;
+				}
+			}
+
+			foreach_row(i, label)
+			{
+				us(i, j) = 0.0f;
+			}
+		}
+
+		return *this;
+	}
+	template<class ElemType>
+	CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label,
+		const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha)
+	{
+		auto& us = *this;
+		foreach_coord(i, j, us)
+			us(i, j) += alpha * (label(i, j) - (1 - hsmoothingWeight)*dnnoutput(i, j) - hsmoothingWeight*gamma(i, j));
+		return *this;
+	}
 
     template<class ElemType>
     int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
@@ -5163,12 +5253,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return numThreads;
     }
 
-    //The explicit instantiation part
-    template class CPUMatrix<float>;
-    template class CPUMatrix<double>;
+    // The explicit instantiation part
+    template class MATH_API CPUMatrix<float>;
+    template class MATH_API CPUMatrix<double>;
 
     // We use Matrix<char> as the backing store for QuantizedMatrix
-    // Let's explciitly instantiate the methods we need for that purpose
+    // Let's explicitly instantiate the methods we need for that purpose
     template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols);
     template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols, char* pArray, const size_t matrixFlags);
     template CPUMatrix<char>::CPUMatrix();

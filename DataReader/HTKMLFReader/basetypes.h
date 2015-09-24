@@ -273,15 +273,16 @@ extern void _CHECKED_ASSERT_error(const char * file, int line, const char * exp)
 
 /**
 These macros are used for sentence segmentation information.
+TODO: get rid of this, no need
 */
-#define SEQUENCE_START ((int) MinibatchPackingFlag::SequenceStart)
-#define SEQUENCE_MIDDLE ((int) MinibatchPackingFlag::None)
-#define SEQUENCE_END ((int) MinibatchPackingFlag::SequenceEnd)
-#define NO_INPUT ((int) MinibatchPackingFlag::NoInput)
-#define NO_FEATURE ((int) MinibatchPackingFlag::NoFeature)
-#define NO_LABEL ((int) MinibatchPackingFlag::NoLabel)
+//#define ((int) MinibatchPackingFlags::SequenceStart) ((int) MinibatchPackingFlags::SequenceStart)
+//#define ((int) MinibatchPackingFlags::None) ((int) MinibatchPackingFlags::None)
+//#define ((int) MinibatchPackingFlags::SequenceEnd) ((int) MinibatchPackingFlags::SequenceEnd)
+//#define ((int) MinibatchPackingFlags::NoInput) ((int) MinibatchPackingFlags::NoInput)
+//#define ((int) MinibatchPackingFlags::NoFeature) ((int) MinibatchPackingFlags::NoFeature)
+//#define ((int) MinibatchPackingFlags::NoLabel) ((int) MinibatchPackingFlags::NoLabel)
 
-enum class MinibatchPackingFlag : unsigned char
+enum class MinibatchPackingFlags : unsigned char
 {
     None = 0,
     SequenceStart = 1 << 0,   //binary 0001
@@ -295,18 +296,18 @@ enum class MinibatchPackingFlag : unsigned char
     SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
 };
 
-inline MinibatchPackingFlag operator| (MinibatchPackingFlag a, MinibatchPackingFlag b)
+inline MinibatchPackingFlags operator| (MinibatchPackingFlags a, MinibatchPackingFlags b)
 {
-    return static_cast<MinibatchPackingFlag>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
+    return static_cast<MinibatchPackingFlags>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
 }
 
-inline MinibatchPackingFlag& operator|= (MinibatchPackingFlag& a, MinibatchPackingFlag b)
+inline MinibatchPackingFlags& operator|= (MinibatchPackingFlags& a, MinibatchPackingFlags b)
 {
     a = a | b;
     return a;
 }
 
-inline bool operator& (MinibatchPackingFlag a, MinibatchPackingFlag b)
+inline bool operator& (MinibatchPackingFlags a, MinibatchPackingFlags b)
 {
     return (static_cast<unsigned char>(a)& static_cast<unsigned char>(b)) != 0;
 }

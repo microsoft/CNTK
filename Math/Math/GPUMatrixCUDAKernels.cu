@@ -1111,6 +1111,45 @@ __global__ void _adagrad4BlockSparse(
 }
 
 template<class ElemType>
+__global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul)
+{
+    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+    CUDA_LONG stride = blockDim.x * gridDim.x;
+    for (; idx < size; idx += stride)
+    {
+        ElemType g = grad[idx];
+        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+        smoothAda[idx] = adaSqr;
+        if (adaSqr != 0.0f)
+        {
+            ElemType w;
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                w = adaMul * rsqrt(adaSqr);
+            }
+            else
+            {
+                w = adaMul * rsqrtf(adaSqr);
+            }
+
+            if (w > 10.0f)
+                w = 10.0f;
+            g *= w;
+        }
+
+        if (mom > 0.0f)
+        {
+            g = mom * smoothMom[idx] + (1.0f - mom) * g;
+            smoothMom[idx] = g;
+        }
+
+        g *= lr;
+        val[idx] -= g;
+    }
+}
+
+template<class ElemType>
 __global__ void _rmsprop_init(
     ElemType* avars, ElemType* signs, ElemType* steps,
     ElemType* curr_grad,
@@ -4399,5 +4438,55 @@ __global__ void _reductionLogAddSum(
         sum[0] = partialLogAddSum[0];
 }
 
+/* set the value of certain columns to be zero
+the column is decided by threshhold value
+*/
+template<class ElemType>
+__global__ void _DropFrame(
+	ElemType *a,
+	const ElemType *label,
+	const ElemType *gamma,
+	const ElemType framedropthreshhold,
+	const long m_numCols,
+	const long m_numRows) //ld
+{
+	int col_id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (col_id >= m_numCols)
+		return;
+	bool dropframe = false;
+	for (long i = 0; i<m_numRows; ++i)
+	{
+		int idx = IDX2C(i, col_id, m_numRows);
+		//printf("%u ", idx);
+		if (fabs(label[idx] - 1.0) < 0.1)
+		{
+			if (gamma[idx] < framedropthreshhold)
+				dropframe = true;
+			break;
+		}
+	}
 
+	if (dropframe)
+	{
+		//printf("frame dropped %u ", col_id);
+		for (long i = 0; i < m_numRows; ++i)
+		{
+			a[IDX2C(i, col_id, m_numRows)] = 0.0;
+		}
+	}
+
+}
+
+template<class ElemType>
+__global__ void _AssignSequenceError(const ElemType hsmoothingWeight, ElemType *error, const ElemType *label,
+	const ElemType *dnnoutput, const ElemType *gamma, ElemType alpha, const long N)
+{
+	LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+	error[id] -= alpha * (label[id] - (1.0 - hsmoothingWeight)*dnnoutput[id] - hsmoothingWeight * gamma[id]);
+	//change to ce
+	//error[id] -= alpha * (label[id] - dnnoutput[id] );
+
+}
 #endif // !CPUONLY
