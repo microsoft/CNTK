@@ -192,7 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
         }
 
-        virtual void SetFunctionAndGradientSize(const int numSamples) = 0;
+        virtual void SetFunctionAndGradientMBSize(const int numSamples) = 0;
 
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
         MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
@@ -842,7 +842,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return result;
         }
 
-        virtual void SetFunctionAndGradientSize(const int numSamples) 
+        // BUGBUG: This should only change nodes that emit minibatches, but not e.g. parameters or criterion nodes
+        //         Cannot be solved by overrides, since parameters may combine before being applied, and nodes won't know
+        // virtual, but currently only overridden by GMMLogLikelihoodNode (which allocates some internal temp memory)
+        virtual void SetFunctionAndGradientMBSize(const int numSamples)
         {
             size_t numRows = m_functionValues.GetNumRows();
             if (numRows > 0 && numSamples > 0)
@@ -1313,7 +1316,7 @@ public: \
     using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
     using Base::OperationName; using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
-    using Base::SaveToFile; using Base::SetFunctionAndGradientSize; using Base::SetInput; using Base::Validate; \
+    using Base::SaveToFile; using Base::SetFunctionAndGradientMBSize; using Base::SetInput; using Base::Validate; \
 protected:  \
     using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
     using Base::m_visitedOrder; using Base::m_index; using Base::m_lowLink; using Base::m_visited; using Base::m_inStack; using Base::m_indexInLoop; \
