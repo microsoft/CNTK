@@ -927,7 +927,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 (*ptr)->Resize(nr, 1);
             }
 
-            dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
+            dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());  // TODO: should this be one column only?
             /// need to set the sentence begining segmentation info
             evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::SequenceStart));
 
