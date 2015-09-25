@@ -129,13 +129,7 @@
     <ClInclude Include="SGD.h">
       <Filter>SGD</Filter>
     </ClInclude>
-    <ClInclude Include="SimpleEvaluator.h">
-      <Filter>SGD</Filter>
-    </ClInclude>
     <ClInclude Include="SimpleOutputWriter.h">
-      <Filter>Eval</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleNetworkBuilder.h">
       <Filter>Eval</Filter>
     </ClInclude>
     <ClInclude Include="IComputationNetBuilder.h">
@@ -156,11 +150,11 @@
     <ClInclude Include="..\..\Math\Math\QuantizedMatrix.h">
       <Filter>from CNTKMath</Filter>
     </ClInclude>
-    <ClInclude Include="..\CNTK\SimpleOutputWriter.h">
-      <Filter>SGD</Filter>
+    <ClInclude Include="SimpleEvaluator.h">
+      <Filter>Eval</Filter>
     </ClInclude>
     <ClInclude Include="DataReaderHelpers.h">
-      <Filter>SGD</Filter>
+      <Filter>Data Reading</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -196,6 +190,9 @@
     </Filter>
     <Filter Include="from CNTKMath">
       <UniqueIdentifier>{4c82e709-ff3e-43ab-b94c-763e300b637e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data Reading">
+      <UniqueIdentifier>{b866d513-7bd0-497c-98c2-f62dbcd4cde4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

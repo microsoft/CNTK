@@ -6,12 +6,13 @@
 #pragma once
 
 #include "Basics.h"
-#include "ComputationNetwork.h"
 #include "DataReader.h"
+#include "ComputationNetwork.h"
+#include "DataReaderHelpers.h"
+#include "fileutil.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
-#include "fileutil.h"
 #include <fstream>
 
 using namespace std;
