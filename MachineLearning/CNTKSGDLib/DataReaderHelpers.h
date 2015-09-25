@@ -74,6 +74,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (numprocs == 1)
                 return;
 
+            assert(pMBLayout->RequireSentenceSeg());
+
             // For RNN, a input Matrix is organized in the following way: 
             //   | x_t^1  x_t^2 ... x_t^N |  .... | x_{t+T-1}^1 ... x_{t+T-1}^N | 
             //   |<----   block 1    ---->|  .... |<------  block T       ----->| 
@@ -173,7 +175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // TODO: ^^ If we cared, this could be done with a single RowSlice(Reshape(.))
             }
             // decimate layout
-            auto pNewMBLayout = make_shared<MBLayout>(newNumParallelSequences, T);
+            auto pNewMBLayout = make_shared<MBLayout>(newNumParallelSequences, T, true);
             for (size_t t = 0; t < T; t++) for (size_t id = 0; id < newNumParallelSequences; id++)
                 pNewMBLayout->Set(id, t, pMBLayout->Get(id + sent_start, t));
             pMBLayout->MoveFrom(pNewMBLayout);  // update layout in-place

@@ -714,7 +714,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         0 : no such case
         1 : case exists
         */
-        m_pMBLayout->Init(mToProcess.size(), mMaxSentenceLength);
+        m_pMBLayout->Init(mToProcess.size(), mMaxSentenceLength, true/*sequential*/);
         for (i = (int)mLastPosInSentence; j < (int)mMaxSentenceLength; i++, j++)
         {
             for (int k = 0; k < mToProcess.size(); k++)

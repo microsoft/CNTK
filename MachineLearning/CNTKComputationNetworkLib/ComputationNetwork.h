@@ -259,9 +259,6 @@ public:
             size_t numTimeSteps = m_pMBLayout->GetNumTimeSteps();
             size_t numSequences = m_pMBLayout->GetNumParallelSequences();
 
-            if (m_pMBLayout->GetSize() != numTimeSteps)
-                LogicError("GetNumSamplesWithLabel(): m_pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams.Check feature reader. ");
-
             size_t numSamplesWithoutLabel = 0;
 
             for (size_t t = 0; t < numTimeSteps; t++)
