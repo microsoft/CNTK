@@ -286,6 +286,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_horizontalSubsample > m_kernelWidth || m_verticalSubsample > m_kernelHeight)
                 InvalidArgument("In ConvolutionNode horizontalSubsample must <= kernelWidth and verticalSubsample must <= kernelHeight.");
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
             size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputChannels;
@@ -465,6 +466,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_horizontalSubsample > m_windowWidth || m_verticalSubsample > m_windowHeight)
                 InvalidArgument("PoolingNodeBase: horizontalSubsample must <= windowWidth and verticalSubsample must <= windowHeight.");
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
             m_inputSizePerSample = m_inputWidth * m_inputHeight * m_inputChannels;

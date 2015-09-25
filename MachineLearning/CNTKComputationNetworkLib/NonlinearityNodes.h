@@ -101,6 +101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_gradient.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -560,6 +561,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             // TODO: differs from base in that it does not resize the gradient--why?
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -656,6 +658,7 @@ private:
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             // differs from base in that it does not resize the gradient
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -1022,6 +1025,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
                 LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
 
             FunctionValues().Resize(1, cols[3]);
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -1208,6 +1212,7 @@ virtual const std::wstring OperationName() const { return TypeName(); }
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -1388,6 +1393,8 @@ private:
             if (cols == 0)
                 cols = 1;
             FunctionValues().Resize(m_numRows, cols);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+            // TODO: ^^ This may require more work.
             InferImageDimsFromInputs();
         }
 
@@ -1638,6 +1645,7 @@ private:
                 LogicError("RowRepeat  operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows() * m_numRepeat, Inputs(0)->FunctionValues().GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 

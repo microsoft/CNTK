@@ -111,6 +111,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t cols = cols0;
             FunctionValues().Resize(rows, cols);
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInput(0);
         }
 
@@ -332,6 +333,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("Mean operation: the input node has 0 element.");
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
 
@@ -466,6 +468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_var.Resize(inputDim, 1);
 
             FunctionValues().Resize(inputDim, 1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
 
@@ -633,6 +636,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(1)->NeedGradient() = false;
             Inputs(2)->NeedGradient() = false;  //prevent learning
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -792,6 +796,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(2)->NeedGradient() = false;
 
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
