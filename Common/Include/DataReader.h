@@ -78,25 +78,21 @@ public:
     }
 
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
-    virtual size_t GetNumParallelSequences() = 0; 
-    virtual int GetSentenceEndIdFromOutputLabel() { return -1; };
-    virtual void SetNumParallelSequences(const size_t sz) { mBlgSize = sz; };
-    virtual bool RequireSentenceSeg() { return false; };
-    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; };
-    virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; };
-    virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; };
-    virtual bool DataEnd(EndDataType) { NOT_IMPLEMENTED; };
-    virtual void CopyMBLayoutTo(MBLayoutPtr) { NOT_IMPLEMENTED; };
-    virtual void SetRandomSeed(unsigned seed = 0) { m_seed = seed; };
+    virtual size_t GetNumParallelSequences() = 0;
+    virtual int GetSentenceEndIdFromOutputLabel() { return -1; }
+    virtual void SetNumParallelSequences(const size_t sz) { mBlgSize = sz; }
+    virtual bool RequireSentenceSeg() const { return false; }
+    virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring&) { NOT_IMPLEMENTED; }
+    virtual void SetLabelMapping(const std::wstring&, const std::map<LabelIdType, LabelType>&) { NOT_IMPLEMENTED; }
+    virtual bool GetData(const std::wstring&, size_t, void*, size_t&, size_t) { NOT_IMPLEMENTED; }
+    virtual bool DataEnd(EndDataType) { NOT_IMPLEMENTED; }
+    virtual void CopyMBLayoutTo(MBLayoutPtr) { NOT_IMPLEMENTED; }
+    virtual void SetRandomSeed(unsigned seed = 0) { m_seed = seed; }
     virtual bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&) { return false; }
     virtual void InitProposals(std::map<std::wstring, Matrix<ElemType>*>*) { }
-    virtual bool CanReadFor(wstring /* nodeName */) {
-        return false;
-    }
-    bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/, const size_t /*tidx*/, vector<size_t>& /*history*/)
-    {
-        NOT_IMPLEMENTED;
-    }
+    virtual bool CanReadFor(wstring /* nodeName */) { return false; }
+
+    bool GetFrame(std::map<std::wstring, Matrix<ElemType>*>& /*matrices*/, const size_t /*tidx*/, vector<size_t>& /*history*/) { NOT_IMPLEMENTED; }
 
     void SetDoRandomize(bool b){ mDoRandomize = b; }
 
@@ -200,6 +196,7 @@ public:
 
     size_t GetNumParallelSequences();
     int GetSentenceEndIdFromOutputLabel();
+    bool RequireSentenceSeg() const override;
 
     // GetLabelMapping - Gets the label mapping from integer index to label type 
     // returns - a map from numeric datatype to native label type 
@@ -242,7 +239,6 @@ public:
 
     bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&);
     void InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices);
-
 };
 
 }}}
