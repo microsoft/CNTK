@@ -1,10 +1,7 @@
 // .cu file --#includes all actual .cu files which we store as .cu.h so we get syntax highlighting (VS does not recognize .cu files)
 //
-// F. Seide, Jan 2011
-//
-// $Log: /Speech_To_Speech_Translation/dbn/cudamatrix/cudamatrixops.cu.h $
+// F. Seide, V-hansu
 
-// a helper for checking launch errors
 #include <stdexcept>
 
 namespace msra { namespace cuda {
@@ -25,5 +22,4 @@ namespace msra { namespace cuda {
 };};
 
 // now include actual code which is in those files to allow for code highlighting etc.
-#include "cudamatrixops.cu.h"
 #include "cudalatticeops.cu.h"

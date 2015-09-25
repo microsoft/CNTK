@@ -14,56 +14,9 @@
 #include "ssematrix.h"
 #include "latticearchive.h"         // for reading HTK phoneme lattices (MMI training)
 #include "simple_checked_arrays.h"  // for const_array_ref
+#include "latticesource.h"
 
 namespace msra { namespace dbn {
-
-// ---------------------------------------------------------------------------
-// latticesource -- manages loading of lattices for MMI (in pairs for numer and denom)
-// ---------------------------------------------------------------------------
-class latticesource
-{
-    const msra::lattices::archive numlattices, denlattices;
-public:
-    latticesource (std::pair<std::vector<wstring>,std::vector<wstring>> latticetocs, const std::unordered_map<std::string,size_t> & modelsymmap)
-        : numlattices (latticetocs.first, modelsymmap), denlattices (latticetocs.second, modelsymmap) {}
-
-    bool empty() const
-    {
-#ifndef NONUMLATTICEMMI        // TODO:set NUM lattice to null so as to save memory
-        if (numlattices.empty() ^ denlattices.empty())
-            throw std::runtime_error("latticesource: numerator and denominator lattices must be either both empty or both not empty");
-#endif
-        return denlattices.empty();
-    }
-
-    bool haslattice (wstring key) const 
-    { 
-#ifdef NONUMLATTICEMMI
-        return denlattices.haslattice (key); 
-#else
-        return numlattices.haslattice (key) && denlattices.haslattice (key); 
-#endif
-    }
-
-    class latticepair : public pair<msra::lattices::lattice,msra::lattices::lattice>
-    {
-    public:
-        // NOTE: we don't check numerator lattice now
-        size_t getnumframes () const { return second.getnumframes(); }
-        size_t getnumnodes () const { return second.getnumnodes(); }
-        size_t getnumedges () const { return second.getnumedges(); }
-        wstring getkey () const { return second.getkey(); }
-    };
-
-    void getlattices (const std::wstring & key, shared_ptr<const latticesource::latticepair> & L, size_t expectedframes) const
-    {
-        shared_ptr<latticepair> LP (new latticepair);
-        denlattices.getlattice (key, LP->second, expectedframes);     // this loads the lattice from disk, using the existing L.second object
-        L = LP;
-    }
-};
-
-
 // ---------------------------------------------------------------------------
 // minibatchsource -- abstracted interface into frame sources
 // There are three implementations:
@@ -89,7 +42,7 @@ public:
     virtual bool getbatch (const size_t globalts,
                            const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
                            std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
-						   std::vector<shared_ptr<const latticesource::latticepair>> & lattices, std::vector<std::vector<size_t>> & sentendmark,
+                           std::vector<shared_ptr<const latticesource::latticepair>> & lattices, std::vector<std::vector<size_t>> & sentendmark,
 						   std::vector<std::vector<size_t>> & phoneboundaries) = 0;
     // getbatch() overload to support subsetting of mini-batches for parallel training
     // Default implementation does not support subsetting and throws an exception on 
@@ -98,7 +51,7 @@ public:
                           const size_t framesrequested, const size_t subsetnum, const size_t numsubsets, size_t & framesadvanced, 
                           std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
-						  std::vector<shared_ptr<const latticesource::latticepair>> & lattices, std::vector<std::vector<size_t>> & sentendmark,
+                          std::vector<shared_ptr<const latticesource::latticepair>> & lattices, std::vector<std::vector<size_t>> & sentendmark,
 						  std::vector<std::vector<size_t>> & phoneboundaries)
     {
         assert((subsetnum == 0) && (numsubsets == 1) && !supportsbatchsubsetting()); subsetnum; numsubsets;
@@ -297,10 +250,10 @@ public:
 	std::vector<size_t> & bounds(size_t i) { checkhasdata(); assert(phoneboundaries.size() >= i + 1); return phoneboundaries[i]; }
 
     // return a lattice for an utterance (caller should first get total through currentmblattices())
-    shared_ptr<const msra::dbn::latticesource::latticepair> lattice (size_t uttindex) const { return lattices[uttindex]; }    // lattices making up the current 
+    shared_ptr<const msra::dbn::latticesource::latticepair> lattice(size_t uttindex) const { return lattices[uttindex]; }    // lattices making up the current 
 	bool haslattice() 	{ return	lattices.size() > 0 ? true : false; }
     // return the reference transcript labels (words with alignments) for current minibatch (or empty if no transcripts requested)
     const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word> transcript (size_t uttindex) { return transcripts.empty() ? const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>() : transcripts[uttindex]; }
 };
 
-};};
+}}

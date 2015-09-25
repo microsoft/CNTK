@@ -76,7 +76,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>CNTKComputationNetworkLib.lib; CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>CNTKComputationNetworkLib.lib; CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib;cublas.lib; SequenceTraining.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(Configuration)\; "c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
       <DelayLoadDLLs>CNTKMath.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
     </Link>
@@ -106,7 +106,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>CNTKComputationNetworkLib.lib; CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>CNTKComputationNetworkLib.lib; CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib;cublas.lib; SequenceTraining.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)$(Platform)\$(Configuration)\; "c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
       <Profile>true</Profile>
       <DelayLoadDLLs>CNTKMath.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>

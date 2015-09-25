@@ -25,6 +25,8 @@
 #include <unordered_map>
 #include <algorithm>        // for find()
 #include "simplesenonehmm.h"
+#include "Matrix.h"
+
 namespace msra { namespace math { class ssematrixbase;  template<class ssematrixbase> class ssematrix; template<class ssematrixbase> class ssematrixstriperef; };};
 
 namespace msra { namespace lm { class CMGramLM; class CSymbolSet; };};        // for numer-lattice building
@@ -984,9 +986,10 @@ public:
 		//to work with CNTK's GPU memory
 		void setmode(bool cpumode/*, size_t DeviceId*/);
 		void release(bool cpumode);		
-		void setloglls(const float * loglls, size_t numrowls, size_t numcols);
-		void allocateloglls(size_t numrowls, size_t numcols);
-		void getgamma(float * loglls, size_t numrows, size_t numcols);
+		void setloglls(const Microsoft::MSR::CNTK::Matrix<float>& loglls);
+        void setloglls(const Microsoft::MSR::CNTK::Matrix<double>& loglls);
+		void getgamma(Microsoft::MSR::CNTK::Matrix<float>& loglls);
+        void getgamma(Microsoft::MSR::CNTK::Matrix<double>& loglls);
     };
 
     // forward-backward function
