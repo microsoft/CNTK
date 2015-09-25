@@ -183,8 +183,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Returns false if end of epoch has been reached.
         // If not, then actualMBSize is set. Note that 0 is a valid value to be returned for actualMBSize, caller must handle that correctly.
         // Note: Later, a function like this will become part of the reader interface.
+        // TODO: callers of this often do ComputationNetwork::UpdateEvalTimeStamps(featureNodes) and also for labels; we should eliminate the need for this.
         template<class ElemType>
-        static bool GetMinibatchIntoNetwork(IDataReader<ElemType>* trainSetDataReader,
+        static bool GetMinibatchIntoNetwork(IDataReader<ElemType>& trainSetDataReader,
                                             ComputationNetwork& net,
                                             bool useDistributedMBReading,
                                             bool useParallelTrain,
@@ -199,12 +200,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //  - VerifyActualNumParallelSequences()  --(refactoring left-over) verify that MBLayout is consistent with #parallel sequences
             // with the special twist that in presence of parallelization, there is some decimation involved.
 
-            bool wasDataRead = trainSetDataReader->GetMinibatch(inputMatrices);     // fill in the minibatch data into the Input nodes' buffers directly
+            bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
             // TODO: how is !wasDataRead semantically different from inputMatrices having zero columns?
-            trainSetDataReader->CopyMBLayoutTo(pMBLayout);                          // and layout meta-data
-            size_t nSlices = trainSetDataReader->GetNumParallelSequences();         // redundant (info already contained in MBLayout)
-            net.VerifyActualNumParallelSequences(nSlices);                          // verify that it really is redundant (this is a left-over of refactoring)
-            assert(trainSetDataReader->RequireSentenceSeg() == pMBLayout->RequireSentenceSeg());    // this one is redundant, too
+            trainSetDataReader.CopyMBLayoutTo(pMBLayout);                           // and layout meta-data
+
+            // verify some DataReader calls that are redundant since the MBLayout refactoring (keep verifying for a while for cosy feeling)
+            net.VerifyActualNumParallelSequences(trainSetDataReader.GetNumParallelSequences()); // info already contained in MBLayout
+            assert(trainSetDataReader.RequireSentenceSeg() == pMBLayout->RequireSentenceSeg()); // this one is redundant, too
 
             // did we reach end of epoch?
             if (useDistributedMBReading)
@@ -225,32 +227,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (!wasDataRead)
                 return false;       // end of epoch
 
-            // not end of epoch (but note: this MPI rank may have received a share of 0 samples)
-            actualMBSize = 0;
-            if (wasDataRead)
-            {
-                // decimate if needed. Decimation happens in-place.
-                if (!useDistributedMBReading && useParallelTrain)
-                {
-                    if (trainSetDataReader->RequireSentenceSeg())   // TODO: same as pMBLayout->IsAllNone()? If so, change to it
-                    {
-                        // BUGBUG: rank and numprocs are passed in opposite order!!
-                        DecimateMinibatchWithSentences(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
-                        // TODO: ^^ verify that num parallel sequences is fully encoded in MBLayout in all cases
-                    }
-                    else        // frame mode: decimate without layout
-                    {
-                        // BUGBUG: rank and numprocs are passed in opposite order!!
-                        DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank());
-                    }
-                }
+            // We are not at the end of epoch.
+            // Note, however, that in case of parallelization, this MPI rank may have received a share of 0 samples. Calling code, beware.
 
-                // tell Network to update its nodes' buffers based on what's in the input matrices
-                // Note: Decimation may have reduced this to 0 frames.
-                // TODO: This should be called/callable outside if 'wasDataRead' (GetMinibatch() should fill matrices to empty)
-                // TODO: This will go away, as we will do resizing inside EvaluateThisNode().
-                actualMBSize = net.SetActualMiniBatchSizeFromFeatures();
+            // decimate if needed. Decimation happens in-place.
+            if (wasDataRead && !useDistributedMBReading && useParallelTrain)
+            {
+                if (pMBLayout->RequireSentenceSeg())   // TODO: same as pMBLayout->IsAllNone()? If so, change to it
+                    DecimateMinibatchWithSentences(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
+                else        // frame mode: decimate without layout
+                    DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank());
             }
+
+            // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
+            // Note: Decimation may have reduced this to 0 frames.
+            // TODO: This should be called/callable outside if 'wasDataRead' (GetMinibatch() should fill matrices to empty)
+            // TODO: This will go away, as we will do resizing inside EvaluateThisNode().
+            actualMBSize = 0;
+            if (wasDataRead)    // TODO: what if we call it always? Answer: Moot, since this function call will go away.
+                actualMBSize = net.SetActualMiniBatchSizeFromFeatures();
 
             return true;
         }
