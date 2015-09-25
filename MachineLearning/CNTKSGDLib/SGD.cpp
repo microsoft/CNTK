@@ -1135,7 +1135,7 @@ template<class ElemType>
 
 #if 1
         size_t actualMBSize;
-        while (DataReaderHelpers::GetMinibatchIntoNetwork(trainSetDataReader, net, false, false, *inputMatrices, actualMBSize))
+        while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, false, false, *inputMatrices, actualMBSize))
         {
             // TODO: move these into GetMinibatchIntoNetwork()  --but those are passed around; necessary? Can't we get them from 'net'?
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
@@ -1747,7 +1747,7 @@ template<class ElemType>
             // get minibatch
             // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
             size_t actualMBSize = 0;
-            bool notAtEndOfEpoch = DataReaderHelpers::GetMinibatchIntoNetwork(trainSetDataReader, net, useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
+            bool notAtEndOfEpoch = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
             if (!notAtEndOfEpoch)
                 break;  // end of epoch
 

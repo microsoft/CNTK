@@ -123,21 +123,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             dataReader->StartMinibatchLoop(mbSize, 0, testSize);
 
-            while (dataReader->GetMinibatch(inputMatrices))
+            while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, false, false, inputMatrices, actualMBSize))
             {
-                // TODO: use GetMinibatchIntoNetwork(), should be easy
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-                actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
-                dataReader->CopyMBLayoutTo(m_net.GetMBLayoutPtr());
-                m_net.VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
+                //actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
+                //dataReader->CopyMBLayoutTo(m_net.GetMBLayoutPtr());
+                //m_net.VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
 
                 //for now since we share the same label masking flag we call this on one node only
                 //Later, when we apply different labels on different nodes
                 //we need to add code to call this function multiple times, one for each criteria node
                 size_t numSamplesWithLabel = m_net.GetNumSamplesWithLabel(actualMBSize);
-                for (int i = 0; i<evalNodes.size(); i++)
+                for (int i = 0; i < evalNodes.size(); i++)
                 {
                     m_net.Evaluate(evalNodes[i]);
                     evalResults[i] += (double)evalNodes[i]->Get00Element(); //criterionNode should be a scalar
@@ -836,12 +835,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             startReadMBTime = clock();
             size_t numMBsRun = 0;
             double ComputeTimeInMBs = 0;
-            while (dataReader->GetMinibatch(inputMatrices))
+            while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, false, false, inputMatrices, actualMBSize))
             {
-                // TODO: use GetMinibatchIntoNetwork(), should be easy
+                // note: GetMinibatchIntoNetwork() will also fetch the MBLayout although we don't need ithere. This should not hurt.
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-
-                actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
+                //actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
 
                 vector<size_t> best_path;
 
