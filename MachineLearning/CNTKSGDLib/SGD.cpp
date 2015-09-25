@@ -921,15 +921,15 @@ template<class ElemType>
             net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
         }
 
-        // first, we need to normalize the effect of nbruttsineachrecurrentiter
-        if (trainSetDataReader->GetNumParallelSequences() > 1 && m_needToNormalizeLRByParallUtterance)
+        // Learning rates and momentum are not always specified per sample.
+        // In these cases, we need to post-patch the learning-rate parameters.
+        // BUGBUG: but this is done on a class member. Wouldn't that compound as we do >1 epoch?
+        if (m_needToNormalizeLRByParallUtterance)
         {
             for (auto& x : m_learningRatesPerSample)
                 x /= (float)trainSetDataReader->GetNumParallelSequences();
         }
-        
-        // first, we need to normalize the effect of nbruttsineachrecurrentiter for momemtum
-        if (trainSetDataReader->GetNumParallelSequences() > 1 && m_needToNormalizeMomentumByParallUtterance)
+        if (m_needToNormalizeMomentumByParallUtterance)
         {
             for (auto& x : m_momentumPerSample)
                 x = (float)pow(x, 1.0 / trainSetDataReader->GetNumParallelSequences());
@@ -946,7 +946,7 @@ template<class ElemType>
                                                       /*out*/ m_prevChosenMinibatchSize);
             if (learnRateInitialized)
                 prevLearnRates[startEpoch % m_numPrevLearnRates] = learnRatePerSample;
-            }
+        }
 
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
             !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
@@ -961,13 +961,14 @@ template<class ElemType>
 
         bool learnRateReduced = false;
 
+        // pass user config on memory allocation for convolution operations to the Network
         ComputationNetwork::SetMaxTempMemSizeForCNN(net, criterionNodes[0], m_maxTempMemSizeInSamplesForCNN);
-        if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
+        if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode)
             ComputationNetwork::SetMaxTempMemSizeForCNN(refNet, refNode, m_maxTempMemSizeInSamplesForCNN);
 
         // --- MAIN EPOCH LOOP
 
-        for (int i = startEpoch; i < (int)m_maxEpochs; i++)
+        for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {
             // Synchronize all ranks before proceeding to ensure that 
             // rank 0 has finished writing the previous model file
@@ -977,7 +978,7 @@ template<class ElemType>
             Timer timer;
             timer.Start();
 
-            // set dropout rate
+            // set dropout rate for this epoch
             ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
             // learning rate adjustment
@@ -1009,7 +1010,7 @@ template<class ElemType>
 
             if (learnRatePerSample < m_minLearnRate)
             {
-                fprintf(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training stops.\n",
+                fprintf(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearnRate %.8g. Training complete.\n",
                         i + 1, learnRatePerSample, m_minLearnRate);
                 if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
                     net.SaveToFile(m_modelPath);
@@ -1052,6 +1053,7 @@ template<class ElemType>
             if (trainSetDataReader->GetNumParallelSequences() > 1 && m_needToNormalizeMomentumByParallUtterance)
                 actualMinibatchSize = chosenMinibatchSize * trainSetDataReader->GetNumParallelSequences();
 
+            // TODO: show momentum also as a time constant
             fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
                     i + 1, learnRatePerSample, MomentumPerMB(m_momentumPerSample[i], actualMinibatchSize));
 
@@ -1810,7 +1812,7 @@ template<class ElemType>
                          const std::vector<ComputationNodeBasePtr> & labelNodes,
                          const std::vector<ComputationNodeBasePtr> & criterionNodes,
                          const std::vector<ComputationNodeBasePtr> & evaluationNodes,
-                         std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,
+                         std::map<std::wstring, Matrix<ElemType>*>* inputMatrices,  // TODO: why is this a pointer?
                          const std::list<ComputationNodeBasePtr> & learnableNodes,
                          std::list<Matrix<ElemType>>& smoothedGradients,
                          /*out*/ double& epochCriterion,
@@ -1877,6 +1879,7 @@ template<class ElemType>
             trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, m_epochSize);
         }
 
+        // TODO: what is this??
         AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, featureNodes, inputMatrices);
 
         fprintf(stderr, "\nStarting minibatch loop");
@@ -1899,6 +1902,13 @@ template<class ElemType>
         for (;;)
         {
             bool wasDataRead = trainSetDataReader->GetMinibatch(*inputMatrices);
+            // TODO: factor out NextMinibatchToNetwork() including the below into a separate function:
+            //        - SetActualMiniBatchSizeFromFeatures()
+            //        - GetMBLayoutPtr()                        --this is about reading
+            //        - VerifyActualNumParallelSequences()      --this too
+            // The inputMatrices reference the Network, i.e. at this point we already poke into the network.
+            // So it is appropriate to poke everything at once at this point.
+            // Later this will become a function of the reader interface.
 
             if (useDistributedMBReading)
             {
@@ -1997,16 +2007,19 @@ template<class ElemType>
                     if (learnRatePerSample > m_minLearnRate * 0.01)
                     {
                         // use only the first criterion. Is there any possibility to use more?
+                        // forward prop, back-prop
                         net.ComputeGradient<ElemType>(criterionNodes[0]);
                     }
                     else
                     {
                         // use only the first criterion. Is there any possibility to use more?
+                        // forward prop
                         net.Evaluate(criterionNodes[0]);
                     }
                 }
-            }
+            } // wasDataRead
 
+            // Some labels may be missing (e.g. forced alignment failed, or being gaps due to packing parallel sequences).
             //for now since we share the same label masking flag we call this on the network. 
             //Later, when we apply different labels on different nodes
             //we need to add code to call this function multiple times, one for each criteria node
@@ -2016,11 +2029,12 @@ template<class ElemType>
             size_t aggregateNumSamples = actualMBSize;
             size_t aggregateNumSamplesWithLabel = numSamplesWithLabel;
 
-            //distributed gradient aggregation
             if (!useGradientAggregation)
             {
+                // accumulate criterion values (objective, eval)
                 if (actualMBSize != 0)
                 {
+                    // criteria are in FunctionValues()(0,0)
                     Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(criterionNodes[0])->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
                     for (size_t i = 0; i < numEvalNodes; i++)
                         Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(evaluationNodes[i])->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
@@ -2028,6 +2042,7 @@ template<class ElemType>
             }
             else
             {
+                //distributed gradient aggregation
                 LazyInitDistGradAgg(learnableNodes, numEvalNodes, m_traceLevel);
 
                 //prepare the header
@@ -2045,9 +2060,9 @@ template<class ElemType>
                 epochCriterion += m_gradHeader->criterion;
                 for (size_t i = 0; i<numEvalNodes; i++)
                     epochEvalErrors[i] += m_gradHeader->evalErrors[i];
-                }
+            }
 
-            //update model parameters
+            // update model parameters
             if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
             {
                 auto smoothedGradientIter = smoothedGradients.begin();
@@ -2062,7 +2077,9 @@ template<class ElemType>
                                   m_needAveMultiplier);
                 }
             }
-    
+
+            // aggregation by model averaging
+            // TODO: this does not happen each MB, does it?
             if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
             {
                 size_t processedSamples = 0; 
@@ -2094,6 +2111,7 @@ template<class ElemType>
 
             timer.Stop();
             numMBsRun++;
+            // tracing
             if (m_traceLevel > 0)
             {
                 totalTimeInMBs += timer.ElapsedSeconds();
@@ -2147,8 +2165,8 @@ template<class ElemType>
 
                     if (std::isnan(epochCriterion))
                         RuntimeError("The training criterion is not a number (NAN). Stop\n");
-                    }
                 }
+            }
 
             timer.Restart();
             totalEpochSamples += aggregateNumSamplesWithLabel;
@@ -2158,8 +2176,9 @@ template<class ElemType>
                 break;
 
             // call DataEnd function
+            // This signals something from SGD to the reader.
             // DataEnd does reader specific process if sentence ending is reached
-            trainSetDataReader->DataEnd(endDataSentence);
+            trainSetDataReader->DataEnd(EndDataType::endDataSentence);
 
             // Tries to set up derivative features for the next utterance.
             AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, featureNodes, inputMatrices);
@@ -2181,14 +2200,17 @@ template<class ElemType>
             nSamplesSinceLastModelSync = 0;
         }
 
+        // compute final criterion values
         if (useGradientAggregation)
         {
+            // with parallelization, we have them in regular variables
             epochCriterion /= float(totalEpochSamples);
             for (size_t i = 0; i< numEvalNodes; i++)
                 epochEvalErrors[i] /= totalEpochSamples;
         }
         else
         {
+            // without, we have them in Matrix objects that possibly live on the GPU--get them over now
             localEpochCriterion /= float(totalEpochSamples);
             localEpochEvalErrors /= float(totalEpochSamples);
 
@@ -2197,7 +2219,7 @@ template<class ElemType>
                 epochEvalErrors[i] = localEpochEvalErrors(0, i);
         }
 
-
+        // in case of model averaging, do one more final aggregation of criteria
         if (useModelAveraging && (g_mpi->NumNodesInUse() > 1))
         {
             // merge epochCriterion and epochEvalErrors over nodes 
