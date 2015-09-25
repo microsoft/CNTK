@@ -124,6 +124,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             while (dataReader->GetMinibatch(inputMatrices))
             {
+                // TODO: use GetMinibatchIntoNetwork(), should be easy
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
@@ -236,6 +237,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t actualMBSize = 0;
             while (dataReader->GetMinibatch(inputMatrices))
             {
+                // TODO: we should use GetMinibatchIntoNetwork(), but it seems tricky. What is this for?
                 size_t nbrSamples = (size_t)(*inputMatrices[L"numberobs"])(0, 0);
                 actualMBSize = nbrSamples;
 
@@ -835,6 +837,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             double ComputeTimeInMBs = 0;
             while (dataReader->GetMinibatch(inputMatrices))
             {
+                // TODO: use GetMinibatchIntoNetwork(), should be easy
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
                 actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
