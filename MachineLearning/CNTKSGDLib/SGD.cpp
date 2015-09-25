@@ -1757,6 +1757,8 @@ template<class ElemType>
 
     // Tries to compute derivatives for the whole utterances, which will be
     // fed to the neural network as features.
+    // This function currently does nothing in the Windows build (no version of GetMinibatchCopy() does anything),
+    // but it is currently used in the Kaldi reader to support parallelizing more utterances in sequence and CTC training. Only implemented inside Kaldi reader right now.
     template<class ElemType>
     void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetwork& net,
                                             IDataReader<ElemType>* trainSetDataReader,
@@ -1770,7 +1772,7 @@ template<class ElemType>
         auto pMBLayout = make_shared<MBLayout>();
         while (trainSetDataReader->GetMinibatchCopy(uttInfo, *inputMatrices, pMBLayout))
         {
-            // TODO: use GetMinibatchIntoNetwork(), should be easy
+            // TODO: should use GetMinibatchIntoNetwork(), but can't because GetMinibatchCopy() is not the same (whatever it is)
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
             auto & outputNodes = net.OutputNodes();

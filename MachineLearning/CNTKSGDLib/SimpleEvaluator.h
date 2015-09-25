@@ -6,11 +6,6 @@
 //
 #pragma once
 
-#include <vector>
-#include <string>
-#include <stdexcept>
-#include <fstream>
-#include <queue>
 #include "Basics.h"
 #include "Helpers.h"    // for foreach_column() macro
 #include "fileutil.h"
@@ -19,6 +14,11 @@
 #include "ComputationNetwork.h"
 #include "TrainingCriterionNodes.h" // TODO: we should move the functions that depend on these to the .cpp
 #include "CompositeComputationNodes.h"
+#include <vector>
+#include <string>
+#include <stdexcept>
+#include <fstream>
+#include <queue>
 
 using namespace std;
 

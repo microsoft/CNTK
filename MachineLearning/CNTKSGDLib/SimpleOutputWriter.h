@@ -5,12 +5,12 @@
 //
 #pragma once
 
+#include "Basics.h"
 #include "ComputationNetwork.h"
 #include "DataReader.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
-#include "Basics.h"
 #include "fileutil.h"
 #include <fstream>
 
@@ -69,6 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             while (dataReader.GetMinibatch(inputMatrices))
             {
+                // TODO: use GetMinibatchIntoNetwork(), should be easy, except that currently it is part of SGD.cpp
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
@@ -151,6 +152,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             while (dataReader.GetMinibatch(inputMatrices))
             {
+                // TODO: use GetMinibatchIntoNetwork(), should be easy
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
                 size_t actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();

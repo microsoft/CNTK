@@ -178,6 +178,7 @@
     <ClInclude Include="..\CNTKComputationNetworkLib\CompositeComputationNodes.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\MatrixPool.h" />
     <ClInclude Include="..\CNTKSGDLib\IComputationNetBuilder.h" />
+    <ClInclude Include="..\CNTKSGDLib\SimpleOutputWriter.h" />
     <ClInclude Include="AllReduceDistGradAggregator.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetwork.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetworkBuilder.h" />
@@ -200,7 +201,6 @@
     <ClInclude Include="..\CNTKComputationNetworkLib\NonlinearityNodes.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\RecurrentNodes.h" />
     <ClInclude Include="SimpleEvaluator.h" />
-    <ClInclude Include="SimpleOutputWriter.h" />
     <ClInclude Include="SGD.h" />
     <ClInclude Include="SimpleNetworkBuilder.h" />
     <ClInclude Include="stdafx.h" />
