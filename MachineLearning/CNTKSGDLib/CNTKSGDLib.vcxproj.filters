@@ -159,6 +159,9 @@
     <ClInclude Include="..\CNTK\SimpleOutputWriter.h">
       <Filter>SGD</Filter>
     </ClInclude>
+    <ClInclude Include="DataReaderHelpers.h">
+      <Filter>SGD</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
