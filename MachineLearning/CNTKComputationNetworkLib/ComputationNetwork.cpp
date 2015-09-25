@@ -299,6 +299,72 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // evaluation
     // -----------------------------------------------------------------------
 
+    // validate sub-network needed to evalute a specific output node
+    // This calls Validate() on every node in evaluation order (allowing to propagate things forwards through the net).
+    // This is called lazily but once only per node until next ClearCache().
+    // This also sets up MBLayout links.
+    // TODO: I can't see a clear pattern when ClearCache() is called. E.g. at the start of each epoch? Or never in normal operation (init only at construction)?
+    // Note: under some circumstances, one must call FormRecurrentNodes() on this node before calling this. TODO: Not clear which ones.
+    // TODO: ^^ is this really needed? Can we just call it inside?
+    void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr rootNode)
+    {
+        fprintf(stderr, "\n\nValidating node %ls \n", rootNode->NodeName().c_str());
+
+        // set up MBLayout links of inputs (all others get propagated upwards through Validate())
+        // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
+        for (auto node : InputNodes(rootNode))
+            node->LinkToMBLayout(m_pMBLayout);
+
+        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
+
+        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        {
+            auto node = *nodeIter;
+            node->PrintSelfBeforeValidation();
+            node->Validate();
+        }
+
+        fprintf(stderr, "\n\n");
+
+        // logging the non-default-layout nodes
+        vector<ComputationNodeBasePtr> nonDefaultNodes;
+        for (auto node : nodes)
+        {
+            if (!(node->GetMBLayout() == m_pMBLayout))
+                nonDefaultNodes.push_back(node);
+        }
+        if (!nonDefaultNodes.empty())
+        {
+            fprintf(stderr, "\n\n%d out of %d nodes do not share the minibatch layout with the input data.\n", (int)nonDefaultNodes.size(), (int)nodes.size());
+            //for (auto node : nonDefaultNodes)
+            //    fprintf(stderr, "    %ls\n", node->NodeName().c_str());
+            //fprintf(stderr, "\n\n");
+        }
+    }
+
+    // prepares the network for computation
+    // Done lazily, called for every minibatch's invocation of EvaluateNode(), but memoizing which nodes were done already.
+    // BUGBUG? Lazy triggers on the root node. I.e. for two different root nodes (training, eval), it validates twice.
+    void ComputationNetwork::BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode)
+    {
+        const auto inserted = m_built.insert(rootNode).second;  // remember we built it
+        if (!inserted)
+            return;                                             // already done
+
+        // detect recurrent loops for this root node (more loops will be detected inside ValidateSubNetwork())
+        // TODO: not nice--why not always call this in ValidateSubNetwork() only?
+        FormRecurrentLoops(rootNode);
+
+        // for the m_inputs and m_learnableParameters sets for this rootNode
+        CollectInputAndLearnableParameters(rootNode);
+
+        // validate the rootNode and all nodes it depends on, in evaluation order
+        ValidateSubNetwork(rootNode);
+
+        //
+        SetRequestNodesMultiSeqHandling();
+    }
+
     bool ComputationNetwork::IsFuncValueOlderThanInputs(const std::vector<ComputationNodeBasePtr>& recurrentNodes)
     {
         for (auto ptr = recurrentNodes.begin(); ptr != recurrentNodes.end(); ptr++)
@@ -797,6 +863,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         nodes = newList;
     }
 
+    // lazily reate the m_inputs[] and m_learnableParameters lists
+    // The only other side effect is to call GetEvalOrder(), which will cache the evaluation order for the given root node.
     void ComputationNetwork::CollectInputAndLearnableParameters(const ComputationNodeBasePtr rootNode)
     {
         //not found
@@ -805,10 +873,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::list<ComputationNodeBasePtr> inputs;
 
             std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end();
-                    nodeIter++)
+            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
-                ComputationNodeBasePtr node = (*nodeIter);
+                ComputationNodeBasePtr node = *nodeIter;
                 if (node->OperationName() == OperationNameOf(InputValue) /*L"InputValue"*/ ||
                     node->OperationName() == InputValue<float>::SparseTypeName())
                 {
@@ -826,9 +893,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
 
+            // instead of collecting the nodes themselves, collect the names (they will be sorted below)
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
-                ComputationNodeBasePtr node = (*nodeIter);
+                ComputationNodeBasePtr node = *nodeIter;
                 if ((node->OperationName() == OperationNameOf(LearnableParameter) && node->NeedGradient()) ||
                     (node->OperationName() == OperationNameOf(SparseLearnableParameter) && node->NeedGradient()))
                 {
@@ -836,8 +904,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            //we need to sort it so that we get consistent order when load it from saved file
+            // we need to sort it so that we get consistent order when load it from saved file
             learnableParameterNames.sort();
+
+            // now collect the actual nodes in the sort order of their node names
             for (auto nodeNameIter = learnableParameterNames.begin(); nodeNameIter != learnableParameterNames.end(); nodeNameIter++)
             {
                 learnableParameters.push_back(GetNodeFromName((*nodeNameIter)));

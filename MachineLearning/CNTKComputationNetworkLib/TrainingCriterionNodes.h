@@ -104,6 +104,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(1,1);
             m_leftMinusRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
 
@@ -271,6 +272,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
 
             FunctionValues().Resize(1,1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
 
             m_logSoftmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
@@ -424,6 +426,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FunctionValues().Resize(1,1);
             m_logOfRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             m_leftDivRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
 
@@ -528,6 +531,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             FunctionValues().Resize(1,1);
             m_gradientOfL1Norm.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
 
@@ -623,6 +627,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("MatrixL2Reg operation: the input node has 0 element.");
 
             FunctionValues().Resize(1,1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
 
@@ -796,7 +801,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //cerr << Inputs(3)->FunctionValues().GetNumCols() << "\t" << Inputs(0)->FunctionValues().GetNumCols() << endl;
             //if (!(Inputs(3)->FunctionValues().GetNumCols() == Inputs(0)->FunctionValues().GetNumCols())) // number of observations
             //   LogicError("The number of observations in class log post probability and label in the NoiseContrastiveEstimationNode operation don't match.");
-            FunctionValues().Resize(1, 1);
+            FunctionValues().Resize(1,1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
 
@@ -1142,7 +1148,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!(Inputs(3)->FunctionValues().GetNumCols() == Inputs(0)->FunctionValues().GetNumCols())) // number of observations
                 LogicError("The number of observations in class log post probability and label in the ClassBasedCrossEntropyWithSoftmaxNode operation don't match.");
 
-            FunctionValues().Resize(1, 1);
+            FunctionValues().Resize(1,1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
 
             m_nbrCls = Inputs(3)->FunctionValues().GetNumRows();
@@ -1452,7 +1459,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("The Matrix<ElemType>  dimension in the CRFNode operation does not match.");
             }
 
-            FunctionValues().Resize(1, 1);
+            FunctionValues().Resize(1,1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
 
@@ -1581,6 +1589,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(1)->FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(2)->FunctionValues().GetNumCols()); 
 
             FunctionValues().Resize(1,1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
 

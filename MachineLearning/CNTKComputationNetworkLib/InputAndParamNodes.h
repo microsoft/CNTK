@@ -25,6 +25,10 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // -----------------------------------------------------------------------
+    // LearnableParameter
+    // -----------------------------------------------------------------------
+
     //used to represent weight Matrix<ElemType> and biases
     template<class ElemType>
     class LearnableParameter : public ComputationNode<ElemType>
@@ -137,6 +141,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNode() {}
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) {}
 
+        virtual void /*ComputationNodeBase::*/Validate()
+        {
+            Base::Validate();
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+        }
+
         static const std::wstring TypeName() {return L"LearnableParameter";} 
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
@@ -152,6 +162,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintNodeValuesToFile(printValues, fstream);
         }
     };
+
+    // -----------------------------------------------------------------------
+    // SparseLearnableParameter
+    // -----------------------------------------------------------------------
 
     //WARNING: Don't use SparseLearnableParameter yet since the current version assumes the parameter is dense instead of sparse
     //WARNING: After the right implementation is put here we need to turn it on in NetworkDescriptionLangauge.cpp
@@ -187,6 +201,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SparseLearnableParameter<float>; 
     template class SparseLearnableParameter<double>;
 
+    // -----------------------------------------------------------------------
+    // InputValue
+    // -----------------------------------------------------------------------
+
+    // this covers four types: (regular, image) x (non-sparse, sparse)
     template<class ElemType>
     class InputValue : public ComputationNode<ElemType>
     {
@@ -284,6 +303,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
 
+        virtual void /*ComputationNodeBase::*/Validate()
+        {
+            Base::Validate();
+            if (!m_pMBLayout)
+                RuntimeError("Validate: Input node '%ls' should have been assigned an MBLayout, but hasn't.");
+        }
+
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
             Base::DumpNodeInfo(printValues, fstream);
@@ -305,6 +331,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class InputValue<float>; 
     template class InputValue<double>;
+
+    // -----------------------------------------------------------------------
+    // LookupTableNode
+    // -----------------------------------------------------------------------
 
     //originally designed to extract word embedding representation from bag-of-word. 
     //takes two inputs, input0 is weight matrix and input1 is the bag-of-word representation of the inputs
@@ -438,12 +468,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
 
             if (Inputs(1)->FunctionValues().GetNumRows() % Inputs(0)->FunctionValues().GetNumCols() != 0)
-                throw invalid_argument("Mismatched dimention. rows in input1 must be multiples of cols in input0.");
+                throw invalid_argument("Mismatched dimension. rows in input1 must be multiples of cols in input0.");
 
             int wordsInEachSample = Inputs(1)->FunctionValues().GetNumRows() / Inputs(0)->FunctionValues().GetNumCols();
-          
+
             FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows() * wordsInEachSample, Inputs(1)->FunctionValues().GetNumCols());
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -519,6 +550,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class LookupTableNode<float>;
     template class LookupTableNode<double>;
+
+    // -----------------------------------------------------------------------
+    // PairNetworkNode
+    // -----------------------------------------------------------------------
 
     /**
     pair this node to a node in another network
@@ -599,6 +634,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (rows0 > 0 && cols0 > 0) FunctionValues().Resize(rows0, cols0);
             }
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
