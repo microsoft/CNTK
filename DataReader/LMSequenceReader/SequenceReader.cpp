@@ -1856,7 +1856,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
         features.TransferFromDeviceToDevice(featureDeviceId, CPUDEVICE, false, true, false);
 
         size_t nT = actualmbsize / mToProcess.size();
-        m_pMBLayout->Init(mToProcess.size(), nT);
+        m_pMBLayout->Init(mToProcess.size(), nT, true/*sequential*/);
         if (features.GetMatrixType() == MatrixType::DENSE)
         {
             features.Resize(labelInfo.dim, actualmbsize);

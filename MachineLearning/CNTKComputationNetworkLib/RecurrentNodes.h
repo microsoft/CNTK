@@ -116,7 +116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // each row has a number to indicate how many values should be reset for that utterance
                 vector<int> numResetLeft(numRows, 0);
-                for (size_t i = 0; i < m_pMBLayout->GetSize(); i++)   // i = frame index (time)
+                for (size_t i = 0; i < m_pMBLayout->GetNumTimeSteps(); i++)   // i = frame index (time)
                 {
                     if (m_pMBLayout->Is(i, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
                     {
@@ -1375,7 +1375,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> giWeight, ghWeight, goWeight;
                 ElemType initStateValue = m_DefaultState;
                 auto pMBLayout = make_shared<MBLayout>();
-                pMBLayout->Init(1, nT);
+                pMBLayout->Init(1, nT, true);
                 //Matrix<float> & boundary = pMBLayout->m_sentenceBoundaryFlags;
                 //vector<MinibatchPackingFlags> & minibatchPackingFlags = pMBLayout->m_minibatchPackingFlags;
                 //boundary.ColumnSlice(0, 1).SetValue(((int) MinibatchPackingFlags::SequenceStart));

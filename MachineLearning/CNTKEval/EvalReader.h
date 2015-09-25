@@ -65,7 +65,7 @@ public:
         {
             if (m_oldSig==newSig)
             {
-                m_switchFrame[0] = m_mbSize+8888;
+                m_switchFrame[0] = m_mbSize+8888;   // TODO: WTF??
             }
             else
             {
@@ -175,7 +175,7 @@ public:
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
     {
         assert(m_switchFrame.size() == 1);        
-        pMBLayout->Init(1, m_mbSize);
+        pMBLayout->Init(1, m_mbSize, true/*sequential*/);   // TODO: not sure if this is always sequential
 
         if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch*/
         {

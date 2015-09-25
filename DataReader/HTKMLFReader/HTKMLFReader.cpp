@@ -842,36 +842,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // on first minibatch, make sure we can supply data for requested nodes
             std::map<std::wstring,size_t>::iterator iter;
-            if     (m_checkDictionaryKeys)
+            if (m_checkDictionaryKeys)
             {
                 for (auto iter=matrices.begin();iter!=matrices.end();iter++)
                 {
-                    if (m_nameToTypeMap.find(iter->first)==m_nameToTypeMap.end())
-                        throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
-
+                    if (m_nameToTypeMap.find(iter->first) == m_nameToTypeMap.end())
+                        RuntimeError("minibatch requested for input node %ls not found in reader - cannot generate input\n", iter->first.c_str());
                 }
-                m_checkDictionaryKeys=false;
+                m_checkDictionaryKeys = false;
             }
 
             do 
             {
-                if (!m_truncated)
+                if (!m_truncated)       // frame mode or whole utterances
                 {
-                    if (!(*m_mbiter))
+                    if (!(*m_mbiter))   // hit the end
                         return false;
 
                     // now, access all features and and labels by iterating over map of "matrices"
                     bool first = true;
                     typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
-                    for (iter = matrices.begin();iter!=matrices.end(); iter++)
+                    for (iter = matrices.begin(); iter!=matrices.end(); iter++)
                     {
                         // dereference matrix that corresponds to key (input/output name) and 
                         // populate based on whether its a feature or a label
                         Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 
-                        if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+                        if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)     // --- read features
                         {
-
                             id = m_featureNameToIdMap[iter->first];
                             dim = m_featureNameToDimMap[iter->first];
                             const msra::dbn::matrixstripe feat = m_mbiter->frames(id);
@@ -879,11 +877,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (first)  // initialize MBLayout
                             {
                                 // entire minibatch is one utterance
-                                m_pMBLayout->Init(1, actualmbsize);
-                                m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
-                                m_pMBLayout->SetWithoutOr(0, actualmbsize - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
+                                m_pMBLayout->Init(1, actualmbsize, !m_framemode);
+                                if (m_pMBLayout->RequireSentenceSeg())       // in framemode we leave the flags empty
+                                {
+                                    m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
+                                    m_pMBLayout->SetWithoutOr(0, actualmbsize - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
+                                }
                                 first = false;
                             }
+                            else
+                                if (m_pMBLayout->GetNumTimeSteps() != actualmbsize)
+                                    RuntimeError("GetMinibatch: Multiple feature streams with inconsistent minibatch size detected, e.g. %d vs. %d.", (int)m_pMBLayout->GetNumTimeSteps(), (int)actualmbsize);
 
                             assert (actualmbsize == m_mbiter->currentmbframes());
                             skip = (!m_partialMinibatch && m_mbiter->requestedframes() != actualmbsize && m_frameSource->totalframes() > actualmbsize);
@@ -922,7 +926,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 data.SetValue(feat.rows(), feat.cols(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
                             }
                         }
-                        else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
+                        else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)    // --- read labels
                         {
                             id = m_labelNameToIdMap[iter->first];
                             dim = m_labelNameToDimMap[iter->first];
@@ -984,17 +988,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 data.SetValue(dim, uids.size(), m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
                             }
                         }
-                        else{
-                            //default:
-                            throw runtime_error(msra::strfun::strprintf("GetMinibatchMultiIO:: unknown InputOutputType for %S\n",(iter->first).c_str()));
-                        }
-
+                        else    //default:
+                            RuntimeError("GetMinibatch: unknown InputOutputType for %ls", (iter->first).c_str());
                     }
                     // advance to the next minibatch
                     (*m_mbiter)++;
                 }
                 else    // if (!m_truncated) else...
                 {
+                    // In truncated BPTT mode, a minibatch only consists of the truncation length, e.g. 20 frames.
+                    // The reader maintains a set of current utterances, and each next minibatch contains the next 20 frames.
+                    // When the end of an utterance is reached, the next available utterance is begin in the same slot.
                     if (m_noData)
                     {
                         bool endEpoch = true;
@@ -1009,7 +1013,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t numOfFea = m_featuresBufferMultiIO.size();
                     size_t numOfLabel = m_labelsBufferMultiIO.size();
 
-                    m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_mbSize);
+                    m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_mbSize, true/*sequential*/);
 
                     vector<size_t> actualmbsize(m_numberOfuttsPerMinibatch,0);
                     for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
@@ -1294,7 +1298,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
                         if (first)
                         {
-                            m_pMBLayout->Init(1, feat.cols());
+                            m_pMBLayout->Init(1, feat.cols(), true/*sequential*/);
                             m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
                             m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
                             first = false;
@@ -1605,10 +1609,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
         void HTKMLFReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
         {
-            if (!m_framemode)
-                pMBLayout->CopyFrom(m_pMBLayout);
-            else
-                pMBLayout->SetAllNone();    // no flags in frame mode
+            pMBLayout->CopyFrom(m_pMBLayout);
         }
 
 
