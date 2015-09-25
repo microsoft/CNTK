@@ -200,8 +200,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //  - VerifyActualNumParallelSequences()  --(refactoring left-over) verify that MBLayout is consistent with #parallel sequences
             // with the special twist that in presence of parallelization, there is some decimation involved.
 
-            bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
             // TODO: how is !wasDataRead semantically different from inputMatrices having zero columns?
+            bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
             trainSetDataReader.CopyMBLayoutTo(pMBLayout);                           // and layout meta-data
 
             // verify some DataReader calls that are redundant since the MBLayout refactoring (keep verifying for a while for cosy feeling)

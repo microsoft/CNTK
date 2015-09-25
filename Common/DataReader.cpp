@@ -217,6 +217,15 @@ size_t DataReader<ElemType>::GetNumParallelSequences()
 }
 
 template<class ElemType>
+bool DataReader<ElemType>::RequireSentenceSeg() const
+{
+    bool ans = false;
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        ans = ans || m_dataReader.find(m_ioNames[i])->second->RequireSentenceSeg();  // can't say m_dataReader[] since that is non-const...
+    return ans;
+}
+
+template<class ElemType>
 void DataReader<ElemType>::InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices)
 {
     for (size_t i = 0; i < m_ioNames.size(); i++)
