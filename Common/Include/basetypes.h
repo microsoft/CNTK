@@ -646,10 +646,10 @@ private:
 		return n;
 #endif
 	}
-    inline size_t _cprintf (const  char   * format, va_list args) 
+    inline size_t _cprintf(const  char   * format, va_list args)
 	{ 
 #ifdef __WINDOWS__
-		return vsprintf (nullptr, format, args);
+		return vsprintf_s(nullptr, 0, format, args);
 #elif defined(__UNIX__)
 		FILE *dummyf = fopen("/dev/null", "wb");
 		if (dummyf == NULL)
@@ -661,8 +661,16 @@ private:
 		return n;
 #endif
 	}
-    inline const wchar_t * _sprintf (wchar_t * buf, size_t bufsiz,  const wchar_t * format, va_list args) { vswprintf (buf, bufsiz, format, args); return buf; }
-    inline const  char   * _sprintf ( char   * buf, size_t /*bufsiz*/, const char * format, va_list args) { vsprintf  (buf, format, args); return buf; }
+    inline const wchar_t * _sprintf(wchar_t * buf, size_t bufsiz, const wchar_t * format, va_list args) { vswprintf(buf, bufsiz, format, args); return buf; }
+    inline const  char   * _sprintf ( char   * buf, size_t bufsiz, const char * format, va_list args) 
+    {
+#ifdef __WINDOWS__
+        vsprintf_s(buf, bufsiz, format, args);
+#else
+        vsprintf(buf, format, args);
+#endif
+        return buf;
+    }
 };
 typedef strfun::_strprintf<char>    strprintf;  // char version
 typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
@@ -833,15 +841,21 @@ class auto_file_ptr
     auto_file_ptr (auto_file_ptr &);
     // implicit close (destructor, assignment): we ignore error
     void close()  throw() { if (f) try { if (f != stdin && f != stdout && f != stderr) ::fclose (f); } catch (...) { } f = NULL; }
+#pragma warning(push)
+#pragma warning(disable : 4996)
     void openfailed (const std::string & path) { throw std::runtime_error ("auto_file_ptr: error opening file '" + path + "': " + strerror (errno)); }
+#pragma warning(pop)
 protected:
     friend int fclose (auto_file_ptr&); // explicit close (note: may fail)
     int fclose() { int rc = ::fclose (f); if (rc == 0) f = NULL; return rc; }
 public:
     auto_file_ptr() : f (NULL) { }
     ~auto_file_ptr() { close(); }
-    auto_file_ptr (const char * path, const char * mode) { f = fopen (path, mode); if (f == NULL) openfailed (path); }
+#pragma warning(push)
+#pragma warning(disable : 4996)
+    auto_file_ptr(const char * path, const char * mode) { f = fopen(path, mode); if (f == NULL) openfailed(path); }
     auto_file_ptr (const wchar_t * wpath, const char * mode) { f = _wfopen (wpath, msra::strfun::utf16 (mode).c_str()); if (f == NULL) openfailed (msra::strfun::utf8 (wpath)); }
+#pragma warning(pop)
     FILE * operator= (FILE * other) { close(); f = other; return f; }
     auto_file_ptr (FILE * other) : f (other) { }
     operator FILE * () const { return f; }

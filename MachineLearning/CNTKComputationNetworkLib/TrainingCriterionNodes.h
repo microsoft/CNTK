@@ -1607,298 +1607,298 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class DummyCriterionNode<float>; 
     template class DummyCriterionNode<double>;
 
-	//discriminative sequence training criteria 
-	template<class ElemType>
-	class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>
-	{
-		typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-	public:
-		virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    //discriminative sequence training criteria 
+    template<class ElemType>
+    class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+    public:
+        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
 
-		SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name)
-			: ComputationNodeNonLooping<ElemType>(deviceId, name)
-			, m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_maskOfFramedrop(deviceId)
-		{
-		}
-		
+        SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name)
+            : ComputationNodeNonLooping<ElemType>(deviceId, name)
+            , m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_maskOfFramedrop(deviceId)
+        {
+        }
+        
 
-		virtual const std::wstring OperationName() const { return TypeName(); }
-		static const std::wstring TypeName() { return L"SequenceWithSoftmax"; }
+        virtual const std::wstring OperationName() const { return TypeName(); }
+        static const std::wstring TypeName() { return L"SequenceWithSoftmax"; }
 
-		/**
-		compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
-		*/
-		virtual void ComputeInputPartial(const size_t inputIndex)
-		{
-			//auto t_start_time = Timer::MilliSecondElapsed();
-			if (inputIndex > 2)
-				InvalidArgument("SequenceWithSoftmaxNode criterion only takes three inputs.");
+        /**
+        compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
+        */
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            //auto t_start_time = Timer::MilliSecondElapsed();
+            if (inputIndex > 2)
+                InvalidArgument("SequenceWithSoftmaxNode criterion only takes three inputs.");
 
-			//left Node must be a scalar
-			if (inputIndex == 0)  //left derivative
-			{
-				ComputeInputPartialLeft(m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
-			}
-			else if (inputIndex == 1)
-			{
-				ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_gammaFromLattice,
-					m_hsmoothingWeight, m_frameDropThresh);
-				Base::MaskMissingColumnsToZero(Inputs(inputIndex)->GradientValues());
-			}
-			else if (inputIndex == 2)
-			{
-				Inputs(inputIndex)->NeedGradient() = false;
-				Inputs(inputIndex)->GradientValues().SetValue(0.0);
-			}
-			else
-				throw std::runtime_error("SequenceWithSoftmaxNode criterion only takes with respect to label, DNN output and log likelihood.");
-			//auto t_end_time = Timer::MilliSecondElapsed();
+            //left Node must be a scalar
+            if (inputIndex == 0)  //left derivative
+            {
+                ComputeInputPartialLeft(m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
+            }
+            else if (inputIndex == 1)
+            {
+                ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_gammaFromLattice,
+                    m_hsmoothingWeight, m_frameDropThresh);
+                Base::MaskMissingColumnsToZero(Inputs(inputIndex)->GradientValues());
+            }
+            else if (inputIndex == 2)
+            {
+                Inputs(inputIndex)->NeedGradient() = false;
+                Inputs(inputIndex)->GradientValues().SetValue(0.0);
+            }
+            else
+                throw std::runtime_error("SequenceWithSoftmaxNode criterion only takes with respect to label, DNN output and log likelihood.");
+            //auto t_end_time = Timer::MilliSecondElapsed();
 
-			//m_partialtime += (t_end_time - t_start_time);
-		}
+            //m_partialtime += (t_end_time - t_start_time);
+        }
 
-		
-		static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
-			const Matrix<ElemType>& gradientValues)
-		{
+        
+        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
+            const Matrix<ElemType>& gradientValues)
+        {
 #if DUMPOUTPUT
-			logSoftmaxOfRight.Print("SequenceWithSoftmaxNode Partial-logSoftmaxOfRight");
-			gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
-			inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-in");
+            logSoftmaxOfRight.Print("SequenceWithSoftmaxNode Partial-logSoftmaxOfRight");
+            gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
+            inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-in");
 #endif
 
-			Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
+            Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
 #if DUMPOUTPUT
-			inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-out");
+            inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-out");
 #endif
 
-		}
+        }
 
-		static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
-			Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType> &gammaFromLattice,
-			const ElemType &hsmoothingWeight, const ElemType &frameDropThresh)
-		{
+        static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType> &gammaFromLattice,
+            const ElemType &hsmoothingWeight, const ElemType &frameDropThresh)
+        {
 #if DUMPOUTPUT
-			softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
-			inputFunctionValues.Print("SequenceWithSoftmaxNode Partial-inputFunctionValues");
-			gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
-			inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
+            softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
+            inputFunctionValues.Print("SequenceWithSoftmaxNode Partial-inputFunctionValues");
+            gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
+            inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
 #endif  
-			
-			inputGradientValues.AssignSequenceError(hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());			
-			inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, frameDropThresh);	
-			
+            
+            inputGradientValues.AssignSequenceError(hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());            
+            inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, frameDropThresh);    
+            
 
 #if DUMPOUTPUT
-			inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
+            inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
 #endif
-		}
+        }
 
-		virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
-		{
-			//auto t_start_time = Timer::MilliSecondElapsed();
+        virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
+        {
+            //auto t_start_time = Timer::MilliSecondElapsed();
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, m_gammaFromLattice, m_lattice, m_GammaCal,
-				m_uids, m_boundaries,  m_pMBLayout, m_extrauttmap, m_doreferencealign);
-		}
+                m_uids, m_boundaries,  m_pMBLayout, m_extrauttmap, m_doreferencealign);
+        }
 
-		
+        
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1,
-			const Matrix<ElemType>& inputFunctionValues2, Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& gammafromlattice,
-			std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> &lattices, msra::lattices::GammaCalculation<ElemType> &GammaCal, std::vector<size_t> & uids,
-			std::vector<size_t> & boundaries,  MBLayoutPtr pMBLayout, std::vector<size_t> &extrauttmap, bool doReferenceAlign)
-		{
-			//softmax 
+            const Matrix<ElemType>& inputFunctionValues2, Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& gammafromlattice,
+            std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> &lattices, msra::lattices::GammaCalculation<ElemType> &GammaCal, std::vector<size_t> & uids,
+            std::vector<size_t> & boundaries,  MBLayoutPtr pMBLayout, std::vector<size_t> &extrauttmap, bool doReferenceAlign)
+        {
+            //softmax 
 
-			logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
-			softmaxOfRight.SetValue(logSoftmaxOfRight);
-			softmaxOfRight.InplaceExp();
+            logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
+            softmaxOfRight.SetValue(logSoftmaxOfRight);
+            softmaxOfRight.InplaceExp();
 
-			
+            
             size_t sequenceNum = pMBLayout->GetNumParallelSequences();
-			gammafromlattice.SwitchToMatrixType(softmaxOfRight.GetMatrixType(), softmaxOfRight.GetFormat(), false);
-			gammafromlattice.Resize(softmaxOfRight.GetNumRows(), softmaxOfRight.GetNumCols());
-			//DecideAndMoveToRightDevice(a, *this);
-			//SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
-			//gamma value,            
+            gammafromlattice.SwitchToMatrixType(softmaxOfRight.GetMatrixType(), softmaxOfRight.GetFormat(), false);
+            gammafromlattice.Resize(softmaxOfRight.GetNumRows(), softmaxOfRight.GetNumCols());
+            //DecideAndMoveToRightDevice(a, *this);
+            //SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+            //gamma value,            
             GammaCal.calgammaformb(functionValues, lattices, inputFunctionValues2, inputFunctionValues0, gammafromlattice, uids, boundaries, sequenceNum, pMBLayout, extrauttmap, doReferenceAlign);
-			
+            
 #if NANCHECK
-			functionValues.HasNan("SequenceWithSoftmaxNode");
+            functionValues.HasNan("SequenceWithSoftmaxNode");
 #endif
 #if DUMPOUTPUT
-			functionValues.Print("SequenceWithSoftmaxNode");
+            functionValues.Print("SequenceWithSoftmaxNode");
 #endif
-			/*for (long i = 0; i < lattices.size(), i++)
-			{
-			lattices[i]->second.forwardbackward()
-			}*/
-		}
+            /*for (long i = 0; i < lattices.size(), i++)
+            {
+            lattices[i]->second.forwardbackward()
+            }*/
+        }
 
-		virtual void Validate()
-		{
-			Base::Validate();
+        virtual void Validate()
+        {
+            Base::Validate();
 
-			if (m_children.size() != 3)
-				LogicError("SequenceWithSoftmaxNode criterion requires three inputs.");
+            if (m_children.size() != 3)
+                LogicError("SequenceWithSoftmaxNode criterion requires three inputs.");
 
-			if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
-				LogicError("SequenceWithSoftmaxNode criterion requires the first input to be the label.");
+            if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
+                LogicError("SequenceWithSoftmaxNode criterion requires the first input to be the label.");
 
-			//we may release the constraint that the first operant is an inputValue later so the following code should be kept
-			size_t index = 0;
-			if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-			{
-				size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-				size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-				Inputs(index)->FunctionValues().Resize(rows, cols);
-			}
+            //we may release the constraint that the first operant is an inputValue later so the following code should be kept
+            size_t index = 0;
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
+            {
+                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
+                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
+                Inputs(index)->FunctionValues().Resize(rows, cols);
+            }
 
-			index = 1;
-			if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-			{
-				size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-				size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-				Inputs(index)->FunctionValues().Resize(rows, cols);
-			}
+            index = 1;
+            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
+            {
+                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
+                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
+                Inputs(index)->FunctionValues().Resize(rows, cols);
+            }
 
-			if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()  || Inputs(2)->FunctionValues().HasNoElements() )
-				LogicError("SequenceWithSoftmaxNode operation: one of the operants has 0 element.");
+            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()  || Inputs(2)->FunctionValues().HasNoElements() )
+                LogicError("SequenceWithSoftmaxNode operation: one of the operants has 0 element.");
 
-			if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&  //match size
-				Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&
-				Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() &&
-				Inputs(1)->FunctionValues().GetNumCols() == Inputs(2)->FunctionValues().GetNumCols()))
-			{
-				LogicError("The Matrix<ElemType>  dimension in the SequenceWithSoftmaxNode operation does not match.");
-			}
+            if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&  //match size
+                Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&
+                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() &&
+                Inputs(1)->FunctionValues().GetNumCols() == Inputs(2)->FunctionValues().GetNumCols()))
+            {
+                LogicError("The Matrix<ElemType>  dimension in the SequenceWithSoftmaxNode operation does not match.");
+            }
 
-			FunctionValues().Resize(1, 1);
-			InferImageDimsFromInputs();
+            FunctionValues().Resize(1, 1);
+            InferImageDimsFromInputs();
 
-			m_logSoftmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-			m_softmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-			m_gammaFromLattice.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-			m_maskOfFramedrop.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-			if (m_hmm.hmms.size() > 0)
-				m_GammaCal.init(m_hmm, m_deviceId);
-			m_gammatime = 0;
-			m_partialtime = 0;
-		}
+            m_logSoftmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_softmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_gammaFromLattice.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_maskOfFramedrop.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            if (m_hmm.hmms.size() > 0)
+                m_GammaCal.init(m_hmm, m_deviceId);
+            m_gammatime = 0;
+            m_partialtime = 0;
+        }
 
-		virtual void InferImageDimsFromInputs()
-		{
-			InferImageDimsFromInput(0, false);
+        virtual void InferImageDimsFromInputs()
+        {
+            InferImageDimsFromInput(0, false);
 
-			m_outputChannels = 1;
-			m_outputWidth = 1;
-			m_outputHeight = 1;
-		}
+            m_outputChannels = 1;
+            m_outputWidth = 1;
+            m_outputHeight = 1;
+        }
 
-		//leftNode should be the empirical
-		virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood)
-		{
-			m_children.resize(3);
-			m_children[0] = label;
-			m_children[1] = prediction;
-			m_children[2] = loglikelihood;
-			loglikelihood->NeedGradient() = false;
-		}
+        //leftNode should be the empirical
+        virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood)
+        {
+            m_children.resize(3);
+            m_children[0] = label;
+            m_children[1] = prediction;
+            m_children[2] = loglikelihood;
+            loglikelihood->NeedGradient() = false;
+        }
 
-		virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-		{
-			Base::MoveMatricesToDevice(deviceId);			
-			m_logSoftmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace( deviceId, true);
-			m_softmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace( deviceId, true);
-			m_gammaFromLattice.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-			m_maskOfFramedrop.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);			
-		}
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        {
+            Base::MoveMatricesToDevice(deviceId);            
+            m_logSoftmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace( deviceId, true);
+            m_softmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace( deviceId, true);
+            m_gammaFromLattice.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_maskOfFramedrop.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);            
+        }
 
-		virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-		{
-			Base::CopyTo(nodeP, newName, flags);
-			
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            Base::CopyTo(nodeP, newName, flags);
+            
 
-			if (flags & CopyNodeFlags::copyNodeValue)
-			{
-				auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(nodeP);
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(nodeP);
 
-				node->m_logSoftmaxOfRight = m_logSoftmaxOfRight;
-				node->m_softmaxOfRight = m_softmaxOfRight;
-				node->m_gammaFromLattice = m_gammaFromLattice;
-				node->m_maskOfFramedrop = m_maskOfFramedrop;
-				node->m_hsmoothingWeight = m_hsmoothingWeight;
-				node->m_frameDropThresh = m_frameDropThresh;
-				node->m_doreferencealign = m_doreferencealign;
-			}
-		}
+                node->m_logSoftmaxOfRight = m_logSoftmaxOfRight;
+                node->m_softmaxOfRight = m_softmaxOfRight;
+                node->m_gammaFromLattice = m_gammaFromLattice;
+                node->m_maskOfFramedrop = m_maskOfFramedrop;
+                node->m_hsmoothingWeight = m_hsmoothingWeight;
+                node->m_frameDropThresh = m_frameDropThresh;
+                node->m_doreferencealign = m_doreferencealign;
+            }
+        }
 
-		
+        
 
-		std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> * getLatticePtr()
-		{
-			return &m_lattice;
-		}
+        std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> * getLatticePtr()
+        {
+            return &m_lattice;
+        }
 
-		std::vector<size_t> * getuidprt()
-		{
-			return &m_uids;
-		}
+        std::vector<size_t> * getuidprt()
+        {
+            return &m_uids;
+        }
 
-		std::vector<size_t> * getboundaryprt()
-		{
-			return &m_boundaries;
-		}
-		std::vector<size_t> * getextrauttmap()
-		{
-			return &m_extrauttmap;
-		}
-		msra::asr::simplesenonehmm *gethmm()
-		{
-			return &m_hmm;
-		}
+        std::vector<size_t> * getboundaryprt()
+        {
+            return &m_boundaries;
+        }
+        std::vector<size_t> * getextrauttmap()
+        {
+            return &m_extrauttmap;
+        }
+        msra::asr::simplesenonehmm *gethmm()
+        {
+            return &m_hmm;
+        }
 
-		void SetSmoothWeight(const ElemType hsmoothingWeight)
-		{
-			m_hsmoothingWeight = hsmoothingWeight;
-		}
-		void SetFrameDropThresh(const ElemType frameDropThresh)
-		{
-			m_frameDropThresh = frameDropThresh;
-		}
+        void SetSmoothWeight(const ElemType hsmoothingWeight)
+        {
+            m_hsmoothingWeight = hsmoothingWeight;
+        }
+        void SetFrameDropThresh(const ElemType frameDropThresh)
+        {
+            m_frameDropThresh = frameDropThresh;
+        }
 
-		void SetRefrencealign(const bool dorefrencealign)
-		{
-			m_doreferencealign = dorefrencealign;
-		}
-		void gettime(unsigned long long &gammatime, unsigned long long &partialtime)
-		{
-			gammatime = m_gammatime;
-			partialtime = m_partialtime;
-		}
-	protected:
-		virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-		Matrix<ElemType> m_logSoftmaxOfRight;
-		Matrix<ElemType> m_softmaxOfRight;
-		Matrix<ElemType> m_gammaFromLattice;
-		Matrix<ElemType> m_maskOfFramedrop;
-		ElemType m_frameDropThresh;
-		ElemType m_hsmoothingWeight;
-		bool m_doreferencealign;
-		std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> m_lattice;
-		msra::asr::simplesenonehmm m_hmm;
-		msra::lattices::GammaCalculation<ElemType> m_GammaCal;
-		std::vector<size_t> m_uids;
-		std::vector<size_t> m_boundaries;
-		std::vector<size_t> m_extrauttmap;
+        void SetRefrencealign(const bool dorefrencealign)
+        {
+            m_doreferencealign = dorefrencealign;
+        }
+        void gettime(unsigned long long &gammatime, unsigned long long &partialtime)
+        {
+            gammatime = m_gammatime;
+            partialtime = m_partialtime;
+        }
+    protected:
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
+        Matrix<ElemType> m_logSoftmaxOfRight;
+        Matrix<ElemType> m_softmaxOfRight;
+        Matrix<ElemType> m_gammaFromLattice;
+        Matrix<ElemType> m_maskOfFramedrop;
+        ElemType m_frameDropThresh;
+        ElemType m_hsmoothingWeight;
+        bool m_doreferencealign;
+        std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> m_lattice;
+        msra::asr::simplesenonehmm m_hmm;
+        msra::lattices::GammaCalculation<ElemType> m_GammaCal;
+        std::vector<size_t> m_uids;
+        std::vector<size_t> m_boundaries;
+        std::vector<size_t> m_extrauttmap;
 
-		unsigned long long m_gammatime;
-		unsigned long long m_partialtime;
-
-
-	};
+        unsigned long long m_gammatime;
+        unsigned long long m_partialtime;
 
 
+    };
 
-	template class SequenceWithSoftmaxNode<float>;
-	template class SequenceWithSoftmaxNode<double>;
+
+
+    template class SequenceWithSoftmaxNode<float>;
+    template class SequenceWithSoftmaxNode<double>;
 }}}

@@ -1,465 +1,6 @@
 // parallelforwardbackward.cpp -- parallelized implementation(s) of lattice forward/backward implemented --currently through CUDA
 //
-// F. Seide, Sep 2012
-//
-// $Log: /Speech_To_Speech_Translation/dbn/dbn/parallelforwardbackward.cpp $
-// 
-// 136   5/13/13 10:27 Fseide
-// [from Rui Zhao] changed lr3transP to a full trans matrix, to allow for
-// IPE-Speech's fully ergodic silence model--note the TODOs and one BUGBUG
-// in there that must be fixed
-// 
-// 135   4/08/13 9:02p V-hansu
-// (fix last check-in)
-// 
-// 134   4/08/13 9:01p V-hansu
-// remove PARALLEL_DEBUG
-//
-// 133   1/15/13 5:09p V-hansu
-// (fix last checkin)
-// 
-// 132   1/15/13 2:59p V-hansu
-// remove SUM_AND_PRODUCT
-// 
-// 131   12/25/12 2:08p V-hansu
-// (modify a fprintf)
-// 
-// 130   11/21/12 9:05p V-hansu
-// modify cachehset() to use interface of hmm rather than member
-// 
-// 129   11/21/12 8:56p V-hansu
-// modify cachehset() to separate sil and sp when constructing
-// senone2classmap
-// 
-// 128   11/21/12 8:21p V-hansu
-// (remove {})
-// 
-// 127   11/21/12 7:49p V-hansu
-// add enum mbrclassdefinition, add that to entercomputation() and
-// cachehset() to specify which kind of MBR we use
-// 
-// 126   11/21/12 7:10p V-hansu
-// rename statetoclassmap to state2classmap
-// 
-// 125   11/21/12 7:06p V-hansu
-// get statetoclassmap done making use of hset
-// 
-// 124   11/21/12 6:32p V-hansu
-// add statetoclassmap in parallelforwardbackward(), not finished.
-// 
-// 123   11/09/12 5:41p V-hansu
-// modify a little w.r.t. emulateforwardbackwardlattice()
-// 
-// 122   11/05/12 12:22a V-hansu
-// undo last checkin :( not got enough time to do so...
-// 
-// 121   11/02/12 9:56a V-hansu
-// add logframescorrect to forwardbackwardalign() related functions to
-// prepare for moving computation from forwardbackwardlattice() to
-// forwardbackwardalign()
-// 
-// 120   10/29/12 5:44p V-hansu
-// activate BMMI with silence_penalty
-// 
-// 119   10/29/12 4:20p V-hansu
-// allocate memory for framescorrect when boost mmi is performed
-// 
-// 118   10/29/12 3:48p V-hansu
-// add boostingfactor, not enabled by now.
-// 
-// 117   10/29/12 11:04a V-hansu
-// activate TWO_CHANNEL
-// 
-// 116   10/22/12 2:51p V-hansu
-// move PARALLEL_SIL to latticearchive.h and change edgehassil to local
-// variable
-// 
-// 115   10/21/12 7:37p V-hansu
-// change the interface of emulateedgealignment
-// 
-// 114   10/21/12 1:03p V-hansu
-// add method getedgeacscores(), getedgealignments() in parallelstateimpl
-// 
-// 113   10/19/12 8:41p V-hansu
-// put some code to if{} to save time/space for mmi
-// 
-// 112   10/19/12 4:07p V-hansu
-// finish parallelmmierrorsignal() and emulatemmierrorsignal()
-// combine allocerrormatrix and cacheandallocatematrix into
-// cacheerrorsignal()
-// 
-// 111   10/19/12 2:53p V-hansu
-// add method cacheandallocatematrix,
-// factor allocerrormatrix to two part of cacheandallocatematrix
-// 
-// 110   10/19/12 2:42p V-hansu
-// new method parallelmmierrorsignal, not finished
-// 
-// 109   10/19/12 2:11p V-hansu
-// modify allocatevectors() to prepare for mmi
-// 
-// 108   10/19/12 12:21p V-hansu
-// rename FORBID to TWO_CHANNEL and remove timer. deactivate
-// SUM_AND_PRODUCT
-// 
-// 107   10/17/12 11:59p V-hansu
-// get emulation compatible with cuda version (use kernel)
-// 
-// 106   10/17/12 8:39p V-hansu
-// fix some debugging code
-// 
-// 105   10/17/12 8:03p V-hansu
-// modify emulation code relating to smbrerrorsignal()
-// 
-// 104   10/17/12 7:42p V-hansu
-// add a comment and change to cuda mode
-// 
-// 103   10/17/12 6:07p V-hansu
-// rename Eframescorrectdiff to logEframescorrect, rename
-// Eframescorrecttotal to logEframescorrecttotal
-// 
-// 102   10/17/12 4:24p V-hansu
-// (modify some comments)
-// 
-// 101   10/17/12 4:18p V-hansu
-// add error initialization to sMBRerrorsignal now
-// 
-// 100   10/17/12 3:50p V-hansu
-// change eframecorrect from float vector to double vector
-// add function weighteddotproduct
-// 
-// 99    10/17/12 2:57p Fseide
-// bug fix for sMBR: added the calls into stateposteriors(), but commented
-// out for now
-// 
-// 98    10/17/12 2:48p Fseide
-// emulation layer for stateposteriors() added
-// 
-// 97    10/17/12 12:15p V-hansu
-// remove the posprocessing in emulateforwardbackwardlattice in two-
-// channel mode
-// 
-// 96    10/17/12 2:04a V-hansu
-// add some debugging code and disenable FORBID_INVALID_SIL_PATHS
-// 
-// 95    10/16/12 5:06p V-hansu
-// activate FORBID_INVALID_SIL_PATHS
-// 
-// 94    10/16/12 3:41p V-hansu
-// (add some debugging code)
-// 
-// 93    10/16/12 12:45p V-hansu
-// add a log printing sentence in FORBID_INVALID_SIL_PATH mode
-// 
-// 92    10/16/12 12:32p V-hansu
-// change SILENCE_PRUNING to FORBID_INVALID_SIL_PATHS
-// 
-// 91    10/15/12 7:38p V-hansu
-// add postprocessing for combining silence path and non-silence path
-// 
-// 90    10/15/12 5:36p V-hansu
-// add align to forwardbackwardlattice() related functions
-// 
-// 89    10/14/12 10:05p V-hansu
-// add silalignunitid and spalignunitid to forwardlatticej and
-// backwardlatticej
-// 
-// 88    10/12/12 4:24p V-hansu
-// (add a space)
-// 
-// 87    10/12/12 1:02p V-hansu
-// add some debugging code
-// 
-// 86    10/12/12 1:19a V-hansu
-// activate PARALLEL_SIL and add some code for debugging
-// 
-// 85    10/09/12 7:42p V-hansu
-// fix initialization of member in lr3transPcpuforgpu
-// 
-// 84    10/08/12 10:56a V-hansu
-// deactivate parallel_sil
-// 
-// 83    10/05/12 5:12p V-hansu
-// add cpumode to parallelstate and get cpumode back to work now.
-// 
-// 82    10/05/12 4:07p V-hansu
-// activate parallel silence processing
-// 
-// 81    10/04/12 9:06p V-hansu
-// add copyalignments function to sync back the alignments in cuda mode
-// for diagnostic
-// 
-// 80    9/30/12 7:06p V-hansu
-// prepare for silence processing
-// 
-// 79    9/30/12 5:26p V-hansu
-// add backptr to edgealignments and enable logPergodicskip in lr3transP
-// 
-// 78    9/30/12 3:44p V-hansu
-// add something relating to processing sil on cuda, not finished, include
-// in #if 0
-// 
-// 77    9/28/12 6:11p V-hansu
-// rename allocgammas to allocmatrix and factor out setvalue function
-// 
-// 76    9/28/12 4:36p V-hansu
-// rename transPindex to alignunit
-// 
-// 75    9/27/12 11:29p V-hansu
-// cache gammas in parallelstate and add shuffle check
-// 
-// 74    9/27/12 12:29a V-hansu
-// move memory allocation things into parallelstate
-// 
-// 73    9/26/12 7:33p V-hansu
-// change setvaluej, add expdiffj, pull alpha/beta vectors for fwbw to
-// parallestate, pass siltransPindex into fwbwalign
-// 
-// 72    9/26/12 2:29p V-hansu
-// change logpps in errorsignal from float to double. remove
-// Eframecorrecttotal in sMBRerrorsignal, change the location of resize
-// towards logpps and Eframecorrect
-// 
-// 71    9/26/12 1:08p V-hansu
-// rename combinemode to returnEframescorrect
-// 
-// 70    9/26/12 12:57p Fseide
-// renamed errorsignalj() to sMBRerrorsignalj()
-// 
-// 69    9/26/12 12:53p Fseide
-// errorsignal() renamed to sMBRerrorsignal()
-// 
-// 68    9/26/12 12:42p Fseide
-// (added a comment and renamed some local variables0
-// 
-// 67    9/26/12 12:38p Fseide
-// trainlayer() now passes a buffer to L.forwardbackward() for
-// error-signal computation
-// 
-// 66    9/25/12 11:31p V-hansu
-// pass the alignment (with silence processed) back to gpu to do
-// parallelforwardbackwardlattice
-// 
-// 65    9/25/12 9:36p V-hansu
-// get returnEframescorrect fwbw working for emulation, still debugging through
-// CUDA version
-// 
-// 64    9/25/12 5:33p V-hansu
-// remove totalfwacc in backwardlatticej
-// 
-// 63    9/25/12 3:34p V-hansu
-// temporarily check in to make build
-// 
-// 62    9/25/12 1:57p V-hansu
-// modify the interface of parallelforwardbackward to get prepared for
-// emulation of that
-// 
-// 61    9/24/12 10:11p V-hansu
-// modify the interface for parallelfwbw to prepare for the combined mode.
-// turn off parallelforwardbackwardlattice now
-// 
-// 60    9/24/12 7:10p V-hansu
-// change the interface of parallelforwardbackwardlattice to get ready for
-// gpu combination of latticelevel fwbw
-// 
-// 59    9/24/12 1:08a V-hansu
-// add #define SHUFFLE_FORWARD, not turned on
-// 
-// 58    9/22/12 9:16p V-hansu
-// change the location of initialization in parallelforwardbackwardlattice
-// 
-// 57    9/21/12 10:13p V-hansu
-// copy edgeacscores to gpu again because sil is not computed on gpu.
-// change the interface of emulateforwardbackwardlattice as well.
-// 
-// 56    9/21/12 4:08p V-hansu
-// change the interface of forwardbackwardlattice
-// 
-// 55    9/21/12 3:14p V-hansu
-// remove some unimportant resize() in parallelforwardbackwardlattice()
-// 
-// 54    9/21/12 2:42p V-hansu
-// fix a bug that require elements before allocate in
-// parallelforwardbackwardlattice (logalphas...)
-// 
-// 53    9/21/12 1:42p V-hansu
-// finish CUDA call of forwardbackwardlattice and add some comments
-// 
-// 52    9/21/12 10:28a V-hansu
-// (remove some unuseful references)
-// 
-// 51    9/21/12 9:03a Fseide
-// fixed the message that the parallelstate constructor prints
-// 
-// 50    9/21/12 8:10a Fseide
-// new method msra::cuda::numcudadevices() inside cudamatrix.h, which
-// determines the # devices but does not crash if CUDA DLL missing
-// (returning 0 instead), this was factored out from
-// msra::dbn::numcudadevices() so we can share it with lattice code;
-// parallelstate() constructor now uses proper numcudadevices() function
-// to determine whether CUDA is available (before just assumed it is,
-// which was an early hack)
-// 
-// 49    9/19/12 9:33a Fseide
-// renamed edgeinfo to edgeinfowithscores, in prep for V2 lattice format
-// 
-// 48    9/17/12 8:06p V-hansu
-// change float into double for logalphas and logbetas in forwardbackward
-// 
-// 47    9/14/12 10:02p V-hansu
-// (fix a bug relating to batchsizebackward)
-// 
-// 46    9/14/12 9:27p V-hansu
-// modify parallelforwardbackwardlattice
-// 
-// 45    9/14/12 5:56p V-hansu
-// add parallelforwardbackwardlattice, forwardlatticej and
-// backwardlatticej 
-// 
-// 44    9/14/12 1:57p V-hansu
-// finish forwardlatticej, change forwardbackwardlattice's lambda into
-// normal vector, both not tested
-// 
-// 43    9/13/12 5:40p V-hansu
-// add parallelforwardbackwardlattice, not finished
-// 
-// 42    9/07/12 12:36p V-hansu
-// replace timers, move all timers to latticefwbw.cpp
-// 
-// 41    9/07/12 12:20p V-hansu
-// get the comments relating to timing right
-// 
-// 40    9/07/12 12:14p V-hansu
-// (format some comments)
-// 
-// 39    9/07/12 12:10p V-hansu
-// (fix a bug of calling cuda state fwbw)
-// 
-// 38    9/07/12 11:34a Fseide
-// bug fix: initial data transfer did not wait for completion before
-// freeing the CPU-side vector;
-// added static_asserts for CUDA HMM types;
-// 
-// 37    9/07/12 11:28a V-hansu
-// add a static_assert into parallelstate
-// 
-// 36    9/07/12 11:00a V-hansu
-// (format the comment again)
-// 
-// 35    9/07/12 10:26a V-hansu
-// (format some comments)
-// 
-// 34    9/07/12 9:41a V-hansu
-// (format some comments)
-// 
-// 33    9/07/12 9:24a V-hansu
-// format the comments
-// 
-// 32    9/07/12 8:50a V-hansu
-// (add some comments about timing)
-// 
-// 31    9/07/12 8:45a V-hansu
-// finish the cuda version of sMBRerrorsignal
-// 
-// 30    9/06/12 11:49p V-hansu
-// finish cuda sMBRerrorsignal computation, but the result are not correct
-// 
-// 29    9/06/12 7:26p V-hansu
-// add alignoffsets into sMBRerrorsignal function, next step shall be
-// implementation
-// 
-// 28    9/06/12 6:57p V-hansu
-// modify interface of parallelsMBRerrorsignal
-// 
-// 27    9/06/12 12:15p V-hansu
-// (fix a bug relating to hmm.size() checking)
-// 
-// 26    9/06/12 8:10a Fseide
-// parallelstate and GPU model transfer for lattice processing now moved
-// out to trainlayer(), such that models (and memory allocations) are
-// actually cached across all lattices
-// 
-// 25    9/05/12 10:54p V-hansu
-// 
-// 24    9/05/12 7:07p Fseide
-// (editorial)
-// 
-// 23    9/05/12 7:05p Fseide
-// moved all parallel state to parallelstate object
-// 
-// 22    9/05/12 6:29p Fseide
-// new class parallelstate to encapsulate and carry over state from
-// parallel lattice processing
-// 
-// 21    9/05/12 5:31p V-hansu
-// (fix some indentation)
-// 
-// 20    9/05/12 10:28a Fseide
-// minor edits of time measurements
-// 
-// 19    9/05/12 10:08a V-hansu
-// add TEST_TIME
-// 
-// 18    9/05/12 8:47a V-hansu
-// fetch scores and enable cuda mode
-// 
-// 17    9/05/12 8:10a Fseide
-// fixed compilation error due to inconsistent check-in (numframes
-// parameter)
-// 
-// 16    9/04/12 6:30p V-hansu
-// extract PRINT_ALIGNMENTS into latticefwbw.cpp
-// 
-// 15    9/04/12 6:18p V-hansu
-// fix dim3 t and b in emulator
-// 
-// 14    9/04/12 3:06p V-hansu
-// modify some copying codes
-// 
-// 13    9/03/12 10:53p V-hansu
-// get through a hmm copy bug
-// 
-// 12    9/03/12 4:58p V-hansu
-// change blockDim to gridDim and enable parallelization
-// 
-// 11    9/02/12 8:24p V-hansu
-// add sptransPindex
-// 
-// 10    9/02/12 3:33p V-hansu
-// change interface of edgealignmentj and add cudalogLLs
-// 
-// 9     9/02/12 12:38p V-hansu
-// change initialization of lr3transPcpuforgpu and invoke parallelization
-// mode
-// 
-// 8     9/02/12 11:49a V-hansu
-// change the initialization of lr3transPcpuforgpu
-// 
-// 7     9/01/12 8:42p V-hansu
-// comment out lr3transPcpuforgpu[i].loga[j][k] temp temporarily
-// 
-// 6     9/01/12 8:04p Fseide
-// minor update due to new lr3transP structure, not compiling yet--fix
-// this soon!
-// 
-// 5     9/01/12 7:54p Fseide
-// (tidied up header dependencies)
-// 
-// 4     9/01/12 7:45p Fseide
-// now, all infrastructure is, at least basically, in place--ready to
-// actually implement edge alignment
-// 
-// 3     9/01/12 7:22p Fseide
-// completed CUDA wrappers and emulator (but not tested, and inner CUDA
-// kernel function still missing)
-// 
-// 2     9/01/12 5:45p V-hansu
-// add edgealignmentj
-// 
-// 1     9/01/12 3:23p Fseide
-// created parallelforwardbackward
-#if 0
-#endif
+// F. Seide, V-hansu
 
 #include "latticearchive.h"     // we implement parts of class lattice
 #include "simple_checked_arrays.h"
@@ -469,6 +10,7 @@
 #include "latticefunctionskernels.h"    // for emulation
 #include <numeric>              // for debug
 #include "cudalib.h"
+#include "cublas_v2.h"
 
 #define TWO_CHANNEL         // [v-hansu]
 using namespace msra::cuda;
@@ -787,12 +329,12 @@ namespace msra { namespace lattices {
             // current lattice, logLLs, and return values
             edgesgpu (msra::cuda::newedgeinfovector()), nodesgpu (msra::cuda::newnodeinfovector()), aligngpu (msra::cuda::newaligninfovector()),
             alignresult (msra::cuda::newushortvector()), alignoffsetsgpu (msra::cuda::newuintvector()),
-            edgeacscoresgpu (msra::cuda::newfloatvector()), cudalogLLs (msra::cuda::newmatrix()), logppsgpu (msra::cuda::newdoublevector()),
+            edgeacscoresgpu(msra::cuda::newfloatvector()), cudalogLLs(new Microsoft::MSR::CNTK::Matrix<float>()), logppsgpu(msra::cuda::newdoublevector()),
             logalphasgpu (msra::cuda::newdoublevector()), logbetasgpu (msra::cuda::newdoublevector()), logaccalphasgpu (msra::cuda::newdoublevector()),
             logaccbetasgpu (msra::cuda::newdoublevector()), logframescorrectedgegpu (msra::cuda::newdoublevector()), Eframescorrectbufgpu (msra::cuda::newdoublevector()), 
             logEframescorrectgpu (msra::cuda::newdoublevector()), uidsgpu (msra::cuda::newushortvector()), senone2classmapgpu (msra::cuda::newushortvector()),
-            errorsignalgpu (msra::cuda::newmatrix()), errorsignalneggpu (msra::cuda::newmatrix()), errorsignalgpustorage (msra::cuda::newmatrix()),
-            errorsignalneggpustorage (msra::cuda::newmatrix()), backptrstoragegpu (msra::cuda::newushortvector()), backptroffsetsgpu (msra::cuda::newsizetvector())
+            errorsignalgpu(new Microsoft::MSR::CNTK::Matrix<float>()), errorsignalneggpu(new Microsoft::MSR::CNTK::Matrix<float>()), errorsignalgpustorage(new Microsoft::MSR::CNTK::Matrix<float>()),
+            errorsignalneggpustorage(new Microsoft::MSR::CNTK::Matrix<float>()), backptrstoragegpu(msra::cuda::newushortvector()), backptroffsetsgpu(msra::cuda::newsizetvector())
         {
         }
 
@@ -911,7 +453,7 @@ namespace msra { namespace lattices {
         std::unique_ptr<ushortvector> alignresult;  // concatenated alignments; edges[j]'s alignment starts at offset alignoffsets[j]
         std::unique_ptr<msra::cuda::uintvector> alignoffsetsgpu;
         std::unique_ptr<floatvector> edgeacscoresgpu;
-        std::unique_ptr<msra::cuda::matrix> cudalogLLs;
+        std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> cudalogLLs;
         
         std::unique_ptr<doublevector> logppsgpu;
         std::unique_ptr<doublevector> logalphasgpu;
@@ -929,10 +471,10 @@ namespace msra { namespace lattices {
         std::unique_ptr<ushortvector> uidsgpu;
         std::unique_ptr<ushortvector> senone2classmapgpu;
 
-        std::unique_ptr<msra::cuda::matrix> errorsignalgpustorage;
-        std::unique_ptr<msra::cuda::matrix> errorsignalneggpustorage;
-        std::unique_ptr<msra::cuda::matrix> errorsignalgpu;
-        std::unique_ptr<msra::cuda::matrix> errorsignalneggpu;
+        std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> errorsignalgpustorage;
+        std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> errorsignalneggpustorage;
+        std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> errorsignalgpu;
+        std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> errorsignalneggpu;
 
         // cache current lattice
         // This is a weird mix of const/non-const and private lattice data... :(
@@ -965,22 +507,13 @@ namespace msra { namespace lattices {
 
         }
         //template<class ElemType>
-        void allocateloglls(size_t numrowls, size_t numcols)
+        void setloglls(const Microsoft::MSR::CNTK::Matrix<float>& loglls)
         {
-            // LLs
-            cudalogLLs->allocate(numrowls, numcols);          
+            *cudalogLLs = loglls;
         }
-        void setloglls(const float * loglls, size_t numrows, size_t numcols)
-        { 
-            if (numcols > cudalogLLs->cols())
-                cudalogLLs->allocate(numrows, numcols);
-            cudalogLLs->assignfromdevice( loglls, sizeof(float)*numcols*numrows);  // doing this last with 'true' so we can measure time better; maybe remove later
-        }
-        void getgamma(float * loglls, size_t numrows, size_t numcols)
+        void getgamma(Microsoft::MSR::CNTK::Matrix<float>& loglls)
         {
-            //cudaMemcpy(loglls, errorsignalgpu->, sizeof(float)*numrows*numcols, cudaMemcpyDeviceToDevice);
-            //errorsignalgpu->fetch(0, numrows, 0, numcols, loglls, numrows, true);
-            errorsignalgpu->fetchtodevice(loglls, sizeof(float)*numrows*numcols);
+            loglls = *errorsignalgpu;
         }
         template<class edgealignments>
         void copyalignments (edgealignments & edgealignments)
@@ -1023,19 +556,19 @@ namespace msra { namespace lattices {
         // check if gpumatrixstorage supports size of cpumatrix, if not allocate. set gpumatrix to part of gpumatrixstorage
         void cacheerrorsignal (const msra::math::ssematrixbase & errorsignal, const bool cacheerrsignalneg)
         {
-            if (errorsignalgpustorage->rows() != 0 && errorsignalgpustorage->rows() != errorsignal.rows())
+            if (errorsignalgpustorage->GetNumRows() != 0 && errorsignalgpustorage->GetNumRows() != errorsignal.rows())
                 throw::logic_error ("gpumatrixstorage->rows() shall be fixed once allocated");
-            if (errorsignalgpustorage->cols() < errorsignal.cols())
-                errorsignalgpustorage->allocate (errorsignal.rows(), errorsignal.cols());
-            errorsignalgpu.reset(errorsignalgpustorage->patch (0, errorsignal.rows(), 0, errorsignal.cols()));
+            if (errorsignalgpustorage->GetNumCols() < errorsignal.cols())
+                errorsignalgpustorage->Resize(errorsignal.rows(), errorsignal.cols());
+            *errorsignalgpu = errorsignalgpustorage->ColumnSlice(0, errorsignal.cols());
 
             if (cacheerrsignalneg)
             {
-                if (errorsignalneggpustorage->rows() != 0 && errorsignalneggpustorage->rows() != errorsignal.rows())
+                if (errorsignalneggpustorage->GetNumRows() != 0 && errorsignalneggpustorage->GetNumRows() != errorsignal.rows())
                     throw::logic_error ("gpumatrixstorage->rows() shall be fixed once allocated");
-                if (errorsignalneggpustorage->cols() < errorsignal.cols())
-                    errorsignalneggpustorage->allocate (errorsignal.rows(), errorsignal.cols());
-                errorsignalneggpu.reset(errorsignalneggpustorage->patch (0, errorsignal.rows(), 0, errorsignal.cols()));
+                if (errorsignalneggpustorage->GetNumCols() < errorsignal.cols())
+                    errorsignalneggpustorage->Resize(errorsignal.rows(), errorsignal.cols());
+                *errorsignalneggpu = errorsignalneggpustorage->ColumnSlice(0, errorsignal.cols());
             }
         }
 
@@ -1051,15 +584,6 @@ namespace msra { namespace lattices {
             alignresult->fetch (edgealignments, true);
         }
     };
-
-    // helper to get number of CUDA devices in a cached fashion
-    static size_t numcudadevices()
-    {
-        static size_t cudadevices = SIZE_MAX;    // SIZE_MAX = unknown yet
-        if (cudadevices == SIZE_MAX)
-            cudadevices = msra::cuda::numcudadevices();
-        return cudadevices;
-    }
 
     void lattice::parallelstate::setmode(bool pcpumode)
     {
@@ -1102,9 +626,22 @@ namespace msra { namespace lattices {
     void lattice::parallelstate::getedgeacscores (std::vector<float> & edgeacscores) { pimpl->getedgeacscores (edgeacscores); }
     void lattice::parallelstate::getedgealignments (std::vector<unsigned short> & edgealignments) { pimpl->getedgealignments (edgealignments); }
     //template<class ElemType> 
-    void lattice::parallelstate::setloglls(const float * loglls, size_t numrowls, size_t numcols) { pimpl->setloglls(loglls, numrowls, numcols); }
-    void lattice::parallelstate::allocateloglls(size_t numrowls, size_t numcols) { pimpl->allocateloglls(numrowls, numcols); }
-    void lattice::parallelstate::getgamma(float * loglls, size_t numrows, size_t numcols) { pimpl->getgamma(loglls, numrows, numcols); }
+    void lattice::parallelstate::setloglls(const Microsoft::MSR::CNTK::Matrix<float>& loglls) { pimpl->setloglls(loglls); }
+
+    // TODO: Overload to enable compilation for DoublePrecision though its currently unsupported
+    void lattice::parallelstate::setloglls(const Microsoft::MSR::CNTK::Matrix<double>& loglls) 
+    {
+        throw::logic_error("Double precision not supported for sequence training");
+    }
+
+    void lattice::parallelstate::getgamma(Microsoft::MSR::CNTK::Matrix<float>& loglls) { pimpl->getgamma(loglls); }
+
+    // TODO: Overload to enable compilation for DoublePrecision though its currently unsupported
+    void lattice::parallelstate::getgamma(Microsoft::MSR::CNTK::Matrix<double>& loglls) 
+    {
+        throw::logic_error("Double precision not supported for sequence training");
+    }
+
     // -----------------------------------------------------------------------
     // parallel implementations of key processing steps
     // -----------------------------------------------------------------------
@@ -1256,6 +793,17 @@ namespace msra { namespace lattices {
         return totalfwscore;
     }
 
+    typedef std::string cublasfailure;
+    static void operator|| (cublasStatus_t rc, const cublasfailure & msg)
+    {
+        if (rc != CUBLAS_STATUS_SUCCESS)
+        {
+            char buf[1000];
+            sprintf_s(buf, "%s: cublas error code %d", msg.c_str(), rc);    // ... TODO: add error message
+            throw std::runtime_error(buf);
+        }
+    }
+
     // ------------------------------------------------------------------------
     // parallel implementations of sMBR error updating step
     // ------------------------------------------------------------------------
@@ -1284,8 +832,11 @@ namespace msra { namespace lattices {
                                               logEframescorrecttotal,
                                               *parallelstate->errorsignalgpu.get(), *parallelstate->errorsignalneggpu.get());
 
-            parallelstate->errorsignalgpu->fetch (0, errorsignal.rows(), 0, errorsignal.cols(), &errorsignal(0, 0), errorsignal.getcolstride(), true);
-
+            // TODO: Add a function to Matrix type to do this instead of directly calling cubloas method here
+            if (errorsignal.rows() > 0 && errorsignal.cols() > 0)
+                cublasGetMatrix((int)errorsignal.rows(), (int)errorsignal.cols(), sizeof(float),
+                                parallelstate->errorsignalgpu->BufferPointer(), (int)parallelstate->errorsignalgpu->GetNumCols(),
+                                &errorsignal(0, 0), (int)errorsignal.getcolstride()) || cublasfailure("cublasGetMatrix");
         }
         else
         {

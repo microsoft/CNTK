@@ -1,69 +1,6 @@
 // cudabasetypes.h -- basic types used on both CUDA and PC side
 //
-// F. Seide, Jan 2011
-//
-// $Log: /Speech_To_Speech_Translation/dbn/cudamatrix/cudabasetypes.h $
-// 
-// 19    10/12/12 1:15a V-hansu
-// fix the bug with wrong index check
-// 
-// 18    10/09/12 9:44a V-hansu
-// delete the unused bpmatrixref
-// 
-// 17    10/08/12 2:37p V-hansu
-// add class bpmatrixref to help debug backpointer
-// 
-// 16    9/27/12 10:56p V-hansu
-// add get() in cudamatrixref for getting cudaptr
-// 
-// 15    9/04/12 5:08p Fseide
-// new classes cudaarrayref (replacing incomplete textureref) and
-// passtextureref
-// 
-// 14    9/04/12 2:42p Fseide
-// began to write textureref, but that won't work since CUDA requires a
-// global definition per texture :( so we need some wrapper class around
-// that
-// 
-// 13    9/03/12 6:32p V-hansu
-// add __host__ __device__ in front of size
-// 
-// 12    8/28/12 5:40p Fseide
-// fixed a compilation issue for vectorref<>
-// 
-// 11    8/28/12 3:26p Fseide
-// vectorref::reset() now returns the old cuda_ptr
-// 
-// 10    8/28/12 1:57p Fseide
-// fixed a compilation problem with SDK 4.1, needed to include a header
-// 
-// 9     11/23/11 1:16p Dongyu
-// add reshape
-// 
-// 8     2/01/11 10:48a Fseide
-// added operator-()
-// 
-// 7     1/31/11 7:19p Fseide
-// new __device__ method getcolstride() (for padding results to 0)
-// 
-// 6     1/31/11 5:43p Fseide
-// added const version of operator[]
-// 
-// 5     1/31/11 4:55p Fseide
-// messing around with CUDA-only vs. both-sides functions, not nicely
-// solved yet
-// 
-// 4     1/31/11 2:48p Fseide
-// added matrixref
-// 
-// 3     1/31/11 11:49a Fseide
-// added some PC-side methods to cuda_ptr and vectorref
-// 
-// 2     1/30/11 18:00 Fseide
-// (changed #define to ON_CUDA)
-// 
-// 1     1/30/11 17:51 Fseide
-// created
+// F. Seide, V-hansu
 
 #pragma once
 
@@ -144,6 +81,10 @@ protected:
     }   // matrix in column-wise storage
     matrixref() : p (0), numrows (0), numcols (0), colstride (0) {}
 public:
+    matrixref(T* p, size_t numRows, size_t numCols, size_t colStride)
+        : p(p), numrows(numRows), numcols(numCols), colstride(colStride)
+    {
+    }
     cuda_ptr<T> get() const throw() { return p; }
     __device__ __host__ size_t rows() const throw() { return numrows; }
     __device__ __host__ size_t cols() const throw() { return numcols; }

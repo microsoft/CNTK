@@ -1,7 +1,6 @@
 // cudadevice.h - holds the buffers, events, and streams used on a per device basis
 //
-// 1     5/29/12 AdamE
-// created
+// F. Seide, V-hansu
 
 #pragma once
 
