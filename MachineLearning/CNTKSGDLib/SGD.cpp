@@ -1293,19 +1293,26 @@ template<class ElemType>
         // trainSetDataReader->StartMinibatchLoop(m_mbSize[0],  0 , m_epochSize); // only based on one epoch
         // [1/12/2015 erw] to support large dataset, we usually partition whole dataset into several epoch's,
         // so we need to use all the data to do precomputing
-        if (m_useAllDataForPreComputedNode)
-        {
-            // using all the data
+        if (m_useAllDataForPreComputedNode)     // using all the data
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0);
-        }
-        else
-        {
-            // using all the data
+        else                                    // using only one epoch
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, m_epochSize);
-        }
 
+#if 1
+        size_t actualMBSize;
+        while (GetMinibatchIntoNetwork(trainSetDataReader, net, false, false, *inputMatrices, actualMBSize))
+        {
+            // TODO: move these into GetMinibatchIntoNetwork()  --but those are passed around; necessary? Can't we get them from 'net'?
+            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+            ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
+
+            for (auto & node : nodes)   // this loops over all pertinent PreComputeNodes
+                net.Evaluate(node);
+        }
+#else
         while (trainSetDataReader->GetMinibatch(*inputMatrices))
         {
+            // TODO: use GetMinibatchIntoNetwork(), should be easy
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
             ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
@@ -1317,6 +1324,7 @@ template<class ElemType>
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
                 net.Evaluate(*nodeIter);
         }
+#endif
 
         // mark done
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
@@ -1762,6 +1770,7 @@ template<class ElemType>
         auto pMBLayout = make_shared<MBLayout>();
         while (trainSetDataReader->GetMinibatchCopy(uttInfo, *inputMatrices, pMBLayout))
         {
+            // TODO: use GetMinibatchIntoNetwork(), should be easy
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
             auto & outputNodes = net.OutputNodes();
