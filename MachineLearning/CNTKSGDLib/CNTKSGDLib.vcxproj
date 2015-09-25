@@ -171,6 +171,7 @@
     <ClInclude Include="..\..\Math\Math\QuantizedMatrix.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\CompositeComputationNodes.h" />
     <ClInclude Include="..\CNTK\Profiler.h" />
+    <ClInclude Include="..\CNTK\SimpleOutputWriter.h" />
     <ClInclude Include="AllReduceDistGradAggregator.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetwork.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNode.h" />

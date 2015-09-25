@@ -156,6 +156,9 @@
     <ClInclude Include="..\..\Math\Math\QuantizedMatrix.h">
       <Filter>from CNTKMath</Filter>
     </ClInclude>
+    <ClInclude Include="..\CNTK\SimpleOutputWriter.h">
+      <Filter>SGD</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
