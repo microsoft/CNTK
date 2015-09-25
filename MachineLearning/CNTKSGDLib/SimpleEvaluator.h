@@ -12,6 +12,7 @@
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "ComputationNetwork.h"
+#include "DataReaderHelpers.h"
 #include "TrainingCriterionNodes.h" // TODO: we should move the functions that depend on these to the .cpp
 #include "CompositeComputationNodes.h"
 #include <vector>

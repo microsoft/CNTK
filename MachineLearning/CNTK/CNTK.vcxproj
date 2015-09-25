@@ -177,7 +177,11 @@
     <ClInclude Include="..\..\Math\Math\Matrix.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\CompositeComputationNodes.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\MatrixPool.h" />
+    <ClInclude Include="..\CNTKSGDLib\DataReaderHelpers.h" />
     <ClInclude Include="..\CNTKSGDLib\IComputationNetBuilder.h" />
+    <ClInclude Include="..\CNTKSGDLib\MultiNetworksSGD.h" />
+    <ClInclude Include="..\CNTKSGDLib\SGD.h" />
+    <ClInclude Include="..\CNTKSGDLib\SimpleEvaluator.h" />
     <ClInclude Include="..\CNTKSGDLib\SimpleOutputWriter.h" />
     <ClInclude Include="AllReduceDistGradAggregator.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetwork.h" />
@@ -194,14 +198,11 @@
     <ClInclude Include="..\CNTKComputationNetworkLib\InputAndParamNodes.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\LinearAlgebraNodes.h" />
     <ClInclude Include="ModelEditLanguage.h" />
-    <ClInclude Include="MultiNetworksSGD.h" />
     <ClInclude Include="NDLNetworkBuilder.h" />
     <ClInclude Include="NDLUtil.h" />
     <ClInclude Include="NetworkDescriptionLanguage.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\NonlinearityNodes.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\RecurrentNodes.h" />
-    <ClInclude Include="SimpleEvaluator.h" />
-    <ClInclude Include="SGD.h" />
     <ClInclude Include="SimpleNetworkBuilder.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="SynchronousExecutionEngine.h" />

@@ -172,15 +172,6 @@
     <ClInclude Include="NetworkDescriptionLanguage.h">
       <Filter>Model Building, from old NDL</Filter>
     </ClInclude>
-    <ClInclude Include="SGD.h">
-      <Filter>from CNTKSGDLib\SGD</Filter>
-    </ClInclude>
-    <ClInclude Include="MultiNetworksSGD.h">
-      <Filter>from CNTKSGDLib\SGD</Filter>
-    </ClInclude>
-    <ClInclude Include="SimpleEvaluator.h">
-      <Filter>from CNTKSGDLib\SGD</Filter>
-    </ClInclude>
     <ClInclude Include="..\CNTKComputationNetworkLib\MatrixPool.h">
       <Filter>from CNTKComputationNetworkLib\Network</Filter>
     </ClInclude>
@@ -200,6 +191,18 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="..\CNTKSGDLib\SimpleOutputWriter.h">
+      <Filter>from CNTKSGDLib\SGD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\CNTKSGDLib\DataReaderHelpers.h">
+      <Filter>from CNTKSGDLib\SGD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\CNTKSGDLib\SimpleEvaluator.h">
+      <Filter>from CNTKSGDLib\SGD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\CNTKSGDLib\MultiNetworksSGD.h">
+      <Filter>from CNTKSGDLib\SGD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\CNTKSGDLib\SGD.h">
       <Filter>from CNTKSGDLib\SGD</Filter>
     </ClInclude>
   </ItemGroup>
