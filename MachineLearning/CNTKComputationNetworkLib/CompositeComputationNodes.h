@@ -35,15 +35,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ParallelNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Parallel"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Parallel"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -209,7 +206,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
         {
             // further initializations
@@ -262,7 +259,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_hasComputed;
     };
 
-    #define UsingPreComputedNodeMembers UsingComputationNodeMembers; using Base::m_hasComputed
+    #define UsingPreComputedNodeMembers UsingComputationNodeMembersBoilerplate; using Base::m_hasComputed
 
     //template class PreComputedNode<float>;
     //template class PreComputedNode<double>;
@@ -275,8 +272,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class MeanNode : public PreComputedNode<ElemType>, public NumInputs<1>
     {
         typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
+        static const std::wstring TypeName() { return L"Mean"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MeanNode(DEVICEID_TYPE deviceId, const wstring & name) :
             PreComputedNode<ElemType>(deviceId, name),
             m_numSamples(0)
@@ -288,10 +285,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSamples = 0;   // TODO: intended? Not loaded from file?
         }
 
-        virtual bool HasComputed() const        // why are these not in the base class?
-        {
-            return m_hasComputed;
-        }
+        virtual bool HasComputed() const { return m_hasComputed; }        // why are these not in the base class?
 
         virtual void MarkComputed(const bool hasComputed)
         {
@@ -301,9 +295,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual bool RequiresPreCompute() const { return true; }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Mean"; }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)
         {
@@ -373,14 +364,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // InvStdDevNode (features)
+    // TODO: share stuff with MeanNode
     // -----------------------------------------------------------------------
 
     template<class ElemType>
     class InvStdDevNode : public PreComputedNode<ElemType>, public NumInputs<1>
     {
         typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
+        static const std::wstring TypeName() { return L"InvStdDev"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         InvStdDevNode(DEVICEID_TYPE deviceId, const wstring & name) :
             PreComputedNode<ElemType>(deviceId, name),
             m_mean(deviceId), m_var(deviceId), m_temp(deviceId),
@@ -393,10 +385,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSamples = 0;   // TODO: intended? not loading from file?
         }
 
-        virtual bool HasComputed() const
-        {
-            return m_hasComputed;
-        }
+        virtual bool HasComputed() const { return m_hasComputed; }
 
         virtual void MarkComputed(const bool hasComputed)
         {
@@ -427,9 +416,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual bool RequiresPreCompute() const { return true; }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"InvStdDev"; }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)
         {
@@ -532,15 +518,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class PerDimMeanVarNormalizationNode : public ComputationNode<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"PerDimMeanVarNormalization"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"PerDimMeanVarNormalization"; }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
         {
@@ -680,22 +663,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class PerDimMeanVarDeNormalizationNode : public ComputationNode<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"PerDimMeanVarDeNormalization"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PerDimMeanVarDeNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const
-        {
-            return TypeName();
-        }
-
-        static const std::wstring TypeName()
-        {
-            return L"PerDimMeanVarDeNormalization";
-        }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
         {
@@ -854,7 +827,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // all nodes require precomputation should derive from it
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         BatchModeNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_memory(deviceId)
@@ -912,8 +885,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // add this at the start of each derived class, to get access to the members of ComputationNode
-    // See #define of 'UsingComputationNodeMembers' for more explanation.
-    #define UsingBatchModeNodeMembers UsingComputationNodeMembers; \
+    // See #define of 'UsingComputationNodeMembersBoilerplate' for more explanation.
+    #define UsingBatchModeNodeMembers UsingComputationNodeMembersBoilerplate; \
         protected:  \
             using Base::m_memory; using Base::m_hasComputed; \
         public: \
@@ -935,8 +908,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class TimeReverseNode : public BatchModeNode<ElemType>, public NumInputs<1>
     {
         typedef BatchModeNode<ElemType> Base; UsingBatchModeNodeMembers;
+        static const std::wstring TypeName() { return L"TimeReverse"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TimeReverseNode(DEVICEID_TYPE deviceId, const wstring & name) :
             BatchModeNode<ElemType>(deviceId, name)
         { }
@@ -953,9 +926,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual bool HasComputed() const { return m_hasComputed; }
         virtual void MarkComputed(const bool hasComputed) { m_hasComputed = hasComputed; }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"TimeReverse"; }
 
         virtual void MoveMatricesToDevice(const short deviceId)
         {

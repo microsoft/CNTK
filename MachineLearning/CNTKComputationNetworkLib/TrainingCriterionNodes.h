@@ -25,16 +25,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SquareErrorNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SquareError"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SquareErrorNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_leftMinusRight(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"SquareError";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -160,16 +157,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class CrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"CrossEntropyWithSoftmax"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"CrossEntropyWithSoftmax";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -341,16 +335,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class CrossEntropyNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"CrossEntropy"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CrossEntropyNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_logOfRight(deviceId), m_leftDivRight(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"CrossEntropy";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -497,16 +488,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MatrixL1RegNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"MatrixL1Reg"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MatrixL1RegNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_gradientOfL1Norm(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"MatrixL1Reg";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
         {
@@ -600,16 +588,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MatrixL2RegNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"MatrixL2Reg"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MatrixL2RegNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_temp(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"MatrixL2Reg";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
         {
@@ -696,9 +681,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class NoiseContrastiveEstimationNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<4>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"NCEBasedCrossEntropyWithSoftmax"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         NoiseContrastiveEstimationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_logSoftmax(deviceId),
@@ -732,9 +717,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void SetEvalMode(NCEEvalMode& xevMode) { m_evalMode = xevMode; }
         NCEEvalMode & EvalMode() { return m_evalMode; } // TODO: really? Return a reference to a local? TODO: change to const? and call it GetEvalMode()
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"NCEBasedCrossEntropyWithSoftmax"; }
 
         /**
         compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
@@ -890,16 +872,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<4>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"ClassBasedCrossEntropyWithSoftmax"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ClassBasedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_logSoftmax(deviceId), m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_clsLogSoftmax(deviceId), m_clsSoftmax(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"ClassBasedCrossEntropyWithSoftmax"; }
 
         /**
         compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
@@ -1264,16 +1243,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class CRFNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"CRF"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CRFNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"CRF"; }
 
         /// compute posterior probability of label y at position t
         virtual void EvaluateThisNode()
@@ -1565,15 +1541,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class DummyCriterionNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"DummyCriterion"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         DummyCriterionNode(DEVICEID_TYPE deviceId, const wstring & name) :
           ComputationNodeNonLooping<ElemType>(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"DummyCriterion";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {

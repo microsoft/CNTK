@@ -32,15 +32,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class NegateNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Negate"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         NegateNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Negate";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -119,15 +116,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SumElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SumElements"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SumElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"SumElements";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -216,16 +210,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SumColumnElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SumColumnElements"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SumColumnElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_sumValue(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"SumColumnElements"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -327,9 +318,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class RowSliceNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowSlice"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         //RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name) :
         //    Base(deviceId, name),
         //    m_startIndex(0),
@@ -361,9 +352,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_startIndex >> m_numRows;
         }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"RowSlice";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -461,9 +449,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class RowStackNode : public ComputationNode<ElemType>   // note: not deriving from NumInputs<> like most other nodes since this one takes a variable number of inputs
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowStack"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowStackNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
@@ -480,9 +468,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_inputMatrices = m_inputMatrices;
             }
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"RowStack"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -601,15 +586,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ScaleNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Scale"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ScaleNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Scale";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -723,15 +705,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class TimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Times"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Times";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -896,15 +875,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class TransposeTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"TransposeTimes"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"TransposeTimes"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1063,15 +1039,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"ElementTimes"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"ElementTimes";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)  
         {
@@ -1185,16 +1158,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class RowElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowElementTimes"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_tempMatrix(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"RowElementTimes"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1337,16 +1307,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ColumnElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"ColumnElementTimes"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ColumnElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_tempMatrix(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"ColumnElementTimes"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1499,15 +1466,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class PlusNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Plus"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PlusNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Plus";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1751,15 +1715,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MinusNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Minus"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MinusNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Minus";}
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2038,16 +1999,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class DiagTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"DiagTimes"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         DiagTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_innerproduct(deviceId), m_rightGradient(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"DiagTimes";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2192,16 +2150,13 @@ private:
     template<class ElemType>
     class CosDistanceNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"CosDistance"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosDistanceNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"CosDistance";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2415,15 +2370,12 @@ private:
     template<class ElemType>
     class KhatriRaoProductNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"KhatriRaoProduct"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         KhatriRaoProductNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"KhatriRaoProduct";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2559,17 +2511,14 @@ private:
     template<class ElemType>
     class CosDistanceWithNegativeSamplesNode : public ComputationNode<ElemType>, public NumInputs<4>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"CosDistanceWithNegativeSamples"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosDistanceWithNegativeSamplesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
             m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"CosDistanceWithNegativeSamples"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2837,18 +2786,15 @@ private:
     template<class ElemType>
     class TransposeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Transpose"; }
 
         Matrix<ElemType> mOnes; 
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TransposeNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             mOnes(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Transpose"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2956,7 +2902,8 @@ private:
     template<class ElemType>
     class StrideTimesNode : public ComputationNode<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"StrideTimes"; }
 
         size_t m_StrideDim; // the dimension index on which stride works 
         size_t m_Stride;    // the stride 
@@ -2966,15 +2913,11 @@ private:
             m_Stride = input1.GetNumCols();
         }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         StrideTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_Stride(1)
         { }
         // BUGBUG: This node needs to serialize and CopyTo m_Stride
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"StrideTimes"; }
 
         virtual void ComputeInputPartial(const size_t) { NOT_IMPLEMENTED; }
 

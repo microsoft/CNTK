@@ -14,6 +14,7 @@
 //    PRO:
 //     - doing it for every call allows to dynamically grow MB and layout frame-by-frame, allowing sophisticated models and ways
 //     - more code gone from individual nodes
+//     - the (void) version already does that, sneakily through Matrix. Need a unified approach.
 //    CON:
 //     - if moved out from Validate(), errors are not caught during validation (early failure is valuable).
 //       Although Validate() can check dimensions other than MB size, while MB-size consistency itself is ensured through layout sharing (and the Matrix functions as a last resort)
@@ -22,7 +23,6 @@
 //        - it's weird if it is called for a singe frame to update the size for the whole minibatch
 //  - fold EvaluateThisNodeS() into EvaluateThisNode(), same for partial
 //     - PROBLEM: Matrix sneakily resizes result matrices, but only for EvaluateThisNode(void), not for frame-wise ones. Need a unified solution.
-//  - move NewThis() and OperationName() into the boilerplate macro UsingComputationNodeMembers
 //  - also eliminate EvaluateThisNodeGivenInputs()--that stuff is at least as much responsibility of Network
 //    We can also replace NeedToMaskMissingColumnsToZero() to a check against the node set itself inside Network --one more Node member gone (and a weird, unneccessary one at that)
 //  - finally, revise constructors, merge by means of default parameters

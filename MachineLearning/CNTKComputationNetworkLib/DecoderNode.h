@@ -29,7 +29,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SequenceDecoderNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SequenceDecoderNode"; }
     private:
         // TODO: member variables go to the end
         Matrix<ElemType> mAlpha;
@@ -39,15 +40,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int mEndLab;   // the ending output label, if avaliable
         ElemType  m_default_activity;
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SequenceDecoderNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             mAlpha(deviceId), mBacktrace(deviceId),
             mStartLab(-1), mEndLab(-1)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"SequenceDecoderNode"; }
 
         static void DecideStartEndingOutputLab(const Matrix<ElemType>& lbls, int & stt, int & stp)
         {
