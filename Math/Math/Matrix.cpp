@@ -716,6 +716,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
     }
 
+    // BUGBUG: Some code checks before calling here whether one of the dimensions is 0.
+    //         This function must handle that case properly, that is, preserving the non-zero dimension.
     template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
     {            

@@ -65,7 +65,7 @@ public:
         {
             if (m_oldSig==newSig)
             {
-                m_switchFrame[0] = m_mbSize+8888;
+                m_switchFrame[0] = m_mbSize+8888;   // TODO: WTF??
             }
             else
             {
@@ -175,13 +175,13 @@ public:
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
     {
         assert(m_switchFrame.size() == 1);        
-        pMBLayout->Resize(1, m_mbSize);
+        pMBLayout->Init(1, m_mbSize, true/*sequential*/);   // TODO: not sure if this is always sequential
 
         if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch*/
         {
-            pMBLayout->Reset(0, m_switchFrame[0], MinibatchPackingFlags::SequenceStart);
+            pMBLayout->Set(0, m_switchFrame[0], MinibatchPackingFlags::SequenceStart);
             if (m_switchFrame[0] > 0)
-                pMBLayout->Reset(0, m_switchFrame[0] - 1, MinibatchPackingFlags::SequenceEnd);
+                pMBLayout->SetWithoutOr(0, m_switchFrame[0] - 1, MinibatchPackingFlags::SequenceEnd);   // TODO: can't we use Set()?
         }
     }
 
