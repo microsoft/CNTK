@@ -16,21 +16,23 @@
 #include "gammacalculation.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+    // -----------------------------------------------------------------------
+    /// SquareErrorNode (left, right)
+    // -----------------------------------------------------------------------
+
     //note: to save computation the gradient may be scaled by an constant. 
 
     template<class ElemType>
-    class SquareErrorNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class SquareErrorNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SquareError"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SquareErrorNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_leftMinusRight(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"SquareError";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -74,9 +76,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("SquareError operation requires two inputs.");
-
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
@@ -117,12 +116,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputHeight = 1;        
         }       
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -148,20 +147,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SquareErrorNode<float>; 
     template class SquareErrorNode<double>;
 
+    // -----------------------------------------------------------------------
+    // CrossEntropyWithSoftmaxNode (labels, prediction)
+    // -----------------------------------------------------------------------
+
     //calculates: -sum(left_i * log(softmax_i(right)))
     template<class ElemType>
-    class CrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class CrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"CrossEntropyWithSoftmax"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"CrossEntropyWithSoftmax";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -238,9 +238,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("CrossEntropyWithSoftmaxNode criterion requires two inputs.");
-
             // This breaks re-shaping of the label matrix
             /*if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
             LogicError("CrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");*/
@@ -289,12 +286,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //leftNode should be the empirical
-        virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction) 
-        {
-            m_children.resize(2);
-            m_children[0] = label;
-            m_children[1] = prediction;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = label;
+        //    m_children[1] = prediction;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -323,21 +320,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class CrossEntropyWithSoftmaxNode<float>; 
     template class CrossEntropyWithSoftmaxNode<double>;
 
-    //calculates: -sum(left_i * log(right_i))
-    //assume softmax is already done
+    // -----------------------------------------------------------------------
+    /// CrossEntropyNode (labels, prediction)
+    // -----------------------------------------------------------------------
+
+    // calculates: -sum(left_i * log(right_i))
+    // assume softmax is already done
+    // You probably want to use CrossEntropyWithSoftMaxNode instead, it is more efficient in most cases.
     template<class ElemType>
-    class CrossEntropyNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class CrossEntropyNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"CrossEntropy"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CrossEntropyNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_logOfRight(deviceId), m_leftDivRight(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"CrossEntropy";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -392,8 +391,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("CrossEntropyNode criterion requires two inputs.");
             if (Inputs(0)->OperationName() != L"InputValue")
                 LogicError("CrossEntropyNode criterion requires the first input to be the label.");
 
@@ -440,12 +437,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //leftNode should be the empirical
-        virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction) 
-        {
-            m_children.resize(2);
-            m_children[0] = label;
-            m_children[1] = prediction;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = label;
+        //    m_children[1] = prediction;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -476,25 +473,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class CrossEntropyNode<float>; 
     template class CrossEntropyNode<double>;
 
+    // -----------------------------------------------------------------------
+    // MatrixL1RegNode (input)
+    // TODO: share most code with MatrixL2RegNode
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class MatrixL1RegNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class MatrixL1RegNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"MatrixL1Reg"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MatrixL1RegNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_gradientOfL1Norm(deviceId)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"MatrixL1Reg";} 
-
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
         {
-            if (inputIndex != 0)
-                InvalidArgument("MatrixL1RegNode only has one input.");
-
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(m_gradientOfL1Norm, Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues());
         }
 
@@ -524,8 +521,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1) 
-                LogicError("MatrixL1Reg criterion should have one input.");
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("MatrixL1Reg operation: the input node has 0 element.");
 
@@ -544,11 +539,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputHeight = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -574,25 +569,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class MatrixL1RegNode<float>; 
     template class MatrixL1RegNode<double>;
 
+    // -----------------------------------------------------------------------
+    // MatrixL2RegNode (input)
+    // TODO: share most code with MatrixL1RegNode
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class MatrixL2RegNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class MatrixL2RegNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"MatrixL2Reg"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MatrixL2RegNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_temp(deviceId)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"MatrixL2Reg";} 
-
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
         {
-            if (inputIndex != 0)
-                InvalidArgument("MatrixL2RegNode only has one input.");
-
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues(), FunctionValues());
         }
 
@@ -621,8 +616,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1) 
-                LogicError("MatrixL2Reg criterion should have one input.");
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("MatrixL2Reg operation: the input node has 0 element.");
 
@@ -640,11 +633,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputHeight = 1;        
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -659,6 +652,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class MatrixL2RegNode<float>; 
     template class MatrixL2RegNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// NoiseContrastiveEstimationNode (labels, input, inputWeights, biasWeights)
+    // -----------------------------------------------------------------------
+
     enum NCEEvalMode
     {
         Softmax = 0,
@@ -666,11 +664,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         None = 2
     };
     template<class ElemType>
-    class NoiseContrastiveEstimationNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class NoiseContrastiveEstimationNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<4>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"NCEBasedCrossEntropyWithSoftmax"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         NoiseContrastiveEstimationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_logSoftmax(deviceId),
@@ -704,9 +702,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void SetEvalMode(NCEEvalMode& xevMode) { m_evalMode = xevMode; }
         NCEEvalMode & EvalMode() { return m_evalMode; } // TODO: really? Return a reference to a local? TODO: change to const? and call it GetEvalMode()
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"NCEBasedCrossEntropyWithSoftmax"; }
 
         /**
         compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
@@ -787,8 +782,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 4)
-                LogicError("NoiseContrastiveEstimationNode criterion requires four inputs.");
             if (Inputs(0)->OperationName() != OperationNameOf(InputValue))
                 LogicError("NoiseContrastiveEstimationNode criterion requires the first input to be the label.");
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
@@ -814,15 +807,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputHeight = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr input,
-            const ComputationNodePtr inputweight, const ComputationNodePtr biasWeight)
-        {
-            m_children.resize(4);
-            m_children[0] = label;
-            m_children[1] = input;
-            m_children[2] = inputweight;
-            m_children[3] = biasWeight;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr input,
+        //    const ComputationNodePtr inputweight, const ComputationNodePtr biasWeight)
+        //{
+        //    m_children.resize(4);
+        //    m_children[0] = label;
+        //    m_children[1] = input;
+        //    m_children[2] = inputweight;
+        //    m_children[3] = biasWeight;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -853,21 +846,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class NoiseContrastiveEstimationNode<float>;
     template class NoiseContrastiveEstimationNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// ClassBasedCrossEntropyWithSoftmaxNode (labels, input, inputweights, clsProbBeforeSoftmax)
+    // -----------------------------------------------------------------------
+
     //calculates: -sum(left_i * log(softmax_i(right))) for class given history and for word given history
     // need to provide class probabilty from external node
     template<class ElemType>
-    class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<4>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"ClassBasedCrossEntropyWithSoftmax"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ClassBasedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_logSoftmax(deviceId), m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_clsLogSoftmax(deviceId), m_clsSoftmax(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"ClassBasedCrossEntropyWithSoftmax"; }
 
         /**
         compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
@@ -1135,8 +1129,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 4)
-                LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires four inputs.");
             if (Inputs(0)->OperationName() != OperationNameOf(InputValue))
                 LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
@@ -1164,15 +1156,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputHeight = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr input,
-            const ComputationNodePtr inputweight, const ComputationNodePtr clsProbBeforeSoftmax)
-        {
-            m_children.resize(4);
-            m_children[0] = label;
-            m_children[1] = input;
-            m_children[2] = inputweight;
-            m_children[3] = clsProbBeforeSoftmax;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr input,
+        //    const ComputationNodePtr inputweight, const ComputationNodePtr clsProbBeforeSoftmax)
+        //{
+        //    m_children.resize(4);
+        //    m_children[0] = label;
+        //    m_children[1] = input;
+        //    m_children[2] = inputweight;
+        //    m_children[3] = clsProbBeforeSoftmax;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1205,6 +1197,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ClassBasedCrossEntropyWithSoftmaxNode<float>;
     template class ClassBasedCrossEntropyWithSoftmaxNode<double>;
 
+    // -----------------------------------------------------------------------
+    // CRFNode (labels, position_dependent_scores, transition_scores)
+    //  - labels : output label vector of [0:T-1]
+    //  - position_dependent_scores : score from position dependent node,
+    //    in the R-CRF case, it is the RNN output score before softmax
+    //  - transition scores : score from the transition node, 
+    //    in the R-CRF case, it is the transition probability between labels
+    // -----------------------------------------------------------------------
+
     /**
         CRF training criterion 
         It uses forward-backward algorithm within a minibatch to compute statistics for sequence level optimization 
@@ -1221,18 +1222,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     */
     template<class ElemType>
-    class CRFNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class CRFNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"CRF"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CRFNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"CRF"; }
 
         /// compute posterior probability of label y at position t
         virtual void EvaluateThisNode()
@@ -1448,9 +1446,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 3)
-                LogicError("CRFNode requires three inputs.");
-
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&  // position dependent and pair scores have same number of labels
                 Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
                 Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() && // position dependent and pair scores have the same observation numbers
@@ -1473,20 +1468,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputHeight = 1;
         }
 
-        /// label : output label vector of [0:T-1]
-        /// position_dependent_score : score from position dependent node,
-        /// in the R-CRF case, it is the RNN output score before softmax
-        /// transition score : score from the transition node, 
-        /// in the R-CRF case, it is the transition probability between labels
-        virtual void AttachInputs(const ComputationNodePtr label,
-            const ComputationNodePtr position_dependent_score,
-            const ComputationNodePtr transition_score)
-        {
-            m_children.resize(3);
-            m_children[0] = label;
-            m_children[1] = position_dependent_score;
-            m_children[2] = transition_score;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr label,
+        //    const ComputationNodePtr position_dependent_score,
+        //    const ComputationNodePtr transition_score)
+        //{
+        //    m_children.resize(3);
+        //    m_children[0] = label;
+        //    m_children[1] = position_dependent_score;
+        //    m_children[2] = transition_score;
+        //}
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -1512,6 +1502,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int mEndLbl;
     };
 
+    // -----------------------------------------------------------------------
+    /// DummyCriterionNode (objectives, derivatives, prediction)
+    // -----------------------------------------------------------------------
+
     // This training criterion node needs derivatives and objectives to be
     // computed out of the node. Derivatives and objectives will be fed to the
     // node as input features. It has 3 inputs:
@@ -1523,17 +1517,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // we can separate lattice computation (which may rely other softwares, such
     // as Kaldi) with the neural network training.
     template<class ElemType>
-    class DummyCriterionNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class DummyCriterionNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"DummyCriterion"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         DummyCriterionNode(DEVICEID_TYPE deviceId, const wstring & name) :
           ComputationNodeNonLooping<ElemType>(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"DummyCriterion";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1573,8 +1564,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 3) 
-                LogicError("DummyCriterionNode criterion requires three inputs.");
             if (Inputs(0)->OperationName() != L"InputValue")
                 LogicError("DummyCriterionNode criterion requires the first input to be computed objectives.");
             if (Inputs(0)->OperationName() != L"InputValue")
@@ -1602,13 +1591,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputHeight = 1;        
         }
 
-        virtual void AttachInputs(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction) 
-        {
-            m_children.resize(3);
-            m_children[0] = objectives;
-            m_children[1] = derivatives;
-            m_children[2] = prediction;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction) 
+        //{
+        //    m_children.resize(3);
+        //    m_children[0] = objectives;
+        //    m_children[1] = derivatives;
+        //    m_children[2] = prediction;
+        //}
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     };

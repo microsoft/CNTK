@@ -15,14 +15,22 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    /**
-    * this node does sequence decoding only
-    * it corresponds to a decoder
-    */
+    // -----------------------------------------------------------------------
+    // SequenceDecoderNode (label, position_dependent_score, transition_score)
+    // this node does sequence decoding only
+    // it corresponds to a decoder
+    //  - label : output label vector of [0:T-1]
+    //  - position_dependent_score : score from position dependent node,
+    //    in the R-CRF case, it is the RNN output score before softmax
+    //  - transition score : score from the transition node, 
+    //    in the R-CRF case, it is the transition probability between labels
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class SequenceDecoderNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class SequenceDecoderNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SequenceDecoderNode"; }
     private:
         // TODO: member variables go to the end
         Matrix<ElemType> mAlpha;
@@ -32,15 +40,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int mEndLab;   // the ending output label, if avaliable
         ElemType  m_default_activity;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SequenceDecoderNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             mAlpha(deviceId), mBacktrace(deviceId),
             mStartLab(-1), mEndLab(-1)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"SequenceDecoderNode"; }
 
         static void DecideStartEndingOutputLab(const Matrix<ElemType>& lbls, int & stt, int & stp)
         {
@@ -170,9 +174,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 3)
-                LogicError("SequenceDecoderNode requires three inputs.");
-
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&  // position dependent and pair scores have same number of labels
                 Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
                 Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() && // position dependent and pair scores have the same observation numbers
@@ -199,15 +200,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// in the R-CRF case, it is the RNN output score before softmax
         /// transition score : score from the transition node, 
         /// in the R-CRF case, it is the transition probability between labels
-        virtual void AttachInputs(const ComputationNodePtr label,
-            const ComputationNodePtr position_dependent_score,
-            const ComputationNodePtr transition_score)
-        {
-            m_children.resize(3);
-            m_children[0] = label;
-            m_children[1] = position_dependent_score;
-            m_children[2] = transition_score;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr label,
+        //    const ComputationNodePtr position_dependent_score,
+        //    const ComputationNodePtr transition_score)
+        //{
+        //    m_children.resize(3);
+        //    m_children[0] = label;
+        //    m_children[1] = position_dependent_score;
+        //    m_children[2] = transition_score;
+        //}
     };
  
 

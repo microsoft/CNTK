@@ -3,7 +3,7 @@
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-// Math.cpp : Defines the exported functions for the DLL application.
+// CPUMatrix.cpp : full implementation of all matrix functions on the CPU side
 //
 
 #include "stdafx.h"
@@ -291,9 +291,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
     {
-        if (a.IsEmpty())
-            throw std::logic_error("AddToRowSliceValuesOf: input matrix a is empty.");
-
         if (a.GetNumRows() != numRows)
             throw std::logic_error("AddToRowSliceValuesOf: a.GetNumRows() != numRows.");
 
@@ -332,8 +329,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
     {
-        if (a.IsEmpty())
-            throw std::logic_error("AssignRowSliceValuesOf: input matrix a is empty.");
+        //if (a.IsEmpty())
+        //    throw std::logic_error("AssignRowSliceValuesOf: input matrix a is empty.");
 
         if (startIndex + numRows > a.GetNumRows())
             throw std::logic_error("AssignRowSliceValuesOf: startIndex + numRows exceeds a.GetNumRows().");
@@ -1276,10 +1273,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numCols = numCols;
     }
 
-    //if growONly is true, resize will not reallocate memory if the current memory is large enough (i.e., will not shrink)
+    // Resize() -- change matrix size
+    // This function is cheap if the matrix size does not change.
+    // If growONly is true, resize will not reallocate memory if the current memory is large enough (i.e., will not shrink).
     template<class ElemType>
     void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly /*=true*/)
     {
+        if (m_numRows == numRows && m_numCols == numCols)   // TODO: do this check for GPU as well
+            return;
+
         m_numRows = numRows;
         m_numCols = numCols;
 
@@ -1307,7 +1309,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    //allocated by the callee but should be deleted by the caller
+    // allocated by the callee but should be deleted by the caller
+    // BAD DESIGN--use STL vector
     template<class ElemType>
     ElemType* CPUMatrix<ElemType>::CopyToArray() const
     {
@@ -1347,18 +1350,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    inline size_t CPUMatrix<ElemType>::LocateElement (const size_t row, const size_t col) const 
-    { 
-        assert (row < m_numRows && col < m_numCols); 
-        return col * m_numRows  + row;  // matrix in column-wise storage
-    }  
+    inline size_t CPUMatrix<ElemType>::LocateColumn(const size_t col) const
+    {
+        assert(col < m_numCols);
+        return col * m_numRows;         // matrix in column-wise storage
+    }
 
     template<class ElemType>
-    size_t CPUMatrix<ElemType>::LocateColumn (const size_t col) const 
-    { 
-        assert (col < m_numCols); 
-        return col * m_numRows;  // matrix in column-wise storage
-    }  
+    inline size_t CPUMatrix<ElemType>::LocateElement (const size_t row, const size_t col) const 
+    {
+        assert (row < m_numRows); 
+        return LocateColumn(col) + row;  // matrix in column-wise storage
+    }
 
 #pragma endregion Basic Operators
 
@@ -1485,9 +1488,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignDifferenceOf(const ElemType alpha, const CPUMatrix<ElemType>& a)
     {
-        if (a.IsEmpty())
-            throw std::logic_error("AssignDifferenceOf: Matrix a is empty.");
-
         auto& us=*this;
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
@@ -1517,9 +1517,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignDifferenceOf(const CPUMatrix<ElemType>& a, const ElemType alpha)
     {
-        if (a.IsEmpty())
-            throw std::logic_error("AssignDifferenceOf: Matrix a is empty.");
-
         auto& us=*this;
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
