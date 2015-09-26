@@ -13,7 +13,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     using namespace std;
 
-
     static AdaptationRegType ParseAdaptationRegType(wstring s)
     {
         msra::strfun::tolower_ascii(s);
@@ -1167,7 +1166,6 @@ template<class ElemType>
             for (auto & node : nodes)   // this loops over all pertinent PreComputeNodes
                 net.Evaluate(node);
         }
-
 #else
         while (trainSetDataReader->GetMinibatch(*inputMatrices))
         {
@@ -1667,7 +1665,6 @@ template<class ElemType>
         sprintf(format, "%%%d.%df", padSize, precision);
         return format;
     }
-
 
     template<class ElemType>
     size_t SGD<ElemType>::TrainOneEpoch(ComputationNetwork& net,

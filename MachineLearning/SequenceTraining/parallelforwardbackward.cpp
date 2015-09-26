@@ -590,13 +590,6 @@ namespace msra { namespace lattices {
         
         if (!pcpumode)
         {
-            /*if (pimpl != NULL)
-            {
-                delete pimpl;
-                pimpl = NULL;
-            }
-            fprintf (stderr, "numcudadevices: using CUDA for lattice processing\n");*/
-            //initwithdeviceid(DeviceId);
             pimpl = new parallelstateimpl();
         }
         else
@@ -618,7 +611,7 @@ namespace msra { namespace lattices {
             }*/
         }
     }
-	lattice::parallelstate::parallelstate() { pimpl = nullptr; }
+    lattice::parallelstate::parallelstate() { pimpl = nullptr; }
     lattice::parallelstate::~parallelstate() { delete pimpl; }
     void lattice::parallelstate::entercomputation (const msra::asr::simplesenonehmm & hset, const mbrclassdefinition mbrclassdef) { pimpl->cachehset (hset, mbrclassdef);  }    // pass models in (to GPU) //TODO: rethink the naming of this function
     void lattice::parallelstate::copyalignments (edgealignments & edgealignments) { pimpl->copyalignments (edgealignments); }

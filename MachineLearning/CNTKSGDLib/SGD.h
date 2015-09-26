@@ -446,8 +446,6 @@ protected:
     ElemType m_hsmoothingWeight;
     ElemType m_frameDropThresh;
     bool m_doreferencealign;
-
-
 };
 
 }}}
