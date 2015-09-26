@@ -8,9 +8,37 @@
 #include "ssematrix.h"          // the matrices
 #include "cudalattice.h"
 #include "latticefunctionskernels.h"    // for emulation
+#include "cudalatticeops.h"
 #include <numeric>              // for debug
 #include "cudalib.h"
+
+#ifndef CPUONLY
 #include "cublas_v2.h"
+#pragma comment (lib, "cublas.lib")
+
+namespace msra { namespace cuda {
+
+    typedef std::string cublasfailure;
+    static void operator|| (cublasStatus_t rc, const cublasfailure & msg)
+    {
+        if (rc != CUBLAS_STATUS_SUCCESS)
+        {
+            char buf[1000];
+            sprintf_s(buf, sizeof(buf), "%s: cublas error code %d", msg.c_str(), rc);    // ... TODO: add error message
+            throw std::runtime_error(buf);
+        }
+    }
+
+    // TODO: Add a function to Matrix type to do this instead of directly calling cubloas method here
+    template <typename ElemType>
+    void FetchFromGPUMatrix(const Microsoft::MSR::CNTK::Matrix<ElemType>& gpuMatrix, msra::math::ssematrixbase& cpuMatrix)
+    {
+        cublasGetMatrix((int)cpuMatrix.rows(), (int)cpuMatrix.cols(), sizeof(float),
+                        gpuMatrix.BufferPointer(), (int)gpuMatrix.GetNumCols(),
+                        &cpuMatrix(0, 0), (int)cpuMatrix.getcolstride()) || cublasfailure("cublasGetMatrix");
+    }
+}}
+#endif // CPUONLY
 
 #define TWO_CHANNEL         // [v-hansu]
 using namespace msra::cuda;
@@ -786,17 +814,6 @@ namespace msra { namespace lattices {
         return totalfwscore;
     }
 
-    typedef std::string cublasfailure;
-    static void operator|| (cublasStatus_t rc, const cublasfailure & msg)
-    {
-        if (rc != CUBLAS_STATUS_SUCCESS)
-        {
-            char buf[1000];
-            sprintf_s(buf, sizeof(buf), "%s: cublas error code %d", msg.c_str(), rc);    // ... TODO: add error message
-            throw std::runtime_error(buf);
-        }
-    }
-
     // ------------------------------------------------------------------------
     // parallel implementations of sMBR error updating step
     // ------------------------------------------------------------------------
@@ -825,11 +842,10 @@ namespace msra { namespace lattices {
                                               logEframescorrecttotal,
                                               *parallelstate->errorsignalgpu.get(), *parallelstate->errorsignalneggpu.get());
 
-            // TODO: Add a function to Matrix type to do this instead of directly calling cubloas method here
             if (errorsignal.rows() > 0 && errorsignal.cols() > 0)
-                cublasGetMatrix((int)errorsignal.rows(), (int)errorsignal.cols(), sizeof(float),
-                                parallelstate->errorsignalgpu->BufferPointer(), (int)parallelstate->errorsignalgpu->GetNumCols(),
-                                &errorsignal(0, 0), (int)errorsignal.getcolstride()) || cublasfailure("cublasGetMatrix");
+            {
+                msra::cuda::FetchFromGPUMatrix<float>(*parallelstate->errorsignalgpu, errorsignal);
+            }
         }
         else
         {

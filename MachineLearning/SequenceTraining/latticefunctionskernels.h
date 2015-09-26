@@ -156,6 +156,8 @@ public:
     __device__ const unsigned short & operator() (size_t i, size_t j) const { return p[locate(i,j)]; }
 };
 
+#ifndef CPUONLY
+
 // this class contains all-static methods that are inner pieces of thread kernels for use with CUDA
 struct latticefunctionskernels
 {
@@ -851,8 +853,12 @@ struct latticefunctionskernels
     }
 };
 
+#endif // CPUONLY
+
 };};
+
 
 #pragma pop_macro ("atomicCAS")
 #pragma pop_macro ("atomicAdd")
 #pragma pop_macro ("__device__")
+

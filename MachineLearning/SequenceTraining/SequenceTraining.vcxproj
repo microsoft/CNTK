@@ -93,6 +93,7 @@
     <ClCompile Include="cudalattice.cpp" />
     <ClCompile Include="cudalib.cpp" />
     <ClCompile Include="latticeforwardbackward.cpp" />
+    <ClCompile Include="NoGPU.cpp" />
     <ClCompile Include="parallelforwardbackward.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

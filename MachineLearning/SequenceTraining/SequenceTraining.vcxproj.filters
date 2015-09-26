@@ -18,5 +18,6 @@
     <ClCompile Include="cudalib.cpp" />
     <ClCompile Include="latticeforwardbackward.cpp" />
     <ClCompile Include="parallelforwardbackward.cpp" />
+    <ClCompile Include="NoGPU.cpp" />
   </ItemGroup>
 </Project>

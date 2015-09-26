@@ -3,6 +3,9 @@
 // F. Seide, V-hansu
 
 #include <stdexcept>
+#include "BestGpu.h"
+
+#ifndef CPUONLY
 
 namespace msra { namespace cuda {
 
@@ -23,3 +26,5 @@ namespace msra { namespace cuda {
 
 // now include actual code which is in those files to allow for code highlighting etc.
 #include "cudalatticeops.cu.h"
+
+#endif // CPUONLY
