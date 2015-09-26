@@ -151,8 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0) // TODO: this friendly error message should come out of Validate()
-                InvalidArgument("PastValue and FutureValue operations only take one input.");
+            assert (inputIndex == 0);
 
             // special case: DelayedValueNodes may be used outside of loops
             // TODO: this should be a bulk operation; this implementation is a quick hack
@@ -302,12 +301,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            PrintSelfBeforeValidation();
+            PrintSelfBeforeValidation();        // TODO: other nodes do not do that
 
-            if (m_children.size() != 1)
-                LogicError("PastValue and FutureValue operations take one input.");
-
-            if (!(Inputs(0) == nullptr))    // TODO: what is this special case for? For the case that the node has not been hooked up yet?
+            if (!(Inputs(0) == nullptr))        // TODO: what is this special case for? For the case that the node has not been hooked up yet?   --Base::Validate() will fail on NULL inputs
             {
                 size_t rows0 = Inputs(0)->FunctionValues().GetNumRows();
                 size_t cols0 = Inputs(0)->FunctionValues().GetNumCols();
@@ -1301,9 +1297,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 5)
-                LogicError("LSTMNode requires four inputs.");
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
