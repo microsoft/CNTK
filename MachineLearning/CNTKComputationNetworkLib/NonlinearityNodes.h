@@ -492,6 +492,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddElementProductOf(diff, functionValues);
         }
 
+#if 0   // I don't understand why this is here. Seems to resize the output, then forward to base. Either way, resizing will be handled uniformly soon.
         // BUGBUG: where is EvaluateThisNodeMap()?
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
@@ -504,6 +505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_functionValues.Resize(r, c);
             NonlinearityNode<ElemType>::EvaluateThisNode(frameRange);
         }
+#endif
 
         /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
         {

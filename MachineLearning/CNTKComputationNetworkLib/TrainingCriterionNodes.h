@@ -164,9 +164,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex > 1)
-                InvalidArgument("CrossEntropyWithSoftmaxNode criterion only takes two inputs.");
-
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
