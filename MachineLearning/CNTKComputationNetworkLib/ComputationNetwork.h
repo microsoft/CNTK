@@ -8,9 +8,7 @@
 
 // TODOs:
 //  - add a runtime check that nodes deriving from ComputeNodeNonLooping may never participate in a loop
-//  - fully eliminate EvaluateThisNode(void), replace by EvaluateThisNode(FrameRange(void)), which will often elinminate special-casing
 //  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, instead change Node::SetFunctionAndGradientMBSize()
-//  - check SoftmaxNode::EvaluateThisNodeMap()
 //    to infer the dimensions, and call it during the Evaluate() loop (maybe directly from EvaluateThisNode(FrameRange()), i.e. eliminate it as well or replace the virtual by a helper function)
 //    For moving into EvaluateThisNode directly,
 //    PRO:
