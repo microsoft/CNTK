@@ -14,7 +14,7 @@ namespace msra { namespace cuda {
         if (rc != cudaSuccess)
         {
             char buf[1000];
-            snprintf(buf, sizeof(buf), "%s: launch failure: %s (cuda error %d)", fn, cudaGetErrorString (rc), rc);
+            sprintf(buf, "%s: launch failure: %s (cuda error %d)", fn, cudaGetErrorString (rc), rc);
             throw std::runtime_error (buf);
         }
     }
