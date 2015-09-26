@@ -39,7 +39,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-
     // instantiate the core class templates
 
     typedef Matrix<float> FloatMatrix;
@@ -47,7 +46,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     atomic_ullong ComputationNodeBase::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
-    template<> std::map<size_t, std::map<size_t, FloatMatrix*>> ComputationNode<float>::s_constOnes{};
+    template<> std::map<size_t, std::map<size_t, FloatMatrix*>>  ComputationNode<float>::s_constOnes{};
     template<> std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};
 
     template class LearnableParameter<float>;

@@ -24,9 +24,9 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // =======================================================================
-    // NonlinearityNode -- abstract base class that holds what's shared between non-linearity nodes like Sigmoid
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // NonlinearityNode (input) -- abstract base class that holds what's shared between non-linearity nodes like Sigmoid
+    // -----------------------------------------------------------------------
 
     // NOTE:
     // This represents a partially failed attempt to unify this.
@@ -37,13 +37,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // shared base for all elemen-twise non-linearities
     template<class ElemType>
-    class NonlinearityNode : public ComputationNode<ElemType>
+    class NonlinearityNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         NonlinearityNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_gradient(deviceId)
         { }
 
@@ -105,11 +105,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs(); 
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -133,16 +133,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define UsingNonlinearityNodeMembers UsingComputationNodeMembers; using Base::m_gradient
 
-    // =======================================================================
-    // RectifiedLinearNode -- ReLU non-linearity
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // RectifiedLinearNode (input) -- ReLU non-linearity
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class RectifiedLinearNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RectifiedLinearNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
@@ -177,16 +177,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RectifiedLinearNode<float>; 
     template class RectifiedLinearNode<double>;
 
-    // =======================================================================
-    // SigmoidNode -- sigmoid non-linearity
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // SigmoidNode (input) -- sigmoid non-linearity
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class SigmoidNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
@@ -236,16 +236,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SigmoidNode<float>; 
     template class SigmoidNode<double>;
 
-    // =======================================================================
-    // TanhNode -- tanh non-linearity
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // TanhNode (input) -- tanh non-linearity
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class TanhNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TanhNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
@@ -297,16 +297,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class TanhNode<float>; 
     template class TanhNode<double>;
 
-    // =======================================================================
-    // LogNode -- component-wise log() of input
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // LogNode (input) -- component-wise log() of input
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class LogNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LogNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
@@ -357,16 +357,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class LogNode<float>;
     template class LogNode<double>;
 
-    // =======================================================================
-    // ExpNode -- component-wise exp() of input
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // ExpNode (input) -- component-wise exp() of input
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class ExpNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ExpNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
@@ -416,16 +416,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ExpNode<float>;
     template class ExpNode<double>;
 
-    // =======================================================================
-    // CosineNode -- component-wise cos() of input
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // CosineNode (input) -- component-wise cos() of input
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class CosineNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosineNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
@@ -476,9 +476,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class CosineNode<float>; 
     template class CosineNode<double>;
 
-    // =======================================================================
-    // SoftmaxNode -- soft-max over input vector(s)
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // SoftmaxNode (input) -- soft-max over input vector(s)
+    // -----------------------------------------------------------------------
 
     //we assume it's  column-wise by default
     //the derivative will increase the Matrix<ElemType> size to the power of column size and should not be used.
@@ -487,7 +487,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name),
             m_diff(deviceId)
@@ -587,16 +587,16 @@ private:
     template class SoftmaxNode<float>; 
     template class SoftmaxNode<double>;
 
-    // =======================================================================
-    // LogSoftmaxNode -- log of soft-max over input vector(s)
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // LogSoftmaxNode (input) -- log of soft-max over input vector(s)
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class LogSoftmaxNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LogSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
@@ -684,20 +684,19 @@ private:
     template class LogSoftmaxNode<float>;
     template class LogSoftmaxNode<double>;
 
-    // =======================================================================
-    // GMMLogLikelihoodNode -- GMM log LL over input vector(s)
-    // BUGBUG: This seems to just to a single Gaussian?
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // GMMLogLikelihoodNode (unnormedPrior, means, logStdDevs, features) -- GMM log LL over input vector(s)
+    // -----------------------------------------------------------------------
 
     //calculates: the log likelihood of a feature given GMM parameters
     template<class ElemType>
-    class GMMLogLikelihoodNode : public ComputationNode<ElemType>
+    class GMMLogLikelihoodNode : public ComputationNode<ElemType>, public NumInputs<4>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         GMMLogLikelihoodNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_prior(deviceId), m_normedDeviation(deviceId), m_normedDeviationVectors(deviceId),
             m_stddev(deviceId), m_posterior(deviceId), m_temp(deviceId)
         { }
@@ -1039,14 +1038,14 @@ virtual const std::wstring OperationName() const { return TypeName(); }
         }
 
         //leftNode should be the empirical
-        virtual void AttachInputs(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature)
-        {
-            m_children.resize(4);
-            m_children[0] = unnormedPrior;
-            m_children[1] = mean;
-            m_children[2] = logStddev;
-            m_children[3] = feature;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature)
+        //{
+        //    m_children.resize(4);
+        //    m_children[0] = unnormedPrior;
+        //    m_children[1] = mean;
+        //    m_children[2] = logStddev;
+        //    m_children[3] = feature;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1084,19 +1083,19 @@ virtual const std::wstring OperationName() const { return TypeName(); }
     template class GMMLogLikelihoodNode<float>;
     template class GMMLogLikelihoodNode<double>;
 
-    // =======================================================================
-    // DropoutNode -- perform drop-out
+    // -----------------------------------------------------------------------
+    // DropoutNode (input) -- perform drop-out
     // Output is scaled such that no post-scaling is necessary.
-    // =======================================================================
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class DropoutNode : public ComputationNode<ElemType>
+    class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         DropoutNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_maskOfDropout(deviceId),
             m_dropoutRate(0)
         {
@@ -1216,11 +1215,11 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             InferImageDimsFromInputs();
         }
 
-        virtual void AttachInputs(const ComputationNodePtr inputNode)
-        {
-            m_children.resize(1);
-            m_children[0] = inputNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr inputNode)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = inputNode;
+        //}
 
         void SetDropoutRate(const double val)
         {
@@ -1263,26 +1262,28 @@ private:
     template class DropoutNode<float>;
     template class DropoutNode<double>;
 
-    // =======================================================================
-    // ReshapeNode -- reshape input matrix
+    // -----------------------------------------------------------------------
+    // ReshapeNode (input) -- reshape input matrix
     // TODO: Why is this in NonlinearityNodes.h? Should he linear algebra no?
-    // =======================================================================
+    // -----------------------------------------------------------------------
+
+    // TODO: This node needs very special consideration regarding MBLayout
 
     template<class ElemType>
-    class ReshapeNode : public ComputationNode<ElemType>
+    class ReshapeNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_numRows(0),
             m_imageWidth(0),
             m_imageHeight(0),
             m_imageChannels(0)
         { }
         ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows, size_t imageWidth, size_t imageHeight, size_t imageChannels) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_numRows(numRows),
             m_imageWidth(imageWidth),
             m_imageHeight(imageHeight),
@@ -1317,11 +1318,11 @@ private:
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"Reshape"; }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void InferImageDimsFromInputs()
         {
@@ -1543,22 +1544,22 @@ private:
     template class ReshapeNode<float>;
     template class ReshapeNode<double>;
 
-    // =======================================================================
-    // RowRepeatNode -- duplicate row(s) of a matrix multiple times
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // RowRepeatNode (input) -- duplicate row(s) of a matrix multiple times
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class RowRepeatNode : public ComputationNode<ElemType>
+    class RowRepeatNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowRepeatNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_numRepeat(1)
         { }
         RowRepeatNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRepeats) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_numRepeat(numRepeats)
         { }
         // ^^ TODO: merge those two above using optional args
@@ -1588,11 +1589,11 @@ private:
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"RowRepeat"; }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void InferImageDimsFromInputs()
         {

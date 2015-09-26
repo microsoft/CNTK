@@ -26,20 +26,20 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    // ConvolutionNode
+    // ConvolutionNode (convolutionWeights, inputFeature)
     // -----------------------------------------------------------------------
 
     //convolutional network 
     //follow "high performance convolutional neural networks for document processing" by Kumar chellapilla, Sidde Puri, and Patrice Simard
     //assume each column is an input sample. Each sample is stored in [channel, row, col]  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
     template<class ElemType>
-    class ConvolutionNode : public ComputationNode<ElemType>
+    class ConvolutionNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_tempMatrix(deviceId),
             m_kernelWidth(SIZE_MAX), m_kernelHeight(SIZE_MAX),
             // initialize to dummy values so we catch missing initialization
@@ -49,7 +49,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 0;
         }
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_tempMatrix(deviceId),
             m_kernelWidth(kernelWidth), m_kernelHeight(kernelHeight),
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample),
@@ -332,12 +332,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }    
         }
 
-        virtual void AttachInputs(const ComputationNodePtr convolutionWeight, const ComputationNodePtr inputFeature) 
-        {
-            m_children.resize(2);
-            m_children[0] = convolutionWeight;
-            m_children[1] = inputFeature;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr convolutionWeight, const ComputationNodePtr inputFeature) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = convolutionWeight;
+        //    m_children[1] = inputFeature;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -378,23 +378,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ConvolutionNode<double>;
 
     // -----------------------------------------------------------------------
-    // PoolingNodeBase
+    // PoolingNodeBase (input)
     // -----------------------------------------------------------------------
 
     //Max/Average Pooling: support multi channel
     //assume each column is an input sample. Each sample is stored in  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
     template<class ElemType>
-    class PoolingNodeBase : public ComputationNode<ElemType>
+    class PoolingNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_windowWidth(SIZE_MAX), m_windowHeight(SIZE_MAX),
             m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX)
         { }
         PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_windowWidth(windowWidth), m_windowHeight(windowHeight),
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
         { }
@@ -496,11 +496,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = m_inputChannels;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr inputFeature)
-        {
-            m_children.resize(1);
-            m_children[0] = inputFeature;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr inputFeature)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = inputFeature;
+        //}
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
@@ -539,7 +539,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef PoolingNodeBase<ElemType> Base; UsingPoolingNodeBaseMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
         MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
             Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
@@ -577,7 +577,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef PoolingNodeBase<ElemType> Base; UsingPoolingNodeBaseMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
         AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
             Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
