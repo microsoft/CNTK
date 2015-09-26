@@ -211,9 +211,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
         GPUMatrix<ElemType>& AssignLogSoftmaxOf (const GPUMatrix<ElemType>& a, const bool isColWise);
-		//sequence training
-		GPUMatrix<ElemType>& DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType & threshhold);
-		GPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha);
+
+        //sequence training
+        GPUMatrix<ElemType>& DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType & threshhold);
+        GPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha);
 
         GPUMatrix<ElemType>& InplaceSqrt ();
         GPUMatrix<ElemType>& AssignSqrtOf (const GPUMatrix<ElemType>& a);

@@ -10,6 +10,15 @@
 
 using namespace msra::lattices;
 
+// Forward declarations
+namespace Microsoft { namespace MSR { namespace CNTK {
+    template<typename ElemType> class Matrix;
+}}}
+
+namespace msra { namespace math {
+    class ssematrixbase;
+}}
+
 namespace msra { namespace cuda {
 
 // The XXXvectorops classes must derive from vectorref<XXX>.
@@ -20,6 +29,9 @@ class somedatavectorops : protected vectorref<somedata>
 protected:
     int somedataoperation (size_t arg);
 };
+
+template <typename ElemType>
+void FetchFromGPUMatrix(const Microsoft::MSR::CNTK::Matrix<ElemType>& gpuMatrix, msra::math::ssematrixbase& cpuMatrix);
 
 class latticefunctionsops : protected vectorref<empty>
 {
