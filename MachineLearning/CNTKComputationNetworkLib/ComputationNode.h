@@ -162,11 +162,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void EvaluateThisNodeGivenInputs() = 0;
         virtual void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
 
-        virtual void /*ComputationNodeBase::*/Validate() { }
+        virtual void /*ComputationNodeBase::*/Validate()
+        {
+            for (size_t i = 0; i < m_children.size(); i++)
+                if (!m_children[i])
+                    RuntimeError("Validate: Input [%d] of %ls node '%ls' is empty (NULL, not connected).", (int)i, OperationName().c_str(), NodeName().c_str());
+        }
         virtual bool UnitTest() { return true; }
 
         virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) = 0;
-        // legacy convenience versions that take individual arguments
+        // convenience versions that take individual arguments
         void AttachInputs(const ComputationNodeBasePtr singleInput) { AttachInputs(std::vector<ComputationNodeBasePtr> { singleInput } ); }
         void AttachInputs(const ComputationNodeBasePtr leftInput, const ComputationNodeBasePtr rightInput) { AttachInputs(std::vector<ComputationNodeBasePtr> { leftInput, rightInput } ); }
         void AttachInputs(const ComputationNodeBasePtr leftInput, const ComputationNodeBasePtr middleInput, const ComputationNodeBasePtr rightInput) { AttachInputs(std::vector<ComputationNodeBasePtr> { leftInput, middleInput, rightInput } ); }
@@ -804,15 +809,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return p->shared_from_this();
         }
 
-    protected:
-        // helper to print an error message if the number of inputs is not as expected
-        // TODO: If there is no other user than AttachInputs() below, fold it back in.
-        __declspec_noreturn
-        void FailNumInputs(size_t expected, size_t given)
-        {
-        }
-    public:
-
         // AttachInputs() -- attach the inputs of a node
         // This verifies the number of inputs. For that, nodes with fixed number of inputs derive from NumInputs<N>.
         // This function discovers this through RTTI and performs a runtime check. Nodes should not have additional checks in their implementation (save the code).
@@ -825,7 +821,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("%ls operation '%ls' expects %d inputs (given: %d)", OperationName().c_str(), NodeName().c_str(), (int)pNumInputs->GetExpectedNumInputs(), (int)inputs.size());
             m_children.resize(inputs.size());
             for (size_t i = 0; i < m_children.size(); i++)
-                m_children[i] = UpCast(inputs[i]);          // (UpCast() checks the type; the assignment then downcasts it again)
+                if (inputs[i])
+                    m_children[i] = UpCast(inputs[i]);          // (UpCast() checks the type; the assignment then downcasts it again)
+                else
+                    m_children[i] = nullptr;                    // during network creation, nullpts are possible
         }
 
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
