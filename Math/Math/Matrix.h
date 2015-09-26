@@ -472,29 +472,106 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef Matrix<double> DoubleMatrix;
 
     // MBLayout -- layout information of minibatch
-    // Currently this is to bind the two somewhat inconsistent boundary flags and packing flags.
-    // Once that is unified, we can clean it up further. For now, it's just moving the data members and encapsulating access to them where possible.
-    // This should probably also contain m_actualNumParallelSequencesInEachRecIter (which should be node-dependent).
+    // This stores:
+    //  - number of time steps and parallel sequences (their product is equal to the #columns in the minibatch)
+    //  - whether the data is sequential or not
+    //  - MinibatchPackingFlags for every (sequence, time step)
+    //  - a column-wise OR of those flags for fast testing entire time steps at once
+    // This object allocates its storage lazily, i.e. if there are no flags ever set, no memory is allocated. This is transparent to the caller.
+    // Note: With truncated BPTT, it is possible to have sequential data, yet not a single flag set in a minibatch (if all frames are sequence-internal ranges).
     // TODO: move this to an appropriate place and name it properly
-    // NOTE: This class represents an abstraction of an originally distributed/code-duped way of defining and accessing the MB layout.
-    //       The code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
+    // NOTE: This class represents an ongoing abstraction of an originally distributed/code-duped way of defining and accessing the MB layout.
+    //       Some code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
     //       Some wackiness below is explained by this.
     // TODO: frame-randomized MBs are now represented as one stream of many frames. This is wrong; they should be one-frame utterances with many streams. Once we fully abstract out Data access, this can be changed easily.
     struct MBLayout
     {   
         typedef std::shared_ptr<MBLayout> MBLayoutPtr;
 
-        MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { }
+        MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { Init(1, 0, false); }
+        MBLayout(size_t numParallelSequences, size_t numTimeSteps, bool dataIsSequential) : m_sentenceBoundaryFlags(CPUDEVICE) { Init(numParallelSequences, numTimeSteps, dataIsSequential); }
 
         // copy the content of another MBLayoutPtr over
         // Use this instead of actual assignment to make it super-obvious that this is not copying the pointer but actual content. The pointer is kept fixed.
-        void CopyFrom(const MBLayoutPtr & other)
-        {
-            *this = *other;
-        }
+        void CopyFrom(const MBLayoutPtr & other) { *this = *other; }
+        void MoveFrom(MBLayoutPtr other) { *this = move(*other); other->Init(0, 0, false); }    // destructive copy that steals ownership if the content, like std::move()
     private:
         MBLayout & operator=(const MBLayout &) = default;   // make this private --use CopyFrom() instead, which makes it very clear that it's copying content, not copying the reference
-    private:    // one day...
+    public:
+
+        // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
+        void Init(size_t numParallelSequences, size_t numTimeSteps, bool dataIsSequential)
+        {
+            // remember the dimensions..
+            m_numParallelSequences = numParallelSequences;
+            m_numTimeSteps = numTimeSteps;
+            m_dataIsSequential = dataIsSequential;
+            // ...but don't actually allocate anything
+            m_sentenceBoundaryFlags.Resize(0, 0);
+            m_minibatchPackingFlags.clear();
+        }
+
+        size_t GetNumTimeSteps()         const { return m_numTimeSteps; }
+        size_t GetNumParallelSequences() const { return m_numParallelSequences; }   // note: if initialized as a dummy, m_numParallelSequences is set to 1
+
+    private:
+        // test whether we have not allocated anything (will also return true if the minibatch is empty)
+        bool IsEmpty() const { return m_minibatchPackingFlags.empty(); }
+        // call this before ever writing anything--this will create the matrix/vector upon first use
+        void LazyAlloc() const
+        {
+            if (!IsEmpty() || m_numTimeSteps == 0)
+                return;
+            // this is where the actual allocation happens
+            m_sentenceBoundaryFlags.Resize(m_numParallelSequences, m_numTimeSteps);
+            m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
+            m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
+        }
+    public:
+
+        // compare whether two layouts are the same
+        bool operator==(const MBLayout & other) const
+        {
+            // for now just check the object identity
+            // TODO: in the future, we also need to compare the content; and we need to define "equal", e.g. w.r.t. missing features
+            return this == &other;
+        }
+
+        // get boundary flags
+        MinibatchPackingFlags Get(size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : m_minibatchPackingFlags[t]; }
+        MinibatchPackingFlags Get(size_t id, size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t); }
+
+        // test boundary flags for a specific condition
+        bool Is(size_t t, MinibatchPackingFlags f) const { return (Get(t) & f) != 0; }
+        bool Is(size_t id, size_t t, MinibatchPackingFlags f) const { return (Get(id, t) & f) != 0; }
+        // TODO: swap id and t for all of these functions; t is the more important parameter
+
+        // tests if Is() is false for every frame and sequence
+        // If this returns true, it means that boundary information need not be considered, just process the whole thing in one go.
+        // TODO: Can it ever happen that no flag is set, yet we have m_numParallelSequences != 1? Or does that simply not matter?
+        // This is currently the case for frame randomization.
+        bool IsAllNone() const { return IsEmpty(); }
+
+        // set a boundary flag (OR it on top of the existing layout)
+        void Set(size_t id, size_t t, MinibatchPackingFlags f)
+        {
+            if (f == MinibatchPackingFlags::None)   // actually not setting anything: skip allocation
+                return;
+            if ((f & (MinibatchPackingFlags::SequenceStart | MinibatchPackingFlags::SequenceEnd)) && !m_dataIsSequential)
+                LogicError("MBLayout::Set: attempted to set SequenceStart or -End in a layout with !m_dataIsSequential");
+            LazyAlloc();
+            m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) | f));
+            m_minibatchPackingFlags[t] |= f;
+        }
+
+        bool RequireSentenceSeg() const { return m_dataIsSequential; }        // this is the name of a function on DataReader which really belongs here
+
+    private:
+        size_t m_numTimeSteps;
+        size_t m_numParallelSequences;
+        bool m_dataIsSequential;
+        // TODO: ^^ is m_dataIsSequential necessary? Can it be derived from, say, m_numTimeSteps == 1 && IsAllNone()?
+
         /// a matrix of n_stream x n_length
         /// n_stream is the number of streams
         /// n_length is the maximum lenght of each stream
@@ -507,7 +584,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// the second data stream has two sentences, with 0 indicating begining of sentences
         /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
         /// frame. 
-        Matrix<float> m_sentenceBoundaryFlags;  // (t,stream)
+        mutable Matrix<float> m_sentenceBoundaryFlags;  // (t,stream)
         // ^^ float -> MinibatchPackingFlags, right? Or unsigned char; or change that to 'char' because Matrix<char> already exists
         // This matrix ^^ is always in CPU memory  --TODO: should rather be a matrix of some int
         /// conditionally point to either a pointer to that provided by network, or point to 
@@ -515,96 +592,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// a matrix of 1 x n_length
         /// != 0 denotes the case that there exists sentence begin or no_labels case in this frame
         /// == 0 denotes such case is not in this frame
-        vector<MinibatchPackingFlags> m_minibatchPackingFlags;
-        // ^^ This is some form of aggregate of m_sentenceBoundaryFlags taken over all streams. TODO: find out the exact condition
+        mutable vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
+
     public:
-
-        // compare whether two layouts are the same
-        bool operator==(const MBLayout & other) const
-        {
-            // for now just check the object identity
-            // TODO: in the future, we also need to compare the content; and we need to define "equal", e.g. w.r.t. missing features
-            return this == &other;
-        }
-
-        bool Is(size_t t, MinibatchPackingFlags f) const { return (m_minibatchPackingFlags[t] & f) != 0; }
-        // TODO: swap id and t; t is the more important parameter
-        bool Is(size_t id, size_t t, MinibatchPackingFlags f) const { return (((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f) != 0; }
+        // specialized functions to replicate old behavior that shouldn't be there but I cannot test
+        // TODO: these should all go away one day
 
         // get info for one frame; used in DelayedValueNode
-        // TODO: clean this up, we can do this more nicely
+        // TODO: clean this up, we can do this more nicely. DelayedValueNode can just access individual elements, like everybody else.
         pair<Matrix<float>, MinibatchPackingFlags> GetFrame(size_t t) const
         {
+            LazyAlloc();
             return make_pair(m_sentenceBoundaryFlags.ColumnSlice(t, 1), m_minibatchPackingFlags[t]);
         }
 
-        // set a boundary flag
-        // This ORs the flags, i.e. it assumes that the matrix has been cleared before.
-        // NOTE: original code that calls this did not OR the matrix, but did OR the vector value. I visually checked that it was cleared before, but might have gotten it wrong.
-        void Set(size_t id, size_t t, MinibatchPackingFlags f)
+        // same as Set() but not ORing  --TODO: is this distinction needed?
+        void SetWithoutOr(size_t id, size_t t, MinibatchPackingFlags f)
         {
-            m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) | f));
-            m_minibatchPackingFlags[t] |= f;
-        }
-        // same but not ORing  --TODO: is this distinction needed?
-        void Reset(size_t id, size_t t, MinibatchPackingFlags f)
-        {
-            m_sentenceBoundaryFlags.SetValue(id, t, (float)(int)f);
+            if (f == MinibatchPackingFlags::None)
+                return;
+            LazyAlloc();
+            m_sentenceBoundaryFlags.SetValue(id, t, (float)(int)f); // no OR
             m_minibatchPackingFlags[t] |= f;
         }
         // needed in DelayedValueNodeBase
         // TODO: this is wicked in that the matrix keeps only the NoLabel flag, while the vector keeps all (just gets ORed into)
         void Mask(size_t id, size_t t, MinibatchPackingFlags f)
         {
+            if (IsEmpty())
+                return;
             m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f));
             //m_minibatchPackingFlags[t] &= f;
         }
-
         // for LSTMNode ony, which is deprecated, only to make it compile easily:  also used in FindBestPathWithVariableLength() and FindBestPath() in a strange way
-        Matrix<float> & GetM() { return m_sentenceBoundaryFlags; }
-        // and for DecimateMinibatchWithSentences() which should be revised
-        vector<MinibatchPackingFlags> & GetV() { return m_minibatchPackingFlags; }
-
-        // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
-        void Resize(size_t numStreams, size_t numFrames)
-        {
-            m_sentenceBoundaryFlags.Resize(numStreams, numFrames);
-            m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
-            m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
-        }
-
-        // test a pre-condition  --TODO: we only resize this thing here, so this should not be necessary in the future
-        void validate() const { if (m_minibatchPackingFlags.size() != m_sentenceBoundaryFlags.GetNumCols()) LogicError("MBLayout: GetSize() != GetNumTimeSteps()"); }
-
-        // these accessors were for now just collected from actual usage; need to be cleaned up once this compiles again
-        size_t GetNumTimeSteps()  const { validate(); return m_sentenceBoundaryFlags.GetNumCols(); }
-        size_t GetNumParallelSequences() const { return (m_sentenceBoundaryFlags.GetNumRows() == 0) ? 1 : m_sentenceBoundaryFlags.GetNumRows(); }   // 1 stream if no matrix
-        size_t GetSize() const { validate(); return m_minibatchPackingFlags.size(); }
-
-        // if we have no matrix/vector, this means no frame has any flag set
-        // We still can have a number of rows in this case.
-        bool IsAllNone() const { validate(); return m_minibatchPackingFlags.empty(); }
-        void SetAllNone() { Resize(0, 0); }
-
-#if 0   // we have this pattern often:
-        // TODO: mbSize and #slices must also move into MBLayout 
-        evalnet->SetActualMiniBatchSize(mbSize);
-        dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
-        evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
-#endif
-#if 0   // a VERY TELLING piece of code
-        // packing flags = frame-wise or over all streams of start and end
-        for (size_t nt = 0; nt < nMBSize; nt++)
-        {
-            for (size_t ns = 0; ns < nSlices; ns++)
-            {
-                if (newBoundary(ns, nt) == ((int) MinibatchPackingFlags::SequenceStart))
-                    pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceStart;
-                if (newBoundary(ns, nt) == ((int) MinibatchPackingFlags::SequenceEnd))
-                    pMBLayout->m_minibatchPackingFlags[nt] |= MinibatchPackingFlags::SequenceEnd;
-            }
-        }
-#endif
+        Matrix<float> & GetM() { LazyAlloc(); return m_sentenceBoundaryFlags; }
     };
     typedef MBLayout::MBLayoutPtr MBLayoutPtr;
 

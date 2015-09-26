@@ -5,13 +5,14 @@
 //
 #pragma once
 
-#include "ComputationNetwork.h"
+#include "Basics.h"
 #include "DataReader.h"
+#include "ComputationNetwork.h"
+#include "DataReaderHelpers.h"
+#include "fileutil.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
-#include "Basics.h"
-#include "fileutil.h"
 #include <fstream>
 
 using namespace std;
@@ -67,14 +68,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t totalEpochSamples = 0;
             std::map<std::wstring, void *, nocase_compare> outputMatrices;
 
-            while (dataReader.GetMinibatch(inputMatrices))
+            size_t actualMBSize;
+            while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-                size_t actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
-                dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
-                m_net.VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());
+                //size_t actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
+                //dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
+                //m_net.VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {
@@ -149,13 +151,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t tempArraySize = 0;
             ElemType* tempArray = nullptr;
 
-            while (dataReader.GetMinibatch(inputMatrices))
+            size_t actualMBSize;
+            while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
-                size_t actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
-                dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
-                m_net.VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());  // TODO: This was added by my (fseide) but UNTESTED. If this fails, comment out and let me know.
+                //size_t actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
+                //dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
+                //m_net.VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());  // TODO: This was added by my (fseide) but UNTESTED. If this fails, comment out and let me know.
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {

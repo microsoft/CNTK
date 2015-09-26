@@ -82,7 +82,7 @@ namespace msra { namespace lattices {
             if (samplesInRecurrentStep > 1)
             {
                 assert(extrauttmap.size() == lattices.size());
-                assert(mbsize == pMBLayout->GetSize());
+                assert(mbsize == pMBLayout->GetNumTimeSteps());
             }
                 
             size_t mapi = 0;
