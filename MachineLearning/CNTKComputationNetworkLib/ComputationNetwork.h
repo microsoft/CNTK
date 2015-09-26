@@ -8,8 +8,8 @@
 
 // TODOs:
 //  - fully eliminate EvaluateThisNode(void), replace by EvaluateThisNode(FrameRange(void)), which will often elinminate special-casing
-//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, instead change Node::SetActualMiniBatchSizeFromFeatures()
-//    such that it infers its own MB size, and call it during the Evaluate() loop (maybe directly from EvaluateThisNode(), i.e. eliminate it as well or replace the virtual by a helper function)
+//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, instead change Node::SetFunctionAndGradientMBSize()
+//    to infer the dimensions, and call it during the Evaluate() loop (maybe directly from EvaluateThisNode(), i.e. eliminate it as well or replace the virtual by a helper function)
 //    For moving into EvaluateThisNode directly,
 //    PRO:
 //     - doing it for every call allows to dynamically grow MB and layout frame-by-frame, allowing sophisticated models and ways
