@@ -25,17 +25,18 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    /// NegateNode
+    // NegateNode (input)
+    // computes the negative of its input
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class NegateNode : public ComputationNode<ElemType>
+    class NegateNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         NegateNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -100,28 +101,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs(); 
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
     };
 
     template class NegateNode<float>; 
     template class NegateNode<double>;
 
     // -----------------------------------------------------------------------
-    /// SumElementsNode
+    // SumElementsNode (input)
+    // sums up all elements in the input
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class SumElementsNode : public ComputationNode<ElemType>
+    class SumElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SumElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -157,6 +159,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
+            // BUGBUG: This function should mask gaps by itself
             Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
@@ -195,28 +198,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
     };
 
     template class SumElementsNode<float>; 
     template class SumElementsNode<double>;
 
     // -----------------------------------------------------------------------
-    /// SumColumnElementsNode
+    // SumColumnElementsNode (input)
+    // sums up each column of the input
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class SumColumnElementsNode : public ComputationNode<ElemType>
+    class SumColumnElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SumColumnElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_sumValue(deviceId)
         { }
 
@@ -291,11 +295,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -315,24 +319,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SumColumnElementsNode<double>;
 
     // -----------------------------------------------------------------------
-    /// RowSliceNode
+    // RowSliceNode (input)
+    // this node extracts part of the input by rows as the output
+    // it has to be continuous segments of rows since each column is treated as one sample
     // -----------------------------------------------------------------------
 
-    //this node is used to extract part of the input by rows as the output
-    //it has to be continuous segments of rows since each column is treated as one sample
     template<class ElemType>
-    class RowSliceNode : public ComputationNode<ElemType>
+    class RowSliceNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         //RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name) :
-        //    ComputationNode<ElemType>(deviceId, name),
+        //    Base(deviceId, name),
         //    m_startIndex(0),
         //    m_numRows(0)
         //{ }
         RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name, size_t startIndex = 0, size_t numRows = 0) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_startIndex(startIndex),
             m_numRows(numRows)
         { }
@@ -433,11 +437,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "WARNING: RowSlice operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
     private:
         size_t m_startIndex, m_numRows;
@@ -447,20 +451,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RowSliceNode<double>;
 
     // -----------------------------------------------------------------------
-    /// RowStackNode
+    // RowStackNode (input0, input1, ...)
+    // stacks multiple inputs on top of each other
     // -----------------------------------------------------------------------
 
     //this node is used to extract part of the input by rows as the output
     // TODO: Really? RowStack indicates something different.
     //it has to be continuous segments of rows since each column is treated as one sample
     template<class ElemType>
-    class RowStackNode : public ComputationNode<ElemType>
+    class RowStackNode : public ComputationNode<ElemType>   // note: not deriving from NumInputs<> like most other nodes since this one takes a variable number of inputs
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowStackNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -573,13 +578,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "WARNING: RowStack operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
-        virtual void AttachInputs(const std::vector<ComputationNodePtr>& inputs)
-        {
-            unsigned int numInputs = inputs.size();
-            m_children.resize(numInputs);
-            for (unsigned int i = 0; i < numInputs; i++)
-                m_children[i] = inputs[i];
-        }
+        //virtual void AttachInputs(const std::vector<ComputationNodePtr>& inputs)
+        //{
+        //    unsigned int numInputs = inputs.size();
+        //    m_children.resize(numInputs);
+        //    for (unsigned int i = 0; i < numInputs; i++)
+        //        m_children[i] = inputs[i];
+        //}
 
     private:
         std::vector<size_t> m_startRowIndices; //start row number in the stacked matrix of each input (child)
@@ -590,17 +595,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RowStackNode<double>;
 
     // -----------------------------------------------------------------------
-    /// ScaleNode
+    /// ScaleNode (scalar scaling factor, matrix)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ScaleNode : public ComputationNode<ElemType>
+    class ScaleNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ScaleNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -699,12 +704,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1); 
         }
 
-        virtual void AttachInputs(const ComputationNodePtr scalarValue, const ComputationNodePtr Value) 
-        {
-            m_children.resize(2);
-            m_children[0] = scalarValue;
-            m_children[1] = Value;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr scalarValue, const ComputationNodePtr Value) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = scalarValue;
+        //    m_children[1] = Value;
+        //}
     };
 
 
@@ -712,17 +717,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ScaleNode<double>;
 
     // -----------------------------------------------------------------------
-    /// TimesNode
+    /// TimesNode (A, B)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class TimesNode : public ComputationNode<ElemType>
+    class TimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -873,29 +878,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels =  1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class TimesNode<float>; 
     template class TimesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// TransposeTimesNode
+    /// TransposeTimesNode (A', B)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class TransposeTimesNode : public ComputationNode<ElemType>
+    class TransposeTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const { return TypeName(); }
@@ -1040,30 +1045,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
 
-
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class TransposeTimesNode<float>;
     template class TransposeTimesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// ElementTimesNode
+    /// ElementTimesNode (factor1, factor2)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ElementTimesNode : public ComputationNode<ElemType>
+    class ElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -1163,29 +1167,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InferImageDimsFromInput(1);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class ElementTimesNode<float>; 
     template class ElementTimesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// RowElementTimesNode
+    /// RowElementTimesNode (left, right)  --TODO: what are left and right?
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class RowElementTimesNode : public ComputationNode<ElemType>
+    class RowElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_tempMatrix(deviceId)
         { }
 
@@ -1306,12 +1310,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1319,25 +1323,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        private:
-            Matrix<ElemType> m_tempMatrix;
+    private:
+        Matrix<ElemType> m_tempMatrix;
     };
 
     template class RowElementTimesNode<float>;
     template class RowElementTimesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// ColumnElementTimesNode
+    /// ColumnElementTimesNode (left, right)  --TODO: what are left and right?
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ColumnElementTimesNode : public ComputationNode<ElemType>
+    class ColumnElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ColumnElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_tempMatrix(deviceId)
         { }
 
@@ -1468,12 +1472,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1489,17 +1493,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ColumnElementTimesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// PlusNode
+    /// PlusNode (summand1, summand2)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class PlusNode : public ComputationNode<ElemType>
+    class PlusNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PlusNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -1729,29 +1733,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class PlusNode<float>; 
     template class PlusNode<double>;
 
     // -----------------------------------------------------------------------
-    /// MinusNode
+    /// MinusNode (minuend, subtrahend)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class MinusNode : public ComputationNode<ElemType>
+    class MinusNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MinusNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -2016,30 +2020,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class MinusNode<float>; 
     template class MinusNode<double>;
 
     // -----------------------------------------------------------------------
-    /// DiagTimesNode
+    /// DiagTimesNode (vector representing the diagonal of a square matrix, data)
     // -----------------------------------------------------------------------
 
-    //The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation
     template<class ElemType>
-    class DiagTimesNode : public ComputationNode<ElemType>
+    class DiagTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         DiagTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_innerproduct(deviceId), m_rightGradient(deviceId)
         { }
 
@@ -2149,12 +2152,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -2182,18 +2185,18 @@ private:
     template class DiagTimesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// CosDistanceNode
+    /// CosDistanceNode (left, right)
     // -----------------------------------------------------------------------
 
     //The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation
     template<class ElemType>
-    class CosDistanceNode : public ComputationNode<ElemType>
+    class CosDistanceNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosDistanceNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         { }
 
@@ -2362,12 +2365,12 @@ private:
             m_outputHeight = 1;        
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -2406,17 +2409,17 @@ private:
     template class CosDistanceNode<double>;
 
     // -----------------------------------------------------------------------
-    /// KhatriRaoProductNode
+    /// KhatriRaoProductNode (left, right)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class KhatriRaoProductNode : public ComputationNode<ElemType>
+    class KhatriRaoProductNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         KhatriRaoProductNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual const std::wstring OperationName() const {return TypeName();}
@@ -2538,29 +2541,29 @@ private:
             m_outputChannels =  1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class KhatriRaoProductNode<float>; 
     template class KhatriRaoProductNode<double>;
 
     // -----------------------------------------------------------------------
-    /// CosDistanceWithNegativeSamplesNode
+    /// CosDistanceWithNegativeSamplesNode (left, right, shift, neg)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class CosDistanceWithNegativeSamplesNode : public ComputationNode<ElemType>
+    class CosDistanceWithNegativeSamplesNode : public ComputationNode<ElemType>, public NumInputs<4>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosDistanceWithNegativeSamplesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
             m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         { }
@@ -2779,14 +2782,14 @@ private:
             m_outputHeight = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr shiftNode, const ComputationNodePtr negNode)
-        {
-            m_children.resize(4);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-            m_children[2] = shiftNode;
-            m_children[3] = negNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr shiftNode, const ComputationNodePtr negNode)
+        //{
+        //    m_children.resize(4);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //    m_children[2] = shiftNode;
+        //    m_children[3] = negNode;
+        //}
 
         virtual void MoveMatricesToDevice(const short deviceId)
         {
@@ -2828,17 +2831,17 @@ private:
     template class CosDistanceWithNegativeSamplesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// TransposeNode
+    /// TransposeNode (input matrix)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class TransposeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class TransposeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 
         Matrix<ElemType> mOnes; 
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TransposeNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             mOnes(deviceId)
@@ -2918,18 +2921,18 @@ private:
             m_outputChannels = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode)
-        {
-            m_children.resize(1);
-            m_children[0] = leftNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = leftNode;
+        //}
     };
 
     template class TransposeNode<float>;
     template class TransposeNode<double>;
 
     // -----------------------------------------------------------------------
-    /// StrideTimesNode
+    /// StrideTimesNode (left, right, stride)
     // -----------------------------------------------------------------------
 
     /**
@@ -2951,7 +2954,7 @@ private:
     Notice that s is equal to k. 
     */
     template<class ElemType>
-    class StrideTimesNode : public ComputationNode<ElemType>
+    class StrideTimesNode : public ComputationNode<ElemType>, public NumInputs<3>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
 
@@ -2963,9 +2966,9 @@ private:
             m_Stride = input1.GetNumCols();
         }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         StrideTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_Stride(1)
         { }
         // BUGBUG: This node needs to serialize and CopyTo m_Stride
@@ -3289,13 +3292,13 @@ private:
             m_outputChannels = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr strideNode)
-        {
-            m_children.resize(3);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-            m_children[2] = strideNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr strideNode)
+        //{
+        //    m_children.resize(3);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //    m_children[2] = strideNode;
+        //}
     };
 
     template class StrideTimesNode<float>;

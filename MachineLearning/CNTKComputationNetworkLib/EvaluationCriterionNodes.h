@@ -16,12 +16,16 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
     //note: to save computation the gradient may be scaled by an constant. 
 
+    // -----------------------------------------------------------------------
+    // ErrorPredictionNode (label, prediction)    --TODO: is that correct?
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class ErrorPredictionNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class ErrorPredictionNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ErrorPredictionNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
@@ -115,12 +119,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputHeight = 1;        
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {

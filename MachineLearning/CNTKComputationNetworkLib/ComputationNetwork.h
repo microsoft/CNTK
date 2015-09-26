@@ -20,11 +20,8 @@
 //     - inside a loop
 //        - it has to check for every frame, although only the first frame really will make a difference
 //        - it's weird if it is called for a singe frame to update the size for the whole minibatch
-//  - elinminate individual AttachInput() versions with 1..6 arguments (change the outer ones to just call AttachInputs(vector))
-//    and implement the dimension check by a using a template parameter to ComputationNode<ElemType>.
-//    This will take out and standardize much code from Validate() (will often just be { InferMBLayoutFromInputsForStandardCase(); InferImageDimsFromInputs(); }
-//    i.e. Validate() could be completely removed in many cases.
 //  - fold EvaluateThisNodeS() into EvaluateThisNode(), same for partial
+//     - PROBLEM: Matrix sneakily resizes result matrices, but only for EvaluateThisNode(void), not for frame-wise ones. Need a unified solution.
 //  - move NewThis() and OperationName() into the boilerplate macro UsingComputationNodeMembers
 //  - also eliminate EvaluateThisNodeGivenInputs()--that stuff is at least as much responsibility of Network
 //    We can also replace NeedToMaskMissingColumnsToZero() to a check against the node set itself inside Network --one more Node member gone (and a weird, unneccessary one at that)

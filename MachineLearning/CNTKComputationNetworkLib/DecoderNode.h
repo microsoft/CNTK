@@ -15,12 +15,19 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    /**
-    * this node does sequence decoding only
-    * it corresponds to a decoder
-    */
+    // -----------------------------------------------------------------------
+    // SequenceDecoderNode (label, position_dependent_score, transition_score)
+    // this node does sequence decoding only
+    // it corresponds to a decoder
+    //  - label : output label vector of [0:T-1]
+    //  - position_dependent_score : score from position dependent node,
+    //    in the R-CRF case, it is the RNN output score before softmax
+    //  - transition score : score from the transition node, 
+    //    in the R-CRF case, it is the transition probability between labels
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class SequenceDecoderNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class SequenceDecoderNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     private:
@@ -32,7 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int mEndLab;   // the ending output label, if avaliable
         ElemType  m_default_activity;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SequenceDecoderNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             mAlpha(deviceId), mBacktrace(deviceId),
@@ -199,15 +206,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// in the R-CRF case, it is the RNN output score before softmax
         /// transition score : score from the transition node, 
         /// in the R-CRF case, it is the transition probability between labels
-        virtual void AttachInputs(const ComputationNodePtr label,
-            const ComputationNodePtr position_dependent_score,
-            const ComputationNodePtr transition_score)
-        {
-            m_children.resize(3);
-            m_children[0] = label;
-            m_children[1] = position_dependent_score;
-            m_children[2] = transition_score;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr label,
+        //    const ComputationNodePtr position_dependent_score,
+        //    const ComputationNodePtr transition_score)
+        //{
+        //    m_children.resize(3);
+        //    m_children[0] = label;
+        //    m_children[1] = position_dependent_score;
+        //    m_children[2] = transition_score;
+        //}
     };
  
 

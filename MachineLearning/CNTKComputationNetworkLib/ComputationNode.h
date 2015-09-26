@@ -65,6 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         public ScriptableObjects::WithTag, public ScriptableObjects::HasName, public ScriptableObjects::HasToString,
         public std::enable_shared_from_this<ComputationNodeBase>
     {
+        // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
     public:
         typedef shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;
 
@@ -163,13 +164,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate() { }
         virtual bool UnitTest() { return true; }
 
-        virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs, size_t numExpected = SIZE_MAX) = 0;
-        virtual void AttachInputs(const ComputationNodeBasePtr /*singleInput*/) = 0;
-        virtual void AttachInputs(const ComputationNodeBasePtr /*leftInput*/, const ComputationNodeBasePtr /*rightInput*/) = 0;
-        virtual void AttachInputs(const ComputationNodeBasePtr /*leftInput*/, const ComputationNodeBasePtr /*middleInput*/, const ComputationNodeBasePtr /*rightInput*/) = 0;
-        virtual void AttachInputs(const ComputationNodeBasePtr /*firstInput*/, const ComputationNodeBasePtr /*secondInput*/, const ComputationNodeBasePtr /*thirdInput*/, const ComputationNodeBasePtr /*fourthInput*/) = 0;
-        virtual void AttachInputs(const ComputationNodeBasePtr /*firstInput*/, const ComputationNodeBasePtr /*secondInput*/, const ComputationNodeBasePtr /*thirdInput*/, const ComputationNodeBasePtr /*fourthInput*/, const ComputationNodeBasePtr /*fifthInput*/) = 0;
-        virtual void AttachInputs(const ComputationNodeBasePtr /*firstInput*/, const ComputationNodeBasePtr /*secondInput*/, const ComputationNodeBasePtr /*thirdInput*/, const ComputationNodeBasePtr /*fourthInput*/, const ComputationNodeBasePtr /*fifthInput*/, const ComputationNodeBasePtr /* sixthInput */) = 0;
+        virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) = 0;
+        // legacy convenience versions that take individual arguments
+        void AttachInputs(const ComputationNodeBasePtr singleInput) { AttachInputs(std::vector<ComputationNodeBasePtr> { singleInput } ); }
+        void AttachInputs(const ComputationNodeBasePtr leftInput, const ComputationNodeBasePtr rightInput) { AttachInputs(std::vector<ComputationNodeBasePtr> { leftInput, rightInput } ); }
+        void AttachInputs(const ComputationNodeBasePtr leftInput, const ComputationNodeBasePtr middleInput, const ComputationNodeBasePtr rightInput) { AttachInputs(std::vector<ComputationNodeBasePtr> { leftInput, middleInput, rightInput } ); }
+        void AttachInputs(const ComputationNodeBasePtr firstInput, const ComputationNodeBasePtr secondInput, const ComputationNodeBasePtr thirdInput, const ComputationNodeBasePtr fourthInput) { AttachInputs(std::vector<ComputationNodeBasePtr> { firstInput, secondInput, thirdInput, fourthInput } ); }
+        void AttachInputs(const ComputationNodeBasePtr firstInput, const ComputationNodeBasePtr secondInput, const ComputationNodeBasePtr thirdInput, const ComputationNodeBasePtr fourthInput, const ComputationNodeBasePtr fifthInput) { AttachInputs(std::vector<ComputationNodeBasePtr> { firstInput, secondInput, thirdInput, fourthInput, fifthInput } ); }
+        void AttachInputs(const ComputationNodeBasePtr firstInput, const ComputationNodeBasePtr secondInput, const ComputationNodeBasePtr thirdInput, const ComputationNodeBasePtr fourthInput, const ComputationNodeBasePtr fifthInput, const ComputationNodeBasePtr sixthInput) { AttachInputs(std::vector<ComputationNodeBasePtr> { firstInput, secondInput, thirdInput, fourthInput, fifthInput, sixthInput } ); }
 
         virtual void DetachInputs() { m_children.clear(); }
 
@@ -734,15 +736,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // ComputationNode -- abstract base class for computation nodes parameterized by float vs. double
     // =======================================================================
 
+    // little helper class to allow derived Node classes to specify how many inputs they expect
+    struct INumInputs { virtual size_t GetExpectedNumInputs() const = 0; };
+    template<size_t m_numInputs> struct NumInputs : public INumInputs { size_t GetExpectedNumInputs() const override { return m_numInputs; } };  // e.g. derive from NumInputs<2>
+
     template<class ElemType>
-    class ComputationNode : public ComputationNodeBase //Abstract Class that cannot be instantiated
+    class ComputationNode : public ComputationNodeBase // abstract class that cannot be instantiated
     {
-        // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
     protected:
         //std containers such as list and map does not support class reference so we need to use pointer
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
         ComputationNode() { }
     public:
+        using ComputationNodeBase::AttachInputs;    // import the convenience functions that take 1..6 parameters
         typedef ElemType OurElemType;
     protected:
         // TODO: this should be protected and only accessible to the New method; maybe just move it in here?
@@ -797,52 +803,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return p->shared_from_this();
         }
 
-        // these take ComputationNodePtr, not ComputationNodeBasePtr, as these are being overloaded by nodes
-        virtual void AttachInputs(const ComputationNodePtr /*singleInput*/) 
+    protected:
+        // helper to print an error message if the number of inputs is not as expected
+        // TODO: If there is no other user than AttachInputs() below, fold it back in.
+        __declspec_noreturn
+        void FailNumInputs(size_t expected, size_t given)
         {
-            LogicError("This operation does not support single input.");
         }
+    public:
 
-        virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*rightInput*/) 
+        // AttachInputs() -- attach the inputs of a node
+        // This verifies the number of inputs. For that, nodes with fixed number of inputs derive from NumInputs<N>.
+        // This function discovers this through RTTI and performs a runtime check. Nodes should not have additional checks in their implementation (save the code).
+        // Note: Nodes with variable number of inputs will not derive from NumInputs<>, but instead check their inputs in Validate().
+        void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs)
         {
-            LogicError("This operation does not support two inputs.");
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr /*leftInput*/, const ComputationNodePtr /*middleInput*/, const ComputationNodePtr /*rightInput*/) 
-        {
-            LogicError("This operation does not support three inputs.");
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, const ComputationNodePtr /*fourthInput*/)
-        {
-            LogicError("This operation does not support four inputs.");
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/, 
-                                  const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/)
-        {
-            LogicError("This operation does not support five inputs.");
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr /*firstInput*/, const ComputationNodePtr /*secondInput*/, const ComputationNodePtr /*thirdInput*/,
-                                  const ComputationNodePtr /*fourthInput*/, const ComputationNodePtr /*fifthInput*/, const ComputationNodePtr /* sixthInput */)
-        {
-            LogicError("This operation does not support six inputs.");
-        }
-
-        virtual void AttachInputs(const ComputationNodeBasePtr singleInput) { AttachInputs(UpCast(singleInput)); }
-        virtual void AttachInputs(const ComputationNodeBasePtr leftInput, const ComputationNodeBasePtr rightInput) { AttachInputs(UpCast(leftInput), UpCast(rightInput)); }
-        virtual void AttachInputs(const ComputationNodeBasePtr leftInput, const ComputationNodeBasePtr middleInput, const ComputationNodeBasePtr rightInput) { AttachInputs(UpCast(leftInput), UpCast(middleInput), UpCast(rightInput)); }
-        virtual void AttachInputs(const ComputationNodeBasePtr firstInput, const ComputationNodeBasePtr secondInput, const ComputationNodeBasePtr thirdInput, const ComputationNodeBasePtr fourthInput) { AttachInputs(UpCast(firstInput), UpCast(secondInput), UpCast(thirdInput), UpCast(fourthInput)); }
-        virtual void AttachInputs(const ComputationNodeBasePtr firstInput, const ComputationNodeBasePtr secondInput, const ComputationNodeBasePtr thirdInput, const ComputationNodeBasePtr fourthInput, const ComputationNodeBasePtr fifthInput) { AttachInputs(UpCast(firstInput), UpCast(secondInput), UpCast(thirdInput), UpCast(fourthInput), UpCast(fifthInput)); }
-        virtual void AttachInputs(const ComputationNodeBasePtr firstInput, const ComputationNodeBasePtr secondInput, const ComputationNodeBasePtr thirdInput, const ComputationNodeBasePtr fourthInput, const ComputationNodeBasePtr fifthInput, const ComputationNodeBasePtr sixthInput) { AttachInputs(UpCast(firstInput), UpCast(secondInput), UpCast(thirdInput), UpCast(fourthInput), UpCast(fifthInput), UpCast(sixthInput)); }
-        virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs, size_t numExpected = SIZE_MAX)
-        {
-            if (numExpected != SIZE_MAX && numExpected != inputs.size())
-                RuntimeError(msra::strfun::strprintf("AttachInputs: unexpected number of arguments: %d, expected: %d", (int)inputs.size(), (int)numExpected));
+            wstring name = NodeName(); name;
+            const auto * pNumInputs = dynamic_cast<INumInputs*>(this);    // if this class also derives from NumInputs<N> then N is the expected number of inputs
+            if (pNumInputs && pNumInputs->GetExpectedNumInputs() != inputs.size())
+                RuntimeError("%ls operation '%ls' expects %d inputs (given: %d)", OperationName().c_str(), NodeName().c_str(), (int)pNumInputs->GetExpectedNumInputs(), (int)inputs.size());
             m_children.resize(inputs.size());
             for (size_t i = 0; i < m_children.size(); i++)
-                m_children[i] = UpCast(inputs[i]);      // (this checks the type)
+                m_children[i] = UpCast(inputs[i]);          // (UpCast() checks the type; the assignment then downcasts it again)
         }
 
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
@@ -1266,7 +1248,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags)
         {
             const std::wstring& name = (newName == L"") ? NodeName() : newName;
-            ComputationNodeBasePtr node(NewThis(m_deviceId, name));    // NewThis() is a virtual function that creates a new node of the actual type of 'this'
+            ComputationNodeBasePtr node(NewThis(m_deviceId, name)); // NewThis() is a virtual function that creates a new node of the actual type of 'this'
             node->CopyTo(shared_from_this(), newName, flags);       // note: shared_from_this() is the base class, but CopyTo() up-casts it as needed
             return node;
         }
@@ -1301,10 +1283,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ComputationNodeNonLooping : public ComputationNode<ElemType>
     {
+        typedef ComputationNode<ElemType> Base;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         ComputationNodeNonLooping(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &)
