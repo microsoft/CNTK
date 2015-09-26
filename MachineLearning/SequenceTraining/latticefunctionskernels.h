@@ -14,6 +14,7 @@
 #pragma push_macro ("atomicCAS")
 
 #include "latticestorage.h"
+#include <limits>
 
 namespace msra { namespace cuda { class passtextureref; }}
 

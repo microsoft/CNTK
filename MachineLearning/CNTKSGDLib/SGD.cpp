@@ -491,9 +491,9 @@ template<class ElemType>
               const bool useCVSetControlLRIfCVExists,
               const bool useEvalCriterionControlLR,
               const size_t minibatchSearchCriterionErrorMargin,
-              const ElemType hsmoothingWeight = 1.0,
-              const ElemType frameDropThresh = 1e-10,
-              const bool doreferencealign = false)
+              const ElemType hsmoothingWeight,
+              const ElemType frameDropThresh,
+              const bool doreferencealign)
     {
         m_numPrevLearnRates = numPrevLearnRates;
         m_prevChosenMinibatchSize = 0;

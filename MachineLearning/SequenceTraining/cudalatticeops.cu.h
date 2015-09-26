@@ -16,11 +16,21 @@
 #include "math.h"
 #include <assert.h>
 #include <stdexcept>
+
+#ifdef _WIN32
 #include <windows.h>    // for timer
+#endif
+
+#if __unix__
+#include <sys/time.h>
+#endif
 
 namespace msra { namespace cuda {
 
-    // auto_timer timer; run(); double seconds = timer; // now can abandon the object
+    // auto_timer timer; run(); double seconds = timer; // now can abandon the object    
+    #ifdef __unix__
+    typedef timeval LARGE_INTEGER;
+    #endif
     class auto_timer
     {
         LARGE_INTEGER freq, start;
@@ -28,15 +38,26 @@ namespace msra { namespace cuda {
     public:
         auto_timer()
         {
+    #ifdef _WIN32
             if (!QueryPerformanceFrequency (&freq)) // count ticks per second
                 throw std::runtime_error ("auto_timer: QueryPerformanceFrequency failure");
             QueryPerformanceCounter (&start);
+    #endif
+    #ifdef __unix__
+            gettimeofday (&start, NULL);
+    #endif
         }
         operator double() const     // each read gives time elapsed since start, in seconds
         {
             LARGE_INTEGER end;
+    #ifdef _WIN32
             QueryPerformanceCounter (&end);
             return (end.QuadPart - start.QuadPart) / (double) freq.QuadPart;
+    #endif
+    #ifdef __unix__
+            gettimeofday (&end,NULL);
+            return (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec)/(1000*1000);
+    #endif
         }
         void show (const std::string & msg) const
         {
@@ -44,7 +65,7 @@ namespace msra { namespace cuda {
             fprintf (stderr, "%s: %.6f ms\n", msg.c_str(), elapsed * 1000.0/*to ms*/);
         }
     };
-
+    
     // -----------------------------------------------------------------------
     // edgealignment --do alignment on a per edge level, only support normal left to right hmms and ergodic silence hmm
     // output alignresult

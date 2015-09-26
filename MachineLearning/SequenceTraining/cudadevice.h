@@ -8,8 +8,7 @@
 #include <assert.h>
 #include <math.h>
 #include <vector>
-#include <hash_set>
-using namespace stdext;
+#include <unordered_set>
 
 namespace msra { namespace cuda {
 
@@ -265,7 +264,7 @@ public:
 class Devices
 {
 	DeviceInfo* deviceInfo[deviceMax];
-	hash_set<const float *> pinnedBuffers;
+	std::unordered_set<const float *> pinnedBuffers;
 public:
 	Devices()
 	{
@@ -320,7 +319,7 @@ public:
 	// Is the buffer passed in pinned?
 	bool IsPinned(const float *bufHost)
 	{
-		hash_set<const float *>::iterator found = pinnedBuffers.find(bufHost);
+		std::unordered_set<const float *>::iterator found = pinnedBuffers.find(bufHost);
 		// see if we found the pointer or not
 		return (found != pinnedBuffers.end());
 	}
@@ -340,7 +339,7 @@ public:
 	// WARNING: Unpin operations do a CPU sync
 	void UnpinBuffer(const float *bufHost)
 	{
-		hash_set<const float *>::iterator found = pinnedBuffers.find(bufHost);
+		std::unordered_set<const float *>::iterator found = pinnedBuffers.find(bufHost);
 		// if we didn't find the buffer, exit
 		if (found == pinnedBuffers.end())
 			return;

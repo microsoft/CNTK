@@ -29,7 +29,7 @@ template<typename VECTORTYPE,typename OPSTYPE> class vectorbaseimpl :
 {
     typedef typename VECTORTYPE::elemtype elemtype; // (for convenience)
     size_t capacity;                                // amount of allocated storage (like capacity() vs. vectorref::n = size())
-    void release() { ondevice no (deviceid); free (reset (NULL, 0)); }
+    void release() { ondevice no (deviceid); free (this->reset (NULL, 0)); }
 public:
     vectorbaseimpl() : capacity (0) { }
     ~vectorbaseimpl() { release(); }
@@ -49,29 +49,29 @@ public:
             ondevice no (deviceid);                             // switch to desired CUDA card
             cuda_ptr<elemtype> pnew = malloc<elemtype> (sz);    // allocate memory inside CUDA device (or throw)
             capacity = sz;                                      // if succeeded then: remember
-            cuda_ptr<elemtype> p = reset (pnew, sz);            //  and swap the pointers and update n
+            cuda_ptr<elemtype> p = this->reset (pnew, sz);            //  and swap the pointers and update n
             free (p);                                           //  then release the old one
         }
         else                                                    // not growing: keep same allocation
-            reset (get(), sz);
+            this->reset (this->get(), sz);
     }
-    size_t size() const throw() { return vectorref::size(); }
+    size_t size() const throw() { return vectorref<elemtype>::size(); }
     void assign (const elemtype * p, size_t nelem, bool synchronize)
     {
         allocate (nelem);           // assign will resize the target appropriately
         ondevice no (deviceid);     // switch to desired CUDA card
         if (nelem > 0)
-            memcpy (get(), 0, p, nelem);
+            memcpy (this->get(), 0, p, nelem);
         if (synchronize)
             join();
     }
-    void fetch (typename elemtype * p, size_t nelem, bool synchronize) const
+    void fetch (elemtype * p, size_t nelem, bool synchronize) const
     {
         if (nelem != size())        // fetch() cannot resize the target; caller must do that
             throw std::logic_error ("fetch: vector size mismatch");
         ondevice no (deviceid);     // switch to desired CUDA card
         if (nelem > 0)
-            memcpy (p, get(), 0, nelem);
+            memcpy (p, this->get(), 0, nelem);
         if (synchronize)
             join();
     };
@@ -176,12 +176,13 @@ class latticefunctionsimpl : public vectorbaseimpl<latticefunctions,latticefunct
     {
         ondevice no (deviceid);
 
+        matrixref<float> dengammasMatrixRef = tomatrixref(dengammas);
         latticefunctionsops::mmierrorsignal (dynamic_cast<const vectorbaseimpl<ushortvector, vectorref<unsigned short>> &> (alignstateids),
                                              dynamic_cast<const vectorbaseimpl<uintvector, vectorref<unsigned int>> &> (alignoffsets),
                                              dynamic_cast<const vectorbaseimpl<edgeinfowithscoresvector, vectorref<msra::lattices::edgeinfowithscores>> &> (edges),
                                              dynamic_cast<const vectorbaseimpl<nodeinfovector, vectorref<msra::lattices::nodeinfo>> &> (nodes),
                                              dynamic_cast<const vectorbaseimpl<doublevector, vectorref<double>> &> (logpps),
-                                             tomatrixref (dengammas));
+                                             dengammasMatrixRef);
     }
 
     void stateposteriors (const ushortvector & alignstateids, const uintvector & alignoffsets,
