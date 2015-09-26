@@ -1065,7 +1065,7 @@ __global__ void _adagrad(
     ElemType* a,
     ElemType* d_v,
     const CUDA_LONG N,
-	ElemType* multipliers)
+    ElemType* multipliers)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
@@ -1074,11 +1074,11 @@ __global__ void _adagrad(
     const ElemType floor = 1e-16f;
 
     a[id] += d_v[id] * d_v[id];
-	ElemType temp = sqrt(a[id]+floor);
+    ElemType temp = sqrt(a[id]+floor);
     d_v[id] /= temp;
 
-	if (multipliers != nullptr)
-		multipliers[id] = 1/temp;
+    if (multipliers != nullptr)
+        multipliers[id] = 1/temp;
 }
 
 template<class ElemType>
@@ -1174,7 +1174,7 @@ __global__ void _rmsprop(
     ElemType RMS_GAMMA,ElemType RMS_WGT_INC,ElemType RMS_WGT_MAX,ElemType RMS_WGT_DEC,ElemType RMS_WGT_MIN,
     ElemType floor,
     ElemType *upd_gpu,
-	ElemType* multipliers
+    ElemType* multipliers
     )
 {
     CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -1212,12 +1212,12 @@ __global__ void _rmsprop(
     else
         steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
 
-	ElemType temp = steps[i] / sqrt(avars[i] + floor);
+    ElemType temp = steps[i] / sqrt(avars[i] + floor);
     curr_grad[i] *= temp;
     signs[i] = grad_sign;
 
-	if (multipliers != nullptr)
-		multipliers[i] = temp;
+    if (multipliers != nullptr)
+        multipliers[i] = temp;
 }
 
 template<class ElemType>
@@ -3957,142 +3957,142 @@ d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrt(d_tmp[1]))/max((
 
 template<class ElemType>
 __global__ void _assignElementProductOfWithShiftNeg(
-	ElemType* us,
-	const ElemType* a,
-	const ElemType* b,
-	const int shift,
-	const int NTPlusOne,
-	const int BS)
+    ElemType* us,
+    const ElemType* a,
+    const ElemType* b,
+    const int shift,
+    const int NTPlusOne,
+    const int BS)
 {
-	CUDA_LONG idx = blockDim.x * blockIdx.x + threadIdx.x;
-	CUDA_LONG idy = blockDim.y * blockIdx.y + threadIdx.y;
+    CUDA_LONG idx = blockDim.x * blockIdx.x + threadIdx.x;
+    CUDA_LONG idy = blockDim.y * blockIdx.y + threadIdx.y;
 
-	if (idx >= NTPlusOne || idy >= BS)
-		return;
+    if (idx >= NTPlusOne || idy >= BS)
+        return;
 
-	if (idx == 0)
-	{
-		// this is row-0. No need to shift
-		us[IDX2C(idx, idy, NTPlusOne)] = a[idy] * b[idy];
-	}
-	else
-	{
-		int cs = shift + idx - 1;
-		int tmpidy = (idy + cs) % BS;
-		us[IDX2C(idx, idy, NTPlusOne)] = a[idy] * b[tmpidy];
-	}
+    if (idx == 0)
+    {
+        // this is row-0. No need to shift
+        us[IDX2C(idx, idy, NTPlusOne)] = a[idy] * b[idy];
+    }
+    else
+    {
+        int cs = shift + idx - 1;
+        int tmpidy = (idy + cs) % BS;
+        us[IDX2C(idx, idy, NTPlusOne)] = a[idy] * b[tmpidy];
+    }
 }
 
 template<class ElemType>
 __global__ void _innerProductWithShiftNeg(
-	ElemType* c,
-	const ElemType* a,
-	const ElemType* b,
-	const CUDA_LONG N, //a.GetNumRows();
-	const CUDA_LONG M, //a.GetNumCols();
-	const CUDA_LONG shift,
-	const CUDA_LONG NTPlusOne
-	)
+    ElemType* c,
+    const ElemType* a,
+    const ElemType* b,
+    const CUDA_LONG N, //a.GetNumRows();
+    const CUDA_LONG M, //a.GetNumCols();
+    const CUDA_LONG shift,
+    const CUDA_LONG NTPlusOne
+    )
 {
-	CUDA_LONG idx = blockDim.x * blockIdx.x + threadIdx.x;
-	CUDA_LONG idy = blockDim.y * blockIdx.y + threadIdx.y;
+    CUDA_LONG idx = blockDim.x * blockIdx.x + threadIdx.x;
+    CUDA_LONG idy = blockDim.y * blockIdx.y + threadIdx.y;
 
-	if (idx >= NTPlusOne || idy >= M)
-		return;
+    if (idx >= NTPlusOne || idy >= M)
+        return;
 
-	ElemType sum = 0;
-	CUDA_LONG index_a = 0;
-	CUDA_LONG index_b = 0;
-	CUDA_LONG col_a = 0;
-	CUDA_LONG col_b = 0;
-	if (idx == 0)
-	{
-		// this is row 0. No need to shift
-		// the product of a(:,idy) dot b(:,idy)
-		col_a = idy;
-		for (CUDA_LONG i = 0; i < N; ++i)
-		{
-			index_a = IDX2C(i, col_a, N);
-			sum += a[index_a] * b[index_a];
-		}
-	}
-	else
-	{
-		int cs = shift + idx - 1;
-		col_a = idy;
-		col_b = (idy + cs) % M;
-		for (int i = 0; i < N; ++i)
-		{
-			index_a = IDX2C(i, col_a, N);
-			index_b = IDX2C(i, col_b, N);
-			sum += a[index_a] * b[index_b];
-		}
-	}
-	c[IDX2C(idx, idy, NTPlusOne)] = sum;
+    ElemType sum = 0;
+    CUDA_LONG index_a = 0;
+    CUDA_LONG index_b = 0;
+    CUDA_LONG col_a = 0;
+    CUDA_LONG col_b = 0;
+    if (idx == 0)
+    {
+        // this is row 0. No need to shift
+        // the product of a(:,idy) dot b(:,idy)
+        col_a = idy;
+        for (CUDA_LONG i = 0; i < N; ++i)
+        {
+            index_a = IDX2C(i, col_a, N);
+            sum += a[index_a] * b[index_a];
+        }
+    }
+    else
+    {
+        int cs = shift + idx - 1;
+        col_a = idy;
+        col_b = (idy + cs) % M;
+        for (int i = 0; i < N; ++i)
+        {
+            index_a = IDX2C(i, col_a, N);
+            index_b = IDX2C(i, col_b, N);
+            sum += a[index_a] * b[index_b];
+        }
+    }
+    c[IDX2C(idx, idy, NTPlusOne)] = sum;
 
 }
 
 template<class ElemType>
 __global__ void _getARowByIndex(
-	ElemType* us,
-	const ElemType* a,
-	const int O, // a's rows
-	const int P, // a's cols
-	const int m // the m-th row of a
-	)
+    ElemType* us,
+    const ElemType* a,
+    const int O, // a's rows
+    const int P, // a's cols
+    const int m // the m-th row of a
+    )
 {
-	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-	if (id >= P)
-		return;
-	//	us[id] = a[id] * b[id];
-	us[id] = a[IDX2C(m, id, O)];
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= P)
+        return;
+    //    us[id] = a[id] * b[id];
+    us[id] = a[IDX2C(m, id, O)];
 }
 
 
 template<class ElemType>
 __global__ void _conductRowElementMultiplyWithShift(
-	ElemType* us,
-	const ElemType* a,
-	const ElemType* b,
-	const int O, // b's rows
-	const int P, // b's cols
-	const int shift,
-	const bool isafixed)
+    ElemType* us,
+    const ElemType* a,
+    const ElemType* b,
+    const int O, // b's rows
+    const int P, // b's cols
+    const int shift,
+    const bool isafixed)
 {
-	CUDA_LONG idx = blockDim.x * blockIdx.x + threadIdx.x;
-	CUDA_LONG idy = blockDim.y * blockIdx.y + threadIdx.y;
+    CUDA_LONG idx = blockDim.x * blockIdx.x + threadIdx.x;
+    CUDA_LONG idy = blockDim.y * blockIdx.y + threadIdx.y;
 
-	if (idx >= O || idy >= P)
-		return;
+    if (idx >= O || idy >= P)
+        return;
 
-	int tmpidy = (idy + shift) % P;
-	if (isafixed)
-	{
-		// we fix a, and shift b
-		us[IDX2C(idx, idy, O)] = a[idy] * b[IDX2C(idx, tmpidy, O)];
-	}
-	else
-	{
-		// we fix b, but shift a
-		us[IDX2C(idx, idy, O)] = a[tmpidy] * b[IDX2C(idx, idy, O)];
-	}
+    int tmpidy = (idy + shift) % P;
+    if (isafixed)
+    {
+        // we fix a, and shift b
+        us[IDX2C(idx, idy, O)] = a[idy] * b[IDX2C(idx, tmpidy, O)];
+    }
+    else
+    {
+        // we fix b, but shift a
+        us[IDX2C(idx, idy, O)] = a[tmpidy] * b[IDX2C(idx, idy, O)];
+    }
 
 }
 
 template<class ElemType>
 __global__ void _assignElementProductOfWithShift(
-	ElemType* us,
-	const ElemType* a,
-	const ElemType* b,
-	const int shift,
-	const CUDA_LONG N)
+    ElemType* us,
+    const ElemType* a,
+    const ElemType* b,
+    const int shift,
+    const CUDA_LONG N)
 {
-	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-	if (id >= N)
-		return;
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
 
-	int tmpidb = (id + shift) % N;
-	us[id] = a[id] * b[tmpidb];
+    int tmpidb = (id + shift) % N;
+    us[id] = a[id] * b[tmpidb];
 }
 
 
@@ -4438,55 +4438,54 @@ __global__ void _reductionLogAddSum(
         sum[0] = partialLogAddSum[0];
 }
 
-/* set the value of certain columns to be zero
-the column is decided by threshhold value
-*/
+// set the value of certain columns to be zero
+// the column is decided by threshhold value
 template<class ElemType>
 __global__ void _DropFrame(
-	ElemType *a,
-	const ElemType *label,
-	const ElemType *gamma,
-	const ElemType framedropthreshhold,
-	const long m_numCols,
-	const long m_numRows) //ld
+    ElemType *a,
+    const ElemType *label,
+    const ElemType *gamma,
+    const ElemType framedropthreshhold,
+    const long m_numCols,
+    const long m_numRows) //ld
 {
-	int col_id = blockDim.x * blockIdx.x + threadIdx.x;
-	if (col_id >= m_numCols)
-		return;
-	bool dropframe = false;
-	for (long i = 0; i<m_numRows; ++i)
-	{
-		int idx = IDX2C(i, col_id, m_numRows);
-		//printf("%u ", idx);
-		if (fabs(label[idx] - 1.0) < 0.1)
-		{
-			if (gamma[idx] < framedropthreshhold)
-				dropframe = true;
-			break;
-		}
-	}
+    int col_id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (col_id >= m_numCols)
+        return;
+    bool dropframe = false;
+    for (long i = 0; i<m_numRows; ++i)
+    {
+        int idx = IDX2C(i, col_id, m_numRows);
+        //printf("%u ", idx);
+        if (fabs(label[idx] - 1.0) < 0.1)
+        {
+            if (gamma[idx] < framedropthreshhold)
+                dropframe = true;
+            break;
+        }
+    }
 
-	if (dropframe)
-	{
-		//printf("frame dropped %u ", col_id);
-		for (long i = 0; i < m_numRows; ++i)
-		{
-			a[IDX2C(i, col_id, m_numRows)] = 0.0;
-		}
-	}
+    if (dropframe)
+    {
+        //printf("frame dropped %u ", col_id);
+        for (long i = 0; i < m_numRows; ++i)
+        {
+            a[IDX2C(i, col_id, m_numRows)] = 0.0;
+        }
+    }
 
 }
 
 template<class ElemType>
 __global__ void _AssignSequenceError(const ElemType hsmoothingWeight, ElemType *error, const ElemType *label,
-	const ElemType *dnnoutput, const ElemType *gamma, ElemType alpha, const long N)
+    const ElemType *dnnoutput, const ElemType *gamma, ElemType alpha, const long N)
 {
-	int id = blockDim.x * blockIdx.x + threadIdx.x;
-	if (id >= N)
-		return;
-	error[id] -= alpha * (label[id] - (1.0 - hsmoothingWeight)*dnnoutput[id] - hsmoothingWeight * gamma[id]);
-	//change to ce
-	//error[id] -= alpha * (label[id] - dnnoutput[id] );
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    error[id] -= alpha * (label[id] - (1.0 - hsmoothingWeight)*dnnoutput[id] - hsmoothingWeight * gamma[id]);
+    //change to ce
+    //error[id] -= alpha * (label[id] - dnnoutput[id] );
 
 }
 #endif // !CPUONLY

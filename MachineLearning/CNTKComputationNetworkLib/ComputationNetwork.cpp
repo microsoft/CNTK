@@ -384,7 +384,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (nodePtr->OperationName() == OperationNameOf(SquareErrorNode) ||
             nodePtr->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
-			nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
+            nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
             nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
             nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
             nodePtr->OperationName() == OperationNameOf(ErrorPredictionNode) ||               
@@ -943,28 +943,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-	//set sequence training parameters, e.g. smoothing weight, frame drop threshhold
-	template<class ElemType>
-	void ComputationNetwork::SetSeqParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ElemType hsmoothingWeight, const ElemType frameDropThresh, const bool doreferencealign)
-	{
+    //set sequence training parameters, e.g. smoothing weight, frame drop threshhold
+    template<class ElemType>
+    void ComputationNetwork::SetSeqParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ElemType hsmoothingWeight, const ElemType frameDropThresh, const bool doreferencealign)
+    {
 
-		fprintf(stderr, "set Hsmoothing weight %.8g and frame drop thresh %.8g\n", hsmoothingWeight, frameDropThresh);
-		std::list<ComputationNodeBasePtr> seqNodes = net.GetNodesWithType(OperationNameOf(SequenceWithSoftmaxNode), criterionNode);
-		if (seqNodes.size() == 0)
-		{
-			fprintf(stderr, "WARNING: there is no sequence node.\n");
-		}
-		else
-		{
-			for (auto nodeIter = seqNodes.begin(); nodeIter != seqNodes.end(); nodeIter++)
-			{				
-				auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(*nodeIter);
-				node->SetSmoothWeight(hsmoothingWeight);
-				node->SetFrameDropThresh(frameDropThresh);
-				node->SetRefrencealign(doreferencealign);
-			}
-		}
-	}
+        fprintf(stderr, "set Hsmoothing weight %.8g and frame drop thresh %.8g\n", hsmoothingWeight, frameDropThresh);
+        std::list<ComputationNodeBasePtr> seqNodes = net.GetNodesWithType(OperationNameOf(SequenceWithSoftmaxNode), criterionNode);
+        if (seqNodes.size() == 0)
+        {
+            fprintf(stderr, "WARNING: there is no sequence node.\n");
+        }
+        else
+        {
+            for (auto nodeIter = seqNodes.begin(); nodeIter != seqNodes.end(); nodeIter++)
+            {                
+                auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(*nodeIter);
+                node->SetSmoothWeight(hsmoothingWeight);
+                node->SetFrameDropThresh(frameDropThresh);
+                node->SetRefrencealign(doreferencealign);
+            }
+        }
+    }
+
     /*static*/void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples)
     {
         fprintf(stderr, "Set Max Temp Mem Size For Convolution Nodes to %lu samples.\n", maxTempMemSizeInSamples);
@@ -1260,7 +1261,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream << "rankdir = BT ;  \n";
 
         //////////////////////////////////////////////////////////////////////////
-        //	special nodes
+        //    special nodes
         //////////////////////////////////////////////////////////////////////////
         fstream << L"// special nodes \n";
 
@@ -1284,7 +1285,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream << dotcfg.m_normalNodeStyle << L"\n";
 
         //////////////////////////////////////////////////////////////////////////
-        //	add labels for each node
+        //    add labels for each node
         //////////////////////////////////////////////////////////////////////////
         fstream << L"\n// add labels and operation name\n";
         wstring line;
@@ -1300,7 +1301,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //////////////////////////////////////////////////////////////////////////
-        //	sub-graph
+        //    sub-graph
         //////////////////////////////////////////////////////////////////////////
         // subgraph source
         fstream << L"subgraph {\n";
@@ -1328,7 +1329,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream << line << L"\n}\n";
 
         //////////////////////////////////////////////////////////////////////////
-        //	specify arc connections
+        //    specify arc connections
         //////////////////////////////////////////////////////////////////////////
         for (auto x = arcs.begin(); x != arcs.end(); x++)
         {
@@ -1377,7 +1378,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         BuildAndValidateSubNetwork(m_evalNodes[0]);
 
         //////////////////////////////////////////////////////////////////////////
-        //	step 1.		get all the arcs in the network
+        //    step 1.        get all the arcs in the network
         //////////////////////////////////////////////////////////////////////////
         std::unordered_set<ComputationNodeBasePtr> visited;
         std::list<ComputationArc> arcs;
@@ -1392,7 +1393,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //////////////////////////////////////////////////////////////////////////
-        //	step 2.		output dot description
+        //    step 2.        output dot description
         //////////////////////////////////////////////////////////////////////////
         DescribeNetworkUsingDot(arcs, outputFile);
     }

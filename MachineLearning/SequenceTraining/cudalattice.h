@@ -3,8 +3,8 @@
 // F. Seide, V-hansu
 
 #pragma once
-#include <stdexcept>			// (for NOCUDA version only)
-#include "latticestorage.h"		// basic data types for storing lattices
+#include <stdexcept>            // (for NOCUDA version only)
+#include "latticestorage.h"        // basic data types for storing lattices
 #define __kernel_emulation__            // allow the compilation of CUDA kernels on the CPU
 #include "latticefunctionskernels.h"    // for data types passed to kernel functions
 #undef __kernel_emulation__

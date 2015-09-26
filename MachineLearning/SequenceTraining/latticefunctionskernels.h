@@ -560,7 +560,7 @@ struct latticefunctionskernels
         // edge info
         const edgeinfowithscores & e = edges[j];
         double edgescore = (e.l * lmf + wp + edgeacscores[j]) / amf;      // note: edgeacscores[j] == LOGZERO if edge was pruned
-		//zhaorui to deal with the abnormal score for sent start. 
+        //zhaorui to deal with the abnormal score for sent start. 
         if(e.l < -200.0f)
             edgescore = (0.0 * lmf + wp + edgeacscores[j]) / amf;
         const bool boostmmi = (boostingfactor != 0.0f);
@@ -664,7 +664,7 @@ struct latticefunctionskernels
         // edge info
         const edgeinfowithscores & e = edges[j];
         double edgescore = (e.l * lmf + wp + edgeacscores[j]) / amf;
-		//zhaorui to deal with the abnormal score for sent start. 
+        //zhaorui to deal with the abnormal score for sent start. 
         if (e.l < -200.0f)
             edgescore = (0.0 * lmf + wp + edgeacscores[j]) / amf;
         if (boostmmi)
@@ -809,17 +809,6 @@ struct latticefunctionskernels
             const double diff = expdiff (logEframescorrect[j], logEframescorrecttotal);
             // Note: the contribution of the states of an edge to their senones is the same for all states
             // so we compute it once and add it to all; this will not be the case without hard alignments.
-#if 0       // linear mode
-            const float pp = expf ((float)logpps[j]);      // edge posterior
-            const float edgecorrect = (pp * diff) / amf;
-            size_t offset = alignoffsets[j];
-            for (size_t t = ts; t < te; t++)
-            {
-                const size_t s = (size_t) alignstateids[t - ts + offset];
-                atomicAdd (&errorsignal(s,t), edgecorrect);
-            }
-            errorsignalneg(0,0) = 0;   // to reference it because we hope to support log mode as well
-#else       // log mode
             double absdiff = fabs (diff);
             if (absdiff == 0.0f)
                 return;
@@ -834,7 +823,6 @@ struct latticefunctionskernels
                     atomicLogAdd(&errorsignalneg(s,t), logedgecorrect);
             }
             absdiff = amf;        // just to reference it because we hope to support linear mode as well
-#endif
 #endif
         }
     }

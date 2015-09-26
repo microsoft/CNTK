@@ -4688,7 +4688,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return bHas;
     }
 
-    //		CPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift, size_t negnumber);
+    //        CPUMatrix<ElemType>& AssignElementProductOfWithShiftNeg(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift, size_t negnumber);
     //[this]=a .* b
     // here, a and b must be two row vectors of the same size, i.e. [1,m]
     // the inputs are two rwo vectors
@@ -4710,7 +4710,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &a)
         {
             Resize(negnumber + 1, a.GetNumCols());
-            //			Resize(a.GetNumRows(), a.GetNumCols());
+            //            Resize(a.GetNumRows(), a.GetNumCols());
         }
 
         long m = (long)GetNumRows(), n = (long)GetNumCols();  // a and b are of size (1,n)
@@ -4752,7 +4752,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if ((isColWise && m == 1) || !isColWise && n == 1)  //in this case it's equivalent to element-wise product
         {
             throw std::invalid_argument("InnerProduct: Both matrices should be normal ones, not vectors");
-            //			c.AssignElementProductOf(a, b);
+            //            c.AssignElementProductOf(a, b);
         }
         else if (isColWise)  //col-wise
         {
@@ -4942,7 +4942,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
 
-    //		CPUMatrix<ElemType>& AssignElementProductOfWithShift(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift);
+    //        CPUMatrix<ElemType>& AssignElementProductOfWithShift(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, size_t shift);
     //[this]=a .* b
     // here, a and b must be two row vectors of the same size, i.e. [1,m]. We will do element product with shift.
     // inputs are 2 row vectors
@@ -4964,7 +4964,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this != &a)
         {
             Resize(1, a.GetNumCols());
-            //			Resize(a.GetNumRows(), a.GetNumCols());
+            //            Resize(a.GetNumRows(), a.GetNumCols());
         }
 
         //long m = (long)GetNumRows(), n = (long)GetNumCols();  // a and b are of size (1,n)
@@ -5187,45 +5187,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     };
-	template<class ElemType>
-	CPUMatrix<ElemType>& CPUMatrix<ElemType>::DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType & threshhold)
-	{
-		auto& us = *this;
-		if (us.GetNumCols() != gamma.GetNumCols() || us.GetNumRows() != gamma.GetNumRows())
-			throw std::logic_error("DropFrame: target matrix is not in the same size as gamm matrix.");
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType & threshhold)
+    {
+        auto& us = *this;
+        if (us.GetNumCols() != gamma.GetNumCols() || us.GetNumRows() != gamma.GetNumRows())
+            throw std::logic_error("DropFrame: target matrix is not in the same size as gamm matrix.");
 
 #pragma omp parallel for
-		foreach_column(j, label)
-		{
+        foreach_column(j, label)
+        {
 
-			bool dropframe = false;
-			foreach_row(i, label)
-			{
-				if (fabs(label(i, j) - 1.0f) < 0.1)
-				{
-					if (gamma(i, j) < threshhold)
-						dropframe = true;
-					break;
-				}
-			}
+            bool dropframe = false;
+            foreach_row(i, label)
+            {
+                if (fabs(label(i, j) - 1.0f) < 0.1)
+                {
+                    if (gamma(i, j) < threshhold)
+                        dropframe = true;
+                    break;
+                }
+            }
 
-			foreach_row(i, label)
-			{
-				us(i, j) = 0.0f;
-			}
-		}
+            foreach_row(i, label)
+            {
+                us(i, j) = 0.0f;
+            }
+        }
 
-		return *this;
-	}
-	template<class ElemType>
-	CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label,
-		const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha)
-	{
-		auto& us = *this;
-		foreach_coord(i, j, us)
-			us(i, j) += alpha * (label(i, j) - (1 - hsmoothingWeight)*dnnoutput(i, j) - hsmoothingWeight*gamma(i, j));
-		return *this;
-	}
+        return *this;
+    }
+
+    template<class ElemType>
+    CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label,
+                                                                  const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha)
+    {
+        auto& us = *this;
+        foreach_coord(i, j, us)
+            us(i, j) += alpha * (label(i, j) - (1 - hsmoothingWeight)*dnnoutput(i, j) - hsmoothingWeight*gamma(i, j));
+        return *this;
+    }
 
     template<class ElemType>
     int CPUMatrix<ElemType>::SetNumThreads(int numThreads)

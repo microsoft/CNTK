@@ -1630,13 +1630,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
         
-
         virtual const std::wstring OperationName() const { return TypeName(); }
         static const std::wstring TypeName() { return L"SequenceWithSoftmax"; }
 
-        /**
-        compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
-        */
+        //compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             //auto t_start_time = Timer::MilliSecondElapsed();
@@ -1661,9 +1658,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
                 throw std::runtime_error("SequenceWithSoftmaxNode criterion only takes with respect to label, DNN output and log likelihood.");
-            //auto t_end_time = Timer::MilliSecondElapsed();
-
-            //m_partialtime += (t_end_time - t_start_time);
         }
 
         
@@ -1717,18 +1711,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::vector<size_t> & boundaries,  MBLayoutPtr pMBLayout, std::vector<size_t> &extrauttmap, bool doReferenceAlign)
         {
             //softmax 
-
             logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
             softmaxOfRight.SetValue(logSoftmaxOfRight);
             softmaxOfRight.InplaceExp();
 
-            
             size_t sequenceNum = pMBLayout->GetNumParallelSequences();
             gammafromlattice.SwitchToMatrixType(softmaxOfRight.GetMatrixType(), softmaxOfRight.GetFormat(), false);
             gammafromlattice.Resize(softmaxOfRight.GetNumRows(), softmaxOfRight.GetNumCols());
-            //DecideAndMoveToRightDevice(a, *this);
-            //SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
-            //gamma value,            
             GammaCal.calgammaformb(functionValues, lattices, inputFunctionValues2, inputFunctionValues0, gammafromlattice, uids, boundaries, sequenceNum, pMBLayout, extrauttmap, doReferenceAlign);
             
 #if NANCHECK
@@ -1737,10 +1726,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
             functionValues.Print("SequenceWithSoftmaxNode");
 #endif
-            /*for (long i = 0; i < lattices.size(), i++)
-            {
-            lattices[i]->second.forwardbackward()
-            }*/
         }
 
         virtual void Validate()
@@ -1826,7 +1811,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::CopyTo(nodeP, newName, flags);
             
-
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(nodeP);
@@ -1840,8 +1824,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_doreferencealign = m_doreferencealign;
             }
         }
-
-        
 
         std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> * getLatticePtr()
         {
@@ -1902,8 +1884,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         unsigned long long m_gammatime;
         unsigned long long m_partialtime;
-
-
     };
 
 

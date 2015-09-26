@@ -30,21 +30,12 @@ template<typename T> class cuda_ptr
     T * p;  // CUDA pointers are the same as host (e.g. Win32 is restricted to 32-bit CUDA pointers)
 public:
     void swap (cuda_ptr & other) { T * tmp = p; p = other.p; other.p = tmp; }
-//#if ON_CUDA    // CUDA side: allow access as if it is a pointer
-    //operator T* () { return p; }
-    //T & operator* () { return *p; }
-    //T * operator-> () { return p; }
-    //T ** operator& () { return &p; }
     __device__ T &       operator[] (size_t index)       { return p[index]; }
     __device__ const T & operator[] (size_t index) const { return p[index]; }
     __device__ __host__ cuda_ptr operator+ (size_t index) const { return cuda_ptr (p + index); }
     __device__ __host__ cuda_ptr operator- (size_t index) const { return cuda_ptr (p - index); }
-    // 'const' versions
-//#else       // PC-side: only allow allocation
     cuda_ptr (T * pp) : p (pp) {}
-    //void reset (T * pp) { p = pp; }
     T * get() const { return p; }
-//#endif
 };
 
 // reference to a vector (without allocation) that lives in CUDA RAM
@@ -55,15 +46,12 @@ template<typename T> class vectorref
     cuda_size_t n;      // number of elements
 public:
     __device__ __host__ size_t size() const throw() { return n; }
-//#if ON_CUDA    // CUDA side: allow access as if it is a pointer
     __device__ T &       operator[] (size_t i)       { return p[i]; }
     __device__ const T & operator[] (size_t i) const { return p[i]; }
-//#else
     cuda_ptr<T> get() const throw() { return p; }
     cuda_ptr<T> reset (cuda_ptr<T> pp, size_t nn) throw() { p.swap (pp); n = nn; return pp; }
     vectorref (cuda_ptr<T> pp, size_t nn) : p (pp), n (nn) { }
     vectorref() : p (0), n (0) { }
-//#endif
 };
 
 // reference to a matrix
@@ -74,9 +62,8 @@ protected:
     size_t numrows;     // rows()
     size_t numcols;     // cols()
     size_t colstride;   // height of column = rows() rounded to multiples of 4
-    __device__ __host__ size_t locate (size_t i, size_t j) const {
-        /*if (j >= numrows || i >= numcols)
-            *((int*)-1)=0;*/
+    __device__ __host__ size_t locate (size_t i, size_t j) const
+    {
         return j * colstride + i; 
     }   // matrix in column-wise storage
     matrixref() : p (0), numrows (0), numcols (0), colstride (0) {}
@@ -90,10 +77,8 @@ public:
     __device__ __host__ size_t cols() const throw() { return numcols; }
     __device__ __host__ void reshape(const size_t newrows, const size_t newcols) { assert (rows() * cols() == newrows * newcols); numrows=newrows; numcols = newcols;};
     __device__ __host__ size_t getcolstride() const throw() { return colstride; }
-//#if ON_CUDA    // CUDA side: allow access as if it is a pointer
     __device__ T &       operator() (size_t i, size_t j)       { return p[locate(i,j)]; }
     __device__ const T & operator() (size_t i, size_t j) const { return p[locate(i,j)]; }
-//#endif
 };
 
 // reference to a CUDA array for use with textures

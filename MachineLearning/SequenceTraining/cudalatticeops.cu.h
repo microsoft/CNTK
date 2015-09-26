@@ -308,7 +308,6 @@ namespace msra { namespace cuda {
             logEframescorrecttotal = totalbwacc;
         }
 
-#if 1   // check for matching
         double difffwbwscore = totalfwscore - totalbwscore;
         double absdifffwbwscore = difffwbwscore > 0 ? difffwbwscore : 0 - difffwbwscore;
 
@@ -323,7 +322,6 @@ namespace msra { namespace cuda {
             if (absdifffwbwacc / nodes.size() > 1e-4)
                 fprintf (stderr, "forwardbackward: WARNING: lattice fw and bw acc %.10f vs. %.10f (%d nodes/%d edges)\n", (float) totalfwacc, (float) totalbwacc, (int) nodes.size(), (int) edges.size());
         }
-#endif
     }
 
     // -----------------------------------------------------------------------
@@ -417,17 +415,10 @@ namespace msra { namespace cuda {
         directerrorcomputationi <<<dim3((((unsigned int) errorsignal.rows())+31)/32), 32, 0, GetCurrentStream()>>> (errorsignal, errorsignalauxbuf, logEframescorrecttotal, amf);
         checklaunch ("errorcomputationj");
 #else   // this saves some computation compared with DIRECT_MODE
-#if 0   // linear mode, i.e. accumulated error directly
-        setvaluei <<<dim3((((unsigned int) errorsignal.rows())+31)/32), 32, 0, GetCurrentStream()>>> (errorsignal, 0);
-        checklaunch ("setvaluei");
-        setvaluei <<<dim3((((unsigned int) errorsignalauxbuf.rows())+31)/32), 32, 0, GetCurrentStream()>>> (errorsignalauxbuf, 0);
-        checklaunch ("setvaluei");
-#else   // log mode, for numerical safety
         setvaluei <<<dim3((((unsigned int) errorsignal.rows())+31)/32), 32, 0, GetCurrentStream()>>> (errorsignal, LOGZERO);
         checklaunch ("setvaluei");
         setvaluei <<<dim3((((unsigned int) errorsignalauxbuf.rows())+31)/32), 32, 0, GetCurrentStream()>>> (errorsignalauxbuf, LOGZERO);
         checklaunch ("setvaluei");
-#endif
         sMBRerrorsignalj <<<b, t, 0, GetCurrentStream()>>> (alignstateids, alignoffsets, edges, nodes, logpps, amf, logEframescorrect, logEframescorrecttotal, errorsignal, errorsignalauxbuf);
         checklaunch ("sMBRerrorsignal");
 
@@ -458,6 +449,4 @@ namespace msra { namespace cuda {
         expfi <<<dim3((((unsigned int) errorsignal.rows())+31)/32), 32, 0, GetCurrentStream()>>> (errorsignal);
         checklaunch ("expfi");
     }
-
-
 };};

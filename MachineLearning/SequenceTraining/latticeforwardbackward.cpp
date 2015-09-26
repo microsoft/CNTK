@@ -151,7 +151,7 @@ template<typename FLOAT> static bool islogzero (FLOAT v) { return v < LOGZERO/2;
     // backward pass   --token passing
     size_t te = logbetas.cols();
     size_t je = logbetas.rows();
-    float bwscore = 0.0f;						// backward score
+    float bwscore = 0.0f;                        // backward score
     for (size_t k = units.size() -1; k+1 > 0; k--)
     {
         const auto & hmm = hset.gethmm (units[k].unit);
@@ -480,47 +480,6 @@ double lattice::forwardbackwardlattice (const std::vector<float> & edgeacscores,
     {
         double totalfwscore = parallelforwardbackwardlattice (parallelstate, edgeacscores, thisedgealignments, lmf, wp, amf, boostingfactor, logpps, logalphas, logbetas, sMBRmode, uids, logEframescorrect, Eframescorrectbuf, logEframescorrecttotal);
 
-#if 0   // cpu verification
-        std::vector<double> logalphascpu (nodes.size(), LOGZERO);
-        std::vector<double> logbetascpu (nodes.size(), LOGZERO);
-        std::vector<double> logppscpu (edges.size());
-
-        logalphascpu.front() = 0.0f;
-        foreach_index (j, edges)
-        {
-            const auto & e = edges[j];
-            const double inscore = logalphascpu[e.S];
-            const double edgescore = (e.l * lmf + wp + edgeacscores[j]) / amf;  // note: edgeacscores[j] == LOGZERO if edge was pruned
-            const double pathscore = inscore + edgescore;
-            logadd (logalphascpu[e.E], pathscore);
-        }
-        const double totalfwscorecpu = logalphascpu.back();
-
-        // backward pass
-        logbetascpu.back() = 0.0f;
-        for (size_t j = edges.size() -1; j+1 > 0; j--)
-        {
-            const auto & e = edges[j];
-            const double inscore = logbetascpu[e.E];
-            const double edgescore = (e.l * lmf + wp + edgeacscores[j]) / amf;
-            const double pathscore = inscore + edgescore;
-            logadd (logbetascpu[e.S], pathscore);
-
-            // compute lattice posteriors on the fly since we are at it
-            double logpp = logalphascpu[e.S] + edgescore + logbetascpu[e.E] - totalfwscorecpu;
-            if (logpp > 1e-2)
-                fprintf (stderr, "forwardbackward: WARNING: edge J=%d log posterior %.10f > 0\n", (int) j, (float) logpp);
-            if (logpp > 0.0)
-                logpp = 0.0;
-            logppscpu[j] = logpp;
-        }
-        const double totalbwscorecpu = logbetascpu.front();
-        if (fabs (totalfwscorecpu - totalbwscorecpu) / info.numframes > 1e-4)
-            fprintf (stderr, "forwardbackward: WARNING: lattice fw and bw scores %.10f vs. %.10f (%d nodes/%d edges)\n", (float) totalfwscorecpu, (float) totalbwscorecpu, (int) nodes.size(), (int) edges.size());
-        
-        if (fabs (totalfwscorecpu - totalfwscore) / info.numframes > 1e-4)
-            fprintf (stderr, "forwardbackward: WARNING: lattice fw (cpu) and fw (gpu) scores %.10f vs. %.10f (%d nodes/%d edges)\n", (float) totalfwscorecpu, (float) totalfwscore, (int) nodes.size(), (int) edges.size());
-#endif
         return totalfwscore;
     }
     // if we get here, we have no CUDA, and do it the good ol' way
@@ -721,29 +680,7 @@ double lattice::forwardbackwardlatticesMBR (const std::vector<float> & edgeacsco
     }
     const double totalfwacc = accalphas.back();
 
-#if 0
-    //traceback the best corr path
-    vector<size_t> bestcorrstate;
-    int backpos = backpointersformaxcorr.back();
-    while (backpos >= 0)
-    {
-        const auto & abc = *abcs[backpos];
-        size_t ts = nodes[edges[backpos].S].t;
-        size_t te = nodes[edges[backpos].E].t;
-
-        for (size_t t = te - 1 ; t + 1 > ts; t--)               // formulate the bestcorrstate from end to start
-            bestcorrstate.insert(bestcorrstate.begin(),(size_t) abc(0, t - ts));
-        
-        backpos = backpointersformaxcorr[edges[backpos].S];
-    }
-    for (size_t t = nodes[0].t; t < nodes[nodes.size() - 1].t; t++)
-    {
-        char * sameornot = (bestcorrstate[t] == uids[t]) ? "true" : "MISMATCH!!";
-        printf("mostcorr v.s. groundtruth : %4d -- %4d || %s\t--  %s\t || %s \n", bestcorrstate[t], uids[t], hset.getsenonename(bestcorrstate[t]), hset.getsenonename(uids[t]), sameornot);
-    }
-#else
     hset;           // just for reference
-#endif
 
     // report on ground-truth path
     // TODO: we will later have code that adds this path if needed
@@ -944,9 +881,9 @@ void lattice::forwardbackwardalign (parallelstate & parallelstate,
     //zhaorui align to reference mlf
     if (bounds.size() > 0)
     {
-		size_t framenum=bounds.size();
-	
-		msra::math::ssematrixbase *refabcs;
+        size_t framenum=bounds.size();
+    
+        msra::math::ssematrixbase *refabcs;
         size_t ts, te, t;
         ts = te = 0;
         
@@ -969,26 +906,21 @@ void lattice::forwardbackwardalign (parallelstate & parallelstate,
             te=t;
             
             
-			//make one phone unit
+            //make one phone unit
             size_t phoneid = bounds[ts]-1;
             refunits[0].unit = phoneid;
             refunits[0].frames = te-ts;        
             
             size_t edgestates = hset.gethmm(phoneid).getnumstates();
-			littlematrixheap refmatrixheap (1);        // for abcs
+            littlematrixheap refmatrixheap (1);        // for abcs
             refabcs = &refmatrixheap.newmatrix (edgestates, te-ts + 2);
             const auto edgeLLs = msra::math::ssematrixstriperef<msra::math::ssematrixbase> (const_cast<msra::math::ssematrixbase &> (logLLs), ts, te - ts);
             //do alignment
             alignedge ((const_array_ref<aligninfo>) refunits, hset, edgeLLs, *refabcs, 0, true,refedgealignmentsj);
-			
+            
             for(t=ts; t< te; t++)
             {
-                //if(uids[t] != refedgealignmentsj[t-ts])
-                  //printf("here not same\n");				
-				//printf ("time:%d before:%d ",t,uids[t]);
                 uids[t] = (size_t)refedgealignmentsj[t-ts];
-				//printf ("after:%d\n",uids[t]);
-                
             }
             ts=te;
 
@@ -1094,79 +1026,6 @@ void lattice::sMBRerrorsignal (parallelstate & parallelstate,
         return;
     }
 
-    /*  time measurement for cpu version error signal
-        timeresignalreset:      101.946185 ms
-        timeresignalaggregate:  732.504066 ms  */
-
-#if 0       // log model error accumulation
-    // reservation for obselete log based error signal computation
-
-    // We first accumulate gammas in log form for numeric stability, and exp(.) them at the end.
-    // Because the error signal can be negative, we split positive and negative parts into num and den gammas,
-    // each of which can now be computed in log form. These are expected to be subtracted from each other later
-    // by the caller to form the actual error signal.
-
-    foreach_coord (i, j, errorsignal)
-        errorsignalneg(i,j) = errorsignal(i,j) = LOGZERO;
-
-    foreach_index (j, edges)
-    {
-        const auto & e = edges[j];
-        if (nodes[e.S].t == nodes[e.E].t)                   // this happens for dummy !NULL edge at end of file
-            continue;
-        if (minlogpp > LOGZERO && origlogpps[j] < minlogpp) // this is pruned
-            continue;
-        
-        size_t ts = nodes[e.S].t;
-        size_t te = nodes[e.E].t;
-
-        const double diff = Eframescorrectdiff[j]; // diff. of accuracy
-        auto & numdengammas = (diff > 0.0) ? errorsignal : errorsignalneg; // we update num or den depending on sign
-        // Note: the contribution of the states of an edge to their senones is the same for all states
-        // so we compute it once and add it to all; this will not be the case without hard alignments.
-        const double absdiff = fabs (diff);
-        const float logedgecorrect = (diff > 0.0) ? (float) (logpps[j] + log (absdiff)) : LOGZERO;
-        for (size_t t = ts; t < te; t++)
-        {
-            const size_t s = (size_t) thisedgealignments[j][t-ts];
-            logadd (numdengammas(s,t), logedgecorrect);
-        }
-    }
-
-    // convert to non-log posterior  --that's what we return
-    foreach_coord (i, j, errorsignal)
-        errorsignal(i,j) = expdiff(errorsignal(i,j), errorsignalneg(i,j)) / amf;
-
-#elif 0
-    // for debug, split linear mode
-    foreach_coord (i, j, errorsignal)
-        errorsignal(i,j) = errorsignalneg(i,j) = 0.0f; // Note: we don't actually put anything into the numgammas
-
-    foreach_index (j, edges)
-    {
-        const auto & e = edges[j];
-        if (nodes[e.S].t == nodes[e.E].t)                   // this happens for dummy !NULL edge at end of file
-            continue;
-        if (minlogpp > LOGZERO && origlogpps[j] < minlogpp) // this is pruned
-            continue;
-
-        size_t ts = nodes[e.S].t;
-        size_t te = nodes[e.E].t;
-
-        const float diff = Eframescorrectdiff[j];
-        auto & numdengammas = (diff > 0.0) ? errorsignal : errorsignalneg;
-        const float absdiff = fabs(diff);
-        const double pp = exp (logpps[j]);      // edge posterior
-        const float edgecorrect = (float) (pp * absdiff) / amf;
-        for (size_t t = ts; t < te; t++)
-        {
-            const size_t s = thisedgealignments[j][t-ts];
-            numdengammas(s,t) += edgecorrect;      // minus because error signal is later computed as num-den
-        }
-    }
-    foreach_coord (i, j, errorsignal)
-        errorsignal(i,j) = errorsignal(i,j) - errorsignalneg(i,j);
-#else
     //  linear mode
     foreach_coord (i, j, errorsignal)
         errorsignal(i,j) = 0.0f; // Note: we don't actually put anything into the numgammas
@@ -1192,7 +1051,6 @@ void lattice::sMBRerrorsignal (parallelstate & parallelstate,
             errorsignal(s,t) += edgecorrect;
         }
     }
-#endif
 }
 
 // compute the error signal for MMI mode
@@ -1260,11 +1118,7 @@ void lattice::mmierrorsignal (parallelstate & parallelstate, double minlogpp, co
                     const float gammajt = loggammas(j,t);
                     const float statelogP = edgelogP + gammajt;
                     logadd (errorsignal(s,tutt), statelogP);
-                    //logadd (logsum, (double) gammajt);      // [v-hansu] check code for mmi; search this comment to see all related codes
                 }
-                //if (!islogzero (logsum) && fabs (logsum) > 1e-2 && warnings++ < 10)       // [v-hansu] check code for mmi; search this comment to see all related codes
-                    //fprintf (stderr, "forwardbackward: WARNING: edge J=%d within-phoneme gamma column(%d) sum = exp (%.10f) != 1  (%s, %d fr)\n",
-                    //(int) j, (int) t, (float) logsum, hmm.getname(), te - ts);
             }
             ts = te;
             js = je;
@@ -1523,48 +1377,12 @@ double lattice::forwardbackward (parallelstate & parallelstate, const msra::math
     // PHASE 0: fake word level forward backwards --only used when pruning enabled
     const double minlogpp = LOGZERO;                // pruning threshold  --LOGZERO means disabled
     std::vector<double> origlogpps;                 // word posterior from original lattice, for pruning decision
-#if 0
-    throw::logic_error ("we no longer support pruning now. please check forwardbackwardlattice to add this");
-
-    auto_timer timerpruning;
-    //const double minlogpp = log(1e-6f);             // pruning threshold; set to LOGZERO to disable
-
-    if (minlogpp > LOGZERO)
-    {
-        std::vector<double> logalphas;
-        std::vector<double> logbetas;
-        std::vector<float> oriedgeacscores (edges.size());
-        foreach_index (j, edges)
-            oriedgeacscores[j] = edges[j].a;
-         const double totalfwbwscoreori = forwardbackwardlattice (oriedgeacscores, parallelstate, origlogpps, logalphas, logbetas, lmf, wp, amf);
-        if (islogzero (totalfwbwscoreori))
-        {
-            fprintf (stderr, "forwardbackward: WARNING: no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
-            return LOGZERO;         // failed, do not use resulting matrix
-        }
-    }
-    const double pruningdur = timerpruning;
-#endif
 
     // PHASE 1: per-edge forward backwards (="time alignments")
     
     // score the ground truth  --only if a transcript is provided, which happens if the user provides a language model
     // TODO: no longer used, remove this. 'transcript' parameter is no longer used in this function.
-#if 0   // note: this mode is no longer used, and now conflicts with another use of 'transcript' (excluding OOV words)
-    auto_timer timerscoregroundtruth;
-    double totalgroundtruthscore = LOGZERO;
-    if (transcript.size() > 0)
-        totalgroundtruthscore = scoregroundtruth (uids, transcript, transcriptunigrams, logLLs, hset, lmf, wp, amf);
-    const double scoregroundtruthdur = timerscoregroundtruth;
-#ifdef PRINT_TIME_MEASUREMENT
-    if (transcript.size() > 0)
-        fprintf (stderr, "scoregroundtruth: %f\n", scoregroundtruthdur * 1000);
-#else
-    scoregroundtruthdur;
-#endif
-#else
     transcript; transcriptunigrams;
-#endif
 
 #ifdef PRINT_TIME_MEASUREMENT
     fprintf (stderr, "fwbwprepare: %f ms\n", fwbwpreparedur * 1000);
@@ -1632,127 +1450,12 @@ double lattice::forwardbackward (parallelstate & parallelstate, const msra::math
     // sMBR mode
     else
     {
-#if 0
-        // sanity check for Eframescorrecttotal
-        std::vector<double> checkEframecorrect (edges.size());      // for debug use, will remove later
-        checkEframecorrect.assign (nodes.back().t - nodes.front().t, 0);
-        foreach_index (j, edges)
-        {
-            const auto & e = edges[j];
-            size_t ts = nodes[e.S].t;
-            size_t te = nodes[e.E].t;
-            for (size_t t = ts; t < te; t++)
-                checkEframecorrect[t] += ((double) Eframescorrectdiff[j] + Eframescorrecttotal) * exp(logpps[j]);
-        }
-#endif
         auto & errorsignal = result;
         sMBRerrorsignal (parallelstate, errorsignal, errorsignalbuf, logpps, amf, minlogpp, origlogpps, logEframescorrect, logEframescorrecttotal, thisedgealignments);
 
-# if 0  // code for checking how many terms are zero ~98.5%
-        size_t countzeroerrorsignal = 0;
-        foreach_coord(i,j,errorsignal)
-        {
-            if (errorsignal(i,j) == 0.0f)
-                countzeroerrorsignal++;
-        }
-        size_t totalerroritem = errorsignal.cols() * errorsignal.rows();
-        fprintf(stderr,"%f%% error item is 0.0f\n", 100 * ((float)countzeroerrorsignal) / totalerroritem);
-#endif
-
-#if 0   // diagnostics
-        if(parallelstate.enabled())
-            parallelstate.copyalignments(thisedgealignments);
-        std::vector<size_t> bestpath (errorsignal.cols(), SIZE_MAX);
-        std::vector<double> bestpathflags;   // returns 0.0 for edges on best path, LOGZERO for all others
-        bestpathlattice (edgeacscores, bestpathflags, lmf, wp, amf);
-        foreach_index (j, bestpathflags)
-        {
-            if (bestpathflags[j] != 0.0) continue;  // not on best path
-            // transplant alignment
-            const auto & align = thisedgealignments[j];
-            const size_t t0 = nodes[edges[j].S].t;
-            foreach_index (t1, align)
-            {
-                const size_t t = t0 + t1;
-                if (bestpath[t] != SIZE_MAX)
-                    throw std::logic_error ("multiple parallel best paths??");
-                bestpath[t] = align[t1];
-            }
-        }
-        // check if the ground-truth path is in the lattice
-        vector<bool> refseen (errorsignal.cols(), false);
-        foreach_index (j, edges)
-        {
-            const auto & align = thisedgealignments[j];
-            const size_t t0 = nodes[edges[j].S].t;
-            foreach_index (t1, align)
-            {
-                const size_t t = t0 + t1;
-                if (align[t1] == uids[t])
-                    refseen[t] = true;
-            }
-        }
-        size_t oraclecorrect = 0;
-        foreach_index (t, uids)
-            oraclecorrect += refseen[t] ? 1 : 0;
-        fprintf (stderr, "sMBRdiagnostics for %S, %.2f%% (%d out of %d) ground-truth frames seen\n", key.c_str(),
-                 100.0f * oraclecorrect / errorsignal.cols(), (int) oraclecorrect, (int) errorsignal.cols());
-        sMBRdiagnostics (errorsignal, uids, bestpath, refseen, hset);
-        //dump (stderr, [&] (size_t i) { return hset.gethmm (i).getname(); });
-#endif
-
-#if 0   // nuke silence frames
-    const auto & sil = hset.gethmm (hset.gethmmid ("sil"));
-    const auto & sp = hset.gethmm (hset.gethmmid ("sp"));
-    if (sp.numstates != 1 || sil.numstates != 3)
-        throw std::runtime_error ("forwardbackward: only supports 1-state /sp/ and 3-state /sil/");
-    const size_t silst = sp.senoneids[0];
-    const size_t sil0 = sil.senoneids[0];
-    const size_t sil1 = sil.senoneids[1];
-    const size_t sil2 = sil.senoneids[2];
-    foreach_column (t, errorsignal)
-    {
-        const auto u = uids[t];
-        if (u == silst || u == sil0 || u == sil1 || u == sil2)
-            errorsignal.setzero (t);    // clear error signal for all frames that are silence
-    }
-#endif
-
-#if 0
-        sMBRsuppressweirdstuff (errorsignal, uids);
-#endif
         static bool dummyvariable = (fprintf(stderr, "note: new version with kappa adjustment, kappa = %.2f\n", 1/amf ), true); // we only print once
         return exp (logEframescorrecttotal) / numframes;    // return value is av. expected frame-correct count
     }
-
-#if 0
-    // dump posteriors for debugging
-    std::vector<std::pair<double/*pp*/,size_t/*s*/>> states;
-    states.reserve (posteriors.rows());
-    foreach_column (t, posteriors)
-    {
-        states.clear();
-        foreach_row (s, posteriors)
-            if (posteriors(s,t) > 0.0)
-                states.push_back (std::make_pair (posteriors(s,t), s));
-        std::sort (states.begin(), states.end());
-        std::reverse (states.begin(), states.end());
-        fprintf (stderr, "%3d:\t", t);
-        foreach_index (i, states)
-        {
-            if (i > 5)
-            {
-                fprintf (stderr, " ...");
-                break;
-            }
-            const auto pp = states[i].first;
-            const auto s = states[i].second;
-            const char * sname = hset.getsenonename(s);
-            fprintf (stderr, " %20s %.8f", sname, pp);
-        }
-        fprintf (stderr, "\n");
-    }
-#endif
 }
 
 };};

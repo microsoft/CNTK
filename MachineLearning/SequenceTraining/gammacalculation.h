@@ -146,13 +146,6 @@ namespace msra { namespace lattices {
                     {                            
                         parallellattice.setloglls(tempmatrix);
                     }
-
-                    /*size_t pnumrow = logllmatrix.GetNumRows();
-                    size_t pnumcol = logllmatrix.GetNumCols();
-                    logllmatrix.Print("data value 1", 0, min(10, pnumrow) - 1, 0, min(10, pnumcol) - 1);
-                    logllmatrix.Print("data value 2", 0, min(10, pnumrow) - 1, pnumcol - 11, pnumcol - 1);
-                    float fnorm = (float)(logllmatrix.FrobeniusNorm());
-                    fprintf(stderr, "fnorm %f\n", fnorm);*/
                 }
                     
                     
@@ -221,14 +214,9 @@ namespace msra { namespace lattices {
                 if (samplesInRecurrentStep > 1)
                     validframes[mapi] += numframes;
                 fprintf(stderr, "dengamma value %f\n", denavlogp);
-                /*if (samplesInRecurrentStep == 1)
-                    ts += numframes;
-                else
-                    ts = (i+1) * mbsize;*/
                 ts += numframes;
             }       
             functionValues.SetValue(objectValue);
-            // parallellattice.release(false);
         }
             
     protected:

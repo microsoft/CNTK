@@ -88,26 +88,12 @@ static cudadevicecontext cudadevicecontexts[deviceMax];      // note: increase i
 static cudadevicecontext * currentcudadevicecontext = NULL; // global state: remembered which device context was set
 static size_t deviceCurrent = 0;
 
-
-cudaStream_t GetStream(size_t deviceid)
-{
-    return g_devices.GetComputeES(deviceCurrent)->Stream();
-}
-
-cudaEvent_t GetEvent(size_t deviceid)
-{
-    return g_devices.GetComputeES(deviceCurrent)->EventComplete();
-}
-
 size_t GetCurrentDevice()
 {
     return deviceCurrent;
 }
 
-//cudaStream_t GetCurrentStream() {return GetStream(GetCurrentDevice());}
 cudaStream_t GetCurrentStream() { return cudaStreamDefault; }
-cudaEvent_t GetCurrentEvent() {return GetEvent(GetCurrentDevice());}
-Devices g_devices;    // one global device pool
 
 // initialize CUDA system
 void lazyinit()
@@ -232,8 +218,5 @@ void memcpyd2h (void * dst, const void * src, size_t byteoffset, size_t nbytes)
 {
     cudaMemcpy (dst, byteoffset + (const char *) src, nbytes, cudaMemcpyDeviceToHost) || "cudaMemcpy failed";
 }
-
-//cudadevicecontext::cudathread::cudathread (size_t deviceid) { cudaSetDevice ((int) deviceid) || "cudaSetDevice failed"; }
-//cudadevicecontext::cudathread::~cudathread() { cudaThreadExit(); };
 
 };};
