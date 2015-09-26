@@ -96,6 +96,7 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <unistd.h>
 #include <sys/stat.h>
 #include <dlfcn.h>
+#include <sys/time.h>
 typedef unsigned char byte;
 #endif
 
@@ -188,29 +189,43 @@ static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono:
 namespace msra { namespace basetypes {
 
 	//sequence training
-	class auto_timer
-	{
-		LARGE_INTEGER freq, start;
-		auto_timer(const auto_timer &); void operator= (const auto_timer &);
-	public:
-		auto_timer()
-		{
-			if (!QueryPerformanceFrequency(&freq)) // count ticks per second
-				throw std::runtime_error("auto_timer: QueryPerformanceFrequency failure");
-			QueryPerformanceCounter(&start);
-		}
-		operator double() const     // each read gives time elapsed since start, in seconds
-		{
-			LARGE_INTEGER end;
-			QueryPerformanceCounter(&end);
-			return (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
-		}
-		void show(const std::string & msg) const
-		{
-			double elapsed = *this;
-			fprintf(stderr, "%s: %.6f ms\n", msg.c_str(), elapsed * 1000.0);
-		}
-	};
+    #ifdef __unix__
+    typedef timeval LARGE_INTEGER;
+    #endif
+    class auto_timer
+    {
+        LARGE_INTEGER freq, start;
+        auto_timer (const auto_timer &); void operator= (const auto_timer &);
+    public:
+        auto_timer()
+        {
+    #ifdef _WIN32
+            if (!QueryPerformanceFrequency (&freq)) // count ticks per second
+                throw std::runtime_error ("auto_timer: QueryPerformanceFrequency failure");
+            QueryPerformanceCounter (&start);
+    #endif
+    #ifdef __unix__
+            gettimeofday (&start, NULL);
+    #endif
+        }
+        operator double() const     // each read gives time elapsed since start, in seconds
+        {
+            LARGE_INTEGER end;
+    #ifdef _WIN32
+            QueryPerformanceCounter (&end);
+            return (end.QuadPart - start.QuadPart) / (double) freq.QuadPart;
+    #endif
+    #ifdef __unix__
+            gettimeofday (&end,NULL);
+            return (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec)/(1000*1000);
+    #endif
+        }
+        void show (const std::string & msg) const
+        {
+            double elapsed = *this;
+            fprintf(stderr, "%s: %.6f ms\n", msg.c_str(), elapsed * 1000.0/*to ms*/);
+        }
+    };
 
 // class ARRAY -- std::vector with array-bounds checking
 // VS 2008 and above do this, so there is no longer a need for this.
@@ -1128,6 +1143,7 @@ static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
     return l.second > r.second;
 }
 
+#ifdef _WIN32
 //sequence training 
 // ----------------------------------------------------------------------------
 // frequently missing Win32 functions
@@ -1144,4 +1160,5 @@ static inline std::wstring FormatWin32Error(DWORD error)
 	if (last != std::string::npos) res.erase(last + 1, res.length());
 	return res;
 }
+#endif // _WIN32
 #endif    // _BASETYPES_

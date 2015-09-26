@@ -1,6 +1,6 @@
 #pragma once
 
-#include <hash_map>
+#include <unordered_map>
 #include "simplesenonehmm.h"
 #include "latticearchive.h"
 #include "latticesource.h"

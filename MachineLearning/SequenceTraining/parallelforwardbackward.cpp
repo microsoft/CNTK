@@ -481,21 +481,21 @@ namespace msra { namespace lattices {
         template<class edgestype, class nodestype, class aligntype, class edgealignments, class backpointers>
         void setutterancedata (const edgestype & edges, const nodestype & nodes, const aligntype & align,
                                const msra::math::ssematrixbase & logLLs, std::vector<float> & edgeacscores, 
-                               edgealignments & edgealignments, backpointers & backpointers)
+                               edgealignments & edgeAlignments, backpointers & backPointers)
         {
             // lattice data
             edgesgpu->assign (edges, false);
             nodesgpu->assign (nodes, false);
             aligngpu->assign (align, false);
-            alignoffsetsgpu->assign (edgealignments.getalignoffsets(), false);
-            backptrstoragegpu->allocate (backpointers.getbackptrstoragesize());
-            backptroffsetsgpu->assign (backpointers.getbackptroffsets(), false);
+            alignoffsetsgpu->assign (edgeAlignments.getalignoffsets(), false);
+            backptrstoragegpu->allocate (backPointers.getbackptrstoragesize());
+            backptroffsetsgpu->assign (backPointers.getbackptroffsets(), false);
 
 #ifndef PARALLEL_SIL
-            alignresult->assign (edgealignments.getalignmentsbuffer(), false);
+            alignresult->assign (edgeAlignments.getalignmentsbuffer(), false);
             edgeacscoresgpu->assign (edgeacscores, false);
 #else
-            alignresult->allocate (edgealignments.getalignbuffersize());
+            alignresult->allocate (edgeAlignments.getalignbuffersize());
             edgeacscoresgpu->allocate (edges.size());
             edgeacscores;               // reference to make compilor happy
 #endif
@@ -516,9 +516,9 @@ namespace msra { namespace lattices {
             loglls = *errorsignalgpu;
         }
         template<class edgealignments>
-        void copyalignments (edgealignments & edgealignments)
+        void copyalignments (edgealignments & edgeAlignments)
         {
-            alignresult->fetch(edgealignments.getalignmentsbuffer(), true);
+            alignresult->fetch(edgeAlignments.getalignmentsbuffer(), true);
         }
 
         // [v-hansu] allocate memory for vectors relating to forward-backward
@@ -735,7 +735,7 @@ namespace msra { namespace lattices {
         if (!parallelstate->emulation)
         {
 
-            fprintf(stderr, "parallelforwardbackwardlattice: %d launches for forward, %d launches for backward\n", batchsizeforward.size(), batchsizebackward.size());
+            fprintf(stderr, "parallelforwardbackwardlattice: %d launches for forward, %d launches for backward\n", (int)batchsizeforward.size(), (int)batchsizebackward.size());
 
             const bool allocateframescorrect = (returnEframescorrect || boostingfactor != 0.0f);
             const bool copyuids = (returnEframescorrect || boostingfactor != 0.0f);
@@ -799,7 +799,7 @@ namespace msra { namespace lattices {
         if (rc != CUBLAS_STATUS_SUCCESS)
         {
             char buf[1000];
-            sprintf_s(buf, "%s: cublas error code %d", msg.c_str(), rc);    // ... TODO: add error message
+            sprintf_s(buf, sizeof(buf), "%s: cublas error code %d", msg.c_str(), rc);    // ... TODO: add error message
             throw std::runtime_error(buf);
         }
     }

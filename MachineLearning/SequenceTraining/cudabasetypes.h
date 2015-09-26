@@ -111,36 +111,4 @@ public:
     cudaArray * get() const { return a; }
 };
 
-// using a cudaarrayref
-// Pattern:
-//  - do not declare the texture as an argument to the kernel, instead:
-//  - at file scope:
-//    texture<float, 2, cudaReadModeElementType> texref;
-//  - right before kernel launch:
-//    passtextureref texref (texref, cudaarrayref);    // use the same name as that global texref one, so it will match the name inside the kernel
-class passtextureref
-{
-    textureReference & texref;  // associated texture reference if any
-public:
-    template<typename R,class T>
-    passtextureref (R texref, cudaarrayref<T> cudaarrayref) : texref (texref)
-    {
-        texref.addressMode[0] = cudaAddressModeWrap;
-        texref.addressMode[1] = cudaAddressModeWrap;
-        texref.filterMode     = cudaFilterModePoint;
-        texref.normalized     = false;
-        cudaError_t rc = cudaBindTextureToArray (texref, cudaarrayref.get());
-        if (rc != cudaSuccess)
-        {
-            char buf[1000];
-            sprintf_s (buf, "passtextureref: %s (cuda error %d)", cudaGetErrorString (rc), rc);
-            throw std::runtime_error (buf);
-        }
-    }
-    ~passtextureref()
-    {
-        cudaUnbindTexture (&texref);
-    }
-};
-
 };};

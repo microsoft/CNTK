@@ -5,7 +5,6 @@
 
 #define _CRT_SECURE_NO_WARNINGS 1    // so we can use getenv()...
 
-#include <Windows.h>            // for the Mutex
 #include <cuda_runtime_api.h>           // for CUDA API
 #include <cuda.h>                       // for device API
 #include "cudalib.h"
@@ -30,7 +29,7 @@ static void operator|| (cudaError_t rc, const char * msg)
     if (rc != cudaSuccess)
     {
         char buf[1000];
-        sprintf_s (buf, "%s: %s (cuda error %d)", msg, cudaGetErrorString (rc), rc);
+        snprintf(buf, sizeof(buf), "%s: %s (cuda error %d)", msg, cudaGetErrorString (rc), rc);
         throw std::runtime_error (buf);
     }
 }
@@ -41,7 +40,7 @@ static void operator|| (CUresult rc, const char * msg)
     if (rc != CUDA_SUCCESS)
     {
         char buf[1000];
-        sprintf_s (buf, "%s: cuda API error %d", msg, rc);
+        snprintf(buf, sizeof(buf), "%s: cuda API error %d", msg, rc);
         throw std::runtime_error (buf);
     }
 }
@@ -71,8 +70,8 @@ public:
         assert (cuContext == cuContextDummy);
         // show some info to the user
         char namebuf[1024] = { 0 };
-        cuDeviceGetName (&namebuf[0], _countof (namebuf) -1, cuDevice) || "cuDeviceGetName failed";
-        fprintf (stderr, "using physical CUDA device %d: %s\n", physicaldeviceid, namebuf);
+        cuDeviceGetName (&namebuf[0], sizeof(namebuf) -1, cuDevice) || "cuDeviceGetName failed";
+        fprintf (stderr, "using physical CUDA device %d: %s\n", (int)physicaldeviceid, namebuf);
 #endif
     }
     // cast this to the CUcontext for use with CUDA functions
@@ -110,102 +109,9 @@ cudaStream_t GetCurrentStream() { return cudaStreamDefault; }
 cudaEvent_t GetCurrentEvent() {return GetEvent(GetCurrentDevice());}
 Devices g_devices;    // one global device pool
 
-
-// try to acquire a device exclusively; managed through this library's private lock mechanism (i.e. not through CUDA APIs)
-static bool lockdevicebymutex (int physicaldeviceid)
-{
-    wchar_t buffer[80];
-    wsprintf (buffer, L"Global\\DBN.exe GPGPU exclusive lock for device %d", physicaldeviceid);
-    // we actually use a Windows-wide named mutex
-    HANDLE h = ::CreateMutex (NULL/*security attr*/, TRUE/*bInitialOwner*/, buffer);
-    DWORD res = ::GetLastError();
-    if (h == NULL)  // failure  --this should not really happen
-    {
-        if (res == ERROR_ACCESS_DENIED)    // no access: already locked by another process
-        {
-            fprintf (stderr, "lockdevicebymutex: mutex access denied, assuming already locked '%S'\n", buffer);
-            return false;
-        }
-        fprintf (stderr, "lockdevicebymutex: failed to create '%S': %d\n", buffer, res);
-        throw std::runtime_error ("lockdevicebymutex: unexpected failure");
-    }
-    // got a handle
-    if (res == 0)   // no error
-    {
-        fprintf (stderr, "lockdevicebymutex: created and acquired mutex '%S'\n", buffer);
-        return true;
-    }
-    // failure with handle  --remember to release the handle
-    ::CloseHandle (h);
-    if (res == ERROR_ALREADY_EXISTS)    // already locked by another process
-    {
-        fprintf (stderr, "lockdevicebymutex: mutex already locked '%S'\n", buffer);
-        return false;
-    }
-    else if (res != 0)
-    {
-        fprintf (stderr, "lockdevicebymutex: unexpected error from CreateMutex() when attempting to create and acquire mutex '%S': %d\n", buffer, res);
-        throw std::logic_error ("lockdevicebymutex: unexpected failure");
-    }
-    return false;
-}
 // initialize CUDA system
 void lazyinit()
 {
-#if 0
-    if (devicesallocated >= 0) return;
-    int numphysicaldevices = 0;
-    cudaGetDeviceCount (&numphysicaldevices) || "cudaGetDeviceCount failed";
-    fprintf (stderr, "lazyinit: %d physical CUDA devices detected\n", numphysicaldevices);
-#ifndef NOMULTIDEVICE
-       // we can emulate a larger number of GPUs than actually present, for dev purposes
-    int oversubscribe = 1;
-    const char * oversubscribevar = getenv ("DBNOVERSUBSCRIBEGPUS");
-    if (oversubscribevar)
-        oversubscribe = atoi (oversubscribevar);
-       const int numdevices = numphysicaldevices * oversubscribe;
-    // number of devices
-    // environment variable DBNMAXGPUS
-    //  - 0: use all, exclusively
-    //  - >0: limit to this number, exclusively  --default is 1
-       //        The number of available devices includes the emulated one by means of DBNOVERSUBSCRIBEGPUS
-    //  - <0: use this number but bypassing the exclusive check, for debugging/quick stuff
-    int devlimit = 1;
-    bool exclusive = true;
-    const char * devlimitvar = getenv ("DBNMAXGPUS");
-    if (devlimitvar)
-        devlimit = atoi (devlimitvar);
-    if (devlimit < 0)
-    {
-        devlimit = -devlimit;
-        exclusive = false; // allow non-exclusive use
-    }
-    if (devlimit == 0)
-        devlimit = INT_MAX;
-    // initialize CUDA device API
-    cuInit (0) || "cuInit failed";
-    // initialize the system
-    devicesallocated = 0;
-    for (int deviceid = 0; deviceid < numdevices && devicesallocated < devlimit; deviceid++)    // loop over all physical devices
-    {
-        // check if device is available by trying to lock it
-        bool available = !exclusive || lockdevicebymutex (deviceid); // try to acquire the lock
-        
-        if (!available)           // not available: don't use it
-        {
-            fprintf (stderr, "CUDA device %d already in use, skipping\n", deviceid);
-            continue;
-        }
-        // OK to allocate
-              const int physicaldeviceid = deviceid % numphysicaldevices;   // not the same in case of DBNOVERSUBSCRIBEGPUS > 1
-        cudadevicecontexts[devicesallocated].init (physicaldeviceid);
-        devicesallocated++;
-    }
-    fprintf (stderr, "using %d on %d physically present CUDA devices%s\n", devicesallocated, numphysicaldevices, exclusive ? " exclusively" : "");
-#else
-    devicesallocated = 1;
-#endif
-#endif 
 }
 
 void initwithdeviceid(size_t deviceid)
@@ -214,7 +120,7 @@ void initwithdeviceid(size_t deviceid)
     devicesallocated = 0;
     cudadevicecontexts[devicesallocated].init(deviceid);
     devicesallocated++;
-    fprintf(stderr, "using  CUDA devices%d \n", deviceid);
+    fprintf(stderr, "using  CUDA devices%d \n", (int)deviceid);
 }
 
 // get number of devices
@@ -244,7 +150,7 @@ void setdevicecontext (size_t deviceid)
 #ifndef NOMULTIDEVICE
     //if (currentcudadevicecontext != NULL)
     //    throw std::logic_error ("setdevicecontext: a device context has already been set --??");
-    if (deviceid >= _countof (cudadevicecontexts))
+    if (deviceid >= (sizeof(cudadevicecontexts) / sizeof(cudadevicecontext)))
         throw std::logic_error ("setdevicecontext: device id exceeds size of fixed-size array cudadevicecontexts[]");
     cudadevicecontext & c = cudadevicecontexts[deviceid];
 

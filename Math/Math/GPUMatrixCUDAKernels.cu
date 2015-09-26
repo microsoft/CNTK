@@ -4481,7 +4481,7 @@ template<class ElemType>
 __global__ void _AssignSequenceError(const ElemType hsmoothingWeight, ElemType *error, const ElemType *label,
 	const ElemType *dnnoutput, const ElemType *gamma, ElemType alpha, const long N)
 {
-	LONG64 id = blockDim.x * blockIdx.x + threadIdx.x;
+	int id = blockDim.x * blockIdx.x + threadIdx.x;
 	if (id >= N)
 		return;
 	error[id] -= alpha * (label[id] - (1.0 - hsmoothingWeight)*dnnoutput[id] - hsmoothingWeight * gamma[id]);

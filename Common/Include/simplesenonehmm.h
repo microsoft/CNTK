@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <algorithm>    // for find()
 #include "simple_checked_arrays.h"
+#include <limits.h>
 
 namespace msra { namespace asr {
 

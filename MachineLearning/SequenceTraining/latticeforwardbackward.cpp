@@ -2,21 +2,22 @@
 //
 // F. Seide, V-hansu
 
-#pragma once
-
 #include "basetypes.h"
 #include "simple_checked_arrays.h"
 #include "latticearchive.h"
 #include "simplesenonehmm.h"    // the model
 #include "ssematrix.h"          // the matrices
 #include "latticestorage.h"
-#include <hash_map>
+#include <unordered_map>
+#include <list>
 
 #undef PRINT_TIME_MEASUREMENT       // [v-hansu]
 #define VIRGINLOGZERO (10 * LOGZERO)            // used for printing statistics on unseen states
 #undef CPU_VERIFICATION
 
+#ifdef _WIN32
 int msra::numa::node_override = -1;     // for numahelpers.h
+#endif
 
 namespace msra { namespace lattices {
 
@@ -26,7 +27,7 @@ namespace msra { namespace lattices {
 
 class littlematrixheap
 {
-    static const size_t CHUNKSIZE = 256*1024;   // 1 MB
+    static const size_t CHUNKSIZE;
     typedef msra::math::ssematrixfrombuffer matrixfrombuffer;
     std::list<std::vector<float>> heap;
     size_t allocatedinlast; // in last heap element
@@ -63,6 +64,8 @@ public:
         return matrix;
     }
 };
+
+const size_t littlematrixheap::CHUNKSIZE = 256*1024; // 1 MB
 
 // ---------------------------------------------------------------------------
 // helpers for log-domain addition
@@ -183,7 +186,7 @@ template<typename FLOAT> static bool islogzero (FLOAT v) { return v < LOGZERO/2;
                 const float acLL = logLLs(s,t);
                 if (islogzero (acLL))
                     fprintf (stderr, "forwardbackwardedge: WARNING: edge J=%d unit %d (%s) frames [%d,%d) ac score(%d,%d) is zero (%d st, %d fr: %s)\n",
-                    edgeindex, (int) k, hmm.getname(), (int) ts, (int) te,
+                    (int)edgeindex, (int) k, hmm.getname(), (int) ts, (int) te,
                     (int) s, (int) t,
                     (int) logbetas.rows(), (int) logbetas.cols(), gettranscript (units, hset).c_str());
                 const float betajt = logbetas(j,t);     // sum over all all path exiting from (j,t) to end
@@ -211,7 +214,7 @@ template<typename FLOAT> static bool islogzero (FLOAT v) { return v < LOGZERO/2;
         bwscore = exitscore;
         if (islogzero (bwscore))
             fprintf (stderr, "forwardbackwardedge: WARNING: edge J=%d unit %d (%s) frames [%d,%d) bw score is zero (%d st, %d fr: %s)\n",
-            edgeindex, (int) k, hmm.getname(), (int) ts, (int) te, (int) logbetas.rows(), (int) logbetas.cols(), gettranscript (units, hset).c_str());
+            (int)edgeindex, (int) k, hmm.getname(), (int) ts, (int) te, (int) logbetas.rows(), (int) logbetas.cols(), gettranscript (units, hset).c_str());
 
         te = ts;
         je = js;
@@ -292,17 +295,17 @@ template<typename FLOAT> static bool islogzero (FLOAT v) { return v < LOGZERO/2;
     // These cases must be handled separately. If the whole path is 0 (0 prob is on the only path at some point) then skip the lattice.
     if (islogzero (totalbwscore) ^ islogzero (totalfwscore))
         fprintf (stderr, "forwardbackwardedge: WARNING: edge J=%d fw and bw 0 score %.10f vs. %.10f (%d st, %d fr: %s)\n",
-        edgeindex, (float) totalfwscore, (float) totalbwscore, (int) js, (int) ts, gettranscript (units, hset).c_str());
+        (int)edgeindex, (float) totalfwscore, (float) totalbwscore, (int) js, (int) ts, gettranscript (units, hset).c_str());
     if (islogzero (totalbwscore))
     {
         fprintf (stderr, "forwardbackwardedge: WARNING: edge J=%d has zero ac. score (%d st, %d fr: %s)\n",
-            edgeindex, (int) js, (int) ts, gettranscript (units, hset).c_str());
+                 (int)edgeindex, (int) js, (int) ts, gettranscript (units, hset).c_str());
         return LOGZERO;
     }
 
     if (fabsf (totalfwscore - totalbwscore) / ts > 1e-4f)
         fprintf (stderr, "forwardbackwardedge: WARNING: edge J=%d fw and bw score %.10f vs. %.10f (%d st, %d fr: %s)\n",
-        edgeindex, (float) totalfwscore, (float) totalbwscore, (int) js, (int) ts, gettranscript (units, hset).c_str());
+        (int)edgeindex, (float) totalfwscore, (float) totalbwscore, (int) js, (int) ts, gettranscript (units, hset).c_str());
 
     // we return the full path score
     return totalfwscore;
@@ -414,7 +417,7 @@ template<typename FLOAT> static bool islogzero (FLOAT v) { return v < LOGZERO/2;
     if (islogzero (fwscore))
     {
         fprintf (stderr, "alignedge: WARNING: edge J=%d has zero ac. score (%d st, %d fr: %s)\n",
-            edgeindex, (int) js, (int) ts, gettranscript (units, hset).c_str());
+                 (int)edgeindex, (int) js, (int) ts, gettranscript (units, hset).c_str());
         return LOGZERO;
     }
 
@@ -746,7 +749,7 @@ double lattice::forwardbackwardlatticesMBR (const std::vector<float> & edgeacsco
     // TODO: we will later have code that adds this path if needed
     size_t oracleframeacc = maxcorrect.back();
     if (oracleframeacc != info.numframes)
-        fprintf (stderr, "forwardbackwardlatticesMBR: ground-truth path missing from lattice (most correct path: %d out of %d frames correct)\n", (unsigned int) oracleframeacc, (unsigned int) info.numframes);
+        fprintf (stderr, "forwardbackwardlatticesMBR: ground-truth path missing from lattice (most correct path: %d out of %d frames correct)\n", (unsigned int) oracleframeacc, (int) info.numframes);
 
     // backward pass and computation of state-conditioned frames-correct count
     for (size_t j = edges.size() -1; j+1 > 0; j--)
@@ -897,7 +900,7 @@ void lattice::forwardbackwardalign (parallelstate & parallelstate,
             }
         }
         if (minlogpp > LOGZERO)
-            fprintf(stderr, "forwardbackwardalign: %d of %d edges pruned\n", countskip, edges.size());
+            fprintf(stderr, "forwardbackwardalign: %d of %d edges pruned\n", (int)countskip, (int)edges.size());
     }
     const double abcsallocatedur = timerabcsallocate;
 
@@ -1048,7 +1051,7 @@ void lattice::forwardbackwardalign (parallelstate & parallelstate,
                 for (size_t t = ts; t < te; t++)
                 {
                     if (thisedgealignments[j][t-ts] != thisedgealignmentsgpu[j][t-ts])
-                        fprintf (stderr, "edge %d, sil ? %d, time %d, alignment / alignmentgpu MISMATCH %d v.s. %d\n", j, edgehassil ? 1 : 0, t-ts, thisedgealignments[j][t-ts], thisedgealignmentsgpu[j][t-ts]);
+                        fprintf (stderr, "edge %d, sil ? %d, time %d, alignment / alignmentgpu MISMATCH %d v.s. %d\n", j, edgehassil ? 1 : 0, (int)(t-ts), thisedgealignments[j][t-ts], thisedgealignmentsgpu[j][t-ts]);
                 }
             }
         }
@@ -1284,7 +1287,7 @@ void lattice::mmierrorsignal (parallelstate & parallelstate, double minlogpp, co
             // TODO: count VIRGINLOGZERO, print per frame
         }
         if (fabs (logsum) / errorsignal.rows() > 1e-6)
-            fprintf (stderr, "forwardbackward: WARNING: overall posterior column(%d) sum = exp (%.10f) != 1\n", t, logsum);
+            fprintf (stderr, "forwardbackward: WARNING: overall posterior column(%d) sum = exp (%.10f) != 1\n", (int)t, logsum);
     }
     fprintf (stderr, "forwardbackward: %.3f%% non-zero state posteriors\n", 100.0f - nonzerostates * 100.0f / errorsignal.rows() / errorsignal.cols());
 
@@ -1441,7 +1444,7 @@ void sMBRdiagnostics (const msra::math::ssematrixbase & errorsignal, const_array
     }
     // print this to validate our bestpath computation
     fprintf (stderr, "sMBRdiagnostics: %d frames correct out of %d, %.2f%%, neg better in %d, pos in %d\n",
-             (int) numcor, errorsignal.cols(), 100.0f * numcor / errorsignal.cols(),
+             (int) numcor, (int)errorsignal.cols(), 100.0f * numcor / errorsignal.cols(),
              (int) numnegbetter, (int) numposbetter);
 }
 
@@ -1471,7 +1474,7 @@ void sMBRsuppressweirdstuff (msra::math::ssematrixbase & errorsignal, const_arra
     }
     // print this to validate our bestpath computation
     fprintf (stderr, "sMBRsuppressweirdstuff: %d weird frames out of %d, %.2f%% were flattened\n",
-             (int) numweird, errorsignal.cols(), 100.0f * numweird / errorsignal.cols());
+             (int) numweird, (int) errorsignal.cols(), 100.0f * numweird / errorsignal.cols());
 }
 
 
