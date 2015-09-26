@@ -6,7 +6,32 @@
 //
 #pragma once
 
-//The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
+// TODOs:
+//  - fully eliminate EvaluateThisNode(void), replace by EvaluateThisNode(FrameRange(void)), which will often elinminate special-casing
+//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, instead change Node::SetActualMiniBatchSizeFromFeatures()
+//    such that it infers its own MB size, and call it during the Evaluate() loop (maybe directly from EvaluateThisNode(), i.e. eliminate it as well or replace the virtual by a helper function)
+//    For moving into EvaluateThisNode directly,
+//    PRO:
+//     - doing it for every call allows to dynamically grow MB and layout frame-by-frame, allowing sophisticated models and ways
+//     - more code gone from individual nodes
+//    CON:
+//     - if moved out from Validate(), errors are not caught during validation (early failure is valuable).
+//       Although Validate() can check dimensions other than MB size, while MB-size consistency itself is ensured through layout sharing (and the Matrix functions as a last resort)
+//     - inside a loop
+//        - it has to check for every frame, although only the first frame really will make a difference
+//        - it's weird if it is called for a singe frame to update the size for the whole minibatch
+//  - elinminate individual AttachInput() versions with 1..6 arguments (change the outer ones to just call AttachInputs(vector))
+//    and implement the dimension check by a using a template parameter to ComputationNode<ElemType>.
+//    This will take out and standardize much code from Validate() (will often just be { InferMBLayoutFromInputsForStandardCase(); InferImageDimsFromInputs(); }
+//    i.e. Validate() could be completely removed in many cases.
+//  - fold EvaluateThisNodeS() into EvaluateThisNode(), same for partial
+//  - move NewThis() and OperationName() into the boilerplate macro UsingComputationNodeMembers
+//  - also eliminate EvaluateThisNodeGivenInputs()--that stuff is at least as much responsibility of Network
+//    We can also replace NeedToMaskMissingColumnsToZero() to a check against the node set itself inside Network --one more Node member gone (and a weird, unneccessary one at that)
+//  - finally, revise constructors, merge by means of default parameters
+// => many ComputationNode implementations only have two functions EvaluateThisNode(FrameRange) and ComputePartial(), as it was meant to be!
+
+// The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
 
 #include "File.h"
 #include "Matrix.h"
@@ -826,6 +851,7 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
+    // called by model editing operations, such as DeleteNode(); and by RebuildNetwork()
     void ClearCaches()
     {
         m_built.clear();
@@ -834,6 +860,8 @@ public:
         ClearCalcOrderCaches();
     }
 
+    // called by TrainOrAdaptModel() for refNet, and from PerformSVDDecomposition()
+    // TODO: Is this function really needed?
     void RebuildNetwork(const ComputationNodeBasePtr rootNode)
     {
         ClearCaches();
