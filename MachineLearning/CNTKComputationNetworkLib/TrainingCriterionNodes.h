@@ -490,7 +490,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
         {
-            assert (inputIndex == 0);
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(m_gradientOfL1Norm, Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues());
         }
 
@@ -586,7 +586,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
         {
-            assert (inputIndex == 0);
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues(), FunctionValues());
         }
 

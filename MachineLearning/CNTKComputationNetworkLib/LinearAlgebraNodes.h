@@ -41,13 +41,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            assert (inputIndex == 0);
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            assert (inputIndex == 0);
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -120,13 +120,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            assert (inputIndex == 0);
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            assert(inputIndex == 0);
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -210,13 +210,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            assert (inputIndex == 0);
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            assert (inputIndex == 0);
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -340,13 +340,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            assert (inputIndex == 0);
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_startIndex, m_numRows);
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            assert (inputIndex == 0);
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));

@@ -151,7 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            assert (inputIndex == 0);
+            assert(inputIndex == 0); inputIndex;
 
             // special case: DelayedValueNodes may be used outside of loops
             // TODO: this should be a bulk operation; this implementation is a quick hack
