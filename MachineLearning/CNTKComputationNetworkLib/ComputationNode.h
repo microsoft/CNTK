@@ -161,6 +161,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this is the main entry point for Network; while EvaluateThisNode(FrameRange()) is the virtual call into specific node implementation
         virtual void EvaluateThisNodeGivenInputs() = 0;
         virtual void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
+        virtual void EvaluateThisNodeGivenInputs2() = 0;
+        virtual void EvaluateThisNodeGivenInputs2(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
 
         virtual void Validate()
         {
@@ -869,8 +871,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /*implement*/void EvaluateThisNodeGivenInputs()
         {
             EvaluateThisNode(FrameRange());     // this is a call to the virtual function that implements the actual operation
+        }
 
-            if (NeedToMaskMissingColumnsToZero())       // this means the node does it by itself; if not, we do it for the node
+        /*implement*/void EvaluateThisNodeGivenInputs2()
+        {
+            //if (NeedToMaskMissingColumnsToZero())       // this means the node does it by itself; if not, we do it for the node
                 MaskMissingColumnsToZero(m_functionValues);
         }
 
@@ -880,8 +885,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /*implement*/void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
         {
             EvaluateThisNode(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
+        }
 
-            if (NeedToMaskMissingColumnsToZero())
+        /*implement*/void EvaluateThisNodeGivenInputs2(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
+        {
+            //if (NeedToMaskMissingColumnsToZero())
                 MaskMissingColumnsToZero(m_functionValues, timeIdxInSeq);
         }
 

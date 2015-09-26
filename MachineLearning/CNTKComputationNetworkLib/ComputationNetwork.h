@@ -559,7 +559,9 @@ public:
 
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
 
-    void SetRequestNodesMultiSeqHandling();
+    //void SetRequestNodesMultiSeqHandling();
+
+    bool NeedToMaskMissingColumnsToZero(const ComputationNodeBasePtr & node) const;
 
     // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
     // TODO: pass a set of nodes instead of only one
@@ -619,6 +621,8 @@ public:
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
                             (*nodeIter)->EvaluateThisNodeGivenInputs(t);
+                            if (NeedToMaskMissingColumnsToZero(*nodeIter))
+                                (*nodeIter)->EvaluateThisNodeGivenInputs2(t);
                             (*nodeIter)->UpdateEvalTimeStamp();
                         }
                     } 
@@ -630,6 +634,8 @@ public:
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
                             (*nodeIter)->EvaluateThisNodeGivenInputs(t);
+                            if (NeedToMaskMissingColumnsToZero(*nodeIter))
+                                (*nodeIter)->EvaluateThisNodeGivenInputs2(t);
                             (*nodeIter)->UpdateEvalTimeStamp();
                         }
                     }
@@ -651,6 +657,8 @@ public:
                 // we manage time stamp here so that derived classes don't need to worry about it
                 // TODO: is this the whole-batch evaluation?
                 (*nodeIter)->EvaluateThisNodeGivenInputs(); 
+                if (NeedToMaskMissingColumnsToZero(*nodeIter))
+                    (*nodeIter)->EvaluateThisNodeGivenInputs2();
                 (*nodeIter)->UpdateEvalTimeStamp();
             }
         }
