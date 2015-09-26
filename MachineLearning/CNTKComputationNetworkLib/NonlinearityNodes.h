@@ -49,15 +49,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Nonlinearities only have one input.");
+            assert (inputIndex == 0);
             ComputeInputPartialV(m_gradient, Inputs(0)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Nonlinearities only have one input.");
+            assert (inputIndex == 0);
 
             // TODO: this seems always the same pattern. This belongs into a base slice-extractor function.
             //       We should also unify these two functions into one that decides 1 frame or all frames at runtime... through the slice-extractor function itself.
@@ -92,9 +90,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 1) 
-                LogicError("Nonlinearity operations should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("Nonlinearity operation: the input node has 0 element.");
@@ -191,15 +186,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // we should get rid of this code dup, need to unify the -V functions
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Sigmoid only has one input.");
+            assert (inputIndex == 0);
             ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Sigmoid only has one input.");
+            assert (inputIndex == 0);
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -247,15 +240,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: unify signature & get rid of code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Tanh only has one input.");
+            assert (inputIndex == 0);
             ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Tanh only has one input.");
+            assert (inputIndex == 0);
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -305,15 +296,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: get rid of code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Log only has one input.");
+            assert (inputIndex == 0);
             ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Log only has one input.");
+            assert (inputIndex == 0);
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -362,15 +351,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: get rid of code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Exp only has one input.");
+            assert (inputIndex == 0);
             ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Exp only has one input.");
+            assert (inputIndex == 0);
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -418,15 +405,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Cosine only has one input.");
+            assert (inputIndex == 0);
             ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Cosine only has one input.");
+            assert (inputIndex == 0);
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -478,15 +463,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Softmax only has one input.");
+            assert (inputIndex == 0);
             ComputeInputPartialS(m_gradient, m_diff, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Softmax only has one input.");
+            assert (inputIndex == 0);
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -531,9 +514,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 1) 
-                LogicError("SoftmaxNode operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("SoftmaxNode operation: the input node has 0 element.");
@@ -583,16 +563,13 @@ private:
         // TODO: code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Softmax only has one input.");
+            assert (inputIndex == 0);
             ComputeInputPartialS(m_gradient, m_softmax, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
-
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Softmax only has one input.");
+            assert (inputIndex == 0);
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -625,9 +602,6 @@ private:
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 1)
-                LogicError("LogSoftmaxNode operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("LogSoftmaxNode operation: the input node has 0 element.");
@@ -975,9 +949,6 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 4)
-                LogicError("GMMLogLikelihoodNode requires four inputs.");
-
             size_t rows[4], cols[4];
             for (int i = 0; i < 4; i++)
             {
@@ -1175,9 +1146,6 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("Dropout operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("Dropout operation: the input node has 0 element.");
 
@@ -1345,9 +1313,6 @@ private:
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 1)
-                LogicError("Reshape operation: Should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("Reshape operation: The input node has 0 element.");
@@ -1603,9 +1568,6 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("RowRepeat operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("RowRepeat  operation: the input node has 0 element.");
 
@@ -1637,16 +1599,13 @@ private:
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("RowRepeat only has one input.");
-
+            assert (inputIndex == 0);
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_numRepeat);
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("RowRepeat only has one input.");
+            assert (inputIndex == 0);
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));

@@ -41,15 +41,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Negate operation only has one input.");
+            assert (inputIndex == 0);
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Negate operation only has one input.");
+            assert (inputIndex == 0);
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -85,9 +83,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 1) 
-                LogicError("Negate operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("Negate operation: the input node has 0 element.");
@@ -125,16 +120,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("SumElements only has one input.");
+            assert (inputIndex == 0);
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("SumElements only has one input.");
-
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
@@ -171,9 +162,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 1) 
-                LogicError("SumElements operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("SumElements operation: the input node has 0 element.");
@@ -220,15 +208,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("SumColumnElements only has one input.");
+            assert (inputIndex == 0);
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("SumColumnElements only has one input.");
+            assert (inputIndex == 0);
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -265,9 +251,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 1)
-                LogicError("SumColumnElements operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("SumColumnElements operation: the input node has 0 element.");
@@ -355,15 +338,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("RowSlice only has one input.");
+            assert (inputIndex == 0);
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_startIndex, m_numRows);
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("RowSlice only has one input.");
+            assert (inputIndex == 0);
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -400,9 +381,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 1) 
-                LogicError("RowSlice operation should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("RowSlice operation: the input node has 0 element.");
@@ -517,10 +495,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() < 2)
-                LogicError("RowStack operation: must have two or more inputs.");
-
-            if (Inputs(0) == nullptr)
+            if (Inputs(0) == nullptr)   // TODO: Base::Validate() will fail for this
                 LogicError("RowStack operation: the input node is NULL.");
 
             size_t numCols = Inputs(0)->FunctionValues().GetNumCols();
@@ -665,9 +640,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 2) 
-                LogicError("Scale operation requires two inputs.");
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 LogicError("Scale operation: one of the operands has 0 element.");
@@ -816,9 +788,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 2) 
-                LogicError("Times operation requires two inputs.");
 
             //support automatic dimension inference for learnable parameters
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
@@ -982,9 +951,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2)
-                LogicError("TransposeTimes operation requires two inputs.");
-
             //support automatic dimension inference for learnable parameters
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
@@ -1105,9 +1071,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 2) 
-                LogicError("ElementTimes operation requires two inputs.");
 
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
@@ -1257,9 +1220,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2)
-                LogicError("RowElementTimes operation requires two inputs.");
-
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 LogicError("RowElementTimes operation: one of the operants has 0 element.");
 
@@ -1404,9 +1364,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 2)
-                LogicError("ColumnElementTimes operation requires two inputs.");
 
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
@@ -1638,9 +1595,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 2) 
-                LogicError("Plus operation requires two inputs.");
 
             //if dimension not specified we assume two operants' dimensions should be the same
             size_t index = 0;
@@ -1925,9 +1879,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("Minus operation requires two inputs.");
-
             //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
@@ -2074,19 +2025,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("DiagTimes operation requires two inputs.");
-
             //if dimension not specified we assume two operants' dimensions should match
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0 && Inputs(1)->FunctionValues().GetNumRows() != 0)
-            {
                 Inputs(0)->FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), 1);
-            }
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() != 0 && Inputs(1)->FunctionValues().GetNumRows() == 0)
-            {
                 Inputs(1)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 LogicError("DiagTimes operation: one of the operants has 0 element.");
@@ -2278,9 +2222,6 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("CosDistance operation requires two inputs.");
-
             //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
@@ -2451,15 +2392,12 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("KhatriRaoProduct operation requires two inputs.");
-
             //support automatic dimension inference for learnable parameters
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
 
             if (rows0 == 0 || rows1 == 0)
-                throw logic_error("KhatriRaoProduct operation: The number of rows in the input should not be 0.");
+                LogicError("KhatriRaoProduct operation: The number of rows in the input should not be 0.");
 
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && cols1 != 0)
                 Inputs(0)->FunctionValues().Resize(rows0, cols1);
@@ -2686,9 +2624,6 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 4)
-                LogicError("CosDistanceWithNegativeSamples operation requires 4 inputs.");
-
             //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
@@ -2842,9 +2777,6 @@ private:
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 1)
-                LogicError("Transpose operation requires one input.");
 
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
 
@@ -3186,9 +3118,6 @@ private:
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 3)
-                LogicError("StrideTimes operation requires three inputs.");
 
             //support automatic dimension inference for learnable parameters
             if (Inputs(2)->FunctionValues().GetNumElements() != 1)

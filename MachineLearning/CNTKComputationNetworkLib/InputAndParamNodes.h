@@ -617,10 +617,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("PairNetwork operation should have one input.");
-
-            if (!(Inputs(0) == nullptr))
+            if (!(Inputs(0) == nullptr))    // TODO: Base::Validate() will fail on NULL inputs
             {
                 size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
 

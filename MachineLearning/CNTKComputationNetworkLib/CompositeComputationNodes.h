@@ -94,9 +94,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2)
-                LogicError("Parallel operation requires two inputs.");
-
             size_t rows1, cols1;
             rows1 = Inputs(1)->FunctionValues().GetNumRows();
             cols1 = Inputs(1)->FunctionValues().GetNumCols();
@@ -329,9 +326,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("Mean operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("Mean operation: the input node has 0 element.");
 
@@ -459,9 +453,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("InvStdDev operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("InvStdDev operation: the input node has 0 element.");
 
@@ -578,9 +569,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 3)
-                LogicError("PerDimMeanVarNormalizationNode criterion requires three inputs.");
 
             if (Inputs(0)->RequiresPreCompute())
             {
@@ -730,9 +718,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 3)
-                LogicError("PerDimMeanVarDeNormalizationNode criterion requires three inputs.");
 
             if (Inputs(0)->RequiresPreCompute())
             {
@@ -1000,12 +985,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("TimeReverse operation requires one input.");
-
-            size_t rows, cols;
-            rows = Inputs(0)->FunctionValues().GetNumRows();
-            cols = Inputs(0)->FunctionValues().GetNumCols();
+            size_t rows = Inputs(0)->FunctionValues().GetNumRows();
+            size_t cols = Inputs(0)->FunctionValues().GetNumCols();
 
             FunctionValues().Resize(rows, cols);
             InferImageDimsFromInput(0);

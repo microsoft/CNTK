@@ -75,9 +75,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("SquareError operation requires two inputs.");
-
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
@@ -240,9 +237,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("CrossEntropyWithSoftmaxNode criterion requires two inputs.");
-
             // This breaks re-shaping of the label matrix
             /*if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
             LogicError("CrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");*/
@@ -396,8 +390,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("CrossEntropyNode criterion requires two inputs.");
             if (Inputs(0)->OperationName() != L"InputValue")
                 LogicError("CrossEntropyNode criterion requires the first input to be the label.");
 
@@ -498,9 +490,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
         {
-            if (inputIndex != 0)
-                InvalidArgument("MatrixL1RegNode only has one input.");
-
+            assert (inputIndex == 0);
             ComputeInputPartialS(m_gradientOfL1Norm, Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues());
         }
 
@@ -530,8 +520,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1) 
-                LogicError("MatrixL1Reg criterion should have one input.");
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("MatrixL1Reg operation: the input node has 0 element.");
 
@@ -598,9 +586,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
         {
-            if (inputIndex != 0)
-                InvalidArgument("MatrixL2RegNode only has one input.");
-
+            assert (inputIndex == 0);
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues(), FunctionValues());
         }
 
@@ -629,8 +615,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1) 
-                LogicError("MatrixL2Reg criterion should have one input.");
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("MatrixL2Reg operation: the input node has 0 element.");
 
@@ -797,8 +781,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 4)
-                LogicError("NoiseContrastiveEstimationNode criterion requires four inputs.");
             if (Inputs(0)->OperationName() != OperationNameOf(InputValue))
                 LogicError("NoiseContrastiveEstimationNode criterion requires the first input to be the label.");
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
@@ -1146,8 +1128,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 4)
-                LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires four inputs.");
             if (Inputs(0)->OperationName() != OperationNameOf(InputValue))
                 LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
@@ -1465,9 +1445,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 3)
-                LogicError("CRFNode requires three inputs.");
-
             if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&  // position dependent and pair scores have same number of labels
                 Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
                 Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() && // position dependent and pair scores have the same observation numbers
@@ -1586,8 +1563,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 3) 
-                LogicError("DummyCriterionNode criterion requires three inputs.");
             if (Inputs(0)->OperationName() != L"InputValue")
                 LogicError("DummyCriterionNode criterion requires the first input to be computed objectives.");
             if (Inputs(0)->OperationName() != L"InputValue")

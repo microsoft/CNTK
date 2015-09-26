@@ -64,9 +64,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("ErrorPrediction operation requires two inputs.");
-
             size_t index = 0;
             // TODO: use dynamic_pointer_cast instead
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))

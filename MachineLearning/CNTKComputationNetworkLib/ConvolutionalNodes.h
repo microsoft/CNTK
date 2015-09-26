@@ -273,9 +273,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("ConvolutionNode requires two inputs.");
-
             //we may want to remove this check in the future if we want to support the case that the weight itself is result of some computation 
             //if (Inputs(0)->OperationName() != OperationNameOf(LearnableParameter))
             //    LogicError("ConvolutionNode requires the first input to be LearnableParameter type.");
@@ -456,9 +453,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 1)
-                LogicError("PoolingNodes require one input.");
 
             if (m_horizontalSubsample > m_windowWidth || m_verticalSubsample > m_windowHeight)
                 InvalidArgument("PoolingNodeBase: horizontalSubsample must <= windowWidth and verticalSubsample must <= windowHeight.");
