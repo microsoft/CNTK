@@ -76,7 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << m_initialActivationValue;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             // the node has already been initialized e.g. w.r.t. direction and sequence flags
             Base::LoadFromFile(fstream, modelVersion);
@@ -297,7 +297,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::MaskMissingColumnsToZero(m_functionValues, t); // TODO: make this take a FrameRange
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -416,7 +416,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #if 0
         // TODO: why is this loop not in th underlying execution engine? This node should not have to know about this.
-        virtual void EvaluateThisNode()  
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
         {
             assert(m_timeStep > 0);
 
@@ -431,8 +431,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
 #if 0
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)  
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             EvaluateThisNodeRP(frameRange, frameRange.t() == 0);
         }
 #endif
@@ -474,7 +475,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
 #if 0
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             assert(m_timeStep > 0);
 
@@ -488,8 +489,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
 #if 0
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             //EvaluateThisNodeRP(frameRange, frameRange.t() == Inputs(0)->FunctionValues().GetNumCols() / GetNumParallelSequences() - 1);
             EvaluateThisNodeRP(frameRange, frameRange.t() == Inputs(0)->GetNumTimeSteps() - 1);
         }
@@ -521,10 +523,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class LSTMNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<5>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"LSTM"; }
     public:
-        LSTMNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name),
+        LSTMNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name),
             m_State(deviceId), m_PastState(deviceId),
             m_PastOutput(deviceId), m_Gi(deviceId), m_Gf(deviceId), m_Go(deviceId), grdToObs(deviceId), grdToInputGate(deviceId),
             grdToForgetGate(deviceId), grdToOutputGate(deviceId), grdToCellWgt(deviceId), tanhObs(deviceId),
@@ -541,14 +543,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
 
-        virtual void SaveToFile(File& fstream) const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream << m_inputDim << m_outputDim;
             fstream << m_DefaultState;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             if (modelVersion == 2)
@@ -973,7 +975,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             size_t nT = Inputs(0)->FunctionValues().GetNumCols();
             size_t outputDim = Inputs(1)->FunctionValues().GetNumRows();
@@ -1294,7 +1296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // input(3) : output gate [outputdim x [inputdim + outputdim + 2]] for bo, Wxo, Who, and Wco
         // input(4) : memory cell weight [outputdim x [inputdim + outputdim + 1]] for bc, Wxc, and Whc 
         // output : dimension [outputdim x T]
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -1396,7 +1398,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 FunctionValues().Resize(nOutput, nT);
 
                 m_DefaultState = 0.0;
-                EvaluateThisNode();
+                EvaluateThisNode(FrameRange());
 
                 // check with expected values
                 if (!ISCLOSE(FunctionValues()(0, 0), 0.0335975, EPSILON) ||
@@ -1498,7 +1500,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             grdBeforeTanhInputGate.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
             fstream << L"Input[Width:" << m_inputDim << L"]  \n" ; 

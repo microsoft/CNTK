@@ -150,19 +150,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) = 0;
 
-        virtual void EvaluateThisNode()
-        {
-            EvaluateThisNode(FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
-        }
+        //void EvaluateThisNode()   // this is gone; instead, call it this way directly
+        //{
+        //    EvaluateThisNode(FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
+        //}
         // evaluate only N frames at time index timeIdxInSeq
         // Normally, N is 1 or it spans the entire minibatch.
         virtual void EvaluateThisNode(const FrameRange &) = 0;
-        // evaluate a node--this calls EvaluateThisNode() and MaskMissingColumnsToZero() if needed
-        // this is the main entry point for Network; while EvaluateThisNode() is the virtual call into specific node implementation
+        // evaluate a node--this calls EvaluateThisNode(FrameRange()) and MaskMissingColumnsToZero() if needed
+        // this is the main entry point for Network; while EvaluateThisNode(FrameRange()) is the virtual call into specific node implementation
         virtual void EvaluateThisNodeGivenInputs() = 0;
         virtual void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void Validate()
         {
             for (size_t i = 0; i < m_children.size(); i++)
                 if (!m_children[i])
@@ -190,7 +190,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual bool RequiresPreCompute() const { return false; }
 
         // return true if the node's value should be computed in batch mode only, e.g., time-reverse node
-        virtual bool RequiresBatchMode() const { return false; }
+        //virtual bool RequiresBatchMode() const { return false; }  // not used actually
 
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const = 0;
 
@@ -868,7 +868,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /*implement*/void EvaluateThisNodeGivenInputs()
         {
-            EvaluateThisNode();     // this is a call to the virtual function that implements the actual operation
+            EvaluateThisNode(FrameRange());     // this is a call to the virtual function that implements the actual operation
 
             if (NeedToMaskMissingColumnsToZero())       // this means the node does it by itself; if not, we do it for the node
                 MaskMissingColumnsToZero(m_functionValues);
@@ -1280,6 +1280,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
 
     // This will provide default implementations for those two functions that will fail at runtime with a meaningful error.
+    // TODO: Most of these are reduce nodes that output a single number, no MBLayout. Maybe abstract those out further
     template<class ElemType>
     class ComputationNodeNonLooping : public ComputationNode<ElemType>
     {
@@ -1290,17 +1291,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
+        // TODO: check range here? Or just make a helper function with the test? Or use DataSlice()??
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &)
         {
             LogicError("%s node should never be in a loop.", typeid(*this).name());
         }
-        virtual void EvaluateThisNode(const FrameRange &)
+        // non-looping node types instead implement this function...
+        virtual void EvaluateThisNodeNonLooping() = 0;
+        // ...which we call from our overload, but not before we checked that indeed the entire batch is passed
+        virtual void EvaluateThisNode(const FrameRange & frameRange)
         {
-            LogicError("%s node should never be in a loop.", typeid(*this).name());
+            if (frameRange.IsAllFrames())
+                EvaluateThisNodeNonLooping();
+            else
+                LogicError("%s node should never be in a loop.", typeid(*this).name());
         }
         // classes that derive from this must implement the non-range version
         virtual void ComputeInputPartial(const size_t inputIndex) = 0;
-        virtual void EvaluateThisNode() = 0;
     };
 
     // helper macro to ease access to base members in presence of C++ two-phase name lookup

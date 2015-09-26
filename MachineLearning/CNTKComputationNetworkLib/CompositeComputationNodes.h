@@ -35,11 +35,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ParallelNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Parallel"; }
     public:
         ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -67,7 +67,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues += gradientValues;
         }
 
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
         }
@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// input(0) : [nDim1 X T]
         /// input(1) : [nDim2 X T]
         /// output   : [[nDim1 + nDim2] X T]
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -145,7 +145,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(1)->FunctionValues()(0, 2) = 6;
             FunctionValues().Resize(nInput0 + nInput1, nT);
 
-            EvaluateThisNode();
+            EvaluateThisNode(FrameRange());
 
             /// check with expected values
             if (!ISCLOSE(FunctionValues()(0, 0), 1, EPSILON) ||
@@ -201,10 +201,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class PreComputedNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers;
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
-        PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
+        PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name)
         {
             // further initializations
             m_hasComputed = false;
@@ -215,21 +215,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual bool RequiresPreCompute() const { return true;}
 
-        virtual void SaveToFile(File& fstream)  const
+        virtual void SaveToFile(File& fstream)  const override
         {
             Base::SaveToFile(fstream);
             fstream << m_hasComputed;
             fstream << m_functionValues;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_hasComputed;
             fstream >> m_functionValues;
         }
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
@@ -276,7 +276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSamples(0)
         { }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             m_numSamples = 0;   // TODO: intended? Not loaded from file?
@@ -298,7 +298,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("Mean operation should not be involved in the gradient calculation.");
         }
 
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             if (!m_hasComputed)
             {
@@ -322,7 +322,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -373,7 +373,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSamples(0)
         { }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             m_numSamples = 0;   // TODO: intended? not loading from file?
@@ -416,7 +416,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("InvStdDev operation should not be involved in the gradient calculation.");
         }
 
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             if (!m_hasComputed)
             {
@@ -449,7 +449,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -527,14 +527,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //(feature-mean).*InvStdDev
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(),
                               Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             //only feature (input0) and output needs to be sliced
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -566,7 +567,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -669,14 +670,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //(feature-mean).*InvStdDev
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(),
                               Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             //only feature (input0) and output needs to be sliced
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -715,7 +717,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -804,53 +806,56 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     This is used in case of beam search decoding. Batchmode node must be processed before other nodes.
     It differs from PreComputeNode in that precompute done is done before the entire corpus.
     This is done before forward computation of all nodes.
-    This node is similar to the PreComputeNode, but is an abstract of it.
     */
     template<class ElemType>
     class BatchModeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        // all nodes require precomputation should derive from it
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        // all nodes require precomputation should derive from this class
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers;
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         BatchModeNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_memory(deviceId)
         { }
 
         virtual bool HasComputed() const = 0;
         virtual void MarkComputed(const bool hasComputed) = 0;
 
-        virtual bool RequiresBatchMode() const { return true; }
+        //virtual bool RequiresBatchMode() const { return true; }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+#if 0   // I think this is a left-over. It does not seem to fit BatchMode
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             assert(m_memory.GetNumCols() > 0);
 
+            // BUGBUG: this is broken
+            // TODO: what is this? Derives from ComputationNodeNonLooping, yet implemented a frame loop?
             //FunctionValues().Resize(m_memory.GetNumRows(), GetNumParallelSequences());
-            FunctionValues().Resize(m_memory.GetNumRows(), frameRange.NumCols());   // extra space for one time step
+            FunctionValues().Resize(m_memory.GetNumRows(), GetNumParallelSequences());   // extra space for one time step
             if (frameRange.t() == 0)    // for first frame, check that we got all in memory  --TODO: is this comment correct? How about going backwards?
                 assert(ValueSlice(FrameRange(0, GetNumParallelSequences())).FrobeniusNorm() == DataSlice(m_memory, FrameRange(0, GetNumParallelSequences())).FrobeniusNorm());
                 //assert(FunctionValues().ColumnSlice(0, GetNumParallelSequences()), m_pMBLayout).FrobeniusNorm() == m_memory.ColumnSlice(0, GetNumParallelSequences()), m_pMBLayout).FrobeniusNorm());
             FunctionValues().SetValue(DataSlice(m_memory, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout)));
             assert(FunctionValues().GetNumCols() == GetNumParallelSequences());
         }
+#endif
 
-        virtual void SaveToFile(File& fstream)  const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream << m_hasComputed;
             fstream << m_functionValues;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_hasComputed;
             fstream >> m_functionValues;
         }
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
@@ -875,10 +880,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         protected:  \
             using Base::m_memory; using Base::m_hasComputed; \
         public: \
-            using Base::HasComputed; using Base::MarkComputed; using Base::RequiresBatchMode
-
-    //template class BatchModeNode<float>;
-    //template class BatchModeNode<double>;
+            using Base::HasComputed; using Base::MarkComputed
 
     // -----------------------------------------------------------------------
     // TimeReverseNode (input)
@@ -952,7 +954,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         }
 
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             if (m_hasComputed == false)
             {
@@ -981,7 +983,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -1017,7 +1019,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(0)->FunctionValues()(0, 2) = 3;
             FunctionValues().Resize(nOutput, nT);
             Inputs(0)->FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
-            EvaluateThisNode();
+            EvaluateThisNode(FrameRange());
 
             /// check with expected values
             if (!ISCLOSE(FunctionValues()(0, 0), 3, EPSILON) ||

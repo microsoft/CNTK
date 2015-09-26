@@ -25,11 +25,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SquareErrorNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"SquareError"; }
     public:
         SquareErrorNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_leftMinusRight(deviceId)
         { }
 
@@ -54,7 +54,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddWithScaleOf(-gradientValues.Get00Element(), leftMinusRight);
         }
 
-        virtual void EvaluateThisNode()  
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_leftMinusRight, shared_from_this());
         }
@@ -71,7 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -154,11 +154,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class CrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"CrossEntropyWithSoftmax"; }
     public:
         CrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId)
         { }
 
@@ -211,7 +211,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, shared_from_this());
         }
@@ -233,7 +233,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -329,19 +329,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class CrossEntropyNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"CrossEntropy"; }
     public:
         CrossEntropyNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_logOfRight(deviceId), m_leftDivRight(deviceId)
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex > 1)
-                InvalidArgument("CrossEntropy criterion only takes two inputs.");
-
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
@@ -368,7 +365,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
         }
 
-        virtual void EvaluateThisNode()   //-sum(left_i * log(right_i))
+        //-sum(left_i * log(right_i))
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_logOfRight, shared_from_this());
         }
@@ -386,7 +384,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -480,11 +478,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MatrixL1RegNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"MatrixL1Reg"; }
     public:
         MatrixL1RegNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_gradientOfL1Norm(deviceId)
         { }
 
@@ -501,7 +499,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddWithScaleOf(gradientValues.Get00Element(), gradientOfL1Norm);
         }
 
-        virtual void EvaluateThisNode()  
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             Base::MaskMissingColumnsToZero(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
@@ -516,7 +514,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -576,11 +574,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MatrixL2RegNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"MatrixL2Reg"; }
     public:
         MatrixL2RegNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_temp(deviceId)
         { }
 
@@ -596,7 +594,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddWithScaleOf(v, inputFunctionValues);
         }
 
-        virtual void EvaluateThisNode()  
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             Base::MaskMissingColumnsToZero(Inputs(0)->FunctionValues());
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
@@ -611,7 +609,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -665,30 +663,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class NoiseContrastiveEstimationNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<4>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"NCEBasedCrossEntropyWithSoftmax"; }
     public:
         NoiseContrastiveEstimationNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_logSoftmax(deviceId),
             m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId),
             m_evalMode(NCEEvalMode::None)
         { }
         NoiseContrastiveEstimationNode(DEVICEID_TYPE deviceId, const wstring & name, NCEEvalMode xm_evalMode) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_logSoftmax(deviceId),
             m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_ncePrediction(deviceId),
             m_evalMode(xm_evalMode)
         { }
         // ^^ TODO: we can merge these two
 
-        virtual void SaveToFile(File& fstream) const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream << m_evalMode;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_evalMode;
@@ -734,7 +732,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::Scale(gradientValues, inputGradientValues);
         }
 
-        virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
         {
             int positive = 0, negative = 0;
             if (Inputs(0)->FunctionValues().GetNumRows() == 1)
@@ -777,7 +775,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
         [3] clsprob in dense matrix in [nbr_cls x T]. this is the output from logsoftmax node for the log-posterior probabilty of class given observations
         */
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -854,11 +852,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<4>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"ClassBasedCrossEntropyWithSoftmax"; }
     public:
         ClassBasedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_logSoftmax(deviceId), m_softMax(deviceId), m_grdToSoftMaxInput(deviceId), m_clsLogSoftmax(deviceId), m_clsSoftmax(deviceId)
         { }
 
@@ -975,7 +973,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
         {
             if (Inputs(0)->FunctionValues().GetDeviceId() != CPUDEVICE)
                 LogicError("ClassBasedCrossEntropyWithSoftmax: evaluatethisnode. the label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
@@ -1124,7 +1122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
         [3] clsprob in dense matrix in [nbr_cls x T]. this input, if applied softmax on, is the posterior probabilty of class given observations
         */
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -1223,16 +1221,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class CRFNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"CRF"; }
     public:
         CRFNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             mAlpha(deviceId), mBeta(deviceId), mPostProb(deviceId)
         { }
 
         /// compute posterior probability of label y at position t
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             size_t nrow = Inputs(0)->FunctionValues().GetNumRows();
             size_t ncol = Inputs(0)->FunctionValues().GetNumCols();
@@ -1441,7 +1439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             postprob.InplaceExp();
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
@@ -1518,11 +1516,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class DummyCriterionNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"DummyCriterion"; }
     public:
         DummyCriterionNode(DEVICEID_TYPE deviceId, const wstring & name) :
-          ComputationNodeNonLooping<ElemType>(deviceId, name)
+          Base(deviceId, name)
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -1543,7 +1541,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::ScaleAndAdd(gradientValues.Get00Element(), inputFunctionValues1, inputGradientValues);
         }
 
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
@@ -1559,7 +1557,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 
