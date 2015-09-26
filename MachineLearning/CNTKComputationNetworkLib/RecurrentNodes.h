@@ -24,15 +24,16 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // =======================================================================
-    // DelayedValueNodeBase -- abstract base class for PastValueNode and FutureValueNode to hold all shared code
+    // -----------------------------------------------------------------------
+    // DelayedValueNodeBase (input) -- abstract base class for PastValueNode and FutureValueNode to hold all shared code
     // The two differ in the step direction, some loop directions, and sequence-boundary flags.
-    // =======================================================================
+    // -----------------------------------------------------------------------
 
-    template<class ElemType, int direction/*-1 or +1*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>  // TODO: unify the two flag sets
-    class DelayedValueNodeBase : public ComputationNode<ElemType>
+    template<class ElemType, int direction/*-1 or +1*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
+    class DelayedValueNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"DelayedValue"; }
     private:
         void Init(size_t row_size, size_t col_size, ElemType initialActivationValue = (ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
@@ -43,15 +44,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_historyAlreadySet = false;    // PastValueNode only
         }
     protected:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
         {
                 Init(1, 1);
         }
         DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
         {
             Init(row_size, col_size, initialActivationValue);
@@ -90,9 +91,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (modelVersion >= CNTK_MODEL_VERSION_2)
                 fstream >> m_initialActivationValue;
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"DelayedValue"; }
 
     private:
         // cache a post-processed version of m_pMBLayout (depends on the actual minibatch)
@@ -153,8 +151,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0) // TODO: this friendly error message should come out of Validate()
-                InvalidArgument("PastValue and FutureValue operations only take one input.");
+            assert(inputIndex == 0); inputIndex;
 
             // special case: DelayedValueNodes may be used outside of loops
             // TODO: this should be a bulk operation; this implementation is a quick hack
@@ -304,12 +301,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            PrintSelfBeforeValidation();
+            PrintSelfBeforeValidation();        // TODO: other nodes do not do that
 
-            if (m_children.size() != 1)
-                LogicError("PastValue and FutureValue operations take one input.");
-
-            if (!(Inputs(0) == nullptr))    // TODO: what is this special case for? For the case that the node has not been hooked up yet?
+            if (!(Inputs(0) == nullptr))        // TODO: what is this special case for? For the case that the node has not been hooked up yet?   --Base::Validate() will fail on NULL inputs
             {
                 size_t rows0 = Inputs(0)->FunctionValues().GetNumRows();
                 size_t cols0 = Inputs(0)->FunctionValues().GetNumCols();
@@ -343,11 +337,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             hist.TransferFromDeviceToDevice(m_deviceId, device, true);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr inputNode)
-        {
-            m_children.resize(1);
-            m_children[0] = inputNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr inputNode)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = inputNode;
+        //}
 
         // this function is only used from old NDL  --TODO: delete once no longer used
         void SetTimeStep(const int val)
@@ -386,29 +380,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_historyAlreadySet;               // for PastValueNode only
     };
 
-#define UsingDelayedValueNodeMembers UsingComputationNodeMembers; \
+#define UsingDelayedValueNodeMembers UsingComputationNodeMembersBoilerplate; \
     using Base::m_initialActivationValue; using Base::m_delayedActivation; using Base::m_timeStep; \
     using Base::m_pShiftedMBLayout; using Base::m_historyAlreadySet;
 
     // =======================================================================
-    // PastValueNode -- delay node
-    // =======================================================================
+    // PastValueNode (input) -- delay node
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class PastValueNode : public DelayedValueNodeBase<ElemType, -1, MinibatchPackingFlags::SequenceStart>
     {
         typedef DelayedValueNodeBase<ElemType, -1, MinibatchPackingFlags::SequenceStart> Base; UsingDelayedValueNodeMembers;
+        static const std::wstring TypeName() { return L"PastValue"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
             Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"PastValue"; }
 
 #if 0
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -451,26 +442,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class PastValueNode<double>;
 
 
-    // =======================================================================
-    // FutureValueNode -- delay node in future direction
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // FutureValueNode (input) -- delay node in future direction
+    // -----------------------------------------------------------------------
 
     //get value from future (used in the bi-directional models)
     template<class ElemType>
     class FutureValueNode : public DelayedValueNodeBase<ElemType, +1, MinibatchPackingFlags::SequenceEnd>
     {
         typedef DelayedValueNodeBase<ElemType, +1, MinibatchPackingFlags::SequenceEnd> Base; UsingDelayedValueNodeMembers;
+        static const std::wstring TypeName() { return L"FutureValue"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
             Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"FutureValue"; }
 
 #if 0
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -511,25 +499,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class FutureValueNode<float>;
     template class FutureValueNode<double>;
 
-
-    // =======================================================================
-    // LSTMNode -- deprecated early implementation of LSTM operating on minibatches directly
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // LSTMNode (obs, inputGate, forgetGate, outputGate, memoryCellWgt)
+    // deprecated early implementation of LSTM operating on minibatches directly
+    //  - input(0) : child with dimension [inputdim x T]
+    //  - input(1) : input gate [outputdim x [inputdim + outputdim + 2]] bi, Wxi, Whi, Wci
+    //  - input(2) : forget gate [outputdim x [inputdim + outputdim + 2]] for bf, Wxf, Whf, Wcf
+    //  - input(3) : output gate [outputdim x [inputdim + outputdim + 2]] for bo, Wxo, Who, and Wco
+    //  - input(4) : memory cell weight [outputdim x [inputdim + outputdim + 1]] for bc, Wxc, and Whc 
+    //  - output : dimension [outputdim x T]
+    // -----------------------------------------------------------------------
 
     /**
     LSTM specific node. This node uses matrix operations to have LSTM functionality. 
-    It avoids using general recurrent loop operations in the network operations in computationnetwork. 
+    It avoids using general recurrent loop operations in the network operations in ComputationNetwork.
 
     Developed by Kaisheng Yao
     Used in the following works:
     K. Yao, G. Zweig, "Sequence to sequence neural net models for graphone to phoneme conversion", in Interspeech 2015
     */
     template<class ElemType>
-    class LSTMNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class LSTMNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<5>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"LSTM"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LSTMNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_State(deviceId), m_PastState(deviceId),
             m_PastOutput(deviceId), m_Gi(deviceId), m_Gf(deviceId), m_Go(deviceId), grdToObs(deviceId), grdToInputGate(deviceId),
@@ -546,9 +540,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_DefaultState((ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"LSTM"; }
 
         virtual void SaveToFile(File& fstream) const
         {
@@ -1307,9 +1298,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 5)
-                LogicError("LSTMNode requires four inputs.");
-
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
@@ -1472,21 +1460,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false);
         }
 
-        // input(0) : child with dimension [inputdim x T]
-        // input(1) : input gate [outputdim x [inputdim + outputdim + 2]] bi, Wxi, Whi, Wci
-        // input(2) : forget gate [outputdim x [inputdim + outputdim + 2]] for bf, Wxf, Whf, Wcf
-        // input(3) : output gate [outputdim x [inputdim + outputdim + 2]] for bo, Wxo, Who, and Wco
-        // input(4) : memory cell weight [outputdim x [inputdim + outputdim + 1]] for bc, Wxc, and Whc 
-        // output : dimension [outputdim x T]
-        virtual void AttachInputs(const ComputationNodePtr obs, const ComputationNodePtr inputGate, const ComputationNodePtr forgetGate, const ComputationNodePtr outputGate, const ComputationNodePtr memoryCellWgt)
-        {
-            m_children.resize(5);
-            m_children[0] = obs;
-            m_children[1] = inputGate;
-            m_children[2] = forgetGate;
-            m_children[3] = outputGate;
-            m_children[4] = memoryCellWgt;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr obs, const ComputationNodePtr inputGate, const ComputationNodePtr forgetGate, const ComputationNodePtr outputGate, const ComputationNodePtr memoryCellWgt)
+        //{
+        //    m_children.resize(5);
+        //    m_children[0] = obs;
+        //    m_children[1] = inputGate;
+        //    m_children[2] = forgetGate;
+        //    m_children[3] = outputGate;
+        //    m_children[4] = memoryCellWgt;
+        //}
 
         virtual void MoveMatricesToDevice(const short deviceId)
         {

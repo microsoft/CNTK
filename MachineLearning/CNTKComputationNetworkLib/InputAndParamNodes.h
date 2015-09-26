@@ -26,18 +26,18 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    // LearnableParameter
+    // LearnableParameter (/*no input*/)
+    // represents weight matrices and biases
     // -----------------------------------------------------------------------
 
-    //used to represent weight Matrix<ElemType> and biases
     template<class ElemType>
-    class LearnableParameter : public ComputationNode<ElemType>
+    class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"LearnableParameter"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         {
             m_needGradient = true;
             m_outputWidth = 1;
@@ -45,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         {
             m_needGradient = true;
             m_outputWidth = 1;
@@ -134,8 +134,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
         virtual void EvaluateThisNode() {}
@@ -146,8 +144,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
         }
-
-        static const std::wstring TypeName() {return L"LearnableParameter";} 
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
@@ -164,7 +160,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // -----------------------------------------------------------------------
-    // SparseLearnableParameter
+    // SparseLearnableParameter (/*no input*/)
     // -----------------------------------------------------------------------
 
     //WARNING: Don't use SparseLearnableParameter yet since the current version assumes the parameter is dense instead of sparse
@@ -172,9 +168,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SparseLearnableParameter : public LearnableParameter<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
             LearnableParameter<ElemType>(deviceId, name)
         {
@@ -193,23 +189,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);       // TODO: needed? Constructor already sets this
             m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
     };
 
     template class SparseLearnableParameter<float>; 
     template class SparseLearnableParameter<double>;
 
     // -----------------------------------------------------------------------
-    // InputValue
+    // InputValue (/*no input*/)
+    // an input value (typically fed by a DataReader)
+    // this covers four types: (regular vs. image) x (non-sparse vs. sparse)
     // -----------------------------------------------------------------------
 
-    // this covers four types: (regular, image) x (non-sparse, sparse)
     template<class ElemType>
-    class InputValue : public ComputationNode<ElemType>
+    class InputValue : public ComputationNode<ElemType>, public NumInputs<0>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        // BUGBUG: This node identifies its sparseness through a different OperationName(). Hence we must do a non-standard dance ^^ to declare the boilerplate stuff.
+        //         This is bad. It should just write m_isSparse, or be a different type.
+
         void Init(size_t rows, size_t cols, bool isSparse)
         {
             m_isSparse = isSparse;
@@ -220,9 +218,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_needGradient = false;
         }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         {
             m_outputWidth = SIZE_MAX;
             m_outputHeight = SIZE_MAX;
@@ -230,7 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Init(0, 0, false);
         }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         {
             m_outputWidth = SIZE_MAX;
             m_outputHeight = SIZE_MAX;
@@ -239,7 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         // ^^ TODO: merge the two above with optional arg
         InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse = false) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         {
             if (rows * cols == 0)
                 LogicError("This InputValue dimension is 0.");
@@ -251,7 +248,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Init(rows, cols, isSparse);
         }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, bool isSparse = false) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         {
             size_t rows = imageWidth * imageHeight * imageChannels;
             size_t cols = numImages;
@@ -294,8 +291,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type; this special-casing will cause grief
         virtual const std::wstring OperationName() const { return m_isSparse ? SparseTypeName() : TypeName(); }
 
-        static const std::wstring TypeName() {return L"InputValue";} 
-        static const std::wstring SparseTypeName() {return L"SparseInputValue";}    // special case used by old NDL
+        static const std::wstring TypeName() { return L"InputValue"; }
+        static const std::wstring SparseTypeName() { return L"SparseInputValue"; }    // special case used by old NDL
 
         virtual void EvaluateThisNode()  {} 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) {}
@@ -333,23 +330,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class InputValue<double>;
 
     // -----------------------------------------------------------------------
-    // LookupTableNode
+    // LookupTableNode (weight matrix, bag-of-word representation of the inputs)
+    // originally designed to extract word embedding representation from bag-of-word
     // -----------------------------------------------------------------------
 
-    //originally designed to extract word embedding representation from bag-of-word. 
-    //takes two inputs, input0 is weight matrix and input1 is the bag-of-word representation of the inputs
     template<class ElemType>
-    class LookupTableNode : public ComputationNode<ElemType>
+    class LookupTableNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"LookupTable"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LookupTableNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"LookupTable";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -478,12 +471,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs(); 
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         bool UnitTest()
         {
@@ -552,7 +545,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class LookupTableNode<double>;
 
     // -----------------------------------------------------------------------
-    // PairNetworkNode
+    // PairNetworkNode (input)
     // -----------------------------------------------------------------------
 
     /**
@@ -560,22 +553,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     this node provide an interface from this network. The next layer network then can use this interface to know which node to connect to.
     */
     template<class ElemType>
-    class PairNetworkNode : public ComputationNode<ElemType>
+    class PairNetworkNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"PairNetwork"; }
+
         void Init(size_t row_size, size_t col_size)
         {
             m_functionValues.Resize(row_size, col_size);
         }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        {
-            Init(1, 1); // TODO: do we not need to resize m_gradientValues?
-        }
-        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size, size_t col_size) :
-            ComputationNode<ElemType>(deviceId, name)
+        //PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        //    Base(deviceId, name)
+        //{
+        //    Init(1, 1); // TODO: do we not need to resize m_gradientValues?
+        //}
+        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size = 1, size_t col_size = 1) :
+            Base(deviceId, name)
         {
             Init(row_size, col_size);
             m_gradientValues.Resize(row_size, col_size);
@@ -587,8 +581,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Init(1, 1); // TODO: this looks wrong; should the dimension not come from the loaded model data?
             Base::LoadFromFile(fstream, modelVersion);
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
 
         /// to-do: need to change to the new way of resetting state
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -625,10 +617,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("PairNetwork operation should have one input.");
-
-            if (!(Inputs(0) == nullptr))
+            if (!(Inputs(0) == nullptr))    // TODO: Base::Validate() will fail on NULL inputs
             {
                 size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
 
@@ -638,11 +627,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs();
         }
 
-        virtual void AttachInputs(const ComputationNodePtr inputNode)
-        {
-            m_children.resize(1);
-            m_children[0] = inputNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr inputNode)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = inputNode;
+        //}
 
 #if 0   // folded into base function, to avoid virtual; that base function already knows about some node types anyway
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
@@ -666,8 +655,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 #endif
-
-        static const std::wstring TypeName() { return L"PairNetwork"; }
 protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 

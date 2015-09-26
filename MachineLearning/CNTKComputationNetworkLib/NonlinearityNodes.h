@@ -24,9 +24,9 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // =======================================================================
-    // NonlinearityNode -- abstract base class that holds what's shared between non-linearity nodes like Sigmoid
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // NonlinearityNode (input) -- abstract base class that holds what's shared between non-linearity nodes like Sigmoid
+    // -----------------------------------------------------------------------
 
     // NOTE:
     // This represents a partially failed attempt to unify this.
@@ -37,27 +37,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // shared base for all elemen-twise non-linearities
     template<class ElemType>
-    class NonlinearityNode : public ComputationNode<ElemType>
+    class NonlinearityNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         NonlinearityNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_gradient(deviceId)
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Nonlinearities only have one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialV(m_gradient, Inputs(0)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Nonlinearities only have one input.");
+            assert(inputIndex == 0); inputIndex;
 
             // TODO: this seems always the same pattern. This belongs into a base slice-extractor function.
             //       We should also unify these two functions into one that decides 1 frame or all frames at runtime... through the slice-extractor function itself.
@@ -93,9 +91,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1) 
-                LogicError("Nonlinearity operations should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("Nonlinearity operation: the input node has 0 element.");
 
@@ -105,11 +100,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs(); 
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -131,26 +126,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m_gradient;
     };
 
-#define UsingNonlinearityNodeMembers UsingComputationNodeMembers; using Base::m_gradient
+#define UsingNonlinearityNodeMembers UsingComputationNodeMembersBoilerplate; using Base::m_gradient
 
-    // =======================================================================
-    // RectifiedLinearNode -- ReLU non-linearity
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // RectifiedLinearNode (input) -- ReLU non-linearity
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class RectifiedLinearNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"RectifiedLinear"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RectifiedLinearNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"RectifiedLinear";} 
-
-        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) override
         {
             gradient.AssignLinearRectifierDerivativeOf(inputFunctionValues);
 #if DUMPOUTPUT
@@ -177,35 +169,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RectifiedLinearNode<float>; 
     template class RectifiedLinearNode<double>;
 
-    // =======================================================================
-    // SigmoidNode -- sigmoid non-linearity
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // SigmoidNode (input) -- sigmoid non-linearity
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class SigmoidNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"Sigmoid"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"Sigmoid";} 
-
         // we should get rid of this code dup, need to unify the -V functions
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Sigmoid only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Sigmoid only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -236,35 +223,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SigmoidNode<float>; 
     template class SigmoidNode<double>;
 
-    // =======================================================================
-    // TanhNode -- tanh non-linearity
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // TanhNode (input) -- tanh non-linearity
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class TanhNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"Tanh"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TanhNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"Tanh";}
-
         // TODO: unify signature & get rid of code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Tanh only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Tanh only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -297,35 +279,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class TanhNode<float>; 
     template class TanhNode<double>;
 
-    // =======================================================================
-    // LogNode -- component-wise log() of input
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // LogNode (input) -- component-wise log() of input
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class LogNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"Log"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LogNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Log"; }
-
         // TODO: get rid of code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Log only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Log only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -357,35 +334,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class LogNode<float>;
     template class LogNode<double>;
 
-    // =======================================================================
-    // ExpNode -- component-wise exp() of input
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // ExpNode (input) -- component-wise exp() of input
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class ExpNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"Exp"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ExpNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Exp"; }
-
         // TODO: get rid of code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Exp only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Exp only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -416,35 +388,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ExpNode<float>;
     template class ExpNode<double>;
 
-    // =======================================================================
-    // CosineNode -- component-wise cos() of input
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // CosineNode (input) -- component-wise cos() of input
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class CosineNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"Cosine"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosineNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Cosine";}
-
         // TODO: code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Cosine only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Cosine only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -476,9 +443,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class CosineNode<float>; 
     template class CosineNode<double>;
 
-    // =======================================================================
-    // SoftmaxNode -- soft-max over input vector(s)
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // SoftmaxNode (input) -- soft-max over input vector(s)
+    // -----------------------------------------------------------------------
 
     //we assume it's  column-wise by default
     //the derivative will increase the Matrix<ElemType> size to the power of column size and should not be used.
@@ -486,28 +453,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class SoftmaxNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"Softmax"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name),
             m_diff(deviceId)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"Softmax";}
-
         // TODO: code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Softmax only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(m_gradient, m_diff, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Softmax only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -553,9 +515,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1) 
-                LogicError("SoftmaxNode operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("SoftmaxNode operation: the input node has 0 element.");
 
@@ -587,36 +546,30 @@ private:
     template class SoftmaxNode<float>; 
     template class SoftmaxNode<double>;
 
-    // =======================================================================
-    // LogSoftmaxNode -- log of soft-max over input vector(s)
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // LogSoftmaxNode (input) -- log of soft-max over input vector(s)
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class LogSoftmaxNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"LogSoftmax"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LogSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"LogSoftmax"; }
-
         // TODO: code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Softmax only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(m_gradient, m_softmax, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
-
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Softmax only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -650,9 +603,6 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("LogSoftmaxNode operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("LogSoftmaxNode operation: the input node has 0 element.");
 
@@ -684,25 +634,22 @@ private:
     template class LogSoftmaxNode<float>;
     template class LogSoftmaxNode<double>;
 
-    // =======================================================================
-    // GMMLogLikelihoodNode -- GMM log LL over input vector(s)
-    // BUGBUG: This seems to just to a single Gaussian?
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // GMMLogLikelihoodNode (unnormedPrior, means, logStdDevs, features) -- GMM log LL over input vector(s)
+    // -----------------------------------------------------------------------
 
     //calculates: the log likelihood of a feature given GMM parameters
     template<class ElemType>
-    class GMMLogLikelihoodNode : public ComputationNode<ElemType>
+    class GMMLogLikelihoodNode : public ComputationNode<ElemType>, public NumInputs<4>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"GMMLogLikelihood"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         GMMLogLikelihoodNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_prior(deviceId), m_normedDeviation(deviceId), m_normedDeviationVectors(deviceId),
             m_stddev(deviceId), m_posterior(deviceId), m_temp(deviceId)
         { }
-virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"GMMLogLikelihood"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1002,9 +949,6 @@ virtual const std::wstring OperationName() const { return TypeName(); }
         {
             Base::Validate();
 
-            if (m_children.size() != 4)
-                LogicError("GMMLogLikelihoodNode requires four inputs.");
-
             size_t rows[4], cols[4];
             for (int i = 0; i < 4; i++)
             {
@@ -1039,14 +983,14 @@ virtual const std::wstring OperationName() const { return TypeName(); }
         }
 
         //leftNode should be the empirical
-        virtual void AttachInputs(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature)
-        {
-            m_children.resize(4);
-            m_children[0] = unnormedPrior;
-            m_children[1] = mean;
-            m_children[2] = logStddev;
-            m_children[3] = feature;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature)
+        //{
+        //    m_children.resize(4);
+        //    m_children[0] = unnormedPrior;
+        //    m_children[1] = mean;
+        //    m_children[2] = logStddev;
+        //    m_children[3] = feature;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1084,26 +1028,24 @@ virtual const std::wstring OperationName() const { return TypeName(); }
     template class GMMLogLikelihoodNode<float>;
     template class GMMLogLikelihoodNode<double>;
 
-    // =======================================================================
-    // DropoutNode -- perform drop-out
+    // -----------------------------------------------------------------------
+    // DropoutNode (input) -- perform drop-out
     // Output is scaled such that no post-scaling is necessary.
-    // =======================================================================
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class DropoutNode : public ComputationNode<ElemType>
+    class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Dropout"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         DropoutNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_maskOfDropout(deviceId),
             m_dropoutRate(0)
         {
             m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1204,9 +1146,6 @@ virtual const std::wstring OperationName() const { return TypeName(); }
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("Dropout operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("Dropout operation: the input node has 0 element.");
 
@@ -1216,11 +1155,11 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             InferImageDimsFromInputs();
         }
 
-        virtual void AttachInputs(const ComputationNodePtr inputNode)
-        {
-            m_children.resize(1);
-            m_children[0] = inputNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr inputNode)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = inputNode;
+        //}
 
         void SetDropoutRate(const double val)
         {
@@ -1239,8 +1178,6 @@ virtual const std::wstring OperationName() const { return TypeName(); }
             Base::MoveMatricesToDevice(deviceId);
             m_maskOfDropout.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
-
-        static const std::wstring TypeName() { return L"Dropout"; }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -1263,26 +1200,28 @@ private:
     template class DropoutNode<float>;
     template class DropoutNode<double>;
 
-    // =======================================================================
-    // ReshapeNode -- reshape input matrix
+    // -----------------------------------------------------------------------
+    // ReshapeNode (input) -- reshape input matrix
     // TODO: Why is this in NonlinearityNodes.h? Should he linear algebra no?
-    // =======================================================================
+    // -----------------------------------------------------------------------
+
+    // TODO: This node needs very special consideration regarding MBLayout
 
     template<class ElemType>
-    class ReshapeNode : public ComputationNode<ElemType>
+    class ReshapeNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Reshape"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_numRows(0),
             m_imageWidth(0),
             m_imageHeight(0),
             m_imageChannels(0)
         { }
         ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows, size_t imageWidth, size_t imageHeight, size_t imageChannels) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_numRows(numRows),
             m_imageWidth(imageWidth),
             m_imageHeight(imageHeight),
@@ -1314,14 +1253,11 @@ private:
             fstream >> m_numRows >> m_imageWidth >> m_imageHeight >> m_imageChannels;
         }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Reshape"; }
-
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void InferImageDimsFromInputs()
         {
@@ -1377,9 +1313,6 @@ private:
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 1)
-                LogicError("Reshape operation: Should have one input.");
 
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("Reshape operation: The input node has 0 element.");
@@ -1543,22 +1476,22 @@ private:
     template class ReshapeNode<float>;
     template class ReshapeNode<double>;
 
-    // =======================================================================
-    // RowRepeatNode -- duplicate row(s) of a matrix multiple times
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // RowRepeatNode (input) -- duplicate row(s) of a matrix multiple times
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class RowRepeatNode : public ComputationNode<ElemType>
+    class RowRepeatNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowRepeat"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowRepeatNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_numRepeat(1)
         { }
         RowRepeatNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRepeats) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_numRepeat(numRepeats)
         { }
         // ^^ TODO: merge those two above using optional args
@@ -1585,14 +1518,11 @@ private:
             fstream >> m_numRepeat;
         }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"RowRepeat"; }
-
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void InferImageDimsFromInputs()
         {
@@ -1638,9 +1568,6 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("RowRepeat operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("RowRepeat  operation: the input node has 0 element.");
 
@@ -1672,16 +1599,13 @@ private:
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("RowRepeat only has one input.");
-
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_numRepeat);
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("RowRepeat only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));

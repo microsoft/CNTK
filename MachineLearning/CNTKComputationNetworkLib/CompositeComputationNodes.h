@@ -20,6 +20,10 @@
 //composite nodes can save memory, computation, or both
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // -----------------------------------------------------------------------
+    // ParallelNode (input0, input1)
+    // -----------------------------------------------------------------------
+
     /**
     parallel node to join two streams into one 
     
@@ -29,17 +33,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     output   : [[nDim0 + nDim1] X T]
     */
     template<class ElemType>
-    class ParallelNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class ParallelNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Parallel"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Parallel"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -93,9 +94,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2)
-                LogicError("Parallel operation requires two inputs.");
-
             size_t rows1, cols1;
             rows1 = Inputs(1)->FunctionValues().GetNumRows();
             cols1 = Inputs(1)->FunctionValues().GetNumCols();
@@ -115,12 +113,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr c1, const ComputationNodePtr c2)
-        {
-            m_children.resize(2);
-            m_children[0] = c1;
-            m_children[1] = c2;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr c1, const ComputationNodePtr c2)
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = c1;
+        //    m_children[1] = c2;
+        //}
 
     public:
         virtual bool UnitTest() {
@@ -195,13 +193,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ParallelNode<float>;
     template class ParallelNode<double>;
 
+    // -----------------------------------------------------------------------
+    // PreComputedNode
+    // -----------------------------------------------------------------------
+
     //this is a noninstantiable virtual class, all nodes require precomputation should derive from it
     template<class ElemType>
     class PreComputedNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
         {
             // further initializations
@@ -254,17 +256,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_hasComputed;
     };
 
-    #define UsingPreComputedNodeMembers UsingComputationNodeMembers; using Base::m_hasComputed
+    #define UsingPreComputedNodeMembers UsingComputationNodeMembersBoilerplate; using Base::m_hasComputed
 
-    template class PreComputedNode<float>;
-    template class PreComputedNode<double>;
+    //template class PreComputedNode<float>;
+    //template class PreComputedNode<double>;
+
+    // -----------------------------------------------------------------------
+    // MeanNode (features)
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class MeanNode : public PreComputedNode<ElemType>
+    class MeanNode : public PreComputedNode<ElemType>, public NumInputs<1>
     {
         typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
+        static const std::wstring TypeName() { return L"Mean"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MeanNode(DEVICEID_TYPE deviceId, const wstring & name) :
             PreComputedNode<ElemType>(deviceId, name),
             m_numSamples(0)
@@ -276,10 +282,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSamples = 0;   // TODO: intended? Not loaded from file?
         }
 
-        virtual bool HasComputed() const        // why are these not in the base class?
-        {
-            return m_hasComputed;
-        }
+        virtual bool HasComputed() const { return m_hasComputed; }        // why are these not in the base class?
 
         virtual void MarkComputed(const bool hasComputed)
         {
@@ -289,9 +292,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual bool RequiresPreCompute() const { return true; }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Mean"; }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)
         {
@@ -326,9 +326,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("Mean operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("Mean operation: the input node has 0 element.");
 
@@ -337,11 +334,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs();
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -359,12 +356,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class MeanNode<float>;
     template class MeanNode<double>;
 
+    // -----------------------------------------------------------------------
+    // InvStdDevNode (features)
+    // TODO: share stuff with MeanNode
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class InvStdDevNode : public PreComputedNode<ElemType>
+    class InvStdDevNode : public PreComputedNode<ElemType>, public NumInputs<1>
     {
         typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
+        static const std::wstring TypeName() { return L"InvStdDev"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         InvStdDevNode(DEVICEID_TYPE deviceId, const wstring & name) :
             PreComputedNode<ElemType>(deviceId, name),
             m_mean(deviceId), m_var(deviceId), m_temp(deviceId),
@@ -377,10 +379,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSamples = 0;   // TODO: intended? not loading from file?
         }
 
-        virtual bool HasComputed() const
-        {
-            return m_hasComputed;
-        }
+        virtual bool HasComputed() const { return m_hasComputed; }
 
         virtual void MarkComputed(const bool hasComputed)
         {
@@ -411,9 +410,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         virtual bool RequiresPreCompute() const { return true; }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"InvStdDev"; }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)
         {
@@ -457,9 +453,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("InvStdDev operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("InvStdDev operation: the input node has 0 element.");
 
@@ -472,11 +465,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs();
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -509,18 +502,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class InvStdDevNode<float>;
     template class InvStdDevNode<double>;
 
-    template<class ElemType>
-    class PerDimMeanVarNormalizationNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        { }
+    // -----------------------------------------------------------------------
+    // PerDimMeanVarNormalizationNode (feature, mean, invStdDev)
+    // -----------------------------------------------------------------------
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
+    template<class ElemType>
+    class PerDimMeanVarNormalizationNode : public ComputationNode<ElemType>, public NumInputs<3>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"PerDimMeanVarNormalization"; }
+    public:
+        PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
         {
@@ -575,9 +569,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 3)
-                LogicError("PerDimMeanVarNormalizationNode criterion requires three inputs.");
 
             if (Inputs(0)->RequiresPreCompute())
             {
@@ -641,38 +632,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //leftNode should be the empirical
-        virtual void AttachInputs(const ComputationNodePtr feature,
-                                  const ComputationNodePtr mean, const ComputationNodePtr InvStdDev)
-        {
-            m_children.resize(3);
-            m_children[0] = feature;
-            m_children[1] = mean;
-            m_children[2] = InvStdDev;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev)
+        //{
+        //    m_children.resize(3);
+        //    m_children[0] = feature;
+        //    m_children[1] = mean;
+        //    m_children[2] = InvStdDev;
+        //}
     };
 
     template class PerDimMeanVarNormalizationNode<float>;
     template class PerDimMeanVarNormalizationNode<double>;
 
+    // -----------------------------------------------------------------------
+    // PerDimMeanVarDeNormalizationNode (feature, mean, invStdDev)
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class PerDimMeanVarDeNormalizationNode : public ComputationNode<ElemType>
+    class PerDimMeanVarDeNormalizationNode : public ComputationNode<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"PerDimMeanVarDeNormalization"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PerDimMeanVarDeNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const
-        {
-            return TypeName();
-        }
-
-        static const std::wstring TypeName()
-        {
-            return L"PerDimMeanVarDeNormalization";
-        }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
         {
@@ -734,9 +718,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 3)
-                LogicError("PerDimMeanVarDeNormalizationNode criterion requires three inputs.");
 
             if (Inputs(0)->RequiresPreCompute())
             {
@@ -801,17 +782,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //leftNode should be the empirical
-        virtual void AttachInputs(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev)
-        {
-            m_children.resize(3);
-            m_children[0] = feature;
-            m_children[1] = mean;
-            m_children[2] = InvStdDev;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev)
+        //{
+        //    m_children.resize(3);
+        //    m_children[0] = feature;
+        //    m_children[1] = mean;
+        //    m_children[2] = InvStdDev;
+        //}
     };
 
     template class PerDimMeanVarDeNormalizationNode<float>;
     template class PerDimMeanVarDeNormalizationNode<double>;
+
+    // -----------------------------------------------------------------------
+    // BatchModeNode
+    // -----------------------------------------------------------------------
 
     /**
     BatchModeNode is a derivative of ComputationNode.
@@ -827,7 +812,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // all nodes require precomputation should derive from it
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         BatchModeNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_memory(deviceId)
@@ -885,8 +870,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // add this at the start of each derived class, to get access to the members of ComputationNode
-    // See #define of 'UsingComputationNodeMembers' for more explanation.
-    #define UsingBatchModeNodeMembers UsingComputationNodeMembers; \
+    // See #define of 'UsingComputationNodeMembersBoilerplate' for more explanation.
+    #define UsingBatchModeNodeMembers UsingComputationNodeMembersBoilerplate; \
         protected:  \
             using Base::m_memory; using Base::m_hasComputed; \
         public: \
@@ -895,17 +880,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //template class BatchModeNode<float>;
     //template class BatchModeNode<double>;
 
+    // -----------------------------------------------------------------------
+    // TimeReverseNode (input)
+    // -----------------------------------------------------------------------
+
     /**
     Developed by Kaisheng Yao.
     This node is used in the following work
     K. Yao and G. Zweig, "Sequence-to-Sequence Neural Net Models for Grapheme-to-Phoneme Conversion", submitted to INTERSPEECH 2015
     */
     template<class ElemType>
-    class TimeReverseNode : public BatchModeNode<ElemType>
+    class TimeReverseNode : public BatchModeNode<ElemType>, public NumInputs<1>
     {
         typedef BatchModeNode<ElemType> Base; UsingBatchModeNodeMembers;
+        static const std::wstring TypeName() { return L"TimeReverse"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TimeReverseNode(DEVICEID_TYPE deviceId, const wstring & name) :
             BatchModeNode<ElemType>(deviceId, name)
         { }
@@ -922,9 +911,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual bool HasComputed() const { return m_hasComputed; }
         virtual void MarkComputed(const bool hasComputed) { m_hasComputed = hasComputed; }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"TimeReverse"; }
 
         virtual void MoveMatricesToDevice(const short deviceId)
         {
@@ -999,22 +985,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("TimeReverse operation requires one input.");
-
-            size_t rows, cols;
-            rows = Inputs(0)->FunctionValues().GetNumRows();
-            cols = Inputs(0)->FunctionValues().GetNumCols();
+            size_t rows = Inputs(0)->FunctionValues().GetNumRows();
+            size_t cols = Inputs(0)->FunctionValues().GetNumCols();
 
             FunctionValues().Resize(rows, cols);
             InferImageDimsFromInput(0);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr cNode)
-        {
-            m_children.resize(1);
-            m_children[0] = cNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr cNode)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = cNode;
+        //}
 
     public:
         bool UnitTest() {

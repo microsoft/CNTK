@@ -25,33 +25,29 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    /// NegateNode
+    // NegateNode (input)
+    // computes the negative of its input
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class NegateNode : public ComputationNode<ElemType>
+    class NegateNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Negate"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         NegateNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Negate";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Negate operation only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Negate operation only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -88,9 +84,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1) 
-                LogicError("Negate operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("Negate operation: the input node has 0 element.");
 
@@ -100,44 +93,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs(); 
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
     };
 
     template class NegateNode<float>; 
     template class NegateNode<double>;
 
     // -----------------------------------------------------------------------
-    /// SumElementsNode
+    // SumElementsNode (input)
+    // sums up all elements in the input
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class SumElementsNode : public ComputationNode<ElemType>
+    class SumElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SumElements"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SumElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"SumElements";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("SumElements only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("SumElements only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -157,6 +146,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
         {
+            // BUGBUG: This function should mask gaps by itself
             Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
@@ -175,9 +165,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1) 
-                LogicError("SumElements operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("SumElements operation: the input node has 0 element.");
 
@@ -195,45 +182,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
     };
 
     template class SumElementsNode<float>; 
     template class SumElementsNode<double>;
 
     // -----------------------------------------------------------------------
-    /// SumColumnElementsNode
+    // SumColumnElementsNode (input)
+    // sums up each column of the input
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class SumColumnElementsNode : public ComputationNode<ElemType>
+    class SumColumnElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SumColumnElements"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SumColumnElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_sumValue(deviceId)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"SumColumnElements"; }
-
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("SumColumnElements only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("SumColumnElements only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -271,9 +254,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("SumColumnElements operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("SumColumnElements operation: the input node has 0 element.");
 
@@ -291,11 +271,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -315,24 +295,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SumColumnElementsNode<double>;
 
     // -----------------------------------------------------------------------
-    /// RowSliceNode
+    // RowSliceNode (input)
+    // this node extracts part of the input by rows as the output
+    // it has to be continuous segments of rows since each column is treated as one sample
     // -----------------------------------------------------------------------
 
-    //this node is used to extract part of the input by rows as the output
-    //it has to be continuous segments of rows since each column is treated as one sample
     template<class ElemType>
-    class RowSliceNode : public ComputationNode<ElemType>
+    class RowSliceNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowSlice"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         //RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name) :
-        //    ComputationNode<ElemType>(deviceId, name),
+        //    Base(deviceId, name),
         //    m_startIndex(0),
         //    m_numRows(0)
         //{ }
         RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name, size_t startIndex = 0, size_t numRows = 0) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_startIndex(startIndex),
             m_numRows(numRows)
         { }
@@ -358,20 +338,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_startIndex >> m_numRows;
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"RowSlice";} 
-
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("RowSlice only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_startIndex, m_numRows);
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
         {
-            if (inputIndex != 0)
-                InvalidArgument("RowSlice only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -409,9 +384,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 1) 
-                LogicError("RowSlice operation should have one input.");
-
             if (Inputs(0)->FunctionValues().HasNoElements())
                 LogicError("RowSlice operation: the input node has 0 element.");
 
@@ -433,11 +405,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "WARNING: RowSlice operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
     private:
         size_t m_startIndex, m_numRows;
@@ -447,20 +419,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RowSliceNode<double>;
 
     // -----------------------------------------------------------------------
-    /// RowStackNode
+    // RowStackNode (input0, input1, ...)
+    // stacks multiple inputs on top of each other
     // -----------------------------------------------------------------------
 
     //this node is used to extract part of the input by rows as the output
     // TODO: Really? RowStack indicates something different.
     //it has to be continuous segments of rows since each column is treated as one sample
     template<class ElemType>
-    class RowStackNode : public ComputationNode<ElemType>
+    class RowStackNode : public ComputationNode<ElemType>   // note: not deriving from NumInputs<> like most other nodes since this one takes a variable number of inputs
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowStack"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowStackNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -475,9 +448,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_inputMatrices = m_inputMatrices;
             }
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"RowStack"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -527,10 +497,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() < 2)
-                LogicError("RowStack operation: must have two or more inputs.");
-
-            if (Inputs(0) == nullptr)
+            if (Inputs(0) == nullptr)   // TODO: Base::Validate() will fail for this
                 LogicError("RowStack operation: the input node is NULL.");
 
             size_t numCols = Inputs(0)->FunctionValues().GetNumCols();
@@ -573,13 +540,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "WARNING: RowStack operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
-        virtual void AttachInputs(const std::vector<ComputationNodePtr>& inputs)
-        {
-            unsigned int numInputs = inputs.size();
-            m_children.resize(numInputs);
-            for (unsigned int i = 0; i < numInputs; i++)
-                m_children[i] = inputs[i];
-        }
+        //virtual void AttachInputs(const std::vector<ComputationNodePtr>& inputs)
+        //{
+        //    unsigned int numInputs = inputs.size();
+        //    m_children.resize(numInputs);
+        //    for (unsigned int i = 0; i < numInputs; i++)
+        //        m_children[i] = inputs[i];
+        //}
 
     private:
         std::vector<size_t> m_startRowIndices; //start row number in the stacked matrix of each input (child)
@@ -590,21 +557,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RowStackNode<double>;
 
     // -----------------------------------------------------------------------
-    /// ScaleNode
+    /// ScaleNode (scalar scaling factor, matrix)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ScaleNode : public ComputationNode<ElemType>
+    class ScaleNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Scale"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ScaleNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Scale";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -679,9 +643,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("Scale operation requires two inputs.");
-
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 LogicError("Scale operation: one of the operands has 0 element.");
 
@@ -699,12 +660,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1); 
         }
 
-        virtual void AttachInputs(const ComputationNodePtr scalarValue, const ComputationNodePtr Value) 
-        {
-            m_children.resize(2);
-            m_children[0] = scalarValue;
-            m_children[1] = Value;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr scalarValue, const ComputationNodePtr Value) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = scalarValue;
+        //    m_children[1] = Value;
+        //}
     };
 
 
@@ -712,21 +673,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ScaleNode<double>;
 
     // -----------------------------------------------------------------------
-    /// TimesNode
+    /// TimesNode (A, B)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class TimesNode : public ComputationNode<ElemType>
+    class TimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Times"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Times";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -833,9 +791,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("Times operation requires two inputs.");
-
             //support automatic dimension inference for learnable parameters
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
@@ -873,33 +828,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels =  1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class TimesNode<float>; 
     template class TimesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// TransposeTimesNode
+    /// TransposeTimesNode (A', B)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class TransposeTimesNode : public ComputationNode<ElemType>
+    class TransposeTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"TransposeTimes"; }
+    public:
+        TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1001,9 +953,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2)
-                LogicError("TransposeTimes operation requires two inputs.");
-
             //support automatic dimension inference for learnable parameters
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
@@ -1040,34 +989,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
 
-
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class TransposeTimesNode<float>;
     template class TransposeTimesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// ElementTimesNode
+    /// ElementTimesNode (factor1, factor2)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ElementTimesNode : public ComputationNode<ElemType>
+    class ElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"ElementTimes"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"ElementTimes";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)  
         {
@@ -1129,9 +1074,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("ElementTimes operation requires two inputs.");
-
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
             {
@@ -1163,34 +1105,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InferImageDimsFromInput(1);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class ElementTimesNode<float>; 
     template class ElementTimesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// RowElementTimesNode
+    /// RowElementTimesNode (left, right)  --TODO: what are left and right?
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class RowElementTimesNode : public ComputationNode<ElemType>
+    class RowElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowElementTimes"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_tempMatrix(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"RowElementTimes"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1283,9 +1222,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2)
-                LogicError("RowElementTimes operation requires two inputs.");
-
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 LogicError("RowElementTimes operation: one of the operants has 0 element.");
 
@@ -1306,12 +1242,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1319,30 +1255,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        private:
-            Matrix<ElemType> m_tempMatrix;
+    private:
+        Matrix<ElemType> m_tempMatrix;
     };
 
     template class RowElementTimesNode<float>;
     template class RowElementTimesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// ColumnElementTimesNode
+    /// ColumnElementTimesNode (left, right)  --TODO: what are left and right?
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ColumnElementTimesNode : public ComputationNode<ElemType>
+    class ColumnElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"ColumnElementTimes"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ColumnElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_tempMatrix(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"ColumnElementTimes"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1434,9 +1367,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2)
-                LogicError("ColumnElementTimes operation requires two inputs.");
-
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
             {
@@ -1468,12 +1398,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1489,21 +1419,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ColumnElementTimesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// PlusNode
+    /// PlusNode (summand1, summand2)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class PlusNode : public ComputationNode<ElemType>
+    class PlusNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Plus"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PlusNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Plus";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1671,9 +1598,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("Plus operation requires two inputs.");
-
             //if dimension not specified we assume two operants' dimensions should be the same
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
@@ -1729,33 +1653,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class PlusNode<float>; 
     template class PlusNode<double>;
 
     // -----------------------------------------------------------------------
-    /// MinusNode
+    /// MinusNode (minuend, subtrahend)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class MinusNode : public ComputationNode<ElemType>
+    class MinusNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Minus"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MinusNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Minus";}
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1960,9 +1881,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("Minus operation requires two inputs.");
-
             //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
@@ -2016,35 +1934,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class MinusNode<float>; 
     template class MinusNode<double>;
 
     // -----------------------------------------------------------------------
-    /// DiagTimesNode
+    /// DiagTimesNode (vector representing the diagonal of a square matrix, data)
     // -----------------------------------------------------------------------
 
-    //The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation
     template<class ElemType>
-    class DiagTimesNode : public ComputationNode<ElemType>
+    class DiagTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"DiagTimes"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         DiagTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_innerproduct(deviceId), m_rightGradient(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"DiagTimes";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2113,19 +2027,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("DiagTimes operation requires two inputs.");
-
             //if dimension not specified we assume two operants' dimensions should match
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0 && Inputs(1)->FunctionValues().GetNumRows() != 0)
-            {
                 Inputs(0)->FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), 1);
-            }
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() != 0 && Inputs(1)->FunctionValues().GetNumRows() == 0)
-            {
                 Inputs(1)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            }
 
             if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
                 LogicError("DiagTimes operation: one of the operants has 0 element.");
@@ -2149,12 +2056,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -2182,23 +2089,20 @@ private:
     template class DiagTimesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// CosDistanceNode
+    /// CosDistanceNode (left, right)
     // -----------------------------------------------------------------------
 
     //The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation
     template<class ElemType>
-    class CosDistanceNode : public ComputationNode<ElemType>
+    class CosDistanceNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"CosDistance"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosDistanceNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"CosDistance";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2320,9 +2224,6 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("CosDistance operation requires two inputs.");
-
             //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
@@ -2362,12 +2263,12 @@ private:
             m_outputHeight = 1;        
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -2406,21 +2307,18 @@ private:
     template class CosDistanceNode<double>;
 
     // -----------------------------------------------------------------------
-    /// KhatriRaoProductNode
+    /// KhatriRaoProductNode (left, right)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class KhatriRaoProductNode : public ComputationNode<ElemType>
+    class KhatriRaoProductNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"KhatriRaoProduct"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         KhatriRaoProductNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"KhatriRaoProduct";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2496,15 +2394,12 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 2) 
-                LogicError("KhatriRaoProduct operation requires two inputs.");
-
             //support automatic dimension inference for learnable parameters
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
             size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
 
             if (rows0 == 0 || rows1 == 0)
-                throw logic_error("KhatriRaoProduct operation: The number of rows in the input should not be 0.");
+                LogicError("KhatriRaoProduct operation: The number of rows in the input should not be 0.");
 
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && cols1 != 0)
                 Inputs(0)->FunctionValues().Resize(rows0, cols1);
@@ -2538,35 +2433,32 @@ private:
             m_outputChannels =  1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class KhatriRaoProductNode<float>; 
     template class KhatriRaoProductNode<double>;
 
     // -----------------------------------------------------------------------
-    /// CosDistanceWithNegativeSamplesNode
+    /// CosDistanceWithNegativeSamplesNode (left, right, shift, neg)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class CosDistanceWithNegativeSamplesNode : public ComputationNode<ElemType>
+    class CosDistanceWithNegativeSamplesNode : public ComputationNode<ElemType>, public NumInputs<4>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"CosDistanceWithNegativeSamples"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosDistanceWithNegativeSamplesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
             m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"CosDistanceWithNegativeSamples"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2734,9 +2626,6 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 4)
-                LogicError("CosDistanceWithNegativeSamples operation requires 4 inputs.");
-
             //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
@@ -2779,14 +2668,14 @@ private:
             m_outputHeight = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr shiftNode, const ComputationNodePtr negNode)
-        {
-            m_children.resize(4);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-            m_children[2] = shiftNode;
-            m_children[3] = negNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr shiftNode, const ComputationNodePtr negNode)
+        //{
+        //    m_children.resize(4);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //    m_children[2] = shiftNode;
+        //    m_children[3] = negNode;
+        //}
 
         virtual void MoveMatricesToDevice(const short deviceId)
         {
@@ -2828,24 +2717,21 @@ private:
     template class CosDistanceWithNegativeSamplesNode<double>;
 
     // -----------------------------------------------------------------------
-    /// TransposeNode
+    /// TransposeNode (input matrix)
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class TransposeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class TransposeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Transpose"; }
 
         Matrix<ElemType> mOnes; 
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TransposeNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeNonLooping<ElemType>(deviceId, name),
             mOnes(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Transpose"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2894,9 +2780,6 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 1)
-                LogicError("Transpose operation requires one input.");
-
             size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
 
             if (rows0 == 0 || cols0 == 0)
@@ -2918,18 +2801,18 @@ private:
             m_outputChannels = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode)
-        {
-            m_children.resize(1);
-            m_children[0] = leftNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = leftNode;
+        //}
     };
 
     template class TransposeNode<float>;
     template class TransposeNode<double>;
 
     // -----------------------------------------------------------------------
-    /// StrideTimesNode
+    /// StrideTimesNode (left, right, stride)
     // -----------------------------------------------------------------------
 
     /**
@@ -2951,9 +2834,10 @@ private:
     Notice that s is equal to k. 
     */
     template<class ElemType>
-    class StrideTimesNode : public ComputationNode<ElemType>
+    class StrideTimesNode : public ComputationNode<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"StrideTimes"; }
 
         size_t m_StrideDim; // the dimension index on which stride works 
         size_t m_Stride;    // the stride 
@@ -2963,15 +2847,11 @@ private:
             m_Stride = input1.GetNumCols();
         }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         StrideTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_Stride(1)
         { }
         // BUGBUG: This node needs to serialize and CopyTo m_Stride
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"StrideTimes"; }
 
         virtual void ComputeInputPartial(const size_t) { NOT_IMPLEMENTED; }
 
@@ -3241,9 +3121,6 @@ private:
         {
             Base::Validate();
 
-            if (m_children.size() != 3)
-                LogicError("StrideTimes operation requires three inputs.");
-
             //support automatic dimension inference for learnable parameters
             if (Inputs(2)->FunctionValues().GetNumElements() != 1)
                 LogicError("StrideTimes : input(2) should be a single element matrix");
@@ -3289,13 +3166,13 @@ private:
             m_outputChannels = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr strideNode)
-        {
-            m_children.resize(3);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-            m_children[2] = strideNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr strideNode)
+        //{
+        //    m_children.resize(3);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //    m_children[2] = strideNode;
+        //}
     };
 
     template class StrideTimesNode<float>;
