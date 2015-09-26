@@ -29,7 +29,7 @@ static void operator|| (cudaError_t rc, const char * msg)
     if (rc != cudaSuccess)
     {
         char buf[1000];
-        snprintf(buf, sizeof(buf), "%s: %s (cuda error %d)", msg, cudaGetErrorString (rc), rc);
+        sprintf(buf, "%s: %s (cuda error %d)", msg, cudaGetErrorString (rc), rc);
         throw std::runtime_error (buf);
     }
 }
@@ -40,7 +40,7 @@ static void operator|| (CUresult rc, const char * msg)
     if (rc != CUDA_SUCCESS)
     {
         char buf[1000];
-        snprintf(buf, sizeof(buf), "%s: cuda API error %d", msg, rc);
+        sprintf(buf, "%s: cuda API error %d", msg, rc);
         throw std::runtime_error (buf);
     }
 }
