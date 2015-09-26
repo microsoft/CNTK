@@ -471,7 +471,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     //return list of nodes that require precomputation and not precomputed yet.
-    // TODO: name has a grammar error, fix
     std::list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringPreComputation(const ComputationNodeBasePtr rootNode, bool checkComputed)
     {
         std::list<ComputationNodeBasePtr> nodesRequirePreComputation;
@@ -480,8 +479,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return nodesRequirePreComputation;
     }
 
-    //return list of nodes that require precomputation and not precomputed yet.
-    // TODO: name has grammar error, fix
+    //return list of nodes that require batch mode and not precomputed yet.
     std::list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringBatchMode(const ComputationNodeBasePtr rootNode, bool checkComputed)
     {
         std::list<ComputationNodeBasePtr> nodesRequirePreComputation;

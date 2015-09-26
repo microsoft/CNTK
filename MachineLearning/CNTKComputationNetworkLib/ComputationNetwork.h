@@ -7,9 +7,11 @@
 #pragma once
 
 // TODOs:
+//  - add a runtime check that nodes deriving from ComputeNodeNonLooping may never participate in a loop
 //  - fully eliminate EvaluateThisNode(void), replace by EvaluateThisNode(FrameRange(void)), which will often elinminate special-casing
 //  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, instead change Node::SetFunctionAndGradientMBSize()
-//    to infer the dimensions, and call it during the Evaluate() loop (maybe directly from EvaluateThisNode(), i.e. eliminate it as well or replace the virtual by a helper function)
+//  - check SoftmaxNode::EvaluateThisNodeMap()
+//    to infer the dimensions, and call it during the Evaluate() loop (maybe directly from EvaluateThisNode(FrameRange()), i.e. eliminate it as well or replace the virtual by a helper function)
 //    For moving into EvaluateThisNode directly,
 //    PRO:
 //     - doing it for every call allows to dynamically grow MB and layout frame-by-frame, allowing sophisticated models and ways
@@ -21,7 +23,7 @@
 //     - inside a loop
 //        - it has to check for every frame, although only the first frame really will make a difference
 //        - it's weird if it is called for a singe frame to update the size for the whole minibatch
-//  - fold EvaluateThisNodeS() into EvaluateThisNode(), same for partial
+//  - fold EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
 //     - PROBLEM: Matrix sneakily resizes result matrices, but only for EvaluateThisNode(void), not for frame-wise ones. Need a unified solution.
 //  - also eliminate EvaluateThisNodeGivenInputs()--that stuff is at least as much responsibility of Network
 //    We can also replace NeedToMaskMissingColumnsToZero() to a check against the node set itself inside Network --one more Node member gone (and a weird, unneccessary one at that)
