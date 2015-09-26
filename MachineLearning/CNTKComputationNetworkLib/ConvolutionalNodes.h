@@ -35,9 +35,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ConvolutionNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Convolution"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_tempMatrix(deviceId),
@@ -91,9 +91,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_tempMatrix = m_tempMatrix;
             }
         }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Convolution";} 
 
         //virtual void ComputeInputPartial(const size_t inputIndex) 
         //{
@@ -524,8 +521,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // add this at the start of each derived class, to get access to the members of ComputationNode
-    // See #define of 'UsingComputationNodeMembers' for more explanation.
-#define UsingPoolingNodeBaseMembers UsingComputationNodeMembers; \
+    // See #define of 'UsingComputationNodeMembersBoilerplate' for more explanation.
+#define UsingPoolingNodeBaseMembers UsingComputationNodeMembersBoilerplate; \
     protected:  \
         using Base::m_windowWidth; using Base::m_windowHeight; using Base::m_horizontalSubsample; using Base::m_verticalSubsample; using Base::m_inputSizePerSample; using Base::m_outputSizePerSample; \
     public:
@@ -538,15 +535,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class MaxPoolingNode : public PoolingNodeBase<ElemType>
     {
         typedef PoolingNodeBase<ElemType> Base; UsingPoolingNodeBaseMembers;
+        static const std::wstring TypeName() { return L"MaxPooling"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
         MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
             Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"MaxPooling";}
 
         /*implement*/ void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues)
         {
@@ -576,15 +570,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class AveragePoolingNode : public PoolingNodeBase<ElemType>
     {
         typedef PoolingNodeBase<ElemType> Base; UsingPoolingNodeBaseMembers;
+        static const std::wstring TypeName() { return L"AveragePooling"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
         AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
             Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"AveragePooling";}
 
         /*implement*/ void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/)
         {

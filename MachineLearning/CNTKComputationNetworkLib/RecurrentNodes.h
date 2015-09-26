@@ -32,7 +32,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType, int direction/*-1 or +1*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
     class DelayedValueNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"DelayedValue"; }
     private:
         void Init(size_t row_size, size_t col_size, ElemType initialActivationValue = (ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
@@ -43,7 +44,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_historyAlreadySet = false;    // PastValueNode only
         }
     protected:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
@@ -90,9 +91,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (modelVersion >= CNTK_MODEL_VERSION_2)
                 fstream >> m_initialActivationValue;
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"DelayedValue"; }
 
     private:
         // cache a post-processed version of m_pMBLayout (depends on the actual minibatch)
@@ -386,7 +384,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_historyAlreadySet;               // for PastValueNode only
     };
 
-#define UsingDelayedValueNodeMembers UsingComputationNodeMembers; \
+#define UsingDelayedValueNodeMembers UsingComputationNodeMembersBoilerplate; \
     using Base::m_initialActivationValue; using Base::m_delayedActivation; using Base::m_timeStep; \
     using Base::m_pShiftedMBLayout; using Base::m_historyAlreadySet;
 
@@ -398,17 +396,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class PastValueNode : public DelayedValueNodeBase<ElemType, -1, MinibatchPackingFlags::SequenceStart>
     {
         typedef DelayedValueNodeBase<ElemType, -1, MinibatchPackingFlags::SequenceStart> Base; UsingDelayedValueNodeMembers;
+        static const std::wstring TypeName() { return L"PastValue"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
             Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"PastValue"; }
 
 #if 0
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -460,17 +455,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class FutureValueNode : public DelayedValueNodeBase<ElemType, +1, MinibatchPackingFlags::SequenceEnd>
     {
         typedef DelayedValueNodeBase<ElemType, +1, MinibatchPackingFlags::SequenceEnd> Base; UsingDelayedValueNodeMembers;
+        static const std::wstring TypeName() { return L"FutureValue"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
             Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"FutureValue"; }
 
 #if 0
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -533,9 +525,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class LSTMNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<5>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"LSTM"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LSTMNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name),
             m_State(deviceId), m_PastState(deviceId),
             m_PastOutput(deviceId), m_Gi(deviceId), m_Gf(deviceId), m_Go(deviceId), grdToObs(deviceId), grdToInputGate(deviceId),
@@ -552,9 +544,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_DefaultState((ElemType)DEFAULT_HIDDEN_ACTIVATION)
         {
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"LSTM"; }
 
         virtual void SaveToFile(File& fstream) const
         {

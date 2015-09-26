@@ -33,9 +33,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"LearnableParameter"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         {
@@ -134,8 +134,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
         virtual void EvaluateThisNode() {}
@@ -146,8 +144,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate();
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
         }
-
-        static const std::wstring TypeName() {return L"LearnableParameter";} 
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const
         {
@@ -172,9 +168,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SparseLearnableParameter : public LearnableParameter<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
             LearnableParameter<ElemType>(deviceId, name)
         {
@@ -193,9 +189,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);       // TODO: needed? Constructor already sets this
             m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
     };
 
     template class SparseLearnableParameter<float>; 
@@ -211,6 +204,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class InputValue : public ComputationNode<ElemType>, public NumInputs<0>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        // BUGBUG: This node identifies its sparseness through a different OperationName(). Hence we must do a non-standard dance ^^ to declare the boilerplate stuff.
+        //         This is bad. It should just write m_isSparse, or be a different type.
+
         void Init(size_t rows, size_t cols, bool isSparse)
         {
             m_isSparse = isSparse;
@@ -221,7 +218,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_needGradient = false;
         }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         {
@@ -295,8 +291,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type; this special-casing will cause grief
         virtual const std::wstring OperationName() const { return m_isSparse ? SparseTypeName() : TypeName(); }
 
-        static const std::wstring TypeName() {return L"InputValue";} 
-        static const std::wstring SparseTypeName() {return L"SparseInputValue";}    // special case used by old NDL
+        static const std::wstring TypeName() { return L"InputValue"; }
+        static const std::wstring SparseTypeName() { return L"SparseInputValue"; }    // special case used by old NDL
 
         virtual void EvaluateThisNode()  {} 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) {}
@@ -341,15 +337,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class LookupTableNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"LookupTable"; }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LookupTableNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"LookupTable";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -562,13 +555,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class PairNetworkNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"PairNetwork"; }
+
         void Init(size_t row_size, size_t col_size)
         {
             m_functionValues.Resize(row_size, col_size);
         }
     public:
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         //PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name) :
         //    Base(deviceId, name)
         //{
@@ -587,8 +581,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Init(1, 1); // TODO: this looks wrong; should the dimension not come from the loaded model data?
             Base::LoadFromFile(fstream, modelVersion);
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
 
         /// to-do: need to change to the new way of resetting state
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -666,8 +658,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 #endif
-
-        static const std::wstring TypeName() { return L"PairNetwork"; }
 protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 

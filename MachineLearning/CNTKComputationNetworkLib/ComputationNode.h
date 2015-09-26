@@ -121,6 +121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: OperationName calls static TypeName which does not match the actual type names in that the 'Node' is missing.
         virtual const std::wstring OperationName() const = 0;
 #define OperationNameOf(T) (T<float>::TypeName())    // we are templated, but for this the type param matters not. So we just pick one, and hide that fact.
+        //static const std::wstring TypeName() { LogicError("TypeName() was called by abstract class"); }   // (we should never see this)
 
         // TODO: make sure this does not get implemented in any of the base classes
         DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }    // TODO: remove, only used from copy constructor which will go away
@@ -1304,7 +1305,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // helper macro to ease access to base members in presence of C++ two-phase name lookup
-    // Add 'typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;' at the start of each derived class
+    // Add 'typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;' at the start of each derived class
     // (some derived classes define a similar macro; there please modify the typedef for Base accordingly.)
     // This macro imports, one by one, every member of ComputationNode into the name space of the derived class.
     // Without this, one would have to use the name prefix, or alternatively this->, in front of all base member,
@@ -1313,10 +1314,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This macro expects 'Base' to be the name of the base class. Please also use 'Base' outside this macro to make it less likely to accidentally call the wrong base class members.
     // BUGBUG: some should be protected, not public
     // Note: Whoever invented that insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain. [fseide]
-#define UsingComputationNodeMembers    \
-protected:  \
-    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  \
-        /* TODO: move NewThis() here  */ \
+#define UsingComputationNodeMembers /*-WithoutOperationName needed to support inconsistent pattern of InputValue */    \
+protected: \
+    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  /*TODO: can we just use 'using?' */ \
+    using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
+    using Base::m_visitedOrder; using Base::m_index; using Base::m_lowLink; using Base::m_visited; using Base::m_inStack; using Base::m_indexInLoop; \
+    using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
+    using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::SetMaskMissingColumnsToZero; \
+    using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
+    using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
+    using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; using Base::s_timeStampCounter; \
+    using Base::shared_from_this; \
 public: \
     using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; \
     using Base::ComputeGradientForChildren; using Base::ComputeInputPartial; using Base::ConstOnes; \
@@ -1327,19 +1335,15 @@ public: \
     using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
     using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
-    using Base::OperationName; using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
+    using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
-    using Base::SaveToFile; using Base::SetFunctionAndGradientMBSize; using Base::SetInput; using Base::Validate; \
-protected:  \
-    using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
-    using Base::m_visitedOrder; using Base::m_index; using Base::m_lowLink; using Base::m_visited; using Base::m_inStack; using Base::m_indexInLoop; \
-    using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
-    using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::SetMaskMissingColumnsToZero; \
-    using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
-    using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
-    using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; using Base::s_timeStampCounter; \
-    using Base::shared_from_this; \
-public:
+    using Base::SaveToFile; using Base::SetFunctionAndGradientMBSize; using Base::SetInput; using Base::Validate
+
+#define UsingComputationNodeMembersBoilerplate \
+protected:    /* some boilerplate goes here */ \
+    virtual const std::wstring OperationName() const override { return TypeName(); } \
+    virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); } \
+    UsingComputationNodeMembers
 
 #pragma endregion base computation class
 
