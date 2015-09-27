@@ -735,7 +735,7 @@ private:
             }
         }
 
-        static void WINAPI ComputeInputPartialUnnormedPrior(Matrix<ElemType>& unnormedPriorGradientValues, const Matrix<ElemType>& gradientValues,
+        /*TODO: merge with call site*/void ComputeInputPartialUnnormedPrior(Matrix<ElemType>& unnormedPriorGradientValues, const Matrix<ElemType>& gradientValues,
             const Matrix<ElemType>& prior, const Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
             temp.AssignDifferenceOf(posterior, prior);
@@ -748,7 +748,7 @@ private:
                 RuntimeError("GMMLogLikelihoodNode: UnnormedPrior should either have same number of columns as the features or have only one column.");
         }
 
-        static void WINAPI ComputeInputPartialMean(Matrix<ElemType>& meanGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
+        /*TODO: merge with call site*/void ComputeInputPartialMean(Matrix<ElemType>& meanGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
             Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
             size_t numComponent = posterior.GetNumRows(); 
@@ -774,7 +774,7 @@ private:
                 RuntimeError("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
         }
 
-        static void WINAPI ComputeInputPartialLogStddev(Matrix<ElemType>& logStddevGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviation,
+        /*TODO: merge with call site*/void ComputeInputPartialLogStddev(Matrix<ElemType>& logStddevGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviation,
             const Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
             size_t numComponent = posterior.GetNumRows();
@@ -791,7 +791,7 @@ private:
                 RuntimeError("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
         }
 
-        static void WINAPI ComputeInputPartialFeature(Matrix<ElemType>& featureGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
+        /*TODO: merge with call site*/void ComputeInputPartialFeature(Matrix<ElemType>& featureGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
             Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
             size_t numComponent = posterior.GetNumRows();
@@ -873,7 +873,7 @@ private:
 
         //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
         //If we want to speed up we need to replace following code with a several specialized GPU functions
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& unnormedPrior, const Matrix<ElemType>& mean,  Matrix<ElemType>& logstddev,
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& unnormedPrior, const Matrix<ElemType>& mean,  Matrix<ElemType>& logstddev,
             const Matrix<ElemType>& feature, Matrix<ElemType>& prior, Matrix<ElemType>& stddev, Matrix<ElemType>& normedDeviationVectors,
             Matrix<ElemType>& normedDeviation, Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
@@ -1077,7 +1077,7 @@ private:
             ComputeInputPartialS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
         }
 
-        static void WINAPI ComputeInputPartialS(const double dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialS(const double dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
         {
             if (dropoutRate > 0)
             {
@@ -1112,7 +1112,7 @@ private:
             EvaluateThisNodeS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
         }
 
-        static void WINAPI EvaluateThisNodeS(const double dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(const double dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
         {
             if (dropoutRate > 0)
             {
@@ -1360,7 +1360,7 @@ private:
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_numRows);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRows)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRows)
         {
             functionValues.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
             functionValues.AssignRowSliceValuesOf(inputFunctionValues, 0, inputFunctionValues.GetNumRows());
@@ -1405,7 +1405,7 @@ private:
             ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_numRows);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t /*numRows*/)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t /*numRows*/)
         {
             size_t numRows = inputGradientValues.GetNumRows();
             inputGradientValues.Reshape(gradientValues.GetNumRows(), gradientValues.GetNumCols());
@@ -1598,7 +1598,7 @@ private:
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_numRepeat);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRepeats)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRepeats)
         {
             functionValues.AssignRepeatOf(inputFunctionValues, numRepeats, 1);
 #if NANCHECK
@@ -1622,7 +1622,7 @@ private:
             ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_numRepeat);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t numRepeats)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t numRepeats)
         {
             inputGradientValues.AddToRowRepeatValuesOf(gradientValues, numRepeats);
         }
