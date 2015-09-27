@@ -1572,7 +1572,7 @@ protected:
     // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
     MBLayoutPtr m_pMBLayout;    // note that this must be installed before doing anything that needs it (default leaves a nullptr)
-    MBLayoutPtr m_pMBNoLayout;  // this alternative one is passed when no layout is available/should be used
+    //MBLayoutPtr m_pMBNoLayout;  // this alternative one is passed when no layout is available/should be used
 
     size_t m_actualMBSize;      // current MB size in columns --note: this is not #frames, if we have multiple parallel sequences, cf. MBLayout
 
