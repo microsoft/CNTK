@@ -152,10 +152,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
 
-        // special convenience function to apply ColumnSlice() to getting a frame range
-        //Matrix<ElemType> FrameSlice(const struct FrameRange & frameRange, size_t expectedStartColumn, size_t expectedNumCols) const;
-        Matrix<ElemType> FrameSlice(const struct FrameRange & frameRange, const shared_ptr<struct MBLayout> & pMBLayout) const;
-
         // difference between AssignColumnSlice and SetColumnSlice 
         // AssignColumnSlice :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, startColumn: startColumn+numCols-1) 
         // SetColumnSlice    :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, 0: startColumn+numCols-1) 
@@ -675,7 +671,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const FrameRange & Check(size_t expectedStartColumn, size_t expectedNumCols, const shared_ptr<MBLayout> & pMBLayout) const
         {
             if (!IsAllFrames() && (samplesInRecurrentStep != pMBLayout->GetNumParallelSequences() || expectedStartColumn != StartColumn(pMBLayout) || expectedNumCols != NumCols(pMBLayout)))
-                LogicError("FrameSlice: FrameRange object gives different range than original explicit code. Logic is borked.");
+                LogicError("FrameRange::Check: FrameRange object gives different range than original explicit code. Logic is borked.");
             return *this;
         }
     private:

@@ -250,7 +250,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // This is used at 284 places inside nodes, most of the time as
-        // FrameSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout)
+        // ...Slice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout)
         size_t GetNumParallelSequences() const
         {
             return m_pMBLayout->GetNumParallelSequences();
