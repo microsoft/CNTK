@@ -172,10 +172,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: should Reshape() return a new Matrix object that contains a reference to the original?
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
-        /// similarly to the repmat operation in matlab or octave
+
+        // update number of columns
+        // TODO: a future version may want to enforce retaining the content, to allow dynamically growing layouts column by column (when size is not known upfront)
+        void ResizeColumns(const size_t numCols) { Resize(GetNumRows(), numCols); }
+
+        // similarl to the repmat operation in matlab or octave
         static Matrix<ElemType> RepMat(const Matrix<ElemType>& frmMat, const size_t rows, const size_t cols);
+
         size_t GetAllocatedSize() const;
-        void Reset(); //reset for sparse matrix
+        void Reset(); // reset for sparse matrix
 
         const ElemType operator() (const size_t row, const size_t col) const;
         ElemType& operator() (const size_t row, const size_t col);
@@ -478,13 +484,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - a column-wise OR of those flags for fast testing entire time steps at once
     // This object allocates its storage lazily, i.e. if there are no flags ever set, no memory is allocated. This is transparent to the caller.
     // Note: With truncated BPTT, it is possible to have sequential data, yet not a single flag set in a minibatch (if all frames are sequence-internal ranges).
-    // TODO: move this to an appropriate place and name it properly
+    // Contract between ComputationNode, ComputationNetwork, and MBLayout:
+    //  - if a node has no MBLayout, m_{function,gradient}Values are not samples (they are not activations or input data), but e.g. model parameters
+    //  - ComputationNode::GetNumCols() == MBLayout::GetNumTimeSteps() * MBLayout::GetNumParallelSequences()
+    //  - ComputationNetwork ensures that m_{function,gradient}Values are allocated correctly before calling EvaluateThisNode() on a node
+    // TODO: move this to an appropriate place and name it properly. This class has no relationship with Matrix
     // NOTE: This class represents an ongoing abstraction of an originally distributed/code-duped way of defining and accessing the MB layout.
     //       Some code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
     //       Some wackiness below is explained by this.
     // TODO: frame-randomized MBs are now represented as one stream of many frames. This is wrong; they should be one-frame utterances with many streams. Once we fully abstract out Data access, this can be changed easily.
     struct MBLayout
-    {   
+    {
         typedef std::shared_ptr<MBLayout> MBLayoutPtr;
 
         MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { Init(1, 0, false); }

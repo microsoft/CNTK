@@ -566,17 +566,20 @@ public:
     // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
     // TODO: pass a set of nodes instead of only one
     // TODO: rename to ForwardProp()? To make it very clear?
+    // TODO: big stuff like this should be in the CPP
+    // This calls EvaluateThisNode() on all nodes in order of data flow through the network.
+    // By default, the network is applied concurrently on all frames in a minibatch in parallel (a "map" operation)
+    // Recurrent loops deviate:
+    //  - a recurrent loop is the loop of nodes that make up computation for one time step (e.g. Times -> Plus -> Sigmoid -> Delay)
+    //  - these must be executed frame by frame rather than as a map
+    //  - such a loop is treated as if they were a little nested network; this is done inside here
+    //  - these little nested networks are defined in m_recurrentInfo[]
     void Evaluate(const ComputationNodeBasePtr rootNode)
     {
-        // We have a matching layout structure that matches pMBLayout in number of sequences while not having any flags set.
-        // This is used for nodes that do not need recurrent processing, but can be done in batch.
-        // TODO: Does it harm if we have flags, for those that can be done in batch? I.e. why don't we just always provide flags?
-        //m_pMBNoLayout->Resize(m_pMBLayout->GetNumParallelSequences(), 0);   // TODO: this is not nice, but we currently have no trigger to detect changes in layout
-
         // prepare to compute with the subnetwork that this rootNode depends on, including
         //  - auto-detecting recurrent loops
-        //  - calling Validate() on all nodes, which, a.o, resizes the matrices
-        //  - ...more stuff
+        //  - collect input and learnable nodes
+        //  - calling Validate() on all nodes lazily, which sizes all matrices (column dimensions get updated to MB size)
         BuildAndValidateSubNetwork(rootNode);
 
         // determines order of evaluation, such that children get evaluated before their parent nodes
@@ -609,7 +612,12 @@ public:
                 // TODO: move this out of the loop, always do it; gives nodes change to update internal cached layout
                 //       ^^ not that simple, since some should not be scaled, such as parameters and criterion nodes
                 for (auto & nodeIter : recurrentNodes)
-                    nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize);
+                {
+                    if (!nodeIter->GetMBLayout() || nodeIter->GetMBLayout() != recurrentNodes[0]->GetMBLayout())
+                        LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
+                                   nodeIter->NodeName().c_str(), recurrentNodes[0]->NodeName().c_str());
+                    nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize); // TODO: this will go
+                }
 
                 const size_t T = m_actualMBSize / GetNumParallelSequences();
 
@@ -620,6 +628,7 @@ public:
                     {
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
+                            (*nodeIter)->SetFunctionAndGradientMBSize();
                             (*nodeIter)->EvaluateThisNodeGivenInputs(t);
                             if (IsNodeReqMultiSeqHandling(*nodeIter))
                                 (*nodeIter)->MaskMissingValuesColumnsToZero(t);
@@ -633,6 +642,7 @@ public:
                     {
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
+                            (*nodeIter)->SetFunctionAndGradientMBSize();
                             (*nodeIter)->EvaluateThisNodeGivenInputs(t);
                             if (IsNodeReqMultiSeqHandling(*nodeIter))
                                 (*nodeIter)->MaskMissingValuesColumnsToZero(t);
@@ -654,9 +664,10 @@ public:
 #if DUMPOUTPUT
                 fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
 #endif
+                // evaluate the node for all frames concurrently (map)
                 // we manage time stamp here so that derived classes don't need to worry about it
-                // TODO: is this the whole-batch evaluation?
-                (*nodeIter)->EvaluateThisNodeGivenInputs(); 
+                (*nodeIter)->SetFunctionAndGradientMBSize();
+                (*nodeIter)->EvaluateThisNodeGivenInputs();
                 if (IsNodeReqMultiSeqHandling(*nodeIter))
                     (*nodeIter)->MaskMissingValuesColumnsToZero();
                 (*nodeIter)->UpdateEvalTimeStamp();
