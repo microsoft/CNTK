@@ -1084,14 +1084,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
                                    const FrameRange & frameRange/*select frame or entire batch*/)
         {
-            auto sequence = SIZE_MAX;
-            if (frameRange.IsAllFrames()/* || m_pMBLayout*/)
+            auto sequence = SIZE_MAX;   // (left-over, need to think this through)
+            // if FrameRange refers to whole minibatch (map mode)
+            // or if we don't even have a layout
+            // then return the whole matrix
+            if (!m_pMBLayout || frameRange.IsAllFrames())
             {
                 if (sequence == SIZE_MAX)
                     return data.ColumnSlice(0, data.GetNumCols());
                 else
                     LogicError("DataSlice: sequence index only supported when accessing individual frame"); // (not needed; doable but more involved, requiring a reshape)
             }
+            // FrameRange refers to a time slice -> return that
             else
             {
                 size_t numParallelSequences = m_pMBLayout->GetNumParallelSequences();

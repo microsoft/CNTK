@@ -1523,34 +1523,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
             //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            size_t cols0 = Inputs(0)->FunctionValues().GetNumCols(), cols1=Inputs(1)->FunctionValues().GetNumCols();
+            //size_t cols0 = Inputs(0)->FunctionValues().GetNumCols(), cols1=Inputs(1)->FunctionValues().GetNumCols();
 
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
-            Matrix<ElemType> sliceInput0Value;
-            //only the one with more columns can be sliced, if both have same columns both are sliced
-            //if (frameRange.IsAllFrames())
-            //    sliceInput0Value = Inputs(0)->ValueSlice(FrameRange());
-            //else
-            if (cols0 >= cols1)
-                sliceInput0Value = Inputs(0)->ValueSlice(frameRange);
-            else
-                sliceInput0Value = Inputs(0)->ValueSlice(FrameRange());
-            Matrix<ElemType> sliceInput1Value;
-            //if (frameRange.IsAllFrames())
-            //    sliceInput1Value = Inputs(1)->ValueSlice(FrameRange());
-            //else
-            if (cols0 <= cols1)
-                sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
-            else
-                sliceInput1Value = Inputs(1)->ValueSlice(FrameRange());
-            EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
-        }
+            Matrix<ElemType> functionValues = ValueSlice(frameRange);
+            // note that ValueSlice will consider whether that input has an MB layout or not (in the latter case it will not slice)
+            Matrix<ElemType> inputFunctionValues0 = Inputs(0)->ValueSlice(frameRange);
+            Matrix<ElemType> inputFunctionValues1 = Inputs(1)->ValueSlice(frameRange);
 
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
-        {
+            //EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
+        //}
+
+        ///*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
+        //{
+            // TODO: rethink/reinterpret this cols0 < cols1 business, what does it really mean in the context of MBLayouts?
             size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
             size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
-            functionValues.Resize(max(rows0, rows1), max(cols0,cols1));
+            functionValues.Resize(max(rows0, rows1), max(cols0,cols1)); // TODO: for a slice, this becomes a check. Make it more clear.
 
             if ((rows0 == rows1 && cols0 == cols1) || ((rows0 == 1 || rows1 == 1) && cols0 == cols1))
             {
@@ -1558,6 +1546,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (cols0 == 1 && rows1 % rows0 == 0)  //one is col vec with divisable rows, including scalar
             {
+                // TODO: Reshape should not operate in place, but return a reshaped view
                 inputFunctionValues1.Reshape(rows0, rows1 * cols1 / rows0);
                 functionValues.AssignSumOf(inputFunctionValues0, inputFunctionValues1);
                 inputFunctionValues1.Reshape(rows1, cols1);

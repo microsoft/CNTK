@@ -1279,7 +1279,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly /*=true*/)
     {
-        if (m_numRows == numRows && m_numCols == numCols)   // TODO: do this check for GPU as well
+        if (m_numRows == numRows && m_numCols == numCols)
             return;
 
         m_numRows = numRows;
