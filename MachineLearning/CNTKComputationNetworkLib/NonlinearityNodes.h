@@ -812,20 +812,24 @@ private:
                 featureGradientValues.AddWithRowSliceValuesOf(temp, i*featureSize, featureSize);
         }
 
-        virtual void SetFunctionAndGradientMBSize(size_t numSamples)
+        virtual size_t SetFunctionAndGradientMBSize(size_t numCols)
         {
-            Base::SetFunctionAndGradientMBSize(numSamples);
+            numCols = Base::SetFunctionAndGradientMBSize(numCols);
+            // ^^ if numCols is SIZE_MAX then we let base determine the value based on MB layout
+            if (!m_pMBLayout)            // if no layout, this node contains parameters independent of MB size, don't resize
+                return numCols;         // BUGBUG: what do we return here?
 
             size_t numComponents = Inputs(0)->FunctionValues().GetNumRows();
             size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();
-            //size_t numSamples = Inputs(3)->FunctionValues().GetNumCols();
+            //size_t numCols = Inputs(3)->FunctionValues().GetNumCols();
             size_t featureSize = Inputs(3)->FunctionValues().GetNumRows();
 
             m_prior.Resize(numComponents, colsPrior);
             m_stddev.Resize(numComponents, colsPrior);
-            m_normedDeviation.Resize(numComponents, numSamples);
-            m_normedDeviationVectors.Resize(numComponents * featureSize, numSamples);
-            m_posterior.Resize(numComponents, numSamples);
+            m_normedDeviation.Resize(numComponents, numCols);
+            m_normedDeviationVectors.Resize(numComponents * featureSize, numCols);
+            m_posterior.Resize(numComponents, numCols);
+            return numCols;
         }
 
         //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature

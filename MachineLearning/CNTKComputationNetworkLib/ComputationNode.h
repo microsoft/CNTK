@@ -202,7 +202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
         }
 
-        virtual void SetFunctionAndGradientMBSize(size_t numSamples) = 0;
+        virtual size_t SetFunctionAndGradientMBSize(size_t numCols = SIZE_MAX/*means take from layout*/) = 0;
 
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
         MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
@@ -249,6 +249,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("VerifyNumParallelSequences: value inconsistent with MB layout");
         }
 
+    protected:
+    public: // the following should be protected, but nodes inquire about their children, requiring public access
         // This is used at 284 places inside nodes, most of the time as
         // ...Slice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences()), m_pMBLayout)
         size_t GetNumParallelSequences() const
@@ -256,17 +258,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_pMBLayout->GetNumParallelSequences();
         }
 
+        // get our current number of time steps for this node
+        // This really inquites the MB layout.
         size_t GetNumTimeSteps() const
         {
-            if (!m_pMBLayout)       // TODO: or should this function simply be invalid to call if we have no layout? E.g. a LearnableParameter has no time steps
-                return GetNumParallelSequences();
-            else if (m_pMBLayout->IsAllNone())
-                return GetNumCols() / GetNumParallelSequences();
-            else if (m_pMBLayout->GetNumTimeSteps() * GetNumParallelSequences() != GetNumCols())
+            if (!m_pMBLayout)
+                LogicError("GetNumTimeSteps: invalid to call on a node without MB layout"); // since it has no notion of time
+                //return GetNumCols();
+            if (m_pMBLayout->GetNumTimeSteps() * m_pMBLayout->GetNumParallelSequences() != GetNumCols())
                 LogicError("GetNumTimeSteps: inconsistency between layout and actual number of columns");
             // TODO: ^^ much of this should go away, as in the future, the layout will always correctly know the #samples
             return m_pMBLayout->GetNumTimeSteps();
         }
+    public:
 
         // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
         // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNode, LSTMNode)
@@ -860,14 +864,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // BUGBUG: This should only change nodes that emit minibatches, but not e.g. parameters or criterion nodes
         //         Cannot be solved by overrides, since parameters may combine before being applied, and nodes won't know
         // virtual, but currently only overridden by GMMLogLikelihoodNode (which allocates some internal temp memory)
-        virtual void SetFunctionAndGradientMBSize(size_t numSamples)
+        // TODO: numCols parameter should go away; kept for legacy code
+        virtual size_t SetFunctionAndGradientMBSize(size_t numCols)
         {
-            size_t numRows = m_functionValues.GetNumRows();
-            if (numRows > 0 && numSamples > 0)
+            if (!m_pMBLayout)            // if no layout, this node contains parameters independent of MB size, don't resize
+                return numCols;         // BUGBUG: what do we return here?
+            if (numCols == SIZE_MAX)    // SIZE_MAX means determine from layout
+                return numCols;         // TODO: for now, to keep its existing functionality
+                //numCols = m_pMBLayout->GetNumTimeSteps() * m_pMBLayout->GetNumParallelSequences();
+            if (m_functionValues.GetNumRows() > 0 && numCols > 0)  // TODO: why skip this for 0 samples?
             {
-                m_functionValues.Resize(numRows, numSamples); 
-                m_gradientValues.Resize(numRows, numSamples); 
+                m_functionValues.ResizeColumns(numCols); 
+                m_gradientValues.ResizeColumns(numCols); 
             }
+            return numCols;
         }
 
         /*implement*/void EvaluateThisNodeGivenInputs()

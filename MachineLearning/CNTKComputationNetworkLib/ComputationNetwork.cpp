@@ -321,6 +321,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto node = *nodeIter;
             node->PrintSelfBeforeValidation();
             node->Validate();
+            // verify contract with MB layout was obeyed by Validate()
+            if (node->GetMBLayout() && node->GetNumCols() != node->GetNumTimeSteps() * node->GetNumParallelSequences())
+                LogicError("%ls operation's Validate() function set function values width (%d) inconsistent with MB layout width (%d x %d)",
+                           (int)node->GetNumCols(), (int)node->GetNumTimeSteps(), (int)node->GetNumParallelSequences());
         }
 
         fprintf(stderr, "\n\n");
