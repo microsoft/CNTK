@@ -405,7 +405,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return true;
         return false;
     }
-    bool ComputationNetwork::NeedToMaskMissingColumnsToZero(const ComputationNodeBasePtr & node) const
+    bool ComputationNetwork::IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const
     {
         bool maskingWasRequested = VectorContains(m_requestNodesMultiSeqHandling,node);
         if (maskingWasRequested &&
@@ -414,7 +414,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
              node->OperationName() == OperationNameOf(MeanNode) ||
              node->OperationName() == OperationNameOf(InvStdDevNode)))
         {
-            RuntimeError("NeedToMaskMissingColumnsToZero: NodesReqMultiSeqHandling cannot be used with operation '%ls'\nIn the past, CNTK silently fixed this; now please change your NDL instead.", node->OperationName().c_str());
+            RuntimeError("The 'NodesReqMultiSeqHandling' option cannot be used with operation '%ls'.\nIn the past, CNTK silently fixed this; now please change your NDL instead.", node->OperationName().c_str());
         }
         return maskingWasRequested;
     }

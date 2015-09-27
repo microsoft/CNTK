@@ -7,6 +7,7 @@
 // TODO:
 //  - remove empty-matrix checks: if an op is well-defined with empty matrices, then do it
 //  - Resize() must be cheap if it does nothing  (I already did that for CPU, still to be done for GPU)
+//  - an overload for Resize() to match another matrix
 //  - need a way to grow a minibatch matrix without destroying its content, something like PushColumns()
 
 #pragma once

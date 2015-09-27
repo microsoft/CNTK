@@ -80,7 +80,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_indexInLoop(0),
             m_visited(false),
             m_inStack(false),
-            m_maskMissingColumnsToZero(false),
+            //m_maskMissingColumnsToZero(false),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name)
         {
         }
@@ -113,7 +113,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_outputHeight = m_outputHeight;
                 node->m_outputChannels = m_outputChannels;
 
-                node->m_maskMissingColumnsToZero = m_maskMissingColumnsToZero;
+                //node->m_maskMissingColumnsToZero = m_maskMissingColumnsToZero;
             }
         }
         virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) = 0;
@@ -161,8 +161,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this is the main entry point for Network; while EvaluateThisNode(FrameRange()) is the virtual call into specific node implementation
         virtual void EvaluateThisNodeGivenInputs() = 0;
         virtual void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
-        virtual void EvaluateThisNodeGivenInputs2() = 0;
-        virtual void EvaluateThisNodeGivenInputs2(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
+        virtual void MaskMissingValuesColumnsToZero() = 0;
+        virtual void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
 
         virtual void Validate()
         {
@@ -328,14 +328,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // only called from SetRequestNodesMultiSeqHandling() (which is in turn called from BuildAndValidateSubNetwork())
         // and from the deprecated LSTMNode and PairNode
         // TODO: remove this flag, instead call it based on testing the user flag directly
-        void SetMaskMissingColumnsToZero()
-        {
-            if (NodeDoesItsOwnCustomizedMissingColumnsMasking())
-                RuntimeError("SetMaskMissingColumnsToZero: do not explicitly specify NodesReqMultiSeqHandling for operation '%ls', as this operation does it implicitly already.\nIn the past, CNTK silently fixed this; now please change your NDL instead.", OperationName().c_str());
-            m_maskMissingColumnsToZero = true;
-        }
-    protected:
-        bool NeedToMaskMissingColumnsToZero() const { return m_maskMissingColumnsToZero; }
+        //void SetMaskMissingColumnsToZero()
+        //{
+        //    if (NodeDoesItsOwnCustomizedMissingColumnsMasking())
+        //        RuntimeError("SetMaskMissingColumnsToZero: do not explicitly specify NodesReqMultiSeqHandling for operation '%ls', as this operation does it implicitly already.\nIn the past, CNTK silently fixed this; now please change your NDL instead.", OperationName().c_str());
+        //    m_maskMissingColumnsToZero = true;
+        //}
+    //protected:
+        //bool IsNodeReqMultiSeqHandling() const { return m_maskMissingColumnsToZero; }
     public:
 
         void InitRecurrentNode()    // this initialization says that this node is not inside a loop
@@ -373,8 +373,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr node) = 0;
 
         virtual void ComputeGradientForChildren() = 0;
-
         virtual void ComputeGradientForChildren(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
+
+        virtual void MaskMissingGradientColumnsToZero() = 0;
+        virtual void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
 
         // TODO: some evaluation method to be abstracted, but types don't match
 
@@ -733,7 +735,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // for loop nodes
         bool m_hasloop;
 
-        bool m_maskMissingColumnsToZero;  // indicates whether user requested that the results of operation should be masked to handle the cases that the utterances have different lengths when grouped together as a minibatch.
+        //bool m_maskMissingColumnsToZero;  // indicates whether user requested that the results of operation should be masked to handle the cases that the utterances have different lengths when grouped together as a minibatch.
         // The obvious cases--recurrence, training criterion, and parameter gradients--are already handled automatically.
         // The user must only set this flag for special cases where current CNTK does not do stuff right.
         // Once we handle inconsistent layouts, this will go away.
@@ -873,9 +875,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNode(FrameRange());     // this is a call to the virtual function that implements the actual operation
         }
 
-        /*implement*/void EvaluateThisNodeGivenInputs2()
+        /*implement*/void MaskMissingValuesColumnsToZero()
         {
-            //if (NeedToMaskMissingColumnsToZero())       // this means the node does it by itself; if not, we do it for the node
+            //if (IsNodeReqMultiSeqHandling())       // this means the node does it by itself; if not, we do it for the node
                 MaskMissingColumnsToZero(m_functionValues);
         }
 
@@ -887,9 +889,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNode(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
         }
 
-        /*implement*/void EvaluateThisNodeGivenInputs2(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
+        /*implement*/void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
         {
-            //if (NeedToMaskMissingColumnsToZero())
+            //if (IsNodeReqMultiSeqHandling())
                 MaskMissingColumnsToZero(m_functionValues, timeIdxInSeq);
         }
 
@@ -1119,14 +1121,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
-        /*implement*/void ComputeGradientForChildren()
+        /*implement*/void MaskMissingGradientColumnsToZero()
         {
             // batch is done only for feed-forward nodes
             if (HasLoop()) 
                 return;
 
-            if (NeedToMaskMissingColumnsToZero())
+            //if (IsNodeReqMultiSeqHandling())
                 MaskMissingColumnsToZero(m_gradientValues);
+        }
+
+        // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
+        /*implement*/void ComputeGradientForChildren() override
+        {
+            if (HasLoop())
+                return;
 
             for (size_t i = 0; i<m_children.size(); i++)
             {
@@ -1152,13 +1161,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         
         // TODO: use a FrameRange here as well, then unify with above
-        /*implement*/void ComputeGradientForChildren(const size_t timeIdxInSeq)
+        /*implement*/void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq)
         {
-            for (size_t i=0; i<m_children.size(); i++)
-            {
-                if (NeedToMaskMissingColumnsToZero())
-                    MaskMissingColumnsToZero(m_gradientValues, timeIdxInSeq);
+            //if (IsNodeReqMultiSeqHandling())
+                MaskMissingColumnsToZero(m_gradientValues, timeIdxInSeq);
+        }
 
+        // TODO: use a FrameRange here as well, then unify with above
+        /*implement*/void ComputeGradientForChildren(const size_t timeIdxInSeq) override
+        {
+            for (size_t i = 0; i<m_children.size(); i++)
+            {
                 ComputationNodePtr child = Inputs(i);
                 if (child->NeedGradient())
                 {
@@ -1334,14 +1347,14 @@ protected: \
     using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
     using Base::m_visitedOrder; using Base::m_index; using Base::m_lowLink; using Base::m_visited; using Base::m_inStack; using Base::m_indexInLoop; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
-    using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::SetMaskMissingColumnsToZero; \
+    using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; \
     using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
     using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; using Base::s_timeStampCounter; \
     using Base::shared_from_this; \
 public: \
     using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; \
-    using Base::ComputeGradientForChildren; using Base::ComputeInputPartial; using Base::ConstOnes; \
+    /*using Base::ComputeGradientForChildren; using Base::ComputeInputPartial;*/ using Base::ConstOnes; \
     using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
