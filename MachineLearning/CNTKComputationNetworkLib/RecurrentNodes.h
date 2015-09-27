@@ -1225,7 +1225,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        static void WINAPI EvaluateThisNodeS(
+        /*TODO: merge with call site*/void EvaluateThisNodeS(
             const Matrix<ElemType>& mInputGate,
             const Matrix<ElemType> &mForgetGate, const Matrix<ElemType> &mOutputGate,
             const Matrix<ElemType> &mCellWgt,

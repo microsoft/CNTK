@@ -382,7 +382,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        static void WINAPI ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)  
+        /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)  
         {
             size_t rows1 =inputFunctionValues.GetNumRows(), cols1 = inputFunctionValues.GetNumCols();
             size_t rowsp = gradientValues.GetNumRows(), colsp = gradientValues.GetNumCols();
@@ -397,7 +397,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gradientValues.Reshape(rowsp, colsp);
         }
 
-        static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)  
+        /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)  
             {
             size_t rows1 =inputGradientValues.GetNumRows(), cols1 = inputGradientValues.GetNumCols();
             size_t rowsp = gradientValues.GetNumRows(), colsp = gradientValues.GetNumCols();
@@ -430,7 +430,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, Matrix<ElemType>& input1)  
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, Matrix<ElemType>& input1)  
         {
             size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
             size_t cols0 = input0.GetNumCols();

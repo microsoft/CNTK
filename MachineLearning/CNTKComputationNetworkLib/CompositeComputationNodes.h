@@ -62,7 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(tmpMat, child->GradientValues());
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
         {
             inputGradientValues += gradientValues;
         }
@@ -72,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
         {
             size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
             size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
@@ -543,7 +543,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
                                              const Matrix<ElemType>& input1, const Matrix<ElemType>& input2)
         {
     #if DUMPOUTPUT
@@ -686,7 +686,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
                                              const Matrix<ElemType>& input1, const Matrix<ElemType>& input2)
         {
     #if DUMPOUTPUT
@@ -928,7 +928,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(GradientValues(), child->GradientValues(), GetNumParallelSequences());
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues, int nSamples)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues, int nSamples)
         {
     #if DUMPOUTPUT
 
@@ -963,7 +963,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues, int nSamples)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues, int nSamples)
         {
             /// this assumes this reverse node is called once, so it can set, instead add to, the function values
             size_t rows0 = inputFunctionValues.GetNumRows(), cols0 = inputFunctionValues.GetNumCols();

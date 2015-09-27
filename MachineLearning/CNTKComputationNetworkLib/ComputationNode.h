@@ -1085,7 +1085,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                    const FrameRange & frameRange/*select frame or entire batch*/)
         {
             auto sequence = SIZE_MAX;
-            if (frameRange.IsAllFrames())
+            if (frameRange.IsAllFrames()/* || m_pMBLayout*/)
             {
                 if (sequence == SIZE_MAX)
                     return data.ColumnSlice(0, data.GetNumCols());
