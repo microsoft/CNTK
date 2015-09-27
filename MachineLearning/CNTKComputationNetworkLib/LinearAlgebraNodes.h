@@ -1525,6 +1525,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             //size_t cols0 = Inputs(0)->FunctionValues().GetNumCols(), cols1=Inputs(1)->FunctionValues().GetNumCols();
 
+            {
+                // TODO: this will become code shared between Validate() and this
+                size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
+                size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+                FunctionValues().Resize(max(rows0, rows1), max(cols0, cols1));
+            }
+
             Matrix<ElemType> functionValues = ValueSlice(frameRange);
             // note that ValueSlice will consider whether that input has an MB layout or not (in the latter case it will not slice)
             Matrix<ElemType> inputFunctionValues0 = Inputs(0)->ValueSlice(frameRange);
@@ -1538,7 +1545,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: rethink/reinterpret this cols0 < cols1 business, what does it really mean in the context of MBLayouts?
             size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
             size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
-            functionValues.Resize(max(rows0, rows1), max(cols0,cols1)); // TODO: for a slice, this becomes a check. Make it more clear.
+            //functionValues.Resize(max(rows0, rows1), max(cols0,cols1)); // BUGBUG: in loop, cols0 == #slices?? This only works because growOnly defaults to true
 
             if ((rows0 == rows1 && cols0 == cols1) || ((rows0 == 1 || rows1 == 1) && cols0 == cols1))
             {
