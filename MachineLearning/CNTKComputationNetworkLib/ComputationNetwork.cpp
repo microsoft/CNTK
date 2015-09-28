@@ -361,8 +361,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // validate the rootNode and all nodes it depends on, in evaluation order
         ValidateSubNetwork(rootNode);
 
-        //
-        SetRequestNodesMultiSeqHandling();
+        // (gone: now done more directly without state in ComputationNode)
+        //SetRequestNodesMultiSeqHandling();
     }
 
     bool ComputationNetwork::IsFuncValueOlderThanInputs(const std::vector<ComputationNodeBasePtr>& recurrentNodes)
@@ -395,6 +395,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return false;
     }
 
+    // test for user-specified request for masking to the individual nodes
+    // This is only needed if users explicitly perform reduce-like operations, to workaround current limitations of CNTK.
+    // It makes no sense for some nodes, so we skip those.
+    template <typename T>
+    static bool VectorContains(const vector<T> & v, const T & what)
+    {
+        // TODO: I am sure there is some std algorithm for this, need to look for it
+        for (const auto & elem : v)
+            if (elem == what)
+                return true;
+        return false;
+    }
+    bool ComputationNetwork::IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const
+    {
+        bool maskingWasRequested = VectorContains(m_requestNodesMultiSeqHandling,node);
+        if (maskingWasRequested &&
+            (node->OperationName() == OperationNameOf(SumElementsNode) ||
+             node->OperationName() == OperationNameOf(TransposeNode) ||
+             node->OperationName() == OperationNameOf(MeanNode) ||
+             node->OperationName() == OperationNameOf(InvStdDevNode)))
+        {
+            RuntimeError("The 'NodesReqMultiSeqHandling' option cannot be used with operation '%ls'.\nIn the past, CNTK silently fixed this; now please change your NDL instead.", node->OperationName().c_str());
+        }
+        return maskingWasRequested;
+    }
+
+#if 0
+    // TODO: this vv has become this ^^
     // transfer user-specified request for masking to the indivudal nodes
     // This is only needed if users explicitly perform reduce-like operations.
     // It makes no sense for some nodes, so we skip those.
@@ -440,6 +468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!node->NodeDoesItsOwnCustomizedMissingColumnsMasking())
                     LogicError("criterion %ls's NodeDoesItsOwnCustomizedMissingColumnsMasking() function must return true", node->OperationName().c_str());
     }
+#endif
 
     template<class N> void ComputationNetwork::GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequirePreComputation, const ComputationNodeBasePtr rootNode, bool checkComputed)
     {
@@ -473,7 +502,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     //return list of nodes that require precomputation and not precomputed yet.
-    // TODO: name has a grammar error, fix
     std::list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringPreComputation(const ComputationNodeBasePtr rootNode, bool checkComputed)
     {
         std::list<ComputationNodeBasePtr> nodesRequirePreComputation;
@@ -482,8 +510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return nodesRequirePreComputation;
     }
 
-    //return list of nodes that require precomputation and not precomputed yet.
-    // TODO: name has grammar error, fix
+    //return list of nodes that require batch mode and not precomputed yet.
     std::list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringBatchMode(const ComputationNodeBasePtr rootNode, bool checkComputed)
     {
         std::list<ComputationNodeBasePtr> nodesRequirePreComputation;

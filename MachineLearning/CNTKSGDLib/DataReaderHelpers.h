@@ -257,7 +257,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
             // Note: Decimation may have reduced this to 0 frames.
             // TODO: This should be called/callable outside if 'wasDataRead' (GetMinibatch() should fill matrices to empty)
-            // TODO: This will go away, as we will do resizing inside EvaluateThisNode().
+            // TODO: This will go away, as we will do resizing inside EvaluateThisNode(FrameRange()).
             actualMBSize = 0;
             if (wasDataRead)    // TODO: what if we call it always? Answer: Moot, since this function call will go away.
                 actualMBSize = net.SetActualMiniBatchSizeFromFeatures();
