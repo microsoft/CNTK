@@ -876,8 +876,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!m_pMBLayout)            // if no layout, this node contains parameters independent of MB size, don't resize
                 return numCols;         // BUGBUG: what do we return here?
             if (numCols == SIZE_MAX)    // SIZE_MAX means determine from layout
-                return numCols;         // TODO: for now, to keep its existing functionality
-                //numCols = m_pMBLayout->GetNumTimeSteps() * m_pMBLayout->GetNumParallelSequences();
+                numCols = m_pMBLayout->GetNumTimeSteps() * m_pMBLayout->GetNumParallelSequences();
             if (m_functionValues.GetNumRows() > 0 && numCols > 0)  // TODO: why skip this for 0 samples?
             {
                 m_functionValues.ResizeColumns(numCols); 

@@ -540,14 +540,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_recurrentInfo.size() <= 1)
             return;
 
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+        // uniq the m_recurrentInfo array w.r.t. m_sourceNode
+        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)    // enumerate all loops
         {
             if (m_recurrentInfoTmp.size() == 0)
-            {
-                RecurrentInfo rInfo;
-                rInfo.Copy(*iter);
-                m_recurrentInfoTmp.push_back(rInfo);
-            }
+                m_recurrentInfoTmp.push_back(*iter);
             else
             {
                 bool bFound = false;
@@ -560,14 +557,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                if (bFound == false)
-                {
-                    RecurrentInfo rInfo;
-                                rInfo.Copy(*iter);
-                    m_recurrentInfoTmp.push_back(rInfo);
-                }
+                if (!bFound)
+                    m_recurrentInfoTmp.push_back(*iter);
                 else
-                    continue;
+                    continue;   // TODO: why is this else branch necessary? It's at the end...
             }
         }
 
@@ -575,6 +568,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_recurrentInfo.clear();
         for (auto iter = m_recurrentInfoTmp.begin(); iter != m_recurrentInfoTmp.end(); iter++)
             m_recurrentInfo.push_back(*iter);
+        // TODO: ^^ how is this different from m_recurrentInfo = move(m_recurrentInfoTmp)??
 
         // for debug purposes
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
@@ -1178,6 +1172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
 
         //some internal values in the nodes are computed during validation
+        SetFakeMBLayoutForValidation();
         ValidateNetwork(false, bAllowNoCriterionNode);
     }
 

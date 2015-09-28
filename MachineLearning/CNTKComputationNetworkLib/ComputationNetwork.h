@@ -56,17 +56,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class ComputationNetwork : public ScriptableObjects::Object, public ScriptableObjects::HasToString, public ScriptableObjects::IConfigRecord
 {
 protected:
-    // TODO: comment: what info is stored here? For what?
+    // recurrent loops in CNTK are like little local ComputationNetworks, but stored in a completely separate set of structures
+    // This structure stores that little sub-network.
     struct RecurrentInfo
     {
-        std::vector<ComputationNodeBasePtr> m_recurrentNodes;
+        std::vector<ComputationNodeBasePtr> m_recurrentNodes;               // all nodes involved in thisloop
         std::vector<ComputationNodeBasePtr> m_recurrentNodesForForward;
         ComputationNodeBasePtr m_sourceNode;
-        int m_loopId;
+        int m_loopId;                                                       // the loop id (index in xxx array)
         bool m_completedGradient;
         bool m_completedEvaluate;
         bool m_loopClosed;
-        bool m_isForwardLoop; 
+        bool m_isForwardLoop;                                               // true if left to right (t=0..T-1), false otherwise (t=T-1..0)
 
         void Reset()
         {
@@ -75,8 +76,9 @@ protected:
             m_loopClosed = false;
         }
 
+#if 0
         // TODO: why is this not a copy constructor or assignment operator?
-        void Copy(const RecurrentInfo& src)
+        void Copy(const RecurrentInfo & src)
         {
             m_recurrentNodes = src.m_recurrentNodes;
             m_recurrentNodesForForward = src.m_recurrentNodesForForward;
@@ -85,7 +87,9 @@ protected:
             m_completedGradient = src.m_completedGradient;
             m_completedEvaluate = src.m_completedEvaluate;
             m_loopClosed = src.m_loopClosed;
+            // m_isForwardLoop??
         }
+#endif
     };
 
 public:
@@ -232,6 +236,20 @@ public:
             actualMBSize = max(actualMBSize, (*nodeIter)->GetNumCols());
 
         return actualMBSize;
+    }
+
+    // helper to fix an MB layout given featureNodes, so that ValidateNetwork() will not fail due to a mismatching layout
+    // The problem is that fresh networks come in weird constellations:
+    //  - SimpleNetworkBuilder seems to set up all Input nodes to 3 columns
+    //  - NDL sets them by default to 1 column, unless user specifies anything different
+    //  - LoadNetworkFromFile() will bring back whatever MB size was last used before saving
+    // and ValidateNetwork() requires the MBLayout to be set up matching the Input node(s).
+    // So this function intializes the network's MBLayout to match the fresh model.
+    // If you find calls to ValidateNetwork() outside a MB loop fail with layout mismatches, call this function before.
+    // TODO: This is incredibly ugly. We need a better approach to this.
+    void SetFakeMBLayoutForValidation()
+    {
+        m_pMBLayout->Init(1, FeatureNodes()[0]->GetNumCols(), false);
     }
 
     // a helper function for some places that like to hack the features directly
@@ -607,24 +625,27 @@ public:
 
             if (recInfo && IsFuncValueOlderThanInputs(recInfo->m_recurrentNodesForForward) && !recInfo->m_completedEvaluate)
             {
-                const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
                 // node participates in a recurrent loop: process the loop frame by frame
-                // TODO: move this out of the loop, always do it; gives nodes change to update internal cached layout
-                //       ^^ not that simple, since some should not be scaled, such as parameters and criterion nodes
-                for (auto & nodeIter : recurrentNodes)
+                const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+
+                // get layout associated with this loop
+                auto pMBLayout = recurrentNodes[0]->GetMBLayout();
+                for (auto & nodeIter : recurrentNodes)  // layout must be shared by all nodes in the loop
                 {
-                    if (!nodeIter->GetMBLayout() || nodeIter->GetMBLayout() != recurrentNodes[0]->GetMBLayout())
+                    if (!pMBLayout || nodeIter->GetMBLayout() != pMBLayout)
                         LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
                                    nodeIter->NodeName().c_str(), recurrentNodes[0]->NodeName().c_str());
-                    nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize); // TODO: this will go
+                    //nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize); // TODO: this will go
                 }
 
-                const size_t T = m_actualMBSize / GetNumParallelSequences();
+                //const size_t T = m_actualMBSize / GetNumParallelSequences();
 
-                // for every time step run through all nodes in this particular loop
+                // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
                 if (recInfo->m_isForwardLoop)
                 {
-                    for (size_t t = 0; t < T; t ++)
+                    // note: the number of time steps may increase as we go along, e.g. for Decoder networks that decide the end based on network output
+                    // TODO: ^^ that's actually not yet implemented, but we can already be prepared for it
+                    for (size_t t = 0; t < pMBLayout->GetNumTimeSteps(); t++)
                     {
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
@@ -638,7 +659,7 @@ public:
                 }
                 else
                 {
-                    for (size_t t = T - 1; t --> 0; )
+                    for (size_t t = pMBLayout->GetNumTimeSteps() - 1; t--> 0;)
                     {
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
@@ -1567,7 +1588,7 @@ protected:
         return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_requestNodesMultiSeqHandling };
     }
 
-    std::vector<RecurrentInfo> m_recurrentInfo;     // [index--TODO: comment what this is indexed with]
+    std::vector<RecurrentInfo> m_recurrentInfo;     // [loopId] each entry is one recurrent loop (local little network that implements a recurrence)
 
     // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample

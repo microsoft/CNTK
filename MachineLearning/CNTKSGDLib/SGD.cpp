@@ -684,6 +684,10 @@ template<class ElemType>
         auto & criterionNodes = GetTrainCriterionNodes(net);
         auto & evaluationNodes = GetEvalCriterionNodes(net);
 
+        // give the layout something to validate with (some code below validates the network before actually receiving data)
+        // Note: yak!
+        net.SetFakeMBLayoutForValidation();
+
         // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
         // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
         std::map<std::wstring, Matrix<ElemType>*>* inputMatrices = new std::map<std::wstring, Matrix<ElemType>*>();
@@ -693,15 +697,6 @@ template<class ElemType>
             for (size_t i = 0; i < nodes.size(); i++)
             {
                 auto & node = nodes[i];
-                // give the layout something to validate with (some cod ebelow validates the network before actually receiving data)
-                if (pass == 0 && i == 0)
-                    net.GetMBLayoutPtr()->Init(1, node->GetNumCols(), false);
-                else if (net.GetMBLayoutPtr()->GetNumTimeSteps() != node->GetNumCols())
-                {
-                    fprintf(stderr, "TrainOrAdaptModel: node '%ls' column dimension (%d) inconsistency, resizing to match first node (%d)\n",
-                            node->NodeName().c_str(), (int)node->GetNumCols(), (int)net.GetMBLayoutPtr()->GetNumTimeSteps());
-                    node->SetFunctionAndGradientMBSize(net.GetMBLayoutPtr()->GetNumTimeSteps());
-                }
                 auto * functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues();
                 assert(functionValues->GetNumCols() == net.GetMBLayoutPtr()->GetNumTimeSteps());
                 (*inputMatrices)[node->NodeName()] = functionValues;
