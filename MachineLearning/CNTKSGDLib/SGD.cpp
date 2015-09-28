@@ -684,16 +684,28 @@ template<class ElemType>
         auto & criterionNodes = GetTrainCriterionNodes(net);
         auto & evaluationNodes = GetEvalCriterionNodes(net);
 
+        // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
+        // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
         std::map<std::wstring, Matrix<ElemType>*>* inputMatrices = new std::map<std::wstring, Matrix<ElemType>*>();
-        for (size_t i = 0; i < featureNodes.size(); i++)
+        for (size_t pass = 0; pass < 2; pass++)
         {
-            // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
-            (*inputMatrices)[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
-        }
-
-        for (size_t i = 0; i < labelNodes.size(); i++)
-        {
-            (*inputMatrices)[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->FunctionValues();
+            auto & nodes = (pass == 0) ? featureNodes : labelNodes;
+            for (size_t i = 0; i < nodes.size(); i++)
+            {
+                auto & node = nodes[i];
+                // give the layout something to validate with (some cod ebelow validates the network before actually receiving data)
+                if (pass == 0 && i == 0)
+                    net.GetMBLayoutPtr()->Init(1, node->GetNumCols(), false);
+                else if (net.GetMBLayoutPtr()->GetNumTimeSteps() != node->GetNumCols())
+                {
+                    fprintf(stderr, "TrainOrAdaptModel: node '%ls' column dimension (%d) inconsistency, resizing to match first node (%d)\n",
+                            node->NodeName().c_str(), node->GetNumCols(), net.GetMBLayoutPtr()->GetNumTimeSteps());
+                    node->SetFunctionAndGradientMBSize(net.GetMBLayoutPtr()->GetNumTimeSteps());
+                }
+                auto * functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues();
+                assert(functionValues->GetNumCols() == net.GetMBLayoutPtr()->GetNumTimeSteps());
+                (*inputMatrices)[node->NodeName()] = functionValues;
+            }
         }
 
         // used for KLD regularized adaptation. For all other adaptation techniques
@@ -714,6 +726,7 @@ template<class ElemType>
 
         //initializing weights and gradient holder
         //only one criterion so far TODO: support multiple ones?
+        // BUGBUG: fails here in validation--MBLayout not set yet
         auto & learnableNodes = net.LearnableNodes(criterionNodes[0]);
         std::list<Matrix<ElemType>> smoothedGradients;
 
