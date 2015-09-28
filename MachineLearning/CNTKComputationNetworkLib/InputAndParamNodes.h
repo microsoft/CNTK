@@ -204,6 +204,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
         virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        static const std::wstring TypeName() { return L"InputValue"; }
+        static const std::wstring SparseTypeName() { return L"SparseInputValue"; }    // special case used by old NDL
         // BUGBUG: This node identifies its sparseness through a different OperationName(). Hence we must do a non-standard dance ^^ to declare the boilerplate stuff.
         //         This is bad. It should just write m_isSparse, or be a different type.
 
@@ -284,14 +286,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ConvertToSparseMatrix();
 
             m_functionValues.Resize(rows, cols);
-            m_needGradient = false;
+            m_functionValues.SetValue(0.0);         // (Resize() alone is not guaranteed to clear to 0; this eliminates potential left-overs)
+            m_needGradient = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
         }
 
         // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type; this special-casing will cause grief
         virtual const std::wstring OperationName() const { return m_isSparse ? SparseTypeName() : TypeName(); }
-
-        static const std::wstring TypeName() { return L"InputValue"; }
-        static const std::wstring SparseTypeName() { return L"SparseInputValue"; }    // special case used by old NDL
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override {}
 
