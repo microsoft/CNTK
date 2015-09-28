@@ -201,6 +201,36 @@ bool DataReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*
     return bRet;
 }
 
+// GetMinibatch4SE - Get the next minibatch for SE training, including lattice, labels and phone boundary
+// latticeinput - lattice for each utterances in this minibatch
+// uids - lables stored in size_t vector instead of ElemType matrix
+// boundary - phone boundaries
+// returns - true if there are more minibatches, false if no more minibatchs remain
+template<class ElemType>
+bool DataReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap)
+{
+	bool bRet = true;
+	for (size_t i = 0; i < m_ioNames.size(); i++)
+	{
+		bRet &= m_dataReader[m_ioNames[i]]->GetMinibatch4SE(latticeinput, uids, boundaries, extrauttmap);
+	}
+	return bRet;
+}
+
+// GetHmmData - Get the HMM definition for SE training
+// hmm - HMM definition 
+// returns - true if succeed 
+template<class ElemType>
+bool DataReader<ElemType>::GetHmmData(msra::asr::simplesenonehmm * hmm)
+{
+	bool bRet = true;
+	for (size_t i = 0; i < m_ioNames.size(); i++)
+	{
+		bRet &= m_dataReader[m_ioNames[i]]->GetHmmData(hmm);
+	}
+	return bRet;	
+}
+
 template<class ElemType>
 size_t DataReader<ElemType>::GetNumParallelSequences()
 {

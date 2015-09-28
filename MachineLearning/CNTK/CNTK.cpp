@@ -332,12 +332,14 @@ namespace Microsoft {
                 msra::strfun::tolower_ascii(s);
                 if (s == L"crossentropywithsoftmax")
                     return TrainingCriterion::CrossEntropyWithSoftmax;
+				if (s == L"SequenceWithSoftmax")
+					return TrainingCriterion::SequenceWithSoftmax;
                 else if (s == L"squareerror")
                     return TrainingCriterion::SquareError;
                 else if (s == L"noisecontrastiveestimationnode")
                     return TrainingCriterion::NCECrossEntropyWithSoftmax;
                 else if (s != L"classcrossentropywithsoftmax")    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
-                    LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax)");
+                    LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax| SequenceWithSoftmax)");
                 return TrainingCriterion::ClassCrossEntropyWithSoftmax;
             }
 
@@ -348,12 +350,14 @@ namespace Microsoft {
                     return EvalCriterion::ErrorPrediction;
                 else if (s == L"crossentropywithsoftmax")
                     return EvalCriterion::CrossEntropyWithSoftmax;
+				else if (s == L"SequenceWithSoftmax")
+					return EvalCriterion::SequenceWithSoftmax;
                 else if (s == L"classcrossentropywithsoftmax")
                     return EvalCriterion::ClassCrossEntropyWithSoftmax;
                 else if (s == L"noisecontrastiveestimationnode")
                     return EvalCriterion::NCECrossEntropyWithSoftmax;
                 else if (s != L"squareerror")
-                    LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError)");
+                    LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError | SequenceWithSoftmax)");
                 return EvalCriterion::SquareError;
             }
 

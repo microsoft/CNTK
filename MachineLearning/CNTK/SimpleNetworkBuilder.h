@@ -53,7 +53,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SquareError,
         ClassCrossEntropyWithSoftmax,
         NCECrossEntropyWithSoftmax,
-        CRF
+        CRF,
+		SequenceWithSoftmax
     };
 
     enum class EvalCriterion : int
@@ -63,7 +64,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SquareError,
         ErrorPrediction,
         ClassCrossEntropyWithSoftmax,
-
+		SequenceWithSoftmax,
         NCECrossEntropyWithSoftmax,
         CRF
     };

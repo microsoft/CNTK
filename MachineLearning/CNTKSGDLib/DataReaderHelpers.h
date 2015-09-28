@@ -8,6 +8,7 @@
 #include "MPIWrapper.h"
 #include <string>
 #include <map>
+#include "TrainingCriterionNodes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -189,6 +190,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         template<class ElemType>
         static bool GetMinibatchIntoNetwork(IDataReader<ElemType>& trainSetDataReader,
                                             ComputationNetwork& net,
+                                            ComputationNodeBasePtr criterionNode,
                                             bool useDistributedMBReading,
                                             bool useParallelTrain,
                                             std::map<std::wstring, Matrix<ElemType>*> & inputMatrices,
@@ -209,6 +211,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // verify some DataReader calls that are redundant since the MBLayout refactoring (keep verifying for a while for cosy feeling)
             net.VerifyActualNumParallelSequences(trainSetDataReader.GetNumParallelSequences()); // info already contained in MBLayout
             assert(trainSetDataReader.RequireSentenceSeg() == pMBLayout->RequireSentenceSeg()); // this one is redundant, too
+
+            if ((criterionNode != nullptr) && (criterionNode->OperationName() == L"SequenceWithSoftmax"))
+            {
+                auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNode);
+                auto latticeinput = node->getLatticePtr();
+                auto uids = node->getuidprt();
+                auto boundaries = node->getboundaryprt();
+                auto extrauttmap = node->getextrauttmap();
+
+                trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *boundaries, *extrauttmap);
+            }
 
             // did we reach end of epoch?
             if (useDistributedMBReading)
