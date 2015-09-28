@@ -699,7 +699,7 @@ template<class ElemType>
                 else if (net.GetMBLayoutPtr()->GetNumTimeSteps() != node->GetNumCols())
                 {
                     fprintf(stderr, "TrainOrAdaptModel: node '%ls' column dimension (%d) inconsistency, resizing to match first node (%d)\n",
-                            node->NodeName().c_str(), node->GetNumCols(), net.GetMBLayoutPtr()->GetNumTimeSteps());
+                            node->NodeName().c_str(), (int)node->GetNumCols(), (int)net.GetMBLayoutPtr()->GetNumTimeSteps());
                     node->SetFunctionAndGradientMBSize(net.GetMBLayoutPtr()->GetNumTimeSteps());
                 }
                 auto * functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues();
