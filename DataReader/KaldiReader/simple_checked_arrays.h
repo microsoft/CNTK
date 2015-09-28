@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include <stddef.h>     // for size_t
-#include <assert.h>
+#include <cstddef>     // for size_t
+#include <cassert>
 
 // ---------------------------------------------------------------------------
 // array_ref -- wraps a C pointer to an array together with its size.
