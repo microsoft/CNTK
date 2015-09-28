@@ -533,42 +533,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_cacheGradientCalcOrders.clear();
     }
 
+    // purge identical loops (i.e. loops that have the same source node)
     void ComputationNetwork::MergeRecurrentLoops(const ComputationNodeBasePtr /*rootNode*/)
     {
-        /// merge loops if they have the same source node
-        std::vector<RecurrentInfo> m_recurrentInfoTmp;
         if (m_recurrentInfo.size() <= 1)
             return;
 
         // uniq the m_recurrentInfo array w.r.t. m_sourceNode
+        std::vector<RecurrentInfo> m_recurrentInfoTmp;
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)    // enumerate all loops
         {
-            if (m_recurrentInfoTmp.size() == 0)
-                m_recurrentInfoTmp.push_back(*iter);
-            else
+            bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
+            for (auto iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
             {
-                bool bFound = false;
-                for (auto iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
+                if ((*iter2).m_sourceNode == (*iter).m_sourceNode)
                 {
-                    if ((*iter2).m_sourceNode == (*iter).m_sourceNode)
-                    {
-                        bFound = true;
-                        break;
-                    }
+                    bFound = true;
+                    break;
                 }
-
-                if (!bFound)
-                    m_recurrentInfoTmp.push_back(*iter);
-                else
-                    continue;   // TODO: why is this else branch necessary? It's at the end...
             }
+            if (!bFound)
+                m_recurrentInfoTmp.push_back(*iter);
         }
-
-        // no need to sort the vector of recurrent loops, because they are pushed and later used as FIFO
-        m_recurrentInfo.clear();
-        for (auto iter = m_recurrentInfoTmp.begin(); iter != m_recurrentInfoTmp.end(); iter++)
-            m_recurrentInfo.push_back(*iter);
-        // TODO: ^^ how is this different from m_recurrentInfo = move(m_recurrentInfoTmp)??
+        m_recurrentInfo = move(m_recurrentInfoTmp);
 
         // for debug purposes
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
