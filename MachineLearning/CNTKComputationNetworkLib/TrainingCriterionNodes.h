@@ -1681,7 +1681,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
+        virtual void EvaluateThisNodeNonLooping()   //-sum(left_i * log(softmax_i(right)))
         {
             // Initialize m_GammaCal
             if (!m_gammaCalcInitialized)
