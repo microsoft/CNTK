@@ -1600,30 +1600,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class DummyCriterionNode<float>; 
     template class DummyCriterionNode<double>;
 
-    //discriminative sequence training criteria 
-    template<class ElemType>
-    class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+    // -----------------------------------------------------------------------
+    /// SequenceWithSoftmaxNode (label, prediction, loglikelihood)
+    // -----------------------------------------------------------------------
 
-        SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name)
-            : ComputationNodeNonLooping<ElemType>(deviceId, name)
-            , m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_maskOfFramedrop(deviceId), m_gammaCalcInitialized(false)
+    // discriminative sequence training criterion
+    template<class ElemType>
+    class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
+    {
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SequenceWithSoftmax"; }
+    public:
+        SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name),
+            m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_maskOfFramedrop(deviceId), m_gammaCalcInitialized(false)
         {
         }
-        
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"SequenceWithSoftmax"; }
 
         //compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             //auto t_start_time = Timer::MilliSecondElapsed();
-            if (inputIndex > 2)
-                InvalidArgument("SequenceWithSoftmaxNode criterion only takes three inputs.");
-
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
@@ -1641,10 +1638,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(inputIndex)->GradientValues().SetValue(0.0);
             }
             else
-                throw std::runtime_error("SequenceWithSoftmaxNode criterion only takes with respect to label, DNN output and log likelihood.");
+                RuntimeError("SequenceWithSoftmaxNode criterion only takes with respect to label, DNN output and log likelihood.");
         }
 
-        
         static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
             const Matrix<ElemType>& gradientValues)
         {
@@ -1658,12 +1654,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
             inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-out");
 #endif
-
         }
 
         static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType> &gammaFromLattice,
-            const ElemType &hsmoothingWeight, const ElemType &frameDropThresh)
+            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType> & gammaFromLattice,
+            const ElemType & hsmoothingWeight, const ElemType & frameDropThresh)
         {
 #if DUMPOUTPUT
             softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
@@ -1674,8 +1669,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
             inputGradientValues.AssignSequenceError(hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());            
             inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, frameDropThresh);    
-            
-
 #if DUMPOUTPUT
             inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
 #endif
@@ -1697,7 +1690,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_uids, m_boundaries,  m_pMBLayout, m_extrauttmap, m_doreferencealign);
         }
 
-        
         static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1,
             const Matrix<ElemType>& inputFunctionValues2, Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& gammafromlattice,
             std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> &lattices, msra::lattices::GammaCalculation<ElemType> &GammaCal, std::vector<size_t> & uids,
@@ -1724,9 +1716,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void Validate()
         {
             Base::Validate();
-
-            if (m_children.size() != 3)
-                LogicError("SequenceWithSoftmaxNode criterion requires three inputs.");
 
             if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
                 LogicError("SequenceWithSoftmaxNode criterion requires the first input to be the label.");
@@ -1781,14 +1770,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //leftNode should be the empirical
-        virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood)
-        {
-            m_children.resize(3);
-            m_children[0] = label;
-            m_children[1] = prediction;
-            m_children[2] = loglikelihood;
-            loglikelihood->NeedGradient() = false;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood)
+        //{
+        //    m_children.resize(3);
+        //    m_children[0] = label;
+        //    m_children[1] = prediction;
+        //    m_children[2] = loglikelihood;
+        //    loglikelihood->NeedGradient() = false;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1817,6 +1806,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        // TODO: method names should be CamelCase
         std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> * getLatticePtr()
         {
             return &m_lattice;
@@ -1849,10 +1839,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_frameDropThresh = frameDropThresh;
         }
 
-        void SetRefrencealign(const bool dorefrencealign)
+        void SetReferenceAlign(const bool doreferencealign)
         {
-            m_doreferencealign = dorefrencealign;
+            m_doreferencealign = doreferencealign;
         }
+
         void gettime(unsigned long long &gammatime, unsigned long long &partialtime)
         {
             gammatime = m_gammatime;
@@ -1878,8 +1869,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         unsigned long long m_gammatime;
         unsigned long long m_partialtime;
     };
-
-
 
     template class SequenceWithSoftmaxNode<float>;
     template class SequenceWithSoftmaxNode<double>;

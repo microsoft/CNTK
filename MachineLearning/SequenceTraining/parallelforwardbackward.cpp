@@ -2,6 +2,8 @@
 //
 // F. Seide, V-hansu
 
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+
 #include "latticearchive.h"     // we implement parts of class lattice
 #include "simple_checked_arrays.h"
 #include "simplesenonehmm.h"    // the model
