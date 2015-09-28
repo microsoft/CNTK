@@ -1615,7 +1615,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name)
             : ComputationNodeNonLooping<ElemType>(deviceId, name)
-            , m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_maskOfFramedrop(deviceId)
+            , m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_maskOfFramedrop(deviceId), m_gammaCalcInitialized(false)
         {
         }
         
@@ -1688,7 +1688,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNode()   //-sum(left_i * log(softmax_i(right)))
         {
-            //auto t_start_time = Timer::MilliSecondElapsed();
+            // Initialize m_GammaCal
+            if (!m_gammaCalcInitialized)
+            {
+                if (m_hmm.hmms.size() == 0)
+                {
+                    LogicError("SequenceWithSoftmaxNode criterion evaluation requires HMM states to be set.");
+                }
+                m_GammaCal.init(m_hmm, m_deviceId);
+                m_gammaCalcInitialized = true;
+            }
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, m_gammaFromLattice, m_lattice, m_GammaCal,
                 m_uids, m_boundaries,  m_pMBLayout, m_extrauttmap, m_doreferencealign);
         }
@@ -1756,14 +1765,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             FunctionValues().Resize(1, 1);
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
             m_logSoftmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_softmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_gammaFromLattice.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
             m_maskOfFramedrop.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            if (m_hmm.hmms.size() > 0)
-                m_GammaCal.init(m_hmm, m_deviceId);
             m_gammatime = 0;
             m_partialtime = 0;
         }
@@ -1867,6 +1875,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> m_lattice;
         msra::asr::simplesenonehmm m_hmm;
         msra::lattices::GammaCalculation<ElemType> m_GammaCal;
+        bool m_gammaCalcInitialized;
         std::vector<size_t> m_uids;
         std::vector<size_t> m_boundaries;
         std::vector<size_t> m_extrauttmap;
