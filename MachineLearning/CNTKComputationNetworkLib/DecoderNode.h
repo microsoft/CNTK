@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SequenceDecoderNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"SequenceDecoderNode"; }
     private:
         // TODO: member variables go to the end
@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType  m_default_activity;
     public:
         SequenceDecoderNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             mAlpha(deviceId), mBacktrace(deviceId),
             mStartLab(-1), mEndLab(-1)
         { }
@@ -75,15 +75,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         /// compute posterior probability of label y at position t
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             DecideStartEndingOutputLab(Inputs(0)->FunctionValues(), mStartLab, mEndLab);
             EvaluateThisNodeS(mAlpha, mBacktrace, FunctionValues(), Inputs(1)->FunctionValues(),
-                Inputs(2)->FunctionValues(), mStartLab, mEndLab);
+                              Inputs(2)->FunctionValues(), mStartLab, mEndLab);
         }
 
-        /// compute forward backward algorithm
-        static void EvaluateThisNodeS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const size_t stt, const size_t stp)
+        // compute forward backward algorithm
+        void EvaluateThisNodeS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const size_t stt, const size_t stp)
         {
             /// to-do, each slice is for one sentence
             /// to-do, number of slices correspond to number of frames 
@@ -170,7 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /// need to feed in pseudo label data, which tells the decoder what is the beginning
         /// and ending output symbol. these symbols will constrain the search space
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
 

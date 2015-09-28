@@ -7,6 +7,7 @@
 // TODO:
 //  - remove empty-matrix checks: if an op is well-defined with empty matrices, then do it
 //  - Resize() must be cheap if it does nothing  (I already did that for CPU, still to be done for GPU)
+//  - an overload for Resize() to match another matrix
 //  - need a way to grow a minibatch matrix without destroying its content, something like PushColumns()
 
 #pragma once
@@ -636,7 +637,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // there is a version of ColumnSlice() in ComputationNode that abstracts the number of streams
     // TODO: This may not belong here, but having it in ComputeNode would require syntax changes, while having it as a member here only requires a local find-replace. Let's make it work first, then decide how to refactor.
-    // the looping versions of EvaluateThisNode() and ComputeInputPartial() take a frame range, through this structure
+    // the looping versions of EvaluateThisNode(FrameRange()) and ComputeInputPartial() take a frame range, through this structure
     // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
     // TODO: GetNumParallelSequences() should be subsumed here & removed from nodes
     // TODO: We should also have a FrameRange that selects a single sequence instead of all.
