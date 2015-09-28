@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CudaCompile Include="cudalatticeops.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cudabasetypes.h" />
+    <ClInclude Include="cudadevice.h" />
+    <ClInclude Include="cudalattice.h" />
+    <ClInclude Include="cudalatticeops.cu.h" />
+    <ClInclude Include="cudalatticeops.h" />
+    <ClInclude Include="cudalib.h" />
+    <ClInclude Include="gammacalculation.h" />
+    <ClInclude Include="latticefunctionskernels.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cudalattice.cpp" />
+    <ClCompile Include="cudalib.cpp" />
+    <ClCompile Include="latticeforwardbackward.cpp" />
+    <ClCompile Include="parallelforwardbackward.cpp" />
+    <ClCompile Include="NoGPU.cpp" />
+  </ItemGroup>
+</Project>

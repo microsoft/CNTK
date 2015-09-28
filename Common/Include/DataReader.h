@@ -28,6 +28,8 @@
 #include "commandArgUtil.h" // for ConfigParameters
 #include <map>
 #include <string>
+#include "simplesenonehmm.h"
+#include "latticesource.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -78,7 +80,9 @@ public:
     }
 
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) = 0;
-    virtual size_t GetNumParallelSequences() = 0;
+    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & /*latticeinput*/, vector<size_t> &/*uids*/, vector<size_t> &/*boundaries*/, vector<size_t> &/*extrauttmap*/) { NOT_IMPLEMENTED; };
+    virtual bool GetHmmData(msra::asr::simplesenonehmm * /*hmm*/) { NOT_IMPLEMENTED; };
+    virtual size_t GetNumParallelSequences() = 0; 
     virtual int GetSentenceEndIdFromOutputLabel() { return -1; }
     virtual void SetNumParallelSequences(const size_t sz) { mBlgSize = sz; }
     virtual bool RequireSentenceSeg() const { return false; }
@@ -193,6 +197,8 @@ public:
     //             [out] each matrix resized if necessary containing data. 
     // returns - true if there are more minibatches, false if no more minibatchs remain
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
+    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap);
+	virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm);
 
     size_t GetNumParallelSequences();
     int GetSentenceEndIdFromOutputLabel();
@@ -239,6 +245,7 @@ public:
 
     bool GetProposalObs(std::map<std::wstring, Matrix<ElemType>*>*, const size_t, vector<size_t>&);
     void InitProposals(std::map<std::wstring, Matrix<ElemType>*>* matrices);
+
 };
 
 }}}

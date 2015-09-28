@@ -1059,7 +1059,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->SetColumn(val,colInd), 
-            NOT_IMPLEMENTED, 
+			NOT_IMPLEMENTED,
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED);
     }
@@ -1072,7 +1072,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             this->m_CPUMatrix->SetColumn(*colMat.m_CPUMatrix,colInd), 
-            NOT_IMPLEMENTED, 
+			this->m_GPUMatrix->SetColumn(*colMat.m_GPUMatrix, colInd),            
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED);
     }
@@ -4822,7 +4822,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
     }
 
+	template<class ElemType>
+	Matrix<ElemType>& Matrix<ElemType>::DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold)
+	{
+		DecideAndMoveToRightDevice(*this, label, gamma);
 
+		if (label.GetNumCols() != gamma.GetNumCols() || label.GetNumRows() != gamma.GetNumRows())
+			throw std::logic_error("DropFrame: label matrix is not in the same size as gamm matrix.");
+		this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
+
+		DISPATCH_MATRIX_ON_FLAG(this,
+			this,
+			this->m_CPUMatrix->DropFrame(*label.m_CPUMatrix, *gamma.m_CPUMatrix, threshhold),
+			this->m_GPUMatrix->DropFrame(*label.m_GPUMatrix, *gamma.m_GPUMatrix, threshhold),
+			NOT_IMPLEMENTED,
+			NOT_IMPLEMENTED
+			);
+
+		return *this;
+	}
+
+	/// <summary> c = alpha * (a-b)</summary>
+	/// if a, b, c  must have same dim 
+	/// <param name="alpha">Scalar</param>
+	/// <param name="a">Input matrix</param>
+	/// <param name="b">Input matrix</param>
+	/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+	template<class ElemType>
+	Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label,
+		const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha)
+	{
+		DecideAndMoveToRightDevice(label, dnnoutput, gamma);
+
+		if (!(label.GetMatrixType() == gamma.GetMatrixType()))
+			NOT_IMPLEMENTED;
+
+		this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
+
+
+		DISPATCH_MATRIX_ON_FLAG(this,
+			this,
+			this->m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
+			this->m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
+			NOT_IMPLEMENTED,
+			NOT_IMPLEMENTED
+			);
+		return *this;
+	}
 #pragma endregion Static BLAS Functions
 
     template class Matrix<float>; 

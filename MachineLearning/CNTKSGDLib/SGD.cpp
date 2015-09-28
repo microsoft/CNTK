@@ -138,6 +138,10 @@ template<class ElemType>
         bool gradientClippingWithTruncation = configSGD("gradientClippingWithTruncation", "true");
         double clippingThresholdPerSample = configSGD("clippingThresholdPerSample", "1#INF");
 
+        //sequence training
+        ElemType hsmoothingWeight = configSGD("hsmoothingWeight", "0.95");
+        ElemType frameDropThresh = configSGD("frameDropThresh", "1e-10");
+        bool doReferenceAlign = configSGD("doReferenceAlign", "false");
         ConfigArray dropoutRatesStr = configSGD("dropoutRate", "0.0");
         floatargvector dropoutRates = dropoutRatesStr;
 
@@ -268,7 +272,8 @@ template<class ElemType>
              minibatchSizeTuningMax,
              useCVSetControlLRIfCVExists,
              useEvalCriterionControlLR,
-             minibatchSearchCriterionErrorMargin);
+             minibatchSearchCriterionErrorMargin,
+             hsmoothingWeight, frameDropThresh, doReferenceAlign);
     }
 
     //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
@@ -318,7 +323,10 @@ template<class ElemType>
               const size_t minibatchSizeTuningMax,
               const bool useCVSetControlLRIfCVExists,
               const bool useEvalCriterionControlLR,
-              const size_t minibatchSearchCriterionErrorMargin)
+              const size_t minibatchSearchCriterionErrorMargin,
+              const ElemType hsmoothingWeight,
+              const ElemType frameDropThresh,
+              const bool doreferencealign)
     {
         m_numPrevLearnRates = numPrevLearnRates;
         m_prevChosenMinibatchSize = 0;
@@ -375,6 +383,10 @@ template<class ElemType>
         m_L2RegWeight = L2RegWeight;
         m_L1RegWeight = L1RegWeight;
 
+        //sequence trainning parameters
+        m_hsmoothingWeight = hsmoothingWeight;
+        m_frameDropThresh = frameDropThresh;
+        m_doreferencealign = doreferencealign;
         for (size_t i = 0; i < m_mbSize.size(); i++)
         {
             if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
@@ -703,6 +715,14 @@ template<class ElemType>
             }
         }
 
+		//get hmm file for sequence training
+		if (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax")
+		{
+			//SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
+			auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
+			auto  hmm = node->gethmm();
+			trainSetDataReader->GetHmmData(hmm);
+		}
         // used for KLD regularized adaptation. For all other adaptation techniques
         // use MEL to edit the model and using normal training algorithm
         std::vector<ComputationNodeBasePtr> refFeatureNodes;
@@ -810,6 +830,8 @@ template<class ElemType>
 
         // --- MAIN EPOCH LOOP
 
+		//sequence trainning
+        ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hsmoothingWeight, m_frameDropThresh, m_doreferencealign);
         for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {
             // Synchronize all ranks before proceeding to ensure that 
@@ -1143,7 +1165,7 @@ template<class ElemType>
 
 #if 1
         size_t actualMBSize;
-        while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, false, false, *inputMatrices, actualMBSize))
+        while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSize))
         {
             // TODO: move these into GetMinibatchIntoNetwork()  --but those are passed around; necessary? Can't we get them from 'net'?
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
@@ -1755,7 +1777,7 @@ template<class ElemType>
             // get minibatch
             // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
             size_t actualMBSize = 0;
-            bool notAtEndOfEpoch = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
+            bool notAtEndOfEpoch = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0], useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
             if (!notAtEndOfEpoch)
                 break;  // end of epoch
 

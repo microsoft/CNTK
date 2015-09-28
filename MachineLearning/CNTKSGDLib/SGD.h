@@ -149,7 +149,10 @@ public:
               const size_t minibatchSizeTuningMax,
               const bool useCVSetControlLRIfCVExists,
               const bool useEvalCriterionControlLR,
-              const size_t minibatchSearchCriterionErrorMargin);
+              const size_t minibatchSearchCriterionErrorMargin,
+              const ElemType hsmoothingWeight = 1.0,
+              const ElemType frameDropThresh = 1e-10,
+              const bool doreferencealign = false);
 
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader<ElemType>* trainSetDataReader,
@@ -439,6 +442,10 @@ protected:
     double m_L2RegWeight;
     double m_L1RegWeight;
 
+    //sequence trainning
+    ElemType m_hsmoothingWeight;
+    ElemType m_frameDropThresh;
+    bool m_doreferencealign;
 };
 
 }}}

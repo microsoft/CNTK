@@ -36,7 +36,7 @@ bool do_sync = false;
 bool do_sync = true;
 #endif
 
-#define DEFAULT_THREAD_PER_DIM		16
+#define DEFAULT_THREAD_PER_DIM        16
 
 #define UNCONST(t,c,uc)  GPUMatrix<t> &uc = const_cast<GPUMatrix<t>&>(c);
 
@@ -48,7 +48,7 @@ static
 #endif
 cudaStream_t t_stream = cudaStreamDefault;
 
-#define DEFAULT_THREAD_PER_DIM		16
+#define DEFAULT_THREAD_PER_DIM        16
 
 extern int _ConvertSMVer2Cores(int major, int minor);   // forward declaration
 
@@ -1015,6 +1015,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (colPointer==NULL)
             return;
         CUDA_CALL(cudaMemcpy(m_pArray+LocateColumn(colInd),colPointer,sizeof(ElemType)*m_numRows,cudaMemcpyHostToDevice));
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd)
+    {
+        if (IsEmpty())
+            throw std::logic_error("SetColumn: Matrix is empty.");
+        if (valMat.GetNumCols() != 1)
+            throw std::logic_error("SetColumn: only support one column matrix now.");
+        CUDA_CALL(cudaMemcpy(m_pArray + LocateColumn(colInd), valMat.m_pArray, sizeof(ElemType)*m_numRows, cudaMemcpyDeviceToDevice));
     }
 
     template<class ElemType>
@@ -3923,7 +3933,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudaEvent_t done = nullptr;;
         if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
         _assignElementProductOfWithShiftNeg<ElemType> << < block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, shift, nt + 1, BS);
-        //		_assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
+        //        _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
 
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
@@ -3931,143 +3941,184 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-	template<class ElemType>
-	void GPUMatrix<ElemType>::InnerProductWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const size_t nt)
-	{
-		if (a.GetComputeDeviceId() != b.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId()) //different GPUs
-			throw std::invalid_argument("All matrices must be on the same GPU");
+    template<class ElemType>
+    void GPUMatrix<ElemType>::InnerProductWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const size_t nt)
+    {
+        if (a.GetComputeDeviceId() != b.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId()) //different GPUs
+            throw std::invalid_argument("All matrices must be on the same GPU");
 
-		if (a.IsEmpty() || b.IsEmpty())
-			throw std::logic_error("Scale:  one of the input matrices is empty.");
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("Scale:  one of the input matrices is empty.");
 
-		const int m = (int)a.GetNumRows();
-		const int n = (int)a.GetNumCols();
-		const int k = (int)b.GetNumRows();
-		const int l = (int)b.GetNumCols();
+        const int m = (int)a.GetNumRows();
+        const int n = (int)a.GetNumCols();
+        const int k = (int)b.GetNumRows();
+        const int l = (int)b.GetNumCols();
 
-		assert(m>0 && n>0 && k>0 && l>0); //converting from size_t to int may cause overflow
-		assert(m == k && n == l); //converting from size_t to int may cause overflow
-		if (m != k || n != l)
-			throw std::invalid_argument("Matrices a and b should have same dimension.");
+        assert(m>0 && n>0 && k>0 && l>0); //converting from size_t to int may cause overflow
+        assert(m == k && n == l); //converting from size_t to int may cause overflow
+        if (m != k || n != l)
+            throw std::invalid_argument("Matrices a and b should have same dimension.");
 
-		c.Resize(nt + 1, n);
+        c.Resize(nt + 1, n);
 
-		if (true)
-		{
+        if (true)
+        {
             cudaEvent_t done = nullptr;;
-			c.PrepareDevice();
+            c.PrepareDevice();
 
-			dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
-			dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (n + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
-
-
-			if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-			_innerProductWithShiftNeg<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(c.m_pArray, a.m_pArray, b.m_pArray, m, n, shift, nt + 1);
-			if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-			if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-			if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-		}
-	}
-
-	template<class ElemType>
-	GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemType>& a, const size_t m)
-	{
-		if (a.IsEmpty())
-			throw std::logic_error("GetARowByIndex: Matrix is empty.");
-
-		Resize(1, a.GetNumCols());
-
-		int n = a.GetNumRows();
-		int P = a.GetNumCols();
-
-		if (m >= n)
-			throw std::logic_error("GetARowByIndex: m is out of range.");
+            dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+            dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (n + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
 
-		int blocksPerGrid = (int)ceil(((double)P) / threadsPerBlock);
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _innerProductWithShiftNeg<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(c.m_pArray, a.m_pArray, b.m_pArray, m, n, shift, nt + 1);
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
+    }
 
-		a.PrepareDevice();
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemType>& a, const size_t m)
+    {
+        if (a.IsEmpty())
+            throw std::logic_error("GetARowByIndex: Matrix is empty.");
+
+        Resize(1, a.GetNumCols());
+
+        int n = a.GetNumRows();
+        int P = a.GetNumCols();
+
+        if (m >= n)
+            throw std::logic_error("GetARowByIndex: m is out of range.");
+
+
+        int blocksPerGrid = (int)ceil(((double)P) / threadsPerBlock);
+
+        a.PrepareDevice();
         cudaEvent_t done = nullptr;;
-		if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-		_getARowByIndex<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, n, P, m);
-		//		_assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _getARowByIndex<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, n, P, m);
+        //        _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, nt);
 
-		if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-		if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-		if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-		return *this;
-	}
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        return *this;
+    }
 
 
-	template<class ElemType>
-	void GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const bool isafixed)
-	{
-		if (a.GetComputeDeviceId() != b.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId()) //different GPUs
-			throw std::invalid_argument("All matrices must be on the same GPU");
+    template<class ElemType>
+    void GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const bool isafixed)
+    {
+        if (a.GetComputeDeviceId() != b.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId()) //different GPUs
+            throw std::invalid_argument("All matrices must be on the same GPU");
 
-		if (a.IsEmpty() || b.IsEmpty())
-			throw std::logic_error("Scale:  one of the input matrices is empty.");
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("Scale:  one of the input matrices is empty.");
 
-		const int m = (int)a.GetNumRows();
-		const int n = (int)a.GetNumCols();
-		const int O = (int)b.GetNumRows();
-		const int P = (int)b.GetNumCols();
+        const int m = (int)a.GetNumRows();
+        const int n = (int)a.GetNumCols();
+        const int O = (int)b.GetNumRows();
+        const int P = (int)b.GetNumCols();
 
-		assert(m>0 && n>0 && O>0 && P>0); //converting from size_t to int may cause overflow
-		if (m != 1 || n != P)
-			throw std::invalid_argument("Matrices a and b should have same dimension.");
+        assert(m>0 && n>0 && O>0 && P>0); //converting from size_t to int may cause overflow
+        if (m != 1 || n != P)
+            throw std::invalid_argument("Matrices a and b should have same dimension.");
 
-		c.Resize(O, P);
+        c.Resize(O, P);
 
-		if (true)
-		{
+        if (true)
+        {
             cudaEvent_t done = nullptr;;
-			c.PrepareDevice();
+            c.PrepareDevice();
 
-			dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
-			dim3 block_tail((O + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (P + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
-
-
-			if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-			_conductRowElementMultiplyWithShift<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(c.m_pArray, a.m_pArray, b.m_pArray, O, P, shift, isafixed);
-			if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-			if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-			if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-		}
-	}
+            dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+            dim3 block_tail((O + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (P + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
 
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _conductRowElementMultiplyWithShift<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(c.m_pArray, a.m_pArray, b.m_pArray, O, P, shift, isafixed);
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
+    }
 
-	template<class ElemType>
-	GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift)
-	{
-		if (a.IsEmpty() || b.IsEmpty())
-			throw std::logic_error("AssignElementProductOfWithShift: Matrix is empty.");
 
-		assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-		if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-			throw std::invalid_argument("The input matrix dimensions do not match.");
 
-		//int O = a.GetNumRows();
-		int P = a.GetNumCols();
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t shift)
+    {
+        if (a.IsEmpty() || b.IsEmpty())
+            throw std::logic_error("AssignElementProductOfWithShift: Matrix is empty.");
 
-		Resize(1, P);
-		CUDA_LONG N = (CUDA_LONG)GetNumElements();
-		int blocksPerGrid = (int)ceil(((double)N) / threadsPerBlock);
-		a.PrepareDevice();
+        assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+        if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+            throw std::invalid_argument("The input matrix dimensions do not match.");
+
+        //int O = a.GetNumRows();
+        int P = a.GetNumCols();
+
+        Resize(1, P);
+        CUDA_LONG N = (CUDA_LONG)GetNumElements();
+        int blocksPerGrid = (int)ceil(((double)N) / threadsPerBlock);
+        a.PrepareDevice();
         cudaEvent_t done = nullptr;;
-		if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
-		_assignElementProductOfWithShift<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, shift, N);
-		if (do_sync)    CUDA_CALL(cudaEventRecord(done));
-		if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
-		if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
-		return *this;
-	}
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _assignElementProductOfWithShift<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, a.m_pArray, b.m_pArray, shift, N);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        return *this;
+    }
 
+    //sequence training
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType & threshhold)
+    {
+        if (IsEmpty())
+            throw std::logic_error("DropFrame: Matrix is empty.");
 
+        PrepareDevice();
+
+        long N = (long)GetNumCols(); //one kernel per column
+        int blocksPerGrid = (int)ceil(N*1.0 / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _DropFrame << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, label.m_pArray, gamma.m_pArray, threshhold, (long)m_numCols, (long)m_numRows);
+
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label,
+        const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha)
+    {
+        if (IsEmpty())
+            throw std::logic_error("AssignSequenceError: Matrix is empty.");
+
+        PrepareDevice();
+
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        long N = (LONG64)label.GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        _AssignSequenceError << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(hsmoothingWeight, m_pArray, label.m_pArray, dnnoutput.m_pArray, gamma.m_pArray, alpha, N);
+
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
 
 #pragma endregion Static BLAS Functions
-
 
     /// f = logadd(f, vec) to get the logadd sum of vector elments
     template<class ElemType>

@@ -161,6 +161,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
         CPUMatrix<ElemType>& AssignLogSoftmaxOf (const CPUMatrix<ElemType>& a, const bool isColWise);
         
+		//sequence training
+		CPUMatrix<ElemType>& DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType & threshhold);
+		CPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha);
         CPUMatrix<ElemType>& InplaceSqrt ();
         CPUMatrix<ElemType>& AssignSqrtOf (const CPUMatrix<ElemType>& a);
 

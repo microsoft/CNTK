@@ -1159,7 +1159,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i<m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
-                if (child->NeedGradient())
+                if (child->NeedGradient() && NeedGradient())
                 {
 #ifdef DISPLAY_DEBUG
                     fprintf (stderr, "    [%lu]: %s(%s)\n", i, 

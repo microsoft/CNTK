@@ -123,7 +123,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             dataReader->StartMinibatchLoop(mbSize, 0, testSize);
 
-            while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, false, false, inputMatrices, actualMBSize))
+            while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
@@ -835,7 +835,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             startReadMBTime = clock();
             size_t numMBsRun = 0;
             double ComputeTimeInMBs = 0;
-            while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, false, false, inputMatrices, actualMBSize))
+            while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
                 // note: GetMinibatchIntoNetwork() will also fetch the MBLayout although we don't need ithere. This should not hurt.
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);

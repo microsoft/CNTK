@@ -69,7 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::map<std::wstring, void *, nocase_compare> outputMatrices;
 
             size_t actualMBSize;
-            while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, false, false, inputMatrices, actualMBSize))
+            while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
@@ -152,7 +152,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ElemType* tempArray = nullptr;
 
             size_t actualMBSize;
-            while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, false, false, inputMatrices, actualMBSize))
+            while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 

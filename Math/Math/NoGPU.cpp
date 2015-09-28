@@ -109,7 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum) { }
     template<class ElemType>
-    ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier) { return 1; }
+    ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier) {return 1;}
     //template<class ElemType>
     //void GPUSparseMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType) { }
 
@@ -357,9 +357,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma endregion Helper Functions
 
-    template class GPUSparseMatrix<char>;
-    template class GPUSparseMatrix<float>;
-    template class GPUSparseMatrix<double>;
+    template class MATH_API GPUSparseMatrix<char>;
+    template class MATH_API GPUSparseMatrix<float>;
+    template class MATH_API GPUSparseMatrix<double>;
 
     template <typename ElemType>
     MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
@@ -518,6 +518,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {}
 
     template<class ElemType> void GPUMatrix<ElemType>::SetColumn(const ElemType* colPointer, size_t colInd) { }
+    template<class ElemType> void GPUMatrix<ElemType>::SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd) { }
 
     template<class ElemType> void GPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& deepCopyFrom) { }
 
@@ -653,6 +654,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignLogSoftmaxOf(const GPUMatrix<ElemType>& /*a*/, const bool isColWise) { return *this; }
+    template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType & threshhold) { return *this; }
+    template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha) { return *this; }
 
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSqrt() { return *this; }
 

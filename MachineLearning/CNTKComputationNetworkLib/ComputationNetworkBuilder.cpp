@@ -41,6 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(CosineNode))	            return New<CosineNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(CrossEntropyNode))	    return New<CrossEntropyNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(CrossEntropyWithSoftmaxNode))	return New<CrossEntropyWithSoftmaxNode<ElemType>>(deviceId, name);
+		else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))	return New<SequenceWithSoftmaxNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(DiagTimesNode))	    return New<DiagTimesNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(DropoutNode))	            return New<DropoutNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(DummyCriterionNode))	    return New<DummyCriterionNode<ElemType>>(deviceId, name);
@@ -304,6 +305,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return net.AddNodeToNetAndAttachInputs(New<CrossEntropyWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), label, prediction);
     }
+
+	template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const std::wstring nodeName)
+
+	{
+		return net.AddNodeToNetAndAttachInputs(New<SequenceWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), label, prediction,loglikelihood);
+	}
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::NoiseContrastiveEstimation(const ComputationNodePtr label, const ComputationNodePtr prediction,
         const ComputationNodePtr input_weight,
