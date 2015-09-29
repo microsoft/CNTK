@@ -278,7 +278,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows, cols;
             fstream >> rows >> cols;
             if (rows * cols == 0) 
-                LogicError("This InputValue dimension is 0.");
+                RuntimeError("LoadFromFile: Malformed input file: InputValue has dimension 0.");
 
             fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels; 
 
