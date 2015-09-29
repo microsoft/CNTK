@@ -168,6 +168,12 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     system("sleep 0.1");
 
     mBlgSize = readerConfig("nbruttsineachrecurrentiter", "1");
+
+    lcache.resize(mBlgSize);
+    lcache_type.resize(mBlgSize);
+    //for (int i = 0; i < mBlgSize; i++)
+    //    temp_ls[i] = new list<pair<int, float>>();
+
     fprintf(stderr, "debughtx sequence number is %d\n", mBlgSize);
     nwords = readerConfig("vocabsize", "0");
     if (nwords == 0) {
@@ -279,7 +285,31 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     Matrix<ElemType>* feature_m = matrices[L"features"];
     Matrix<ElemType>* label_m = matrices[L"labels"];
     Matrix<ElemType>* prob_m = matrices[L"probs"];
-    size_t wordNumber = mBlgSize * m_mbSize;
+
+    bool res = false; //Got something new(we assume can always get new noise data)
+    mbSizeNow = 0; //Find the longest sentence, m_mbSize is the MBSize in the config
+    for (int i = 0; i < mBlgSize; i++) {
+        lcache[i].clear();
+        if (noiseRatio == 0 || senCount % (noiseRatio + 1) == 0) {
+            lcache_type[i] = LMSDataType::data;
+            if (getDataSeq(lcache[i])) //word_id, -1
+                res = true; //data ends, stop epoch
+        }
+        else {
+            lcache_type[i] = LMSDataType::noise;
+            if (!getNoiseSeq(lcache[i])) //word_id, word_prob
+                LogicError("BatchSequenceReader<ElemType>::GetMinibatch did not get noise sentence.\n");
+        }
+        if (lcache[i].size() > m_mbSize)
+            RuntimeError("BatchSequenceReader<ElemType>::GetMinibatch sentence length larger than minibatch size.\n");
+        if (lcache[i].size() > mbSizeNow)
+            mbSizeNow = (int)lcache[i].size();
+        senCount++;
+    }
+    if (!res)
+        return false;
+
+    size_t wordNumber = mBlgSize * mbSizeNow; //mBlgSize * m_mbSize;
 
     DEVICEID_TYPE featureDeviceId = feature_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
     DEVICEID_TYPE labelDeviceId = label_m->GetDeviceId(); //SetValue(i,j,value) need to be called when the matrix is on CPU
@@ -307,26 +337,14 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
     prob_m->Resize(1, wordNumber);
     //label_m->Reset(); //Can't do this 
 
-    minibatchFlag.Resize(mBlgSize, m_mbSize);
+    minibatchFlag.Resize(mBlgSize, mbSizeNow);
 
     int *temp_feature =  new int[wordNumber];
-    list<pair<int, float>> temp_l; //temp list
-    bool res = true; //Got something new(we can always get new noise data)
 
     //senCount % noiseRatio == 0 means DataFeed, otherwise NoiseFeed
     for (int i = 0; i < mBlgSize; i++) {
-        temp_l.clear();
-        if (noiseRatio == 0 || senCount % (noiseRatio + 1) == 0) {
-            if (!getDataSeq(temp_l)) //word_id, -1
-                res = false; //data ends, stop epoch
-        }
-        else {
-            if (!getNoiseSeq(temp_l)) //word_id, word_prob
-                LogicError("BatchSequenceReader<ElemType>::GetMinibatch did not get noise sentence.\n");
-        }
-        if (temp_l.size() > m_mbSize)
-            RuntimeError("BatchSequenceReader<ElemType>::GetMinibatch sentence length larger than minibatch size.\n");
-        for (int j = 0; j < m_mbSize; j++) {
+        list<pair<int, float>> &temp_l = lcache[i]; //temp list
+        for (int j = 0; j < mbSizeNow; j++) {
             minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::None);
             int idx = j * (int)mBlgSize + i;
             if (temp_l.size() == 0) {
@@ -344,7 +362,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             temp_l.pop_front();
             if (outputLabelType == LMSLabelType::compressed) { //In the current implementation we only use compressed laybelType
                 label_m->SetValue(0, idx, (ElemType)temp_l.front().first);
-                if (noiseRatio == 0 || senCount % (noiseRatio + 1) == 0)
+                if (noiseRatio == 0 || lcache_type[i] == LMSDataType::data)
                     label_m->SetValue(1, idx, (ElemType)1); //This is a data sample
                 else
                     label_m->SetValue(1, idx, (ElemType)-1);
@@ -358,7 +376,9 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
                 minibatchFlag.SetValue(i, j, (ElemType)MinibatchPackingFlag::SequenceEnd);
             }
         }
-        senCount++;
+        if (temp_l.size() != 0) {
+            LogicError("BatchSequenceReader<ElemType>::GetMinibatch sentence(temp_l) not entirely fed into minibatch.\n");
+        }
     }
 
     for (int i = 0; i < wordNumber; i++)
@@ -382,7 +402,7 @@ void BatchSequenceReader<ElemType>::PrintMinibatch(std::map<std::wstring, Matrix
     int sequence_number = (int)NumberSlicesInEachRecurrentIter();
     for (int i = 0; i < matrices.find(L"labels")->second->GetNumCols(); i++) {
         for (int j = 0; j < 4; j++) { //assume compressed label type
-            fprintf(stderr, " %.2lf", (*(matrices.find(L"labels")->second))(j, i));
+            fprintf(stderr, "  %.2lf", (*(matrices.find(L"labels")->second))(j, i));
             if (j == 0) {
                 fprintf(stderr, "p(%.5lf)", (*(matrices.find(L"probs")->second))(j, i));
                 fprintf(stderr, "[%s] ", idx4word[int((*(matrices.find(L"labels")->second))(j, i))].c_str());
@@ -411,9 +431,9 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& senten
     //static bool first = true; //Stupid version debughtx
     DEBUG_HTX fprintf(stderr, "debughtx ---SetSentenceSegBatch called---\n");
     //For the stupid version, I need to set it to sequenceStart everything, otherwise the first pastActivity for the recurrent node will be wrong in dimension.
-    sentenceBegin.Resize(mBlgSize, m_mbSize);
+    sentenceBegin.Resize(mBlgSize, mbSizeNow);
     sentenceBegin.SetValue(0);
-    minibatchPackingFlag.resize(m_mbSize);
+    minibatchPackingFlag.resize(mbSizeNow);
 
     minibatchFlag.TransferFromDeviceToDevice(CPUDEVICE, sentenceBegin.GetDeviceId());
     sentenceBegin.SetValue(minibatchFlag);
@@ -429,7 +449,7 @@ void BatchSequenceReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType>& senten
     }
     */
     
-    for (int i = 0; i < m_mbSize; i++) {
+    for (int i = 0; i < mbSizeNow; i++) {
         int k = (int)MinibatchPackingFlag::None;
         for (int j = 0; j < mBlgSize; j++)
             k |= (int)minibatchFlag(j, i);

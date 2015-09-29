@@ -35,12 +35,23 @@ enum LMSLabelType
     onehot = 1, //dim-vocab, for crossEntropy
 };
 
+enum LMSDataType
+{
+    data = 0,  
+    noise = 1,
+};
+
 template<class ElemType>
 class BatchSequenceReader : public IDataReader<ElemType>
 {
 public:
 	int class_size;
 	int nwords; //vocabSize
+
+    vector<list<pair<int, float>>> lcache; //cache of data lists
+    vector<LMSDataType> lcache_type; //Whether each data list in the cache is data or noise
+    int mbSizeNow; //The current minibatch size, inferred from the data
+
     map<string, int> word4idx;
     map<int, string> idx4word;
     map<int, int> idx4class;
