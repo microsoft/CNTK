@@ -708,14 +708,15 @@ template<class ElemType>
             (*inputMatrices)[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->FunctionValues();
         }
 
-		//get hmm file for sequence training
-		if (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax")
-		{
-			//SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
-			auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
-			auto  hmm = node->gethmm();
-			trainSetDataReader->GetHmmData(hmm);
-		}
+        //get hmm file for sequence training
+        bool isSequenceTrainingCriterion = (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax");
+        if (isSequenceTrainingCriterion)
+        {
+            //SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
+            auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
+            auto  hmm = node->gethmm();
+            trainSetDataReader->GetHmmData(hmm);
+        }
         // used for KLD regularized adaptation. For all other adaptation techniques
         // use MEL to edit the model and using normal training algorithm
         std::vector<ComputationNodeBasePtr> refFeatureNodes;
@@ -822,8 +823,10 @@ template<class ElemType>
 
         // --- MAIN EPOCH LOOP
 
-		//sequence trainning
-        ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hsmoothingWeight, m_frameDropThresh, m_doreferencealign);
+        //sequence trainning
+        if (isSequenceTrainingCriterion)
+            ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hsmoothingWeight, m_frameDropThresh, m_doreferencealign);
+
         for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {
             // Synchronize all ranks before proceeding to ensure that 
