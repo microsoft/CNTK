@@ -697,7 +697,7 @@ public:
     }
 
     // propagate the features' MB size to all nodes of the network
-    // TODO: only resizes nodes participating in recurrent loops ... but can't just resize all since that would also hit, for example, parameter or criterion nodes
+    // TODO: This function should go. Resizing is now part of Validate() and EvaluateThisNode().
     size_t SetActualMiniBatchSizeFromFeatures()
     {
         m_actualMBSize = DetermineActualMBSizeFromFeatures();
