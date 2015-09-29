@@ -14,7 +14,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     /*static*/ struct DataReaderHelpers
     {
-        // decimate minibatch for parallelization--in absence of parallel utterances
+        // decimate minibatch for parallelization--in frame mode
         // We sub-sample the individual frames (= matrix columns).
         template<class ElemType>
         static void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb, int procs, int rank, MBLayoutPtr pMBLayout)
@@ -71,7 +71,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             pMBLayout->Init(1, rv, false);
         }
 
-        // decimate minibatch for parallelization--in presence of parallel utterances
+        // decimate minibatch for parallelization--in utterance mode, also requires presence of parallel utterances
         // We sub-sample the utterances.
         template<class ElemType> 
         static void DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb,  /* (input) matrix to be decimated */
