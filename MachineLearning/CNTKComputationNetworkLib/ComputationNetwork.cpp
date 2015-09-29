@@ -194,10 +194,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
 
-        SetActualMiniBatchSizeFromFeatures();
+        SetActualMiniBatchSizeFromFeatures();   // TODO: this should go
 
         if (requireValidation)
+        {
+            SetFakeMBLayoutForValidation();  // fake an MB layout to match the initial values of Input
             ValidateNetwork();
+        }
     }
 
     // -----------------------------------------------------------------------

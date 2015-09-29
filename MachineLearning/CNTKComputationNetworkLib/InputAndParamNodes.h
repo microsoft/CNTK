@@ -267,6 +267,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
+            // TODO: if this node has a layout, we should serialize a column dimension of 0 (since col dim represents the MB size, which should not be serialized)
             fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
             fstream << m_outputWidth << m_outputHeight << m_outputChannels; 
         }
@@ -277,7 +278,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t rows, cols;
             fstream >> rows >> cols;
-            if (rows * cols == 0) 
+            if (rows * cols == 0)   // TODO: no! zero cols is perfectly fine.
                 RuntimeError("LoadFromFile: Malformed input file: InputValue has dimension 0.");
 
             fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels; 
