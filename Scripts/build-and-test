@@ -126,7 +126,7 @@ if [[ $RANDOM_OUTPUT == 1 ]]; then
     OUTPUT_DIR="$OUTPUT_DIR-$RANDOM"
 fi
 
-echo "============ Creating CNTK temp directory in $TMP_ROOT ============"
+echo "============ Creating CNTK temp directory in $OUTPUT_DIR ============"
 mkdir -p $OUTPUT_DIR || exit $?
 
 CONF_FILE="$OUTPUT_DIR/Simple.conf"
@@ -197,6 +197,7 @@ fi
 if [[ $RUN == 1 ]]; then
 
     cd $PREFIX_DIR
+    echo "============ cp Demos/Simple/Simple.config $CONF_FILE  ============"
 
     for TARGET in "${targetArray[@]}"
     do
@@ -224,7 +225,12 @@ if [[ $RUN == 1 ]]; then
                 exit 1
             fi
 
-            echo "============ Running CNTK for ($FLAVOR) ($TARGET), output in ($RUN_FILE.*) ============"
+            if [[ $OS == "Windows_NT" ]]; then
+                echo "============ Running $BIN_PATH configFile=`cygpath -w $CONF_FILE` for ($FLAVOR) ($TARGET) ============"
+            else
+                echo "============ Running $BIN_PATH configFile=$CONF_FILE for ($FLAVOR) ($TARGET) ============"
+            fi
+            echo "============ output in ($OUT_FILE) ============"
             cd $CNTK_ROOT/Demos
             rm -rf models
             if [[ $OS == "Windows_NT" ]]; then
