@@ -142,6 +142,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual size_t GetNumRows() const = 0;
         virtual size_t GetNumCols() const = 0;
         virtual void Resize(size_t rows, size_t cols) = 0;
+        void VerifySize(size_t rows, size_t cols)
+        {
+            if (rows != GetNumRows() || cols != GetNumCols())
+                LogicError("VerifySize: expected m_functionValues size %d x %d, but it is %d x %d",
+                           (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
+        }
         virtual double Get00Element() const = 0;
 
         virtual void ComputeInputPartial(const size_t inputIndex)
