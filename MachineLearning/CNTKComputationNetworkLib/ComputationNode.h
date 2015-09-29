@@ -274,10 +274,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_pMBLayout->GetNumTimeSteps() * m_pMBLayout->GetNumParallelSequences() != GetNumCols())
             {
                 // TODO: remove this fprintf() once it no longer triggers
-                fprintf(stderr, "GetNumTimeSteps: inconsistency between layout and actual number of columns for node '%ls', %d x %d vs. %d\n",
-                        NodeName().c_str(), (int)m_pMBLayout->GetNumTimeSteps(), (int)m_pMBLayout->GetNumParallelSequences(), (int)GetNumCols());
-                LogicError("GetNumTimeSteps: inconsistency between layout and actual number of columns for node '%ls', %d x %d vs. %d",
-                           NodeName().c_str(), (int)m_pMBLayout->GetNumTimeSteps(), (int)m_pMBLayout->GetNumParallelSequences(), (int)GetNumCols());
+                fprintf(stderr, "GetNumTimeSteps: inconsistency between layout and actual number of columns for node '%ls', seq=%d x T=%d vs. cols=%d\n",
+                        NodeName().c_str(), (int)m_pMBLayout->GetNumParallelSequences(), (int)m_pMBLayout->GetNumTimeSteps(), (int)GetNumCols());
+                LogicError("GetNumTimeSteps: inconsistency between layout and actual number of columns for node '%ls', seq=%d x T=%d vs. cols=%d",
+                           NodeName().c_str(), (int)m_pMBLayout->GetNumParallelSequences(), (int)m_pMBLayout->GetNumTimeSteps(), (int)GetNumCols());
             }
             // TODO: ^^ much of this should go away, as in the future, the layout will always correctly know the #samples
             return m_pMBLayout->GetNumTimeSteps();

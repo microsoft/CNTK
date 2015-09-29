@@ -22,32 +22,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (procs == 1)
                 return;
 
-            size_t rv = 0;  // used for checking that all matrices have the same dimension
+            const size_t nCols = mb.begin()->second->GetNumCols();
+            const size_t colBegin = (nCols * rank) / procs;
+            const size_t colEnd = (nCols * (rank + 1)) / procs;
+
             for (auto it = mb.begin(); it != mb.end(); ++it)
             {
                 MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
 
-                if (rv == 0)
-                    rv = mat.GetNumCols();
-                else if (rv != mat.GetNumCols())
-                    LogicError("Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)mat.GetNumCols());
-
-                size_t nCols = mat.GetNumCols();
-                size_t col_start = (nCols * rank) / procs;
-                size_t col_end = (nCols * (rank + 1)) / procs;
-                //if (col_end > nCols)
-                //{
-                //    // this shouldn't happen
-                //    col_end = nCols;
-                //}
+                if (nCols != mat.GetNumCols())  // all matrices must have the same number of columns
+                    LogicError("DecimateMinibatch: Inconsistent number of columns among inputs (found %d and %d).", (int)nCols, (int)mat.GetNumCols());
 
 #if 1
-                MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(col_start, col_end - col_start);
+                MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(colBegin, colEnd - colBegin);
                 if (tmp.GetNumRows() != mat.GetNumRows())
                     LogicError("DecimateMinibatch:: found ColumnSlice() to not preserve #rows when asking for 0 columns. That's a bug in ColumnSlice()");// TODO: remove this if confirmed the original code below indicates that it may not (then that would be a bug in ColumnSlice())
                 mat.SetValue(tmp);
 #else
-                if (col_end == col_start)
+                if (colEnd == colBegin)
                 {
                     MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), 0, AUTOPLACEMATRIX, DENSE);
                     mat.SetValue(tmp);
@@ -55,7 +47,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else
                 {
-                    MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(col_start, col_end - col_start);
+                    MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(colBegin, colEnd - colBegin);
                     mat.SetValue(tmp);
                 }
 #endif
@@ -68,7 +60,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("DecimateMinibatch: unexpectedly called on minibatch that has sentence-boundary flags set");
             else if (pMBLayout->GetNumParallelSequences() != 1)
                 LogicError("DecimateMinibatch: unexpectedly called on minibatch that has >1 parallel sequence");
-            pMBLayout->Init(1, rv, false);
+            else if (nCols != pMBLayout->GetNumTimeSteps())     // matrices must match the layout prior to decimation
+                LogicError("DecimateMinibatch: Number of columns inconsistent with layout (%d vs. %d).", (int)nCols, (int)pMBLayout->GetNumTimeSteps());
+            pMBLayout->Init(1, colEnd - colBegin, false);
         }
 
         // decimate minibatch for parallelization--in utterance mode, also requires presence of parallel utterances
