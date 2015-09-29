@@ -238,7 +238,7 @@ namespace msra { namespace cuda {
                                                       const bool returnEframescorrect, const vectorref<unsigned short> & uids, 
                                                       const vectorref<unsigned short> & senone2classmap, vectorref<double> & logaccalphas, 
                                                       vectorref<double> & logaccbetas, vectorref<double> & logframescorrectedge,
-                                                      vectorref<double> & logEframescorrect, vectorref<double> & Eframescorrectbuf, 
+                                                      vectorref<double> & logEframescorrect, vectorref<double> & /*Eframescorrectbuf*/, 
                                                       double & logEframescorrecttotal, double & totalfwscore) const
     {
         // initialize log{,acc}(alhas/betas)
@@ -246,7 +246,6 @@ namespace msra { namespace cuda {
         const size_t tpb = t.x * t.y;
         dim3 b ((unsigned int) ((logalphas.size() + tpb - 1) / tpb));
 
-        size_t alphabetablowup = logalphas.size() / nodes.size();
         // TODO: is this really efficient? One thread per value?
         setvaluej<<<b, t, 0, GetCurrentStream()>>> (logalphas, LOGZERO, logalphas.size());
         checklaunch ("setvaluej");

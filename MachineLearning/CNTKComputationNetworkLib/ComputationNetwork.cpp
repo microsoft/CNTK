@@ -6,7 +6,6 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
-#include "TrainingCriterionNodes.h"
 #include "Basics.h"
 #include "ComputationNetwork.h"
 #include "ComputationNetworkBuilder.h"  // used for load & save
@@ -988,7 +987,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(*nodeIter);
                 node->SetSmoothWeight(hsmoothingWeight);
                 node->SetFrameDropThresh(frameDropThresh);
-                node->SetRefrencealign(doreferencealign);
+                node->SetReferenceAlign(doreferencealign);
             }
         }
     }
