@@ -2,6 +2,8 @@
 //
 // F. Seide, V-hansu
 
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+
 #define DLLEXPORT
 #define __kernel_emulation__    // allow the compilation of CUDA kernels on the CPU
 #include "latticefunctionskernels.h"    // for the actual inner kernels and any argument types that are not yet defined in latticestorage.h

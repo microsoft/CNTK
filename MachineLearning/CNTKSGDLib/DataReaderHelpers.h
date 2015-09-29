@@ -17,10 +17,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // decimate minibatch for parallelization--in absence of parallel utterances
         // We sub-sample the individual frames (= matrix columns).
         template<class ElemType>
-        static void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb, int numProcessor, int myID)
+        static void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb, int procs, int rank, MBLayoutPtr pMBLayout)
         {
-            int rank = myID;
-            int procs = numProcessor;
             if (procs == 1)
                 return;
 
@@ -63,6 +61,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
             }
+
+            // fix the layout
+            // In frame mode, this is easy, since the layout has no flags. So we can just recreate one.
+            if (!pMBLayout->IsAllNone())
+                LogicError("DecimateMinibatch: unexpectedly called on minibatch that has sentence-boundary flags set");
+            else if (pMBLayout->GetNumParallelSequences() != 1)
+                LogicError("DecimateMinibatch: unexpectedly called on minibatch that has >1 parallel sequence");
+            pMBLayout->Init(1, rv, false);
         }
 
         // decimate minibatch for parallelization--in presence of parallel utterances
@@ -248,10 +254,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // decimate if needed. Decimation happens in-place.
             if (wasDataRead && !useDistributedMBReading && useParallelTrain)
             {
-                if (pMBLayout->RequireSentenceSeg())   // TODO: same as pMBLayout->IsAllNone()? If so, change to it
+                if (pMBLayout->RequireSentenceSeg())   // decimate in sequences
                     DecimateMinibatchWithSentences(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
-                else        // frame mode: decimate without layout
-                    DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank());
+                else        // frame mode: decimate in frames
+                    DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
             }
 
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices

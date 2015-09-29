@@ -1165,7 +1165,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i<m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
-                if (child->NeedGradient() && NeedGradient())
+                if (child->NeedGradient())// && NeedGradient())
                 {
 #ifdef DISPLAY_DEBUG
                     fprintf (stderr, "    [%lu]: %s(%s)\n", i, 
@@ -1378,7 +1378,7 @@ protected: \
     using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; using Base::s_timeStampCounter; \
     using Base::shared_from_this; \
 public: \
-    using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; \
+    using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifySize; \
     /*using Base::ComputeGradientForChildren; using Base::ComputeInputPartial;*/ using Base::ConstOnes; \
     using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
