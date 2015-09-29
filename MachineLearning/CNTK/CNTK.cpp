@@ -1171,6 +1171,23 @@ void DoConvertFromDbn(const ConfigParameters& config)
     delete (netBuilder);
 }
 
+template <typename ElemType>
+void DoExportToDbn(const ConfigParameters& config)
+{
+    //config.Insert("deviceId","-1"); //force using CPU
+    //DEVICEID_TYPE deviceID = DeviceFromConfig(config);
+
+    wstring modelPath = config("modelPath");
+    wstring dbnModelPath = config("dbnModelPath");
+
+    IComputationNetBuilder<ElemType>* netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(config);
+    ComputationNetwork* net = netBuilder->LoadNetworkFromFile(modelPath);
+    // write dbn file
+    net->SaveToDbnFile<ElemType>(dbnModelPath);
+
+    return;
+}
+
 // do topological plot of computation network 
 template <typename ElemType>
 void DoTopologyPlot(const ConfigParameters& config)
@@ -1293,6 +1310,11 @@ void DoCommand(const ConfigParameters& config)
             {
                 DoConvertFromDbn<ElemType>(commandParams);
             }
+            else if (action[j] == "exportdbn")
+            {
+                DoExportToDbn<ElemType>(commandParams);
+            }
+
             else if (action[j] == "createLabelMap")
             {
                 DoCreateLabelMap<ElemType>(commandParams);

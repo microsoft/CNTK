@@ -1286,6 +1286,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void GetErrorsToPreviousMinibatch(Matrix<ElemType>&) {}
         virtual void SetErrorsFromFutureMinibatch(Matrix<ElemType>&) {}
 
+        const Matrix<ElemType> & PeekFunctionValues() { return m_functionValues; }  // needed for saving to a different format
+
     protected:
 
         Matrix<ElemType> m_functionValues, m_gradientValues;
@@ -1368,7 +1370,7 @@ public: \
     using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
-    using Base::SaveToFile; using Base::SetFunctionAndGradientMBSize; using Base::SetInput; using Base::Validate
+    using Base::SaveToFile; using Base::SetFunctionAndGradientMBSize; using Base::SetInput; using Base::Validate;
 
 #define UsingComputationNodeMembersBoilerplate \
 protected:    /* some boilerplate goes here */ \

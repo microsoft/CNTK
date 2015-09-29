@@ -248,7 +248,6 @@ public:
     // -----------------------------------------------------------------------
     // serialization
     // -----------------------------------------------------------------------
-
     void SaveToFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary) const;
 private:
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
@@ -262,6 +261,8 @@ public:
     void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
                       const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
 
+    template<class ElemType>
+    void SaveToDbnFile(const std::wstring& fileName) const;
 #pragma region Network Modification
 
     void SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr rootNode = nullptr);

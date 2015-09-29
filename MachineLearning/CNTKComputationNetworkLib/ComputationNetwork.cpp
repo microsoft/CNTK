@@ -1201,6 +1201,212 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ValidateNetwork(false, bAllowNoCriterionNode);
     }
 
+    // save network to legacy DBN.exe format
+    template<class ElemType> void ComputationNetwork::SaveToDbnFile(const std::wstring& fileName) const
+    {
+        // DBN.exe has strict requirements. In particular, it only supports a single tower of networks.
+        // [fseide] I am not sure if I am testing all conditions correctly to prevent writing out a non-convertible format.
+        // This function assumes the following:
+        //  - simple single-tower feed-forward network
+        //  - layer parameters are named (Wn,Bn)
+        //  - non-linearities are named Hn, supported ones are: sigmoid, softmax, ReLU, none
+        //  - we also expect MeanOfFeatures, InvStdOfFeatures, and Prior
+
+        // local helper functions
+        auto Fail = [](const wstring & message) { throw std::runtime_error(string(message.begin(), message.end())); };  // TODO: use RuntimeError() function instead
+
+        auto GetMatrixFromName = [&](const wstring & name, const wchar_t * expectedop) -> const Matrix<ElemType> *
+        {            
+            const auto node = GetNodeFromName(name);
+            const auto & nodeop = node->OperationName();
+            if (expectedop != nodeop) Fail(L"Unexpected op '" + nodeop + L"' for node " + name + L", expected '" + expectedop + L"'");\
+            auto pnode = dynamic_pointer_cast<ComputationNode<ElemType>>(node);            
+            return &pnode->PeekFunctionValues();
+        };
+
+        auto CheckVecDim = [&](const Matrix<ElemType> * v, size_t rows, size_t cols, const wstring & what)
+        {
+            if (v->GetNumRows() != rows) Fail(L"Incompatible layer dimensions " + what);
+            if (v->GetNumCols() != cols) Fail(L"Incompatible layer dimensions " + what + L" must be a column vector");
+        };
+
+        // build node info
+        // We fill in the following variables, which describe the DBN.exe-compatible model completely.
+        vector<size_t> layerdims;
+        vector<string> layertypes;
+        const Matrix<ElemType> * mean, *invstd;    // this is of feature dimension
+        const Matrix<ElemType> * priors;            // this is of output dimension
+        vector<Matrix<ElemType>> Ws;
+        vector<Matrix<ElemType>> bs;
+        vector<const Matrix<ElemType> *> as;
+        vector<wstring> nlops;                      // non-linearities
+        size_t featdim;
+
+        mean = GetMatrixFromName(L"MeanOfFeatures", L"Mean");
+        invstd = GetMatrixFromName(L"InvStdOfFeatures", L"InvStdDev");
+
+        // guess feature dimension from repetition pattern in mean
+        // DBN.exe stores mean/var in feature dimension, while CNTK duplicates it all the way to the input dimension; we can detect that.
+        // This will fail for hacks where all values are set to the same, e.g. 0.0.
+        // If one ever needs to estimate these straight with CNTK (so that values won't be bit-identical) and convert, we can add an override parameter.
+        size_t meansize = mean->GetNumElements();       // used for CopyToArray() API
+        ElemType * meandata = new ElemType[meansize];    // risk: memory leak
+        mean->CopyToArray(meandata, meansize);
+        for (featdim = 1; featdim < meansize; featdim++)
+        {
+            if (meansize % featdim != 0) continue;
+            for (size_t k = 0; k < featdim; k++)
+            if (meandata[k] != meandata[k + featdim]) goto mismatch;
+            break;
+        mismatch:;
+        }
+        delete[] meandata;
+
+        priors = GetMatrixFromName(L"Prior", L"Mean");
+
+        // get all weights
+        bool done = false;
+        for (size_t n = 0; !done; n++)
+        {
+            const size_t NAMEBUFLEN = 20;
+            wchar_t namebuf[NAMEBUFLEN];
+            namebuf[0] = 'B';
+            swprintf(namebuf + 1, NAMEBUFLEN - 1, L"%d", n);
+            auto an = GetMatrixFromName(namebuf, L"LearnableParameter");
+            namebuf[0] = 'W';
+            auto Wn = GetMatrixFromName(namebuf, L"LearnableParameter");
+
+            // Logic for determining layer type is as follows:
+            // 1. Assume layer N is an output layer (HLast) and that we are done (last layer)
+            // 2. If H{N+1} exists, N must be a nonlinearlayer and we are not done.
+            // 3. If H{N+1} doesn't exist, and W{N+1}*H{N+1} does, N must be a linear layer and we are not done.
+
+            auto Hnp1 = GetNodeFromName(L"HLast"); // default value
+            std::wstring nlop = Hnp1->OperationName();
+            done = true;
+
+            namebuf[0] = 'H';
+            swprintf(namebuf + 1, NAMEBUFLEN - 1, L"%d", n + 1);
+            if (NodeNameExist(namebuf))
+            {
+                // non-linear layer
+                Hnp1 = GetNodeFromName(namebuf);
+                nlop = Hnp1->OperationName();
+                done = false;
+            }
+            else
+            {
+                swprintf(namebuf, NAMEBUFLEN, L"W%d*H%d", n + 1, n + 1);
+                if (NodeNameExist(namebuf))
+                {
+                    // linear layer
+                    Hnp1 = GetNodeFromName(namebuf);
+                    nlop = L"Linear";
+                    done = false;
+                }
+            }
+
+            done = !NodeNameExist(namebuf);
+
+            as.push_back(an);
+
+            // n.b. - DBN stores the transpose of the matrix, from CNTK's viewpoint
+            // Construct a matrix based on the const* Wn because Transpose() incorrectly not declared as const funciton
+            Ws.push_back(Matrix<ElemType>(*Wn).Transpose());
+
+            bs.push_back(Matrix<ElemType>(Wn->GetNumCols(), 1, AUTOPLACEMATRIX, DENSE));
+
+            nlops.push_back(nlop);
+        }
+
+        // determine layerdims and layertypes
+        size_t numlayers = nlops.size();
+        for (size_t n = 0; n < numlayers; n++)
+        {
+            // non-linearity
+            if (n < numlayers - 1)
+            {
+                if (nlops[n] == L"Sigmoid") layertypes.push_back(n == 0 ? "rbmgaussbernoulli" : "rbmbernoullibernoulli");
+                else if (nlops[n] == L"RectifiedLinearNode") layertypes.push_back("relunetwork");
+                // we want to remain compatible with IPE's SVD format; their old code remembered the nonlinearitykind by patching the 'type' (ugh!)
+                else if (nlops[n] == L"Linear") layertypes.push_back("rbmisalinearbernoulli");
+                else Fail(L"Unsupported non-linearity OperationName for hidden layer: " + nlops[n]);
+            }
+            else
+            {
+                if (nlops[n] != L"Plus") Fail(L"Unexpected non-linearity OperationName for output layer: " + nlops[n]);
+                layertypes.push_back("perceptron");
+            }
+            // dimensions.
+            // n.b. - GetNumRows/GetNumCols switched wrt what CNTK expects, this is W transpose (DBN convention)
+            if (n == 0) layerdims.push_back(Ws[n].GetNumRows());
+            else if (layerdims.back() != Ws[n].GetNumRows()) Fail(L"Incompatible layer dimensions (Wn)");
+            layerdims.push_back(Ws[n].GetNumCols());
+            CheckVecDim(as[n], layerdims.back(), 1, L"Wn with Bn");
+            CheckVecDim(&bs[n], Ws[n].GetNumRows(), 1, L"Wn with An");
+        }
+        CheckVecDim(priors, layerdims.back(), 1, L"Prior");
+        CheckVecDim(mean, layerdims.front(), 1, L"Mean");
+        CheckVecDim(mean, invstd->GetNumRows(), invstd->GetNumCols(), L"Mean vs. InvStdOfFeatures");
+        if (layerdims.front() / featdim * featdim != layerdims.front()) Fail(L"Input dimension not integer multiple of features");
+
+        // save it to DBN.exe-formatted file
+        File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
+
+        // local helper functions for writing stuff in DBN.exe-expected format
+        auto PutTag = [&](const char * tag) { while (*tag) fstream << *tag++; };
+        auto PutString = [&](const char * string) { fstream.WriteString(string, 0); };
+        auto PutInt = [&](int val) { fstream << val; };
+        auto PutMatrixConverted = [&](const Matrix<ElemType> * m, size_t maxelem, const char * name, float(*f)(float))      // write a DBN matrix object, optionally applying a function
+        {
+            PutTag("BMAT");
+            PutString(name);
+            if (maxelem == SIZE_MAX)
+            {
+                PutInt((int)m->GetNumRows());
+                PutInt((int)m->GetNumCols());
+            }
+            else    // this allows to shorten a vector, as we need for mean/invstd
+            {
+                PutInt(maxelem);
+                PutInt(1);
+            }
+            {
+                // this code transposes the matrix on the fly, and outputs at most maxelem floating point numbers to the stream
+                size_t numRows = m->GetNumRows();
+                size_t numCols = m->GetNumCols();
+                size_t k = 0;
+                for (size_t j = 0; j < numCols && k < maxelem; j++)
+                for (size_t i = 0; i < numRows && k < maxelem; i++, k++)
+                    fstream << f((float)(*m)(i, j));
+            }
+            PutTag("EMAT");
+        };
+        auto PutMatrix = [&](const Matrix<ElemType> * m, const char * name) { PutMatrixConverted(m, SIZE_MAX, name, [](float v) { return v; }); };
+
+        // write out the data
+        PutTag("DBN\n"); PutString("converted from CNTK-formatted file");
+        PutTag("BDBN");
+        PutInt(0);                  // a version number
+        PutInt((int)numlayers);     // number of layers
+        PutMatrixConverted(mean, featdim, "gmean", [](float v) { return v; });          // reduce to feat dim
+        PutMatrixConverted(invstd, featdim, "gstddev", [](float v) { return 1.0f / v; });   // need to invert
+        PutTag("BNET");
+        for (size_t i = 0; i < numlayers; i++)
+        {
+            string type = layertypes[i];
+            PutString(type.c_str());
+            // write the layer
+            PutMatrix(&Ws[i], "W");
+            PutMatrix(as[i], "a");
+            PutMatrix(&bs[i], "b");
+        }
+        PutTag("ENET");
+        PutMatrix(priors, "Pu");
+        PutTag("EDBN");
+        // BUGBUG: at this point we need to flush the file in order to catch a final buffer-flush error, which otherwise would illegally show up in the destructor. 'File' has no such interface it seems.
+    }
+
     // -----------------------------------------------------------------------
     // topological plot [erw]
     // -----------------------------------------------------------------------
@@ -1580,10 +1786,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig);
     template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const   float hsmoothingWeight, const float frameDropThresh, const bool doreferencealign);
+    template void ComputationNetwork::SaveToDbnFile<float>(const std::wstring& fileName) const;
 
     template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<double>(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
     template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig);
     template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const   double hsmoothingWeight, const double frameDropThresh, const bool doreferencealign);
+    template void ComputationNetwork::SaveToDbnFile<double>(const std::wstring& fileName) const;
+
 }}}
