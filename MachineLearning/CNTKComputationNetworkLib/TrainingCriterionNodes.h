@@ -1604,19 +1604,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SequenceWithSoftmax"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-
-        SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name)
-            : ComputationNodeNonLooping<ElemType>(deviceId, name)
-            , m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_maskOfFramedrop(deviceId), m_gammaCalcInitialized(false)
+        SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name),
+            m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_maskOfFramedrop(deviceId), m_gammaCalcInitialized(false)
         {
         }
         
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"SequenceWithSoftmax"; }
-
         //compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1849,7 +1845,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_frameDropThresh = frameDropThresh;
         }
 
-        void SetRefrencealign(const bool dorefrencealign)
+        void SetReferenceAlign(const bool dorefrencealign)
         {
             m_doreferencealign = dorefrencealign;
         }
