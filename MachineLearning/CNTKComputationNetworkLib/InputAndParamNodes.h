@@ -267,9 +267,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
-            // TODO: if this node has a layout, we should serialize a column dimension of 0 (since col dim represents the MB size, which should not be serialized)
-            fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
-            fstream << m_outputWidth << m_outputHeight << m_outputChannels; 
+            fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols();
+            // if this Input depends on MB size, we write it as having 0 dimensions
+            fstream << FunctionValues().GetNumRows() << m_pMBLayout ? 0 : FunctionValues().GetNumCols();
+            fstream << m_outputWidth << m_outputHeight << m_outputChannels;
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
@@ -278,20 +279,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t rows, cols;
             fstream >> rows >> cols;
-            if (rows * cols == 0)   // TODO: no! zero cols is perfectly fine.
-                RuntimeError("LoadFromFile: Malformed input file: InputValue has dimension 0.");
-
+            if (m_pMBLayout)    // some older files retained the #columns when saving, wehich is meaningless
+                cols = 0;
             fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels; 
 
             if (m_isSparse)
                 ConvertToSparseMatrix();
 
             m_functionValues.Resize(rows, cols);
-            m_functionValues.SetValue(0.0);         // (Resize() alone is not guaranteed to clear to 0; this eliminates potential left-overs)
+            m_functionValues.SetValue(0.0);         // (if cols > 0, Resize() alone is not guaranteed to clear to 0; this eliminates potential left-overs)
             m_needGradient = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
         }
 
-        // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type; this special-casing will cause grief
+        // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type. This causes some unnecessary special-casing.
         virtual const std::wstring OperationName() const { return m_isSparse ? SparseTypeName() : TypeName(); }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override {}
@@ -302,8 +302,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate() override
         {
             Base::Validate();
-            if (!m_pMBLayout)
-                RuntimeError("Validate: Input node '%ls' should have been assigned an MBLayout, but hasn't.");
+            // TODO: There is still debate whether an InputValue without layout makes sense.
+            if (m_pMBLayout)
+            {
+                m_functionValues.ResizeColumns(m_pMBLayout->GetNumTimeSteps() * m_pMBLayout->GetNumParallelSequences());
+                m_functionValues.SetValue(0.0);
+            }
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -311,8 +315,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
-            sprintf(str, "[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            fstream << string(str);        
+            sprintf(str, "[%lu,%lu]", GetNumRows(), GetNumCols());
+            fstream << string(str);         // TODO: string(.) necessary?
         }
     private:
         bool m_isSparse = false;
