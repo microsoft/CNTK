@@ -74,7 +74,9 @@ void RedirectStdErr(wstring logpath)
     fprintf(stderr, "Redirecting stderr to file %S\n", logpath.c_str());
     auto f = make_shared<File>(logpath.c_str(), fileOptionsWrite | fileOptionsText);
     if (dup2(fileno(*f), 2) == -1)
+    {
         RuntimeError("unexpected failure to redirect stderr to log file");
+    }
     setvbuf(stderr, NULL, _IONBF, 16384);   // unbuffer it
     static auto fKept = f;                  // keep it around (until it gets changed)
 }
@@ -243,7 +245,9 @@ void DoCrossValidate(const ConfigParameters& config)
 
     //find best model
     if (cvErrorResults.size() == 0)
+    {
         LogicError("No model is evaluated.");
+    }
 
     std::vector<double> minErrors;
     std::vector<int> minErrIds;
@@ -400,11 +404,17 @@ void DoCreateLabelMap(const ConfigParameters& config)
         ConfigParameters labelConfig(readerConfig(labelsName));
         std::string labelMappingFile;
         if (labelConfig.ExistsCurrent("labelMappingFile"))
+        {
             labelMappingFile = labelConfig("labelMappingFile");
+        }
         else if (readerConfig.ExistsCurrent("labelMappingFile"))
+        {
             labelMappingFile = labelConfig("labelMappingFile");
+        }
         else
+        {
             RuntimeError("CreateLabelMap: No labelMappingFile defined");
+        }
 
         if (fexists(labelMappingFile))
         {
@@ -564,9 +574,14 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     //FILE *fp = fopen(inputFile.c_str(), "rt");
     ifstream fp(inputFile.c_str());
     if (!fp)
+    {
         RuntimeError("inputFile cannot be read");
+    }
+
     if (nbrCls > 0)
+    {
         cls2idx.Resize(nbrCls, 1);
+    }
     std::unordered_map<string, double> v_count;
 
     /// get line
@@ -581,12 +596,20 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         int sposition = str.find("</s> ");
         int eposition = str.find(" </s>");
         if (sposition == str.npos)
+        {
             str = "</s> " + str;
+        }
+
         if (eposition == str.npos)
+        {
             str = str + " </s>";
+        }
+
         vstr = msra::strfun::split(str, "\t ");
         for (int i = 1; i < vstr.size(); i++)
+        {
             v_count[vstr[i]]++;
+        }
     }
     fp.close();
 
@@ -606,8 +629,12 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     size_t wordCountLessCutoff = v_count.size();
     if (cutoff > 0)
         for (std::unordered_map<std::string, double>::iterator iter = v_count.begin(); iter != v_count.end(); iter++)
+        {
             if (iter->second <= cutoff)
+            {
                 wordCountLessCutoff--;
+            }
+        }
     if (wordCountLessCutoff <= 0)
         RuntimeError("no word remained after cutoff");
 
@@ -654,9 +681,14 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     if (nbrCls > 0)
     {
         for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
+        {
             total += iter->second;
+        }
+
         for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
+        {
             dd += sqrt(iter->second / total);
+        }
     }
 
     double df = 0;
@@ -671,9 +703,14 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         {
             df += sqrt(freq / total) / dd;
             if (df > 1)
+            {
                 df = 1;
+            }
+
             if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
+            {
                 class_id++;
+            }
         }
 
         size_t wid = m_words.size();
@@ -683,7 +720,9 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 
         m_count[wid] = freq;
         if (nbrCls > 0)
+        {
             m_class[wid] = class_id;
+        }
         p.pop();
     }
 
@@ -701,6 +740,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         }
         ofvocab << "     " << i << "\t     " << m_count[i] << "\t" << m_words[i] << "\t" << clsIdx << std::endl;
     }
+
     ofvocab.close();
     if (nbrCls > 0)
     {
@@ -716,9 +756,14 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         msra::files::make_intermediate_dirs(s2ws(outputCls2Index));
         ofp.open(outputCls2Index.c_str());
         if (!ofp)
+        {
             RuntimeError("cannot write to %s", outputCls2Index.c_str());
+        }
+
         for (size_t r = 0; r < cls2idx.GetNumRows(); r++)
+        {
             ofp << (int)cls2idx(r, 0) << endl;
+        }
         ofp.close();
     }
 }
@@ -841,7 +886,9 @@ void DoEncoderDecoder(const ConfigParameters& config)
         encoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
+    {
         LogicError("Need encoder network");
+    }
 
     if (config.Exists("DecoderNetworkBuilder"))
     {
@@ -849,7 +896,9 @@ void DoEncoderDecoder(const ConfigParameters& config)
         decoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
+    {
         LogicError("Need decoder networks");
+    }
 
     MultiNetworksSGD<ElemType> sgd(configSGD);
 
@@ -920,7 +969,9 @@ void DoBidirecionEncoderDecoder(const ConfigParameters& config)
         forwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
+    {
         LogicError("Need decoder networks");
+    }
 
     if (config.Exists("BackwardDecoderNetworkBuilder"))
     {
@@ -928,7 +979,9 @@ void DoBidirecionEncoderDecoder(const ConfigParameters& config)
         backwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
+    {
         LogicError("Need decoder networks");
+    }
 
     MultiNetworksSGD<ElemType> sgd(configSGD);
 

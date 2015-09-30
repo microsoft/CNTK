@@ -343,6 +343,7 @@ template<class ElemType>
         {
             m_epochSize = requestDataSize;
         }
+        m_maxComputedEpochSize = m_epochSize;
 
         // the total number of epochs to run.
         m_maxEpochs = maxEpochs;
@@ -464,7 +465,7 @@ template<class ElemType>
             m_momentumPerSample.resize(momentumVectorSize);
             for (int i = 0; i < momentumVectorSize; i++)
                 m_momentumPerSample[i] = (float)pow(0.9f, 1.0 / m_mbSize[i]);
-        }
+            }
 
         if (m_learnRateDecreaseFactor > 1 || m_learnRateIncreaseFactor < 1)
             InvalidArgument("learnRateIncreaseFactor must be >= 1 and learnRateDecreaseFactor must be <= 1.");
@@ -714,11 +715,12 @@ template<class ElemType>
                 auto * functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues();
                 assert(functionValues->GetNumCols() == net.GetMBLayoutPtr()->GetNumTimeSteps());
                 (*inputMatrices)[node->NodeName()] = functionValues;
-            }
+        }
         }
 
-        // get hmm file for sequence training
-        if (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax")
+        //get hmm file for sequence training
+        bool isSequenceTrainingCriterion = (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax");
+        if (isSequenceTrainingCriterion)
         {
             //SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
             auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
@@ -834,7 +836,9 @@ template<class ElemType>
         // --- MAIN EPOCH LOOP
 
 		//sequence trainning
-        ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hsmoothingWeight, m_frameDropThresh, m_doreferencealign);
+        if (isSequenceTrainingCriterion)
+            ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hsmoothingWeight, m_frameDropThresh, m_doreferencealign);
+
         for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {
             // Synchronize all ranks before proceeding to ensure that 
@@ -949,8 +953,8 @@ template<class ElemType>
                 lrControlCriterion = epochCriterion;
 
             fprintf(stderr,
-                    "Finished Epoch[%d]: [Training Set] TrainLossPerSample = %.8g; ",
-                    i + 1, epochCriterion);
+                    "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; ",
+                    i + 1, (int) m_maxEpochs, epochCriterion);
             if (epochEvalErrors.size() == 1)
             {
                 fprintf(stderr,
@@ -966,13 +970,13 @@ template<class ElemType>
                 fprintf(stderr, "Ave LearnRatePerSample = %.10g; Epoch Time=%.8g\n",
                         learnRatePerSample, epochTime);
 
-                fprintf(stderr, "Finished Epoch[%d]: Criterion Node [%ls] Per Sample = %.8g\n",
-                                i + 1, criterionNodes[0]->NodeName().c_str(), epochCriterion);
+                fprintf(stderr, "Finished Epoch[%2d of %d]: Criterion Node [%ls] Per Sample = %.8g\n",
+                                i + 1, (int) m_maxEpochs, criterionNodes[0]->NodeName().c_str(), epochCriterion);
 
                 for (size_t j = 0; j < epochEvalErrors.size(); j++)
                 {
-                    fprintf(stderr, "Finished Epoch[%d]: Evaluation Node [%ls] Per Sample = %.8g\n",
-                            i + 1, evalNodeNames[j].c_str(), epochEvalErrors[j]);
+                    fprintf(stderr, "Finished Epoch[%2d of %d]: Evaluation Node [%ls] Per Sample = %.8g\n",
+                            i + 1, (int) m_maxEpochs, evalNodeNames[j].c_str(), epochEvalErrors[j]);
                 }
             }
 
@@ -986,8 +990,8 @@ template<class ElemType>
                     cvSetTrainAndEvalNodes.push_back(evaluationNodes[0]->NodeName());
 
                     vector<double> vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
-                    fprintf(stderr, "Finished Epoch[%d]: [Validation Set] TrainLossPerSample = %.8g; EvalErrPerSample = %.8g\n",
-                            i + 1, vScore[0], vScore[1]);
+                    fprintf(stderr, "Finished Epoch[%2d of %d]: [Validation Set] TrainLossPerSample = %.8g; EvalErrPerSample = %.8g\n",
+                            i + 1, (int) m_maxEpochs, vScore[0], vScore[1]);
 
                     if (m_useCVSetControlLRIfCVExists)
                     {
@@ -1404,7 +1408,9 @@ fprintf(stderr,"\n\n#### 4 ####\n\n");
         {
             fprintf(stderr, "EvalErrPerSample ");
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
+            {
                 fprintf(stderr, "[%lu] = %.8g; ", i, epochEvalErrors[i]);
+            }
             fprintf(stderr, "Ave LearnRatePerSample = %.10g\n", learnRatePerSample);
         }
 
@@ -1764,7 +1770,8 @@ fprintf(stderr,"\n\n#### 4 ####\n\n");
         fprintf(stderr, "\nStarting minibatch loop");
         if (useGradientAggregation)
         {
-            fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)", (int)g_mpi->CurrentNodeRank(), (int)g_mpi->NumNodesInUse(), (int)m_numGradientBits);
+            fprintf(stderr, ", DataParallelSGD training (MyRank = %d, NumNodes = %d, NumGradientBits = %d)",
+                    (int)g_mpi->CurrentNodeRank(), (int)g_mpi->NumNodesInUse(), (int)m_numGradientBits);
         }
 
         if (useDistributedMBReading)
@@ -1783,7 +1790,8 @@ fprintf(stderr,"\n\n#### 4 ####\n\n");
             // get minibatch
             // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
             size_t actualMBSize = 0;
-            bool notAtEndOfEpoch = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0], useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
+            bool notAtEndOfEpoch = DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, criterionNodes[0],
+                                                                              useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize);
             if (!notAtEndOfEpoch)
                 break;  // end of epoch
 
@@ -1866,9 +1874,13 @@ fprintf(stderr,"\n\n#### 4 ####\n\n");
                 if (actualMBSize != 0)
                 {
                     // criteria are in FunctionValues()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
-                    Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(criterionNodes[0])->FunctionValues(), 0, 0, localEpochCriterion, 0, 0);
+                    Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(criterionNodes[0])->FunctionValues(),
+                                                          0, 0, localEpochCriterion, 0, 0);
                     for (size_t i = 0; i < numEvalNodes; i++)
-                        Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(evaluationNodes[i])->FunctionValues(), 0, 0, localEpochEvalErrors, 0, i);
+                    {
+                        Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(evaluationNodes[i])->FunctionValues(),
+                                                              0, 0, localEpochEvalErrors, 0, i);
+                    }
                 }
             }
             else
@@ -1964,21 +1976,34 @@ fprintf(stderr,"\n\n#### 4 ####\n\n");
                     }
 
                     double trainLossPerSample = (epochCriterion - epochCriterionLastMBs) / numSamplesLastMBs;
-                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of %d]: SamplesSeen = %d; TrainLossPerSample = " +
-                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
-                    fprintf(stderr, formatString.c_str(),
-                            prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
-                            numMBsRun, epochSize / tunedMBSize, numSamplesLastMBs, trainLossPerSample);
+
+                    if (epochNumber > 0 || (int) epochSize > 0)
+                    {
+                       string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of %d]: SamplesSeen = %d; TrainLossPerSample = " +
+                                              GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
+                        fprintf(stderr, formatString.c_str(),
+                                prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
+                                numMBsRun, m_maxComputedEpochSize / tunedMBSize, numSamplesLastMBs, trainLossPerSample);
+                    }
+                    else
+                    {
+                        string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of -1]: SamplesSeen = %d; TrainLossPerSample = " +
+                                              GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
+                        fprintf(stderr, formatString.c_str(),
+                                prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
+                                numMBsRun, numSamplesLastMBs, trainLossPerSample);
+                        m_maxComputedEpochSize = numMBsRun * numSamplesLastMBs / m_numMBsToShowResult;
+                    }
 
                     for (size_t i = 0; i < numEvalNodes; i++)
                     {
                         double evalError = (epochEvalErrors[i] - epochEvalErrorsLastMBs[i]) / numSamplesLastMBs;
-                        formatString = "EvalErr[%lu]PerSample = " + GeneratePaddedFloatOrExpFormat(0, 8, evalError) + "; ";
+                        string formatString = "EvalErr[%lu]PerSample = " + GeneratePaddedFloatOrExpFormat(0, 8, evalError) + "; ";
                         fprintf(stderr, formatString.c_str(), i, evalError);
                     }
 
                     double totalTimePerSample = (1000.0 * totalTimeInMBs) / numSamplesLastMBs;
-                    formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 5, totalTimeInMBs) + "s; TotalTimePerSample = " +
+                    string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 5, totalTimeInMBs) + "s; TotalTimePerSample = " +
                                    GeneratePaddedFloatOrExpFormat(0, 5, totalTimePerSample) + "ms; SamplesPerSecond = %d\n";
                     fprintf(stderr, formatString.c_str(),
                             totalTimeInMBs, totalTimePerSample,

@@ -198,6 +198,7 @@ if [[ $RUN == 1 ]]; then
 
     cd $PREFIX_DIR
     echo "============ cp Demos/Simple/Simple.config $CONF_FILE  ============"
+    echo "============ cd $CNTK_ROOT/Demos  ============"
 
     for TARGET in "${targetArray[@]}"
     do

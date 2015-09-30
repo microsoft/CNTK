@@ -510,7 +510,7 @@ namespace msra { namespace lattices {
         // This is a weird mix of const/non-const and private lattice data... :(
         template<class edgestype, class nodestype, class aligntype, class edgealignments, class backpointers>
         void setutterancedata (const edgestype & edges, const nodestype & nodes, const aligntype & align,
-                               const msra::math::ssematrixbase & logLLs, std::vector<float> & edgeacscores, 
+                               const msra::math::ssematrixbase & /*logLLs*/, std::vector<float> & edgeacscores, 
                                edgealignments & edgeAlignments, backpointers & backPointers)
         {
             // lattice data
@@ -652,7 +652,7 @@ namespace msra { namespace lattices {
     void lattice::parallelstate::setloglls(const Microsoft::MSR::CNTK::Matrix<float>& loglls) { pimpl->setloglls(loglls); }
 
     // TODO: Overload to enable compilation for DoublePrecision though its currently unsupported
-    void lattice::parallelstate::setloglls(const Microsoft::MSR::CNTK::Matrix<double>& loglls) 
+    void lattice::parallelstate::setloglls(const Microsoft::MSR::CNTK::Matrix<double>& /*loglls*/) 
     {
         throw::logic_error("Double precision not supported for sequence training");
     }
@@ -660,7 +660,7 @@ namespace msra { namespace lattices {
     void lattice::parallelstate::getgamma(Microsoft::MSR::CNTK::Matrix<float>& loglls) { pimpl->getgamma(loglls); }
 
     // TODO: Overload to enable compilation for DoublePrecision though its currently unsupported
-    void lattice::parallelstate::getgamma(Microsoft::MSR::CNTK::Matrix<double>& loglls) 
+    void lattice::parallelstate::getgamma(Microsoft::MSR::CNTK::Matrix<double>& /*loglls*/) 
     {
         throw::logic_error("Double precision not supported for sequence training");
     }

@@ -266,8 +266,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //    LogicError("CrossEntropyWithSoftmaxNode operation: one of the operands has 0 elements.");
 
                 if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
-                    LogicError("The Matrix<ElemType>  dimension in the CrossEntropyWithSoftmaxNode operation does not match.");
-            }
+                LogicError("The Matrix<ElemType>  dimension in the CrossEntropyWithSoftmaxNode operation does not match.");
+            }       
 
             Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
@@ -629,7 +629,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs();
+            InferImageDimsFromInputs(); 
 #endif
         }
 
@@ -800,7 +800,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!(Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols())) // label and input same obs numbers
                     LogicError("The Matrix dimension for label and observation in the NoiseContrastiveEstimationNode operation does not match.");
                 //if (!(Inputs(0)->GetNumRows() == 3)) // label needs to be 4 rows
-                //  LogicError("The label in the NoiseContrastiveEstimationNode operation needs to be 4 rows.");
+            //  LogicError("The label in the NoiseContrastiveEstimationNode operation needs to be 4 rows.");
             }
 
             //cerr << Inputs(3)->GetNumCols() << "\t" << Inputs(0)->GetNumCols() << endl;
@@ -1146,13 +1146,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass)
             {
                 if (!(Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows())) // input and matrix can be timed
-                    LogicError("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
+                LogicError("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
                 if (!(Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols())) // label and input same obs numbers
-                    LogicError("The Matrix<ElemType>  dimension for label and observation in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
+                LogicError("The Matrix<ElemType>  dimension for label and observation in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
                 if (!(Inputs(0)->GetNumRows() == 4)) // label needs to be 4 rows
-                    LogicError("The label in the ClassBasedCrossEntropyWithSoftmaxNode operation needs to be 4 rows.");
+                LogicError("The label in the ClassBasedCrossEntropyWithSoftmaxNode operation needs to be 4 rows.");
                 if (!(Inputs(3)->GetNumCols() == Inputs(0)->GetNumCols())) // number of observations
-                    LogicError("The number of observations in class log post probability and label in the ClassBasedCrossEntropyWithSoftmaxNode operation don't match.");
+                LogicError("The number of observations in class log post probability and label in the ClassBasedCrossEntropyWithSoftmaxNode operation don't match.");
             }
 
             Resize(1,1);
@@ -1466,9 +1466,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
                     Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
                     Inputs(2)->GetNumCols() == Inputs(2)->GetNumRows()))
-                {
-                    LogicError("The Matrix<ElemType>  dimension in the CRFNode operation does not match.");
-                }
+            {
+                LogicError("The Matrix<ElemType>  dimension in the CRFNode operation does not match.");
+            }
 
             Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
@@ -1587,11 +1587,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass)
             {
                 if (Inputs(0)->GetNumRows() != 1)
-                    LogicError("DummyCriterionNode criterion requires the first input to have dimension 1.");
+                LogicError("DummyCriterionNode criterion requires the first input to have dimension 1.");
                 if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0 || Inputs(2)->GetNumRows() == 0)
                     LogicError("DummyCriterionNode operation: one of the operands has 0 elements.");
                 if (Inputs(1)->GetNumRows() != Inputs(2)->GetNumRows())
-                    LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
+                LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
             }
             if (Inputs(1)->GetNumCols() != Inputs(2)->GetNumCols())
                 Inputs(1)->Resize(Inputs(1)->GetNumRows(), Inputs(2)->GetNumCols()); 
@@ -1640,7 +1640,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_maskOfFramedrop(deviceId), m_gammaCalcInitialized(false)
         {
         }
-
+        
         //compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1770,9 +1770,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows() &&
                     Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols() &&
                     Inputs(1)->GetNumCols() == Inputs(2)->GetNumCols()))
-                {
+            {
                     LogicError("The Matrix dimension in the SequenceWithSoftmaxNode operation does not match.");
-                }
+            }
 
             Resize(1, 1);
             m_pMBLayout = nullptr;  // no layout

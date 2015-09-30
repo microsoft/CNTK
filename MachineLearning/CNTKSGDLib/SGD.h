@@ -355,6 +355,7 @@ protected:
 
     // the number of samples in each epoch (0 means, use all the samples in each epoch).
     size_t m_epochSize;
+    size_t m_maxComputedEpochSize;
 
     // the total number of epochs to run.
     size_t m_maxEpochs;

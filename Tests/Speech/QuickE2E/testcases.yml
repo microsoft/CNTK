@@ -18,7 +18,7 @@ testCases:
 
   Epochs must be finished with expected results:
     patterns:
-      - ^Finished Epoch[{{integer}}]
+      - ^Finished Epoch[{{integer}} of {{integer}}]
       - TrainLossPerSample = {{float,tolerance=1%}}
       - EvalErrPerSample = {{float,tolerance=1%}}
       - Ave LearnRatePerSample = {{float,tolerance=1%}}
