@@ -84,14 +84,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_maxValues.Resize(1,cols);
             }
 
-            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                LogicError("ErrorPrediction operation: one of the operands has 0 elements.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("ErrorPrediction operation: one of the operands has 0 elements.");
 
-            if (((!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows()  &&  //match size
-                Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()) )) && isFinalValidationPass/*Inputs(0)->GetLoopId() < 0*/)
-            {
-                LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
-            }       
+            if (isFinalValidationPass)
+                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
+                {
+                    LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
+                }       
 
             Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data

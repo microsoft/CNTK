@@ -90,15 +90,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate(isFinalValidationPass);
-
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("Nonlinearity operation: the input node has 0 element.");
-
-            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            ValidateUnaryMap(isFinalValidationPass);
             m_gradient.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+#if 0
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("Nonlinearity operation: the input node has 0 element.");
+
+            Resize(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
+#endif
         }
 
         //virtual void AttachInputs(const ComputationNodePtr singleInput) 
@@ -518,15 +519,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate(isFinalValidationPass);
+            ValidateUnaryMap(isFinalValidationPass);
+#if 0
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("SoftmaxNode operation: the input node has 0 element.");
 
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("SoftmaxNode operation: the input node has 0 element.");
-
-            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            Resize(Inputs(0));
             // TODO: differs from base in that it does not resize the gradient--why?
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
+#endif
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
@@ -606,8 +608,8 @@ private:
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate(isFinalValidationPass);
-
+            ValidateUnaryMap(isFinalValidationPass);
+#if 0
             if (Inputs(0)->GetNumRows() == 0)
                 LogicError("LogSoftmaxNode operation: the input node has 0 element.");
 
@@ -615,6 +617,7 @@ private:
             // differs from base in that it does not resize the gradient
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
+#endif
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
@@ -966,17 +969,20 @@ private:
                 cols[i] = Inputs(i)->GetNumCols();
             }
 
-            if (cols[0] != cols[1] || cols[0] != cols[2])
-                LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input), mean (second input), and logStddev (third input) should have same number of columns.");
+            if (isFinalValidationPass)
+            {
+                if (cols[0] != cols[1] || cols[0] != cols[2])
+                    LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input), mean (second input), and logStddev (third input) should have same number of columns.");
 
-            if (cols[0] != 1 && cols[0] != cols[3])
-                LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should either have same number of columns as the features (fourth input) or have only one column.");
+                if (cols[0] != 1 && cols[0] != cols[3])
+                    LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should either have same number of columns as the features (fourth input) or have only one column.");
 
-            if (rows[0] != rows[2])
-                LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should have same dimension as logStddev (third input), i.e., all dimensions in each Gaussian component share the same stddev.");
+                if (rows[0] != rows[2])
+                    LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should have same dimension as logStddev (third input), i.e., all dimensions in each Gaussian component share the same stddev.");
 
-            if (rows[1] != rows[0]*rows[3])
-                LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
+                if (rows[1] != rows[0]*rows[3])
+                    LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
+            }
 
             Resize(1, cols[3]);
             InferMBLayoutFromInputsForStandardCase();
@@ -1155,15 +1161,16 @@ private:
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate(isFinalValidationPass);
-
+            ValidateUnaryMap(isFinalValidationPass);
+            m_maskOfDropout.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+#if 0
             if (Inputs(0)->GetNumRows() == 0)
                 LogicError("Dropout operation: the input node has 0 element.");
 
             Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-            m_maskOfDropout.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
+#endif
         }
 
         //virtual void AttachInputs(const ComputationNodePtr inputNode)
@@ -1325,8 +1332,8 @@ private:
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("Reshape operation: The input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("Reshape operation: The input node has 0 element.");
 
             size_t cols = Inputs(0)->FunctionValues().GetNumElements() / m_numRows;
 
@@ -1580,8 +1587,8 @@ private:
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("RowRepeat  operation: the input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("RowRepeat  operation: the input node has 0 element.");
 
             Resize(Inputs(0)->GetNumRows() * m_numRepeat, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();

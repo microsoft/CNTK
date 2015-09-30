@@ -299,21 +299,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate(isFinalValidationPass);
-
+            ValidateUnaryMap(isFinalValidationPass);
+#if 0
             //PrintSelfBeforeValidation();
 
             size_t rows0 = Inputs(0)->GetNumRows();
             size_t cols0 = Inputs(0)->GetNumCols();
 
-            // since this is a recurrent node in a loop, the child migth not have been validated yet
+            // since this is a recurrent node in a loop, the child might not have been validated yet
             if (rows0 > 0 && (cols0 > 0 || Inputs(0)->HasMBLayout()))
-                Resize(rows0, cols0);
+                Resize(Inputs(0));
             else if (GetMBLayout())
                 Resize(GetNumRows(), GetMBLayout()->GetNumCols());
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
+#endif
         }
 
         // the following two are only used for PastValueNode
@@ -1315,38 +1316,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(4)->OperationName() != OperationNameOf(LearnableParameter))
                 LogicError("LSTM validation: need to have learnable parameters ");
 
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("LSTM validation: input size is zero!");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("LSTM validation: input size is zero!");
 
-            if (Inputs(1)->GetNumRows() == 0 ||
-                Inputs(2)->GetNumRows() == 0 ||
-                Inputs(3)->GetNumRows() == 0 ||
-                Inputs(4)->GetNumRows() == 0)
-                LogicError("LSTM validation : parameter size is zero!");
-
+            //if (Inputs(1)->GetNumRows() == 0 ||
+            //    Inputs(2)->GetNumRows() == 0 ||
+            //    Inputs(3)->GetNumRows() == 0 ||
+            //    Inputs(4)->GetNumRows() == 0)
+            //    LogicError("LSTM validation : parameter size is zero!");
 
             size_t nindim = Inputs(0)->GetNumRows();
             size_t noutdim = Inputs(1)->GetNumRows();
             size_t nT = Inputs(0)->GetNumCols();
             size_t nCol = nindim + noutdim + 2;
-            if (Inputs(1)->GetNumCols() != nCol)
+            if (isFinalValidationPass)
             {
-                LogicError("LSTM validation : dimension mismatched between child and inputGate");
-            }
-            if (Inputs(2)->GetNumCols() != nCol)
-            {
-                LogicError("LSTM validation : dimension mismatched between child and forgetGate");
-            }
-            if (Inputs(3)->GetNumCols() != nCol)
-            {
-                LogicError("LSTM validation : dimension mismatched between child and outputGate");
-            }
+                if (Inputs(1)->GetNumCols() != nCol)
+                {
+                    LogicError("LSTM validation : dimension mismatched between child and inputGate");
+                }
+                if (Inputs(2)->GetNumCols() != nCol)
+                {
+                    LogicError("LSTM validation : dimension mismatched between child and forgetGate");
+                }
+                if (Inputs(3)->GetNumCols() != nCol)
+                {
+                    LogicError("LSTM validation : dimension mismatched between child and outputGate");
+                }
 
-            if (noutdim != Inputs(2)->GetNumRows() ||
-                noutdim != Inputs(3)->GetNumRows() ||
-                noutdim != Inputs(4)->GetNumRows())
-            {
-                LogicError("LSTM validation: output dimension mismatched!");
+                if (noutdim != Inputs(2)->GetNumRows() ||
+                    noutdim != Inputs(3)->GetNumRows() ||
+                    noutdim != Inputs(4)->GetNumRows())
+                {
+                    LogicError("LSTM validation: output dimension mismatched!");
+                }
             }
 
             Resize(noutdim, nT);

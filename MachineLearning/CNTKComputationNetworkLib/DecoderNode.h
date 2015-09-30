@@ -174,13 +174,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (!(Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows() &&  // position dependent and pair scores have same number of labels
-                Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
-                Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
-                Inputs(2)->GetNumCols() == Inputs(2)->GetNumRows()))
-            {
-                LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
-            }
+            if (isFinalValidationPass)
+                if (!(Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows() &&  // position dependent and pair scores have same number of labels
+                    Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
+                    Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
+                    Inputs(2)->GetNumCols() == Inputs(2)->GetNumRows()))
+                {
+                    LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
+                }
             // BUGBUG: Not resizing FunctionValues?
 
             InferMBLayoutFromInputsForStandardCase();

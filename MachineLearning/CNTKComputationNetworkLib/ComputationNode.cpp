@@ -55,14 +55,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Resize(m_children[0]->GetNumRows(), DetermineNumCols(m_children[0]));
         InferImageDimsFromInputs();
     }
-    // binary zip operation, e.g. Plus
-    // If allowScaling then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
-    // This also helpfully resizes the children if not yet sized.
-    void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples)
+    void ComputationNodeBase::ValidateInferBinaryChildren()
     {
-        ComputationNodeBase::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase();
-
         // limited inference of children dimensions
         // if dimension not specified we assume two operands' dimensions should be the same
         for (size_t index = 0; index < m_children.size(); index++)
@@ -77,6 +71,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 in->Resize(rows, cols);
             }
         }
+    }
+    // binary zip operation, e.g. Plus
+    // If allowScaling then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
+    // This also helpfully resizes the children if not yet sized.
+    void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples)
+    {
+        ComputationNodeBase::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase();
+
+        ValidateInferBinaryChildren();
 
         // TODO: I still don't understand why we need this test.
         //if ((Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
@@ -86,8 +90,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
         if (isFinalValidationPass && !(
-               (rows0 == rows1 && cols0 == cols1) ||                   // matching size (obvious case)
-               ((rows0 == 1 || rows1 == 1) && cols0 == cols1) ||       // one is row vec
+               (rows0 == rows1 && cols0 == cols1) ||                                    // matching size (obvious case)
+               (allowMultiples && (rows0 == 1 || rows1 == 1) && cols0 == cols1) ||      // one is row vec
                (allowMultiples && ((!HasMBLayout() && cols0 > cols1 && cols0 % cols1 == 0) || (cols0 == 1 && rows1 % rows0 == 0) || (cols1 == 1 && rows0 % rows1 == 0)))
            ))
         {
@@ -95,6 +99,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         Resize(max(rows0, rows1), GetMBLayout() ? GetMBLayout()->GetNumCols() : max(cols0, cols1));
+        InferImageDimsFromInputs();
+    }
+    // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
+    void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass)
+    {
+        ComputationNodeBase::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+        Resize(1, 1);
+        InferImageDimsFromInputs();
+    }
+    // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
+    void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
+    {
+        ComputationNodeBase::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+        ValidateInferBinaryChildren();
+        if (isFinalValidationPass && !(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
+            LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
+        Resize(1, 1);
         InferImageDimsFromInputs();
     }
 

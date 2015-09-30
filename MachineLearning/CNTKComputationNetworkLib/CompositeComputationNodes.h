@@ -102,7 +102,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             rows0 = Inputs(0)->GetNumRows();
             cols0 = Inputs(0)->GetNumCols();
 
-            if (cols0 != cols1)
+            if (isFinalValidationPass && cols0 != cols1)
                 LogicError("ParallelNode: column dimension mismatched!");
 
             size_t rows = rows0 + rows1;
@@ -326,8 +326,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("Mean operation: the input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("Mean operation: the input node has 0 element.");
 
             Resize(Inputs(0)->GetNumRows(), 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
@@ -453,8 +453,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("InvStdDev operation: the input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("InvStdDev operation: the input node has 0 element.");
 
             size_t inputDim = Inputs(0)->GetNumRows();
             m_mean.Resize(inputDim, 1);
@@ -591,43 +591,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = (Inputs(1)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() :
-                                                                                Inputs(1)->GetNumRows();
+                size_t rows = (Inputs(1)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() : Inputs(1)->GetNumRows();
                 Inputs(1)->Resize(rows, 1);
             }
 
             if (Inputs(2)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = (Inputs(2)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() :
-                                                                                Inputs(2)->GetNumRows();
+                size_t rows = (Inputs(2)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() : Inputs(2)->GetNumRows();
                 Inputs(2)->Resize(rows, 1);
             }
 
-            if (Inputs(0)->GetNumRows() == 0 ||
-                Inputs(1)->GetNumRows() == 0 ||
-                Inputs(2)->GetNumRows() == 0)
-            {
-                LogicError(
-                    "PerDimMeanVarNormalizationNode operation: one of the operands has 0 elements.");
-            }
+            //if (Inputs(0)->GetNumRows() == 0 ||
+            //    Inputs(1)->GetNumRows() == 0 ||
+            //    Inputs(2)->GetNumRows() == 0)
+            //{
+            //    LogicError(
+            //        "PerDimMeanVarNormalizationNode operation: one of the operands has 0 elements.");
+            //}
 
-            //match rows
-            if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
-                Inputs(2)->GetNumRows() == Inputs(1)->GetNumRows()))
+            if (isFinalValidationPass)
             {
-                LogicError(
-                    "PerDimMeanVarNormalizationNode: All inputs should have same number of rows.");
-            }
+                //match rows
+                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
+                    Inputs(2)->GetNumRows() == Inputs(1)->GetNumRows()))
+                {
+                    LogicError("PerDimMeanVarNormalizationNode: All inputs should have same number of rows.");
+                }
 
-            if (!(Inputs(1)->GetNumCols() == 1 && Inputs(2)->GetNumCols() == 1))
-            {
-                LogicError(
-                    "PerDimMeanVarNormalizationNode: Mean and InvStdDev should be a colum  vector.");
+                if (!(Inputs(1)->GetNumCols() == 1 && Inputs(2)->GetNumCols() == 1))
+                    LogicError("PerDimMeanVarNormalizationNode: Mean and InvStdDev should be a colum  vector.");
             }
 
             Inputs(1)->NeedGradient() = false;
             Inputs(2)->NeedGradient() = false;  //prevent learning
-            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            Resize(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -741,44 +738,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(1)->GetNumRows() == 0 ? Inputs(0)->GetNumRows() :
-                                                                              Inputs(1)->GetNumRows();
+                size_t rows = Inputs(1)->GetNumRows() == 0 ? Inputs(0)->GetNumRows() : Inputs(1)->GetNumRows();
                 Inputs(1)->Resize(rows, 1);
             }
 
             if (Inputs(2)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(2)->GetNumRows() == 0? Inputs(0)->GetNumRows() :
-                                                                                        Inputs(2)->GetNumRows();
+                size_t rows = Inputs(2)->GetNumRows() == 0? Inputs(0)->GetNumRows() : Inputs(2)->GetNumRows();
                 Inputs(2)->Resize(rows, 1);
             }
 
-            if (Inputs(0)->GetNumRows() == 0 ||
-                Inputs(1)->GetNumRows() == 0 ||
-                Inputs(2)->GetNumRows() == 0)
-            {
-                LogicError("PerDimMeanVarDeNormalizationNode operation: one of the operands has 0 elements.");
-            }
+            //if (Inputs(0)->GetNumRows() == 0 ||
+            //    Inputs(1)->GetNumRows() == 0 ||
+            //    Inputs(2)->GetNumRows() == 0)
+            //{
+            //    LogicError("PerDimMeanVarDeNormalizationNode operation: one of the operands has 0 elements.");
+            //}
 
-            if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows()  &&  //match rows
-                Inputs(2)->GetNumRows() == Inputs(1)->GetNumRows()) )
+            if (isFinalValidationPass)
             {
-                //Inputs(1)->Resize(Inputs(0)->GetNumRows(), 1);
-                //Inputs(2)->Resize(Inputs(0)->GetNumRows(), 1);
-                LogicError("PerDimMeanVarDeNormalizationNode: All inputs should have same number of rows.");
-            }
+                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match rows
+                    Inputs(2)->GetNumRows() == Inputs(1)->GetNumRows()))
+                {
+                    //Inputs(1)->Resize(Inputs(0)->GetNumRows(), 1);
+                    //Inputs(2)->Resize(Inputs(0)->GetNumRows(), 1);
+                    LogicError("PerDimMeanVarDeNormalizationNode: All inputs should have same number of rows.");
+                }
 
-            if (!(Inputs(1)->GetNumCols() == 1 && Inputs(2)->GetNumCols() == 1))
-            {
-                LogicError("PerDimMeanVarDeNormalizationNode: Mean and InvStdDev should be a colum  vector.");
+                if (!(Inputs(1)->GetNumCols() == 1 && Inputs(2)->GetNumCols() == 1))
+                {
+                    LogicError("PerDimMeanVarDeNormalizationNode: Mean and InvStdDev should be a colum  vector.");
+                }
             }
 
             Inputs(1)->NeedGradient() = false;
-
             //prevent learning
             Inputs(2)->NeedGradient() = false;
 
-            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            Resize(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -986,11 +983,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
-            size_t rows = Inputs(0)->GetNumRows();
-            size_t cols = Inputs(0)->GetNumCols();
-
-            Resize(rows, cols);
+            InferMBLayoutFromInputsForStandardCase();
+            Resize(Inputs(0));
             InferImageDimsFromInput(0);
         }
 

@@ -455,8 +455,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(1)->GetNumRows() % Inputs(0)->GetNumCols() != 0)
-                InvalidArgument("Mismatched dimension. rows in input1 must be multiples of cols in input0.");
+            if (isFinalValidationPass && Inputs(1)->GetNumRows() % Inputs(0)->GetNumCols() != 0)
+                InvalidArgument("Mismatched dimension. Rows in input1 must be multiples of cols in input0.");
 
             int wordsInEachSample = Inputs(1)->GetNumRows() / Inputs(0)->GetNumCols();
 
@@ -607,8 +607,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
 
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
-            if (rows0 > 0 && cols0 > 0)
-                Resize(rows0, cols0);
+            if (rows0 > 0 && cols0 > 0) // TODO: is this check needed?
+                Resize(Inputs(0));
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
