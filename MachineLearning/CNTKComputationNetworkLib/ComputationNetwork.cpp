@@ -378,7 +378,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // at this point, all nodes had one call into Validate()
 
         if (!nodesToFullyValidate.empty())
-            fprintf(stderr, "\n\nRevalidating\n\n", (int)nodesToFullyValidate.size());
+            fprintf(stderr, "\n\nRevalidating\n\n");
 
         // second phase: validate finally. This phase is quiet unless a size changes
         bool done = false;
@@ -393,8 +393,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (rows != node->GetNumRows() || cols != node->GetNumCols())
                 {
                     fprintf(stderr, "\nRevalidating --> %ls [%lu, %s%lu] changed to [%lu, %s%lu]", node->NodeName().c_str(),
-                            (int)rows, node->HasMBLayout() ? "MBSize " : "", (int)cols,
-                            (int)node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", (int)node->GetNumCols());
+                            rows, node->HasMBLayout() ? "MBSize " : "", cols,
+                            node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
                     done = false;
                 }
             }

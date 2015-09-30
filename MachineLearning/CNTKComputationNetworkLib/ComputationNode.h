@@ -1391,6 +1391,7 @@ protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  /*TODO: can we just use 'using?' */ \
     using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
     using Base::m_visitedOrder; using Base::m_index; using Base::m_lowLink; using Base::m_visited; using Base::m_inStack; using Base::m_indexInLoop; \
+    using Base::Resize; using Base::GetNumRows; using Base::GetNumCols; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; \
     using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
@@ -1403,6 +1404,7 @@ public: \
     using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
+    using Base::HasMBLayout; using Base::GetMBLayout; \
     using Base::EvaluateThisNode; using Base::FindChildInASet; using Base::FunctionValues; \
     using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
