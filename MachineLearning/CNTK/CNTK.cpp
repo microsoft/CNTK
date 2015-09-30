@@ -1175,16 +1175,20 @@ template <typename ElemType>
 void DoExportToDbn(const ConfigParameters& config)
 {
     //config.Insert("deviceId","-1"); //force using CPU
-    //DEVICEID_TYPE deviceID = DeviceFromConfig(config);
+    DEVICEID_TYPE deviceID = DeviceFromConfig(config);
 
     wstring modelPath = config("modelPath");
     wstring dbnModelPath = config("dbnModelPath");
 
-    IComputationNetBuilder<ElemType>* netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(config);
-    ComputationNetwork* net = netBuilder->LoadNetworkFromFile(modelPath);
-    // write dbn file
-    net->SaveToDbnFile<ElemType>(dbnModelPath);
+    //IComputationNetBuilder<ElemType>* netBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(config);
+    //ComputationNetwork* net = netBuilder->LoadNetworkFromFile(modelPath);
 
+    ComputationNetwork net(deviceID);
+    net.LoadFromFile<ElemType>(modelPath);
+    net.SaveToDbnFile<ElemType>(dbnModelPath);
+    // write dbn file
+    //net->SaveToDbnFile<ElemType>(dbnModelPath);
+    //
     return;
 }
 
