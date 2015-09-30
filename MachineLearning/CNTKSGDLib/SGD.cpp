@@ -420,6 +420,8 @@ template<class ElemType>
             for (int i = 0; i < LRSize; i++)
             {
                 m_learningRatesPerSample[i] = learningRatesPerMB[i] / m_mbSize[i];
+                // Note: this may get further updated w.r.t. unit-gain momentum
+                // BUGBUG: No, it's not! But it should. Ugh!!
             }
             m_needToNormalizeLRByParallUtterance = true;
         }
@@ -452,16 +454,17 @@ template<class ElemType>
                     InvalidArgument("momentumPerMB must be in [0, 1).");
                 m_momentumPerSample[i] = (float)pow(momentumPerMB[i], 1.0 / m_mbSize[i]); 
             }
+            // BUGBUG: This must also compensate for non-unit gain interpretation of momentum
 
             m_needToNormalizeMomentumByParallUtterance = true;
         }
-        else
+        else    // default: momentumPerMB = 0.9 assuming MB size 256
         {
             int momentumVectorSize = m_mbSize.size();
             m_momentumPerSample.resize(momentumVectorSize);
             for (int i = 0; i < momentumVectorSize; i++)
                 m_momentumPerSample[i] = (float)pow(0.9f, 1.0 / m_mbSize[i]);
-            }
+        }
 
         if (m_learnRateDecreaseFactor > 1 || m_learnRateIncreaseFactor < 1)
             InvalidArgument("learnRateIncreaseFactor must be >= 1 and learnRateDecreaseFactor must be <= 1.");
@@ -698,7 +701,6 @@ template<class ElemType>
 
         // give the layout something to validate with (some code below validates the network before actually receiving data)
         // Note: yak!
-        net.SetFakeMBLayoutForValidation();
 
         // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
         // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
@@ -715,14 +717,15 @@ template<class ElemType>
             }
         }
 
-		//get hmm file for sequence training
-		if (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax")
-		{
-			//SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
-			auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
-			auto  hmm = node->gethmm();
-			trainSetDataReader->GetHmmData(hmm);
-		}
+        // get hmm file for sequence training
+        if (criterionNodes[0]->OperationName() == L"SequenceWithSoftmax")
+        {
+            //SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
+            auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNodes[0]);
+            auto  hmm = node->gethmm();
+            trainSetDataReader->GetHmmData(hmm);
+        }
+
         // used for KLD regularized adaptation. For all other adaptation techniques
         // use MEL to edit the model and using normal training algorithm
         std::vector<ComputationNodeBasePtr> refFeatureNodes;
@@ -748,8 +751,8 @@ template<class ElemType>
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
         {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-            smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(),
-                                                         node->FunctionValues().GetNumCols(),
+            smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(),
+                                                         node->GetNumCols(),
                                                          net.GetDeviceId()));
         }
 
@@ -2485,8 +2488,8 @@ template<class ElemType>
             for (size_t itry = 0; itry < min((size_t)50, node->FunctionValues().GetNumElements()); itry++)
             {
                 /// no support to sparse matrix yet
-                int irow = (int) fmod(rand(), node->FunctionValues().GetNumRows() - 1);
-                int icol = (int) fmod(rand(), node->FunctionValues().GetNumCols() - 1);
+                int irow = (int) fmod(rand(), node->GetNumRows() - 1);
+                int icol = (int) fmod(rand(), node->GetNumCols() - 1);
                 irow = max(0, irow);
                 icol = max(0, icol);
 

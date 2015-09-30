@@ -142,6 +142,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual size_t GetNumRows() const = 0;
         virtual size_t GetNumCols() const = 0;
         virtual void Resize(size_t rows, size_t cols) = 0;
+        virtual void Resize(ComputationNodeBasePtr node) { Resize(node->GetNumRows(), node->GetNumCols()); }
         void VerifySize(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
@@ -170,12 +171,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MaskMissingValuesColumnsToZero() = 0;
         virtual void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
 
-        virtual void Validate()
+        // validation
+        virtual void Validate(bool isFinalValidationPass)           // main base validation function
         {
+            // check for NULL pointers
             for (size_t i = 0; i < m_children.size(); i++)
+            {
                 if (!m_children[i])
                     RuntimeError("Validate: Input [%d] of %ls node '%ls' is empty (NULL, not connected).", (int)i, OperationName().c_str(), NodeName().c_str());
+            }
+            // check for empty inputs
+            if (isFinalValidationPass)
+            {
+                for (const auto & child : m_children)
+                {
+                    if (child->GetNumRows() == 0 || (!child->HasMBLayout() && child->GetNumCols() == 0))
+                        RuntimeError("%ls %ls operation: input %ls %ls has 0 elements.",
+                                     NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+                }
+            }
         }
+        // helper functions for common cases
+    private:
+        ComputationNodeBasePtr Inputs(size_t index) const { return m_children[index]; } // TODO: delete this; change to m_children
+        // determine number of columns from a child and/or layout
+        size_t DetermineNumCols(const ComputationNodeBasePtr & child) const
+        {
+            size_t childCols = child->GetNumCols();     // this is what the child says
+            if (!m_pMBLayout)                           // no layout: copy from child
+                return childCols;
+            size_t cols = m_pMBLayout->GetNumCols();    // layout: get it from there, but validate against child
+            if (childCols != cols)
+                RuntimeError("%ls %ls operation: ");
+            return cols;
+        }
+    protected:
+        void ValidateUnaryMap(bool isFinalValidationPass);
+        void ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples);
+    public:
+
         virtual bool UnitTest() { return true; }
 
         virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) = 0;
@@ -212,6 +246,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
         MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
+        bool HasMBLayout() const { return !!m_pMBLayout; }
 
         void ClearCache()
         {
@@ -265,12 +300,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // get our current number of time steps for this node
-        // This really inquites the MB layout.
+        // This inquires the MB layout.
         size_t GetNumTimeSteps() const
         {
             if (!m_pMBLayout)
                 LogicError("GetNumTimeSteps: invalid to call on a node without MB layout"); // since it has no notion of time
                 //return GetNumCols();
+#if 0       // can't check here; this is sometimes inquired as part of the process of setting the right #cols
             if (m_pMBLayout->GetNumTimeSteps() * m_pMBLayout->GetNumParallelSequences() != GetNumCols())
             {
                 // TODO: remove this fprintf() once it no longer triggers
@@ -280,6 +316,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                            NodeName().c_str(), (int)m_pMBLayout->GetNumParallelSequences(), (int)m_pMBLayout->GetNumTimeSteps(), (int)GetNumCols());
             }
             // TODO: ^^ much of this should go away, as in the future, the layout will always correctly know the #samples
+#endif
             return m_pMBLayout->GetNumTimeSteps();
         }
     public:
@@ -323,15 +360,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         continue;
                     }
 
-
+                    const char * mbSizeMark = child->m_pMBLayout ? "MBSize " : "";
                     if (IsChildAnImage(i))  //image
-                        fprintf(stderr, "%ls[%lu {W=%lu, H=%lu, C=%lu}, %lu]", child->NodeName().c_str(), child->GetNumRows(),
-                        child->m_outputWidth, child->m_outputHeight, child->m_outputChannels, child->GetNumCols());
+                        fprintf(stderr, "%ls[%lu {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(),
+                                child->m_outputWidth, child->m_outputHeight, child->m_outputChannels, mbSizeMark, child->GetNumCols());
                     else
-                        fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
+                        fprintf(stderr, "%ls[%lu, %s%lu]", child->NodeName().c_str(), child->GetNumRows(), mbSizeMark, child->GetNumCols());
                 }
                 fprintf(stderr, ")");
             }
+#if 0
+            else
+            {
+                if (m_pMBLayout)
+                    fprintf(stderr, "[%lu, MBSize]", GetNumRows());
+                else
+                    fprintf(stderr, "[%lu, %lu]", GetNumRows(), GetNumCols());
+            }
+#endif
         }
 
         const std::wstring& NodeName() const { return m_nodeName; }
@@ -419,34 +465,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        // helper function to infer the MBLayout for this node from inputs, for the *standard case*
-        // the standard case is:
-        //  - all inputs must share the same layout (e.g. adding two minibatches)
-        //  - with the exception of NULL layouts (e.g. TimesNode)
-        //  - all layouts may be NULL (e.g. W' = W * Exp(Stabilizer))
-        //  - if there are more than one different layouts involved, this function will fail
-        void InferMBLayoutFromInputsForStandardCase()
-        {
-            //wstring name = NodeName(); name;
-            //fprintf(stderr, "\nDetermining Layout --> %ls:", name.c_str());
-            MBLayoutPtr pMBLayout;  // starts with NULL layout
-            for (auto child : m_children)
-            {
-                //wstring cname = child->NodeName(); cname;
-                //fprintf(stderr, "  %ls(%s)", cname.c_str(), child->m_pMBLayout ? "." : "NULL");
-                if (!child)                         // node not set yet (DelayedValueNodeBase seems to allow this)--BUGBUG: Then this function won't operate correctly.
-                    ;
-                else if (!child->m_pMBLayout)       // NULL layout (typical for parameter nodes)
-                    ;
-                else if (!pMBLayout)                // first non-NULL layout: just copy it
-                    pMBLayout = child->m_pMBLayout;
-                else if (!(*pMBLayout == *child->m_pMBLayout)) // got a layout--compare whether it is the same
-                    RuntimeError("InferMBLayoutFromInputsForStandardCase: found inconsistent layout in node '%ls', mismatch detected for child '%ls'", NodeName().c_str(), child->NodeName().c_str());
-            }
-            //fprintf(stderr, "  --> (%s)\n", pMBLayout ? "." : "NULL");
-            // all are consistent: install it
-            LinkToMBLayout(pMBLayout);
-        }
+        void InferMBLayoutFromInputsForStandardCase();
 
     public:
 
@@ -775,6 +794,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNode() { }
     public:
         using ComputationNodeBase::AttachInputs;    // import the convenience functions that take 1..6 parameters
+        using ComputationNodeBase::Resize;
         typedef ElemType OurElemType;
     protected:
         // TODO: this should be protected and only accessible to the New method; maybe just move it in here?
@@ -882,7 +902,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!m_pMBLayout)            // if no layout, this node contains parameters independent of MB size, don't resize
                 return numCols;         // BUGBUG: what do we return here?
             if (numCols == SIZE_MAX)    // SIZE_MAX means determine from layout
-                numCols = m_pMBLayout->GetNumTimeSteps() * m_pMBLayout->GetNumParallelSequences();
+                numCols = m_pMBLayout->GetNumCols();
             if (m_functionValues.GetNumRows() > 0 && numCols > 0)  // TODO: why skip this for 0 samples?
             {
                 m_functionValues.ResizeColumns(numCols); 
@@ -1224,7 +1244,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if(child->GradientValues().GetMatrixType() == DENSE) 
                     {
-                        child->GradientValues().Resize(child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                        child->GradientValues().Resize(child->GetNumRows(), child->GetNumCols());
                         child->GradientValues().SetValue(0); 
                     }
                     else
@@ -1389,7 +1409,8 @@ public: \
     using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
-    using Base::SaveToFile; using Base::SetFunctionAndGradientMBSize; using Base::SetInput; using Base::Validate
+    using Base::SaveToFile; using Base::SetFunctionAndGradientMBSize; using Base::SetInput; \
+    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip
 
 #define UsingComputationNodeMembersBoilerplate \
 protected:    /* some boilerplate goes here */ \

@@ -20,6 +20,7 @@
 #include "MPIWrapper.h"
 #include <string>
 #include <fstream>
+#include <set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -197,10 +198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SetActualMiniBatchSizeFromFeatures();   // TODO: this should go
 
         if (requireValidation)
-        {
-            SetFakeMBLayoutForValidation();  // fake an MB layout to match the initial values of Input
             ValidateNetwork();
-        }
     }
 
     // -----------------------------------------------------------------------
@@ -316,21 +314,109 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // set up MBLayout links of inputs (all others get propagated upwards through Validate())
         // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
         for (auto node : InputNodes(rootNode))
-            node->LinkToMBLayout(m_pMBLayout);
-
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
-
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            auto node = *nodeIter;
-            node->PrintSelfBeforeValidation();
-            node->Validate();
-            // verify contract with MB layout was obeyed by Validate()
-            if (node->GetMBLayout() && node->GetNumCols() != node->GetNumTimeSteps() * node->GetNumParallelSequences())
-                LogicError("%ls operation's Validate() function set function values width (%d) inconsistent with MB layout width (%d x %d)",
-                           (int)node->GetNumCols(), (int)node->GetNumTimeSteps(), (int)node->GetNumParallelSequences());
+            node->LinkToMBLayout(m_pMBLayout);
+            // handle the special case of being validated before reading a minibatch
+            // In that case, the layout is empty. We set up a dummy layout to match the first InputValue.
+            // TODO: This is a stop-gap. We need a better-controlled way of when what gets validated.
+            if (m_pMBLayout->GetNumCols() == 0)
+                m_pMBLayout->Init(1, node->GetNumCols(), false);
         }
 
+        // we call all nodes' Validate() in order to validate, that is, set up MBLayout and FunctionValues dimension
+        // A problem is that recurrent loops may require partial validation.
+        // Nodes validated on partial input (i.e. some children not yet validated) will be revisited.
+        const auto & nodes = GetEvalOrder(rootNode, false);
+
+        // first phase: run all Validate() at least once, but only if they have at least one input that has run Validate() already
+        set<ComputationNodeBasePtr> partiallyValidated, fullyValidated;
+        list<ComputationNodeBasePtr> pendingNodes;
+        list<ComputationNodeBasePtr> nodesToFullyValidate;
+        for (auto nodesToProcess = nodes; !nodesToProcess.empty(); nodesToProcess = pendingNodes)
+        {
+            pendingNodes.clear();
+            for (auto & node : nodesToProcess)
+            {
+                // determine how many children of this node have size information
+                size_t numChildrenPartiallyValidated = 0;
+                size_t numChildrenFullyValidated = 0;
+                for (auto & child : node->GetChildren())
+                {
+                    if (!child)
+                        RuntimeError("ValidateSubNetwork: %ls %ls node has a NULL child", node->NodeName().c_str(), node->OperationName().c_str());
+                    if (fullyValidated.find(child) != fullyValidated.end())
+                        numChildrenFullyValidated++;
+                    else if (partiallyValidated.find(child) != partiallyValidated.end())
+                        numChildrenPartiallyValidated++;
+                }
+                // if no useful intput then defer
+                if (node->IsLeaf() || numChildrenPartiallyValidated + numChildrenFullyValidated > 0)
+                {
+                    bool isFinalValidationPass = numChildrenFullyValidated == node->ChildrenSize();
+                    // validate
+                    node->PrintSelfBeforeValidation();
+                    node->Validate(isFinalValidationPass);  // if all inputs fully validated--great
+                    fprintf(stderr, " -> [%lu, %s%lu]", node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
+                    if (!isFinalValidationPass)
+                    {
+                        partiallyValidated.insert(node);
+                        nodesToFullyValidate.push_back(node); // and remember in which order we did this
+                    }
+                    else
+                    {
+                        fullyValidated.insert(node);
+                    }
+                }
+                else
+                    pendingNodes.push_back(node);   // no input yet--need to try again later
+            }
+            if (pendingNodes.size() == nodesToProcess.size())
+                LogicError("ValidateSubNetwork: network has circular references");
+            if (!pendingNodes.empty())
+                fprintf(stderr, "\n---");
+        }
+        // at this point, all nodes had one call into Validate()
+
+        if (!nodesToFullyValidate.empty())
+            fprintf(stderr, "\n\nRevalidating\n\n", (int)nodesToFullyValidate.size());
+
+        // second phase: validate finally. This phase is quiet unless a size changes
+        bool done = false;
+        while (!done)
+        {
+            done = true;
+            for (auto & node : nodes)
+            {
+                // validate
+                size_t rows = node->GetNumRows(), cols = node->GetNumCols();
+                node->Validate(true);
+                if (rows != node->GetNumRows() || cols != node->GetNumCols())
+                {
+                    fprintf(stderr, "\nRevalidating --> %ls [%lu, %s%lu] changed to [%lu, %s%lu]", node->NodeName().c_str(),
+                            (int)rows, node->HasMBLayout() ? "MBSize " : "", (int)cols,
+                            (int)node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", (int)node->GetNumCols());
+                    done = false;
+                }
+            }
+            if (!done)
+            {
+                nodesToFullyValidate = nodes;   // need to do all
+            }
+        }
+        for (auto & node : nodes)
+        {
+            // verify that the contract with MB layout was obeyed by Validate()
+            if (node->GetMBLayout() && node->GetMBLayout()->GetNumCols() != node->GetNumCols())
+            {
+                fprintf(stderr, "\n%ls %ls operation's Validate() function set function values width (%d) inconsistent with MB layout width (T=%d x S=%d)\n",
+                        node->NodeName().c_str(), node->OperationName().c_str(), (int)node->GetNumCols(), (int)node->GetNumTimeSteps(), (int)node->GetNumParallelSequences());
+                LogicError("%ls %ls operation's Validate() function set function values width (%d) inconsistent with MB layout width (T=%d x S=%d)",
+                           node->NodeName().c_str(), node->OperationName().c_str(), (int)node->GetNumCols(), (int)node->GetNumTimeSteps(), (int)node->GetNumParallelSequences());
+            }
+            // nodes must output non-zero dimensional data, otherwise assume user error
+            if (node->GetNumRows() == 0 && (node->GetMBLayout() || node->GetNumCols() == 0))
+                RuntimeError("%ls operation has 0 elements", node->NodeName().c_str());
+        }
         fprintf(stderr, "\n\n");
 
         // logging the non-default-layout nodes
@@ -1187,7 +1273,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
 
         //some internal values in the nodes are computed during validation
-        SetFakeMBLayoutForValidation();
+        //SetFakeMBLayoutForValidation();
         ValidateNetwork(false, bAllowNoCriterionNode);
     }
 

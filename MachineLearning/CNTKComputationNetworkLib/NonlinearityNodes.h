@@ -88,15 +88,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) = 0;
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("Nonlinearity operation: the input node has 0 element.");
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_gradient.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_gradient.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -498,7 +498,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             // need to resize
-            size_t r = Inputs(0)->FunctionValues().GetNumRows(), c = Inputs(0)->FunctionValues().GetNumCols();
+            size_t r = Inputs(0)->GetNumRows(), c = Inputs(0)->GetNumCols();
             // note: I moved this test before sliceInputValue=..., assuming it will not be affected by the assignment
             if (m_functionValues.GetNumCols() != c ||
                 m_functionValues.GetNumRows() != r)
@@ -516,14 +516,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("SoftmaxNode operation: the input node has 0 element.");
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             // TODO: differs from base in that it does not resize the gradient--why?
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
@@ -604,14 +604,14 @@ private:
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("LogSoftmaxNode operation: the input node has 0 element.");
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             // differs from base in that it does not resize the gradient
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
@@ -680,7 +680,7 @@ private:
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             //get the right slice 
-            const size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();
+            const size_t colsPrior = Inputs(0)->GetNumCols();
 
             Matrix<ElemType> sliceGradientValue = DataSlice(m_gradientValues, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> slicePosterior = DataSlice(m_posterior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -819,10 +819,10 @@ private:
             if (!m_pMBLayout)            // if no layout, this node contains parameters independent of MB size, don't resize
                 return numCols;         // BUGBUG: what do we return here?
 
-            size_t numComponents = Inputs(0)->FunctionValues().GetNumRows();
-            size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();
-            //size_t numCols = Inputs(3)->FunctionValues().GetNumCols();
-            size_t featureSize = Inputs(3)->FunctionValues().GetNumRows();
+            size_t numComponents = Inputs(0)->GetNumRows();
+            size_t colsPrior = Inputs(0)->GetNumCols();
+            //size_t numCols = Inputs(3)->GetNumCols();
+            size_t featureSize = Inputs(3)->GetNumRows();
 
             m_prior.Resize(numComponents, colsPrior);
             m_stddev.Resize(numComponents, colsPrior);
@@ -844,8 +844,8 @@ private:
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();
-            size_t numSamples = Inputs(3)->FunctionValues().GetNumCols();
+            size_t colsPrior = Inputs(0)->GetNumCols();
+            size_t numSamples = Inputs(3)->GetNumCols();
 
             //get the right slice 
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -955,15 +955,15 @@ private:
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             size_t rows[4], cols[4];
             for (int i = 0; i < 4; i++)
             {
-                rows[i] = Inputs(i)->FunctionValues().GetNumRows();
-                cols[i] = Inputs(i)->FunctionValues().GetNumCols();
+                rows[i] = Inputs(i)->GetNumRows();
+                cols[i] = Inputs(i)->GetNumCols();
             }
 
             if (cols[0] != cols[1] || cols[0] != cols[2])
@@ -978,7 +978,7 @@ private:
             if (rows[1] != rows[0]*rows[3])
                 LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
 
-            FunctionValues().Resize(1, cols[3]);
+            Resize(1, cols[3]);
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -1106,8 +1106,8 @@ private:
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
             {
-                FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-                m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+                Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+                m_maskOfDropout.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
                 sliceMask = DataSlice(m_maskOfDropout, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             }
 
@@ -1153,15 +1153,15 @@ private:
                 return Inputs(0)->FunctionValues();
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("Dropout operation: the input node has 0 element.");
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_maskOfDropout.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -1314,18 +1314,18 @@ private:
                         throw runtime_error("One of the children is missing.");
                     }
 
-                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
                 }
 
                 fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numRows, m_imageWidth, m_imageHeight, m_imageChannels);
             }
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("Reshape operation: The input node has 0 element.");
 
             size_t cols = Inputs(0)->FunctionValues().GetNumElements() / m_numRows;
@@ -1336,7 +1336,7 @@ private:
             // for cases where at runtime the operation would be valid
             if (cols == 0)
                 cols = 1;
-            FunctionValues().Resize(m_numRows, cols);
+            Resize(m_numRows, cols);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             // TODO: ^^ This may require more work.
             InferImageDimsFromInputs();
@@ -1350,7 +1350,7 @@ private:
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            size_t rows = Inputs(0)->FunctionValues().GetNumRows();
+            size_t rows = Inputs(0)->GetNumRows();
             if ((rows * GetNumParallelSequences()) % m_numRows > 0)
             {
                 LogicError("Reshape operation: Number of elements in the recurrent input step is not a multiple of the specified number of rows.");
@@ -1419,7 +1419,7 @@ private:
 
         virtual const Matrix<ElemType>& FunctionValues() const
         {
-            if (Inputs(0)->FunctionValues().GetNumRows() != m_numRows)
+            if (Inputs(0)->GetNumRows() != m_numRows)
                 return m_functionValues;
             else
                 return Inputs(0)->FunctionValues();
@@ -1569,21 +1569,21 @@ private:
                         throw runtime_error("One of the children is missing.");
                     }
 
-                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
                 }
 
                 fprintf(stderr, ", numRepeats=%lu)", m_numRepeat);
             }
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("RowRepeat  operation: the input node has 0 element.");
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows() * m_numRepeat, Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0)->GetNumRows() * m_numRepeat, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }

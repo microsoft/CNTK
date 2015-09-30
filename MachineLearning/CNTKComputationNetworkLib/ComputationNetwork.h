@@ -238,20 +238,6 @@ public:
         return actualMBSize;
     }
 
-    // helper to fix an MB layout given featureNodes, so that ValidateNetwork() will not fail due to a mismatching layout
-    // The problem is that fresh networks come in weird constellations:
-    //  - SimpleNetworkBuilder seems to set up all Input nodes to 3 columns
-    //  - NDL sets them by default to 1 column, unless user specifies anything different
-    //  - LoadNetworkFromFile() will bring back whatever MB size was last used before saving
-    // and ValidateNetwork() requires the MBLayout to be set up matching the Input node(s).
-    // So this function intializes the network's MBLayout to match the fresh model.
-    // If you find calls to ValidateNetwork() outside a MB loop fail with layout mismatches, call this function before.
-    // TODO: This is incredibly ugly. We need a better approach to this.
-    void SetFakeMBLayoutForValidation()
-    {
-        m_pMBLayout->Init(1, FeatureNodes()[0]->GetNumCols(), false);
-    }
-
     // a helper function for some places that like to hack the features directly
     // This is for a few places (FindBestPath stuff) that don't follow the normal pattern but instead called the old SetFeaturesMiniBatchSize() function with a value of their choosing.
     // This is now changed in that they must actually resize the features, and then the system takes it from here.
