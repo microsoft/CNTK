@@ -526,6 +526,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t GetNumTimeSteps()         const { return m_numTimeSteps; }
         size_t GetNumParallelSequences() const { return m_numParallelSequences; }   // note: if initialized as a dummy, m_numParallelSequences is set to 1
 
+        // how many columns the MB should be allocated for
+        size_t GetNumCols()              const { return GetNumTimeSteps() * GetNumParallelSequences(); }
+
     private:
         // test whether we have not allocated anything (will also return true if the minibatch is empty)
         bool IsEmpty() const { return m_minibatchPackingFlags.empty(); }

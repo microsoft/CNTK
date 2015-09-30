@@ -72,37 +72,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            size_t index = 0;
+            size_t index = 0;   // TODO: code dup
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
             index = 1;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("SquareError operation: one of the operants has 0 element.");
+            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+                LogicError("SquareError operation: one of the operands has 0 elements.");
 
-            if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match size
-                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()) )
-            {
+            if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
                 LogicError("The Matrix dimension in the SquareError operation does not match.");
-            }       
 
-            FunctionValues().Resize(1,1);
-            m_leftMinusRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(1,1);
+            m_leftMinusRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
@@ -231,9 +228,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             // This breaks re-shaping of the label matrix
             /*if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
@@ -243,34 +240,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
             index = 1;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("CrossEntropyWithSoftmaxNode operation: one of the operants has 0 element.");
-
-            if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match size
-                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()) )
+            if (isFinalValidationPass)
             {
-                LogicError("The Matrix<ElemType>  dimension in the CrossEntropyWithSoftmaxNode operation does not match.");
-            }       
+                if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+                    LogicError("CrossEntropyWithSoftmaxNode operation: one of the operands has 0 elements.");
 
-            FunctionValues().Resize(1,1);
+                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
+                    LogicError("The Matrix<ElemType>  dimension in the CrossEntropyWithSoftmaxNode operation does not match.");
+            }
+
+            Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
 
-            m_logSoftmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_softmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_logSoftmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_softmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
@@ -382,42 +379,42 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->OperationName() != L"InputValue")
+            if (Inputs(0)->OperationName() != L"InputValue")    // TODO: but labels could be post-processed, e.g. sub-sampled. This test should not be here.
                 LogicError("CrossEntropyNode criterion requires the first input to be the label.");
 
             //we may release the constraint that the first operant is an inputValue later so the following code should be kept
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
             index = 1;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("CrossEntropyNode operation: one of the operants has 0 element.");
+            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+                LogicError("CrossEntropyNode operation: one of the operands has 0 elements.");
 
-            if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match size
-                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()) )
+            if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows()  &&  //match size
+                Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()) )
             {
                 LogicError("The Matrix dimension in the CrossEntropyNode operation does not match.");
             }       
 
-            FunctionValues().Resize(1,1);
-            m_logOfRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            m_leftDivRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
+            Resize(1,1);
+            m_logOfRight.Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());
+            m_leftDivRight.Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
@@ -512,15 +509,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("MatrixL1Reg operation: the input node has 0 element.");
 
-            FunctionValues().Resize(1,1);
-            m_gradientOfL1Norm.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(1,1);
+            m_gradientOfL1Norm.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
@@ -607,14 +604,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("MatrixL2Reg operation: the input node has 0 element.");
 
-            FunctionValues().Resize(1,1);
+            Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
@@ -733,9 +730,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
         {
             int positive = 0, negative = 0;
-            if (Inputs(0)->FunctionValues().GetNumRows() == 1)
+            if (Inputs(0)->GetNumRows() == 1)
             {
-                for (int i = 0; i < Inputs(0)->FunctionValues().GetNumCols(); i++)
+                for (int i = 0; i < Inputs(0)->GetNumCols(); i++)
                 {
                     if (Inputs(0)->FunctionValues()(0, i) > 0)
                         positive++;
@@ -744,7 +741,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 assert(positive * negative == 0);
             }
-            if (m_evalMode == NCEEvalMode::Softmax || (Inputs(0)->FunctionValues().GetNumRows() == 1 && positive > 0))
+            if (m_evalMode == NCEEvalMode::Softmax || (Inputs(0)->GetNumRows() == 1 && positive > 0))
             {
                 // evaluation uses softmax
                 m_logSoftmax.AssignProductOf(Inputs(1)->FunctionValues(), true, Inputs(2)->FunctionValues(), false);
@@ -752,7 +749,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_logSoftmax.InplaceLogSoftmax(false);
                 FunctionValues().AssignSoftmaxSum(Inputs(0)->FunctionValues(), m_logSoftmax);
             }
-            else if (m_evalMode == NCEEvalMode::Unnormalized || (Inputs(0)->FunctionValues().GetNumRows() == 1 && negative > 0))
+            else if (m_evalMode == NCEEvalMode::Unnormalized || (Inputs(0)->GetNumRows() == 1 && negative > 0))
             {
                 FunctionValues().AssignNceUnnormalizedEval(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues());
             }
@@ -773,23 +770,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
         [3] clsprob in dense matrix in [nbr_cls x T]. this is the output from logsoftmax node for the log-posterior probabilty of class given observations
         */
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             if (Inputs(0)->OperationName() != OperationNameOf(InputValue))
                 LogicError("NoiseContrastiveEstimationNode criterion requires the first input to be the label.");
-            if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
+            if (!(Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows())) // input and matrix can be timed
                 LogicError("The Matrix<ElemType>  dimension for observation and weight in the NoiseContrastiveEstimationNode operation does not match.");
-            if (!(Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols())) // label and input same obs numbers
+            if (!(Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols())) // label and input same obs numbers
                 LogicError("The Matrix<ElemType>  dimension for label and observation in the NoiseContrastiveEstimationNode operation does not match.");
-            //if (!(Inputs(0)->FunctionValues().GetNumRows() == 3)) // label needs to be 4 rows
+            //if (!(Inputs(0)->GetNumRows() == 3)) // label needs to be 4 rows
             //  LogicError("The label in the NoiseContrastiveEstimationNode operation needs to be 4 rows.");
 
-            //cerr << Inputs(3)->FunctionValues().GetNumCols() << "\t" << Inputs(0)->FunctionValues().GetNumCols() << endl;
-            //if (!(Inputs(3)->FunctionValues().GetNumCols() == Inputs(0)->FunctionValues().GetNumCols())) // number of observations
+            //cerr << Inputs(3)->GetNumCols() << "\t" << Inputs(0)->GetNumCols() << endl;
+            //if (!(Inputs(3)->GetNumCols() == Inputs(0)->GetNumCols())) // number of observations
             //   LogicError("The number of observations in class log post probability and label in the NoiseContrastiveEstimationNode operation don't match.");
-            FunctionValues().Resize(1,1);
+            Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
@@ -866,7 +863,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex != 1 && inputIndex != 2 && inputIndex != 3)
                 InvalidArgument("ClassCrossEntropyWithSoftmaxNode criterion only takes with respect to input, weight to the input and class log posterior probability.");
 
-            size_t nT = Inputs(0)->FunctionValues().GetNumCols();
+            size_t nT = Inputs(0)->GetNumCols();
             Matrix<ElemType> grd_t;
             Matrix<ElemType> grd_to_wgt_t;
 
@@ -937,7 +934,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 m_grdToSoftMaxInput.Resize(1, m_totalNbrWords);
 
-                size_t nT = Inputs(1)->FunctionValues().GetNumCols();
+                size_t nT = Inputs(1)->GetNumCols();
                 size_t sz = 0;
                 for (size_t t = 0; t < nT; t++)
                 {
@@ -1120,26 +1117,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
         [3] clsprob in dense matrix in [nbr_cls x T]. this input, if applied softmax on, is the posterior probabilty of class given observations
         */
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             if (Inputs(0)->OperationName() != OperationNameOf(InputValue))
                 LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
-            if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows())) // input and matrix can be timed
+            if (!(Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows())) // input and matrix can be timed
                 LogicError("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
-            if (!(Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols())) // label and input same obs numbers
+            if (!(Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols())) // label and input same obs numbers
                 LogicError("The Matrix<ElemType>  dimension for label and observation in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
-            if (!(Inputs(0)->FunctionValues().GetNumRows() == 4)) // label needs to be 4 rows
+            if (!(Inputs(0)->GetNumRows() == 4)) // label needs to be 4 rows
                 LogicError("The label in the ClassBasedCrossEntropyWithSoftmaxNode operation needs to be 4 rows.");
-            if (!(Inputs(3)->FunctionValues().GetNumCols() == Inputs(0)->FunctionValues().GetNumCols())) // number of observations
+            if (!(Inputs(3)->GetNumCols() == Inputs(0)->GetNumCols())) // number of observations
                 LogicError("The number of observations in class log post probability and label in the ClassBasedCrossEntropyWithSoftmaxNode operation don't match.");
 
-            FunctionValues().Resize(1,1);
+            Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
 
-            m_nbrCls = Inputs(3)->FunctionValues().GetNumRows();
+            m_nbrCls = Inputs(3)->GetNumRows();
         }
 
         virtual void InferImageDimsFromInputs()
@@ -1230,8 +1227,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// compute posterior probability of label y at position t
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            size_t nrow = Inputs(0)->FunctionValues().GetNumRows();
-            size_t ncol = Inputs(0)->FunctionValues().GetNumCols();
+            size_t nrow = Inputs(0)->GetNumRows();
+            size_t ncol = Inputs(0)->GetNumCols();
 
             mAlpha.Resize(nrow, ncol);
             mBeta.Resize(nrow, ncol);
@@ -1437,19 +1434,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             postprob.InplaceExp();
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&  // position dependent and pair scores have same number of labels
-                Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
-                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() && // position dependent and pair scores have the same observation numbers
-                Inputs(2)->FunctionValues().GetNumCols() == Inputs(2)->FunctionValues().GetNumRows()))
+            if (!(Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows() &&  // position dependent and pair scores have same number of labels
+                Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
+                Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
+                Inputs(2)->GetNumCols() == Inputs(2)->GetNumRows()))
             {
                 LogicError("The Matrix<ElemType>  dimension in the CRFNode operation does not match.");
             }
 
-            FunctionValues().Resize(1,1);
+            Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
@@ -1555,24 +1552,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             if (Inputs(0)->OperationName() != L"InputValue")
                 LogicError("DummyCriterionNode criterion requires the first input to be computed objectives.");
             if (Inputs(0)->OperationName() != L"InputValue")
                 LogicError("DummyCriterionNode criterion requires the first input to be computed derivatives.");
-            if (Inputs(0)->FunctionValues().GetNumRows() != 1)
+            if (Inputs(0)->GetNumRows() != 1)
                 LogicError("DummyCriterionNode criterion requires the first input to have dimension 1.");
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements() || Inputs(2)->FunctionValues().HasNoElements())
-                LogicError("DummyCriterionNode operation: one of the operants has 0 element.");
-            if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(2)->FunctionValues().GetNumRows())
+            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0 || Inputs(2)->GetNumRows() == 0)
+                LogicError("DummyCriterionNode operation: one of the operands has 0 elements.");
+            if (Inputs(1)->GetNumRows() != Inputs(2)->GetNumRows())
                 LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
-            if (Inputs(1)->FunctionValues().GetNumCols() != Inputs(2)->FunctionValues().GetNumCols())
-                Inputs(1)->FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(2)->FunctionValues().GetNumCols()); 
+            if (Inputs(1)->GetNumCols() != Inputs(2)->GetNumCols()) // TODO: Ugh. Breaks validation of that child.
+                Inputs(1)->Resize(Inputs(1)->GetNumRows(), Inputs(2)->GetNumCols()); 
 
-            FunctionValues().Resize(1,1);
+            Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
@@ -1713,9 +1710,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
                 LogicError("SequenceWithSoftmaxNode criterion requires the first input to be the label.");
@@ -1724,38 +1721,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
             index = 1;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()  || Inputs(2)->FunctionValues().HasNoElements() )
-                LogicError("SequenceWithSoftmaxNode operation: one of the operants has 0 element.");
+            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0  || Inputs(2)->GetNumRows() == 0 )
+                LogicError("SequenceWithSoftmaxNode operation: one of the operands has 0 elements.");
 
-            if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&  //match size
-                Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&
-                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() &&
-                Inputs(1)->FunctionValues().GetNumCols() == Inputs(2)->FunctionValues().GetNumCols()))
+            if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match size
+                Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows() &&
+                Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols() &&
+                Inputs(1)->GetNumCols() == Inputs(2)->GetNumCols()))
             {
                 LogicError("The Matrix<ElemType>  dimension in the SequenceWithSoftmaxNode operation does not match.");
             }
 
-            FunctionValues().Resize(1, 1);
+            Resize(1, 1);
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
-            m_logSoftmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_softmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_gammaFromLattice.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            m_maskOfFramedrop.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            m_logSoftmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_softmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_gammaFromLattice.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_maskOfFramedrop.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             m_gammatime = 0;
             m_partialtime = 0;
         }

@@ -270,9 +270,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         // note: this also infers dimensions from chilren
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             //we may want to remove this check in the future if we want to support the case that the weight itself is result of some computation 
             //if (Inputs(0)->OperationName() != OperationNameOf(LearnableParameter))
@@ -287,23 +287,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputChannels;
 
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().HasNoElements())
-                Inputs(0)->FunctionValues().Resize(m_outputChannels, weightCols);
+                Inputs(0)->Resize(m_outputChannels, weightCols);
 
-            if (Inputs(0)->FunctionValues().GetNumCols() != weightCols || Inputs(0)->FunctionValues().GetNumRows() != m_outputChannels)
+            if (Inputs(0)->GetNumCols() != weightCols || Inputs(0)->GetNumRows() != m_outputChannels)
                 LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_children[0]->NodeName().c_str(), m_outputChannels, weightCols);
 
             size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;
-            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(1)->FunctionValues().GetNumRows() == 0)
-                Inputs(1)->FunctionValues().Resize(inputDim, Inputs(1)->FunctionValues().GetNumCols());
+            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(1)->GetNumRows() == 0)
+                Inputs(1)->Resize(inputDim, Inputs(1)->GetNumCols());
 
-            if (Inputs(1)->FunctionValues().GetNumRows() != inputDim)
+            if (Inputs(1)->GetNumRows() != inputDim)
                 LogicError("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), inputDim);
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements() )
-                LogicError("Convolution operation: one of the operants has 0 element.");
+            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0 )
+                LogicError("Convolution operation: one of the operands has 0 elements.");
             
             size_t outputDim = m_outputWidth * m_outputHeight * m_outputChannels;
-            FunctionValues().Resize(outputDim, Inputs(1)->FunctionValues().GetNumCols());
+            Resize(outputDim, Inputs(1)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
@@ -452,9 +452,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this function must be overriden by Max or AveragePoolingNode
         virtual void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) = 0;
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             if (m_horizontalSubsample > m_windowWidth || m_verticalSubsample > m_windowHeight)
                 InvalidArgument("PoolingNodeBase: horizontalSubsample must <= windowWidth and verticalSubsample must <= windowHeight.");
@@ -465,16 +465,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inputSizePerSample = m_inputWidth * m_inputHeight * m_inputChannels;
             m_outputSizePerSample = m_outputWidth * m_outputHeight * m_outputChannels;
 
-            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0)
-                Inputs(0)->FunctionValues().Resize(m_inputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
+            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->GetNumRows() == 0)
+                Inputs(0)->Resize(m_inputSizePerSample, Inputs(0)->GetNumCols());
 
-            if (Inputs(0)->FunctionValues().GetNumRows() != m_inputSizePerSample)
+            if (Inputs(0)->GetNumRows() != m_inputSizePerSample)
                 LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), m_inputSizePerSample);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("PoolingNodeBase operation: the input node has 0 element.");
 
-            m_functionValues.Resize(m_outputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
+            m_functionValues.Resize(m_outputSizePerSample, Inputs(0)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()

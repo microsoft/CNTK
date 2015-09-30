@@ -47,12 +47,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 1)
                 InvalidArgument("Parallel operation only takes two input.");
             ComputationNodePtr child = Inputs(inputIndex);
-            size_t startidx = (inputIndex == 0) ? 0 : Inputs(0)->FunctionValues().GetNumRows();
-            size_t nrows = child->FunctionValues().GetNumRows();
+            size_t startidx = (inputIndex == 0) ? 0 : Inputs(0)->GetNumRows();
+            size_t nrows = child->GetNumRows();
 
-            if (child->GradientValues().GetNumRows() != child->FunctionValues().GetNumRows() || child->GradientValues().GetNumCols() != FunctionValues().GetNumCols())
+            if (child->GradientValues().GetNumRows() != child->GetNumRows() || child->GradientValues().GetNumCols() != GetNumCols())
             {
-                child->GradientValues().Resize(child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                child->GradientValues().Resize(child->GetNumRows(), child->GetNumCols());
                 child->GradientValues().SetValue(0);
             }
 
@@ -90,24 +90,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// input(0) : [nDim1 X T]
         /// input(1) : [nDim2 X T]
         /// output   : [[nDim1 + nDim2] X T]
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             size_t rows1, cols1;
-            rows1 = Inputs(1)->FunctionValues().GetNumRows();
-            cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            rows1 = Inputs(1)->GetNumRows();
+            cols1 = Inputs(1)->GetNumCols();
 
             size_t rows0, cols0;
-            rows0 = Inputs(0)->FunctionValues().GetNumRows();
-            cols0 = Inputs(0)->FunctionValues().GetNumCols();
+            rows0 = Inputs(0)->GetNumRows();
+            cols0 = Inputs(0)->GetNumCols();
 
             if (cols0 != cols1)
                 LogicError("ParallelNode: column dimension mismatched!");
 
             size_t rows = rows0 + rows1;
             size_t cols = cols0;
-            FunctionValues().Resize(rows, cols);
+            Resize(rows, cols);
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInput(0);
@@ -132,18 +132,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             f1 = Inputs(1)->FunctionValues();
             func = FunctionValues();
 
-            Inputs(0)->FunctionValues().Resize(nInput0, nT);
+            Inputs(0)->Resize(nInput0, nT);
             Inputs(0)->FunctionValues().SetValue(0);
             Inputs(0)->FunctionValues()(0, 0) = 1;
             Inputs(0)->FunctionValues()(0, 1) = 2;
             Inputs(0)->FunctionValues()(0, 2) = 3;
 
-            Inputs(1)->FunctionValues().Resize(nInput1, nT);
+            Inputs(1)->Resize(nInput1, nT);
             Inputs(1)->FunctionValues().SetValue(0);
             Inputs(1)->FunctionValues()(0, 0) = 4;
             Inputs(1)->FunctionValues()(0, 1) = 5;
             Inputs(1)->FunctionValues()(0, 2) = 6;
-            FunctionValues().Resize(nInput0 + nInput1, nT);
+            Resize(nInput0 + nInput1, nT);
 
             EvaluateThisNode(FrameRange());
 
@@ -234,7 +234,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
-            sprintf(str, "[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            sprintf(str, "[%lu,%lu]  ", GetNumRows(), GetNumCols());
             fstream << string(str);
             sprintf(str, "HasComputed=%ls", HasComputed()? L"true" : L"false");
             fstream << string(str);
@@ -322,14 +322,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("Mean operation: the input node has 0 element.");
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
+            Resize(Inputs(0)->GetNumRows(), 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
@@ -449,18 +449,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("InvStdDev operation: the input node has 0 element.");
 
-            size_t inputDim = Inputs(0)->FunctionValues().GetNumRows();
+            size_t inputDim = Inputs(0)->GetNumRows();
             m_mean.Resize(inputDim, 1);
             m_var.Resize(inputDim, 1);
 
-            FunctionValues().Resize(inputDim, 1);
+            Resize(inputDim, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
@@ -567,9 +567,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             if (Inputs(0)->RequiresPreCompute())
             {
@@ -591,35 +591,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = (Inputs(1)->FunctionValues().GetNumRows() == 0) ? Inputs(0)->FunctionValues().GetNumRows() :
-                                                                                Inputs(1)->FunctionValues().GetNumRows();
-                Inputs(1)->FunctionValues().Resize(rows, 1);
+                size_t rows = (Inputs(1)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() :
+                                                                                Inputs(1)->GetNumRows();
+                Inputs(1)->Resize(rows, 1);
             }
 
             if (Inputs(2)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = (Inputs(2)->FunctionValues().GetNumRows() == 0) ? Inputs(0)->FunctionValues().GetNumRows() :
-                                                                                Inputs(2)->FunctionValues().GetNumRows();
-                Inputs(2)->FunctionValues().Resize(rows, 1);
+                size_t rows = (Inputs(2)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() :
+                                                                                Inputs(2)->GetNumRows();
+                Inputs(2)->Resize(rows, 1);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() ||
-                Inputs(1)->FunctionValues().HasNoElements() ||
-                Inputs(2)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0 ||
+                Inputs(1)->GetNumRows() == 0 ||
+                Inputs(2)->GetNumRows() == 0)
             {
                 LogicError(
-                    "PerDimMeanVarNormalizationNode operation: one of the operants has 0 element.");
+                    "PerDimMeanVarNormalizationNode operation: one of the operands has 0 elements.");
             }
 
             //match rows
-            if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
-                Inputs(2)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()))
+            if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
+                Inputs(2)->GetNumRows() == Inputs(1)->GetNumRows()))
             {
                 LogicError(
                     "PerDimMeanVarNormalizationNode: All inputs should have same number of rows.");
             }
 
-            if (!(Inputs(1)->FunctionValues().GetNumCols() == 1 && Inputs(2)->FunctionValues().GetNumCols() == 1))
+            if (!(Inputs(1)->GetNumCols() == 1 && Inputs(2)->GetNumCols() == 1))
             {
                 LogicError(
                     "PerDimMeanVarNormalizationNode: Mean and InvStdDev should be a colum  vector.");
@@ -627,7 +627,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Inputs(1)->NeedGradient() = false;
             Inputs(2)->NeedGradient() = false;  //prevent learning
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -717,9 +717,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             if (Inputs(0)->RequiresPreCompute())
             {
@@ -741,34 +741,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(1)->FunctionValues().GetNumRows() == 0 ? Inputs(0)->FunctionValues().GetNumRows() :
-                                                                              Inputs(1)->FunctionValues().GetNumRows();
-                Inputs(1)->FunctionValues().Resize(rows, 1);
+                size_t rows = Inputs(1)->GetNumRows() == 0 ? Inputs(0)->GetNumRows() :
+                                                                              Inputs(1)->GetNumRows();
+                Inputs(1)->Resize(rows, 1);
             }
 
             if (Inputs(2)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(2)->FunctionValues().GetNumRows() == 0? Inputs(0)->FunctionValues().GetNumRows() :
-                                                                                        Inputs(2)->FunctionValues().GetNumRows();
-                Inputs(2)->FunctionValues().Resize(rows, 1);
+                size_t rows = Inputs(2)->GetNumRows() == 0? Inputs(0)->GetNumRows() :
+                                                                                        Inputs(2)->GetNumRows();
+                Inputs(2)->Resize(rows, 1);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() ||
-                Inputs(1)->FunctionValues().HasNoElements() ||
-                Inputs(2)->FunctionValues().HasNoElements())
+            if (Inputs(0)->GetNumRows() == 0 ||
+                Inputs(1)->GetNumRows() == 0 ||
+                Inputs(2)->GetNumRows() == 0)
             {
-                LogicError("PerDimMeanVarDeNormalizationNode operation: one of the operants has 0 element.");
+                LogicError("PerDimMeanVarDeNormalizationNode operation: one of the operands has 0 elements.");
             }
 
-            if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match rows
-                Inputs(2)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()) )
+            if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows()  &&  //match rows
+                Inputs(2)->GetNumRows() == Inputs(1)->GetNumRows()) )
             {
-                //Inputs(1)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
-                //Inputs(2)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
+                //Inputs(1)->Resize(Inputs(0)->GetNumRows(), 1);
+                //Inputs(2)->Resize(Inputs(0)->GetNumRows(), 1);
                 LogicError("PerDimMeanVarDeNormalizationNode: All inputs should have same number of rows.");
             }
 
-            if (!(Inputs(1)->FunctionValues().GetNumCols() == 1 && Inputs(2)->FunctionValues().GetNumCols() == 1))
+            if (!(Inputs(1)->GetNumCols() == 1 && Inputs(2)->GetNumCols() == 1))
             {
                 LogicError("PerDimMeanVarDeNormalizationNode: Mean and InvStdDev should be a colum  vector.");
             }
@@ -778,7 +778,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //prevent learning
             Inputs(2)->NeedGradient() = false;
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -831,13 +831,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // BUGBUG: this is broken
             // TODO: what is this? Derives from ComputationNodeNonLooping, yet implemented a frame loop?
-            //FunctionValues().Resize(m_memory.GetNumRows(), GetNumParallelSequences());
-            FunctionValues().Resize(m_memory.GetNumRows(), GetNumParallelSequences());   // extra space for one time step
+            //Resize(m_memory.GetNumRows(), GetNumParallelSequences());
+            Resize(m_memory.GetNumRows(), GetNumParallelSequences());   // extra space for one time step
             if (frameRange.t() == 0)    // for first frame, check that we got all in memory  --TODO: is this comment correct? How about going backwards?
                 assert(ValueSlice(FrameRange(0, GetNumParallelSequences())).FrobeniusNorm() == DataSlice(m_memory, FrameRange(0, GetNumParallelSequences())).FrobeniusNorm());
                 //assert(FunctionValues().ColumnSlice(0, GetNumParallelSequences()), m_pMBLayout).FrobeniusNorm() == m_memory.ColumnSlice(0, GetNumParallelSequences()), m_pMBLayout).FrobeniusNorm());
             FunctionValues().SetValue(DataSlice(m_memory, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout)));
-            assert(FunctionValues().GetNumCols() == GetNumParallelSequences());
+            assert(GetNumCols() == GetNumParallelSequences());
         }
 #endif
 
@@ -861,7 +861,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             const size_t BUFLEN = 4096;
             WCHAR str[BUFLEN];
-            swprintf(str, BUFLEN, L"[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            swprintf(str, BUFLEN, L"[%lu,%lu]  ", GetNumRows(), GetNumCols());
             fstream << wstring(str);
             swprintf(str, BUFLEN, L"HasComputed=%ls", HasComputed() ? L"true" : L"false");
             fstream << wstring(str);
@@ -983,14 +983,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            size_t rows = Inputs(0)->FunctionValues().GetNumRows();
-            size_t cols = Inputs(0)->FunctionValues().GetNumCols();
+            size_t rows = Inputs(0)->GetNumRows();
+            size_t cols = Inputs(0)->GetNumCols();
 
-            FunctionValues().Resize(rows, cols);
+            Resize(rows, cols);
             InferImageDimsFromInput(0);
         }
 
@@ -1012,12 +1012,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             f0 = Inputs(0)->FunctionValues();
             func = FunctionValues();
 
-            Inputs(0)->FunctionValues().Resize(nInput, nT);
+            Inputs(0)->Resize(nInput, nT);
             Inputs(0)->FunctionValues().SetValue(0);
             Inputs(0)->FunctionValues()(0, 0) = 1;
             Inputs(0)->FunctionValues()(0, 1) = 2;
             Inputs(0)->FunctionValues()(0, 2) = 3;
-            FunctionValues().Resize(nOutput, nT);
+            Resize(nOutput, nT);
             Inputs(0)->FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
             EvaluateThisNode(FrameRange());
 
