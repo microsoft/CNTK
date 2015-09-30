@@ -159,8 +159,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("SumElements operation: the input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("SumElements operation: the input node has 0 element.");
 
             Resize(1, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
@@ -249,8 +249,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("SumColumnElements operation: the input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("SumColumnElements operation: the input node has 0 element.");
 
             Resize(1, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
@@ -380,11 +380,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("RowSlice operation: the input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("RowSlice operation: the input node has 0 element.");
 
-            if (Inputs(0)->GetNumRows() < m_startIndex + m_numRows)
-                LogicError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
+            if (isFinalValidationPass && Inputs(0)->GetNumRows() < m_startIndex + m_numRows)
+                RuntimeError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
 
             Resize(m_numRows, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
@@ -491,8 +491,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0) == nullptr)   // TODO: Base::Validate() will fail for this
-                LogicError("RowStack operation: the input node is NULL.");
+            //if (Inputs(0) == nullptr)   // TODO: Base::Validate() will fail for this
+            //    LogicError("RowStack operation: the input node is NULL.");
 
             size_t numCols = Inputs(0)->GetNumCols();
             m_startRowIndices.resize(ChildrenSize()+1);
@@ -503,15 +503,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (int i = 0; i < ChildrenSize(); i++)
             {
-                if (Inputs(i) == nullptr)
-                    LogicError("RowStack operation: the input node is NULL.");
+                //if (Inputs(i) == nullptr)
+                //    LogicError("RowStack operation: the input node is NULL.");
 
                 Matrix<ElemType>& childMatrix = Inputs(i)->FunctionValues();
                 size_t numRows = childMatrix.GetNumRows();
-                if (numRows == 0)
-                    LogicError("RowStack operation: the input node %ls has 0 rows.", Inputs(i)->NodeName().c_str());
+                //if (numRows == 0)
+                //    LogicError("RowStack operation: the input node %ls has 0 rows.", Inputs(i)->NodeName().c_str());
                 
-                if (childMatrix.GetNumCols() != numCols)
+                if (isFinalValidationPass && childMatrix.GetNumCols() != numCols)
                     LogicError("RowStack operation: the input node %ls has different number of columns.", Inputs(i)->NodeName().c_str());
 
                 totalRows += numRows;
@@ -638,14 +638,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (isFinalValidationPass)
-            {
-                //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                //    LogicError("Scale operation: one of the operands has 0 elements.");
-                // left Node must be a scalar
-                if (Inputs(0)->GetNumRows() != 1 || Inputs(0)->GetNumCols() != 1)
-                    LogicError("The left value of ScaleNode must be a scalar value.");
-            }
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("Scale operation: one of the operands has 0 elements.");
+
+            // left Node must be a scalar
+            if (isFinalValidationPass && (Inputs(0)->GetNumRows() != 1 || Inputs(0)->GetNumCols() != 1))
+                RuntimeError("The left value of ScaleNode must be a scalar value.");
 
             Resize(Inputs(1));
             InferMBLayoutFromInputsForStandardCase();
@@ -790,8 +788,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
             size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            if ((rows0 == 0 || (cols1 == 0 && !Inputs(1)->GetMBLayout())) && isFinalValidationPass/*this->GetLoopId() < 0*/)  // (TODO: is the LoopId check redundant with checking layout?)
-                throw logic_error("Times operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 since it cannot be automatically inferred");
+            if (isFinalValidationPass && (rows0 == 0 || (cols1 == 0 && !Inputs(1)->GetMBLayout())))
+                RuntimeError("Times operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 since it cannot be automatically inferred");
 
             // limited automatic dimension inference for *children*, useful for CNN since it can be hard to know the size of each input parameter without deep knowledge how CNN is implemented (padding, stride)
             // TODO: ^^ There must be a better solution. Maybe MBLayout as well?
@@ -804,12 +802,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
                 Inputs(1)->Resize(cols0, cols1);
 
-            if ((Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
-                LogicError("Times operation: One of the operands has 0 elements.");
+            //if ((Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
+            //    LogicError("Times operation: One of the operands has 0 elements.");
 
             // cols0 and rows1 may have been changed so don't use them in the following check
             // TODO: why not check this when part of a loop?
-            if ((Inputs(1)->GetNumRows() != Inputs(0)->GetNumCols()) && isFinalValidationPass/*this->GetLoopId() < 0*/)
+            if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumCols())
                 LogicError("The Matrix dimension in the Times operation does not match.");
             Resize(rows0, cols1);
 
@@ -957,8 +955,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
             size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            if ((rows0 == 0 || cols1 == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
-                throw logic_error("TransposeTimes operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 since it cannot be automatically inferred");
+            if (isFinalValidationPass && (rows0 == 0 || cols1 == 0))
+                RuntimeError("TransposeTimes operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 since it cannot be automatically inferred");
 
             if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
                 Inputs(0)->Resize(rows0, rows1);
@@ -966,16 +964,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
                 Inputs(1)->Resize(cols0, cols1);
 
-            if ((Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
-                LogicError("TransposeTimes operation: One of the operands has 0 elements.");
+            //if ((Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
+            //    LogicError("TransposeTimes operation: One of the operands has 0 elements.");
 
             //cols0 and rows1 may have been changed so don't use them in the following check
-            if ((Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows()) && isFinalValidationPass/*this->GetLoopId() < 0*/)
-            {
+            if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows())
                 LogicError("The Matrix dimension in the TransposeTimes operation does not match.");
-            }
+
             Resize(cols0, cols1);
-            InferMBLayoutFromInputsForStandardCase();
+            InferMBLayoutFromInputsForStandardCase();   // TODO: what does the MBLayout mean in the context of TransposeTimes? Can the left arg have an MBLayout?
             InferImageDimsFromInputs();
         }
 
@@ -1070,8 +1067,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate(isFinalValidationPass);
-
+            ValidateBinaryZip(isFinalValidationPass, false/*allowMultiple*/);
+#if 0
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
             {
@@ -1083,18 +1080,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            if (isFinalValidationPass)
-            {
-                if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                    LogicError("ElementTimes operation: one of the operands has 0 elements.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("ElementTimes operation: one of the operands has 0 elements.");
 
-                if (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())
-                    LogicError("The Matrix<ElemType> dimension in the ElementTimes operation does not match.");
-            }
+            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
+                LogicError("The Matrix dimension in the ElementTimes operation does not match.");
 
-            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            Resize(Inputs);
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
+#endif
         }
 
         virtual void InferImageDimsFromInputs()
@@ -1223,16 +1218,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                LogicError("RowElementTimes operation: one of the operands has 0 elements.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("RowElementTimes operation: one of the operands has 0 elements.");
 
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
-            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
-
-            if (cols0 != cols1 || rows1 != 1)
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols(); rows0;
+            if (isFinalValidationPass && cols0 != cols1 || rows1 != 1)
                 LogicError("RowElementTimes: Either the second operand is not a row vector or the number of columns of operands does not match.");
 
-            Resize(rows0, cols0);
+            Resize(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -1377,16 +1371,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                LogicError("ColumnElementTimes operation: one of the operands has 0 elements.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("ColumnElementTimes operation: one of the operands has 0 elements.");
 
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
-            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
-
-            if (rows0 != rows1 || cols1 != 1)
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols(); cols0;
+            if (isFinalValidationPass && (rows0 != rows1 || cols1 != 1))
                 LogicError("ColumnElementTimes: Either the second operand is not a column vector or the number of rows of operands does not match.");
 
-            Resize(rows0, cols0);
+            Resize(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -1933,16 +1926,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->GetNumRows() != 0 && Inputs(1)->GetNumRows() == 0)
                 Inputs(1)->Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
 
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("DiagTimes operation: one of the operands has 0 elements.");
+
             if (isFinalValidationPass)
             {
-                if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                    LogicError("DiagTimes operation: one of the operands has 0 elements.");
-
                 if (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows())
                     LogicError("The Matrix dimension in the DiagTimes operation does not match.");
 
                 if (Inputs(0)->GetNumCols() != 1)
-                    LogicError("The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation.");
+                    LogicError("The first matrix should be a vector representing the diagonal of a square matrix in the DiagTimes operation.");
             }
 
             Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
@@ -2141,11 +2134,10 @@ private:
                 Inputs(index)->Resize(rows, cols);
             }
 
-            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                LogicError("CosDistance operation: one of the operands has 0 elements.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("CosDistance operation: one of the operands has 0 elements.");
 
-            if (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || 
-                Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())
+            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
                 LogicError("The Matrix dimension in the CosDistance operation does not match.");
 
             Resize(1, Inputs(1)->GetNumCols());
@@ -2299,8 +2291,8 @@ private:
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
             size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            if (rows0 == 0 || rows1 == 0)
-                LogicError("KhatriRaoProduct operation: The number of rows in the input should not be 0.");
+            //if (rows0 == 0 || rows1 == 0)
+            //    LogicError("KhatriRaoProduct operation: The number of rows in the input should not be 0.");
 
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && cols1 != 0)
                 Inputs(0)->Resize(rows0, cols1);
@@ -2309,13 +2301,11 @@ private:
                 Inputs(1)->Resize(rows1, cols0);
 
             //cols may be changed before this line and so cannot use cached cols values below
-            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                LogicError("KhatriRaoProduct operation: One of the operands has 0 elements.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("KhatriRaoProduct operation: One of the operands has 0 elements.");
 
-            if (Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())
-            {
+            if (isFinalValidationPass && Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())
                 LogicError("The Matrices should have same number of columns.");
-            }
 
             Resize(rows0 * rows1, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
@@ -2545,11 +2535,10 @@ private:
                 Inputs(index)->Resize(rows, cols);
             }
 
-            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                LogicError("CosDistanceWithNegativeSamples operation: one of the operands has 0 elements.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("CosDistanceWithNegativeSamples operation: one of the operands has 0 elements.");
 
-            if (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() ||
-                Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())
+            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
                 LogicError("The Matrix dimension in the CosDistanceWithNegativeSamples operation does not match.");
 
             // input(2) is shift, input(3) is the #neg
@@ -2682,12 +2671,12 @@ private:
         {
             Base::Validate(isFinalValidationPass);
 
-            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows();   // , cols0 = Inputs(0)->GetNumCols();
 
-            if (rows0 == 0 || cols0 == 0)
-                throw logic_error("Transpose operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 ");
+            //if (rows0 == 0 || cols0 == 0)
+            //    throw logic_error("Transpose operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 ");
 
-            Resize(cols0, rows0);
+            Resize(Inputs(0));
             mOnes = Matrix<ElemType>::Ones(rows0, rows0, m_deviceId);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
@@ -3025,14 +3014,14 @@ private:
             Base::Validate(isFinalValidationPass);
 
             //support automatic dimension inference for learnable parameters
-            if (Inputs(2)->FunctionValues().GetNumElements() != 1)
-                LogicError("StrideTimes : input(2) should be a single element matrix");
+            if (isFinalValidationPass && Inputs(2)->FunctionValues().GetNumElements() != 1)
+                RuntimeError("StrideTimes : input(2) should be a single element matrix");
 
             m_StrideDim = (size_t) Inputs(2)->FunctionValues().Get00Element();
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
             size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            if (m_StrideDim != 0 && m_StrideDim != 1)
+            if (isFinalValidationPass && m_StrideDim != 0 && m_StrideDim != 1)
                 LogicError("StrideTimes : stride dim must be either 0 (row) or 1 (column)");
 
             if (Inputs(2)->NeedGradient())
@@ -3041,7 +3030,7 @@ private:
             //cols0 and rows1 may have been changed so don't use them in the following check
             if (m_StrideDim == 0)
             {
-                if (rows1 != cols0)
+                if (isFinalValidationPass && rows1 != cols0)
                     LogicError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", m_StrideDim, cols0, rows1);
                 size_t T1 = rows0 / m_Stride;
                 Resize(T1, cols1);
@@ -3050,7 +3039,7 @@ private:
             //cols0 and rows1 may have been changed so don't use them in the following check
             if (m_StrideDim == 1)
             {
-                if (cols0/m_Stride != rows1)
+                if (isFinalValidationPass && cols0 / m_Stride != rows1)
                     LogicError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", m_StrideDim, cols0, rows1);
                 Resize(rows0, cols1);
             }

@@ -289,18 +289,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().HasNoElements())
                 Inputs(0)->Resize(m_outputChannels, weightCols);
 
-            if (Inputs(0)->GetNumCols() != weightCols || Inputs(0)->GetNumRows() != m_outputChannels)
+            if (isFinalValidationPass && (Inputs(0)->GetNumCols() != weightCols || Inputs(0)->GetNumRows() != m_outputChannels))
                 LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_children[0]->NodeName().c_str(), m_outputChannels, weightCols);
 
             size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(1)->GetNumRows() == 0)
                 Inputs(1)->Resize(inputDim, Inputs(1)->GetNumCols());
 
-            if (Inputs(1)->GetNumRows() != inputDim)
+            if (isFinalValidationPass && Inputs(1)->GetNumRows() != inputDim)
                 LogicError("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), inputDim);
 
-            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0 )
-                LogicError("Convolution operation: one of the operands has 0 elements.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0 )
+            //    LogicError("Convolution operation: one of the operands has 0 elements.");
             
             size_t outputDim = m_outputWidth * m_outputHeight * m_outputChannels;
             Resize(outputDim, Inputs(1)->GetNumCols());
@@ -468,11 +468,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->GetNumRows() == 0)
                 Inputs(0)->Resize(m_inputSizePerSample, Inputs(0)->GetNumCols());
 
-            if (Inputs(0)->GetNumRows() != m_inputSizePerSample)
+            if (isFinalValidationPass && Inputs(0)->GetNumRows() != m_inputSizePerSample)
                 LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), m_inputSizePerSample);
 
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("PoolingNodeBase operation: the input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("PoolingNodeBase operation: the input node has 0 element.");
 
             m_functionValues.Resize(m_outputSizePerSample, Inputs(0)->GetNumCols());
         }
