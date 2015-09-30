@@ -63,9 +63,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& leftMinusRight, ComputationNodePtr curNode)  
         {
             leftMinusRight.AssignDifferenceOf(inputFunctionValues0, inputFunctionValues1);
-            curNode->MaskMissingColumnsToZero(leftMinusRight);  //we are fine since it will only be called with full minibatch.
+            curNode->MaskMissingColumnsToZero(leftMinusRight, Inputs(0)->GetMBLayout());    // we are fine since it will only be called with full minibatch.
             ElemType v = leftMinusRight.FrobeniusNorm();
-            functionValues.Resize(1,1);
+            VerifySize(1,1);
             functionValues.SetValue(v*v/2);
 #if NANCHECK
             functionValues.HasNan("SquareError");
@@ -175,7 +175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-                Base::MaskMissingColumnsToZero(Inputs(inputIndex)->GradientValues());
+                Inputs(inputIndex)->MaskMissingGradientColumnsToZero();
             }
         }
 
@@ -222,7 +222,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
             softmaxOfRight.SetValue(logSoftmaxOfRight);
             softmaxOfRight.InplaceExp();
-            curNode->MaskMissingColumnsToZero(logSoftmaxOfRight); //we are fine here since it will be called only with full minibatch
+            curNode->MaskMissingColumnsToZero(logSoftmaxOfRight, Inputs(1)->GetMBLayout());     // we are fine here since it will be called only with full minibatch
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logSoftmaxOfRight);
             functionValues*=(-1);
 #if NANCHECK
@@ -363,7 +363,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, ComputationNodePtr curNode)
         {
             leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
-            curNode->MaskMissingColumnsToZero(leftDivRight);
+            curNode->MaskMissingColumnsToZero(leftDivRight, Inputs(0)->GetMBLayout());
             Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
         }
 
@@ -378,7 +378,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             logOfRight.SetValue(inputFunctionValues1);
             logOfRight.InplaceLog();
-            curNode->MaskMissingColumnsToZero(logOfRight);
+            curNode->MaskMissingColumnsToZero(logOfRight, Inputs(1)->GetMBLayout());
             functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logOfRight);
             functionValues*=(-1);
 #if NANCHECK
@@ -507,13 +507,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
-            Base::MaskMissingColumnsToZero(Inputs(0)->FunctionValues());
+            Inputs(0)->MaskMissingValuesColumnsToZero();
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
         /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues)
         {
-            functionValues.Resize(1, 1);
+            VerifySize(1, 1);
             functionValues.SetValue(inputFunctionValues.MatrixNorm1());
 #if NANCHECK
             functionValues.HasNan("MatrixL1Reg");
@@ -605,13 +605,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
-            Base::MaskMissingColumnsToZero(Inputs(0)->FunctionValues());
+            Inputs(0)->MaskMissingValuesColumnsToZero();
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
         /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues)
         {
-            functionValues.Resize(1,1);
+            VerifySize(1,1);
             functionValues.SetValue(inputFunctionValues.FrobeniusNorm());
 #if NANCHECK
             functionValues.HasNan("MatrixL2Reg");
@@ -878,6 +878,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
         */
+        // BUGBUG: FrameRange and MBLayout usage is incorrect here. Will not work.
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex != 1 && inputIndex != 2 && inputIndex != 3)
@@ -894,7 +895,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 FrameRange frameRange(t, 1);    // TODO: change to frameRange over a whole MB with a sequence index. BUGBUG: below code will break until this is fixed
                 /// compute prb - 1 and prb
-                Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(t, 1, m_pMBLayout));
+                Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(t, 1, m_pMBLayout));  // BUGBUG: all Check() expressions are wrong; m_pMBLayout is empty (this node reduces). Will Segfault
                 size_t c_t = (size_t)lbl_t(1, 0);
                 size_t lft_bnd = (size_t)lbl_t(2, 0);
                 size_t rgt_bnd = (size_t)lbl_t(3, 0);
@@ -988,34 +989,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
+        // -sum(left_i * log(softmax_i(right)))
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             if (Inputs(0)->FunctionValues().GetDeviceId() != CPUDEVICE)
                 LogicError("ClassBasedCrossEntropyWithSoftmax: evaluatethisnode. the label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
 
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(),
-                              Inputs(3)->FunctionValues(), m_logSoftmax, m_softMax, m_clsLogSoftmax, m_clsSoftmax, m_totalNbrWords, this);
-            m_needRecomputeGradientToSoftmaxInput = true;
-        }
+            // (the below is left-over from refactoring)
+            Matrix<ElemType>& functionValues = FunctionValues();
+            const Matrix<ElemType>& lbls = Inputs(0)->FunctionValues();
+            const Matrix<ElemType>& inputs = Inputs(1)->FunctionValues();
+            const Matrix<ElemType>& input_weight = Inputs(2)->FunctionValues();
+            const Matrix<ElemType>& input_cls_log_post_prob = Inputs(3)->FunctionValues();
+            Matrix<ElemType>& logSoftmax = m_logSoftmax;
+            Matrix<ElemType>& softMax = m_softMax;
+            Matrix<ElemType>& clsLogSoftmax = m_clsLogSoftmax;
+            Matrix<ElemType>& clsSoftmax = m_clsSoftmax;
+            size_t& totalWords = m_totalNbrWords;
+            
+            // TODO: understand the following code and rewrite w.r.t. how MBLayout should be used
 
-        static void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls,
-                                      const Matrix<ElemType>& inputs, const Matrix<ElemType>& input_weight, const Matrix<ElemType>& input_cls_log_post_prob,
-                                      Matrix<ElemType>& logSoftmax,
-                                      Matrix<ElemType>& softMax, 
-                                      Matrix<ElemType>& clsLogSoftmax, Matrix<ElemType>& clsSoftmax, size_t& totalWords, ClassBasedCrossEntropyWithSoftmaxNode* curNode)
-        {
+            const size_t nT = lbls.GetNumCols();
+            const size_t nRow = inputs.GetNumRows();
+
+            // count totalWords
             totalWords = 0;
-            size_t nT = lbls.GetNumCols();
-
-            for (size_t t = 0; t < lbls.GetNumCols(); t++)
+            for (size_t t = 0; t < nT; t++)
             {
-                Matrix<ElemType> lblInfo = lbls.ColumnSlice(t, 1);
+                Matrix<ElemType> lblInfo = lbls.ColumnSlice(t, 1);  // TODO: const & ?
                 size_t lft_bnd = (size_t)lblInfo(2, 0);
                 size_t rgt_bnd = (size_t)lblInfo(3, 0);
                 totalWords += (rgt_bnd - lft_bnd);
             }
-
-            size_t nRow = inputs.GetNumRows();
 
             size_t sz = totalWords;
             softMax.Resize(1, sz);
@@ -1030,7 +1035,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// loop over time
             functionValues.SetValue(0);
             sz = 0;
-            for (size_t t = 0; t < lbls.GetNumCols(); t++)
+            for (size_t t = 0; t < nT; t++)
             {
                 Matrix<ElemType> lblInfo = lbls.ColumnSlice(t, 1);
                 size_t y_t = (size_t)lblInfo(0, 0);
@@ -1046,7 +1051,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         /// skip this time
                         continue;
                     else
-                        LogicError("ClassbasedCrossEntropyWithSoftmax::EvaluateThisNodeS label provided but the size of its class is zero. Should never happen. Probably misuse of ClassbasedCrossEntropyWithSoftmax.");
+                        LogicError("ClassbasedCrossEntropyWithSoftmax::EvaluateThisNode() label provided but the size of its class is zero. Should never happen. Probably misuse of ClassbasedCrossEntropyWithSoftmax.");
                 }
 
                 /// e.g., 200 x 148
@@ -1056,7 +1061,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> softMax_t = softMax.ColumnSlice(sz, nbr_wrd);
                 Matrix<ElemType> logSoftMax_t = logSoftmax.ColumnSlice(sz, nbr_wrd);
 
-                if (!curNode->MaskMissingColumnsToZero(logSoftMax_t, t))
+                // BUGBUG: This masking is most certainly wrong, as it operates on a sub-slice while still indexing with 't'.
+                //         I believe this is the correct refactoring of the old code, but I may be wrong.
+                if (!Base::MaskMissingColumnsToZero(logSoftMax_t, Inputs(0)->GetMBLayout(), t / Inputs(0)->GetNumParallelSequences()/*time index*/, t % Inputs(0)->GetNumParallelSequences()/*seq index*/))
                 {
                     Matrix<ElemType> obs = inputs.ColumnSlice(t, 1);  /// e.g., 200 x 1
                     obs.Reshape(1, nRow);  /// 1 x 200
@@ -1077,10 +1084,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Matrix<ElemType>::AddElementToElement(logSoftMax_t, 0, idx_in_class, functionValues, 0, 0);
                 }
 
-                /// add the class log posterior probability
-                if (!curNode->MaskMissingColumnsToZero(clsLogSoftmax, t))
+                // add the class log posterior probability
+                // TODO: Is this masking operation correct?
+                if (!Base::MaskMissingColumnsToZero(clsLogSoftmax, Inputs(0)->GetMBLayout(), t / Inputs(0)->GetNumParallelSequences()/*time index*/, t % Inputs(0)->GetNumParallelSequences()/*seq index*/))
                 {
-                    try{
+                    try
+                    {
                         Matrix<ElemType>::AddElementToElement(clsLogSoftmax, c_t, t, functionValues, 0, 0);
                     }
                     catch (...)
@@ -1098,13 +1107,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if NANCHECK
             functionValues.HasNan("ClassBasedCrossEntropyWithSoftmax");
 #endif
+            m_needRecomputeGradientToSoftmaxInput = true;
         }
 
+#if 0   // no longer needed, using Base::MaskMissingColumnsToZero() instead
         /**
         reset to error signals to 0 for any elements without labels
         */
         // BUGBUG: the layout should be that of matrixToBeMasked, not of 'this'
-        bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const size_t j) const
+        bool MaskOneMissingColumnToZero(Matrix<ElemType>& matrixToBeMasked, const size_t j) const
         {
             size_t nS = m_pMBLayout->GetNumParallelSequences();
             size_t t = j / nS;  // this is the time stamp
@@ -1128,6 +1139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return foundLabelOrFeatureMissing;
 #endif
         }
+#endif
 
         /**
         Inputs: [0] label in dense matrix in [4 x T]
@@ -1139,6 +1151,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         */
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
+            bool bad = true;
+            if (bad)
+                LogicError("ClassBasedCrossEntropyWithSoftmaxNode: The node of this code is currently broken (incorrect MBLayout usage). If you see this, contact fseide@microsoft.com, I will help to fix it.");
+
             Base::Validate(isFinalValidationPass);
 
             if (Inputs(0)->OperationName() != OperationNameOf(InputValue))
@@ -1215,9 +1231,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // CRFNode (labels, position_dependent_scores, transition_scores)
     //  - labels : output label vector of [0:T-1]
-    //  - position_dependent_scores : score from position dependent node,
+    //  - position_dependent_scores [?] : score from position dependent node,
     //    in the R-CRF case, it is the RNN output score before softmax
-    //  - transition scores : score from the transition node, 
+    //  - transition scores [?] : score from the transition node, 
     //    in the R-CRF case, it is the transition probability between labels
     // -----------------------------------------------------------------------
 
@@ -1260,8 +1276,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FunctionValues().SetValue(0.0);
             Matrix<ElemType> funcVal = FunctionValues();
 
-            size_t nstep = ncol / GetNumParallelSequences();
-            for (size_t i = 0; i < GetNumParallelSequences(); i++)
+            size_t nS = Inputs(0)->GetNumParallelSequences();
+            size_t nstep = ncol / nS;
+            for (size_t i = 0; i < nS; i++)
             {
                 Matrix<ElemType> postProbSlice = mPostProb.ColumnSlice(i * nstep, nstep);
                 Matrix<ElemType> alphaSlice = mAlpha.ColumnSlice(i * nstep, nstep);
@@ -1291,14 +1308,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ErrorSignalToPostitionDependentNode(GradientValues(), Inputs(0)->FunctionValues(), mPostProb, Inputs(inputIndex)->GradientValues());
             else if (inputIndex == 2)
             {
+                size_t nS = Inputs(0)->GetNumParallelSequences();
+                size_t nT = Inputs(0)->GetNumTimeSteps();
+
                 size_t ncol = mAlpha.GetNumCols();
-                size_t nstep = ncol / GetNumParallelSequences();
+                size_t nstep = ncol / nS;
+                assert(nstep == nT);
                 assert(Inputs(inputIndex)->GradientValues().GetNumElements() > 0);
-                for (size_t i = 0; i < GetNumParallelSequences(); i++)
+                for (size_t i = 0; i < nS; i++)
                 {
+                    // BUGBUG: This ColumnSlice() expression seems very wrong. It takes nT consecutive columns, but those are not T consecutive frames (layout is different).
                     ErrorSignalToTransitionNode(
-                        Inputs(0)->FunctionValues().ColumnSlice(i * nstep, nstep),
-                        mAlpha.ColumnSlice(i * nstep, nstep),
+                        Inputs(0)->FunctionValues().ColumnSlice(i * nstep, nstep),      // TODO: use ValueSlice() here
+                        mAlpha.ColumnSlice(i * nstep, nstep),                           // TODO: use DataSlice() here
                         mBeta.ColumnSlice(i * nstep, nstep),
                         Inputs(inputIndex)->FunctionValues(),
                         Inputs(inputIndex)->GradientValues(),
@@ -1328,7 +1350,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         /// compute forward backward algorithm
-        static void EvaluateThisNodeS(Matrix<ElemType>& postprob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, int& firstLbl, int& lastLbl, const int iStep = 1)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& postprob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, int& firstLbl, int& lastLbl, const int iStep = 1)
         {
             /// to-do, each slice is for one sentence
             /// to-do, number of slices correspond to number of frames 
@@ -1344,13 +1366,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             firstLbl = -1;
             for (int ik = 0; ik < lbls.GetNumRows(); ik++)
-            if (lbls(ik, 0) != 0){
+            if (lbls(ik, 0) != 0)
+            {
                 firstLbl = ik; break;
             }
 
             lastLbl = -1;
             for (int ik = 0; ik < lbls.GetNumRows(); ik++)
-            if (lbls(ik, nObs - 1) != 0){
+            if (lbls(ik, nObs - 1) != 0)
+            {
                 lastLbl = ik; break;
             }
 
@@ -1467,7 +1491,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
                     Inputs(2)->GetNumCols() == Inputs(2)->GetNumRows()))
             {
-                LogicError("The Matrix<ElemType>  dimension in the CRFNode operation does not match.");
+                LogicError("The Matrix dimension in the CRFNode operation does not match.");
             }
 
             Resize(1,1);
@@ -1654,7 +1678,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_gammaFromLattice,
                     m_hsmoothingWeight, m_frameDropThresh);
-                Base::MaskMissingColumnsToZero(Inputs(inputIndex)->GradientValues());
+                Inputs(inputIndex)->MaskMissingGradientColumnsToZero();
             }
             else if (inputIndex == 2)
             {
@@ -1698,7 +1722,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void EvaluateThisNodeNonLooping()   //-sum(left_i * log(softmax_i(right)))
+        // -sum(left_i * log(softmax_i(right)))
+        virtual void EvaluateThisNodeNonLooping()
         {
             // Initialize m_GammaCal
             if (!m_gammaCalcInitialized)
@@ -1714,7 +1739,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_uids, m_boundaries,  m_pMBLayout, m_extrauttmap, m_doreferencealign);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1,
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1,
             const Matrix<ElemType>& inputFunctionValues2, Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& gammafromlattice,
             std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> &lattices, msra::lattices::GammaCalculation<ElemType> &GammaCal, std::vector<size_t> & uids,
             std::vector<size_t> & boundaries,  MBLayoutPtr pMBLayout, std::vector<size_t> &extrauttmap, bool doReferenceAlign)
@@ -1724,7 +1749,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             softmaxOfRight.SetValue(logSoftmaxOfRight);
             softmaxOfRight.InplaceExp();
 
-            size_t sequenceNum = pMBLayout->GetNumParallelSequences();
+            size_t sequenceNum = Inputs(1)->GetNumParallelSequences();
             gammafromlattice.SwitchToMatrixType(softmaxOfRight.GetMatrixType(), softmaxOfRight.GetFormat(), false);
             gammafromlattice.Resize(softmaxOfRight.GetNumRows(), softmaxOfRight.GetNumCols());
             GammaCal.calgammaformb(functionValues, lattices, inputFunctionValues2, inputFunctionValues0, gammafromlattice, uids, boundaries, sequenceNum, pMBLayout, extrauttmap, doReferenceAlign);

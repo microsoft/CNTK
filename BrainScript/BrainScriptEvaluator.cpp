@@ -1164,7 +1164,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 // Like in an [] expression, we do not evaluate at this point, but pass in a lambda to compute on-demand.
                 let & args = argsExpr->args;
                 if (args.size() != lambda->GetNumParams())
-                    Fail(wstrprintf(L"function expects %d parameters, %d were provided", (int)lambda->GetNumParams(), (int)args.size()), argsExpr->location);
+                    Fail(wstrprintf(L"function expects %d positional parameters, %d were provided", (int)lambda->GetNumParams(), (int)args.size()), argsExpr->location);
                 vector<ConfigValuePtr> argVals(args.size());
                 //bool onlyOneArg = args.size() == 1 && argsExpr->namedArgs.empty();
                 for (size_t i = 0; i < args.size(); i++)    // positional arguments

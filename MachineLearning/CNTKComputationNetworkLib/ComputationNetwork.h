@@ -7,26 +7,18 @@
 #pragma once
 
 // TODOs:
-//  - add a runtime check that nodes deriving from ComputeNodeNonLooping may never participate in a loop
-//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, instead change Node::SetFunctionAndGradientMBSize()
-//    to infer the dimensions, and call it during the Evaluate() loop (maybe directly from EvaluateThisNode(FrameRange()), i.e. eliminate it as well or replace the virtual by a helper function)
-//    For moving into EvaluateThisNode directly,
-//    PRO:
-//     - doing it for every call allows to dynamically grow MB and layout frame-by-frame, allowing sophisticated models and ways
-//     - more code gone from individual nodes
-//     - the (void) version already does that, sneakily through Matrix. Need a unified approach.
-//    CON:
-//     - if moved out from Validate(), errors are not caught during validation (early failure is valuable).
-//       Although Validate() can check dimensions other than MB size, while MB-size consistency itself is ensured through layout sharing (and the Matrix functions as a last resort)
-//     - inside a loop
-//        - it has to check for every frame, although only the first frame really will make a difference
-//        - it's weird if it is called for a singe frame to update the size for the whole minibatch
-//  - fold EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
-//     - PROBLEM: Matrix sneakily resizes result matrices, but only for EvaluateThisNode(void), not for frame-wise ones. Need a unified solution.
-//  - also eliminate EvaluateThisNodeGivenInputs()--that stuff is at least as much responsibility of Network
-//    We can also replace IsNodeReqMultiSeqHandling() to a check against the node set itself inside Network --one more Node member gone (and a weird, unneccessary one at that)
-//  - finally, revise constructors, merge by means of default parameters
+//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, it should already be covered by Node::SetFunctionAndGradientMBSize() which is called from inside the Eval loop
+//  - complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
+//  - apply 
 // => many ComputationNode implementations only have two functions EvaluateThisNode(FrameRange) and ComputePartial(), as it was meant to be!
+//  - revise constructors, merge by means of default parameters
+//  - add a runtime check that nodes deriving from ComputeNodeNonLooping may never participate in a loop
+//  - ClassbasedCrossEntropyWithSoftmax::EvaluateThisNodeS()'s calls to MaskMissingColumnsToZero() are likely wrong.
+//    Need to understand what this does, then implement it correctly w.r.t. MBLayout.
+//  - CRFNode::ComputeInputPartial() has strange usage of layout which seems incorrect structurally (swapping id and t).
+//  - BUGBUG: All frameRange.Check() expressions are wrong that operate on children, since the wrong layout pointer is passed in (for most nodes it is identical to the correct one though).
+//    This will get fixed as we remove these Check() expressions when absorbing EvaluateThisNodeS().
+//  - verify that all readers return layouts
 
 // The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
 
@@ -817,7 +809,12 @@ public:
             // --- second, do whole-batch operation if not recurrent
 
             if (IsNodeReqMultiSeqHandling(*nodeIter))
+            {
+                // batch is done only for feed-forward nodes
+                if ((*nodeIter)->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
+                    LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
                 (*nodeIter)->MaskMissingGradientColumnsToZero();
+            }
             (*nodeIter)->ComputeGradientForChildren();
         }
 
