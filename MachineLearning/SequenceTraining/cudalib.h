@@ -15,12 +15,8 @@ namespace msra { namespace cuda {
 void lazyinit();
 size_t numdevices();
 void join();            // wait until current launch or other async operation is completed
-void initwithdeviceid(size_t deviceid);
 
 // managing device context switching
-void setdevicecontext (size_t deviceid); // get a cudadevice; lazy-init if needed
-void cleardevicecontext();
-CUcontext getdevicecontext (size_t deviceid); // get a context for explicitly passing it to the CUDA API
 cudaStream_t GetStream(size_t deviceid);
 cudaEvent_t GetEvent(size_t deviceid);
 size_t GetCurrentDevice();

@@ -1736,7 +1736,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_gammaCalcInitialized = true;
             }
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, m_gammaFromLattice, m_lattice, m_GammaCal,
-                m_uids, m_boundaries,  m_pMBLayout, m_extrauttmap, m_doreferencealign);
+                m_uids, m_boundaries,  Inputs(0)->GetMBLayout(), m_extrauttmap, m_doreferencealign);
         }
 
         /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1,
