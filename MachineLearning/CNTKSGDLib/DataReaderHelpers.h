@@ -205,11 +205,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // with the special twist that in presence of parallelization, there is some decimation involved.
 
             // TODO: how is !wasDataRead semantically different from inputMatrices having zero columns?
-fprintf(stderr, "\n\n#### GMB1 ####   T=%d\n\n", (int)pMBLayout->GetNumTimeSteps());
             bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
-fprintf(stderr, "\n\n#### GMB2 ####   cols=%d\n\n", (int)inputMatrices.begin()->second->GetNumCols());
             trainSetDataReader.CopyMBLayoutTo(pMBLayout);                           // and layout meta-data
-fprintf(stderr, "\n\n#### GMB3 ####   T=%d\n\n", (int)pMBLayout->GetNumTimeSteps());
 
             // verify some DataReader calls that are redundant since the MBLayout refactoring (keep verifying for a while for cosy feeling)
             net.VerifyActualNumParallelSequences(trainSetDataReader.GetNumParallelSequences()); // info already contained in MBLayout
