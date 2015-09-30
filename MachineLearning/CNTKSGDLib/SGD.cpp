@@ -1165,7 +1165,7 @@ template<class ElemType>
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0);
         else                                    // using only one epoch
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, m_epochSize);
-
+fprintf(stderr,"\n\n#### 1 ####\n\n");
 #if 1
         size_t actualMBSize;
         while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSize))
@@ -1174,9 +1174,12 @@ template<class ElemType>
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
             ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
+fprintf(stderr, "\n\n#### 2 ####  S=%d x T=%d\n\n", (int)net.GetMBLayoutPtr()->GetNumParallelSequences(), (int)net.GetMBLayoutPtr()->GetNumTimeSteps());
             for (auto & node : nodes)   // this loops over all pertinent PreComputeNodes
                 net.Evaluate(node);
+fprintf(stderr,"\n\n#### 3 ####\n\n");
         }
+fprintf(stderr,"\n\n#### 4 ####\n\n");
 #else
         while (trainSetDataReader->GetMinibatch(*inputMatrices))
         {
