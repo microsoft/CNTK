@@ -319,7 +319,7 @@ Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, 64], HLast[132,
  Epoch[ 1 of 3]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.21603394; EvalErr[0]PerSample = 0.62812501; TotalTime = 0.18165s; TotalTimePerSample = 0.28383ms; SamplesPerSecond = 3523
  Epoch[ 1 of 3]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.29106450; EvalErr[0]PerSample = 0.60624999; TotalTime = 0.18136s; TotalTimePerSample = 0.28337ms; SamplesPerSecond = 3528
  Epoch[ 1 of 3]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.20531011; EvalErr[0]PerSample = 0.57499999; TotalTime = 0.18055s; TotalTimePerSample = 0.28211ms; SamplesPerSecond = 3544
-Finished Epoch[1]: [Training Set] TrainLossPerSample = 3.0173442; EvalErrPerSample = 0.73061526; Ave LearnRatePerSample = 0.015625; EpochTime=6.531797
+Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 3.0173442; EvalErrPerSample = 0.73061526; Ave LearnRatePerSample = 0.015625; EpochTime=6.531797
 Starting Epoch 2: learning rate per sample = 0.001953  momentum = 0.656119 
 minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 1, with 1 datapasses
 
@@ -332,14 +332,14 @@ Starting minibatch loop.
  Epoch[ 2 of 3]-Minibatch[  51-  60 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.01557612; EvalErr[0]PerSample = 0.54414064; TotalTime = 0.52684s; TotalTimePerSample = 0.20580ms; SamplesPerSecond = 4859
  Epoch[ 2 of 3]-Minibatch[  61-  70 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.94065166; EvalErr[0]PerSample = 0.52499998; TotalTime = 0.52700s; TotalTimePerSample = 0.20586ms; SamplesPerSecond = 4857
  Epoch[ 2 of 3]-Minibatch[  71-  80 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.94852901; EvalErr[0]PerSample = 0.54023439; TotalTime = 0.52384s; TotalTimePerSample = 0.20462ms; SamplesPerSecond = 4886
-Finished Epoch[2]: [Training Set] TrainLossPerSample = 1.9919556; EvalErrPerSample = 0.54179686; Ave LearnRatePerSample = 0.001953125; EpochTime=4.221602
+Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 1.9919556; EvalErrPerSample = 0.54179686; Ave LearnRatePerSample = 0.001953125; EpochTime=4.221602
 Starting Epoch 3: learning rate per sample = 0.000098  momentum = 0.656119 
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 1, with 1 datapasses
 
 Starting minibatch loop.
  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.91941869; EvalErr[0]PerSample = 0.52890623; TotalTime = 1.86784s; TotalTimePerSample = 0.18241ms; SamplesPerSecond = 5482
  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.91062427; EvalErr[0]PerSample = 0.52783203; TotalTime = 1.84987s; TotalTimePerSample = 0.18065ms; SamplesPerSecond = 5535
-Finished Epoch[3]: [Training Set] TrainLossPerSample = 1.9150215; EvalErrPerSample = 0.52836913; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=3.736133
+Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.9150215; EvalErrPerSample = 0.52836913; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=3.736133
 COMPLETED
 === Deleting last epoch data
 ==== Re-running from checkpoint
@@ -709,5 +709,5 @@ Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, 1024], HLast[13
 
  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.91941869; EvalErr[0]PerSample = 0.52890623; TotalTime = 1.88723s; TotalTimePerSample = 0.18430ms; SamplesPerSecond = 5425
  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.91062427; EvalErr[0]PerSample = 0.52783203; TotalTime = 1.84469s; TotalTimePerSample = 0.18015ms; SamplesPerSecond = 5551
-Finished Epoch[3]: [Training Set] TrainLossPerSample = 1.9150215; EvalErrPerSample = 0.52836913; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=5.315324
+Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.9150215; EvalErrPerSample = 0.52836913; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=5.315324
 COMPLETED
