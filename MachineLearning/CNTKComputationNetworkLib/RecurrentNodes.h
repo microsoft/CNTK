@@ -176,7 +176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //const Matrix<float>& colBoundaryFlags = frameLayout.first;
             //MinibatchPackingFlags minibatchPackingFlags = frameLayout.second;
 
-            Base::MaskMissingColumnsToZero(m_gradientValues, t);
+            MaskMissingGradientColumnsToZero(t);
 
             // TODO: change this to FrameRange/GradientSlice()
             size_t mNbr = m_pMBLayout->GetNumParallelSequences();
@@ -294,7 +294,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 out.SetValue(inp);
             }
 
-            Base::MaskMissingColumnsToZero(m_functionValues, t); // TODO: make this take a FrameRange
+            MaskMissingValuesColumnsToZero(t); // TODO: make this take a FrameRange
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override

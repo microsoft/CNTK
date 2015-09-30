@@ -977,18 +977,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This function sets those to 0, assuming that now they can be reduced without affecting the result.
         // This function can operate on the whole range or on a selected single frame and/or a single sequence.
         // It is indirectly guarded by the m_maskMissingColumnsToZero flag, which, if false, will install a layout with IsAllNone() to be true. TODO: we better always install the same layout, and instead test m_maskMissingColumnsToZero here.
-        // Note that existing 'reduce' style operations--the criterion nodes and gradient computation--already call this.
-        bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX) const
+        // Note that existing 'reduce' style operations--the criterion nodes and gradient computation--already call this.  --BUGBUG: They can't, wrong layout!
+        // Warning: The layout used here must match the matrix. E.g. don't pass a child's matrix from a criterion node (use Inputs(x)->MaskMissing{Values,Gradient}ColumnsToZero() instead.
+        static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX)
         {
             bool foundLabelOrFeatureMissing = false; /// set to true if either nolabel or feature missing is processed
 
-            if (m_pMBLayout && !m_pMBLayout->IsAllNone())
+            if (pMBLayout && !pMBLayout->IsAllNone())
             {
-                size_t nT = m_pMBLayout->GetNumTimeSteps();
-                size_t nS = m_pMBLayout->GetNumParallelSequences();
+                size_t nT = pMBLayout->GetNumTimeSteps();
+                size_t nS = pMBLayout->GetNumParallelSequences();
 
                 if (matrixToBeMasked.GetNumCols() != nT * nS)
-                    LogicError("MaskMissingColumnsToZero: m_pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
+                    LogicError("MaskMissingColumnsToZero: pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
 
                 size_t startT = (timeIdxInSeq == SIZE_MAX) ?  0 : timeIdxInSeq;
                 size_t endT   = (timeIdxInSeq == SIZE_MAX) ? nT : timeIdxInSeq + 1;
@@ -998,10 +999,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t t = startT; t < endT; t++)
                 {
-                    if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeature))
+                    if (pMBLayout->Is(t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeature))
                     {
                         for (size_t id = startS; id < endS; id++)
-                            if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeature))
+                            if (pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeature))
                                 matrixToBeMasked.ColumnSlice(t * nS  +  id, 1).SetValue(0);
                         foundLabelOrFeatureMissing = true;
                     }
@@ -1009,6 +1010,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             return foundLabelOrFeatureMissing;
+        }
+
+        // call static MaskMissingColumnsToZero() above with m_{function,gradient}Values with matching layout
+        bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX) const
+        {
+            return MaskMissingColumnsToZero(matrixToBeMasked, m_pMBLayout, timeIdxInSeq, seqIndex);
         }
 
         /*
@@ -1171,10 +1178,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
         /*implement*/void MaskMissingGradientColumnsToZero()
         {
-            // batch is done only for feed-forward nodes
-            if (HasLoop()) 
-                return;
-
             //if (IsNodeReqMultiSeqHandling())
                 MaskMissingColumnsToZero(m_gradientValues);
         }
