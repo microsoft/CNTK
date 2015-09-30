@@ -102,6 +102,15 @@ typedef unsigned char byte;
 
 using namespace std;
 
+#ifndef SIZE_MAX
+#include <limits>
+#ifdef __SIZE_MAX__
+#define SIZE_MAX __SIZE_MAX__
+#else
+#define SIZE_MAX std::numeric_limits<size_t>::max()
+#endif
+#endif
+
 // CRT error handling seems to not be included in wince headers
 // so we define our own imports
 #ifdef UNDER_CE

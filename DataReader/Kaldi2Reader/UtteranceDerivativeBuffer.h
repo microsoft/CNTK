@@ -48,7 +48,7 @@ private:
     void ProcessUttInfo(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag,
+        const std::vector<MinibatchPackingFlags>& minibatchPackingFlags,
         std::vector<std::vector<std::pair<
             wstring, std::pair<size_t, size_t>>>>* uttInfoInMinibatch) const;
 
@@ -72,13 +72,13 @@ public:
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& outputs,
         const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag);
+        const std::vector<MinibatchPackingFlags>& minibatchPackingFlags);
 
     // Gets the computed derivatives for given utterance.
     bool GetDerivative(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag,
+        const std::vector<MinibatchPackingFlags>& minibatchPackingFlags,
         Matrix<ElemType>* derivativesOut);
 
     // Gets the computed objectives for given utterance.

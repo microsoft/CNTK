@@ -24,14 +24,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void UtteranceDerivativeBuffer<ElemType>::ProcessUttInfo(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag,
+        const std::vector<MinibatchPackingFlags>& minibatchPackingFlags,
         std::vector<std::vector<std::pair<
             wstring, std::pair<size_t, size_t>>>>* uttInfoInMinibatch) const
     {
         assert(uttInfoInMinibatch != NULL);
         assert(uttInfo.size() == m_numUttsPerMinibatch);
         assert(sentenceBegin.GetNumRows() == m_numUttsPerMinibatch);
-        assert(minibatchPackingFlag.size() == sentenceBegin.GetNumCols());
+        assert(minibatchPackingFlags.size() == sentenceBegin.GetNumCols());
         uttInfoInMinibatch->clear();
         uttInfoInMinibatch->resize(uttInfo.size());
         for (size_t i = 0; i < uttInfo.size(); ++i)
@@ -75,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& logLikelihoodIn,
         const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
+        const std::vector<MinibatchPackingFlags>& minibatchPackingFlags)
     {
         assert(m_needLikelihood == true);
         assert(m_epochEnd == false);
@@ -89,7 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<std::vector<
             std::pair<wstring, std::pair<size_t, size_t>>>> uttInfoInMinibatch;
         ProcessUttInfo(uttInfo, sentenceBegin,
-                       minibatchPackingFlag, &uttInfoInMinibatch);
+                       minibatchPackingFlags, &uttInfoInMinibatch);
 
         // Checks if we need to move data to CPU.
         Matrix<ElemType> logLikelihood(logLikelihoodIn);
@@ -99,7 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 logLikelihood.GetDeviceId(), CPUDEVICE, true, false, false);
         }
 
-        size_t currentMBSize = minibatchPackingFlag.size();
+        size_t currentMBSize = minibatchPackingFlags.size();
         for (size_t i = 0; i < uttInfo.size(); ++i)
         {
             assert(uttInfo[i].size() == uttInfoInMinibatch[i].size());
@@ -174,7 +174,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     bool UtteranceDerivativeBuffer<ElemType>::GetDerivative(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag,
+        const std::vector<MinibatchPackingFlags>& minibatchPackingFlags,
         Matrix<ElemType>* derivativesOut)
     {
         assert(derivativesOut != NULL);
@@ -182,7 +182,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<std::vector<
             std::pair<wstring, std::pair<size_t, size_t>>>> uttInfoInMinibatch;
         ProcessUttInfo(uttInfo, sentenceBegin,
-                       minibatchPackingFlag, &uttInfoInMinibatch);
+                       minibatchPackingFlags, &uttInfoInMinibatch);
 
         m_currentObj = 0;
         Matrix<ElemType> derivatives(CPUDEVICE);

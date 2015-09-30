@@ -8,6 +8,7 @@
 #include "cudabasetypes.h"
 #include <vector>
 #include <memory>
+#include <stdexcept>
 
 namespace msra { namespace cuda {
 
