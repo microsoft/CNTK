@@ -69,11 +69,12 @@ private:
 
     bool m_endReached;
     int m_traceLevel;
-   
+
     // feature and label data are parallel arrays
     std::vector<ElemType> m_featureData;
     std::vector<LabelIdType> m_labelIdData;
     std::vector<LabelType> m_labelData;
+    MBLayoutPtr m_pMBLayout;
 
     // map is from ElemType to LabelType
     // For UCI, we really only need an int for label data, but we have to transmit in Matrix, so use ElemType instead
@@ -112,7 +113,7 @@ public:
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
     size_t GetNumParallelSequences() { return mBlgSize; }
-    void CopyMBLayoutTo(MBLayoutPtr){};
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { pMBLayout->CopyFrom(m_pMBLayout); };
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
