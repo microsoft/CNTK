@@ -1313,7 +1313,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 size_t ncol = mAlpha.GetNumCols();
                 size_t nstep = ncol / nS;
-                assert(nstep == nT);
+                assert(nstep == nT); nT;
                 assert(Inputs(inputIndex)->GradientValues().GetNumElements() > 0);
                 for (size_t i = 0; i < nS; i++)
                 {
