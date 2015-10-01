@@ -54,7 +54,10 @@ INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTK
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
 CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -Wno-error=literal-suffix
 LIBPATH:=
+# For everyone
 LIBS:=
+# Just the math library
+CNTKMATH_LIBS:=
 LDFLAGS:=
 
 SEPARATOR = "=-----------------------------------------------------------="
@@ -85,7 +88,9 @@ endif
 # Set up CUDA includes and libraries
   INCLUDEPATH += $(CUDA_PATH)/include
   LIBPATH += $(CUDA_PATH)/lib64
-  LIBS += -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
+# Profiling is currently enabled directly from cntk, rather than via the math library
+  LIBS += -lcudart
+  CNTKMATH_LIBS += -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
 
 else
   DEVICE = cpu
@@ -96,14 +101,14 @@ endif
 ifeq ("$(MATHLIB)","acml")
   INCLUDEPATH += $(ACML_PATH)/include
   LIBPATH += $(ACML_PATH)/lib
-  LIBS += -lacml -lm -lpthread
+  CNTKMATH_LIBS += -lacml -lm -lpthread
   CPPFLAGS += -DUSE_ACML
 endif
 
 ifeq ("$(MATHLIB)","mkl")
   INCLUDEPATH += $(MKL_PATH)/mkl/include
   LIBPATH += $(MKL_PATH)/compiler/lib/intel64 $(MKL_PATH)/mkl/lib/intel64 $(MKL_PATH)/compiler/lib/mic $(MKL_PATH)/mkl/lib/mic
-  LIBS += -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread
+  CNTKMATH_LIBS += -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lm -liomp5 -lpthread
   CPPFLAGS += -DUSE_MKL
 endif
 
@@ -212,7 +217,7 @@ $(CNTKMATH_LIB): $(MATH_OBJ)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE) 
 	@mkdir -p $(dir $@)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(NVMLPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(CNTKMATH_LIBS) $(LIBS) -fopenmp
 
 ########################################
 # BinaryReader plugin
@@ -351,8 +356,8 @@ KALDI2READER_SRC = \
 KALDI2READER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDI2READER_SRC))
 
 KALDI2READER:=$(LIBDIR)/Kaldi2Reader.so
-ALL+=$(KALDI2READER)
-SRC+=$(KALDI2READER_SRC)
+#ALL+=$(KALDI2READER)
+#SRC+=$(KALDI2READER_SRC)
 
 $(KALDI2READER): $(KALDI2READER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)

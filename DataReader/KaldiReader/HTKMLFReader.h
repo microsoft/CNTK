@@ -24,6 +24,7 @@ private:
     vector<bool> m_sentenceEnd;
     bool m_readAhead;
     bool m_truncated;
+    bool m_framemode;
     vector<size_t> m_processedFrame;
     size_t m_numberOfuttsPerMinibatch;
     size_t m_actualnumberOfuttsPerMinibatch;
@@ -80,6 +81,9 @@ private:
 
     bool ReNewBufferForMultiIO(size_t i);
 
+    size_t GetNumParallelSequences() { return m_numberOfuttsPerMinibatch; } 
+    void SetNumParallelSequences(const size_t) { };
+
     size_t NumberSlicesInEachRecurrentIter() { return m_numberOfuttsPerMinibatch ;} 
     void SetNbrSlicesEachRecurrentIter(const size_t) { };
 
@@ -96,26 +100,7 @@ private:
 
 
 public:
-    /// a matrix of n_stream x n_length
-    /// n_stream is the number of streams
-    /// n_length is the maximum lenght of each stream
-    /// for example, two sentences used in parallel in one minibatch would be
-    /// [2 x 5] if the max length of one of the sentences is 5
-    /// the elements of the matrix is 0, 1, or -1, defined as SEQUENCE_START, SEQUENCE_MIDDLE, NO_INPUT in cbasetype.h 
-    /// 0 1 1 0 1
-    /// 1 0 1 0 0 
-    /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
-    /// the second data stream has two sentences, with 0 indicating begining of sentences
-    /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
-    /// frame. 
-	Matrix<ElemType> m_sentenceBegin;
-
-    /// a matrix of 1 x n_length
-    /// 1 denotes the case that there exists sentnece begin or no_labels case in this frame
-    /// 0 denotes such case is not in this frame
-
-
-	vector<MinibatchPackingFlag> m_minibatchPackingFlag;
+    MBLayoutPtr m_pMBLayout;
 
     /// by default it is false
     /// if true, reader will set to SEQUENCE_MIDDLE for time positions that are orignally correspond to SEQUENCE_START
@@ -123,8 +108,9 @@ public:
     /// default will have truncated BPTT, which only does BPTT inside a minibatch
 
 	bool mIgnoreSentenceBeginTag;
-	HTKMLFReader() : m_sentenceBegin(CPUDEVICE) {
-	}
+     HTKMLFReader() : m_pMBLayout(make_shared<MBLayout>())
+     {
+     }
 
     virtual void Init(const ConfigParameters& config);
     virtual void Destroy() {delete this;}
@@ -136,10 +122,12 @@ public:
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
 
     virtual bool DataEnd(EndDataType endDataType);
+    void CopyMBLayoutTo(MBLayoutPtr);
     void SetSentenceEndInBatch(vector<size_t> &/*sentenceEnd*/);
     void SetSentenceEnd(int /*actualMbSize*/){};
-	void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
+    void SetRandomSeed(int) { NOT_IMPLEMENTED };
 
+    bool RequireSentenceSeg() { return !m_framemode; }; 
 };
 
 }}}
