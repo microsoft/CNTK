@@ -37,6 +37,7 @@ private:
     std::vector<int32_t*> m_rowIndices;
     std::vector<int32_t*> m_colIndices;
     ElemType* m_labelsBuffer;
+    MBLayoutPtr m_pMBLayout;
 
     HANDLE m_hndl;
     HANDLE m_filemap;
@@ -49,7 +50,7 @@ private:
     std::map<LabelType, LabelIdType> m_mapLabelToId;
 
 public:
-    SparsePCReader() { };
+    SparsePCReader() : m_pMBLayout(make_shared<MBLayout>()) {};
     virtual ~SparsePCReader();
     virtual void Destroy();
     virtual void Init(const ConfigParameters& config);
@@ -58,7 +59,7 @@ public:
 
     size_t GetNumParallelSequences() { return 1 ;} 
     void SetNumParallelSequences(const size_t) { };
-    void CopyMBLayoutTo(MBLayoutPtr) {};
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { pMBLayout->CopyFrom(m_pMBLayout); NOT_IMPLEMENTED; }
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart*/) { throw runtime_error("GetData not supported in SparsePCReader"); };

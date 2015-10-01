@@ -96,6 +96,7 @@ private:
     bool m_partialMinibatch;    // a partial minibatch is allowed
     LabelKind m_labelType;  // labels are categories, create mapping table
     msra::dbn::randomordering m_randomordering;   // randomizing class
+    MBLayoutPtr m_pMBLayout;
 
     std::wstring m_labelsName;
     std::wstring m_labelsCategoryName;
@@ -138,14 +139,14 @@ private:
 public:
     virtual void Init(const ConfigParameters& config);
     virtual void Destroy();
-    LibSVMBinaryReader() { m_qfeaturesBuffer = NULL; m_dfeaturesBuffer = NULL;  m_labelsBuffer = NULL; }
+    LibSVMBinaryReader() : m_pMBLayout(make_shared<MBLayout>()) { m_qfeaturesBuffer = NULL; m_dfeaturesBuffer = NULL;  m_labelsBuffer = NULL; }
     virtual ~LibSVMBinaryReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
     size_t GetNumParallelSequences() { return 1; } 
     void SetNumParallelSequences(const size_t) { };
-    void CopyMBLayoutTo(MBLayoutPtr){};
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { pMBLayout->CopyFrom(m_pMBLayout); NOT_IMPLEMENTED; }
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, typename LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);

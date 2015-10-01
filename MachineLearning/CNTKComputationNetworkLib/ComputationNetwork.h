@@ -20,7 +20,7 @@
 //  - CRFNode::ComputeInputPartial() has strange usage of layout which seems incorrect structurally (swapping id and t).
 //  - BUGBUG: All frameRange.Check() expressions are wrong that operate on children, since the wrong layout pointer is passed in (for most nodes it is identical to the correct one though).
 //    This will get fixed as we remove these Check() expressions when absorbing EvaluateThisNodeS().
-//  - verify that all readers return layouts
+//  - implement reading of MB Layout in Binary, DSSM, LivbSVM, and SparsePCReader
 //  - BUGBUG (in the future): Once we have > 1 layout in the system, all nodes must compare their actual layouts upon Evaluate().
 //    Example: TimeReverse must create a new layout. A second TimeReverse ideally would revert back, but can't know. Hence, all consumers of layouts must compare upon Evaluate().
 //  - more informative CUDA errors (show original error, machine name, and card id; maybe even a time stamp), to better be able to handle hardware issues
