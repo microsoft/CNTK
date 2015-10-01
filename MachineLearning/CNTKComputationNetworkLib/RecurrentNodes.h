@@ -40,8 +40,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
             m_functionValues.Resize(row_size, col_size);
-            m_delayedActivation.Resize(row_size, col_size);
-            m_historyAlreadySet = false;    // PastValueNode only
+            m_delayedActivation.Resize(row_size, col_size); // TODO: relevance of col_size? Why not timeStep?
+            m_historyAlreadySet = false;    // used for BPTT, PastValueNode only
         }
     protected:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
@@ -177,7 +177,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (!m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))    // don't propagate boundary frames or gaps
                         {
-                            // TODO: we need a way to do this with a FrameRange object and DataSlice()
                             Matrix<ElemType> frm = GradientSlice(frameRange.Sequence(id));
                             Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(t_delayed).Sequence(id));
                             to += frm;
@@ -193,6 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        // Note: This function must be called in correct order and not leaving out any frame, since inside we rely on checking the time index for state control.
         virtual void EvaluateThisNode(const FrameRange & frameRange) override
         {
             assert(m_pMBLayout);
@@ -222,22 +222,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // reset past activation as it reached the beginning of a minibatch
             // the node pointed hasn't yet updated, so it is the past activation
             // This is for carrying over state across minibatches (truncated BPTT).
-            if (isFirstFrame && m_historyAlreadySet == false)
+            // BUGBUG: Is this wrong? This should be set at the END of the loop, when all is done, no?
+            if (isFirstFrame && !m_historyAlreadySet/*means it's externally managed*/)
+            {
                 m_delayedActivation = Inputs(0)->FunctionValues();
-            // TODO: don't we need to set m_historyAlreadySet now?
+                // TODO: technically we only need to copy a sub-range of m_timeStep frames.
+                if (!m_delayedActivationMBLayout) m_delayedActivationMBLayout = make_shared<MBLayout>();
+                m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
+            }
 
             Resize(Inputs(0));
 
             size_t T = GetNumTimeSteps();
+            size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : m_timeStep;  // MB layout would be null in full-sequence mode
+            // TODO: ^^ is this correct for whole-sequence case? In that case, m_delayedActivation is constant
 
             // compute logical position of delayed value
             assert(m_timeStep > 0);
-            if (m_timeStep >= T)    // can't reach back more than one minibatch
-                RuntimeError("DelayedValueNode: Time step %d exceeds minibatch size %d. Can't reach that far back.", (int)m_timeStep, (int)T);
 
             int t_delayed = (int)(t + direction * m_timeStep);  // this might end up outside the current window
-
-            bool outside = t_delayed < 0 || t_delayed >= T;     // true if delayed value is outside the window
 
             Matrix<ElemType> inp;   // ((DEVICEID_TYPE)m_functionValues.GetDeviceId());
 
@@ -247,7 +250,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (size_t id = 0; id < GetNumParallelSequences(); id++)
                 {
-                    // TODO: we need a way to do this with a FrameRange object and DataSlice()
                     Matrix<ElemType> out = ValueSlice(frameRange.Sequence(id));
 
                     if (m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End))
@@ -255,8 +257,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     else    // not a boundary: just copy the delayed value
                     {
                         // inside the sequence: access delayed value
-                        if (outside)
-                            inp = DataSlice(m_delayedActivation, FrameRange(t_delayed - direction * T).Sequence(id)); // delay reaches in previous minibatch
+                        if (t_delayed < 0)
+                            inp = DataSlice(m_delayedActivation, FrameRange(t_delayed + T_delayedActivation).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
+                        else if (t_delayed >= T)
+                            inp = DataSlice(m_delayedActivation, FrameRange(t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                         else
                             inp = Inputs(0)->ValueSlice(FrameRange(t_delayed).Sequence(id));
 
@@ -268,8 +272,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 Matrix<ElemType> out = ValueSlice(frameRange);
 
-                if (outside)
-                    inp = DataSlice(m_delayedActivation, FrameRange(t_delayed - direction * T));
+                if (t_delayed < 0)
+                    inp = DataSlice(m_delayedActivation, FrameRange(t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
+                else if (t_delayed >= T)
+                    inp = DataSlice(m_delayedActivation, FrameRange(t_delayed - T), m_delayedActivationMBLayout);
                 else
                     inp = Inputs(0)->ValueSlice(FrameRange(t_delayed));
 
@@ -321,6 +327,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_historyAlreadySet = true;
 
             hist.TransferFromDeviceToDevice(m_deviceId, device, true);
+
+            // need a layout as well
+            // EvaluateThisNode() expects it to have the same number of parallel sequences.
+            // BUGBUG: now we have three cases: initial value from constructor (no layout), this one, and layout from previous MB
+            if (!m_delayedActivationMBLayout) m_delayedActivationMBLayout = make_shared<MBLayout>();
+            m_delayedActivationMBLayout->Init(GetNumParallelSequences(), hist.GetNumCols() / GetNumParallelSequences(), true/*sequential*/);
         }
 
         // this function is only used from old NDL  --TODO: delete once no longer used
@@ -334,7 +346,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            //m_pShiftedMBLayout->m_sentenceBoundaryFlags.TransferToDeviceIfNotThereAndNotAutoPlace(CPUDEVICE);    // boundaryInfo is needed on the CPU   --TODO: should not be needed
             m_delayedActivation.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
@@ -347,17 +358,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_timeStep = m_timeStep;
                 node->m_initialActivationValue = m_initialActivationValue;
                 node->m_delayedActivation = m_delayedActivation;
+                if (m_delayedActivationMBLayout)
+                    (node->m_delayedActivationMBLayout = make_shared<MBLayout>())->CopyFrom(m_delayedActivationMBLayout);
+                else
+                    node->m_delayedActivationMBLayout = nullptr;
                 node->m_historyAlreadySet = false;
             }
         }
 
     protected:
 
-        ElemType m_initialActivationValue;      // starting value for hidden activation vector at boundary
-        Matrix<ElemType> m_delayedActivation;   // saves the activation of the previous step that this node points to
-        int      m_timeStep;                    // delay in frames (typ. 1)
-        MBLayoutPtr m_pShiftedMBLayout;         // individual sentence boundary information     --TODO: do we actually need this separate variable?
-        bool m_historyAlreadySet;               // for PastValueNode only
+        ElemType m_initialActivationValue;          // starting value for hidden activation vector at boundary
+        Matrix<ElemType> m_delayedActivation;       // saves the activation of the previous step that this node points to
+        MBLayoutPtr m_delayedActivationMBLayout;    // layout for m_delayedActivation
+        int      m_timeStep;                        // delay in frames (typ. 1)
+        MBLayoutPtr m_pShiftedMBLayout;             // individual sentence boundary information     --TODO: do we actually need this separate variable?
+        bool m_historyAlreadySet;                   // for PastValueNode only
     };
 
 #define UsingDelayedValueNodeMembers UsingComputationNodeMembersBoilerplate; \

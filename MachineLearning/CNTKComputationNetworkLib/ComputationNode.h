@@ -1107,20 +1107,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
                                    const FrameRange & frameRange/*select frame or entire batch*/)
         {
+            return DataSlice(data, frameRange, m_pMBLayout);
+        }
+        static Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
+                                          const FrameRange & frameRange/*select frame or entire batch*/,
+                                          const MBLayoutPtr & pMBLayout)
+        {
             // if FrameRange refers to whole minibatch (map mode)
             // or if we don't even have a layout
             // then return the whole matrix
-            if (!m_pMBLayout || frameRange.IsAllFrames())
+            if (!pMBLayout || frameRange.IsAllFrames())
             {
                 if (frameRange.seqIndex == SIZE_MAX)
                     return data.ColumnSlice(0, data.GetNumCols());
                 else
-                    LogicError("DataSlice: sequence index only supported when accessing individual frame"); // (not needed; doable but more involved, requiring a reshape)
+                {
+                    if (!pMBLayout)
+                        LogicError("DataSlice: Attempting to retrieve a parallel sequence from data without layout.");
+#if 1
+                    else
+                        LogicError("DataSlice: To retrieve a parallel sequence, implement Matrix::RowSlice() first!");
+#else
+                    // get a reshaped view that stacks all sequences into T long vectors
+                    auto mat = data.ColumnSlice(0, data.GetNumCols());
+                    mat.Resize(data.GetNumRows() * pMBLayout->GetNumParallelSequences(), data.GetNumRows() / pMBLayout->GetNumParallelSequences());
+                    return mat;   // .RowSlice(frameRange.seqIndex * data.GetNumRows());
+                    // TODO: Why does RowSlice() not exist? Seems simple. Is there a hidden assumption of contiguous memory?#endif
+#endif
+                }
             }
             // FrameRange refers to a time slice -> return that
             else
             {
-                size_t numParallelSequences = m_pMBLayout->GetNumParallelSequences();
+                size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
                 size_t startColumn = frameRange.t() * numParallelSequences;
                 if (frameRange.seqIndex == SIZE_MAX)
                     return data.ColumnSlice(startColumn, numParallelSequences);
