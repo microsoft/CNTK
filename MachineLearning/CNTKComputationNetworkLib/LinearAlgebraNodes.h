@@ -2703,7 +2703,7 @@ private:
     template class TransposeNode<double>;
 
     // -----------------------------------------------------------------------
-    /// StrideTimesNode (left, right, stride)
+    /// StrideTimesNode (left, right, stride/*0=row, 1=col*/)
     // -----------------------------------------------------------------------
 
     /**
@@ -2730,19 +2730,19 @@ private:
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"StrideTimes"; }
 
-        size_t m_StrideDim; // the dimension index on which stride works 
-        size_t m_Stride;    // the stride 
+        size_t m_strideDim; // the dimension index on which stride works 
+        size_t m_stride;    // the stride 
     private:
         void UpdateStride(const Matrix<ElemType>& input1) 
         {
-            m_Stride = input1.GetNumCols();
+            m_stride = input1.GetNumCols();
         }
     public:
         StrideTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
-            m_Stride(1)
+            m_stride(1)
         { }
-        // BUGBUG: This node needs to serialize and CopyTo m_Stride
+        // BUGBUG: This node needs to serialize and CopyTo m_stride
 
         virtual void ComputeInputPartial(const size_t) { NOT_IMPLEMENTED; }
 
@@ -2753,27 +2753,24 @@ private:
 
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            if (m_StrideDim == 1) /// column stride
+            if (m_strideDim == 1) /// column stride
             {
                 if (inputIndex == 0)  //left derivative
                 {
                     Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
+                    //TimesNode<ElemType>::ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
 
-//                    TimesNode<ElemType>::ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
-
-                    Matrix<ElemType> mTmp1(sliceInput1Value.GetDeviceId());
                     size_t r = Inputs(0)->GetNumRows();
-                    size_t T1 = Inputs(0)->GetNumCols() / GetNumParallelSequences();
-                    mTmp1.Resize(r, T1);
-                    Matrix<ElemType> mTmp2(sliceInput1Value.GetDeviceId());
-                    Matrix<ElemType> mTmp3(sliceInput1Value.GetDeviceId());
+                    size_t T1 = Inputs(0)->GetNumCols() / GetNumParallelSequences();    // TODO: if T1 == GetNumTimeSteps() then we can simplify code below.
+                    Matrix<ElemType> mTmp1(r, T1, sliceInput1Value.GetDeviceId());
 
+                    // process sequence by sequence
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
                         mTmp1.SetValue(0);
-                        mTmp2 = sliceInput1Value.ColumnSlice(k, 1);
-                        mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
+                        auto mTmp2 = sliceInput1Value.ColumnSlice(k, 1);
+                        auto mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
 
                         TimesNode<ElemType>::ComputeInputPartialLeft(mTmp2, mTmp1, mTmp3);
 
@@ -2787,28 +2784,26 @@ private:
                 {
                     Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-                    //                    TimesNode<ElemType>::ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
+                    //TimesNode<ElemType>::ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
 
+                    // process sequence by sequence
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
-                        Matrix<ElemType> mTmp1(sliceOutputGrad.GetDeviceId());
                         size_t r = Inputs(0)->GetNumRows();
-                        size_t T1 = Inputs(0)->GetNumCols() / GetNumParallelSequences();
-                        mTmp1.Resize(r, T1);
+                        size_t T1 = Inputs(0)->GetNumCols() / GetNumParallelSequences();    // TODO: if T1 == GetNumTimeSteps() then we can simplify code below.
+                        Matrix<ElemType> mTmp1(r, T1, sliceOutputGrad.GetDeviceId());
                         for (size_t t = 0; t < T1; t++)
                         {
                             mTmp1.ColumnSlice(t, 1).SetValue(Inputs(0)->FunctionValues().ColumnSlice(t*GetNumParallelSequences() + k, 1));
                         }
-                        Matrix<ElemType> mTmp2(sliceOutputGrad.GetDeviceId());
-                        mTmp2 = sliceInput1Grad.ColumnSlice(k, 1);
-                        Matrix<ElemType> mTmp3(sliceOutputGrad.GetDeviceId());
-                        mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
+                        auto mTmp2 = sliceInput1Grad.ColumnSlice(k, 1);
+                        auto mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
 
                         TimesNode<ElemType>::ComputeInputPartialRight(mTmp1, mTmp2, mTmp3);
                     }
                 }
             }
-            else if (m_StrideDim == 0) /// row stride
+            else if (m_strideDim == 0) /// row stride
             {
                 if (inputIndex == 0)  //left derivative
                 {
@@ -2897,77 +2892,61 @@ private:
 #endif
         }
 
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
-        {
-            size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
-            UpdateStride(Inputs(1)->FunctionValues());
-            if (m_StrideDim == 0)
-                Resize(rows0 / GetNumParallelSequences(), cols1);
-            if (m_StrideDim == 1)
-                Resize(rows0, cols1);
-
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_Stride, m_StrideDim);
-#ifdef DEBUG_DECODER
-            fprintf(stderr, "Times node %ls output norm = %.8e, input(0) norm = %.8e, input(1) norm = %.8e\n", this->NodeName().c_str(), FunctionValues().FrobeniusNorm(),
-                Inputs(0)->FunctionValues().FrobeniusNorm(), Inputs(1)->FunctionValues().FrobeniusNorm());
-#endif
-        }
-
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
-
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
             UpdateStride(sliceInput1Value);
-            if (m_StrideDim == 0)
+
+            if (m_strideDim == 0)
                 Resize(rows0 / GetNumParallelSequences(), cols1);
-            if (m_StrideDim == 1)
+            if (m_strideDim == 1)
                 Resize(rows0, cols1);
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value, m_Stride, m_StrideDim);
-        }
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
-        /**
-        A in d x [s x T1]
-        B in T1 x s
-        C = A x B  in d x s, and each element is computed as 
-        c_{i,k} = \sum_j a_{i,j*s+k} b_{j,k}
-        C in d x s
-        where s is the stride in column.
+            // (TODO: these following assignments are leftovers of refactoring and can be short-circuited)
+            Matrix<ElemType>& functionValues = sliceOutputValue;
+            const Matrix<ElemType>& input0 = Inputs(0)->FunctionValues();
+            const Matrix<ElemType>& input1 = sliceInput1Value;
 
-        Example 2:
-        A in [s x T1] x d
-        B in d x s
-        C = A x B  in T1 x s, and each element is computed as
-        c_{i,k} = \sum_j a_{i*s+k,j} b_{j,k}
-        where s is the stride in rows.
-        C in T1 x s
-
-        strideDim : 0 or 1
-        */
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1, const size_t stride, const size_t strideDim)
-        {
+            /**
+            A in d x [s x T1]
+            B in T1 x s
+            C = A x B  in d x s, and each element is computed as 
+            c_{i,k} = \sum_j a_{i,j*s+k} b_{j,k}
+            C in d x s
+            where s is the stride in column.
+    
+            Example 2:
+            A in [s x T1] x d
+            B in d x s
+            C = A x B  in T1 x s, and each element is computed as
+            c_{i,k} = \sum_j a_{i*s+k,j} b_{j,k}
+            where s is the stride in rows.
+            C in T1 x s
+    
+            strideDim : 0 or 1 (meaning to apply to row or column)
+            */
 #if DUMPOUTPUT
             input0.Print("StrideTimesNode - Input0");
 #endif
-            assert(strideDim == 0 || strideDim == 1);
+            assert(m_strideDim == 0 || m_strideDim == 1);
             Matrix<ElemType> mTmp1(input0.GetDeviceId());
             Matrix<ElemType> mTmp2(input0.GetDeviceId());
-            if (strideDim == 1) /// the example 1 case at column
+            if (m_strideDim == 1) // 1 = col stride; the example 1 case at column
             {
-                assert(stride == input1.GetNumCols());
-                size_t T1 = input0.GetNumCols() / stride;
+                assert(m_stride == input1.GetNumCols());
+                size_t T1 = input0.GetNumCols() / m_stride;
                 assert(T1 == input1.GetNumRows());
                 size_t d = input0.GetNumRows();
-                functionValues.Resize(d, stride);
-                for (size_t k = 0; k < stride; k++)
+                functionValues.Resize(d, m_stride);
+                for (size_t k = 0; k < m_stride; k++)
                 {
                     mTmp1.Resize(d, T1);
                     for (size_t j = 0; j < T1; j++)
                     {
-                        mTmp1.ColumnSlice(j, 1).SetValue(input0.ColumnSlice(j * stride + k, 1));
+                        mTmp1.ColumnSlice(j, 1).SetValue(input0.ColumnSlice(j * m_stride + k, 1));
                     }
 
                     mTmp2 = input1.ColumnSlice(k, 1);
@@ -2975,19 +2954,19 @@ private:
 
                 }
             }
-            else if (strideDim == 0)/// the example 2 case at row
+            else if (m_strideDim == 0) // 0 = row stride; the example 2 case at row
             {
-                assert(stride == input1.GetNumCols());
-                size_t T1 = input0.GetNumRows() / stride;
+                assert(m_stride == input1.GetNumCols());
+                size_t T1 = input0.GetNumRows() / m_stride;
                 size_t d = input1.GetNumRows();
                 assert(d == input0.GetNumCols());
-                functionValues.Resize(T1, stride);
+                functionValues.Resize(T1, m_stride);
                 mTmp1.Resize(d, T1);
-                for (size_t k = 0; k < stride; k++)
+                for (size_t k = 0; k < m_stride; k++)
                 {
                     for (size_t j = 0; j < T1; j++)
                     {
-                        mTmp1.ColumnSlice(j, 1).AssignRowSliceValuesOf(input0, k + j * stride, 1);
+                        mTmp1.ColumnSlice(j, 1).AssignRowSliceValuesOf(input0, k + j * m_stride, 1);
                     }
 
                     mTmp2 = input1.ColumnSlice(k, 1);
@@ -3013,38 +2992,33 @@ private:
         {
             Base::Validate(isFinalValidationPass);
 
-            //support automatic dimension inference for learnable parameters
-            if (isFinalValidationPass && Inputs(2)->FunctionValues().GetNumElements() != 1)
-                RuntimeError("StrideTimes : input(2) should be a single element matrix");
+            if (Inputs(2)->FunctionValues().GetNumElements() != 1)
+                RuntimeError("%ls %ls operation: Input(2) should be a single element matrix and have the value 0 (row) or 1 (col).", NodeName().c_str(), OperationName().c_str());
+            m_strideDim = (size_t) Inputs(2)->FunctionValues().Get00Element();
+            if (m_strideDim != 0 && m_strideDim != 1)
+                RuntimeError("%ls %ls operation: Input(2) should be a single element matrix and have the value 0 (row) or 1 (col).", NodeName().c_str(), OperationName().c_str());
+            if (Inputs(2)->NeedGradient())
+                RuntimeError("StrideTimes: No gradient update should be on input(2).");
 
-            m_StrideDim = (size_t) Inputs(2)->FunctionValues().Get00Element();
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
             size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            if (isFinalValidationPass && m_StrideDim != 0 && m_StrideDim != 1)
-                LogicError("StrideTimes : stride dim must be either 0 (row) or 1 (column)");
-
-            if (Inputs(2)->NeedGradient())
-                LogicError("StrideTImes : no gradient update should be on input(2)");
-
-            //cols0 and rows1 may have been changed so don't use them in the following check
-            if (m_StrideDim == 0)
+            if (m_strideDim == 0) // by row
             {
                 if (isFinalValidationPass && rows1 != cols0)
-                    LogicError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", m_StrideDim, cols0, rows1);
-                size_t T1 = rows0 / m_Stride;
+                    RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", m_strideDim, cols0, rows1);
+                size_t T1 = rows0 / m_stride;
                 Resize(T1, cols1);
             }
 
-            //cols0 and rows1 may have been changed so don't use them in the following check
-            if (m_StrideDim == 1)
+            else // by col
             {
-                if (isFinalValidationPass && cols0 / m_Stride != rows1)
-                    LogicError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", m_StrideDim, cols0, rows1);
+                if (isFinalValidationPass && cols0 != rows1 * m_stride)
+                    RuntimeError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", m_strideDim, cols0, rows1);
                 Resize(rows0, cols1);
             }
+            LinkToMBLayout(Inputs(1)->GetMBLayout());   // retains the layout of the right input
 
-            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -3057,14 +3031,6 @@ private:
             m_outputHeight = Inputs(0)->GetNumRows();
             m_outputChannels = 1;
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr strideNode)
-        //{
-        //    m_children.resize(3);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //    m_children[2] = strideNode;
-        //}
     };
 
     template class StrideTimesNode<float>;

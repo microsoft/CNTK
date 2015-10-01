@@ -1974,8 +1974,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int m = (int)GetNumRows();
         int n = (int)GetNumCols();
 
-        if (numCols == 0)
-            throw std::logic_error("The slice cannot have 0 columns.");
+        //if (numCols == 0)
+        //    throw std::logic_error("The slice cannot have 0 columns.");
 
         if (startColumn + numCols > n)
             throw std::logic_error("The slice is out of range of the source matrix.");
