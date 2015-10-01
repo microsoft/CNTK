@@ -149,27 +149,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("VerifySize: expected m_functionValues size %d x %d, but it is %d x %d",
                            (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
         }
+        virtual void VerifySize(ComputationNodeBasePtr node) { VerifySize(node->GetNumRows(), node->GetNumCols()); }
         virtual double Get00Element() const = 0;
-
-        virtual void ComputeInputPartial(const size_t inputIndex)
-        {
-            ComputeInputPartial(inputIndex, FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
-        }
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) = 0;
-
-        //void EvaluateThisNode()   // this is gone; instead, call it this way directly
-        //{
-        //    EvaluateThisNode(FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
-        //}
-        // evaluate only N frames at time index timeIdxInSeq
-        // Normally, N is 1 or it spans the entire minibatch.
-        virtual void EvaluateThisNode(const FrameRange &) = 0;
-        // evaluate a node--this calls EvaluateThisNode(FrameRange()) and MaskMissingColumnsToZero() if needed
-        // this is the main entry point for Network; while EvaluateThisNode(FrameRange()) is the virtual call into specific node implementation
-        virtual void EvaluateThisNodeGivenInputs() = 0;
-        virtual void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
-        virtual void MaskMissingValuesColumnsToZero() = 0;
-        virtual void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
 
         // validation
         virtual void Validate(bool isFinalValidationPass)           // main base validation function
@@ -245,7 +226,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
         }
 
-        virtual size_t SetFunctionAndGradientMBSize(size_t numCols = SIZE_MAX/*means take from layout*/) = 0;
+        virtual size_t UpdateFunctionAndGradientMBSize(size_t numCols = SIZE_MAX/*means take from layout--this is the main use*/) = 0;
 
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
         MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
@@ -324,10 +305,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
 
-        // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
-        // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNode, LSTMNode)
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return false; }
-
         int64_t UpdateEvalTimeStamp()
         {
             m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);    // TODO: does this really need to be atomic? We are not multi-threaded
@@ -390,19 +367,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool& NeedGradient() { return m_needGradient; }
         const bool& NeedGradient() const { return m_needGradient; }
 
-        // only called from SetRequestNodesMultiSeqHandling() (which is in turn called from BuildAndValidateSubNetwork())
-        // and from the deprecated LSTMNode and PairNode
-        // TODO: remove this flag, instead call it based on testing the user flag directly
-        //void SetMaskMissingColumnsToZero()
-        //{
-        //    if (NodeDoesItsOwnCustomizedMissingColumnsMasking())
-        //        RuntimeError("SetMaskMissingColumnsToZero: do not explicitly specify NodesReqMultiSeqHandling for operation '%ls', as this operation does it implicitly already.\nIn the past, CNTK silently fixed this; now please change your NDL instead.", OperationName().c_str());
-        //    m_maskMissingColumnsToZero = true;
-        //}
-    //protected:
-        //bool IsNodeReqMultiSeqHandling() const { return m_maskMissingColumnsToZero; }
-    public:
-
         void InitRecurrentNode()    // this initialization says that this node is not inside a loop
         {
             SetLoop(false);
@@ -427,23 +391,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool IsChildAnImage(const size_t index) const
         {
-            if (index > ChildrenSize())
-                throw invalid_argument("IsChildAnImage: out of index.");
-
-            return (m_children[index]->m_outputWidth != 1 || m_children[index]->m_outputChannels != 1);
+            return m_children[index]->m_outputWidth != 1 || m_children[index]->m_outputChannels != 1;
         }
 
         const size_t ChildrenSize() const { return m_children.size(); }
 
         virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr node) = 0;
 
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            ComputeInputPartial(inputIndex, FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
+        }
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) = 0;
+
+        //void EvaluateThisNode()   // this is gone; instead, call it this way directly
+        //{
+        //    EvaluateThisNode(FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
+        //}
+        // evaluate only N frames at time index timeIdxInSeq
+        // Normally, N is 1 or it spans the entire minibatch.
+        virtual void EvaluateThisNode(const FrameRange &) = 0;
         virtual void ComputeGradientForChildren() = 0;
         virtual void ComputeGradientForChildren(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
 
+        // overridden by <ElemType> variant only
+        virtual void MaskMissingValuesColumnsToZero() = 0;
+        virtual void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
         virtual void MaskMissingGradientColumnsToZero() = 0;
         virtual void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
 
-        // TODO: some evaluation method to be abstracted, but types don't match
+        // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
+        // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNode, LSTMNode)
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return false; }
 
     protected:
 
@@ -896,47 +875,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return result;
         }
 
-        // BUGBUG: This should only change nodes that emit minibatches, but not e.g. parameters or criterion nodes
-        //         Cannot be solved by overrides, since parameters may combine before being applied, and nodes won't know
-        // virtual, but currently only overridden by GMMLogLikelihoodNode (which allocates some internal temp memory)
-        // TODO: numCols parameter should go away; kept for legacy code
-        virtual size_t SetFunctionAndGradientMBSize(size_t numCols)
+        // update size (#columns) of m_{function,gradient}Values to match MBLayout
+        // This must be called right before EvaluateThisNode() the first time for a given minibatch.
+        // The 'numCols' parameter is legacy and will go away.
+        // Virtual, but currently only overridden by GMMLogLikelihoodNode (which allocates some internal temp memory).
+        virtual size_t UpdateFunctionAndGradientMBSize(size_t numCols)
         {
-            if (!m_pMBLayout)            // if no layout, this node contains parameters independent of MB size, don't resize
-                return numCols;         // BUGBUG: what do we return here?
-            if (numCols == SIZE_MAX)    // SIZE_MAX means determine from layout
+            if (!m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
+                return numCols;             // BUGBUG: what to return here?
+            if (numCols == SIZE_MAX)        // SIZE_MAX means determine from layout
                 numCols = m_pMBLayout->GetNumCols();
-            if (m_functionValues.GetNumRows() > 0 && numCols > 0)  // TODO: why skip this for 0 samples?
+            if (m_functionValues.GetNumRows() > 0 && numCols > 0)  // TODO: why skip this for 0 samples? BUGBUG: I think the 0 test is a left-over and no longer applicable since we can validate with 0-cols inputs.
             {
                 m_functionValues.ResizeColumns(numCols); 
                 m_gradientValues.ResizeColumns(numCols); 
             }
             return numCols;
-        }
-
-        /*implement*/void EvaluateThisNodeGivenInputs()
-        {
-            EvaluateThisNode(FrameRange());     // this is a call to the virtual function that implements the actual operation
-        }
-
-        /*implement*/void MaskMissingValuesColumnsToZero()
-        {
-            //if (IsNodeReqMultiSeqHandling())       // this means the node does it by itself; if not, we do it for the node
-                MaskMissingColumnsToZero(m_functionValues);
-        }
-
-        // TODO: use a FrameRange arg, then unify with above
-        // TODO: do we even need this extra function? Should Node know about this masking business, or is that the job of Network?
-        // TODO: rename this to make it more clear what this function does
-        /*implement*/void EvaluateThisNodeGivenInputs(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
-        {
-            EvaluateThisNode(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
-        }
-
-        /*implement*/void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
-        {
-            //if (IsNodeReqMultiSeqHandling())
-                MaskMissingColumnsToZero(m_functionValues, timeIdxInSeq);
         }
 
 #if 0   // (this function cannot be used currently since sentenceBegin is not a Matrix<ElemType> anymore; only affects LSTMNode which is no longer used)
@@ -1016,6 +970,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX) const
         {
             return MaskMissingColumnsToZero(matrixToBeMasked, m_pMBLayout, timeIdxInSeq, seqIndex);
+        }
+
+        /*implement*/void MaskMissingValuesColumnsToZero()
+        {
+            MaskMissingColumnsToZero(m_functionValues);
+        }
+        /*implement*/void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
+        {
+            MaskMissingColumnsToZero(m_functionValues, timeIdxInSeq);
+        }
+        /*implement*/void MaskMissingGradientColumnsToZero()
+        {
+            MaskMissingColumnsToZero(m_gradientValues);
+        }
+        // TODO: use a FrameRange here as well, then unify with above
+        /*implement*/void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq)
+        {
+            MaskMissingColumnsToZero(m_gradientValues, timeIdxInSeq);
         }
 
         /*
@@ -1176,13 +1148,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
-        /*implement*/void MaskMissingGradientColumnsToZero()
-        {
-            //if (IsNodeReqMultiSeqHandling())
-                MaskMissingColumnsToZero(m_gradientValues);
-        }
-
-        // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
         /*implement*/void ComputeGradientForChildren() override
         {
             if (HasLoop())
@@ -1209,13 +1174,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         (msra::strfun::utf8 (child->NodeName())).c_str());
 #endif              
             }
-        }
-        
-        // TODO: use a FrameRange here as well, then unify with above
-        /*implement*/void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq)
-        {
-            //if (IsNodeReqMultiSeqHandling())
-                MaskMissingColumnsToZero(m_gradientValues, timeIdxInSeq);
         }
 
         // TODO: use a FrameRange here as well, then unify with above
@@ -1418,7 +1376,7 @@ public: \
     using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
-    using Base::SaveToFile; using Base::SetFunctionAndGradientMBSize; using Base::SetInput; \
+    using Base::SaveToFile; using Base::UpdateFunctionAndGradientMBSize; using Base::SetInput; \
     using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildren
 
 #define UsingComputationNodeMembersBoilerplate \

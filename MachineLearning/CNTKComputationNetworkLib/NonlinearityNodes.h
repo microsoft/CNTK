@@ -815,9 +815,9 @@ private:
                 featureGradientValues.AddWithRowSliceValuesOf(temp, i*featureSize, featureSize);
         }
 
-        virtual size_t SetFunctionAndGradientMBSize(size_t numCols)
+        virtual size_t UpdateFunctionAndGradientMBSize(size_t numCols)
         {
-            numCols = Base::SetFunctionAndGradientMBSize(numCols);
+            numCols = Base::UpdateFunctionAndGradientMBSize(numCols);
             // ^^ if numCols is SIZE_MAX then we let base determine the value based on MB layout
             if (!m_pMBLayout)            // if no layout, this node contains parameters independent of MB size, don't resize
                 return numCols;         // BUGBUG: what do we return here?
