@@ -1107,13 +1107,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
                                    const FrameRange & frameRange/*select frame or entire batch*/)
         {
-            auto sequence = SIZE_MAX;   // (left-over, need to think this through)
             // if FrameRange refers to whole minibatch (map mode)
             // or if we don't even have a layout
             // then return the whole matrix
             if (!m_pMBLayout || frameRange.IsAllFrames())
             {
-                if (sequence == SIZE_MAX)
+                if (frameRange.seqIndex == SIZE_MAX)
                     return data.ColumnSlice(0, data.GetNumCols());
                 else
                     LogicError("DataSlice: sequence index only supported when accessing individual frame"); // (not needed; doable but more involved, requiring a reshape)
@@ -1123,10 +1122,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t numParallelSequences = m_pMBLayout->GetNumParallelSequences();
                 size_t startColumn = frameRange.t() * numParallelSequences;
-                if (sequence == SIZE_MAX)
+                if (frameRange.seqIndex == SIZE_MAX)
                     return data.ColumnSlice(startColumn, numParallelSequences);
                 else
-                    return data.ColumnSlice(startColumn + sequence, 1);
+                    return data.ColumnSlice(startColumn + frameRange.seqIndex, 1);
             }
         }
         enum ValueOrGradient { VALUE, GRADIENT };

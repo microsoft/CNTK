@@ -678,7 +678,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // create a FrameRange that accesses a single sequence only
         // FrameRange(t).Sequence(seq)
-        FrameRange Sequence(size_t s)
+        FrameRange Sequence(size_t s) const
         {
             FrameRange ret = *this;
             ret.seqIndex = s;
