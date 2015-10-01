@@ -628,7 +628,7 @@ public:
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
                             (*nodeIter)->UpdateFunctionAndGradientMBSize();
-                            (*nodeIter)->EvaluateThisNode(FrameRange(t, GetNumParallelSequences()));
+                            (*nodeIter)->EvaluateThisNode(FrameRange(t));
                             if (IsNodeReqMultiSeqHandling(*nodeIter))
                                 (*nodeIter)->MaskMissingValuesColumnsToZero(t);
                             (*nodeIter)->UpdateEvalTimeStamp();
@@ -642,7 +642,7 @@ public:
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
                             (*nodeIter)->UpdateFunctionAndGradientMBSize();
-                            (*nodeIter)->EvaluateThisNode(FrameRange(t, GetNumParallelSequences()));
+                            (*nodeIter)->EvaluateThisNode(FrameRange(t));
                             if (IsNodeReqMultiSeqHandling(*nodeIter))
                                 (*nodeIter)->MaskMissingValuesColumnsToZero(t);
                             (*nodeIter)->UpdateEvalTimeStamp();

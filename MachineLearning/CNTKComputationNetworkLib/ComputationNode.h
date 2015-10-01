@@ -1122,8 +1122,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 size_t numParallelSequences = m_pMBLayout->GetNumParallelSequences();
-                if (numParallelSequences != frameRange.samplesInRecurrentStep)
-                    LogicError("DataSlice: inconsistent samplesInRecurrentStep");   // TODO: this will go away when we remove this memebr from FrameRange
                 size_t startColumn = frameRange.t() * numParallelSequences;
                 if (sequence == SIZE_MAX)
                     return data.ColumnSlice(startColumn, numParallelSequences);
@@ -1156,7 +1154,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i<m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
-                if (child->NeedGradient())// && NeedGradient())
+                if (child->NeedGradient())
                 {
 #ifdef DISPLAY_DEBUG
                     fprintf (stderr, "    [%lu]: %s(%s)\n", i, 
@@ -1189,7 +1187,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         (msra::strfun::utf8 (child->OperationName())).c_str(),
                         (msra::strfun::utf8 (child->NodeName())).c_str());
 #endif              
-                    ComputeInputPartial(i, FrameRange(timeIdxInSeq, GetNumParallelSequences())); //this computes partial wrt to the child and sums the gradient value in the child
+                    ComputeInputPartial(i, FrameRange(timeIdxInSeq)); //this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
                 else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, 

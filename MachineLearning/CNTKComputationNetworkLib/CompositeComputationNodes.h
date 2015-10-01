@@ -924,12 +924,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if 1
             VerifySize(Inputs(0));
 
-            size_t nS = GetNumParallelSequences();
             size_t nT = GetNumTimeSteps();
             for (size_t t = 0; t < nT; t++)
             {
-                Matrix<ElemType> g = GradientSlice(FrameRange(t, nS));
-                Matrix<ElemType> ig = Inputs(0)->GradientSlice(FrameRange(nT - 1 - t, nS));
+                Matrix<ElemType> g = GradientSlice(FrameRange(t));
+                Matrix<ElemType> ig = Inputs(0)->GradientSlice(FrameRange(nT - 1 - t));
                 ig += g;
             }
 #else
@@ -966,12 +965,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Resize(Inputs(0));
 
 #if 1
-                size_t nS = GetNumParallelSequences();
                 size_t nT = GetNumTimeSteps();
                 for (size_t t = 0; t < nT; t++)
                 {
-                    Matrix<ElemType> v = Inputs(0)->ValueSlice(FrameRange(t, nS));
-                    ValueSlice(FrameRange(nT - 1 - t, nS)).SetValue(v);
+                    Matrix<ElemType> v = Inputs(0)->ValueSlice(FrameRange(t));
+                    ValueSlice(FrameRange(nT - 1 - t)).SetValue(v);
                 }
 #else
                 Matrix<ElemType>& functionValues = EvaluateThisNodeS(FunctionValues();
