@@ -397,6 +397,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                  const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample, 
                                                  const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
     public:
+        // TODO: why are these not static? And why are they here?
         ElemType Exp10(ElemType num); 
         ElemType Mod(ElemType x , ElemType y);
         ElemType LogAdd(ElemType x, ElemType y);
@@ -666,13 +667,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //    using a differeren #sequences. Find out what this really means.
     struct FrameRange
     {
-        const size_t timeIdxInSeq;              // start frame
+        size_t timeIdxInSeq;              // start frame; SIZE_MAX = all frames in MB
+        size_t seqIndex;                  // sequence index; SIZE_MAX = all sequences in MB (most common case)
 
         // can construct from a single size_t -> a single-frame range
-        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq){}
+        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), seqIndex(SIZE_MAX) {}
 
         // or without arguments -> entire minibatch / no frame-range
-        FrameRange() : timeIdxInSeq(SIZE_MAX) {}
+        FrameRange() : timeIdxInSeq(SIZE_MAX), seqIndex(SIZE_MAX) {}
+
+        // create a FrameRange that accesses a single sequence only
+        // FrameRange(t).Sequence(seq)
+        FrameRange Sequence(size_t s)
+        {
+            FrameRange ret = *this;
+            ret.seqIndex = s;
+            return ret;
+        }
 
         // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
         // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).
@@ -692,8 +703,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return *this;
         }
     private:
-        FrameRange(const FrameRange & other);
-        void operator=(const FrameRange &);
         void EnsureNotAllFrames() const
         {
             if (IsAllFrames())

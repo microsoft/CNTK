@@ -958,7 +958,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // BUGBUG: We must flip the layout, too.
             //         Challenge: When we flip it back, it will be yet another layout. Turns out, to handle this, ALL nodes must compare layouts now upon Evaluate(), and by comparing content!
             if (GetNumParallelSequences() != 1)
-                LogicError("%ls %ls operation not implemented for multiple parallel sequences. It does not flip the layout either.");
+                LogicError("%ls %ls operation not implemented for multiple parallel sequences. It does not flip the layout either. I.e. only works for a single utterance.");
             if (!m_hasComputed)
             {
                 // this assumes this reverse node is called once, so it can set, instead add to, the function values
