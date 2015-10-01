@@ -3,7 +3,7 @@
 #define _CRT_SECURE_NO_WARNINGS     // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
 #include "Basics.h"
-#include "BrainScriptEvaluator.h"
+#include "ScriptableObjects.h"
 
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
@@ -24,7 +24,7 @@
 #define let const auto
 #endif
 
-namespace Microsoft { namespace MSR { namespace BS {
+namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
     using namespace Microsoft::MSR;
 
@@ -166,8 +166,8 @@ namespace Microsoft { namespace MSR { namespace BS {
 #endif
             if (OpIs(InputValue))
             {
-                let isSparse = config(L"isSparse");
-                let isImage = config(L"isImage");
+                let isSparse = config[L"isSparse"];
+                let isImage  = config[L"isImage"];
                 if (!isImage)
                     node = New<InputValue<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"], isSparse);
                 else
@@ -471,9 +471,6 @@ namespace Microsoft { namespace MSR { namespace BS {
                     // inputs /*one*/, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0
                     node = New<ReshapeNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRows"], (size_t)config[L"imageWidth"], (size_t)config[L"imageHeight"], (size_t)config[L"imageChannels"]);
                     node->NeedGradient() = config[L"needGradient"];
-                    //nodePtr = m_net.Reshape(NULL, num_rows, img_width, img_height, img_channels, name);
-                    // BUGBUG: ^^ how to implement this?? We got no network here. What is this for?
-                    LogicError("ReshapeNode not working with BS because init code needs access to network which we don't haveyet--to be fixed elsewhere");
                 }
 #if 0
                 else if (cnNodeType == OperationNameOf(ConvolutionNode))
@@ -612,7 +609,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 ConfigArrayPtr inputsArray = (ConfigArrayPtr&)inputsArg;
                 let range = inputsArray->GetIndexRange();
                 for (int i = range.first; i <= range.second; i++)   // pull them. This will resolve all of them.
-                    inputs.push_back(inputsArray->At(i, inputsArg.GetLocation()));
+                    inputs.push_back(inputsArray->At(i, [](const wstring &){ LogicError("GetInputs: out of bounds index while iterating??"); }));
             }
             return inputs;
         }
@@ -677,7 +674,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 else if (!_wcsnicmp(tag.c_str(), L"eval", 4))       net->EvaluationNodes().push_back(node);     // eval*
                 else if (tag == L"output")                          net->OutputNodes().push_back(node);
                 else if (tag == L"pair")                            net->PairNodes().push_back(node);           // TODO: I made this up; the original code in SynchronousExecutionEngine did not have this
-                else if (tag == L"multiseq")                        net->NodesReqMultiSeqHandling().push_back(node);
+                else if (tag == L"multiseq")                        net->RequestNodesMultiSeqHandling().push_back(node);
                 else if (!tag.empty())
                     RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
                 // TODO: are there nodes without tag? Where do they go?
@@ -687,7 +684,7 @@ namespace Microsoft { namespace MSR { namespace BS {
 
             // traverse children: append them to the end of the work list
             let children = node->GetChildren();
-            for (auto child : children)
+            for (auto & child : children)
                 workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
         }
 

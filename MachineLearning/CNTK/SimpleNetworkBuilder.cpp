@@ -1750,7 +1750,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     input = output;
                 }
 
-                size_t idim = input->FunctionValues().GetNumRows();
+                size_t idim = input->GetNumRows();
                 assert(m_lookupTabelOrderSizes.size() == m_streamSizes.size());
 
                 e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"Embedding%d", idx), m_layerSizes[1], idim / m_lookupTabelOrderSizes[idx]);
@@ -2071,7 +2071,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     input = output;
                 }
 
-                size_t idim = input->FunctionValues().GetNumRows();
+                size_t idim = input->GetNumRows();
                 assert(m_lookupTabelOrderSizes.size() == m_streamSizes.size());
 
                 e = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"Embedding%d", idx), m_layerSizes[1], idim / m_lookupTabelOrderSizes[idx]);
@@ -2444,7 +2444,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 std::runtime_error("Output layer size must be specified when converting pretrained network, use outputLayerSize=");
 
-            size_t penultimateSize = input->FunctionValues().GetNumRows();
+            size_t penultimateSize = input->GetNumRows();
 
             wstring nameOfW = msra::strfun::wstrprintf(L"W%d", i);
             wstring nameOfB = msra::strfun::wstrprintf(L"B%d", i);

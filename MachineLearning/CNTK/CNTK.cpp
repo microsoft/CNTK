@@ -46,11 +46,11 @@
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
 #include "BestGpu.h"
-#include "BrainScriptEvaluator.h"
+#include "ScriptableObjects.h"
 #include <fileutil.h>
 
 // TODO: Get rid of this global
-Microsoft::MSR::CNTK::MPIWrapper *g_mpi;
+Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
 
 using namespace std;
 using namespace Microsoft::MSR;
@@ -74,7 +74,9 @@ void RedirectStdErr(wstring logpath)
     fprintf(stderr, "Redirecting stderr to file %S\n", logpath.c_str());
     auto f = make_shared<File>(logpath.c_str(), fileOptionsWrite | fileOptionsText);
     if (dup2(fileno(*f), 2) == -1)
+    {
         RuntimeError("unexpected failure to redirect stderr to log file");
+    }
     setvbuf(stderr, NULL, _IONBF, 16384);   // unbuffer it
     static auto fKept = f;                  // keep it around (until it gets changed)
 }
@@ -243,7 +245,9 @@ void DoCrossValidate(const ConfigParameters& config)
 
     //find best model
     if (cvErrorResults.size() == 0)
+    {
         LogicError("No model is evaluated.");
+    }
 
     std::vector<double> minErrors;
     std::vector<int> minErrIds;
@@ -332,12 +336,14 @@ namespace Microsoft {
                 msra::strfun::tolower_ascii(s);
                 if (s == L"crossentropywithsoftmax")
                     return TrainingCriterion::CrossEntropyWithSoftmax;
+				if (s == L"SequenceWithSoftmax")
+					return TrainingCriterion::SequenceWithSoftmax;
                 else if (s == L"squareerror")
                     return TrainingCriterion::SquareError;
                 else if (s == L"noisecontrastiveestimationnode")
                     return TrainingCriterion::NCECrossEntropyWithSoftmax;
                 else if (s != L"classcrossentropywithsoftmax")    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
-                    LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax)");
+                    LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax| SequenceWithSoftmax)");
                 return TrainingCriterion::ClassCrossEntropyWithSoftmax;
             }
 
@@ -348,12 +354,14 @@ namespace Microsoft {
                     return EvalCriterion::ErrorPrediction;
                 else if (s == L"crossentropywithsoftmax")
                     return EvalCriterion::CrossEntropyWithSoftmax;
+				else if (s == L"SequenceWithSoftmax")
+					return EvalCriterion::SequenceWithSoftmax;
                 else if (s == L"classcrossentropywithsoftmax")
                     return EvalCriterion::ClassCrossEntropyWithSoftmax;
                 else if (s == L"noisecontrastiveestimationnode")
                     return EvalCriterion::NCECrossEntropyWithSoftmax;
                 else if (s != L"squareerror")
-                    LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError)");
+                    LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError | SequenceWithSoftmax)");
                 return EvalCriterion::SquareError;
             }
 
@@ -396,11 +404,17 @@ void DoCreateLabelMap(const ConfigParameters& config)
         ConfigParameters labelConfig(readerConfig(labelsName));
         std::string labelMappingFile;
         if (labelConfig.ExistsCurrent("labelMappingFile"))
+        {
             labelMappingFile = labelConfig("labelMappingFile");
+        }
         else if (readerConfig.ExistsCurrent("labelMappingFile"))
+        {
             labelMappingFile = labelConfig("labelMappingFile");
+        }
         else
+        {
             RuntimeError("CreateLabelMap: No labelMappingFile defined");
+        }
 
         if (fexists(labelMappingFile))
         {
@@ -560,9 +574,14 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     //FILE *fp = fopen(inputFile.c_str(), "rt");
     ifstream fp(inputFile.c_str());
     if (!fp)
+    {
         RuntimeError("inputFile cannot be read");
+    }
+
     if (nbrCls > 0)
+    {
         cls2idx.Resize(nbrCls, 1);
+    }
     std::unordered_map<string, double> v_count;
 
     /// get line
@@ -577,12 +596,20 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         int sposition = str.find("</s> ");
         int eposition = str.find(" </s>");
         if (sposition == str.npos)
+        {
             str = "</s> " + str;
+        }
+
         if (eposition == str.npos)
+        {
             str = str + " </s>";
+        }
+
         vstr = msra::strfun::split(str, "\t ");
         for (int i = 1; i < vstr.size(); i++)
+        {
             v_count[vstr[i]]++;
+        }
     }
     fp.close();
 
@@ -602,8 +629,12 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     size_t wordCountLessCutoff = v_count.size();
     if (cutoff > 0)
         for (std::unordered_map<std::string, double>::iterator iter = v_count.begin(); iter != v_count.end(); iter++)
+        {
             if (iter->second <= cutoff)
+            {
                 wordCountLessCutoff--;
+            }
+        }
     if (wordCountLessCutoff <= 0)
         RuntimeError("no word remained after cutoff");
 
@@ -650,9 +681,14 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
     if (nbrCls > 0)
     {
         for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
+        {
             total += iter->second;
+        }
+
         for (std::unordered_map<std::string, double>::iterator iter = removed.begin(); iter != removed.end(); iter++)
+        {
             dd += sqrt(iter->second / total);
+        }
     }
 
     double df = 0;
@@ -667,9 +703,14 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         {
             df += sqrt(freq / total) / dd;
             if (df > 1)
+            {
                 df = 1;
+            }
+
             if (df > 1.0 * (class_id + 1) / nbrCls && class_id < nbrCls)
+            {
                 class_id++;
+            }
         }
 
         size_t wid = m_words.size();
@@ -679,7 +720,9 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 
         m_count[wid] = freq;
         if (nbrCls > 0)
+        {
             m_class[wid] = class_id;
+        }
         p.pop();
     }
 
@@ -697,6 +740,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         }
         ofvocab << "     " << i << "\t     " << m_count[i] << "\t" << m_words[i] << "\t" << clsIdx << std::endl;
     }
+
     ofvocab.close();
     if (nbrCls > 0)
     {
@@ -712,9 +756,14 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
         msra::files::make_intermediate_dirs(s2ws(outputCls2Index));
         ofp.open(outputCls2Index.c_str());
         if (!ofp)
+        {
             RuntimeError("cannot write to %s", outputCls2Index.c_str());
+        }
+
         for (size_t r = 0; r < cls2idx.GetNumRows(); r++)
+        {
             ofp << (int)cls2idx(r, 0) << endl;
+        }
         ofp.close();
     }
 }
@@ -837,7 +886,9 @@ void DoEncoderDecoder(const ConfigParameters& config)
         encoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
+    {
         LogicError("Need encoder network");
+    }
 
     if (config.Exists("DecoderNetworkBuilder"))
     {
@@ -845,7 +896,9 @@ void DoEncoderDecoder(const ConfigParameters& config)
         decoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
+    {
         LogicError("Need decoder networks");
+    }
 
     MultiNetworksSGD<ElemType> sgd(configSGD);
 
@@ -916,7 +969,9 @@ void DoBidirecionEncoderDecoder(const ConfigParameters& config)
         forwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
+    {
         LogicError("Need decoder networks");
+    }
 
     if (config.Exists("BackwardDecoderNetworkBuilder"))
     {
@@ -924,7 +979,9 @@ void DoBidirecionEncoderDecoder(const ConfigParameters& config)
         backwardDecoderNetBuilder = (IComputationNetBuilder<ElemType>*)new SimpleNetworkBuilder<ElemType>(configSNB);
     }
     else
+    {
         LogicError("Need decoder networks");
+    }
 
     MultiNetworksSGD<ElemType> sgd(configSGD);
 
@@ -951,7 +1008,7 @@ void DoBidirecionEncoderDecoder(const ConfigParameters& config)
 }
 
 /**
-Oiginally, this is for testing models trained using the sequence to sequence translation method below
+Originally, this is for testing models trained using the sequence to sequence translation method below
 http://arxiv.org/pdf/1409.3215.pdf
 Later on, it is extended to be more general to include a sequence of network operations. 
 */
@@ -1023,9 +1080,9 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     eval.InitTrainEncoderDecoderWithHiddenStates(config);
 
     eval.EncodingEvaluateDecodingBeamSearch(nets, readers, 
-        testDataWriter, evalNodeNamesVector,
-        outputNodeNamesVector,
-        mbSize[0], beamWidth, epochSize);
+                                            testDataWriter, evalNodeNamesVector,
+                                            outputNodeNamesVector,
+                                            mbSize[0], beamWidth, epochSize);
 }
 
 /**
@@ -1146,7 +1203,9 @@ void DoEdit(const ConfigParameters& config)
     wstring ndlMacros = config("ndlMacros", "");
     NDLScript<ElemType> ndlScript;
     if (!ndlMacros.empty())
+    {
         ndlScript.LoadConfigFile(ndlMacros);
+    }
     MELScript<ElemType> melScript;
     melScript.LoadConfigFileAndResolveVariables(editPath, config);
 }
@@ -1226,7 +1285,9 @@ void DoCommand(const ConfigParameters& config)
     numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
 
     if (numCPUThreads>0)
+    {
         std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
+    }
 
     for (int i = 0; i < command.size(); i++)
     {
@@ -1238,45 +1299,89 @@ void DoCommand(const ConfigParameters& config)
         for (int j = 0; j < action.size(); j++)
         {
             if (action[j] == "train" || action[j] == "trainRNN")
+            {
+                wstring modelPath = commandParams("modelPath");
+                std::wcout << "CNTKModelPath: " << modelPath << endl;
+                std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
                 DoTrain<ElemType>(commandParams);
+                std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
+            }
             else if (action[j] == "trainSequence" || action[j] == "trainSequenceRNN")
+            {
                 DoSequenceTrain<ElemType>(commandParams);
+            }
             else if (action[j] == "adapt")
+            {
                 DoAdapt<ElemType>(commandParams);
+            }
             else if (action[j] == "test" || action[j] == "eval")
+            {
                 DoEval<ElemType>(commandParams);
+            }
             else if (action[j] == "testunroll")
+            {
                 DoEvalUnroll<ElemType>(commandParams);
+            }
             else if (action[j] == "edit")
+            {
                 DoEdit<ElemType>(commandParams);
+            }
             else if (action[j] == "cv")
+            {
                 DoCrossValidate<ElemType>(commandParams);
+            }
             else if (action[j] == "write")
+            {
                 DoWriteOutput<ElemType>(commandParams);
+            }
             else if (action[j] == "devtest")
+            {
                 TestCn<ElemType>(config); // for "devtest" action pass the root config instead
+            }
             else if (action[j] == "dumpnode")
+            {
                 DumpNodeInfo<ElemType>(commandParams);
+            }
             else if (action[j] == "convertdbn")
+            {
                 DoConvertFromDbn<ElemType>(commandParams);
+            }
             else if (action[j] == "createLabelMap")
+            {
                 DoCreateLabelMap<ElemType>(commandParams);
+            }
             else if (action[j] == "writeWordAndClass")
+            {
                 DoWriteWordAndClassInfo<ElemType>(commandParams);
+            }
             else if (action[j] == "plot")
+            {
                 DoTopologyPlot<ElemType>(commandParams);
+            }
             else if (action[j] == "SVD")
+            {
                 DoParameterSVD<ElemType>(commandParams);
+            }
             else if (action[j] == "trainEncoderDecoder")
+            {
                 DoEncoderDecoder<ElemType>(commandParams);
+            }
             else if (action[j] == "testEncoderDecoder")
+            {
                 DoEvalEncodingBeamSearchDecoding<ElemType>(commandParams);
+            }
             else if (action[j] == "trainBidirectionEncoderDecoder")
+            {
                 DoBidirecionEncoderDecoder<ElemType>(commandParams);
+            }
             else if (action[j] == "beamSearch")
+            {
                 DoBeamSearchDecoding<ElemType>(commandParams);
+            }
             else
+            {
                 RuntimeError("unknown action: %s  in command set: %s", action[j].c_str(), command[i].c_str());
+            }
 
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
@@ -1339,6 +1444,7 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
 
         // get the command param set they want
         wstring logpath = config("stderr", L"");
+
         //  [1/26/2015 erw, add done file so that it can be used on HPC]
         wstring DoneFile = config("DoneFile", L"");
         ConfigArray command = config("command", "train");
@@ -1374,49 +1480,63 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
 #endif
         std::string timestamp = TimeDateStamp();
 
-            //dump config info
-            fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
-            fprintf(stderr, "command line options: \n");
-            for (int i = 1; i < argc; i++)
-                fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
+        //dump config info
+        fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
+        fprintf(stderr, "command line options: \n");
+        for (int i = 1; i < argc; i++)
+        {
+            fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
+        }
 
-            // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
-            // and prints it.
-            fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
-            fprintf(stderr, "%s\n", rawConfigString.c_str());
-            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
+        // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
+        // and prints it.
+        fprintf(stderr, "\n\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
+        fprintf(stderr, "%s\n", rawConfigString.c_str());
+        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
 
-            // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
-            // All of these assignments will appear, even though only the last assignment matters.
-            fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-            fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
-            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+        // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overriden at command line),
+        // All of these assignments will appear, even though only the last assignment matters.
+        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+        fprintf(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
+        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
-            // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
-            // value it is set to will appear).
-            fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
-            config.dumpWithResolvedVariables();
-            fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+        // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
+        // value it is set to will appear).
+        fprintf(stderr, "\n>>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+        config.dumpWithResolvedVariables();
+        fprintf(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
 
-            fprintf(stderr, "command: ");
-            for (int i = 0; i < command.size(); i++)
-                fprintf(stderr, "%s ", command[i].c_str());
+        fprintf(stderr, "command: ");
+        for (int i = 0; i < command.size(); i++)
+        {
+            fprintf(stderr, "%s ", command[i].c_str());
+        }
 
         //run commands
         std::string type = config("precision", "float");
         // accept old precision key for backward compatibility
         if (config.Exists("type"))
+        {
             type = config("type", "float");
+        }
+
         fprintf(stderr, "\nprecision = %s\n", type.c_str());
         if (type == "float")
+        {
             DoCommand<float>(config);
+        }
         else if (type == "double")
+        {
             DoCommand<double>(config);
+        }
         else
+        {
             RuntimeError("invalid precision specified: %s", type.c_str());
+        }
 
         // still here , write a DoneFile if necessary 
-        if (!DoneFile.empty()){
+        if (!DoneFile.empty())
+        {
             FILE* fp = fopenOrDie(DoneFile.c_str(), L"w");
             fprintf(fp, "successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
             fcloseOrDie(fp);
@@ -1425,7 +1545,7 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
 
         delete g_mpi;
     }
-    catch (const BS::ConfigError &err)
+    catch (const ScriptableObjects::ScriptingError &err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
         err.PrintError();
@@ -1459,7 +1579,7 @@ int wmain(int argc, wchar_t* argv[])    // wmain wrapper that reports Win32 exce
     }
     __except (1/*EXCEPTION_EXECUTE_HANDLER, see excpt.h--not using constant to avoid Windows header in here*/)
     {
-        fprintf (stderr, "dbn: Win32 exception caught\n");
+        fprintf (stderr, "CNTK: Win32 exception caught (such an access violation or a stack overflow)\n");  // TODO: separate out these two into a separate message
         fflush (stderr);
         exit (EXIT_FAILURE);
     }

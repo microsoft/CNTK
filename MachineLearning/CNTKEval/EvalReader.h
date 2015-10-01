@@ -65,7 +65,7 @@ public:
         {
             if (m_oldSig==newSig)
             {
-                m_switchFrame[0] = m_mbSize+8888;
+                m_switchFrame[0] = m_mbSize+8888;   // TODO: WTF??
             }
             else
             {
@@ -161,9 +161,9 @@ public:
         return true;
     }
 
-    size_t NumberSlicesInEachRecurrentIter() {return 1;}
+    size_t GetNumParallelSequences() { return 1; }
 
-    void SetNbrSlicesEachRecurrentIter(const size_t ) {}
+    void SetNumParallelSequences(const size_t ) {}
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd)
     {
         sentenceEnd.resize(m_switchFrame.size());
@@ -172,23 +172,16 @@ public:
             sentenceEnd[i] = m_switchFrame[i];
         }
     }
-    void SetSentenceSegBatch(Matrix<float> & sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
     {
         assert(m_switchFrame.size() == 1);        
-        sentenceBegin.Resize(1, m_mbSize);
-        minibatchPackingFlag.resize(m_mbSize);
-        sentenceBegin.SetValue((ElemType)SEQUENCE_MIDDLE);
-        std::fill(minibatchPackingFlag.begin(), minibatchPackingFlag.end(), MinibatchPackingFlag::None); 
+        pMBLayout->Init(1, m_mbSize, true/*sequential*/);   // TODO: not sure if this is always sequential
 
         if (m_switchFrame[0] < m_mbSize) /* there is a switch frame within the minibatch*/
         {
-            sentenceBegin.SetValue(0, m_switchFrame[0], (ElemType)SEQUENCE_START); 
-            minibatchPackingFlag[m_switchFrame[0]] = MinibatchPackingFlag::SequenceStart; 
+            pMBLayout->Set(0, m_switchFrame[0], MinibatchPackingFlags::SequenceStart);
             if (m_switchFrame[0] > 0)
-            {
-                sentenceBegin.SetValue(0, m_switchFrame[0] - 1, (ElemType)SEQUENCE_END); 
-                minibatchPackingFlag[m_switchFrame[0] - 1] = MinibatchPackingFlag::SequenceEnd;
-            }
+                pMBLayout->SetWithoutOr(0, m_switchFrame[0] - 1, MinibatchPackingFlags::SequenceEnd);   // TODO: can't we use Set()?
         }
     }
 
@@ -196,9 +189,7 @@ public:
     {
         m_switchFrame.resize(boundaryInfo.size());
         for (size_t i = 0; i < m_switchFrame.size(); i ++)
-        {
             m_switchFrame[i] = boundaryInfo[i];
-        }
     }
 
     void SetRandomSeed(int) { NOT_IMPLEMENTED;  }
@@ -233,6 +224,23 @@ public:
     {
         return m_currentRecord < m_recordCount;
     }
+
+    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & /*latticeinput*/, vector<size_t> & /*uids*/, 
+        vector<size_t> & /*boundaries*/, vector<size_t> &/*extrauttmap*/)
+    {
+        return true;
+    }
+
+    virtual bool GetHmmData(msra::asr::simplesenonehmm * /*hmm*/)
+    {
+        return true;
+    }
+
+    virtual void SetValidFrameInBatch(vector<size_t> &/*validFrame*/)
+    {
+        return;
+    }
+
 };
 
 }}}

@@ -49,7 +49,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\CNTKComputationNetworkLib;..\..\Math\Math;..\..\Common\Include;..\..\BrainScript;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>..\SequenceTraining;..\CNTKComputationNetworkLib;..\..\Math\Math;..\..\Common\Include;..\..\BrainScript;..\..\DataReader\HTKMLFReader;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
     <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
@@ -57,7 +57,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\CNTKComputationNetworkLib;..\..\Math\Math;..\..\Common\Include;..\..\BrainScript;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>..\SequenceTraining;..\CNTKComputationNetworkLib;..\..\Math\Math;..\..\Common\Include;..\..\BrainScript;..\..\DataReader\HTKMLFReader;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
     <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
@@ -163,6 +163,7 @@
     <ClInclude Include="..\..\Common\Include\hostname.h" />
     <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h" />
     <ClInclude Include="..\..\Common\Include\Platform.h" />
+    <ClInclude Include="..\..\Common\Include\ScriptableObjects.h" />
     <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
     <ClInclude Include="..\..\Math\Math\CUDAPageLockedMemAllocator.h" />
     <ClInclude Include="..\..\Math\Math\Matrix.h" />
@@ -174,6 +175,7 @@
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNetwork.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ComputationNode.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\ConvolutionalNodes.h" />
+    <ClInclude Include="DataReaderHelpers.h" />
     <ClInclude Include="DistGradHeader.h" />
     <ClInclude Include="IComputationNetBuilder.h" />
     <ClInclude Include="IDistGradAggregator.h" />
@@ -188,7 +190,6 @@
     <ClInclude Include="SimpleEvaluator.h" />
     <ClInclude Include="SimpleOutputWriter.h" />
     <ClInclude Include="SGD.h" />
-    <ClInclude Include="SimpleNetworkBuilder.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\TrainingCriterionNodes.h" />

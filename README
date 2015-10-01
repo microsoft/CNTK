@@ -1,16 +1,11 @@
-== Dev branch           ==
-This branch contains some features that are not yet checked into main branch. To enlist this branch, run 
-
-git checkout origin/Dev 
-
-== To-do                ==
+== To-do ==
 Add descriptions to LSTMnode
 Add descriptions to 0/1 mask segmentation in feature reader, delay node, and crossentropywithsoftmax node
 Change criterion node to use the 0/1 mask, following example in crossentropywithsoftmax node
 Add description of encoder-decoder simple network builder
 Add description of time-reverse node, simple network builder and NDL builder for bi-directional models
 
-== Author of the README ==
+== Authors of the README ==
    	Kaisheng Yao
         Microsoft Research
         email: kaisheny@microsoft.com
@@ -19,23 +14,29 @@ Add description of time-reverse node, simple network builder and NDL builder for
 	Shanghai Jiao Tong University
 	email: acmgokun@gmail.com
 
-    Yu Zhang, Leo Liu
+    Yu Zhang, Leo Liu, Scott Cyphers
     CSAIL, Massachusetts Institute of Technology
     email: yzhang87@csail.mit.edu
     email: leoliu_cu@sbcglobal.net
+    email: cyphers@mit.edu
 
     Guoguo Chen
     CLSP, Johns Hopkins University
     email: guoguo@jhu.edu
 
-== Preeliminaries ==
-To build the cpu version, you have to install intel MKL blas library or ACML library first. Note that ACML is free, where MKL may not be.
+== Preeliminaries == 
+
+To build the cpu version, you have to install intel MKL blas library
+or ACML library first. Note that ACML is free, whereas MKL may not be.
 
 for MKL:
 1. Download from https://software.intel.com/en-us/intel-mkl
 
 for ACML:
-1. Download from http://developer.amd.com/tools-and-sdks/cpu-development/amd-core-math-library-acml/
+1. Download from
+http://developer.amd.com/tools-and-sdks/archive/amd-core-math-library-acml/acml-downloads-resources/
+We have seen some problems with some versions of the library on Intel
+processors, but have had success with acml-5-3-1-ifort-64bit.tgz
 
 for Kaldi:
 1. In kaldi-trunk/tools/Makefile, uncomment # OPENFST_VERSION = 1.4.1, and
@@ -46,22 +47,31 @@ for Kaldi:
 To build the gpu version, you have to install NIVIDIA CUDA first
 
 == Build Preparation ==
-Let $CNTK be the CNTK directory.
->mkdir build
->$CNTK/configure -h
+
+You can do an out of source build in any directory, as well as an in
+source build.  Let $CNTK be the CNTK directory.  For an out of source
+build in the directory "build" type
+
+  >mkdir build
+  >cd build
+  >$CNTK/configure -h
+
+(For an in source build, just run configure in the $CNTK directory).
 
 You will see various options for configure, as well as their default
 values.  CNTK needs a CPU math directory, either acml or mkl.  If you
 do not specify one and both are available, acml will be used.  For GPU
 use, a cuda and gdk directory are also required.  Similary, to build
 the kaldi plugin a kaldi directory is required.  You may also specify
-whether you want a debug or release build.  Rerun configure with the
-desired options.
+whether you want a debug or release build, as well as add additional
+path roots to use in searching for libraries.
 
->$CNTK/configure ...
+Rerun configure with the desired options:
 
-This will create a Config.make and a Makefile (if you are in the $CNTK
-directory, a Makefile will not be created).  The Config.make file
+  >$CNTK/configure ...
+
+This will create a Config.make and a Makefile (if you are doing an in
+source build, a Makefile will not be created).  The Config.make file
 records the configuration parameters and the Makefile reinvokes the
 $CNTK/Makefile, passing it the build directory where it can find the
 Config.make.
@@ -72,7 +82,8 @@ After make completes, you will have the following directories:
   bin contains the cntk program
   lib contains libraries and plugins
 
-  The bin and lib directories can safely be moved as long as they remain siblings.
+  The bin and lib directories can safely be moved as long as they
+  remain siblings.
 
 To clean
 
@@ -88,7 +99,7 @@ All executables are in bin directory:
 == Kaldi Reader ==
 This is a HTKMLF reader and kaldi writer (for decode)
 
-To build, set KALDI_PATH in your Config.make
+To build, set --with-kaldi when you configure.
 
 The feature section is like:
 
@@ -109,7 +120,7 @@ writer=[
 == Kaldi2 Reader ==
 This is a kaldi reader and kaldi writer (for decode)
 
-To build, set KALDI_PATH in your Config.make
+To build, set --with-kaldi in your Config.make
 
 The features section is different:
 

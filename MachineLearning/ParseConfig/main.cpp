@@ -52,10 +52,8 @@ ComputationNetwork* net = startEpoch < 0 ? netBuilder->BuildNetworkFromDescripti
 //  - there is also SparseLearnableParameter, but that's a different ComputationNode class type
 #endif
 
-
-namespace Microsoft { namespace MSR { namespace BS {
-    // this only makes it build--this test wrapper is dead by now
-    const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring &) { return nullptr;  }
+namespace Microsoft { namespace MSR { namespace ScriptableObjects {
+    const ConfigurableRuntimeType * FindExternalRuntimeTypeInfo(const wstring &) { return nullptr; }
 }}}
 
 int wmain(int /*argc*/, wchar_t* /*argv*/[])

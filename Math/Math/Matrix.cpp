@@ -716,6 +716,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
     }
 
+    // BUGBUG: Some code checks before calling here whether one of the dimensions is 0.
+    //         This function must handle that case properly, that is, preserving the non-zero dimension.
     template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
     {            
@@ -1005,8 +1007,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const ElemType v)
     {
-        if (IsEmpty())
-            throw std::logic_error("SetValue: Matrix is empty.");
+        if (IsEmpty())  // if empty then we are done
+            return;
+            //throw std::logic_error("SetValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1020,8 +1023,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const DeviceBoundNumber<ElemType>& db_number)
     {
-        if (IsEmpty())
-            throw std::logic_error("SetValue: Matrix is empty.");        
+        if (IsEmpty())  // if empty then we are done
+            return;
+            //throw std::logic_error("SetValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1055,7 +1059,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->SetColumn(val,colInd), 
-            NOT_IMPLEMENTED, 
+			NOT_IMPLEMENTED,
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED);
     }
@@ -1068,7 +1072,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             this->m_CPUMatrix->SetColumn(*colMat.m_CPUMatrix,colInd), 
-            NOT_IMPLEMENTED, 
+			this->m_GPUMatrix->SetColumn(*colMat.m_GPUMatrix, colInd),            
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED);
     }
@@ -1295,6 +1299,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void Matrix<ElemType>::FSAdagrad(size_t mbSize, Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum)
+    {
+        // TODO: The values of 'adagradT' and 'targetadagradavdenom' are currently hardcoded constants taken from DBN (empirically determined). 
+        // These should be made configurable if needed
+        const size_t adagradT = 2 * 3600 * 100;
+        const ElemType targetadagradavdenom = 0.0025; // 1/400 magic constant
+        const ElemType adagradkeepweight = static_cast<ElemType>(exp(-1.0 * mbSize / adagradT));
+
+        static ElemType aggadagradsqrframes = 0;
+        aggadagradsqrframes = adagradkeepweight * aggadagradsqrframes + (1.0f - adagradkeepweight) * mbSize;
+        const ElemType targetadagradavdenom_x_sqrtadagradsqrframes = static_cast<ElemType>(targetadagradavdenom * sqrt(aggadagradsqrframes));
+
+        DISPATCH_MATRIX_ON_FLAG(&gradients,
+            &gradients,
+            m_CPUMatrix->FSAdagrad(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, learnRatePerSample, momentum, adagradkeepweight, targetadagradavdenom_x_sqrtadagradsqrframes); SetDataLocation(CPU),
+            m_GPUMatrix->FSAdagrad(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, learnRatePerSample, momentum, adagradkeepweight, targetadagradavdenom_x_sqrtadagradsqrframes); SetDataLocation(GPU),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
+
+    template<class ElemType>
     ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
         ElemType RMS_GAMMA,
         ElemType RMS_WGT_INC,
@@ -1337,6 +1363,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
     {
+        // TODO: should this function test whether the size is changing, and skip if it isn't? We have at least one explicit test for this code calling this (recurrent node)
         DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
             this,
             m_CPUMatrix->Resize(numRows, numCols, growOnly),
@@ -4795,7 +4822,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
     }
 
+	template<class ElemType>
+	Matrix<ElemType>& Matrix<ElemType>::DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold)
+	{
+		DecideAndMoveToRightDevice(*this, label, gamma);
 
+		if (label.GetNumCols() != gamma.GetNumCols() || label.GetNumRows() != gamma.GetNumRows())
+			throw std::logic_error("DropFrame: label matrix is not in the same size as gamm matrix.");
+		this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
+
+		DISPATCH_MATRIX_ON_FLAG(this,
+			this,
+			this->m_CPUMatrix->DropFrame(*label.m_CPUMatrix, *gamma.m_CPUMatrix, threshhold),
+			this->m_GPUMatrix->DropFrame(*label.m_GPUMatrix, *gamma.m_GPUMatrix, threshhold),
+			NOT_IMPLEMENTED,
+			NOT_IMPLEMENTED
+			);
+
+		return *this;
+	}
+
+	/// <summary> c = alpha * (a-b)</summary>
+	/// if a, b, c  must have same dim 
+	/// <param name="alpha">Scalar</param>
+	/// <param name="a">Input matrix</param>
+	/// <param name="b">Input matrix</param>
+	/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+	template<class ElemType>
+	Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label,
+		const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha)
+	{
+		DecideAndMoveToRightDevice(label, dnnoutput, gamma);
+
+		if (!(label.GetMatrixType() == gamma.GetMatrixType()))
+			NOT_IMPLEMENTED;
+
+		this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
+
+
+		DISPATCH_MATRIX_ON_FLAG(this,
+			this,
+			this->m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
+			this->m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
+			NOT_IMPLEMENTED,
+			NOT_IMPLEMENTED
+			);
+		return *this;
+	}
 #pragma endregion Static BLAS Functions
 
     template class Matrix<float>; 

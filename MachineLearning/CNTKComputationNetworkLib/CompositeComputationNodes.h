@@ -20,6 +20,10 @@
 //composite nodes can save memory, computation, or both
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // -----------------------------------------------------------------------
+    // ParallelNode (input0, input1)
+    // -----------------------------------------------------------------------
+
     /**
     parallel node to join two streams into one 
     
@@ -29,29 +33,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     output   : [[nDim0 + nDim1] X T]
     */
     template<class ElemType>
-    class ParallelNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class ParallelNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name)
-        { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Parallel"; }
+    public:
+        ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 1)
                 InvalidArgument("Parallel operation only takes two input.");
             ComputationNodePtr child = Inputs(inputIndex);
-            size_t startidx = (inputIndex == 0) ? 0 : Inputs(0)->FunctionValues().GetNumRows();
-            size_t nrows = child->FunctionValues().GetNumRows();
+            size_t startidx = (inputIndex == 0) ? 0 : Inputs(0)->GetNumRows();
+            size_t nrows = child->GetNumRows();
 
-            if (child->GradientValues().GetNumRows() != child->FunctionValues().GetNumRows() || child->GradientValues().GetNumCols() != FunctionValues().GetNumCols())
+            if (child->GradientValues().GetNumRows() != child->GetNumRows() || child->GradientValues().GetNumCols() != GetNumCols())
             {
-                child->GradientValues().Resize(child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                child->GradientValues().Resize(child->GetNumRows(), child->GetNumCols());
                 child->GradientValues().SetValue(0);
             }
 
@@ -61,17 +62,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(tmpMat, child->GradientValues());
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues)
         {
             inputGradientValues += gradientValues;
         }
 
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
         {
             size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
             size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
@@ -89,37 +90,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// input(0) : [nDim1 X T]
         /// input(1) : [nDim2 X T]
         /// output   : [[nDim1 + nDim2] X T]
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 2)
-                LogicError("Parallel operation requires two inputs.");
+            Base::Validate(isFinalValidationPass);
 
             size_t rows1, cols1;
-            rows1 = Inputs(1)->FunctionValues().GetNumRows();
-            cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            rows1 = Inputs(1)->GetNumRows();
+            cols1 = Inputs(1)->GetNumCols();
 
             size_t rows0, cols0;
-            rows0 = Inputs(0)->FunctionValues().GetNumRows();
-            cols0 = Inputs(0)->FunctionValues().GetNumCols();
+            rows0 = Inputs(0)->GetNumRows();
+            cols0 = Inputs(0)->GetNumCols();
 
-            if (cols0 != cols1)
+            if (isFinalValidationPass && cols0 != cols1)
                 LogicError("ParallelNode: column dimension mismatched!");
 
             size_t rows = rows0 + rows1;
             size_t cols = cols0;
-            FunctionValues().Resize(rows, cols);
+            Resize(rows, cols);
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInput(0);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr c1, const ComputationNodePtr c2)
-        {
-            m_children.resize(2);
-            m_children[0] = c1;
-            m_children[1] = c2;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr c1, const ComputationNodePtr c2)
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = c1;
+        //    m_children[1] = c2;
+        //}
 
     public:
         virtual bool UnitTest() {
@@ -133,20 +132,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             f1 = Inputs(1)->FunctionValues();
             func = FunctionValues();
 
-            Inputs(0)->FunctionValues().Resize(nInput0, nT);
+            Inputs(0)->Resize(nInput0, nT);
             Inputs(0)->FunctionValues().SetValue(0);
             Inputs(0)->FunctionValues()(0, 0) = 1;
             Inputs(0)->FunctionValues()(0, 1) = 2;
             Inputs(0)->FunctionValues()(0, 2) = 3;
 
-            Inputs(1)->FunctionValues().Resize(nInput1, nT);
+            Inputs(1)->Resize(nInput1, nT);
             Inputs(1)->FunctionValues().SetValue(0);
             Inputs(1)->FunctionValues()(0, 0) = 4;
             Inputs(1)->FunctionValues()(0, 1) = 5;
             Inputs(1)->FunctionValues()(0, 2) = 6;
-            FunctionValues().Resize(nInput0 + nInput1, nT);
+            Resize(nInput0 + nInput1, nT);
 
-            EvaluateThisNode();
+            EvaluateThisNode(FrameRange());
 
             /// check with expected values
             if (!ISCLOSE(FunctionValues()(0, 0), 1, EPSILON) ||
@@ -194,14 +193,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ParallelNode<float>;
     template class ParallelNode<double>;
 
+    // -----------------------------------------------------------------------
+    // PreComputedNode
+    // -----------------------------------------------------------------------
+
     //this is a noninstantiable virtual class, all nodes require precomputation should derive from it
     template<class ElemType>
     class PreComputedNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
-        PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) : ComputationNodeNonLooping<ElemType>(deviceId, name)
+        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name)
         {
             // further initializations
             m_hasComputed = false;
@@ -213,26 +216,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual bool RequiresPreCompute() const { return true;}
 
-        virtual void SaveToFile(File& fstream)  const
+        virtual void SaveToFile(File& fstream)  const override
         {
             Base::SaveToFile(fstream);
             fstream << m_hasComputed;
             fstream << FunctionValues();
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_hasComputed;
             fstream >> FunctionValues();
         }
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
-            sprintf(str, "[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            sprintf(str, "[%lu,%lu]  ", GetNumRows(), GetNumCols());
             fstream << string(str);
             sprintf(str, "HasComputed=%ls", HasComputed()? L"true" : L"false");
             fstream << string(str);
@@ -254,32 +257,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_hasComputed;
     };
 
-    #define UsingPreComputedNodeMembers UsingComputationNodeMembers; using Base::m_hasComputed
+    #define UsingPreComputedNodeMembers UsingComputationNodeMembersBoilerplate; using Base::m_hasComputed
 
-    template class PreComputedNode<float>;
-    template class PreComputedNode<double>;
+    //template class PreComputedNode<float>;
+    //template class PreComputedNode<double>;
+
+    // -----------------------------------------------------------------------
+    // MeanNode (features)
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class MeanNode : public PreComputedNode<ElemType>
+    class MeanNode : public PreComputedNode<ElemType>, public NumInputs<1>
     {
         typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
+        static const std::wstring TypeName() { return L"Mean"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MeanNode(DEVICEID_TYPE deviceId, const wstring & name) :
             PreComputedNode<ElemType>(deviceId, name),
             m_numSamples(0)
         { }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             m_numSamples = 0;   // TODO: intended? Not loaded from file?
         }
 
-        virtual bool HasComputed() const        // why are these not in the base class?
-        {
-            return m_hasComputed;
-        }
+        virtual bool HasComputed() const { return m_hasComputed; }        // why are these not in the base class?
 
         virtual void MarkComputed(const bool hasComputed)
         {
@@ -290,15 +294,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual bool RequiresPreCompute() const { return true; }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Mean"; }
-
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)
         {
             LogicError("Mean operation should not be involved in the gradient calculation.");
         }
 
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             if (!m_hasComputed)
             {
@@ -322,25 +323,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 1)
-                LogicError("Mean operation should have one input.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("Mean operation: the input node has 0 element.");
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("Mean operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
+            Resize(Inputs(0)->GetNumRows(), 1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -358,28 +357,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class MeanNode<float>;
     template class MeanNode<double>;
 
+    // -----------------------------------------------------------------------
+    // InvStdDevNode (features)
+    // TODO: share stuff with MeanNode
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class InvStdDevNode : public PreComputedNode<ElemType>
+    class InvStdDevNode : public PreComputedNode<ElemType>, public NumInputs<1>
     {
         typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
+        static const std::wstring TypeName() { return L"InvStdDev"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         InvStdDevNode(DEVICEID_TYPE deviceId, const wstring & name) :
             PreComputedNode<ElemType>(deviceId, name),
             m_mean(deviceId), m_var(deviceId), m_temp(deviceId),
             m_numSamples(0)
         { }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             m_numSamples = 0;   // TODO: intended? not loading from file?
         }
 
-        virtual bool HasComputed() const
-        {
-            return m_hasComputed;
-        }
+        virtual bool HasComputed() const { return m_hasComputed; }
 
         virtual void MarkComputed(const bool hasComputed)
         {
@@ -411,15 +412,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual bool RequiresPreCompute() const { return true; }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"InvStdDev"; }
-
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)
         {
             LogicError("InvStdDev operation should not be involved in the gradient calculation.");
         }
 
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             if (!m_hasComputed)
             {
@@ -452,29 +450,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 1)
-                LogicError("InvStdDev operation should have one input.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("InvStdDev operation: the input node has 0 element.");
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("InvStdDev operation: the input node has 0 element.");
-
-            size_t inputDim = Inputs(0)->FunctionValues().GetNumRows();
+            size_t inputDim = Inputs(0)->GetNumRows();
             m_mean.Resize(inputDim, 1);
             m_var.Resize(inputDim, 1);
 
-            FunctionValues().Resize(inputDim, 1);
+            Resize(inputDim, 1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -507,18 +503,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class InvStdDevNode<float>;
     template class InvStdDevNode<double>;
 
-    template<class ElemType>
-    class PerDimMeanVarNormalizationNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        { }
+    // -----------------------------------------------------------------------
+    // PerDimMeanVarNormalizationNode (feature, mean, invStdDev)
+    // -----------------------------------------------------------------------
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
+    template<class ElemType>
+    class PerDimMeanVarNormalizationNode : public ComputationNode<ElemType>, public NumInputs<3>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"PerDimMeanVarNormalization"; }
+    public:
+        PerDimMeanVarNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
         {
@@ -531,24 +528,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //(feature-mean).*InvStdDev
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(),
                               Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep,
-                                                                                        m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep,
-                                                                             m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
                                              const Matrix<ElemType>& input1, const Matrix<ElemType>& input2)
         {
     #if DUMPOUTPUT
@@ -572,12 +568,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 3)
-                LogicError("PerDimMeanVarNormalizationNode criterion requires three inputs.");
+            Base::Validate(isFinalValidationPass);
 
             if (Inputs(0)->RequiresPreCompute())
             {
@@ -599,79 +592,70 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = (Inputs(1)->FunctionValues().GetNumRows() == 0) ? Inputs(0)->FunctionValues().GetNumRows() :
-                                                                                Inputs(1)->FunctionValues().GetNumRows();
-                Inputs(1)->FunctionValues().Resize(rows, 1);
+                size_t rows = (Inputs(1)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() : Inputs(1)->GetNumRows();
+                Inputs(1)->Resize(rows, 1);
             }
 
             if (Inputs(2)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = (Inputs(2)->FunctionValues().GetNumRows() == 0) ? Inputs(0)->FunctionValues().GetNumRows() :
-                                                                                Inputs(2)->FunctionValues().GetNumRows();
-                Inputs(2)->FunctionValues().Resize(rows, 1);
+                size_t rows = (Inputs(2)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() : Inputs(2)->GetNumRows();
+                Inputs(2)->Resize(rows, 1);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() ||
-                Inputs(1)->FunctionValues().HasNoElements() ||
-                Inputs(2)->FunctionValues().HasNoElements())
-            {
-                LogicError(
-                    "PerDimMeanVarNormalizationNode operation: one of the operants has 0 element.");
-            }
+            //if (Inputs(0)->GetNumRows() == 0 ||
+            //    Inputs(1)->GetNumRows() == 0 ||
+            //    Inputs(2)->GetNumRows() == 0)
+            //{
+            //    LogicError(
+            //        "PerDimMeanVarNormalizationNode operation: one of the operands has 0 elements.");
+            //}
 
-            //match rows
-            if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
-                Inputs(2)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()))
+            if (isFinalValidationPass)
             {
-                LogicError(
-                    "PerDimMeanVarNormalizationNode: All inputs should have same number of rows.");
-            }
+                //match rows
+                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
+                    Inputs(2)->GetNumRows() == Inputs(1)->GetNumRows()))
+                {
+                    LogicError("PerDimMeanVarNormalizationNode: All inputs should have same number of rows.");
+                }
 
-            if (!(Inputs(1)->FunctionValues().GetNumCols() == 1 && Inputs(2)->FunctionValues().GetNumCols() == 1))
-            {
-                LogicError(
-                    "PerDimMeanVarNormalizationNode: Mean and InvStdDev should be a colum  vector.");
+                if (!(Inputs(1)->GetNumCols() == 1 && Inputs(2)->GetNumCols() == 1))
+                    LogicError("PerDimMeanVarNormalizationNode: Mean and InvStdDev should be a colum  vector.");
             }
 
             Inputs(1)->NeedGradient() = false;
             Inputs(2)->NeedGradient() = false;  //prevent learning
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0));
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
         //leftNode should be the empirical
-        virtual void AttachInputs(const ComputationNodePtr feature,
-                                  const ComputationNodePtr mean, const ComputationNodePtr InvStdDev)
-        {
-            m_children.resize(3);
-            m_children[0] = feature;
-            m_children[1] = mean;
-            m_children[2] = InvStdDev;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev)
+        //{
+        //    m_children.resize(3);
+        //    m_children[0] = feature;
+        //    m_children[1] = mean;
+        //    m_children[2] = InvStdDev;
+        //}
     };
 
     template class PerDimMeanVarNormalizationNode<float>;
     template class PerDimMeanVarNormalizationNode<double>;
 
+    // -----------------------------------------------------------------------
+    // PerDimMeanVarDeNormalizationNode (feature, mean, invStdDev)
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class PerDimMeanVarDeNormalizationNode : public ComputationNode<ElemType>
+    class PerDimMeanVarDeNormalizationNode : public ComputationNode<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"PerDimMeanVarDeNormalization"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         PerDimMeanVarDeNormalizationNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const
-        {
-            return TypeName();
-        }
-
-        static const std::wstring TypeName()
-        {
-            return L"PerDimMeanVarDeNormalization";
-        }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
         {
@@ -684,22 +668,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //(feature-mean).*InvStdDev
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(),
                               Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0,
                                              const Matrix<ElemType>& input1, const Matrix<ElemType>& input2)
         {
     #if DUMPOUTPUT
@@ -730,12 +715,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 3)
-                LogicError("PerDimMeanVarDeNormalizationNode criterion requires three inputs.");
+            Base::Validate(isFinalValidationPass);
 
             if (Inputs(0)->RequiresPreCompute())
             {
@@ -757,59 +739,64 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(1)->FunctionValues().GetNumRows() == 0 ? Inputs(0)->FunctionValues().GetNumRows() :
-                                                                              Inputs(1)->FunctionValues().GetNumRows();
-                Inputs(1)->FunctionValues().Resize(rows, 1);
+                size_t rows = Inputs(1)->GetNumRows() == 0 ? Inputs(0)->GetNumRows() : Inputs(1)->GetNumRows();
+                Inputs(1)->Resize(rows, 1);
             }
 
             if (Inputs(2)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(2)->FunctionValues().GetNumRows() == 0? Inputs(0)->FunctionValues().GetNumRows() :
-                                                                                        Inputs(2)->FunctionValues().GetNumRows();
-                Inputs(2)->FunctionValues().Resize(rows, 1);
+                size_t rows = Inputs(2)->GetNumRows() == 0? Inputs(0)->GetNumRows() : Inputs(2)->GetNumRows();
+                Inputs(2)->Resize(rows, 1);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() ||
-                Inputs(1)->FunctionValues().HasNoElements() ||
-                Inputs(2)->FunctionValues().HasNoElements())
-            {
-                LogicError("PerDimMeanVarDeNormalizationNode operation: one of the operants has 0 element.");
-            }
+            //if (Inputs(0)->GetNumRows() == 0 ||
+            //    Inputs(1)->GetNumRows() == 0 ||
+            //    Inputs(2)->GetNumRows() == 0)
+            //{
+            //    LogicError("PerDimMeanVarDeNormalizationNode operation: one of the operands has 0 elements.");
+            //}
 
-            if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match rows
-                Inputs(2)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()) )
+            if (isFinalValidationPass)
             {
-                //Inputs(1)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
-                //Inputs(2)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), 1);
-                LogicError("PerDimMeanVarDeNormalizationNode: All inputs should have same number of rows.");
-            }
+                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match rows
+                    Inputs(2)->GetNumRows() == Inputs(1)->GetNumRows()))
+                {
+                    //Inputs(1)->Resize(Inputs(0)->GetNumRows(), 1);
+                    //Inputs(2)->Resize(Inputs(0)->GetNumRows(), 1);
+                    LogicError("PerDimMeanVarDeNormalizationNode: All inputs should have same number of rows.");
+                }
 
-            if (!(Inputs(1)->FunctionValues().GetNumCols() == 1 && Inputs(2)->FunctionValues().GetNumCols() == 1))
-            {
-                LogicError("PerDimMeanVarDeNormalizationNode: Mean and InvStdDev should be a colum  vector.");
+                if (!(Inputs(1)->GetNumCols() == 1 && Inputs(2)->GetNumCols() == 1))
+                {
+                    LogicError("PerDimMeanVarDeNormalizationNode: Mean and InvStdDev should be a colum  vector.");
+                }
             }
 
             Inputs(1)->NeedGradient() = false;
-
             //prevent learning
             Inputs(2)->NeedGradient() = false;
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0));
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
         //leftNode should be the empirical
-        virtual void AttachInputs(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev)
-        {
-            m_children.resize(3);
-            m_children[0] = feature;
-            m_children[1] = mean;
-            m_children[2] = InvStdDev;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev)
+        //{
+        //    m_children.resize(3);
+        //    m_children[0] = feature;
+        //    m_children[1] = mean;
+        //    m_children[2] = InvStdDev;
+        //}
     };
 
     template class PerDimMeanVarDeNormalizationNode<float>;
     template class PerDimMeanVarDeNormalizationNode<double>;
+
+    // -----------------------------------------------------------------------
+    // BatchModeNode
+    // -----------------------------------------------------------------------
 
     /**
     BatchModeNode is a derivative of ComputationNode.
@@ -817,59 +804,62 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     This is used in case of beam search decoding. Batchmode node must be processed before other nodes.
     It differs from PreComputeNode in that precompute done is done before the entire corpus.
     This is done before forward computation of all nodes.
-    This node is similar to the PreComputeNode, but is an abstract of it.
     */
     template<class ElemType>
     class BatchModeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        // all nodes require precomputation should derive from it
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        // all nodes require precomputation should derive from this class
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         BatchModeNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_memory(deviceId)
         { }
 
         virtual bool HasComputed() const = 0;
         virtual void MarkComputed(const bool hasComputed) = 0;
 
-        virtual bool RequiresBatchMode() const { return true; }
+        //virtual bool RequiresBatchMode() const { return true; }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+#if 0   // I think this is a left-over. It does not seem to fit BatchMode
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             assert(m_memory.GetNumCols() > 0);
 
-            //FunctionValues().Resize(m_memory.GetNumRows(), m_samplesInRecurrentStep);
-            FunctionValues().Resize(m_memory.GetNumRows(), frameRange.NumCols());   // extra space for one time step
+            // BUGBUG: this is broken
+            // TODO: what is this? Derives from ComputationNodeNonLooping, yet implemented a frame loop?
+            //Resize(m_memory.GetNumRows(), GetNumParallelSequences());
+            Resize(m_memory.GetNumRows(), GetNumParallelSequences());   // extra space for one time step
             if (frameRange.t() == 0)    // for first frame, check that we got all in memory  --TODO: is this comment correct? How about going backwards?
-                assert(FunctionValues().FrameSlice(FrameRange(0, m_samplesInRecurrentStep)/*TODO: delete the next two parameters*/, 0, m_samplesInRecurrentStep).FrobeniusNorm() == m_memory.FrameSlice(FrameRange(0, m_samplesInRecurrentStep)/*TODO: delete the next two parameters*/, 0, m_samplesInRecurrentStep).FrobeniusNorm());
-                //assert(FunctionValues().ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm() == m_memory.ColumnSlice(0, m_samplesInRecurrentStep).FrobeniusNorm());
-            FunctionValues().SetValue(m_memory.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
-            assert(FunctionValues().GetNumCols() == m_samplesInRecurrentStep);
+                assert(ValueSlice(FrameRange(0, GetNumParallelSequences())).FrobeniusNorm() == DataSlice(m_memory, FrameRange(0, GetNumParallelSequences())).FrobeniusNorm());
+                //assert(FunctionValues().ColumnSlice(0, GetNumParallelSequences()), m_pMBLayout).FrobeniusNorm() == m_memory.ColumnSlice(0, GetNumParallelSequences()), m_pMBLayout).FrobeniusNorm());
+            FunctionValues().SetValue(DataSlice(m_memory, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout)));
+            assert(GetNumCols() == GetNumParallelSequences());
         }
+#endif
 
-        virtual void SaveToFile(File& fstream)  const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream << m_hasComputed;
             fstream << FunctionValues();
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_hasComputed;
             fstream >> FunctionValues();
         }
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
             const size_t BUFLEN = 4096;
             WCHAR str[BUFLEN];
-            swprintf(str, BUFLEN, L"[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            swprintf(str, BUFLEN, L"[%lu,%lu]  ", GetNumRows(), GetNumCols());
             fstream << wstring(str);
             swprintf(str, BUFLEN, L"HasComputed=%ls", HasComputed() ? L"true" : L"false");
             fstream << wstring(str);
@@ -883,15 +873,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // add this at the start of each derived class, to get access to the members of ComputationNode
-    // See #define of 'UsingComputationNodeMembers' for more explanation.
-    #define UsingBatchModeNodeMembers UsingComputationNodeMembers; \
+    // See #define of 'UsingComputationNodeMembersBoilerplate' for more explanation.
+    #define UsingBatchModeNodeMembers UsingComputationNodeMembersBoilerplate; \
         protected:  \
             using Base::m_memory; using Base::m_hasComputed; \
         public: \
-            using Base::HasComputed; using Base::MarkComputed; using Base::RequiresBatchMode
+            using Base::HasComputed; using Base::MarkComputed
 
-    //template class BatchModeNode<float>;
-    //template class BatchModeNode<double>;
+    // -----------------------------------------------------------------------
+    // TimeReverseNode (input)
+    // -----------------------------------------------------------------------
 
     /**
     Developed by Kaisheng Yao.
@@ -899,11 +890,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     K. Yao and G. Zweig, "Sequence-to-Sequence Neural Net Models for Grapheme-to-Phoneme Conversion", submitted to INTERSPEECH 2015
     */
     template<class ElemType>
-    class TimeReverseNode : public BatchModeNode<ElemType>
+    class TimeReverseNode : public BatchModeNode<ElemType>, public NumInputs<1>
     {
         typedef BatchModeNode<ElemType> Base; UsingBatchModeNodeMembers;
+        static const std::wstring TypeName() { return L"TimeReverse"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TimeReverseNode(DEVICEID_TYPE deviceId, const wstring & name) :
             BatchModeNode<ElemType>(deviceId, name)
         { }
@@ -921,9 +912,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual bool HasComputed() const { return m_hasComputed; }
         virtual void MarkComputed(const bool hasComputed) { m_hasComputed = hasComputed; }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"TimeReverse"; }
-
         virtual void MoveMatricesToDevice(const short deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
@@ -935,10 +923,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0)
                 InvalidArgument("TimeReverse operation only takes one input.");
             ComputationNodePtr child = Inputs(inputIndex);
-            ComputeInputPartialS(GradientValues(), child->GradientValues(), m_samplesInRecurrentStep);
+            ComputeInputPartialS(GradientValues(), child->GradientValues(), GetNumParallelSequences());
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues, int nSamples)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues, int nSamples)
         {
     #if DUMPOUTPUT
 
@@ -964,16 +952,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         }
 
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             if (m_hasComputed == false)
             {
-                EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), m_samplesInRecurrentStep);
+                EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), GetNumParallelSequences());
                 m_memory.SetValue(FunctionValues());
             }
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues, int nSamples)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues, int nSamples)
         {
             /// this assumes this reverse node is called once, so it can set, instead add to, the function values
             size_t rows0 = inputFunctionValues.GetNumRows(), cols0 = inputFunctionValues.GetNumCols();
@@ -993,26 +981,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 1)
-                LogicError("TimeReverse operation requires one input.");
-
-            size_t rows, cols;
-            rows = Inputs(0)->FunctionValues().GetNumRows();
-            cols = Inputs(0)->FunctionValues().GetNumCols();
-
-            FunctionValues().Resize(rows, cols);
+            Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
+            Resize(Inputs(0));
             InferImageDimsFromInput(0);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr cNode)
-        {
-            m_children.resize(1);
-            m_children[0] = cNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr cNode)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = cNode;
+        //}
 
     public:
         bool UnitTest() {
@@ -1026,14 +1007,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             f0 = Inputs(0)->FunctionValues();
             func = FunctionValues();
 
-            Inputs(0)->FunctionValues().Resize(nInput, nT);
+            Inputs(0)->Resize(nInput, nT);
             Inputs(0)->FunctionValues().SetValue(0);
             Inputs(0)->FunctionValues()(0, 0) = 1;
             Inputs(0)->FunctionValues()(0, 1) = 2;
             Inputs(0)->FunctionValues()(0, 2) = 3;
-            FunctionValues().Resize(nOutput, nT);
+            Resize(nOutput, nT);
             Inputs(0)->FunctionValues().TransferToDeviceIfNotThere( m_deviceId, true);
-            EvaluateThisNode();
+            EvaluateThisNode(FrameRange());
 
             /// check with expected values
             if (!ISCLOSE(FunctionValues()(0, 0), 3, EPSILON) ||
@@ -1071,7 +1052,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
-        virtual bool UseCustomizedMultiSeqHandling() 
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() 
         { 
            return true; 
         }

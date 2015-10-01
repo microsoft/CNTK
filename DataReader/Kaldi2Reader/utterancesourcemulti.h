@@ -125,7 +125,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                 if (featdim == 0)
                 {
                     reader.getinfo (utteranceset[0].parsedpath, featdim);
-                    fprintf (stderr, "requiredata: determined feature kind as %zu-dimensional", featdim);
+                    fprintf (stderr, "requiredata: determined feature kind as %zu-dimensional\n", featdim);
                 }
                 // read all utterances; if they are in the same archive, htkfeatreader will be efficient in not closing the file
                 frames.resize (featdim, totalframes);
@@ -214,7 +214,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
     };
     std::vector<utteranceref> randomizedutterancerefs;          // [pos] randomized utterance ids
-    std::hash_map<size_t,size_t> randomizedutteranceposmap;     // [globalts] -> pos lookup table
+    std::unordered_map<size_t,size_t> randomizedutteranceposmap;     // [globalts] -> pos lookup table
     struct positionchunkwindow       // chunk window required in memory when at a certain position, for controlling paging
     {
         std::vector<chunk>::const_iterator definingchunk;       // the chunk in randomizedchunks[] that defined the utterance position of this utterance
@@ -369,13 +369,14 @@ public:
                 if (uttframes < 2)
                 {
                     //throw std::runtime_error("minibatchutterancesource: utterances < 2 frames not supported");
-                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it less than. frames (%d) for frameref bit field: %S", i, uttframes, 2, key.c_str());
+                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%zd frames) because it less than %d frames for frameref bit field: %S\n",
+                            i, uttframes, 2, key.c_str());
                     uttduration[i] = 0;
                     uttisvalid[i] = false;
-                }
-                if (uttframes > frameref::maxframesperutterance || uttframes <2)
+                } else if (uttframes > frameref::maxframesperutterance || uttframes <2)
                 {
-                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
+                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%zd frames) because it exceeds max. frames (%zd) for frameref bit field: %S\n", 
+                            i, uttframes, frameref::maxframesperutterance, key.c_str());
                     uttduration[i] = 0;
                     uttisvalid[i] = false;
                 }
@@ -385,7 +386,8 @@ public:
                         uttisvalid[i] = true;
                     }
                     else if (uttduration[i] != uttframes){
-                        fprintf(stderr, "minibatchutterancesource: skipping %d-th file due to inconsistency in duration in different feature streams (%d vs %d frames)", i, uttduration[i], uttframes);
+                        fprintf(stderr, "minibatchutterancesource: skipping %d-th file due to inconsistency in duration in different feature streams (%zd vs %zd frames)\n",
+                                i, uttduration[i], uttframes);
                         uttduration[i] = 0;
                         uttisvalid[i] = false;
                     }
@@ -400,7 +402,7 @@ public:
         if (invalidutts > uttisvalid.size() / 2)
             throw std::runtime_error("minibatchutterancesource: too many files not found in with inconsistent durations, assuming broken configuration\n");
         else if (invalidutts>0)
-            fprintf(stderr, "Found inconsistent durations across feature streams in %d out of %d files.", invalidutts, uttisvalid.size());
+            fprintf(stderr, "Found inconsistent durations across feature streams in %zd out of %zd files.\n", invalidutts, uttisvalid.size());
 
 
         // now process the features and labels

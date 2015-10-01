@@ -322,7 +322,7 @@ WARNING: The same matrix with dim [1, 1] has been transferred between different 
  Epoch[1 of 3]-Minibatch[291-300 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.1775086; EvalErr[0]PerSample = 0.62187499; TotalTime=0.059501; TotalTimePerSample=9.2970312e-05, SamplesPerSecond=10756
  Epoch[1 of 3]-Minibatch[301-310 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.2626343; EvalErr[0]PerSample = 0.59687501; TotalTime=0.064342; TotalTimePerSample=0.00010053437, SamplesPerSecond=9946
  Epoch[1 of 3]-Minibatch[311-320 of 320]: SamplesSeen = 640; TrainLossPerSample = 2.1507263; EvalErr[0]PerSample = 0.5625; TotalTime=0.064522; TotalTimePerSample=0.00010081563, SamplesPerSecond=9919
-Finished Epoch[1]: [Training Set] TrainLossPerSample = 2.9799569; EvalErrPerSample = 0.72216797; Ave LearnRatePerSample = 0.015625; EpochTime=1.935613
+Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 2.9799569; EvalErrPerSample = 0.72216797; Ave LearnRatePerSample = 0.015625; EpochTime=1.935613
 Starting Epoch 2: learning rate per sample = 0.001953  momentum = 0.656119 
 minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480) with 1 datapasses
  Epoch[2 of 3]-Minibatch[1-10 of 80]: SamplesSeen = 2560; TrainLossPerSample = 2.0159853; EvalErr[0]PerSample = 0.54140627; TotalTime=0.102487; TotalTimePerSample=4.0033984e-05, SamplesPerSecond=24978
@@ -333,12 +333,12 @@ minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 2048
  Epoch[2 of 3]-Minibatch[51-60 of 80]: SamplesSeen = 2560; TrainLossPerSample = 1.9711578; EvalErr[0]PerSample = 0.54140627; TotalTime=0.0896; TotalTimePerSample=3.5e-05, SamplesPerSecond=28571
  Epoch[2 of 3]-Minibatch[61-70 of 80]: SamplesSeen = 2560; TrainLossPerSample = 1.8951813; EvalErr[0]PerSample = 0.52031249; TotalTime=0.092477; TotalTimePerSample=3.6123828e-05, SamplesPerSecond=27682
  Epoch[2 of 3]-Minibatch[71-80 of 80]: SamplesSeen = 2560; TrainLossPerSample = 1.904506; EvalErr[0]PerSample = 0.53164065; TotalTime=0.091179; TotalTimePerSample=3.5616797e-05, SamplesPerSecond=28076
-Finished Epoch[2]: [Training Set] TrainLossPerSample = 1.949242; EvalErrPerSample = 0.53417969; Ave LearnRatePerSample = 0.001953125; EpochTime=0.753703
+Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 1.949242; EvalErrPerSample = 0.53417969; Ave LearnRatePerSample = 0.001953125; EpochTime=0.753703
 Starting Epoch 3: learning rate per sample = 0.000098  momentum = 0.656119 
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960) with 1 datapasses
  Epoch[3 of 3]-Minibatch[1-10 of 20]: SamplesSeen = 10240; TrainLossPerSample = 1.8735985; EvalErr[0]PerSample = 0.51933593; TotalTime=0.27395; TotalTimePerSample=2.675293e-05, SamplesPerSecond=37379
  Epoch[3 of 3]-Minibatch[11-20 of 20]: SamplesSeen = 10240; TrainLossPerSample = 1.8665626; EvalErr[0]PerSample = 0.51748049; TotalTime=0.261453; TotalTimePerSample=2.553252e-05, SamplesPerSecond=39165
-Finished Epoch[3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=0.537273
+Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=0.537273
 COMPLETED
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -732,7 +732,7 @@ Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, 1024], HLast[13
 
  Epoch[3 of 3]-Minibatch[1-10 of 20]: SamplesSeen = 10240; TrainLossPerSample = 1.8735985; EvalErr[0]PerSample = 0.51933593; TotalTime=0.430752; TotalTimePerSample=4.2065625e-05, SamplesPerSecond=23772
  Epoch[3 of 3]-Minibatch[11-20 of 20]: SamplesSeen = 10240; TrainLossPerSample = 1.8665626; EvalErr[0]PerSample = 0.51748049; TotalTime=0.2702; TotalTimePerSample=2.6386719e-05, SamplesPerSecond=37897
-Finished Epoch[3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=0.868162
+Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.51840824; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=0.868162
 COMPLETED
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
