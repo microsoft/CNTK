@@ -258,7 +258,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& ColumnElementDivideBy(const Matrix<ElemType>& a);
         Matrix<ElemType>& RowElementDivideBy(const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& ElementInverse ();
+        Matrix<ElemType>& ElementInverse();
         Matrix<ElemType>& AssignElementInverseOf (const Matrix<ElemType>& a);
 
         Matrix<ElemType>& InplaceLinearRectifierDerivative();
@@ -267,37 +267,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& InplaceSigmoidDerivative();
         Matrix<ElemType>& AssignSigmoidDerivativeOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceSigmoid ();
+        Matrix<ElemType>& InplaceSigmoid();
         Matrix<ElemType>& AssignSigmoidOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceTanh ();
+        Matrix<ElemType>& InplaceTanh();
         Matrix<ElemType>& AssignTanhOf (const Matrix<ElemType>& a);
 
         Matrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
         Matrix<ElemType>& AssignLogSoftmaxOf (const Matrix<ElemType>& a, const bool isColWise);
 
-		//sequence training 
-		Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold);
-		Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
-        Matrix<ElemType>& InplaceSqrt ();
+        //sequence training 
+        Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold);
+        Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
+
+        Matrix<ElemType>& InplaceSqrt();
         Matrix<ElemType>& AssignSqrtOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceExp ();
+        Matrix<ElemType>& InplaceExp();
         Matrix<ElemType>& AssignExpOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceLog ();
+        Matrix<ElemType>& InplaceLog();
         Matrix<ElemType>& AssignLogOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceCosine ();
+        Matrix<ElemType>& InplaceCosine();
         Matrix<ElemType>& AssignCosineOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceNegativeSine ();
+        Matrix<ElemType>& InplaceNegativeSine();
         Matrix<ElemType>& AssignNegativeSineOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceLog10 ();
+        Matrix<ElemType>& InplaceLog10();
         Matrix<ElemType>& AssignLog10Of (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceAbs ();
+        Matrix<ElemType>& InplaceAbs();
         Matrix<ElemType>& AssignAbsOf (const Matrix<ElemType>& a);
 
         Matrix<ElemType>& InplaceTruncateBottom (const ElemType threshold);
@@ -310,8 +311,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 
         DeviceBoundNumber<ElemType> Sum_AsDeviceBoundNum() const;
-        ElemType SumOfAbsElements () const; //sum of all abs(elements)
-        ElemType SumOfElements () const; //sum of all elements
+        ElemType SumOfAbsElements() const; //sum of all abs(elements)
+        ElemType SumOfElements() const; //sum of all elements
         Matrix<ElemType>& AssignSumOfElements(const Matrix<ElemType>& a);
 
         ElemType LogAddSumOfElements() const;
