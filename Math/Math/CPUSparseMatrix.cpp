@@ -304,8 +304,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
     {
-        if (numCols == 0)
-            throw std::logic_error("The slice cannot have 0 columns.");
+        //if (numCols == 0)
+        //    throw std::logic_error("The slice cannot have 0 columns.");
 
         if (startColumn + numCols > m_numCols)
             throw std::logic_error("The slice is out of range of the source matrix.");
