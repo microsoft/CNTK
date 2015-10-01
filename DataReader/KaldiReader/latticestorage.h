@@ -12,7 +12,7 @@
 #pragma once
 #include <string>       // for the error message in checkoverflow() only
 #include <stdexcept>
-#include <stdint.h>
+#include <cstdint>
 
 #undef INITIAL_STRANGE              // [v-hansu] intialize structs to strange values
 #define PARALLEL_SIL                // [v-hansu] process sil on CUDA, used in other files, please search this

@@ -539,7 +539,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed) { }
 
     template<class ElemType> ElemType GPUMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier) { return 0; }
-    template<class ElemType> void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType) { }
+    template<class ElemType> void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul){}
 
     template<class ElemType> ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier) { return 0; }
 

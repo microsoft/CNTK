@@ -17,8 +17,8 @@
 #include "latticestorage.h"
 #include "simple_checked_arrays.h"
 #include "fileutil.h"
-#include <stdint.h>
-#include <inttypes.h>
+#include <cstdint>
+#include <cinttypes>
 #include <vector>
 #include <string>
 #include <algorithm>        // for find()
@@ -1132,7 +1132,8 @@ public:
                 throw std::runtime_error ("open: invalid TOC line (empty archive pathname): " + std::string (line));
             char c;
             uint64_t offset;
-            if (sscanf(q, "[%" PRId64 "]%c", &offset, &c) != 1)
+            const char *scanformat = "[%" PRId64 "]%c"; // Work-around for GNU/Linux bug in sscanf in older libc (2.15) versions
+            if (sscanf(q, scanformat, &offset, &c) != 1)
                 throw std::runtime_error ("open: invalid TOC line (bad [] expression): " + std::string (line));
             if (!toc.insert (make_pair (key, latticeref (offset, archiveindex))).second)
                 throw std::runtime_error ("open: TOC entry leads to duplicate key: " + std::string (line));
