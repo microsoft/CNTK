@@ -11,6 +11,8 @@
 //  - complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
 //  - apply 
 // => many ComputationNode implementations only have two functions EvaluateThisNode(FrameRange) and ComputePartial(), as it was meant to be!
+//  - remove SetHistory() in recurrent nodes; statefulness is sufficiently well defined that there is no need
+//  - need Matrix::RowSlice() (problem: currently has no 'lead' dimension separate from numRows)
 //  - revise constructors, merge by means of default parameters
 //  - add a runtime check that nodes deriving from ComputeNodeNonLooping may never participate in a loop
 //  - ClassbasedCrossEntropyWithSoftmax::EvaluateThisNodeS()'s calls to MaskMissingColumnsToZero() are likely wrong.
@@ -21,6 +23,7 @@
 //  - verify that all readers return layouts
 //  - BUGBUG (in the future): Once we have > 1 layout in the system, all nodes must compare their actual layouts upon Evaluate().
 //    Example: TimeReverse must create a new layout. A second TimeReverse ideally would revert back, but can't know. Hence, all consumers of layouts must compare upon Evaluate().
+//  - more informative CUDA errors (show original error, machine name, and card id; maybe even a time stamp), to better be able to handle hardware issues
 
 // The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
 
