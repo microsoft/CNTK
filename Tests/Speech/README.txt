@@ -26,8 +26,13 @@ bin/cntk configFile=Tests/Speech/QuickE2E/cntk.config RunDir=Tests/Speech/RunDir
 WORKING DIR: $(SolutionDir)Tests\Speech\Data
 COMMAND:     configFile=$(SolutionDir)Tests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\LSTM\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\LSTM  NdlDir=$(SolutionDir)Tests\Speech\LSTM  DataDir=$(SolutionDir)Tests\Speech\Data  DeviceId=Auto
 
+--- MNIST:
+
+WORKING DIR: $(SolutionDir)ExampleSetups\Image\MNIST
+COMMAND:     configFile=02_Conv.config configName=02_Conv
+
+
 Simple test
 -----------
 
-../build/debug/bin/cntk configFile=/home/cbasoglu/src/cntk/.run-linux/Simple.conf
 COMMAND:     configFile=$(SolutionDir)Demos\Simple\Simple.config  stderr=$(SolutionDir)Demos\Simple\RunDir\Simple.config.log  RootDir=$(SolutionDir)  DeviceNumber=-1

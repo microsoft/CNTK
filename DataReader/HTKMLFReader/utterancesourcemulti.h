@@ -162,6 +162,7 @@ class minibatchutterancesourcemulti : public minibatchsource
     };
     std::vector<std::vector<utterancechunkdata>> allchunks;          // set of utterances organized in chunks, referred to by an iterator (not an index)
     std::vector<unique_ptr<biggrowablevector<CLASSIDTYPE>>> classids;            // [classidsbegin+t] concatenation of all state sequences
+	std::vector<unique_ptr<biggrowablevector<CLASSIDTYPE>>> phoneboundaries;
     bool issupervised() const { return !classids.empty(); }
     size_t numutterances;           // total number of utterances
     size_t _totalframes;             // total frames (same as classids.size() if we have labels)
@@ -276,6 +277,30 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         return allclassids;   // nothing to return
     }
+	template<class UTTREF> std::vector<shiftedvector<biggrowablevector<CLASSIDTYPE>>> getphonebound(const UTTREF & uttref)  // return sub-vector of classids[] for a given utterance
+	{
+		std::vector<shiftedvector<biggrowablevector<CLASSIDTYPE>>> allphoneboundaries;
+		allphoneboundaries.empty();
+
+		if (!issupervised())
+		{
+			foreach_index(i, classids)
+				allphoneboundaries.push_back(std::move(shiftedvector<biggrowablevector<CLASSIDTYPE>>((*phoneboundaries[i]), 0, 0)));
+			return allphoneboundaries;     // nothing to return
+		}
+		const auto & chunk = randomizedchunks[0][uttref.chunkindex];
+		const auto & chunkdata = chunk.getchunkdata();
+		const size_t classidsbegin = chunkdata.getclassidsbegin(uttref.utteranceindex); // index of first state label in global concatenated classids[] array
+		const size_t n = chunkdata.numframes(uttref.utteranceindex);
+		foreach_index(i, phoneboundaries)
+		{
+			if ((*phoneboundaries[i])[classidsbegin + n] != (CLASSIDTYPE)-1)
+				throw std::logic_error("getclassids: expected boundary marker not found, internal data structure screwed up");
+			allphoneboundaries.push_back(std::move(shiftedvector<biggrowablevector<CLASSIDTYPE>>((*phoneboundaries[i]), classidsbegin, n)));
+		}
+		return allphoneboundaries;   // nothing to return
+	}
+
 public:
     // constructor
     // Pass empty labels to denote unsupervised training (so getbatch() will not return uids).
@@ -303,10 +328,7 @@ public:
         std::vector<size_t>uttduration; // track utterance durations to determine utterance validity
 
         std::vector<size_t> classidsbegin;
-        if (!lattices.empty())
-        {
-            LogicError("lattices not supported in utterancereadermulti");
-        }
+        
 
         allchunks = std::vector<std::vector<utterancechunkdata>>(infiles.size(), std::vector<utterancechunkdata>());
         featdim = std::vector<size_t>(infiles.size(), 0);
@@ -319,6 +341,7 @@ public:
         foreach_index (i, labels)
         {
             classids.push_back(unique_ptr<biggrowablevector<CLASSIDTYPE>>(new biggrowablevector<CLASSIDTYPE>()));
+			phoneboundaries.push_back(unique_ptr<biggrowablevector<CLASSIDTYPE>>(new biggrowablevector<CLASSIDTYPE>()));
             //std::pair<std::vector<wstring>,std::vector<wstring>> latticetocs;
             //std::unordered_map<std::string,size_t> modelsymmap;
             //lattices.push_back(shared_ptr<latticesource>(new latticesource(latticetocs, modelsymmap)));
@@ -483,13 +506,20 @@ public:
                                         if (e.classid != (CLASSIDTYPE) e.classid)
                                             throw std::runtime_error ("CLASSIDTYPE has too few bits");
                                         for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
+									{
                                             classids[j]->push_back ((CLASSIDTYPE) e.classid);
+										if (e.phonestart != 0 && t == e.firstframe)
+											phoneboundaries[j]->push_back((CLASSIDTYPE)e.phonestart);
+										else
+											phoneboundaries[j]->push_back((CLASSIDTYPE)0);
+									}
                                         numclasses[j] = max (numclasses[j], (size_t)(1u + e.classid));
                                         counts[j].resize (numclasses[j], 0);
                                         counts[j][e.classid] += e.numframes;
                                     }
 
                                     classids[j]->push_back ((CLASSIDTYPE) -1);  // append a boundary marker marker for checking
+								phoneboundaries[j]->push_back((CLASSIDTYPE)-1); // append a boundary marker marker for checking
 
                                     if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
                                         throw std::logic_error (msra::strfun::strprintf ("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
@@ -1057,7 +1087,8 @@ public:
                   const size_t subsetnum, const size_t numsubsets, size_t & framesadvanced,
                   std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
                   std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts, 
-                  std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs) override
+                  std::vector<shared_ptr<const latticesource::latticepair>> & latticepairs, std::vector<std::vector<size_t>> & sentendmark, 
+				  std::vector<std::vector<size_t>> & phoneboundaries) override
     {
         bool readfromdisk = false;  // return value: shall be 'true' if we paged in anything
 
@@ -1127,6 +1158,8 @@ public:
             // resize feat and uids
             feat.resize(vdim.size());
             uids.resize(classids.size());            
+			phoneboundaries.resize(classids.size());
+			sentendmark.resize(vdim.size());
             assert(feat.size()==vdim.size());
             assert(feat.size()==randomizedchunks.size());
             foreach_index(i, feat)
@@ -1138,11 +1171,21 @@ public:
                     foreach_index(j, uids)
                     {
                         if (issupervised())             // empty means unsupervised training -> return empty uids
+						{
                             uids[j].resize(tspos);
+							phoneboundaries[j].resize(tspos);
+						}
                         else
+						{
                             uids[i].clear();
+							phoneboundaries[i].clear();
+						}
                         latticepairs.clear();               // will push_back() below
                         transcripts.clear();
+					}
+					foreach_index(j, sentendmark)
+					{
+						sentendmark[j].clear();
                     }
                 }
             }
@@ -1165,6 +1208,7 @@ public:
                     auto uttframes = chunkdata.getutteranceframes (uttref.utteranceindex);
                     matrixasvectorofvectors uttframevectors (uttframes);    // (wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors())
                     n = uttframevectors.size();
+					sentendmark[i].push_back(n + tspos);
                     assert (n == uttframes.cols() && uttref.numframes == n && chunkdata.numframes (uttref.utteranceindex) == n);
 
                     // copy the frames and class labels
@@ -1189,12 +1233,16 @@ public:
                     if (i==0)
                     {
                         auto uttclassids = getclassids (uttref);
+						auto uttphoneboudaries = getphonebound(uttref);
                         foreach_index(j, uttclassids)
                         {
                             for (size_t t = 0; t < n; t++)          // t = time index into source utterance
                             {
                                 if (issupervised())
+								{
                                 uids[j][t + tspos] = uttclassids[j][t];
+									phoneboundaries[j][t + tspos] = uttphoneboudaries[j][t];
+								}
                             }
 
                             if (!this->lattices.empty())
@@ -1352,10 +1400,11 @@ public:
     bool getbatch(const size_t globalts,
                   const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
                   std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
-                  std::vector<shared_ptr<const latticesource::latticepair>> & lattices)
+				  std::vector<shared_ptr<const latticesource::latticepair>> & lattices, std::vector<std::vector<size_t>> & sentendmark,
+				  std::vector<std::vector<size_t>> & phoneboundaries)
     {
         size_t dummy;
-        return getbatch(globalts, framesrequested, 0, 1, dummy, feat, uids, transcripts, lattices);
+        return getbatch(globalts, framesrequested, 0, 1, dummy, feat, uids, transcripts, lattices,sentendmark,phoneboundaries);
     }
 
     double gettimegetbatch() { return timegetbatch;}

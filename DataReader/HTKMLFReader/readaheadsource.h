@@ -230,9 +230,11 @@ public:
     bool getbatch (const size_t globalts,
                 const size_t framesrequested, std::vector<msra::dbn::matrix> & feat, std::vector<std::vector<size_t>> & uids,
                 std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & transcripts,
-                std::vector<shared_ptr<const latticesource::latticepair>> & lattices) 
+				std::vector<shared_ptr<const latticesource::latticepair>> & lattices, std::vector<std::vector<size_t>> & sentendmark,
+				std::vector<std::vector<size_t>> & phoneboundaries)
     {
-
+		phoneboundaries.resize(1);
+		sentendmark.resize(1);
         feat.resize(1);
         uids.resize(1);
         //transcripts.resize(1);

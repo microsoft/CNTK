@@ -100,7 +100,7 @@ namespace msra { namespace dbn {
             size_t blockid = t0 / elementsperblock;
             assert (blockid * elementsperblock == t0);
             assert (blocks[blockid]);
-            fprintf (stderr, "recoverblock: releasing feature block %d [%d..%d)\n", blockid, t0, t0 + elementsperblock -1);
+            fprintf (stderr, "recoverblock: releasing feature block %zd [%zd..%zd)\n", blockid, t0, t0 + elementsperblock -1);
             blocks[blockid].reset();    // free the memory
         }
         void recoverblock (size_t t0)   // t0=block start time
@@ -109,7 +109,7 @@ namespace msra { namespace dbn {
             size_t blockid = t0 / elementsperblock;
             assert (blockid * elementsperblock == t0);
             assert (!blocks[blockid]);
-            fprintf (stderr, "recoverblock: recovering feature block %d [%d..%d)\n", blockid, t0, t0 + elementsperblock -1);
+            fprintf (stderr, "recoverblock: recovering feature block %zd [%zd..%zd)\n", blockid, t0, t0 + elementsperblock -1);
             blocks[blockid].reset (newblock());
             msra::dbn::matrix & block = *blocks[blockid];
             fsetpos (f, blockid * block.sizeinpagefile());
@@ -163,7 +163,7 @@ namespace msra { namespace dbn {
             // finish off last block
             flushlastblock();
             fflushOrDie (f);
-            fprintf (stderr, "biggrowablevectorarray: disk backup store created, %d frames, %ull bytes\n", (int) n, fgetpos (f));
+            fprintf (stderr, "biggrowablevectorarray: disk backup store created, %d frames, %zull bytes\n", (int) n, fgetpos (f));
             fclose (f);
             foreach_index (i, blocks) assert (!blocks[i]);   // ensure we flushed
             assert (inmembegin == inmemend);    // nothing in cache
@@ -265,7 +265,7 @@ namespace msra { namespace dbn {
             //  - implement block-wise paging directly from HTK feature files through htkfeatreader
             featkind.clear();
             std::vector<float> frame;
-            fprintf (stderr, "minibatchframesource: reading %d utterances..", infiles.size());
+            fprintf (stderr, "minibatchframesource: reading %zd utterances..", infiles.size());
             size_t numclasses = 0;              // number of units found (actually max id +1)
             size_t notfound = 0;                // number of entries missing in MLF
             msra::asr::htkfeatreader reader;    // feature reader
@@ -314,7 +314,7 @@ namespace msra { namespace dbn {
                         size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size()-1].firstframe + labseq[labseq.size()-1].numframes);
                         if (abs ((int) labframes - (int) feat.cols()) > 0)
                         {
-                            fprintf (stderr, "\nminibatchframesource: %d-th file has small duration mismatch (%d in label vs. %d in feat file), skipping: %S", i, labframes, feat.cols(), key.c_str());
+                            fprintf (stderr, "\nminibatchframesource: %d-th file has small duration mismatch (%zd in label vs. %zd in feat file), skipping: %S", i, labframes, feat.cols(), key.c_str());
                             notfound++;
                             continue;   // skip this utterance at all
                         }
@@ -369,10 +369,10 @@ namespace msra { namespace dbn {
             assert (labels.empty() || numframes == classids.size());
             if ((vdim != 0 && numframes != frames.size()) || (!labels.empty() && numframes != classids.size()))
                 throw std::runtime_error ("minibatchframesource: numframes variable screwup");
-            fprintf (stderr, " %d frames read from %d utterances; %d classes\n", numframes, infiles.size(), numclasses);
+            fprintf (stderr, " %zd frames read from %zd utterances; %zd classes\n", numframes, infiles.size(), numclasses);
             if (notfound > 0)
             {
-                fprintf (stderr, "minibatchframesource: %d files out of %d not found in label set\n", notfound, infiles.size());
+                fprintf (stderr, "minibatchframesource: %zd files out of %zd not found in label set\n", notfound, infiles.size());
                 if (notfound > infiles.size() / 2)
                     throw std::runtime_error ("minibatchframesource: too many files not found in label set--assuming broken configuration\n");
             }
@@ -426,7 +426,7 @@ namespace msra { namespace dbn {
             const size_t te = min (ts + framesrequested, totalframes());    // do not go beyond sweep boundary
             assert (te > ts);
             if (verbosity >= 2)
-                fprintf (stderr, "getbatch: frames [%d..%d] in sweep %d\n", ts, te-1, sweep);
+                fprintf (stderr, "getbatch: frames [%zd..%zd] in sweep %zd\n", ts, te-1, sweep);
 
             // get random sequence (each time index occurs exactly once)
             // If the sweep changes, this will re-cache the sequence. We optimize for rare, monotonous sweep changes.
@@ -548,7 +548,7 @@ namespace msra { namespace dbn {
             }
 
 
-            fprintf (stderr, "minibatchframesourcemulti: reading %d feature sets and %d label sets...", infiles.size(),labels.size());
+            fprintf (stderr, "minibatchframesourcemulti: reading %zd feature sets and %zd label sets...", infiles.size(),labels.size());
 
             foreach_index (m, infiles)
             {
@@ -605,7 +605,7 @@ namespace msra { namespace dbn {
                             size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size()-1].firstframe + labseq[labseq.size()-1].numframes);
                             if (abs ((int) labframes - (int) feat.cols()) > 0)
                             {
-                                fprintf (stderr, "\nminibatchframesourcemulti: %d-th file has small duration mismatch (%d in label vs. %d in feat file), skipping: %S", i, labframes, feat.cols(), key.c_str());
+                                fprintf (stderr, "\nminibatchframesourcemulti: %d-th file has small duration mismatch (%zd in label vs. %zd in feat file), skipping: %S", i, labframes, feat.cols(), key.c_str());
                                 notfound++;
                                 continue;   // skip this utterance at all
                             }
@@ -686,12 +686,12 @@ namespace msra { namespace dbn {
                 if (m==0)
                 {
                     foreach_index (j, numclasses)
-                        fprintf (stderr, "\nminibatchframesourcemulti: read label set %d: %d classes\n", j, numclasses[j]);
+                        fprintf (stderr, "\nminibatchframesourcemulti: read label set %d: %zd classes\n", j, numclasses[j]);
                 }
-                fprintf (stderr, "\nminibatchframesourcemulti: feature set %d: %d frames read from %d utterances\n", m, pframes[m]->size(), infiles[m].size());
+                fprintf (stderr, "\nminibatchframesourcemulti: feature set %d: %zd frames read from %zd utterances\n", m, pframes[m]->size(), infiles[m].size());
                 if (notfound > 0)
                 {
-                    fprintf (stderr, "minibatchframesourcemulti: %d files out of %d not found in label set\n", notfound, infiles[m].size());
+                    fprintf (stderr, "minibatchframesourcemulti: %zd files out of %zd not found in label set\n", notfound, infiles[m].size());
                     if (notfound > infiles[m].size() / 2)
                         throw std::runtime_error ("minibatchframesourcemulti: too many files not found in label set--assuming broken configuration\n");
                 }
@@ -751,7 +751,7 @@ namespace msra { namespace dbn {
             const size_t te = min (ts + framesrequested, totalframes());    // do not go beyond sweep boundary
             assert (te > ts);
             if (verbosity >= 2)
-                fprintf (stderr, "getbatch: frames [%d..%d] in sweep %d\n", ts, te-1, sweep);
+                fprintf (stderr, "getbatch: frames [%zd..%zd] in sweep %zd\n", ts, te-1, sweep);
 
             // get random sequence (each time index occurs exactly once)
             // If the sweep changes, this will re-cache the sequence. We optimize for rare, monotonous sweep changes.

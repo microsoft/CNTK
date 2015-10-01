@@ -25,15 +25,19 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    //used to represent weight Matrix<ElemType> and biases
+    // -----------------------------------------------------------------------
+    // LearnableParameter (/*no input*/)
+    // represents weight matrices and biases
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class LearnableParameter : public ComputationNode<ElemType>
+    class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"LearnableParameter"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         {
             m_needGradient = true;
             m_outputWidth = 1;
@@ -41,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         {
             m_needGradient = true;
             m_outputWidth = 1;
@@ -51,15 +55,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_functionValues->Resize(rows, cols);
         }
 
-        virtual void SaveToFile(File& fstream) const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream << m_needGradient;
-            fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
+            fstream << GetNumRows() << GetNumCols(); 
             fstream << FunctionValues();
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
 
@@ -86,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         const ElemType initValueScale,
                         bool initOnCPUOnly) // if true then always init on CPU, making initialization consistent across both (for testing)
         {
-            size_t inputSize = FunctionValues().GetNumCols();
+            size_t inputSize = GetNumCols();
 
             // the random seed offset is set via the "randomSeedOffset" parameter in config
             if (initOnCPUOnly)
@@ -114,37 +118,60 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FunctionValues().SetValue(numRows, numCols, array.data(), matrixFlagNormal, m_deviceId);
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
+        void ReviseFromFile(const std::wstring & reviseFromFilePath)
+        {
+            size_t numRows = 0; 
+            size_t numCols = 0; 
+            auto array = File::LoadMatrixFromTextFile<ElemType>(msra::strfun::utf8(reviseFromFilePath), numRows, numCols); // TODO: change pathname to wstring
+            size_t nRows = m_functionValues.GetNumRows(); 
+            size_t nCols = m_functionValues.GetNumCols(); 
+
+            if (numRows != nRows || numCols != nCols)
+            {
+                RuntimeError("Error in ReviseFromFile for node %ls using file %ls:  original size (%d x %d) vs current size (%d x %d)",
+                    m_nodeName.c_str(), reviseFromFilePath.c_str(), nRows, nCols, numRows, numCols);
+            }
+
+            FunctionValues().SetValue(numRows, numCols, array.data(), matrixFlagNormal, m_deviceId);
+            
+        }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
-        virtual void EvaluateThisNode() {}
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) {}
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override {}
 
-        static const std::wstring TypeName() {return L"LearnableParameter";} 
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+        }
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
-            sprintf(str, "[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            sprintf(str, "[%lu,%lu]  ", GetNumRows(), GetNumCols());
             fstream << string(str);
             sprintf(str, "NeedGradient=%s", NeedGradient()? "true" : "false");
             fstream << string(str);
 
             PrintNodeValuesToFile(printValues, fstream);
         }
-   };
+    };
+
+    // -----------------------------------------------------------------------
+    // SparseLearnableParameter (/*no input*/)
+    // -----------------------------------------------------------------------
 
     //WARNING: Don't use SparseLearnableParameter yet since the current version assumes the parameter is dense instead of sparse
     //WARNING: After the right implementation is put here we need to turn it on in NetworkDescriptionLangauge.cpp
     template<class ElemType>
     class SparseLearnableParameter : public LearnableParameter<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
 
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
             LearnableParameter<ElemType>(deviceId, name)
@@ -161,24 +188,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradientValues->Resize(rows, cols, size);
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             LearnableParameter<ElemType>::LoadFromFile(fstream, modelVersion);
             CreateMatrixIfNull(m_gradientValues);
-            m_gradientValues->Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            m_gradientValues->Resize(GetNumRows(), GetNumCols());
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
     };
 
     template class SparseLearnableParameter<float>; 
     template class SparseLearnableParameter<double>;
 
+    // -----------------------------------------------------------------------
+    // InputValue (/*no input*/)
+    // an input value (typically fed by a DataReader)
+    // this covers four types: (regular vs. image) x (non-sparse vs. sparse)
+    // TODO: There is still debate whether an InputValue without layout makes sense.
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class InputValue : public ComputationNode<ElemType>
+    class InputValue : public ComputationNode<ElemType>, public NumInputs<0>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        static const std::wstring TypeName() { return L"InputValue"; }
+        static const std::wstring SparseTypeName() { return L"SparseInputValue"; }    // special case used by old NDL
+        // BUGBUG: This node identifies its sparseness through a different OperationName(). Hence we must do a non-standard dance ^^ to declare the boilerplate stuff.
+        //         This is bad. It should just write m_isSparse, or be a different type.
+
         void Init(size_t rows, size_t cols, bool isSparse)
         {
             m_isSparse = isSparse;
@@ -190,9 +227,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_needGradient = false;
         }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         {
             m_outputWidth = SIZE_MAX;
             m_outputHeight = SIZE_MAX;
@@ -200,7 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Init(0, 0, false);
         }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         {
             m_outputWidth = SIZE_MAX;
             m_outputHeight = SIZE_MAX;
@@ -209,7 +245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         // ^^ TODO: merge the two above with optional arg
         InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, bool isSparse = false) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         {
             if (rows * cols == 0)
                 LogicError("This InputValue dimension is 0.");
@@ -221,7 +257,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Init(rows, cols, isSparse);
         }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, bool isSparse = false) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         {
             size_t rows = imageWidth * imageHeight * imageChannels;
             size_t cols = numImages;
@@ -236,22 +272,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Init(rows, cols, isSparse);
         }
 
-        virtual void SaveToFile(File& fstream) const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
-            fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
-            fstream << m_outputWidth << m_outputHeight << m_outputChannels; 
+            size_t rows = GetNumRows();                     // using explicitly typed variables to be 100% symmetrical to LoadFromFile()
+            size_t cols = m_pMBLayout ? 0 : GetNumCols();   // if this Input depends on MB size, we write it as having 0 dimensions
+            fstream << rows << cols;
+            fstream << m_outputWidth << m_outputHeight << m_outputChannels;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
 
             size_t rows, cols;
             fstream >> rows >> cols;
-            if (rows * cols == 0) 
-                LogicError("This InputValue dimension is 0.");
-
+            if (m_pMBLayout)    // some older files retained the #columns when saving, which is meaningless
+                cols = 0;
             fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels; 
 
             CreateMatrixIfNull(m_functionValues);
@@ -259,28 +296,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ConvertToSparseMatrix();
 
             m_functionValues->Resize(rows, cols);
-            m_needGradient = false;
+            m_functionValues->SetValue(0.0);         // (if cols > 0, Resize() alone is not guaranteed to clear to 0; this eliminates potential left-overs)
+            m_needGradient = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
         }
 
-        // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type; this special-casing will cause grief
+        // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type. This causes some unnecessary special-casing.
         virtual const std::wstring OperationName() const { return m_isSparse ? SparseTypeName() : TypeName(); }
 
-        static const std::wstring TypeName() {return L"InputValue";} 
-        static const std::wstring SparseTypeName() {return L"SparseInputValue";}    // special case used by old NDL
-
-        virtual void EvaluateThisNode()  {} 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) {}
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override {}
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
-            sprintf(str, "[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            fstream << string(str);        
+            sprintf(str, "[%lu,%lu]", GetNumRows(), GetNumCols());
+            fstream << string(str);         // TODO: string(.) necessary?
         }
 
     private:
@@ -297,20 +331,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class InputValue<float>; 
     template class InputValue<double>;
 
-    //originally designed to extract word embedding representation from bag-of-word. 
-    //takes two inputs, input0 is weight matrix and input1 is the bag-of-word representation of the inputs
-    template<class ElemType>
-    class LookupTableNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        LookupTableNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        { }
+    // -----------------------------------------------------------------------
+    // LookupTableNode (weight matrix, bag-of-word representation of the inputs)
+    // originally designed to extract word embedding representation from bag-of-word
+    // TODO: what does this do?
+    // -----------------------------------------------------------------------
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"LookupTable";} 
+    template<class ElemType>
+    class LookupTableNode : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"LookupTable"; }
+    public:
+        LookupTableNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -332,28 +367,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 1)
                 InvalidArgument("LookupTable operation only takes two inputs.");
 
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             if (inputIndex == 0)  //left derivative
             {
-                Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
             }
             else  //right derivative
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
             }
         }
 
-        static void WINAPI ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)  
+        /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)  
         {
             size_t rows1 =inputFunctionValues.GetNumRows(), cols1 = inputFunctionValues.GetNumCols();
             size_t rowsp = gradientValues.GetNumRows(), colsp = gradientValues.GetNumCols();
@@ -368,7 +402,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gradientValues.Reshape(rowsp, colsp);
         }
 
-        static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)  
+        /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues)  
             {
             size_t rows1 =inputGradientValues.GetNumRows(), cols1 = inputGradientValues.GetNumCols();
             size_t rowsp = gradientValues.GetNumRows(), colsp = gradientValues.GetNumCols();
@@ -383,7 +417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             gradientValues.Reshape(rowsp, colsp);
         }
 
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
 #ifdef DEBUG_DECODER
@@ -391,16 +425,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
         }
 
         //input0 is the weight (each column is an embedding of one word), input 1 contains m_bnrLooked words in each column (sample)
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, Matrix<ElemType>& input1)  
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, Matrix<ElemType>& input1)  
         {
             size_t rows1 = input1.GetNumRows(), cols1 = input1.GetNumCols();
             size_t cols0 = input0.GetNumCols();
@@ -425,25 +460,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             functionValues.Reshape(rows * wordsInEachSample, cols1);
         }
             
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(1)->FunctionValues().GetNumRows() % Inputs(0)->FunctionValues().GetNumCols() != 0)
-                throw invalid_argument("Mismatched dimention. rows in input1 must be multiples of cols in input0.");
+            if (isFinalValidationPass && Inputs(1)->GetNumRows() % Inputs(0)->GetNumCols() != 0)
+                InvalidArgument("Mismatched dimension. Rows in input1 must be multiples of cols in input0.");
 
-            int wordsInEachSample = Inputs(1)->FunctionValues().GetNumRows() / Inputs(0)->FunctionValues().GetNumCols();
-          
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows() * wordsInEachSample, Inputs(1)->FunctionValues().GetNumCols());
+            int wordsInEachSample = Inputs(1)->GetNumRows() / Inputs(0)->GetNumCols();
 
+            Resize(Inputs(0)->GetNumRows() * wordsInEachSample, Inputs(1)->GetNumCols());
+
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
         }
 
         bool UnitTest()
@@ -454,19 +483,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nHidden = 3;
                 size_t nOutput = 3;
 
-                Inputs(0)->FunctionValues().Resize(nInput, nHidden);
+                Inputs(0)->Resize(nInput, nHidden);
                 Inputs(0)->FunctionValues().SetValue(1.0);
                 Inputs(1)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
                 Inputs(1)->FunctionValues().SwitchToMatrixType(DENSE, matrixFormatDense, false);
-                Inputs(1)->FunctionValues().Resize(nHidden, nOutput);
+                Inputs(1)->Resize(nHidden, nOutput);
                 Inputs(1)->FunctionValues().SetValue(0.0);
                 Inputs(1)->FunctionValues().SetValue(0, 0, 1.0);
                 Inputs(1)->FunctionValues().SetValue(1, 1, 2.0);
                 Inputs(1)->FunctionValues().TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true);
                 Inputs(1)->FunctionValues().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
-                FunctionValues().Resize(nInput, nOutput);
+                Resize(nInput, nOutput);
 
-                EvaluateThisNode();
+                EvaluateThisNode(FrameRange());
 
                 /// check with expected values
                 FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
@@ -481,7 +510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 GradientValues().SetValue(1.0);
                 for (size_t i = 0; i < 2; i++)
                 {
-                    Inputs(i)->GradientValues().Resize(Inputs(i)->FunctionValues().GetNumRows(), Inputs(i)->FunctionValues().GetNumCols());
+                    Inputs(i)->GradientValues().Resize(Inputs(i)->GetNumRows(), Inputs(i)->GetNumCols());
                     Inputs(i)->GradientValues().SetValue(0);
                 }
                 for (size_t i = 0; i < 2; i++)
@@ -512,29 +541,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class LookupTableNode<float>;
     template class LookupTableNode<double>;
 
+    // -----------------------------------------------------------------------
+    // PairNetworkNode (input)
+    // -----------------------------------------------------------------------
+
     /**
     pair this node to a node in another network
     this node provide an interface from this network. The next layer network then can use this interface to know which node to connect to.
     */
     template<class ElemType>
-    class PairNetworkNode : public ComputationNode<ElemType>
+    class PairNetworkNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"PairNetwork"; }
+
         void Init(size_t row_size, size_t col_size)
         {
-            m_reqMultiSeqHandling = true;
             CreateMatrixIfNull(m_functionValues);
             m_functionValues->Resize(row_size, col_size);
         }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        {
-            Init(1, 1); // TODO: do we not need to resize m_gradientValues?
-        }
-        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size, size_t col_size) :
-            ComputationNode<ElemType>(deviceId, name)
+        //PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        //    Base(deviceId, name)
+        //{
+        //    Init(1, 1); // TODO: do we not need to resize m_gradientValues?
+        //}
+        PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size = 1, size_t col_size = 1) :
+            Base(deviceId, name)
         {
             Init(row_size, col_size);
             CreateMatrixIfNull(m_gradientValues);
@@ -542,13 +575,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradientValues->SetValue(0.0f);
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Init(1, 1); // TODO: this looks wrong; should the dimension not come from the loaded model data?
             Base::LoadFromFile(fstream, modelVersion);
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
 
         /// to-do: need to change to the new way of resetting state
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -559,53 +590,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues(), Inputs(inputIndex)->GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 0)
                 InvalidArgument("Delay operation only takes one input.");
             assert(m_functionValues->GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues->GetNumRows() for loop dimension
-            assert(m_sentenceSeg != nullptr);
+            assert(m_pMBLayout);
 
-            Matrix<ElemType> mTmp = Inputs(inputIndex)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep), 
-                mTmp);
+            Matrix<ElemType> mTmp = Inputs(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType>::ScaleAndAdd(1.0, GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout)), mTmp);
         }
 
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             m_functionValues->SetValue(Inputs(0)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> mTmp = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            mTmp.SetValue(Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep));
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> mTmp = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            mTmp.SetValue(Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout)));
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 1)
-                LogicError("PairNetwork operation should have one input.");
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            if (rows0 > 0 && cols0 > 0) // TODO: is this check needed?
+                Resize(Inputs(0));
 
-            if (!(Inputs(0) == nullptr))
-            {
-                size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-
-                if (rows0 > 0 && cols0 > 0) FunctionValues().Resize(rows0, cols0);
-            }
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
-        virtual void AttachInputs(const ComputationNodePtr inputNode)
-        {
-            m_children.resize(1);
-            m_children[0] = inputNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr inputNode)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = inputNode;
+        //}
 
+#if 0   // folded into base function, to avoid virtual; that base function already knows about some node types anyway
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,
-            std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromDelayNode)
+                                           std::vector<ComputationNodePtr>& sourceRecurrentNodePtr, const bool bFromDelayNode)
         {
             if (visited.find(shared_from_this()) == visited.end())  //not visited
             {
@@ -613,12 +641,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 //children first for function evaluation
                 if (!IsLeaf())
-                {
-                    if (ChildrenNeedGradient())  //only nodes that require gradient calculation is included in gradient calculation
-                        m_needGradient = true;
-                    else
-                        m_needGradient = false;
-                }
+                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
                 result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
                 this->m_visitedOrder = result.size();
@@ -629,10 +652,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     sourceRecurrentNodePtr.push_back(shared_from_this());
             }
         }
-
-        static const std::wstring TypeName() { return L"PairNetwork"; }
+#endif
 protected:
-        virtual bool UseCustomizedMultiSeqHandling() { return true; }
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
     };
 

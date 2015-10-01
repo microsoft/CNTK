@@ -4,6 +4,7 @@
 
 #include "Basics.h"
 #include "BrainScriptEvaluator.h"
+#include "BrainScriptParser.h"
 
 #ifndef let
 #define let const auto

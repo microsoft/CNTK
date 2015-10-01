@@ -124,6 +124,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType* BufferPointer() const {return m_pArray;}
 
         ElemType Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
+        void FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul);
         ElemType RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
         void Reshape(const size_t numRows, const size_t numCols);
@@ -136,6 +137,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const ElemType v);
         void SetValue(const ElemType* d_v); //d_v is pointer to the the value in GPU memory
         void SetColumn(const ElemType* colPointer, size_t colInd);
+        void SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd);
         void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
         void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);        
 
@@ -209,6 +211,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
         GPUMatrix<ElemType>& AssignLogSoftmaxOf (const GPUMatrix<ElemType>& a, const bool isColWise);
+
+        //sequence training
+        GPUMatrix<ElemType>& DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType & threshhold);
+        GPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha);
 
         GPUMatrix<ElemType>& InplaceSqrt ();
         GPUMatrix<ElemType>& AssignSqrtOf (const GPUMatrix<ElemType>& a);

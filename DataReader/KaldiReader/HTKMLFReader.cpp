@@ -21,6 +21,10 @@
 #ifdef _WIN32
 #include "readaheadsource.h"
 #endif
+#if defined(__unix__)
+#include <unistd.h>
+#endif
+
 #include "chunkevalsource.h"
 #include "minibatchiterator.h"
 #define DATAREADER_EXPORTS  // creating the exports here
@@ -417,12 +421,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     pagePaths.push_back(tempFile);
 #endif
 #ifdef __unix__
-                    char* tempFile;
+                    const char* tempFile;
                     //GetTempFileName(pageFilePath.c_str(), L"CNTK", 0, tempFile);
                     tempFile = pageFilePath.c_str();
-                    int fid = mkstemp(tempFile);
+                    int fid = mkstemp(const_cast<char*>(tempFile));
                     unlink (tempFile);
-                    close (tempFile);
                     pagePaths.push_back(GetWC(tempFile));
 #endif
                 }
@@ -525,7 +528,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     n++;
                 }
 
-                fprintf (stderr, " %d entries\n", n);
+                fprintf (stderr, " %zd entries\n", n);
 
                 if (i==0)
                     numFiles=n;
@@ -1275,7 +1278,7 @@ the first row is 0/1 bit for wether corresponding frame has sentence beginining/
                             {
                             reader.read (path, featkind, sampperiod, feat);   // whole file read as columns of feature vectors
                             });
-                    fprintf (stderr, "evaluate: reading %d frames of %S\n", feat.cols(), ((wstring)path).c_str());
+                    fprintf (stderr, "evaluate: reading %zd frames of %S\n", feat.cols(), ((wstring)path).c_str());
                     m_fileEvalSource->AddFile(feat, featkind, sampperiod, i);
                 }
                 m_inputFileIndex++;

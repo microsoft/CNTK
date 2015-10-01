@@ -345,7 +345,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
         // process outstanding NDL scripts ensuring that the inputs have all been resolved
         ProcessNDLScript(netNdlFrom, ndlPassResolve); 
-        for (auto node : nodeTo)
+        for (auto & node : nodeTo)
         {
             node->SetInput(inputNum, nodeFrom[0]);
         }
@@ -442,7 +442,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         ProcessNDLScript(netNdl, ndlPassInitial, false);
 
         ComputationNetwork* cn = netNdl->cn;
-        for (auto node : nodes)
+        for (auto & node : nodes)
         {
             switch(prop)
             {
@@ -472,7 +472,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 case melPropMultiSeqHandling:
                 {
                     bool set = params[2];
-                    SetProperty(node, cn->NodesReqMultiSeqHandling(), set);
+                    SetProperty(node, cn->RequestNodesMultiSeqHandling(), set);
                     break;
                 }
                 case melPropEvaluation:
@@ -524,7 +524,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         // make sure all NDL links have been resolved
         ProcessNDLScript(netNdl, ndlPassResolve);
 
-        for (auto node : nodes)
+        for (auto & node : nodes)
         {
             switch(prop)
             {
@@ -562,7 +562,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
 
             if (nodes.size() < 1)
                 RuntimeError("Delete must have at least one target, %s doesn't represent any items", params[i].c_str());
-            for (auto node : nodes)
+            for (const auto & node : nodes)
             {
                 netNdl->cn->DeleteNode(node->NodeName());
             }
@@ -590,6 +590,30 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         {
             auto & node = nodeName.first;
             netNdlFrom->cn->RenameNode(node, nodeName.second);
+        }
+    }
+    else if (EqualInsensitive(name, "ReviseParameter"))
+    {
+        typedef LearnableParameter<ElemType> LearnableParameterNode;
+        if (params.size() != 2)
+            RuntimeError("Invalid number of parameters: Valid parameters are: ReviseParameter(nodeName, nodeParametersInASCIIPathName)");
+        std::string nodeName = params[0];
+        std::string paramPath = params[1];
+
+        NetNdl<ElemType>* netNdl; 
+        vector<ComputationNodeBasePtr> nodes = FindSymbols(params[0], netNdl);
+
+        for (auto & pNodes : nodes)
+        {
+            if (pNodes->OperationName() != LearnableParameter<ElemType>::TypeName())
+            {
+                fprintf(stderr, "WARNING: you want to change the parameter of node (%ls), but it is not a learnable parameter (it is a %ls node). Skipping this node\n",
+                    pNodes->NodeName().c_str(), pNodes->OperationName().c_str());
+                continue;
+            }
+            shared_ptr<LearnableParameterNode> pParamNode = std::dynamic_pointer_cast<LearnableParameterNode>(pNodes);
+            pParamNode->ReviseFromFile(msra::strfun::mbstowcs(paramPath));
+            fprintf(stderr, "Revise node %ls using parameter file %s\n", pNodes->NodeName().c_str(), paramPath.c_str());
         }
     }
     else

@@ -58,7 +58,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
 
 
-            m_net->SetDeviceID(m_deviceId);
+            m_net->SetDeviceId(m_deviceId);
             if (m_deviceId < 0)
                 fprintf(stderr, "NDLBuilder Using CPU\n");
             else
@@ -138,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // "load" parameter are in fact loaded (if they were all processed at once, the last file's "load"
                     // parameter would override all the earlier ones, and those sections wouldn't get loaded).
                     std::vector<std::string> filePathVec = msra::strfun::split(ndlMacrosPaths, "+");
-                    for (auto filePath : filePathVec)
+                    for (const auto & filePath : filePathVec)
                     {
                         ndlScript.LoadConfigFileAndResolveVariables(msra::strfun::utf16(filePath), config);
                     }

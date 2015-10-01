@@ -24,9 +24,9 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // =======================================================================
-    // NonlinearityNode -- abstract base class that holds what's shared between non-linearity nodes like Sigmoid
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // NonlinearityNode (input) -- abstract base class that holds what's shared between non-linearity nodes like Sigmoid
+    // -----------------------------------------------------------------------
 
     // NOTE:
     // This represents a partially failed attempt to unify this.
@@ -37,77 +37,75 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // shared base for all elemen-twise non-linearities
     template<class ElemType>
-    class NonlinearityNode : public ComputationNode<ElemType>
+    class NonlinearityNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         NonlinearityNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name),
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Nonlinearities only have one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialV(*m_gradient, Inputs(0)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("Nonlinearities only have one input.");
+            assert(inputIndex == 0); inputIndex;
 
             // TODO: this seems always the same pattern. This belongs into a base slice-extractor function.
             //       We should also unify these two functions into one that decides 1 frame or all frames at runtime... through the slice-extractor function itself.
             //       For now we could define ALL_SAMPLES e.g. as SIZE_MAX.
             //       GetGradientSlice(), GetInputSlice() or something.
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             // why GradientValues() but m_functionValues below and not FunctionValues()?
 
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialV(*m_gradient, sliceInputValue, sliceInputGrad, sliceOutputGrad);
         }
 
         virtual void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) = 0;
 
-        virtual void EvaluateThisNode()  
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
         {
             EvaluateThisNodeV(FunctionValues(), Inputs(0)->FunctionValues());   // actual work is done in derived class depending on what non-linearity it is
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeV(sliceOutputValue, sliceInputValue);
         }
 
         virtual void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) = 0;
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            ValidateUnaryMap(isFinalValidationPass);
+            m_gradient.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+#if 0
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("Nonlinearity operation: the input node has 0 element.");
 
-            if (m_children.size() != 1) 
-                LogicError("Nonlinearity operations should have one input.");
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("Nonlinearity operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            //m_gradient.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0));
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
+#endif
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -143,26 +141,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         shared_ptr<Matrix<ElemType>> m_gradient;
     };
 
-#define UsingNonlinearityNodeMembers UsingComputationNodeMembers; using Base::m_gradient
+#define UsingNonlinearityNodeMembers UsingComputationNodeMembersBoilerplate; using Base::m_gradient
 
-    // =======================================================================
-    // RectifiedLinearNode -- ReLU non-linearity
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // RectifiedLinearNode (input) -- ReLU non-linearity
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class RectifiedLinearNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"RectifiedLinear"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RectifiedLinearNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"RectifiedLinear";} 
-
-        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) override
         {
             gradient.AssignLinearRectifierDerivativeOf(inputFunctionValues);
 #if DUMPOUTPUT
@@ -189,40 +184,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RectifiedLinearNode<float>; 
     template class RectifiedLinearNode<double>;
 
-    // =======================================================================
-    // SigmoidNode -- sigmoid non-linearity
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // SigmoidNode (input) -- sigmoid non-linearity
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class SigmoidNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"Sigmoid"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"Sigmoid";} 
-
         // we should get rid of this code dup, need to unify the -V functions
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Sigmoid only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("Sigmoid only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(*m_gradient, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -248,40 +238,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SigmoidNode<float>; 
     template class SigmoidNode<double>;
 
-    // =======================================================================
-    // TanhNode -- tanh non-linearity
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // TanhNode (input) -- tanh non-linearity
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class TanhNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"Tanh"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TanhNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"Tanh";}
-
         // TODO: unify signature & get rid of code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Tanh only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("Tanh only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(*m_gradient, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -309,40 +294,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class TanhNode<float>; 
     template class TanhNode<double>;
 
-    // =======================================================================
-    // LogNode -- component-wise log() of input
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // LogNode (input) -- component-wise log() of input
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class LogNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"Log"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         LogNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Log"; }
-
         // TODO: get rid of code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Log only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("Log only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(*m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
@@ -369,40 +349,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class LogNode<float>;
     template class LogNode<double>;
 
-    // =======================================================================
-    // ExpNode -- component-wise exp() of input
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // ExpNode (input) -- component-wise exp() of input
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class ExpNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"Exp"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ExpNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Exp"; }
-
         // TODO: get rid of code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Exp only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("Exp only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(*m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
@@ -428,40 +403,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ExpNode<float>;
     template class ExpNode<double>;
 
-    // =======================================================================
-    // CosineNode -- component-wise cos() of input
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // CosineNode (input) -- component-wise cos() of input
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class CosineNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"Cosine"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosineNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Cosine";}
-
         // TODO: code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Cosine only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("Cosine only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(*m_gradient, sliceInputGrad, sliceInputValue, sliceOutputGrad);
         }
@@ -488,9 +458,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class CosineNode<float>; 
     template class CosineNode<double>;
 
-    // =======================================================================
-    // SoftmaxNode -- soft-max over input vector(s)
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // SoftmaxNode (input) -- soft-max over input vector(s)
+    // -----------------------------------------------------------------------
 
     //we assume it's  column-wise by default
     //the derivative will increase the Matrix<ElemType> size to the power of column size and should not be used.
@@ -498,32 +468,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class SoftmaxNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"Softmax"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() {return L"Softmax";}
-
         // TODO: code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Softmax only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, *m_diff, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("Softmax only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(*m_gradient, *m_diff, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -540,16 +505,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddElementProductOf(diff, functionValues);
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+#if 0   // I don't understand why this is here. Seems to resize the output, then forward to base. Either way, resizing will be handled uniformly soon.
+        // BUGBUG: where is EvaluateThisNodeMap()?
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             // need to resize
-            size_t r = Inputs(0)->FunctionValues().GetNumRows(), c = Inputs(0)->FunctionValues().GetNumCols();
+            size_t r = Inputs(0)->GetNumRows(), c = Inputs(0)->GetNumCols();
             // note: I moved this test before sliceInputValue=..., assuming it will not be affected by the assignment
             if (m_functionValues->GetNumCols() != c ||
                 m_functionValues->GetNumRows() != r)
                 m_functionValues->Resize(r, c);
             NonlinearityNode<ElemType>::EvaluateThisNode(frameRange);
         }
+#endif
 
         /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
         {
@@ -560,19 +529,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            ValidateUnaryMap(isFinalValidationPass);
+#if 0
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("SoftmaxNode operation: the input node has 0 element.");
 
-            if (m_children.size() != 1) 
-                LogicError("SoftmaxNode operation should have one input.");
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("SoftmaxNode operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0));
             // TODO: differs from base in that it does not resize the gradient--why?
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
+#endif
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
@@ -612,42 +580,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SoftmaxNode<float>; 
     template class SoftmaxNode<double>;
 
-    // =======================================================================
-    // LogSoftmaxNode -- log of soft-max over input vector(s)
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // LogSoftmaxNode (input) -- log of soft-max over input vector(s)
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class LogSoftmaxNode : public NonlinearityNode<ElemType>
     {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        static const std::wstring TypeName() { return L"LogSoftmax"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
 
         LogSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"LogSoftmax"; }
-
         // TODO: code dup
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Softmax only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, *m_softmax, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
-
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("Softmax only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(*m_gradient, *m_softmax, sliceInputGrad, sliceOutputGrad, sliceOutputValue);
         }
@@ -672,19 +634,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 1)
-                LogicError("LogSoftmaxNode operation should have one input.");
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            ValidateUnaryMap(isFinalValidationPass);
+#if 0
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("LogSoftmaxNode operation: the input node has 0 element.");
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             // differs from base in that it does not resize the gradient
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
+#endif
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
@@ -723,24 +684,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class LogSoftmaxNode<float>;
     template class LogSoftmaxNode<double>;
 
-    // =======================================================================
-    // GMMLogLikelihoodNode -- GMM log LL over input vector(s)
-    // BUGBUG: This seems to just to a single Gaussian?
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // GMMLogLikelihoodNode (unnormedPrior, means, logStdDevs, features) -- GMM log LL over input vector(s)
+    // -----------------------------------------------------------------------
 
     //calculates: the log likelihood of a feature given GMM parameters
     template<class ElemType>
-    class GMMLogLikelihoodNode : public ComputationNode<ElemType>
+    class GMMLogLikelihoodNode : public ComputationNode<ElemType>, public NumInputs<4>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"GMMLogLikelihood"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         GMMLogLikelihoodNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNode<ElemType>(deviceId, name)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"GMMLogLikelihood"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -763,13 +721,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             //get the right slice 
-            const size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();
+            const size_t colsPrior = Inputs(0)->GetNumCols();
 
-            Matrix<ElemType> sliceGradientValue = m_gradientValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> slicePosterior = m_posterior->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceGradientValue = DataSlice(m_gradientValues, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> slicePosterior = DataSlice(m_posterior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                 
             switch (inputIndex)
             {
@@ -779,40 +737,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         ComputeInputPartialUnnormedPrior(Inputs(0)->GradientValues(), sliceGradientValue, *m_prior, slicePosterior, *m_temp);
                     else
                     {
-                        Matrix<ElemType> sliceUnnormedPriorGradient = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                        Matrix<ElemType> slicePrior = m_prior->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                        Matrix<ElemType> sliceUnnormedPriorGradient = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                        Matrix<ElemType> slicePrior = DataSlice(m_prior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                         ComputeInputPartialUnnormedPrior(sliceUnnormedPriorGradient, sliceGradientValue, slicePrior, slicePosterior, *m_temp);
                     }
                 }
                 break;
             case 1:
                 {
-                      Matrix<ElemType> sliceNormedDeviationVectors = m_normedDeviationVectors->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                      Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                       if (colsPrior == 1)
                         ComputeInputPartialMean(Inputs(1)->GradientValues(), sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
                     else
                     {
-                        Matrix<ElemType> sliceMeanGradient = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                        Matrix<ElemType> sliceMeanGradient = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                         ComputeInputPartialMean(sliceMeanGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
                     }
                 }
                 break;
             case 2:
                 {
-                    Matrix<ElemType> sliceNormedDeviation = m_normedDeviation->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceNormedDeviation = DataSlice(m_normedDeviation, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                     if (colsPrior == 1)
                         ComputeInputPartialLogStddev(Inputs(2)->GradientValues(), sliceGradientValue, sliceNormedDeviation, slicePosterior, *m_temp);
                     else
                     {
-                        Matrix<ElemType> sliceLotStddevGradient = Inputs(2)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                        Matrix<ElemType> sliceLotStddevGradient = Inputs(2)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                         ComputeInputPartialLogStddev(sliceLotStddevGradient, sliceGradientValue, sliceNormedDeviation, slicePosterior, *m_temp);
                     }
                 }
                 break;
             case 3:
                 {
-                    Matrix<ElemType> sliceNormedDeviationVectors = m_normedDeviationVectors->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                    Matrix<ElemType> sliceFeatureGradient = Inputs(3)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                    Matrix<ElemType> sliceFeatureGradient = Inputs(3)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                     ComputeInputPartialFeature(sliceFeatureGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
                 }
                 break;
@@ -821,7 +779,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        static void WINAPI ComputeInputPartialUnnormedPrior(Matrix<ElemType>& unnormedPriorGradientValues, const Matrix<ElemType>& gradientValues,
+        /*TODO: merge with call site*/void ComputeInputPartialUnnormedPrior(Matrix<ElemType>& unnormedPriorGradientValues, const Matrix<ElemType>& gradientValues,
             const Matrix<ElemType>& prior, const Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
             temp.AssignDifferenceOf(posterior, prior);
@@ -834,7 +792,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("GMMLogLikelihoodNode: UnnormedPrior should either have same number of columns as the features or have only one column.");
         }
 
-        static void WINAPI ComputeInputPartialMean(Matrix<ElemType>& meanGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
+        /*TODO: merge with call site*/void ComputeInputPartialMean(Matrix<ElemType>& meanGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
             Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
             size_t numComponent = posterior.GetNumRows(); 
@@ -860,7 +818,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
         }
 
-        static void WINAPI ComputeInputPartialLogStddev(Matrix<ElemType>& logStddevGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviation,
+        /*TODO: merge with call site*/void ComputeInputPartialLogStddev(Matrix<ElemType>& logStddevGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviation,
             const Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
             size_t numComponent = posterior.GetNumRows();
@@ -877,7 +835,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("GMMLogLikelihoodNode: stddev should either have same number of columns as the features or have only one column.");
         }
 
-        static void WINAPI ComputeInputPartialFeature(Matrix<ElemType>& featureGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
+        /*TODO: merge with call site*/void ComputeInputPartialFeature(Matrix<ElemType>& featureGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
             Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
             size_t numComponent = posterior.GetNumRows();
@@ -898,24 +856,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 featureGradientValues.AddWithRowSliceValuesOf(temp, i*featureSize, featureSize);
         }
 
-        virtual void SetFunctionAndGradientSize(const int numSamples)
+        virtual size_t SetFunctionAndGradientMBSize(size_t numCols)
         {
-            ComputationNode<ElemType>::SetFunctionAndGradientSize(numSamples);
+            numCols = Base::SetFunctionAndGradientMBSize(numCols);
+            // ^^ if numCols is SIZE_MAX then we let base determine the value based on MB layout
+            if (!m_pMBLayout)            // if no layout, this node contains parameters independent of MB size, don't resize
+                return numCols;         // BUGBUG: what do we return here?
 
-            size_t numComponents = Inputs(0)->FunctionValues().GetNumRows();
-            size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();
-            //size_t numSamples = Inputs(3)->FunctionValues().GetNumCols();
-            size_t featureSize = Inputs(3)->FunctionValues().GetNumRows();
+            size_t numComponents = Inputs(0)->GetNumRows();
+            size_t colsPrior = Inputs(0)->GetNumCols();
+            //size_t numCols = Inputs(3)->GetNumCols();
+            size_t featureSize = Inputs(3)->GetNumRows();
 
             m_prior->Resize(numComponents, colsPrior);
             m_stddev->Resize(numComponents, colsPrior);
-            m_normedDeviation->Resize(numComponents, numSamples);
-            m_normedDeviationVectors->Resize(numComponents * featureSize, numSamples);
-            m_posterior->Resize(numComponents, numSamples);
+            m_normedDeviation->Resize(numComponents, numCols);
+            m_normedDeviationVectors->Resize(numComponents * featureSize, numCols);
+            m_posterior->Resize(numComponents, numCols);
+            return numCols;
         }
 
         //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             // all internal matrices will be automatically resized since all of them are assigned to a value so no resize is needed here.
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), 
@@ -923,17 +885,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            size_t colsPrior = Inputs(0)->FunctionValues().GetNumCols();
-            size_t numSamples = Inputs(3)->FunctionValues().GetNumCols();
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            size_t colsPrior = Inputs(0)->GetNumCols();
+            size_t numSamples = Inputs(3)->GetNumCols();
 
             //get the right slice 
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceFeature = Inputs(3)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceNormedDeviation = m_normedDeviation->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceNormedDeviationVectors = m_normedDeviationVectors->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> slicePosterior = m_posterior->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceFeature = Inputs(3)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceNormedDeviation = DataSlice(m_normedDeviation, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> slicePosterior = DataSlice(m_posterior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             if (colsPrior == 1)
             {
@@ -942,12 +905,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (colsPrior == numSamples)
             {
-                Matrix<ElemType> sliceUnnormedPrior = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceMean = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceLogstddev = Inputs(2)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceUnnormedPrior = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceMean = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceLogstddev = Inputs(2)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-                Matrix<ElemType> slicePrior = m_prior->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceStddev = m_stddev->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> slicePrior = DataSlice(m_prior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceStddev = DataSlice(m_stddev, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 EvaluateThisNodeS(sliceOutputValue, sliceUnnormedPrior, sliceMean, sliceLogstddev, sliceFeature,
                     slicePrior, sliceStddev, sliceNormedDeviationVectors, sliceNormedDeviation, slicePosterior, *m_temp);
@@ -958,7 +921,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
         //If we want to speed up we need to replace following code with a several specialized GPU functions
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& unnormedPrior, const Matrix<ElemType>& mean,  Matrix<ElemType>& logstddev,
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& unnormedPrior, const Matrix<ElemType>& mean,  Matrix<ElemType>& logstddev,
             const Matrix<ElemType>& feature, Matrix<ElemType>& prior, Matrix<ElemType>& stddev, Matrix<ElemType>& normedDeviationVectors,
             Matrix<ElemType>& normedDeviation, Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
@@ -1036,33 +999,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 4)
-                LogicError("GMMLogLikelihoodNode requires four inputs.");
+            Base::Validate(isFinalValidationPass);
 
             size_t rows[4], cols[4];
             for (int i = 0; i < 4; i++)
             {
-                rows[i] = Inputs(i)->FunctionValues().GetNumRows();
-                cols[i] = Inputs(i)->FunctionValues().GetNumCols();
+                rows[i] = Inputs(i)->GetNumRows();
+                cols[i] = Inputs(i)->GetNumCols();
             }
 
-            if (cols[0] != cols[1] || cols[0] != cols[2])
-                LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input), mean (second input), and logStddev (third input) should have same number of columns.");
+            if (isFinalValidationPass)
+            {
+                if (cols[0] != cols[1] || cols[0] != cols[2])
+                    LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input), mean (second input), and logStddev (third input) should have same number of columns.");
 
-            if (cols[0] != 1 && cols[0] != cols[3])
-                LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should either have same number of columns as the features (fourth input) or have only one column.");
+                if (cols[0] != 1 && cols[0] != cols[3])
+                    LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should either have same number of columns as the features (fourth input) or have only one column.");
 
-            if (rows[0] != rows[2])
-                LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should have same dimension as logStddev (third input), i.e., all dimensions in each Gaussian component share the same stddev.");
+                if (rows[0] != rows[2])
+                    LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should have same dimension as logStddev (third input), i.e., all dimensions in each Gaussian component share the same stddev.");
 
-            if (rows[1] != rows[0]*rows[3])
-                LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
+                if (rows[1] != rows[0]*rows[3])
+                    LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
+            }
 
-            FunctionValues().Resize(1, cols[3]);
+            Resize(1, cols[3]);
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -1076,14 +1040,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //leftNode should be the empirical
-        virtual void AttachInputs(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature)
-        {
-            m_children.resize(4);
-            m_children[0] = unnormedPrior;
-            m_children[1] = mean;
-            m_children[2] = logStddev;
-            m_children[3] = feature;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr unnormedPrior, const ComputationNodePtr mean, const ComputationNodePtr logStddev, const ComputationNodePtr feature)
+        //{
+        //    m_children.resize(4);
+        //    m_children[0] = unnormedPrior;
+        //    m_children[1] = mean;
+        //    m_children[2] = logStddev;
+        //    m_children[3] = feature;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1146,25 +1110,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class GMMLogLikelihoodNode<float>;
     template class GMMLogLikelihoodNode<double>;
 
-    // =======================================================================
-    // DropoutNode -- perform drop-out
+    // -----------------------------------------------------------------------
+    // DropoutNode (input) -- perform drop-out
     // Output is scaled such that no post-scaling is necessary.
-    // =======================================================================
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class DropoutNode : public ComputationNode<ElemType>
+    class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Dropout"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         DropoutNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_dropoutRate(0)
         {
             m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1173,24 +1135,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(m_dropoutRate, Inputs(0)->GradientValues(), *m_maskOfDropout, GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 0)
                 InvalidArgument("Dropout operation only takes one input.");
 
-            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
             {
-                sliceMask = m_maskOfDropout->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                sliceMask = DataSlice(m_maskOfDropout, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             }
 
             ComputeInputPartialS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
         }
 
-        static void WINAPI ComputeInputPartialS(const double dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialS(const double dropoutRate, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& gradientValues)
         {
             if (dropoutRate > 0)
             {
@@ -1202,29 +1164,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             EvaluateThisNodeS(m_dropoutRate, m_randomSeed, FunctionValues(), *m_maskOfDropout, Inputs(0)->FunctionValues());
         }
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = Matrix <ElemType>();
 
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
             {
-                FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-                m_maskOfDropout->Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-                sliceMask = m_maskOfDropout->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+                m_maskOfDropout.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+                sliceMask = DataSlice(m_maskOfDropout, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             }
 
-            sliceOutputValue = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(m_dropoutRate, m_randomSeed, sliceOutputValue, sliceMask, sliceInput0Value);
         }
 
-        static void WINAPI EvaluateThisNodeS(const double dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(const double dropoutRate, unsigned long& randomSeed, Matrix<ElemType>& functionValues, Matrix<ElemType>& maskOfDropout, const Matrix<ElemType>& inputFunctionValues)
         {
             if (dropoutRate > 0)
             {
@@ -1261,26 +1224,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return Inputs(0)->FunctionValues();
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 1)
-                LogicError("Dropout operation should have one input.");
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
+            ValidateUnaryMap(isFinalValidationPass);
+            m_maskOfDropout.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+#if 0
+            if (Inputs(0)->GetNumRows() == 0)
                 LogicError("Dropout operation: the input node has 0 element.");
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            //m_maskOfDropout.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
+#endif
         }
 
-        virtual void AttachInputs(const ComputationNodePtr inputNode)
-        {
-            m_children.resize(1);
-            m_children[0] = inputNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr inputNode)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = inputNode;
+        //}
 
         void SetDropoutRate(const double val)
         {
@@ -1299,8 +1261,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::MoveMatricesToDevice(deviceId);
             m_maskOfDropout->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
-
-        static const std::wstring TypeName() { return L"Dropout"; }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -1338,26 +1298,28 @@ private:
     template class DropoutNode<float>;
     template class DropoutNode<double>;
 
-    // =======================================================================
-    // ReshapeNode -- reshape input matrix
+    // -----------------------------------------------------------------------
+    // ReshapeNode (input) -- reshape input matrix
     // TODO: Why is this in NonlinearityNodes.h? Should he linear algebra no?
-    // =======================================================================
+    // -----------------------------------------------------------------------
+
+    // TODO: This node needs very special consideration regarding MBLayout
 
     template<class ElemType>
-    class ReshapeNode : public ComputationNode<ElemType>
+    class ReshapeNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Reshape"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_numRows(0),
             m_imageWidth(0),
             m_imageHeight(0),
             m_imageChannels(0)
         { }
         ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows, size_t imageWidth, size_t imageHeight, size_t imageChannels) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_numRows(numRows),
             m_imageWidth(imageWidth),
             m_imageHeight(imageHeight),
@@ -1377,26 +1339,23 @@ private:
             }
         }
 
-        virtual void SaveToFile(File& fstream) const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream << m_numRows << m_imageWidth << m_imageHeight << m_imageChannels;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_numRows >> m_imageWidth >> m_imageHeight >> m_imageChannels;
         }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Reshape"; }
-
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void InferImageDimsFromInputs()
         {
@@ -1442,22 +1401,19 @@ private:
                         throw runtime_error("One of the children is missing.");
                     }
 
-                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
                 }
 
                 fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numRows, m_imageWidth, m_imageHeight, m_imageChannels);
             }
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 1)
-                LogicError("Reshape operation: Should have one input.");
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("Reshape operation: The input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("Reshape operation: The input node has 0 element.");
 
             size_t cols = Inputs(0)->FunctionValues().GetNumElements() / m_numRows;
 
@@ -1467,31 +1423,35 @@ private:
             // for cases where at runtime the operation would be valid
             if (cols == 0)
                 cols = 1;
-            FunctionValues().Resize(m_numRows, cols);
+            Resize(m_numRows, cols);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+            // TODO: ^^ This may require more work.
             InferImageDimsFromInputs();
         }
 
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), m_numRows);
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            size_t rows = Inputs(0)->FunctionValues().GetNumRows();
-            if ((rows * m_samplesInRecurrentStep) % m_numRows > 0)
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            size_t rows = Inputs(0)->GetNumRows();
+            if ((rows * GetNumParallelSequences()) % m_numRows > 0)
             {
                 LogicError("Reshape operation: Number of elements in the recurrent input step is not a multiple of the specified number of rows.");
             }
 
-            size_t outputSamplesInRecurrentStep = m_samplesInRecurrentStep * rows / m_numRows;
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep);
+            size_t outputSamplesInRecurrentStep = GetNumParallelSequences() * rows / m_numRows;
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            // BUGBUG: the following will fail since outputSamplesInRecurrentStep will not match m_pMBLayout. Need to find out what this means (currently layout is constant throughout the graph), and implement it correctly.
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep, m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_numRows);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRows)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRows)
         {
             functionValues.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
             functionValues.AssignRowSliceValuesOf(inputFunctionValues, 0, inputFunctionValues.GetNumRows());
@@ -1516,26 +1476,27 @@ private:
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_numRows);
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 0)
                 InvalidArgument("Reshape operation only takes one input.");
 
             size_t rows = Inputs(0)->GradientValues().GetNumRows();
-            if ((rows * m_samplesInRecurrentStep) % m_numRows > 0)
+            if ((rows * GetNumParallelSequences()) % m_numRows > 0)
             {
                 LogicError("Reshape operation: Number of elements in the recurrent input step is not a multiple of the specified number of rows.");
             }
 
-            size_t outputSamplesInRecurrentStep = m_samplesInRecurrentStep * rows / m_numRows;
+            size_t outputSamplesInRecurrentStep = GetNumParallelSequences() * rows / m_numRows;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            // BUGBUG: the following will fail since outputSamplesInRecurrentStep will not match m_pMBLayout. Need to find out what this means (currently layout is constant throughout the graph), and implement it correctly.
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep, m_pMBLayout));
 
             ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_numRows);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t /*numRows*/)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t /*numRows*/)
         {
             size_t numRows = inputGradientValues.GetNumRows();
             inputGradientValues.Reshape(gradientValues.GetNumRows(), gradientValues.GetNumCols());
@@ -1545,7 +1506,7 @@ private:
 
         virtual const Matrix<ElemType>& FunctionValues() const
         {
-            if (Inputs(0)->FunctionValues().GetNumRows() != m_numRows)
+            if (Inputs(0)->GetNumRows() != m_numRows)
                 return *m_functionValues;
             else
                 return Inputs(0)->FunctionValues();
@@ -1614,22 +1575,22 @@ private:
     template class ReshapeNode<float>;
     template class ReshapeNode<double>;
 
-    // =======================================================================
-    // RowRepeatNode -- duplicate row(s) of a matrix multiple times
-    // =======================================================================
+    // -----------------------------------------------------------------------
+    // RowRepeatNode (input) -- duplicate row(s) of a matrix multiple times
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class RowRepeatNode : public ComputationNode<ElemType>
+    class RowRepeatNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowRepeat"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowRepeatNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_numRepeat(1)
         { }
         RowRepeatNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRepeats) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_numRepeat(numRepeats)
         { }
         // ^^ TODO: merge those two above using optional args
@@ -1644,26 +1605,23 @@ private:
             }
         }
 
-        virtual void SaveToFile(File& fstream) const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream << m_numRepeat;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_numRepeat;
         }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"RowRepeat"; }
-
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void InferImageDimsFromInputs()
         {
@@ -1698,28 +1656,26 @@ private:
                         throw runtime_error("One of the children is missing.");
                     }
 
-                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
                 }
 
                 fprintf(stderr, ", numRepeats=%lu)", m_numRepeat);
             }
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 1)
-                LogicError("RowRepeat operation should have one input.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("RowRepeat  operation: the input node has 0 element.");
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("RowRepeat  operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows() * m_numRepeat, Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs(0)->GetNumRows() * m_numRepeat, Inputs(0)->GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             if (m_numRepeat > 1)
             {
@@ -1727,18 +1683,19 @@ private:
             }
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             if (m_numRepeat > 1)
             {
-                Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+                Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_numRepeat);
             }
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRepeats)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRepeats)
         {
             functionValues.AssignRepeatOf(inputFunctionValues, numRepeats, 1);
 #if NANCHECK
@@ -1748,24 +1705,21 @@ private:
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("RowRepeat only has one input.");
-
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_numRepeat);
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("RowRepeat only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_numRepeat);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t numRepeats)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t numRepeats)
         {
             inputGradientValues.AddToRowRepeatValuesOf(gradientValues, numRepeats);
         }

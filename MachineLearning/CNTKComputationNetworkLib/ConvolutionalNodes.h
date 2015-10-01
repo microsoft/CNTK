@@ -26,20 +26,20 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    // ConvolutionNode
+    // ConvolutionNode (convolutionWeights, inputFeature)
     // -----------------------------------------------------------------------
 
     //convolutional network 
     //follow "high performance convolutional neural networks for document processing" by Kumar chellapilla, Sidde Puri, and Patrice Simard
     //assume each column is an input sample. Each sample is stored in [channel, row, col]  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
     template<class ElemType>
-    class ConvolutionNode : public ComputationNode<ElemType>
+    class ConvolutionNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Convolution"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_tempMatrix(deviceId),
             m_kernelWidth(SIZE_MAX), m_kernelHeight(SIZE_MAX),
             // initialize to dummy values so we catch missing initialization
@@ -49,7 +49,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 0;
         }
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_tempMatrix(deviceId),
             m_kernelWidth(kernelWidth), m_kernelHeight(kernelHeight),
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample),
@@ -58,14 +58,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = outputChannels;
         }
 
-        virtual void SaveToFile(File& fstream) const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream <<  m_kernelWidth << m_kernelHeight << m_horizontalSubsample << m_verticalSubsample; 
             fstream << m_outputChannels << m_zeroPadding << m_maxTempMemSizeInSamples; 
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample; 
@@ -92,9 +92,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Convolution";} 
-
         //virtual void ComputeInputPartial(const size_t inputIndex) 
         //{
         //    if (inputIndex > 1)
@@ -106,19 +103,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //        ComputeInputPartialOverInputFeature(GradientValues(), Inputs(1)->GradientValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_tempMatrix);
         //}
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) 
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override 
         {
             if (inputIndex > 1)
                 InvalidArgument("Convolution operation only takes two inputs.");
 
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             if (inputIndex == 0)  //derivative with regard to the weight matrix
                 ComputeInputPartialOverWeight(sliceOutputGrad, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix, !frameRange.IsAllFrames());
             else  // derivative with regard to the input feature
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                 ComputeInputPartialOverInputFeature(sliceOutputGrad, sliceInput1Grad, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
             }
         }
@@ -213,10 +210,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
         }
 
@@ -272,12 +270,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         // note: this also infers dimensions from chilren
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 2) 
-                LogicError("ConvolutionNode requires two inputs.");
+            Base::Validate(isFinalValidationPass);
 
             //we may want to remove this check in the future if we want to support the case that the weight itself is result of some computation 
             //if (Inputs(0)->OperationName() != OperationNameOf(LearnableParameter))
@@ -286,28 +281,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_horizontalSubsample > m_kernelWidth || m_verticalSubsample > m_kernelHeight)
                 InvalidArgument("In ConvolutionNode horizontalSubsample must <= kernelWidth and verticalSubsample must <= kernelHeight.");
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
             size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputChannels;
 
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().HasNoElements())
-                Inputs(0)->FunctionValues().Resize(m_outputChannels, weightCols);
+                Inputs(0)->Resize(m_outputChannels, weightCols);
 
-            if (Inputs(0)->FunctionValues().GetNumCols() != weightCols || Inputs(0)->FunctionValues().GetNumRows() != m_outputChannels)
+            if (isFinalValidationPass && (Inputs(0)->GetNumCols() != weightCols || Inputs(0)->GetNumRows() != m_outputChannels))
                 LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_children[0]->NodeName().c_str(), m_outputChannels, weightCols);
 
             size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;
-            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(1)->FunctionValues().GetNumRows() == 0)
-                Inputs(1)->FunctionValues().Resize(inputDim, Inputs(1)->FunctionValues().GetNumCols());
+            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(1)->GetNumRows() == 0)
+                Inputs(1)->Resize(inputDim, Inputs(1)->GetNumCols());
 
-            if (Inputs(1)->FunctionValues().GetNumRows() != inputDim)
+            if (isFinalValidationPass && Inputs(1)->GetNumRows() != inputDim)
                 LogicError("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), inputDim);
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements() )
-                LogicError("Convolution operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0 )
+            //    LogicError("Convolution operation: one of the operands has 0 elements.");
             
             size_t outputDim = m_outputWidth * m_outputHeight * m_outputChannels;
-            FunctionValues().Resize(outputDim, Inputs(1)->FunctionValues().GetNumCols());
+            Resize(outputDim, Inputs(1)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
@@ -331,12 +327,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }    
         }
 
-        virtual void AttachInputs(const ComputationNodePtr convolutionWeight, const ComputationNodePtr inputFeature) 
-        {
-            m_children.resize(2);
-            m_children[0] = convolutionWeight;
-            m_children[1] = inputFeature;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr convolutionWeight, const ComputationNodePtr inputFeature) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = convolutionWeight;
+        //    m_children[1] = inputFeature;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -344,7 +340,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
@@ -377,34 +373,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ConvolutionNode<double>;
 
     // -----------------------------------------------------------------------
-    // PoolingNodeBase
+    // PoolingNodeBase (input)
     // -----------------------------------------------------------------------
 
     //Max/Average Pooling: support multi channel
     //assume each column is an input sample. Each sample is stored in  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
     template<class ElemType>
-    class PoolingNodeBase : public ComputationNode<ElemType>
+    class PoolingNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_windowWidth(SIZE_MAX), m_windowHeight(SIZE_MAX),
             m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX)
         { }
         PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_windowWidth(windowWidth), m_windowHeight(windowHeight),
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
         { }
 
-        virtual void SaveToFile(File& fstream) const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample;
@@ -428,15 +424,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 0)
                 InvalidArgument("MaxPooling operation only takes one inputs.");
 
-            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
 
             ComputeInputPartialV(sliceOutputGrad, sliceInput0Grad, sliceInput0Value, sliceOutputValue);
@@ -445,41 +441,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this function must be overriden by Max or AveragePoolingNode
         virtual void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) = 0;
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             EvaluateThisNodeV(sliceOutputValue, sliceInput0Value);
         }
 
         // this function must be overriden by Max or AveragePoolingNode
         virtual void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) = 0;
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 1)
-                LogicError("PoolingNodes require one input.");
+            Base::Validate(isFinalValidationPass);
 
             if (m_horizontalSubsample > m_windowWidth || m_verticalSubsample > m_windowHeight)
                 InvalidArgument("PoolingNodeBase: horizontalSubsample must <= windowWidth and verticalSubsample must <= windowHeight.");
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
             m_inputSizePerSample = m_inputWidth * m_inputHeight * m_inputChannels;
             m_outputSizePerSample = m_outputWidth * m_outputHeight * m_outputChannels;
 
-            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0)
-                Inputs(0)->FunctionValues().Resize(m_inputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
+            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->GetNumRows() == 0)
+                Inputs(0)->Resize(m_inputSizePerSample, Inputs(0)->GetNumCols());
 
-            if (Inputs(0)->FunctionValues().GetNumRows() != m_inputSizePerSample)
+            if (isFinalValidationPass && Inputs(0)->GetNumRows() != m_inputSizePerSample)
                 LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), m_inputSizePerSample);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("PoolingNodeBase operation: the input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("PoolingNodeBase operation: the input node has 0 element.");
 
-            m_functionValues->Resize(m_outputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
+            m_functionValues->Resize(m_outputSizePerSample, Inputs(0)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
@@ -494,13 +489,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = m_inputChannels;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr inputFeature)
-        {
-            m_children.resize(1);
-            m_children[0] = inputFeature;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr inputFeature)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = inputFeature;
+        //}
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
@@ -522,8 +517,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // add this at the start of each derived class, to get access to the members of ComputationNode
-    // See #define of 'UsingComputationNodeMembers' for more explanation.
-#define UsingPoolingNodeBaseMembers UsingComputationNodeMembers; \
+    // See #define of 'UsingComputationNodeMembersBoilerplate' for more explanation.
+#define UsingPoolingNodeBaseMembers UsingComputationNodeMembersBoilerplate; \
     protected:  \
         using Base::m_windowWidth; using Base::m_windowHeight; using Base::m_horizontalSubsample; using Base::m_verticalSubsample; using Base::m_inputSizePerSample; using Base::m_outputSizePerSample; \
     public:
@@ -536,15 +531,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class MaxPoolingNode : public PoolingNodeBase<ElemType>
     {
         typedef PoolingNodeBase<ElemType> Base; UsingPoolingNodeBaseMembers;
+        static const std::wstring TypeName() { return L"MaxPooling"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
         MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
             Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"MaxPooling";}
 
         /*implement*/ void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues)
         {
@@ -574,15 +566,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class AveragePoolingNode : public PoolingNodeBase<ElemType>
     {
         typedef PoolingNodeBase<ElemType> Base; UsingPoolingNodeBaseMembers;
+        static const std::wstring TypeName() { return L"AveragePooling"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
         AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
             Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"AveragePooling";}
 
         /*implement*/ void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/)
         {

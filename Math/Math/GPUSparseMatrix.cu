@@ -418,7 +418,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDACALL(cudaDeviceCanAccessPeer(&canAccessPeer, to_id, m_computeDevice));
             if (canAccessPeer)
             {
-                CUDACALL(cudaDeviceEnablePeerAccess(m_computeDevice, 0));
+                cudaError_t cudaStatus = cudaDeviceEnablePeerAccess(m_computeDevice, 0);
+                if (cudaStatus != cudaErrorPeerAccessAlreadyEnabled)
+                {
+                    CUDACALL(cudaStatus);
+                }
                 CUDACALL(cudaMemcpyPeer(d_dst, to_id, m_pArray, m_computeDevice, m_totalBufferSizeAllocated));
             }
             else
@@ -2397,8 +2401,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma endregion Helper Functions
 
-    template class GPUSparseMatrix<float>; 
-    template class GPUSparseMatrix<double>;    
+    template class MATH_API GPUSparseMatrix<float>; 
+    template class MATH_API GPUSparseMatrix<double>;
 
     // We use Matrix<char> as the backing store for QuantizedMatrix
     // Let's explciitly instantiate the methods we need for that purpose

@@ -6,7 +6,36 @@
 //
 #pragma once
 
-//The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
+// TODOs:
+//  - add a runtime check that nodes deriving from ComputeNodeNonLooping may never participate in a loop
+//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, instead change Node::SetFunctionAndGradientMBSize()
+//    to infer the dimensions, and call it during the Evaluate() loop (maybe directly from EvaluateThisNode(FrameRange()), i.e. eliminate it as well or replace the virtual by a helper function)
+//    For moving into EvaluateThisNode directly,
+//    PRO:
+//     - doing it for every call allows to dynamically grow MB and layout frame-by-frame, allowing sophisticated models and ways
+//     - more code gone from individual nodes
+//     - the (void) version already does that, sneakily through Matrix. Need a unified approach.
+//    CON:
+//     - if moved out from Validate(), errors are not caught during validation (early failure is valuable).
+//       Although Validate() can check dimensions other than MB size, while MB-size consistency itself is ensured through layout sharing (and the Matrix functions as a last resort)
+//     - inside a loop
+//        - it has to check for every frame, although only the first frame really will make a difference
+//        - it's weird if it is called for a singe frame to update the size for the whole minibatch
+//  - fold EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
+//     - PROBLEM: Matrix sneakily resizes result matrices, but only for EvaluateThisNode(void), not for frame-wise ones. Need a unified solution.
+//  - also eliminate EvaluateThisNodeGivenInputs()--that stuff is at least as much responsibility of Network
+//    We can also replace IsNodeReqMultiSeqHandling() to a check against the node set itself inside Network --one more Node member gone (and a weird, unneccessary one at that)
+//  - finally, revise constructors, merge by means of default parameters
+// => many ComputationNode implementations only have two functions EvaluateThisNode(FrameRange) and ComputePartial(), as it was meant to be!
+
+// The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
+
+#include "File.h"
+#include "Matrix.h"
+#include "commandArgUtil.h" // for nocase_compare
+
+#include "ComputationNode.h"
+#include "ScriptableObjects.h"
 
 #include <map>
 #include <string>
@@ -21,33 +50,24 @@
 #include <regex>
 #include <chrono>
 
-#include "File.h"
-#include "Matrix.h"
-#include "commandArgUtil.h" // for nocase_compare
-
-#include "ComputationNode.h"
-#include "BrainScriptObjects.h"
-#include "BrainScriptEvaluator.h"   // TODO: move (I)ConfigRecord to BrainScriptConfig that only has the config-related stuff (ConfigValuePtr and IConfigRecord, possibly need to do the same for Array and Lambda)
-
-//#include "MatrixPool.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-class ComputationNetwork : public BS::Object, public BS::HasToString, public BS::IConfigRecord
+class ComputationNetwork : public ScriptableObjects::Object, public ScriptableObjects::HasToString, public ScriptableObjects::IConfigRecord
 {
 protected:
-    typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
-
-    typedef struct stRecurrentInfo
+    // recurrent loops in CNTK are like little local ComputationNetworks, but stored in a completely separate set of structures
+    // This structure stores that little sub-network.
+    struct RecurrentInfo
     {
-        std::vector<ComputationNodeBasePtr> m_recurrentNodes;
+        std::vector<ComputationNodeBasePtr> m_recurrentNodes;               // all nodes involved in thisloop
         std::vector<ComputationNodeBasePtr> m_recurrentNodesForForward;
         ComputationNodeBasePtr m_sourceNode;
-        int m_loopId;
+        int m_loopId;                                                       // the loop id (index in xxx array)
         bool m_completedGradient;
         bool m_completedEvaluate;
         bool m_loopClosed;
-        bool m_isForwardLoop; 
+        bool m_isForwardLoop;                                               // true if left to right (t=0..T-1), false otherwise (t=T-1..0)
 
         void Reset()
         {
@@ -56,8 +76,9 @@ protected:
             m_loopClosed = false;
         }
 
+#if 0
         // TODO: why is this not a copy constructor or assignment operator?
-        void Copy(const stRecurrentInfo& src)
+        void Copy(const RecurrentInfo & src)
         {
             m_recurrentNodes = src.m_recurrentNodes;
             m_recurrentNodesForForward = src.m_recurrentNodesForForward;
@@ -66,8 +87,10 @@ protected:
             m_completedGradient = src.m_completedGradient;
             m_completedEvaluate = src.m_completedEvaluate;
             m_loopClosed = src.m_loopClosed;
+            // m_isForwardLoop??
         }
-    } RecurrentInfo;
+#endif
+    };
 
 public:
 
@@ -77,14 +100,12 @@ public:
     // construction
     // -----------------------------------------------------------------------
 
-    ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
-                    : m_deviceId(deviceId), m_SentenceBoundary(CPUDEVICE)
+    ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) :
+        m_randomSeedOffset(0),
+        m_actualMBSize(0),
+        m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())
     {
-        m_randomSeedOffset = 0;
-        m_actMiniBSize = 0;
-        if (m_deviceId == AUTOPLACEMATRIX)  // TODO: code dup with SetDeviceId()
-            m_deviceId = Matrix<float>::GetBestGPUDeviceId();
-        m_nbrSlicesInEachRecurrentIteration = 1;
+        SetDeviceId(deviceId);
     }
 
     virtual ~ComputationNetwork()
@@ -177,6 +198,7 @@ public:
 
 private:
     wstring FormSpecialNodes(wstring style, std::vector<ComputationNodeBasePtr>& specialNodes);
+    typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
 public:
     void DescribeNetworkUsingDot(std::list<ComputationArc>& arcs, std::wstring outFile);
     void PlotNetworkTopology(const std::wstring outputFile); //  [1/13/2015 erw] plot network topology using dot language
@@ -185,14 +207,15 @@ public:
     // construction
     // -----------------------------------------------------------------------
 
-    void SetDeviceID(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
+    void SetDeviceId(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX)
     {
-        m_deviceId = deviceId;
         if (m_deviceId == AUTOPLACEMATRIX)
             m_deviceId = Matrix<float>::GetBestGPUDeviceId();
+        else
+            m_deviceId = deviceId;
     }
 
-    DEVICEID_TYPE GetDeviceID() { return m_deviceId; }
+    DEVICEID_TYPE GetDeviceId() { return m_deviceId; }
 
     unsigned long GetRandomSeedOffset() { return m_randomSeedOffset; }
     void SetRandomSeedOffset(unsigned long value) { m_randomSeedOffset = value; }
@@ -201,7 +224,10 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    size_t GetActualMBSize()
+    // determine the actual MB size from the feature nodes
+    // This returns max number of columns over the feature nodes.
+    // Note that if we have multiple slices, MB size != #frames.
+    size_t DetermineActualMBSizeFromFeatures() const
     {
         size_t actualMBSize = 0;
 
@@ -210,6 +236,17 @@ public:
             actualMBSize = max(actualMBSize, (*nodeIter)->GetNumCols());
 
         return actualMBSize;
+    }
+
+    // a helper function for some places that like to hack the features directly
+    // This is for a few places (FindBestPath stuff) that don't follow the normal pattern but instead called the old SetFeaturesMiniBatchSize() function with a value of their choosing.
+    // This is now changed in that they must actually resize the features, and then the system takes it from here.
+    // UNTESTED stopgap. Most likely places that are never used.
+    void ResizeAllFeatureNodes(size_t cols)
+    {
+        auto & featureNodes = this->FeatureNodes();
+        for (auto nodeIter = featureNodes.begin(); nodeIter != featureNodes.end(); nodeIter++)
+            (*nodeIter)->Resize((*nodeIter)->GetNumRows(), cols);
     }
 
     // -----------------------------------------------------------------------
@@ -240,30 +277,27 @@ public:
     // TODO: describe what this function does
     //this is a temp solution since some nodes such as plus can be just aggregate of two scalar values 
     //in which case the packing info is not available (and not meaningful) for them
+    // TODO: Does this belong into MBLayout?
     size_t GetNumSamplesWithLabel(const size_t numAllSamples)
     {
-        if (!m_SentenceBoundary.IsEmpty() &&
-            !m_minibatchPackingFlag.size() == 0)
+        if (m_pMBLayout && !m_pMBLayout->IsAllNone())
         {
-            size_t numTimeSteps = m_SentenceBoundary.GetNumCols();
-            size_t numSequences = m_SentenceBoundary.GetNumRows();
-
-            if (m_minibatchPackingFlag.size() != numTimeSteps)
-                LogicError("GetNumSamplesWithLabel(): m_minibatchPackingFlag should have one element for each timestep of all streams.Check feature reader. ");
+            size_t numTimeSteps = m_pMBLayout->GetNumTimeSteps();
+            size_t numSequences = m_pMBLayout->GetNumParallelSequences();
 
             size_t numSamplesWithoutLabel = 0;
 
-            for (size_t j = 0; j < numTimeSteps; j++)
+            for (size_t t = 0; t < numTimeSteps; t++)
             {
-                if (m_minibatchPackingFlag[j] & MinibatchPackingFlag::NoLabel)
+                if (m_pMBLayout->Is(t, MinibatchPackingFlags::NoLabel))
                 {
-                    for (int i = 0; i < numSequences; i++)
+                    for (int id = 0; id < numSequences; id++)
                     {
-                        if ((int)(m_SentenceBoundary(i, j)) & NO_LABEL)
+                        if (m_pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
                             numSamplesWithoutLabel++;
-                        }
                     }
                 }
+            }
 
             return numTimeSteps*numSequences - numSamplesWithoutLabel;
         }
@@ -422,7 +456,7 @@ public:
 
         ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
 
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(fromRoot);
+        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(fromRoot, false);
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
             ComputationNodeBasePtr fromNode = *nodeIter;
@@ -513,91 +547,47 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    int FindInRecurrentLoop(const ComputationNodeBasePtr& startNode, vector<ComputationNodeBasePtr>& recurrentNodes)
+    // find if node is part of a recurrent loop; and return the loop id
+    // If found then return a pointer to the list of nodes of this loop.
+    // TODO: This should just return &m_recurrentInfo of the matching loop, or nullptr if no match. If needed, m_recurrentInfo knows its loop id.
+    RecurrentInfo * FindInRecurrentLoops(const ComputationNodeBasePtr& node)
     {
-        int iFound = -1;
-
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
-        {
-            if (std::find((*iter).m_recurrentNodes.begin(), (*iter).m_recurrentNodes.end(), startNode) != (*iter).m_recurrentNodes.end())
-            {
-                iFound = (*iter).m_loopId;
-                recurrentNodes = (*iter).m_recurrentNodesForForward;
-                break;
-            }
-        }
-
-        return iFound;
-    }
-
-    int FindInRecurrentLoop(const ComputationNodeBasePtr& startNode)
-    {
-        int iFound = -1;
-
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
-        {
-            if (std::find((*iter).m_recurrentNodes.begin(), (*iter).m_recurrentNodes.end(), startNode) != (*iter).m_recurrentNodes.end())
-            {
-                iFound = (*iter).m_loopId;
-                break;
-            }
-        }
-
-        return iFound;
+        // look in all recurrent loops of the network
+        for (auto & iter : m_recurrentInfo)
+            if (std::find(iter.m_recurrentNodes.begin(), iter.m_recurrentNodes.end(), node) != iter.m_recurrentNodes.end())
+                return &iter;
+        return nullptr;  // not part of a recurrent loop
     }
 
     bool IsFuncValueOlderThanInputs(const std::vector<ComputationNodeBasePtr>& recurrentNodes);
 
-    void EvaluateLoop(std::list<ComputationNodeBasePtr>& /*allNodes*/, const ComputationNodeBasePtr& startNode)
-    {
-        std::vector<ComputationNodeBasePtr> recurrentNodes;
-        int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
-        if (iLoopId != -1 && IsFuncValueOlderThanInputs(recurrentNodes) && m_recurrentInfo[iLoopId].m_completedEvaluate == false)
-        {
-            for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
-                (*nodeIter)->SetFunctionAndGradientSize(m_actMiniBSize);
-
-            int iMBSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
-
-            if (m_recurrentInfo[iLoopId].m_isForwardLoop)
-            {
-                for (int timeIndex = 0; timeIndex < iMBSize; timeIndex ++)
-                {
-                    for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
-                    {
-                        (*nodeIter)->EvaluateThisNodeGivenInputs(timeIndex);
-                        (*nodeIter)->UpdateEvalTimeStamp();
-                    }
-                } 
-            }
-            else
-            {
-                for (int timeIndex = iMBSize-1; timeIndex >= 0; timeIndex--)
-                {
-                    for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
-                    {
-                        (*nodeIter)->EvaluateThisNodeGivenInputs(timeIndex);
-                        (*nodeIter)->UpdateEvalTimeStamp();
-                    }
-                }
-            }
-
-            m_recurrentInfo[iLoopId].m_completedEvaluate = true;
-        }
-    }
-
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
 
-    void SetNodesReqMultiSeqHandling();
+    //void SetRequestNodesMultiSeqHandling();
 
-    // MAIN ENTRY POINT for evaluation (forward prop)
+    bool IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const;
+
+    // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
     // TODO: pass a set of nodes instead of only one
     // TODO: rename to ForwardProp()? To make it very clear?
+    // TODO: big stuff like this should be in the CPP
+    // This calls EvaluateThisNode() on all nodes in order of data flow through the network.
+    // By default, the network is applied concurrently on all frames in a minibatch in parallel (a "map" operation)
+    // Recurrent loops deviate:
+    //  - a recurrent loop is the loop of nodes that make up computation for one time step (e.g. Times -> Plus -> Sigmoid -> Delay)
+    //  - these must be executed frame by frame rather than as a map
+    //  - such a loop is treated as if they were a little nested network; this is done inside here
+    //  - these little nested networks are defined in m_recurrentInfo[]
     void Evaluate(const ComputationNodeBasePtr& rootNode)
     {
-        BuildAndValidateNetwork(rootNode);
+        // prepare to compute with the subnetwork that this rootNode depends on, including
+        //  - auto-detecting recurrent loops
+        //  - collect input and learnable nodes
+        //  - calling Validate() on all nodes lazily, which sizes all matrices (column dimensions get updated to MB size)
+        BuildAndValidateSubNetwork(rootNode);
 
-        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
+        // determines order of evaluation, such that children get evaluated before their parent nodes
+        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode, false);
 
 #ifdef DISPLAY_DEBUG
         for (auto nodeIter=allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
@@ -607,20 +597,73 @@ public:
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedEvaluate = false;
 
+        // (left-over from refactoring: now we only verify that stuff is consistent)
+        for (auto node : allNodes)
+            if (node->GetMBLayout())
+                node->VerifyNumParallelSequences(GetNumParallelSequences());
+
+        // traverse all nodes in the pre-determined evaluation order
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
-            // TODO: nbrSlices set once to the same value for all nodes each evaluation--is it ever changed later?
-            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
-            if ((*nodeIter)->ReqMultiSeqHandling())
-                    (*nodeIter)->ResetBound(&m_SentenceBoundary, &m_minibatchPackingFlag);
-        }
+            // --- first, evaluate all recurrence that hangs off this
 
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-        {
-            // TODO: is this the frame-by-frame evaluation? Why is there no comment here??
-            EvaluateLoop(allNodes, (*nodeIter));
+            RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);   // check if this node participates in a recurrent loop
 
-            if ((*nodeIter)->IsFuncValueOlderThanInputs() && (FindInRecurrentLoop(*nodeIter) == -1))
+            if (recInfo && IsFuncValueOlderThanInputs(recInfo->m_recurrentNodesForForward) && !recInfo->m_completedEvaluate)
+            {
+                // node participates in a recurrent loop: process the loop frame by frame
+                const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+
+                // get layout associated with this loop
+                auto pMBLayout = recurrentNodes[0]->GetMBLayout();
+                for (auto & nodeIter : recurrentNodes)  // layout must be shared by all nodes in the loop
+                {
+                    if (!pMBLayout || nodeIter->GetMBLayout() != pMBLayout)
+                        LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
+                                   nodeIter->NodeName().c_str(), recurrentNodes[0]->NodeName().c_str());
+                    //nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize); // TODO: this will go
+                }
+
+                //const size_t T = m_actualMBSize / GetNumParallelSequences();
+
+                // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
+                if (recInfo->m_isForwardLoop)
+                {
+                    // note: the number of time steps may increase as we go along, e.g. for Decoder networks that decide the end based on network output
+                    // TODO: ^^ that's actually not yet implemented, but we can already be prepared for it
+                    for (size_t t = 0; t < pMBLayout->GetNumTimeSteps(); t++)
+                    {
+                        for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+                        {
+                            (*nodeIter)->SetFunctionAndGradientMBSize();
+                            (*nodeIter)->EvaluateThisNodeGivenInputs(t);
+                            if (IsNodeReqMultiSeqHandling(*nodeIter))
+                                (*nodeIter)->MaskMissingValuesColumnsToZero(t);
+                            (*nodeIter)->UpdateEvalTimeStamp();
+                        }
+                    } 
+                }
+                else
+                {
+                    for (size_t t = pMBLayout->GetNumTimeSteps() - 1; t--> 0;)
+                    {
+                        for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+                        {
+                            (*nodeIter)->SetFunctionAndGradientMBSize();
+                            (*nodeIter)->EvaluateThisNodeGivenInputs(t);
+                            if (IsNodeReqMultiSeqHandling(*nodeIter))
+                                (*nodeIter)->MaskMissingValuesColumnsToZero(t);
+                            (*nodeIter)->UpdateEvalTimeStamp();
+                        }
+                    }
+                }
+    
+                recInfo->m_completedEvaluate = true;
+            }
+
+            // --- second, do the whole batch (unless it's already done)
+
+            else if (!recInfo && (*nodeIter)->IsFuncValueOlderThanInputs())
             {
 #ifdef DISPLAY_DEBUG
                 fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
@@ -628,17 +671,22 @@ public:
 #if DUMPOUTPUT
                 fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
 #endif
+                // evaluate the node for all frames concurrently (map)
                 // we manage time stamp here so that derived classes don't need to worry about it
-                // TODO: is this the whole-batch evaluation?
-                (*nodeIter)->EvaluateThisNodeGivenInputs(); 
+                (*nodeIter)->SetFunctionAndGradientMBSize();
+                (*nodeIter)->EvaluateThisNodeGivenInputs();
+                if (IsNodeReqMultiSeqHandling(*nodeIter))
+                    (*nodeIter)->MaskMissingValuesColumnsToZero();
                 (*nodeIter)->UpdateEvalTimeStamp();
             }
         }
     }
 
-    void SetActualMiniBatchSize(const size_t aSize, vector<ComputationNodeBasePtr>* featNodes = nullptr)
+    // propagate the features' MB size to all nodes of the network
+    // TODO: This function should go. Resizing is now part of Validate() and EvaluateThisNode().
+    size_t SetActualMiniBatchSizeFromFeatures()
     {
-        m_actMiniBSize = (int) aSize;
+        m_actualMBSize = DetermineActualMBSizeFromFeatures();
 
         // assume that all nodes in recurrent loops need to be reset to aSize minibatch size, so need to reset the following
         for (int i = 0; i < m_recurrentInfo.size(); i++)
@@ -647,71 +695,42 @@ public:
             m_recurrentInfo[i].m_completedGradient = false;
         }
 
+        // resize function values and gradients of everything in m_recurrentInfo
         for (int i = 0; i < m_recurrentInfo.size(); i++)
-            for (auto nodeIter = m_recurrentInfo[i].m_recurrentNodes.begin(); nodeIter != m_recurrentInfo[i].m_recurrentNodes.end(); nodeIter++)
-                (*nodeIter)->SetFunctionAndGradientSize(m_actMiniBSize);
+            for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
+                nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize);
 
-        if (featNodes)
-        {
-            for (auto ptr = featNodes->begin(); ptr != featNodes->end(); ptr++)
-            {
-                size_t nr = (*ptr)->GetNumRows();
-                (*ptr)->Resize(nr, aSize);
-            }
-        }
+        return m_actualMBSize;
     }
 
     // GetMaxMBSize - Get the maximum minibatch size that will be seen in a training run
-    // returns the result from SetActualMiniBatchSize(). Note GetActualMBSize() also exists but returns a value derived from the inputs dimensions
-    size_t GetMaxMBSize() { return m_actMiniBSize; }
+    // returns the result from PropagateActualMiniBatchSize(). Note DetermineActualMBSizeFromFeatures() also exists but returns a value derived from the inputs dimensions
+    size_t GetMaxMBSize() { return m_actualMBSize; }
 
-    void SetActualNbrSlicesInEachRecIter(const size_t aSize)
+#if 0
+    // always called in this pattern:
+    evalnet->SetActualMiniBatchSizeFromFeatures();
+    dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
+    evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
+    // well... most of the time. Not in TrainOneEpoch().
+    void SetActualNumParallelSequencesInEachRecurentIteration(const size_t aSize)
     {
-        m_nbrSlicesInEachRecurrentIteration = aSize;
+        m_nbrSlicesInEachRecurrentIteration() = aSize;   // TODO: this has to go
+    }
+#endif
+    size_t GetNumParallelSequences() const
+    {
+        return m_pMBLayout->GetNumParallelSequences();
+    }
+    // temporary function: Call this after CopyMBLayoutTo(evalnet->GetMBLayoutPtr()) to ensure everything is consistent as expected
+    // It is actually called after every CopyMBLayoutTo() in the entire system (except for multi-reader CopyMBLayoutTo() itself).
+    // Remove this function after a few weeks of not firing.
+    void VerifyActualNumParallelSequences(const size_t aSize)
+    {
+        if (GetNumParallelSequences() != aSize)
+            LogicError("VerifyActualNumParallelSequences: mismatching MB size in MBLayout");
     }
 
-    void ComputeGradientLoop(const bool clearExistingGradientValue, const ComputationNodeBasePtr& startNode)
-    {
-        std::vector<ComputationNodeBasePtr> recurrentNodes;
-        int iLoopId = FindInRecurrentLoop(startNode, recurrentNodes);
-        if (iLoopId != -1)
-        {
-            if (m_recurrentInfo[iLoopId].m_completedGradient == false)
-            {
-                //clear all the gradients
-                for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
-                {
-                    (*nodeIter)->ClearGradient(clearExistingGradientValue);
-                }
-
-                int mbSize = m_actMiniBSize / m_nbrSlicesInEachRecurrentIteration;
-                if (m_recurrentInfo[iLoopId].m_isForwardLoop)
-                {
-                    for (int timeIndex = mbSize - 1; timeIndex >= 0; timeIndex--)
-                    {
-                        for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
-                        {
-                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration); // TODO: move to FrameRange object
-                            (*nodeIter)->ComputeGradient(timeIndex);
-                        }
-                    }
-                }
-                else
-                {
-                    for (int timeIndex = 0; timeIndex < mbSize; timeIndex++)
-                    {
-                        for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
-                        {
-                            (*nodeIter)->SetNbrSlicesInEachRecurrentIteration(m_nbrSlicesInEachRecurrentIteration);
-                            (*nodeIter)->ComputeGradient(timeIndex);
-                        }
-                    }
-                }
-
-                m_recurrentInfo[iLoopId].m_completedGradient = true;
-            }
-        }
-    }
 
 
     //void ComputeGradientLoop(std::list<ComputationNodeBasePtr>& /*allNodes*/, const ComputationNodeBasePtr& startNode)
@@ -829,6 +848,7 @@ public:
             RuntimeError("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
 
         //run forward pass first
+        // TODO: feels out of place; can't we stick for ForwardProp()/BackwardProp()?
         Evaluate(rootNode);
 
         // TODO: comment what the purpose of this is
@@ -848,6 +868,7 @@ public:
         if (rootGradientInitValue != nullptr)
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
 
+        // process nodes in pre-determined order
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
 #ifdef DISPLAY_DEBUG
@@ -855,8 +876,50 @@ public:
                         (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
                         (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
 #endif
-            ComputeGradientLoop(allNodes, *nodeIter);
+            // --- first, perform recurrent loops if this node participates in one
 
+            RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);
+            if (recInfo)
+            {
+                if (recInfo->m_completedGradient == false)
+                {
+                    const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+                    size_t T = m_actualMBSize / GetNumParallelSequences();
+                    if (recInfo->m_isForwardLoop)
+                    {
+                        for (size_t t = T; t--> 0;)
+                        {
+                            for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                            {
+                                (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
+                                if (IsNodeReqMultiSeqHandling(*nodeIter))
+                                    (*nodeIter)->MaskMissingGradientColumnsToZero(t);
+                                (*nodeIter)->ComputeGradientForChildren(t);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for (size_t t = 0; t < T; t++)
+                        {
+                            for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                            {
+                                (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
+                                if (IsNodeReqMultiSeqHandling(*nodeIter))
+                                    (*nodeIter)->MaskMissingGradientColumnsToZero(t);
+                                (*nodeIter)->ComputeGradientForChildren(t);
+                            }
+                        }
+                    }
+
+                    recInfo->m_completedGradient = true;
+                }
+            }
+
+            // --- second, do whole-batch operation if not recurrent
+
+            if (IsNodeReqMultiSeqHandling(*nodeIter))
+                (*nodeIter)->MaskMissingGradientColumnsToZero();
             (*nodeIter)->ComputeGradientForChildren();
         }
 
@@ -877,7 +940,7 @@ public:
         if (forwardCompute)
         {
             fprintf(stderr, "\n\nPrinting Forward Computation Node Order ... \n");
-            nodes = GetEvalOrder(rootNode);
+            nodes = GetEvalOrder(rootNode, false);
         }
         else
         {
@@ -902,6 +965,8 @@ public:
     static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes);
     template<class ElemType> // TODO: dropoutRate change to double
     static void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
+	template<class ElemType>
+	static void SetSeqParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ElemType hsmoothingWeight, const ElemType frameDropThresh, const bool doreferencealign);
     static void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------
@@ -920,6 +985,7 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
+    // called by model editing operations, such as DeleteNode(); and by RebuildNetwork()
     void ClearCaches()
     {
         m_built.clear();
@@ -928,10 +994,12 @@ public:
         ClearCalcOrderCaches();
     }
 
+    // called by TrainOrAdaptModel() for refNet, and from PerformSVDDecomposition()
+    // TODO: Is this function really needed?
     void RebuildNetwork(const ComputationNodeBasePtr& rootNode)
     {
         ClearCaches();
-        BuildAndValidateNetwork(rootNode);
+        BuildAndValidateSubNetwork(rootNode);
     }
 
     // -----------------------------------------------------------------------
@@ -941,46 +1009,35 @@ public:
     std::list<ComputationNodeBasePtr> & InputNodes(const ComputationNodeBasePtr& rootNode, bool bNoBuild = false)
     {
         if (bNoBuild == false)
-            BuildAndValidateNetwork(rootNode);
+            BuildAndValidateSubNetwork(rootNode);
         return m_inputs[rootNode];
     }
 
     std::list<ComputationNodeBasePtr> & LearnableNodes(const ComputationNodeBasePtr& rootNode)
     {
-        BuildAndValidateNetwork(rootNode);
+        BuildAndValidateSubNetwork(rootNode);
         return m_learnableParameters[rootNode];
     }
 
-    inline std::vector<ComputationNodeBasePtr> & FeatureNodes()        { return m_features; }
-    inline std::vector<ComputationNodeBasePtr> & LabelNodes()          { return m_labels; }
-    inline std::vector<ComputationNodeBasePtr> & FinalCriterionNodes() { return m_finalCriteria; }
+    inline       std::vector<ComputationNodeBasePtr> & FeatureNodes()        { return m_features; }
+    inline const std::vector<ComputationNodeBasePtr> & FeatureNodes() const  { return m_features; }
+    inline       std::vector<ComputationNodeBasePtr> & LabelNodes()          { return m_labels; }
+    inline       std::vector<ComputationNodeBasePtr> & FinalCriterionNodes() { return m_finalCriteria; }
 
-    inline std::vector<ComputationNodeBasePtr> & TrainCriterionNodesFrom(wstring criterionNodeName)
+    inline std::vector<ComputationNodeBasePtr> CriterionNodesFrom(const wstring & criterionNodeName)
     {
-        ComputationNodeBasePtr node = this->GetNodeFromName(criterionNodeName);
-        this->ValidateNetwork(node);
+        ComputationNodeBasePtr node = GetNodeFromName(criterionNodeName);
+        ValidateSubNetwork(node);
         if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
-            InvalidArgument("the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
-        m_tmpTrainCriterion.clear();
-        m_tmpTrainCriterion.push_back(node);
-        return m_tmpTrainCriterion;
+            InvalidArgument("the criterionNodeName specified in the config file is not a valid training or eval criterion node.");
+        // TODO: test this, then remove this comment
+        return std::vector<ComputationNodeBasePtr> { node };
     }
 
-    inline std::vector<ComputationNodeBasePtr> & EvalCriterionNodesFrom(wstring criterionNodeName)
-    {
-        ComputationNodeBasePtr node = this->GetNodeFromName(criterionNodeName);
-        this->ValidateNetwork(node);
-        if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
-            InvalidArgument("the trainCriterionNodeName specified in the config file is not a valid training criterion node.");
-        m_tmpEvalulationCriterion.clear();
-        m_tmpEvalulationCriterion.push_back(node);
-        return m_tmpEvalulationCriterion;
-    }
-
-    inline std::vector<ComputationNodeBasePtr> & NodesReqMultiSeqHandling() { return m_nodesReqMultiSeqHandling; }
-    inline std::vector<ComputationNodeBasePtr> & EvaluationNodes()          { return m_evalNodes; }
-    inline std::vector<ComputationNodeBasePtr> & OutputNodes()              { return m_outputNodes; }
-    inline std::vector<ComputationNodeBasePtr> & PairNodes()                { return m_pairNodes; }
+    inline std::vector<ComputationNodeBasePtr> & RequestNodesMultiSeqHandling() { return m_requestNodesMultiSeqHandling; }  // user-specified list 'NodesReqMultiSeqHandling' (NDL and MEL create/modify this list)
+    inline std::vector<ComputationNodeBasePtr> & EvaluationNodes()              { return m_evalNodes; }
+    inline std::vector<ComputationNodeBasePtr> & OutputNodes()                  { return m_outputNodes; }
+    inline std::vector<ComputationNodeBasePtr> & PairNodes()                    { return m_pairNodes; }
 
     inline std::vector<RecurrentInfo> & RecurrentNodes() { return m_recurrentInfo; }
 
@@ -1164,7 +1221,7 @@ public:
         else
         {
             //for calculating a specific node
-            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode);
+            std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = (*nodeIter);
@@ -1180,17 +1237,20 @@ private:
     template<class N> void GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequirePreComputation, const ComputationNodeBasePtr& rootNode, bool checkComputed);
 public:
     //return list of nodes that require precomputation and not precomputed yet.
-    // TODO: name has a grammar error, fix
     std::list<ComputationNodeBasePtr> GetNodesRequiringPreComputation(const ComputationNodeBasePtr& rootNode = nullptr, bool checkComputed = true);
     //return list of nodes that require precomputation and not precomputed yet.
-    // TODO: name has grammar error, fix
     std::list<ComputationNodeBasePtr> GetNodesRequiringBatchMode(const ComputationNodeBasePtr& rootNode = nullptr, bool checkComputed = true);
 
     // -----------------------------------------------------------------------
     // evaluation
     // -----------------------------------------------------------------------
 
-    // Validate - Validate the network
+private:
+
+public: // yak--used by NDLUtil. Will go away someday.
+    // ValidateNetwork() - Validate the entire network
+    // This calls ValidateNetowrk(Node) for all output nodes.
+    // This is used after loading or for dumping the network.
     void ValidateNetwork(bool allowFragment = false, const bool bAllowNoCriterion = false)
     {
         // currently only validates nodes, we should validate everything we can
@@ -1207,11 +1267,10 @@ public:
                 if (!allowFragment)
                     FormRecurrentLoops(node);
 #ifdef DEBUG
-                //PrintComputationTree(node, false);
+                PrintComputationTree(node, false);
 #endif
-                size_t actualMBSize = this->GetActualMBSize();
-                this->SetActualMiniBatchSize(actualMBSize);
-                ValidateNetwork(node);
+                SetActualMiniBatchSizeFromFeatures();
+                ValidateSubNetwork(node);
             }
         }
         else if (bAllowNoCriterion == true)
@@ -1228,7 +1287,7 @@ public:
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
-                ValidateNetwork(node);
+                ValidateSubNetwork(node);
             }
         }
         else if (!allowFragment)
@@ -1241,61 +1300,15 @@ public:
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
-                ValidateNetwork(node);
+                ValidateSubNetwork(node);
             }
         }
     }
-
-    void ValidateNetwork(const ComputationNodeBasePtr& rootNode)
-    {
-        fprintf(stderr, "\n\nValidating node %ls \n", rootNode->NodeName().c_str());
-
-        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
-
-        for (int i = 0; i < m_recurrentInfo.size(); i++)
-            m_recurrentInfo[i].m_completedEvaluate = false;
-
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-        {
-            if ((*nodeIter)->HasLoop())
-            {
-                std::vector<ComputationNodeBasePtr> recurrentNodes;
-                int iLoopId = FindInRecurrentLoop((*nodeIter), recurrentNodes);
-                if (iLoopId != -1 && m_recurrentInfo[iLoopId].m_completedEvaluate == false)
-                {
-                    for (auto nodeLoopIter = recurrentNodes.begin(); nodeLoopIter != recurrentNodes.end(); nodeLoopIter++)
-                    {
-                        (*nodeLoopIter)->PrintSelfBeforeValidation(true);
-                        (*nodeLoopIter)->Validate();
-                    }
-
-                    m_recurrentInfo[iLoopId].m_completedEvaluate = true;
-                }
-            }
-            else
-            {
-                (*nodeIter)->PrintSelfBeforeValidation(true);
-                (*nodeIter)->Validate();
-            }
-        }
-
-        fprintf(stderr, "\n\n");
-    }
-
-    void BuildAndValidateNetwork(const ComputationNodeBasePtr& rootNode)
-    {
-        const ComputationNodeBasePtr& key = rootNode;
-
-        //not found
-        if (m_built.find(key) == m_built.end())
-        {
-            m_built[key] = true;
-            FormRecurrentLoops(rootNode);
-            ValidateNetwork(rootNode);
-            CollectInputAndLeanableParameters(rootNode);
-            SetNodesReqMultiSeqHandling();
-        }
-    }
+private:
+    void ValidateSubNetwork(const ComputationNodeBasePtr& rootNode);
+public:
+    // prepares the network for computation
+    void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
 
     //this function will need to be called before actual validation and execution to 
     //predetermine how to share matrices to reduce memory usage.
@@ -1327,7 +1340,7 @@ public:
     {
         FormRecurrentLoops(rootNode);
 
-        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode);
+        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode, false);
 
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedEvaluate = false;
@@ -1364,7 +1377,7 @@ public:
 
         PopulateParents(rootNode);
 
-        std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
+        std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode, false);
 
         //determine children size
         std::map<ComputationNodeBasePtr, int> childrenCount;
@@ -1440,12 +1453,11 @@ public:
         // first give criteria nodes as root node
         if (FinalCriterionNodes().size() > 0)
         {
-            for (auto node : FinalCriterionNodes())
+            for (auto & node : FinalCriterionNodes())
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
-                size_t actualMBSize = this->GetActualMBSize();
-                this->SetActualMiniBatchSize(actualMBSize);
+                this->SetActualMiniBatchSizeFromFeatures();
                 if (!UnitTest(node))
                     vErrors.push_back(node->NodeName().c_str());
             }
@@ -1455,7 +1467,7 @@ public:
         // now output nodes
         if (OutputNodes().size() > 0)
         {
-            for (auto node : OutputNodes())
+            for (auto & node : OutputNodes())
             if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());
         }
@@ -1464,7 +1476,7 @@ public:
         // now evaluation nodes
         if (EvaluationNodes().size() > 0)
         {
-            for (auto node : EvaluationNodes())
+            for (auto & node : EvaluationNodes())
             if (!UnitTest(node))
                 vErrors.push_back(node->NodeName().c_str());
         }
@@ -1475,11 +1487,11 @@ public:
     {
         fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
 
-        std::list<ComputationNodeBasePtr>&  nodes = GetEvalOrder(rootNode);
+        std::list<ComputationNodeBasePtr>&  nodes = GetEvalOrder(rootNode, false);
 
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-        if (!(*nodeIter)->UnitTest())
-            return false;
+        for (auto & nodeIter : nodes)
+            if (!nodeIter->UnitTest())
+                return false;
 
         fprintf(stderr, "\n\n");
 
@@ -1534,9 +1546,10 @@ public:
         }
     };
 
-    Matrix<float> & SentenceBoundary() { return m_SentenceBoundary; }
-
-    vector<MinibatchPackingFlag> & MinibatchPackingFlags() { return m_minibatchPackingFlag; }
+    // note: this is called to write into our existing MBLayout instance
+    // TODO: This is broken. Instead, we should pass this from the reader, or better, do batching inside here.
+    //       The problem is that we cannot post-process. E.g. is the layout guaranteed to reflect the minibatch size, in the case of no recurrence??
+    const MBLayoutPtr & GetMBLayoutPtr() { return m_pMBLayout; }
 
 protected:
     // -----------------------------------------------------------------------
@@ -1573,11 +1586,11 @@ protected:
     void getStrongSCC(const ComputationNodeBasePtr& rootNode);    // TODO: method names start uppercase
     void strongSCC(ComputationNodeBasePtr cur, std::list<ComputationNodeBasePtr>& sccStack, size_t& index, size_t& loopId);     // TODO: method names start uppercase
     void getLoopForwordOrder(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);   // TODO: method name
-    //must be called before ValidateNetwork
+    //must be called before ValidateSubNetwork
     void FormRecurrentLoops(const ComputationNodeBasePtr& rootNode);
     void DetermineLoopTypes();
     void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr> & /*noRecurrentNodes*/);
-    void CollectInputAndLeanableParameters(const ComputationNodeBasePtr& rootNode);
+    void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
 
     // -----------------------------------------------------------------------
     // node creation
@@ -1625,7 +1638,7 @@ public:
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            (*nodeIter)->ClearGradientForChildren(m_actMiniBSize);
+            (*nodeIter)->ClearGradientForChildren((int)m_actualMBSize);
 
         //for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
         //    (*nodeIter).m_completedGradient = false;
@@ -1634,32 +1647,21 @@ public:
             m_recurrentInfo[i].m_completedGradient = false;
     }
 
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode)
+    // determine the required order in which nodes must be computed in order to compute 'rootNode'
+    // recurrent == true is only used when called from FormRecurrentLoops()
+    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode, bool recurrent)
     {
-        if (!rootNode)
-            LogicError("rootNode is pointing to a nullptr.");
-
-        return GetCalcOrder(rootNode, m_cacheEvalOrders, true);
+        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*means for forward prop*/, recurrent);
     }
 
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode,
-                                                    std::vector<ComputationNodeBasePtr>& recurrentNodes)
-    {
-        if (!rootNode)
-            LogicError("rootNode is pointing to a nullptr.");
-
-        return GetCalcOrder(rootNode, m_cacheEvalOrders, true, recurrentNodes);
-    }
-
+    // determine the required order in which nodes must be computed in order to compute the gradient of 'rootNode'
+    // Basically returns the reverse of GetEvalOrder(), with some special consideration to loops.
     std::list<ComputationNodeBasePtr>& GetGradientCalcOrder(const ComputationNodeBasePtr& rootNode)
     {
-        if (!rootNode)
-            LogicError("rootNode is pointing to a nullptr.");
-
-        return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false);
+        return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*means for backprop*/, false/*recurrent*/);
     }
 
-protected:
+private:
 
     //this will determine the parents for each node. Parents info will be used by the gradient computation
     void PopulateParents(const ComputationNodeBasePtr& rootNode)
@@ -1680,37 +1682,16 @@ protected:
         }
     }
 
-    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr& rootNode,
+
+    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                           const bool forwardCompute)
+                                                           const bool forwardCompute, bool recurrent)
     {
-        const ComputationNodeBasePtr& key = rootNode;
-
-        //not found
-        if (orderMap.find(key) == orderMap.end())
-            orderMap[key] = rootNode->EnumerateNodes(forwardCompute);
-
-        return orderMap[key];
-    }
-
-    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr& rootNode,
-                                                           std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                           const bool forwardCompute,
-                                                           std::vector<ComputationNodeBasePtr> & rootRecurrentNodes)
-    {
-        const ComputationNodeBasePtr& key = rootNode;
-        std::list<ComputationNodeBasePtr> listNodes;
-
-        //not found
-        if (orderMap.find(key) == orderMap.end())
-        {
-            rootRecurrentNodes.clear();
-            listNodes = rootNode->EnumerateNodes(forwardCompute, rootRecurrentNodes);
-
-            orderMap[key] = listNodes;
-
-        }
-        return orderMap[key];
+        if (!rootNode)
+            LogicError("rootNode is NULL.");
+        if (orderMap.find(rootNode) == orderMap.end())
+            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, recurrent);
+        return orderMap[rootNode];
     }
 
 public:
@@ -1737,11 +1718,11 @@ public:
     }
 
     // pretending to be a ConfigRecord. TODO: implement this when we actually need it (when we get to MEL)
-    const BS::ConfigValuePtr & /*IConfigRecord::*/operator()(const wstring & id, wstring message) const   // e.g. confRec(L"message", helpString)
+    const ScriptableObjects::ConfigValuePtr & /*IConfigRecord::*/operator[](const wstring & id) const   // e.g. confRec[L"message"]
     {
-        id; message; RuntimeError("unknown class parameter");    // (for now)
+        id; RuntimeError("unknown class parameter");    // (for now)
     }
-    const BS::ConfigValuePtr * /*IConfigRecord::*/Find(const wstring & id) const         // returns nullptr if not found
+    const ScriptableObjects::ConfigValuePtr * /*IConfigRecord::*/Find(const wstring & id) const         // returns nullptr if not found
     {
         id; return nullptr; // (for now)
     }
@@ -1768,36 +1749,36 @@ protected:
     std::vector<ComputationNodeBasePtr> m_evalNodes;
     std::vector<ComputationNodeBasePtr> m_outputNodes;
     std::vector<ComputationNodeBasePtr> m_pairNodes; /// nodes for the children network to pair
-    std::vector<ComputationNodeBasePtr> m_nodesReqMultiSeqHandling;
+    std::vector<ComputationNodeBasePtr> m_requestNodesMultiSeqHandling;
     vector<std::vector<ComputationNodeBasePtr>*> GetAllNodeGroups()    // get all groups to allow to iterate over all of them ...continue
     {
-        return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_nodesReqMultiSeqHandling };
+        return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_requestNodesMultiSeqHandling };
     }
 
-    std::vector<RecurrentInfo> m_recurrentInfo;
+    std::vector<RecurrentInfo> m_recurrentInfo;     // [loopId] each entry is one recurrent loop (local little network that implements a recurrence)
 
-    /** temporary space
-    */
-    std::vector<ComputationNodeBasePtr> m_tmpTrainCriterion; /// array saving tempary query terms
-    std::vector<ComputationNodeBasePtr> m_tmpEvalulationCriterion; /// array saving tempary query terms
-
-    //used for sentence boundary information passed from reader to reset RNN state 
-    Matrix<float> m_SentenceBoundary; // this matrix is always in CPU memory  --TODO: should rather be a matrix of some int
+    // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
-    vector<MinibatchPackingFlag> m_minibatchPackingFlag;
+    MBLayoutPtr m_pMBLayout;    // note that this must be installed before doing anything that needs it (default leaves a nullptr)
+    //MBLayoutPtr m_pMBNoLayout;  // this alternative one is passed when no layout is available/should be used
 
-    int m_actMiniBSize;
-    size_t m_nbrSlicesInEachRecurrentIteration;
+    size_t m_actualMBSize;      // current MB size in columns --note: this is not #frames, if we have multiple parallel sequences, cf. MBLayout
 
-    std::map<const ComputationNodeBasePtr, bool> m_built;
-    std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // this is the main container that holds this networks' nodes
+    // main node holder
+    std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes
+
+private:    // TODO: make all private that can be made private
+    // cache for evaluation ordering:
+    std::unordered_set<ComputationNodeBasePtr> m_built;   // [node] flag: BuildAndValidateSubNetwork() has been called
 
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheEvalOrders;
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheGradientCalcOrders;
 
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputs;
-    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_learnableParameters;
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputs;                 // [out node] -> all input nodes feeding into out node
+    std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_learnableParameters;    // [out node] -> all parameter nodes feeding into out node
 
+    // pool for matrices that can be shared across nodes
+    // TODO: does this apply to anything else besides temporary node-internal intermediate results? What, for example?
     MatrixPool m_matrixPool;
 };
 

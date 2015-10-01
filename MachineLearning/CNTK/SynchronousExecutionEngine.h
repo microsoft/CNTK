@@ -288,7 +288,7 @@ public:
             }
             else if (!_stricmp(value.c_str(), "multiseq"))
             {
-                SetOutputNode(m_net.NodesReqMultiSeqHandling(), compNode);
+                SetOutputNode(m_net.RequestNodesMultiSeqHandling(), compNode);
             }
             else if (!_strnicmp(value.c_str(), "eval", 4)) // only compare the first 4 characters
             {

@@ -699,6 +699,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // normal update for smoothed gradients c and current gradients (this)
+    // TODO: comment seems wrong; cf. SGD.cpp: smoothedGradient.NormalGrad(gradientValues, functionValues,...)
     template<class ElemType> 
     void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum)
     {

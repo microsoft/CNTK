@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <limits.h>
 #include <wchar.h>
+#include "simplesenonehmm.h"   
 
 namespace msra { namespace asr {
 
@@ -619,6 +620,7 @@ struct htkmlfentry
     unsigned int numframes;
     //unsigned short classid;     // numeric state id
     unsigned int classid;     // numeric state id - mseltzer changed from ushort to uint for untied cd phones > 2^16
+	unsigned int phonestart;     // numeric phone start  time
     
 private:
     // verify and save data
@@ -659,7 +661,8 @@ private:
 public:
 
     // parse format with original HTK state align MLF format and state list
-    void parsewithstatelist (const vector<char*> & toks, const unordered_map<std::string, size_t> & statelisthash, const double htkTimeToFrame)
+    void parsewithstatelist (const vector<char*> & toks, const unordered_map<std::string, size_t> & statelisthash, const double htkTimeToFrame,
+		std::unordered_map<std::string, size_t> & hmmnamehash)
     {
         size_t ts, te;
         parseframerange (toks, ts, te, htkTimeToFrame);
@@ -668,6 +671,20 @@ public:
             throw std::runtime_error (msra::strfun::strprintf ("htkmlfentry: state %s not found in statelist", toks[2]));
         const size_t uid = iter->second;                    // get state index
         setdata (ts, te, uid);
+		//phone boundary
+		if (hmmnamehash.size() > 0)
+		{
+			if (toks.size() > 4)
+			{
+				auto hmmiter = hmmnamehash.find(toks[4]);
+				if (hmmiter == hmmnamehash.end())
+					throw std::runtime_error(msra::strfun::strprintf("htkmlfentry: hmm %s not found in hmmlist", toks[4]));
+				phonestart = (unsigned short)(hmmiter->second + 1);
+			}
+			else
+				phonestart = 0;
+		}
+
     }
 
     // ... note: this will be too simplistic for parsing more complex MLF formats. Fix when needed.
@@ -688,6 +705,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
     wstring curpath;                                    // for error messages
     unordered_map<std::string, size_t> statelistmap;    // for state <=> index
     map<wstring,WORDSEQUENCE> wordsequences;            // [key] word sequences (if we are building word entries as well, for MMI)
+	std::unordered_map<std::string, size_t> symmap;
 
     void strtok (char * s, const char * delim, vector<char*> & toks)
     {
@@ -785,7 +803,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
             if (statelistmap.size() == 0)
                 entries[i-s].parse (toks, htkTimeToFrame);
             else
-                entries[i-s].parsewithstatelist (toks, statelistmap, htkTimeToFrame);
+                entries[i-s].parsewithstatelist (toks, statelistmap, htkTimeToFrame,symmap);
             // if we also read word entries, do it here
             if (wordmap)
             {
@@ -884,6 +902,18 @@ public:
         foreach_index (i, paths)
             read (paths[i], restricttokeys, wordmap, unitmap, htkTimeToFrame);
     }
+
+	//phone boundary
+	template<typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>	
+	htkmlfreader(const vector<wstring> & paths, const set<wstring> & restricttokeys, const wstring & stateListPath, const WORDSYMBOLTABLE * wordmap, const UNITSYMBOLTABLE * unitmap,
+		const double htkTimeToFrame, const msra::asr::simplesenonehmm & hset)
+	{
+		if (stateListPath != L"")
+			readstatelist(stateListPath);
+		symmap = hset.symmap;
+		foreach_index(i, paths)
+			read(paths[i], restricttokeys, wordmap, unitmap, htkTimeToFrame);
+	}
 
     // note: this function is not designed to be pretty but to be fast
     template<typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>

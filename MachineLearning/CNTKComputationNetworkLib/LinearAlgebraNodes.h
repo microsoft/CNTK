@@ -24,55 +24,56 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    template<class ElemType>
-    class NegateNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        NegateNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        { }
+    // -----------------------------------------------------------------------
+    // NegateNode (input)
+    // computes the negative of its input
+    // -----------------------------------------------------------------------
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Negate";} 
+    template<class ElemType>
+    class NegateNode : public ComputationNode<ElemType>, public NumInputs<1>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Negate"; }
+    public:
+        NegateNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("Negate operation only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("Negate operation only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(sliceInputGrad, sliceOutputGrad);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& gradientValues)
         {
             childGradientValues -= gradientValues;
         }
 
-        virtual void EvaluateThisNode()  
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) 
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override 
         {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input)  
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input)  
         {
             functionValues.AssignDifferenceOf(0, input);
 #if NANCHECK
@@ -80,81 +81,73 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 1) 
-                LogicError("Negate operation should have one input.");
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("Negate operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            
-            InferImageDimsFromInputs(); 
+            ValidateUnaryMap(isFinalValidationPass);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
     };
 
     template class NegateNode<float>; 
     template class NegateNode<double>;
 
-    template<class ElemType>
-    class SumElementsNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        SumElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        { }
+    // -----------------------------------------------------------------------
+    // SumElementsNode (input)
+    // sums up all elements in the input
+    // -----------------------------------------------------------------------
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"SumElements";} 
+    template<class ElemType>
+    class SumElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SumElements"; }
+    public:
+        SumElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("SumElements only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("SumElements only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(sliceInputGrad, sliceOutputGrad);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         {
             inputGradientValues += gradientValues; //here the assumption is that gradientValues are 1x1 matrix
         }
 
-        virtual void EvaluateThisNode()  
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            // BUGBUG: This function should mask gaps by itself
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             functionValues.AssignSumOfElements(inputFunctionValues);
 #if NANCHECK
@@ -162,17 +155,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 1) 
-                LogicError("SumElements operation should have one input.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("SumElements operation: the input node has 0 element.");
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("SumElements operation: the input node has 0 element.");
-
-            FunctionValues().Resize(1, 1);
+            Resize(1, 1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
 
@@ -185,67 +176,68 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
     };
 
     template class SumElementsNode<float>; 
     template class SumElementsNode<double>;
 
+    // -----------------------------------------------------------------------
+    // SumColumnElementsNode (input)
+    // sums up each column of the input
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class SumColumnElementsNode : public ComputationNode<ElemType>
+    class SumColumnElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SumColumnElements"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SumColumnElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_sumValue(deviceId)
         { }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"SumColumnElements"; }
-
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("SumColumnElements only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("SumColumnElements only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(sliceInputGrad, sliceOutputGrad);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
             inputGradientValues += gradientValues; //here the assumption is that gradientValues is a row vector
         }
 
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
         {
             Matrix<ElemType>::VectorSum(inputFunctionValues, functionValues, true);
 #if NANCHECK
@@ -253,17 +245,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 1)
-                LogicError("SumColumnElements operation should have one input.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("SumColumnElements operation: the input node has 0 element.");
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("SumColumnElements operation: the input node has 0 element.");
-
-            FunctionValues().Resize(1, Inputs(0)->FunctionValues().GetNumCols());
+            Resize(1, Inputs(0)->GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -276,11 +266,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputChannels = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput)
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -299,21 +289,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class SumColumnElementsNode<float>;
     template class SumColumnElementsNode<double>;
 
-    //this node is used to extract part of the input by rows as the output
-    //it has to be continuous segments of rows since each column is treated as one sample
+    // -----------------------------------------------------------------------
+    // RowSliceNode (input)
+    // this node extracts part of the input by rows as the output
+    // it has to be continuous segments of rows since each column is treated as one sample
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class RowSliceNode : public ComputationNode<ElemType>
+    class RowSliceNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowSlice"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         //RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name) :
-        //    ComputationNode<ElemType>(deviceId, name),
+        //    Base(deviceId, name),
         //    m_startIndex(0),
         //    m_numRows(0)
         //{ }
         RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name, size_t startIndex = 0, size_t numRows = 0) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_startIndex(startIndex),
             m_numRows(numRows)
         { }
@@ -327,58 +321,54 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             node->m_numRows = m_numRows;
         }
 
-        virtual void SaveToFile(File& fstream) const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream << m_startIndex << m_numRows;
         }
         
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_startIndex >> m_numRows;
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"RowSlice";} 
-
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex != 0)
-                InvalidArgument("RowSlice only has one input.");
+            assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_startIndex, m_numRows);
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex != 0)
-                InvalidArgument("RowSlice only has one input.");
+            assert(inputIndex == 0); inputIndex;
 
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_startIndex, m_numRows);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t startIndex, const size_t numRows)  
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t startIndex, const size_t numRows)  
         {
             inputGradientValues.AddToRowSliceValuesOf(gradientValues, startIndex, numRows); 
         }
 
-        virtual void EvaluateThisNode()  
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), m_startIndex, m_numRows);
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInputValue = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_startIndex, m_numRows);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t startIndex, const size_t numRows)  
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t startIndex, const size_t numRows)  
         {
             functionValues.AssignRowSliceValuesOf(inputFunctionValues, startIndex, numRows);
 #if NANCHECK
@@ -386,20 +376,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 1) 
-                LogicError("RowSlice operation should have one input.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("RowSlice operation: the input node has 0 element.");
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("RowSlice operation: the input node has 0 element.");
+            if (isFinalValidationPass && Inputs(0)->GetNumRows() < m_startIndex + m_numRows)
+                RuntimeError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
 
-            if (Inputs(0)->FunctionValues().GetNumRows() < m_startIndex + m_numRows)
-                LogicError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
-
-            FunctionValues().Resize(m_numRows, Inputs(0)->FunctionValues().GetNumCols());
+            Resize(m_numRows, Inputs(0)->GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -413,11 +401,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "WARNING: RowSlice operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
-        virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        {
-            m_children.resize(1);
-            m_children[0] = singleInput;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = singleInput;
+        //}
 
     private:
         size_t m_startIndex, m_numRows;
@@ -426,16 +414,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RowSliceNode<float>; 
     template class RowSliceNode<double>;
 
+    // -----------------------------------------------------------------------
+    // RowStackNode (input0, input1, ...)
+    // stacks multiple inputs on top of each other
+    // -----------------------------------------------------------------------
+
     //this node is used to extract part of the input by rows as the output
+    // TODO: Really? RowStack indicates something different.
     //it has to be continuous segments of rows since each column is treated as one sample
     template<class ElemType>
-    class RowStackNode : public ComputationNode<ElemType>
+    class RowStackNode : public ComputationNode<ElemType>   // note: not deriving from NumInputs<> like most other nodes since this one takes a variable number of inputs
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowStack"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowStackNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -446,50 +440,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeChildren)
             {
                 node->m_children = m_children;
-                node->m_startRowIndeces = m_startRowIndeces;
+                node->m_startRowIndices = m_startRowIndices;
                 node->m_inputMatrices = m_inputMatrices;
             }
         }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"RowStack"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex >= ChildrenSize())
                 InvalidArgument("RowStack-ComputeInputPartial: inputIndex out of range.");
-            ComputeInputPartialS(Inputs(inputIndex)->GradientValues(), GradientValues(), m_startRowIndeces[inputIndex], m_startRowIndeces[inputIndex + 1] - m_startRowIndeces[inputIndex]);
+            ComputeInputPartialS(Inputs(inputIndex)->GradientValues(), GradientValues(), m_startRowIndices[inputIndex], m_startRowIndices[inputIndex + 1] - m_startRowIndices[inputIndex]);
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex >= ChildrenSize())
-                InvalidArgument("RowStack-ComputeInputPartial: inputIndex out of range.");
+            Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_startRowIndeces[inputIndex], m_startRowIndeces[inputIndex+1] - m_startRowIndeces[inputIndex]);
+            ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_startRowIndices[inputIndex], m_startRowIndices[inputIndex+1] - m_startRowIndices[inputIndex]);
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t startIndex, const size_t numRows)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t startIndex, const size_t numRows)
         {
             inputGradientValues.AddWithRowSliceValuesOf(gradientValues, startIndex, numRows);
         }
 
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            EvaluateThisNodeS(FunctionValues(), m_inputMatrices,  0, Inputs(0)->FunctionValues().GetNumCols());
+            EvaluateThisNodeS(FunctionValues(), m_inputMatrices,  0, Inputs(0)->GetNumCols());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceFunctionValues = FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceFunctionValues = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            EvaluateThisNodeS(sliceFunctionValues, m_inputMatrices, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            EvaluateThisNodeS(sliceFunctionValues, m_inputMatrices, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
+        // TODO: change to FrameRange
+        void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
         {
             functionValues.AssignRowStackValuesOf(inputMatrices, sliceStartCol, sliceNumCols);
 #if NANCHECK
@@ -497,83 +487,82 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() < 2)
-                LogicError("RowStack operation: must have two or more inputs.");
+            //if (Inputs(0) == nullptr)   // TODO: Base::Validate() will fail for this
+            //    LogicError("RowStack operation: the input node is NULL.");
 
-            if (Inputs(0) == nullptr)
-                LogicError("RowStack operation: the input node is NULL.");
-
-            size_t numCols = Inputs(0)->FunctionValues().GetNumCols();
-            m_startRowIndeces.resize(ChildrenSize()+1);
+            size_t numCols = Inputs(0)->GetNumCols();
+            m_startRowIndices.resize(ChildrenSize()+1);
             m_inputMatrices.resize(ChildrenSize());
 
             size_t totalRows = 0;
-            m_startRowIndeces[0] = 0;
+            m_startRowIndices[0] = 0;
 
             for (int i = 0; i < ChildrenSize(); i++)
             {
-                if (Inputs(i) == nullptr)
-                    LogicError("RowStack operation: the input node is NULL.");
+                //if (Inputs(i) == nullptr)
+                //    LogicError("RowStack operation: the input node is NULL.");
 
                 Matrix<ElemType>& childMatrix = Inputs(i)->FunctionValues();
                 size_t numRows = childMatrix.GetNumRows();
-                if (numRows == 0)
-                    LogicError("RowStack operation: the input node %ls has 0 rows.", Inputs(i)->NodeName().c_str());
+                //if (numRows == 0)
+                //    LogicError("RowStack operation: the input node %ls has 0 rows.", Inputs(i)->NodeName().c_str());
                 
-                if (childMatrix.GetNumCols() != numCols)
+                if (isFinalValidationPass && childMatrix.GetNumCols() != numCols)
                     LogicError("RowStack operation: the input node %ls has different number of columns.", Inputs(i)->NodeName().c_str());
 
                 totalRows += numRows;
                 m_inputMatrices[i] = &childMatrix;
-                m_startRowIndeces[i + 1] = m_startRowIndeces[i] + numRows;
+                m_startRowIndices[i + 1] = m_startRowIndices[i] + numRows;
             }
 
-            FunctionValues().Resize(totalRows, numCols);
+            Resize(totalRows, numCols);
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_outputHeight = FunctionValues().GetNumRows();
+            m_outputHeight = GetNumRows();
 
             //WARNING: this node will destroy the image size information from the child
             if (m_inputWidth * m_inputChannels != 1)
                 fprintf(stderr, "WARNING: RowStack operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
-        virtual void AttachInputs(const std::vector<ComputationNodePtr>& inputs)
-        {
-            unsigned int numInputs = inputs.size();
-            m_children.resize(numInputs);
-            for (unsigned int i = 0; i < numInputs; i++)
-                m_children[i] = inputs[i];
-        }
+        //virtual void AttachInputs(const std::vector<ComputationNodePtr>& inputs)
+        //{
+        //    unsigned int numInputs = inputs.size();
+        //    m_children.resize(numInputs);
+        //    for (unsigned int i = 0; i < numInputs; i++)
+        //        m_children[i] = inputs[i];
+        //}
 
     private:
-        std::vector<size_t> m_startRowIndeces; //start row number in the stacked matrix of each input (child)
+        std::vector<size_t> m_startRowIndices; //start row number in the stacked matrix of each input (child)
         std::vector<const Matrix<ElemType>*> m_inputMatrices;
     };
 
     template class RowStackNode<float>;
     template class RowStackNode<double>;
 
-    template<class ElemType>
-    class ScaleNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        ScaleNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        { }
+    // -----------------------------------------------------------------------
+    /// ScaleNode (scalar scaling factor, matrix)
+    // -----------------------------------------------------------------------
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Scale";} 
+    template<class ElemType>
+    class ScaleNode : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Scale"; }
+    public:
+        ScaleNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -591,7 +580,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 1)
                 InvalidArgument("ScaleNode operation only takes two inputs.");
@@ -599,44 +588,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
-                Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
             }
             else
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
             }
         }
 
-        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+        /*TODO: merge with call site*/void ComputeInputPartialLeft(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         {
             inputGradientValues += Matrix<ElemType>::InnerProductOfMatrices(gradientValues, inputFunctionValues);
         }
 
-        static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+        /*TODO: merge with call site*/void ComputeInputPartialRight(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         {
             Matrix<ElemType>::ScaleAndAdd(inputFunctionValues.Get00Element(), gradientValues, inputGradientValues);
         }
 
-        virtual void EvaluateThisNode()  
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)  
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)  
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)  
         {
             functionValues.AssignProductOf(input0.Get00Element(), input1);
 #if NANCHECK
@@ -644,21 +634,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 2) 
-                LogicError("Scale operation requires two inputs.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("Scale operation: one of the operands has 0 elements.");
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("Scale operation: one of the operands has 0 element.");
+            // left Node must be a scalar
+            if (isFinalValidationPass && (Inputs(0)->GetNumRows() != 1 || Inputs(0)->GetNumCols() != 1))
+                RuntimeError("The left value of ScaleNode must be a scalar value.");
 
-            if (Inputs(0)->FunctionValues().GetNumRows() != 1 || Inputs(0)->FunctionValues().GetNumCols() != 1)
-                LogicError("The left value of ScaleNode must be a scalar value.");
-
-            FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            //left Node must be a scalar
+            Resize(Inputs(1));
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -667,30 +655,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1); 
         }
 
-        virtual void AttachInputs(const ComputationNodePtr scalarValue, const ComputationNodePtr Value) 
-        {
-            m_children.resize(2);
-            m_children[0] = scalarValue;
-            m_children[1] = Value;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr scalarValue, const ComputationNodePtr Value) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = scalarValue;
+        //    m_children[1] = Value;
+        //}
     };
 
 
     template class ScaleNode<float>; 
     template class ScaleNode<double>;
 
-    template<class ElemType>
-    class TimesNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        TimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        { }
+    // -----------------------------------------------------------------------
+    /// TimesNode (A, B)
+    // -----------------------------------------------------------------------
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Times";} 
+    template<class ElemType>
+    class TimesNode : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Times"; }
+    public:
+        TimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -707,29 +696,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 1)
                 InvalidArgument("Times operation only takes two inputs.");
 
             if (inputIndex == 0)  //left derivative
             {
-                Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
             }
             else  //right derivative
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
             }
         }
 
-        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
-            {
+        static // for now, as it is called from StrideTimesNode
+        /*TODO: merge with call site*/void ComputeInputPartialLeft(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        {
 #if DUMPOUTPUT
             gradientValues.Print("Gradient-in");
             inputGradientValues.Print("child Gradient-in/out");
@@ -745,8 +735,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
-            {
+        static // for now, as it is called from StrideTimesNode
+        /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+        {
 #if DUMPOUTPUT
             gradientValues.Print("Gradient-in");
             inputGradientValues.Print("child Gradient-in/out");
@@ -758,28 +749,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
+        //void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
+        //{
+        //    EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+        //}
 
-        virtual void EvaluateThisNode()  
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
-#ifdef DEBUG_DECODER
-            fprintf(stderr, "Times node %ls output norm = %.8e, input(0) norm = %.8e, input(1) norm = %.8e\n", this->NodeName().c_str(), FunctionValues().FrobeniusNorm(), 
-                Inputs(0)->FunctionValues().FrobeniusNorm(), Inputs(1)->FunctionValues().FrobeniusNorm());
-#endif
-        }
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
+            VerifySize(rows0, cols1);
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)  
-        {
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
-            FunctionValues().Resize(rows0, cols1);
-
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)  
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)  
         {
 #if DUMPOUTPUT
             input0.Print("TimesNode - Input0");
@@ -793,73 +780,75 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 2) 
-                LogicError("Times operation requires two inputs.");
+            //support automatic dimension inference for learnable parameters
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            //support automatic dimention inference for learnable parameters
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            if (isFinalValidationPass && (rows0 == 0 || (cols1 == 0 && !Inputs(1)->GetMBLayout())))
+                RuntimeError("Times operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 since it cannot be automatically inferred");
 
-            if ((rows0 == 0 || cols1 == 0 ) && this->LoopId() < 0)
-                throw logic_error("Times operation: Inputs(0)->FunctionValues().GetNumRows() and Inputs(1)->FunctionValues().GetNumCols() should not be 0 since it cannot be automatically inferred");
-
+            // limited automatic dimension inference for *children*, useful for CNN since it can be hard to know the size of each input parameter without deep knowledge how CNN is implemented (padding, stride)
+            // TODO: ^^ There must be a better solution. Maybe MBLayout as well?
             // TODO: use dynamic_pointer_cast
-            // TODO: why should these nodes even care whether their inputs are LearnableParmaeters? If needed, can the base class do this?
-            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && this->LoopId() < 0)
-                Inputs(0)->FunctionValues().Resize(rows0, rows1);
+            // infer cols0 as rows1
+            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && (cols0 == 0 && !Inputs(0)->GetMBLayout()) && rows1 != 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
+                Inputs(0)->Resize(rows0, rows1);
 
+            // infer rows1 as cols0
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
-                Inputs(1)->FunctionValues().Resize(cols0, cols1);
+                Inputs(1)->Resize(cols0, cols1);
 
-            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())&& this->LoopId() < 0)
-                LogicError("Times operation: One of the operants has 0 elements.");
+            //if ((Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
+            //    LogicError("Times operation: One of the operands has 0 elements.");
 
-            //cols0 and rows1 may have been changed so don't use them in the following check
-            if ((Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumCols()) && this->LoopId() < 0)
-            {
+            // cols0 and rows1 may have been changed so don't use them in the following check
+            // TODO: why not check this when part of a loop?
+            if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumCols())
                 LogicError("The Matrix dimension in the Times operation does not match.");
-            }
-            FunctionValues().Resize(rows0, cols1);
+            Resize(rows0, cols1);
+
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
         virtual void InferImageDimsFromInputs()  
         {
-            InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
+            InferImageDimsFromInput(1, false); //the second one is the input since it's columnwise
 
             //after multiplication the structure is lost
             m_outputWidth = 1;
-            m_outputHeight = Inputs(0)->FunctionValues().GetNumRows();
+            m_outputHeight = Inputs(0)->GetNumRows();
             m_outputChannels =  1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class TimesNode<float>; 
     template class TimesNode<double>;
 
-    template<class ElemType>
-    class TransposeTimesNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        { }
+    // -----------------------------------------------------------------------
+    /// TransposeTimesNode (A', B)
+    // -----------------------------------------------------------------------
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
+    template<class ElemType>
+    class TransposeTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"TransposeTimes"; }
+    public:
+        TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -876,28 +865,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 1)
                 InvalidArgument("TransposeTimesNode operation only takes two inputs.");
 
             if (inputIndex == 0)  //left derivative
             {
-                Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
             }
             else  //right derivative
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
             }
         }
 
-        static void WINAPI ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             gradientValues.Print("Gradient-in");
@@ -916,7 +905,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             gradientValues.Print("Gradient-in");
@@ -930,20 +919,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
         {
 #if DUMPOUTPUT
             input0.Print("TransposeTimesNode - Input0");
@@ -957,35 +947,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 2)
-                LogicError("TransposeTimes operation requires two inputs.");
+            //support automatic dimension inference for learnable parameters
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            //support automatic dimention inference for learnable parameters
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            if (isFinalValidationPass && (rows0 == 0 || cols1 == 0))
+                RuntimeError("TransposeTimes operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 since it cannot be automatically inferred");
 
-            if ((rows0 == 0 || cols1 == 0) && this->LoopId() < 0)
-                throw logic_error("TransposeTimes operation: Inputs(0)->FunctionValues().GetNumRows() and Inputs(1)->FunctionValues().GetNumCols() should not be 0 since it cannot be automatically inferred");
-
-            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && this->LoopId() < 0)
-                Inputs(0)->FunctionValues().Resize(rows0, rows1);
+            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
+                Inputs(0)->Resize(rows0, rows1);
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
-                Inputs(1)->FunctionValues().Resize(cols0, cols1);
+                Inputs(1)->Resize(cols0, cols1);
 
-            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->LoopId() < 0)
-                LogicError("TransposeTimes operation: One of the operants has 0 elements.");
+            //if ((Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
+            //    LogicError("TransposeTimes operation: One of the operands has 0 elements.");
 
             //cols0 and rows1 may have been changed so don't use them in the following check
-            if ((Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows()) && this->LoopId() < 0)
-            {
+            if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows())
                 LogicError("The Matrix dimension in the TransposeTimes operation does not match.");
-            }
-            FunctionValues().Resize(cols0, cols1);
+
+            Resize(cols0, cols1);
+            InferMBLayoutFromInputsForStandardCase();   // TODO: what does the MBLayout mean in the context of TransposeTimes? Can the left arg have an MBLayout?
             InferImageDimsFromInputs();
         }
 
@@ -995,34 +982,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //after multiplication the structure is lost
             m_outputWidth = 1;
-            m_outputHeight = Inputs(0)->FunctionValues().GetNumRows();
+            m_outputHeight = Inputs(0)->GetNumRows();
             m_outputChannels = 1;
         }
 
-
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class TransposeTimesNode<float>;
     template class TransposeTimesNode<double>;
 
-    template<class ElemType>
-    class ElementTimesNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        ElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        { }
+    // -----------------------------------------------------------------------
+    /// ElementTimesNode (factor1, factor2)
+    // -----------------------------------------------------------------------
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"ElementTimes";} 
+    template<class ElemType>
+    class ElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"ElementTimes"; }
+    public:
+        ElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)  
         {
@@ -1032,15 +1019,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(Inputs(1-inputIndex)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)  
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override  
         {
-            if (inputIndex > 1)
-                InvalidArgument("ElementTimes operation only takes two inputs.");
+            Matrix<ElemType> sliceInput0Grad = Inputs(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceInput0Grad = Inputs(inputIndex)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            Matrix<ElemType> sliceInput1Value = Inputs(1-inputIndex)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput1Value = Inputs(1-inputIndex)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(sliceInput1Value, sliceInput0Grad, sliceOutputGrad);
         }
@@ -1048,7 +1032,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // depending on inputIndex, all the input variables change meaning
         // inputIndex == 0 (left) -  inputGradientValues[0], inputFunctionValues[1]
         // inputIndex == 1 (right) - inputGradientValues[1], inputFunctionValues[0]
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         {
             inputGradientValues.AddElementProductOf(gradientValues, inputFunctionValues);
 
@@ -1057,21 +1041,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void EvaluateThisNode()  
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)  
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)  
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)  
         {
             functionValues.AssignElementProductOf(input0, input1);
 
@@ -1080,33 +1065,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 2) 
-                LogicError("ElementTimes operation requires two inputs.");
-
+            ValidateBinaryZip(isFinalValidationPass, false/*allowMultiple*/);
+#if 0
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
             {
                 if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
                 {
-                    size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                    size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                    Inputs(index)->FunctionValues().Resize(rows, cols);
+                    size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
+                    size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
+                    Inputs(index)->Resize(rows, cols);
                 }
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("ElementTimes operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("ElementTimes operation: one of the operands has 0 elements.");
 
-            if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() ||
-                Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
-                LogicError("The Matrix<ElemType> dimension in the ElementTimes operation does not match.");
+            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
+                LogicError("The Matrix dimension in the ElementTimes operation does not match.");
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs);
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
+#endif
         }
 
         virtual void InferImageDimsFromInputs()
@@ -1117,30 +1100,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InferImageDimsFromInput(1);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class ElementTimesNode<float>; 
     template class ElementTimesNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// RowElementTimesNode (left, right)  --TODO: what are left and right?
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class RowElementTimesNode : public ComputationNode<ElemType>
+    class RowElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowElementTimes"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         RowElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_tempMatrix(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"RowElementTimes"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1157,15 +1141,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 1)
                 InvalidArgument("RowElementTimes operation only takes two inputs.");
 
-            Matrix<ElemType> sliceInput0Grad = Inputs(inputIndex)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Grad = Inputs(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceInput1Value = Inputs(1 - inputIndex)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput1Value = Inputs(1 - inputIndex)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             if (inputIndex == 0)
             {
@@ -1178,7 +1162,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //left (input 0) is a matrix
-        static void WINAPI ComputeInputPartialLeftS(Matrix<ElemType>& input1FunctionValues,
+        /*TODO: merge with call site*/void ComputeInputPartialLeftS(Matrix<ElemType>& input1FunctionValues,
             Matrix<ElemType>& input0GradientValues, 
             const Matrix<ElemType>& gradientValues, 
             Matrix<ElemType>& tempMatrix)
@@ -1193,7 +1177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //right (input 1) is a row vector
-        static void WINAPI ComputeInputPartialRightS(Matrix<ElemType>& input0FunctionValues, 
+        /*TODO: merge with call site*/void ComputeInputPartialRightS(Matrix<ElemType>& input0FunctionValues, 
             Matrix<ElemType>& input1GradientValues, 
             const Matrix<ElemType>& gradientValues, 
             Matrix<ElemType>& tempMatrix)
@@ -1205,21 +1189,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             input1GradientValues.HasNan("RowElementTimes");
 #endif
         }
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
         {
             functionValues.SetValue(input0);
             functionValues.RowElementMultiplyWith(input1);
@@ -1229,23 +1214,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 2)
-                LogicError("RowElementTimes operation requires two inputs.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("RowElementTimes operation: one of the operands has 0 elements.");
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("RowElementTimes operation: one of the operants has 0 element.");
-
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
-
-            if (cols0 != cols1 || rows1 != 1)
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols(); rows0;
+            if (isFinalValidationPass && cols0 != cols1 || rows1 != 1)
                 LogicError("RowElementTimes: Either the second operand is not a row vector or the number of columns of operands does not match.");
 
-            FunctionValues().Resize(rows0, cols0);
+            Resize(Inputs(0));
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -1255,12 +1237,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1268,26 +1250,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        private:
-            Matrix<ElemType> m_tempMatrix;
+    private:
+        Matrix<ElemType> m_tempMatrix;
     };
 
     template class RowElementTimesNode<float>;
     template class RowElementTimesNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// ColumnElementTimesNode (left, right)  --TODO: what are left and right?
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class ColumnElementTimesNode : public ComputationNode<ElemType>
+    class ColumnElementTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"ColumnElementTimes"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ColumnElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_tempMatrix(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"ColumnElementTimes"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1304,28 +1287,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex > 1)
-                InvalidArgument("ColumnElementTimes operation only takes two inputs.");
-
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             if (inputIndex == 0)
             {
-                Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 ComputeInputPartialLeftS(Inputs(1)->FunctionValues(), sliceInput0Grad, sliceOutputGrad, m_tempMatrix);
             }
             else
             {
-                Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                 ComputeInputPartialRightS(sliceInput0Value, Inputs(1)->GradientValues(), sliceOutputGrad, m_tempMatrix);
             }
         }
 
         //left (input 0) is a matrix
-        static void WINAPI ComputeInputPartialLeftS(Matrix<ElemType>& input1FunctionValues,
+        /*TODO: merge with call site*/void ComputeInputPartialLeftS(Matrix<ElemType>& input1FunctionValues,
             Matrix<ElemType>& input0GradientValues,
             const Matrix<ElemType>& gradientValues,
             Matrix<ElemType>& tempMatrix)
@@ -1340,7 +1320,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //right (input 1) is a col vector
-        static void WINAPI ComputeInputPartialRightS(Matrix<ElemType>& input0FunctionValues,
+        /*TODO: merge with call site*/void ComputeInputPartialRightS(Matrix<ElemType>& input0FunctionValues,
             Matrix<ElemType>& input1GradientValues,
             const Matrix<ElemType>& gradientValues,
             Matrix<ElemType>& tempMatrix)
@@ -1352,20 +1332,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             input1GradientValues.HasNan("ColumnElementTimes");
 #endif
         }
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues());
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)
         {
             functionValues.SetValue(input0);
             functionValues.ColumnElementMultiplyWith(input1);
@@ -1375,34 +1356,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 2)
-                LogicError("ColumnElementTimes operation requires two inputs.");
+            Base::Validate(isFinalValidationPass);
 
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
             {
                 if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
                 {
-                    size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                    size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                    Inputs(index)->FunctionValues().Resize(rows, cols);
+                    size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
+                    size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
+                    Inputs(index)->Resize(rows, cols);
                 }
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("ColumnElementTimes operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("ColumnElementTimes operation: one of the operands has 0 elements.");
 
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
-
-            if (rows0 != rows1 || cols1 != 1)
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols(); cols0;
+            if (isFinalValidationPass && (rows0 != rows1 || cols1 != 1))
                 LogicError("ColumnElementTimes: Either the second operand is not a column vector or the number of rows of operands does not match.");
 
-            FunctionValues().Resize(rows0, cols0);
+            Resize(Inputs(0));
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -1412,12 +1390,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1432,18 +1410,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ColumnElementTimesNode<float>;
     template class ColumnElementTimesNode<double>;
 
-    template<class ElemType>
-    class PlusNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        PlusNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        { }
+    // -----------------------------------------------------------------------
+    /// PlusNode (summand1, summand2)
+    // -----------------------------------------------------------------------
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Plus";} 
+    template<class ElemType>
+    class PlusNode : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Plus"; }
+    public:
+        PlusNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1453,21 +1432,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(FunctionValues(), GradientValues(), child->FunctionValues(), child->GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex > 1)
-                InvalidArgument("Plus operation only takes two inputs.");
-
             //only the one with more columns can be sliced, if both have same columns both are sliced
-            size_t cols0 = Inputs(inputIndex)->FunctionValues().GetNumCols(), cols1=Inputs(1-inputIndex)->FunctionValues().GetNumCols();
+            size_t cols0 = Inputs(inputIndex)->GetNumCols(), cols1=Inputs(1-inputIndex)->GetNumCols();
 
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             if (cols0 >= cols1)
             {
-                Matrix<ElemType> sliceInput0Grad = Inputs(inputIndex)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceInput0Value = Inputs(inputIndex)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput0Grad = Inputs(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInput0Value = Inputs(inputIndex)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 ComputeInputPartialS(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
             }
@@ -1477,7 +1453,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues)
         {
 #if DUMPOUTPUT
 
@@ -1526,45 +1502,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-
-        virtual void EvaluateThisNode()  
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
-        }
+            // note that ValueSlice will consider whether that input has an MB layout or not (in the latter case it will not slice)
+            Matrix<ElemType> functionValues = ValueSlice(frameRange);
+            Matrix<ElemType> inputFunctionValues0 = Inputs(0)->ValueSlice(frameRange);
+            Matrix<ElemType> inputFunctionValues1 = Inputs(1)->ValueSlice(frameRange);
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)  
-        {
-            size_t cols0 = Inputs(0)->FunctionValues().GetNumCols(), cols1=Inputs(1)->FunctionValues().GetNumCols();
-
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            //only the one with more columns can be sliced, if both have same columns both are sliced
-            if (cols0 == cols1)
-            {
-                Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-                EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
-            }
-            else if (cols0 > cols1)
-            {
-                Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-                EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues());
-            }
-            else //cols0 < cols1)
-            {
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-                EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
-            }
-        }
-
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)  
-        {
             size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
             size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
-            functionValues.Resize(max(rows0, rows1), max(cols0,cols1));
 
             if ((rows0 == rows1 && cols0 == cols1) || ((rows0 == 1 || rows1 == 1) && cols0 == cols1))
             {
@@ -1572,6 +1518,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (cols0 == 1 && rows1 % rows0 == 0)  //one is col vec with divisable rows, including scalar
             {
+                // TODO: Reshape should not operate in place, but return a reshaped view
                 inputFunctionValues1.Reshape(rows0, rows1 * cols1 / rows0);
                 functionValues.AssignSumOf(inputFunctionValues0, inputFunctionValues1);
                 inputFunctionValues1.Reshape(rows1, cols1);
@@ -1597,7 +1544,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
             else
             {
-                LogicError("Plus node not supported format");
+                LogicError("%ls node not supported format", OperationName().c_str());
             }
 #if NANCHECK
             functionValues.HasNan("Plus");
@@ -1607,53 +1554,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 2) 
-                LogicError("Plus operation requires two inputs.");
-
-            //if dimention not specified we assume two operants' dimentions should be the same
-            size_t index = 0;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
-            }
-
-            index = 1;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
-            }
-
-            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->LoopId() < 0)
-                LogicError("Plus operation: one of the operants has 0 element.");
-
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
-
-            if ((!(rows0 == rows1 && cols0 == cols1) &&  //match size
-                !((rows0 == 1 || rows1 == 1) && cols0 == cols1) && //one is row vec
-                !(  (cols0 > cols1 && cols0 % cols1 == 0) || 
-                    (cols0 == 1 && rows1 % rows0 == 0) || 
-                    (cols1 == 1 && rows0 % rows1 == 0))) && this->LoopId() < 0) //one is col vec with divisable rows, including scalar
-            {
-                LogicError("The Matrix dimension in the Plus operation does not match.");
-            }       
-
-            FunctionValues().Resize(max(rows0, rows1), max(cols0,cols1) );
-            InferImageDimsFromInputs(); 
+            ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
         }
 
         virtual void InferImageDimsFromInputs() //based on the matrix with larger size
         {
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
             if (rows0 > rows1 || cols0 > cols1) //child 0 is larger
                 InferImageDimsFromInput(0);
@@ -1668,29 +1577,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class PlusNode<float>; 
     template class PlusNode<double>;
 
-    template<class ElemType>
-    class MinusNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
-    public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        MinusNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
-        { }
+    // -----------------------------------------------------------------------
+    /// MinusNode (minuend, subtrahend)
+    // -----------------------------------------------------------------------
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Minus";}
+    template<class ElemType>
+    class MinusNode : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Minus"; }
+    public:
+        MinusNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1699,8 +1609,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // prepare a matrix of ones as needed
             ComputationNodePtr child = Inputs(inputIndex);
-            size_t rowsc = child->FunctionValues().GetNumRows(), colsc = child->FunctionValues().GetNumCols();
-            size_t rowsp = FunctionValues().GetNumRows(), colsp = FunctionValues().GetNumCols();
+            size_t rowsc = child->GetNumRows(), colsc = child->GetNumCols();
+            size_t rowsp = GetNumRows(), colsp = GetNumCols();
 
             Matrix<ElemType> ones = Matrix<ElemType>();
             if (colsc == 1 && colsp != 1)
@@ -1723,21 +1633,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) 
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override 
         {
             //only the one with more columns can be sliced, if both have same columns both are sliced
-            size_t cols0 = Inputs(inputIndex)->FunctionValues().GetNumCols(), cols1=Inputs(1-inputIndex)->FunctionValues().GetNumCols();
+            size_t cols0 = Inputs(inputIndex)->GetNumCols(), cols1=Inputs(1-inputIndex)->GetNumCols();
 
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceInput0Grad = Inputs(inputIndex)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInput0Value = Inputs(inputIndex)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Grad = Inputs(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Inputs(inputIndex)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             Matrix<ElemType> ones = Matrix<ElemType>();
 
-            size_t rowsc = Inputs(inputIndex)->FunctionValues().GetNumRows(), rowsp = FunctionValues().GetNumRows();
-            size_t colsp = FunctionValues().GetNumCols();
+            size_t rowsc = Inputs(inputIndex)->GetNumRows(), rowsp = GetNumRows();
+            size_t colsp = GetNumCols();
 
             if (cols0 >= cols1) //indicates cols0 == functionValue.cols
             {
@@ -1775,17 +1685,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        static void WINAPI ComputeInputPartialLeft(Matrix<ElemType>& childFunctionValues, Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& functionValues, /*const*/ Matrix<ElemType>& gradientValues, /*const*/ Matrix<ElemType>& ones)
+        /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& childFunctionValues, Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& functionValues, /*const*/ Matrix<ElemType>& gradientValues, /*const*/ Matrix<ElemType>& ones)
             {
             ComputeInputPartialS(0, childFunctionValues, childGradientValues, functionValues, gradientValues, ones);
         }
 
-        static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& childFunctionValues, Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& functionValues, /*const*/ Matrix<ElemType>& gradientValues, /*const*/ Matrix<ElemType>& ones)  
+        /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& childFunctionValues, Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& functionValues, /*const*/ Matrix<ElemType>& gradientValues, /*const*/ Matrix<ElemType>& ones)  
                 {
             ComputeInputPartialS(1, childFunctionValues, childGradientValues, functionValues, gradientValues, ones);
         }
 
-        static void WINAPI ComputeInputPartialS(const size_t inputIndex, Matrix<ElemType>& childFunctionValues, Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& functionValues, /*const*/ Matrix<ElemType>& gradientValues, /*const*/ Matrix<ElemType>& ones)
+        /*TODO: merge with call site*/void ComputeInputPartialS(const size_t inputIndex, Matrix<ElemType>& childFunctionValues, Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& functionValues, /*const*/ Matrix<ElemType>& gradientValues, /*const*/ Matrix<ElemType>& ones)
         {
             ElemType weight = ElemType(inputIndex == 0? 1:-1);
             size_t rowsc = childFunctionValues.GetNumRows(), colsc = childFunctionValues.GetNumCols();
@@ -1829,40 +1739,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
 
-        virtual void EvaluateThisNode()  
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());  
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            size_t cols0 = Inputs(0)->FunctionValues().GetNumCols(), cols1=Inputs(1)->FunctionValues().GetNumCols();
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            size_t cols0 = Inputs(0)->GetNumCols(), cols1=Inputs(1)->GetNumCols();
 
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             //only the one with more columns can be sliced, if both have same columns both are sliced
             if (cols0 == cols1)
             {
-                Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
             }
             else if (cols0 > cols1)
             {
-                Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues());
             }
             else //cols0 < cols1)
             {
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
             }
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1)  
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1)  
         {
             size_t rows0 = in0.GetNumRows(), cols0 = in0.GetNumCols();
             size_t rows1 = in1.GetNumRows(), cols1 = in1.GetNumCols();
@@ -1891,51 +1802,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (m_children.size() != 2) 
-                LogicError("Minus operation requires two inputs.");
-
-            //if dimention is missing make the two operatants to have same size
-            size_t index = 0;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
-            }
-
-            index = 1;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
-            }
-
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("Minus operation: one of the operants has 0 element.");
-
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
-
-            if (!(rows0 == rows1 && cols0 == cols1) &&  //match size
-                !((rows0 == 1 || rows1 == 1) && cols0 == cols1) && //one is row vec
-                !((cols0 == 1 && rows1 % rows0 == 0) || (cols1 == 1 && rows0 % rows1 == 0)))  //one is col vec with divisable rows, including scalar
-            {
-                LogicError("The Matrix dimension in the Minus operation does not match.");
-            }       
-
-            FunctionValues().Resize(max(rows0, rows1), max(cols0,cols1) );
-            InferImageDimsFromInputs(); 
+            ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
         }
 
         virtual void InferImageDimsFromInputs() //based on the matrix with larger size
         {
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
             if (rows0 > rows1 || cols0 > cols1) //child 0 is larger
                 InferImageDimsFromInput(0);
@@ -1950,31 +1825,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class MinusNode<float>; 
     template class MinusNode<double>;
 
-    //The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation
+    // -----------------------------------------------------------------------
+    /// DiagTimesNode (vector representing the diagonal of a square matrix, data)
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class DiagTimesNode : public ComputationNode<ElemType>
+    class DiagTimesNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"DiagTimes"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         DiagTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_innerproduct(deviceId), m_rightGradient(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"DiagTimes";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -1986,33 +1861,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputeInputPartialRight(m_rightGradient, Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 1)
                 InvalidArgument("DiagTimes operation only takes two inputs.");
 
             //left parameter (diag matix cannot be sliced)
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             if (inputIndex == 0)  //left derivative
             {
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                 ComputeInputPartialLeft(m_innerproduct, sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
             }
             else  //right derivative
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                 ComputeInputPartialRight(m_rightGradient, Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
             }
         }
 
-        static void WINAPI ComputeInputPartialLeft(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+        /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         {
             temp.AssignInnerProductOf(gradientValues, inputFunctionValues, false);
             inputGradientValues += temp;
         }
 
-        static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
+        /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& temp, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         {
             temp.SetValue(gradientValues);
             temp.ColumnElementMultiplyWith(inputFunctionValues);
@@ -2020,56 +1895,54 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
 
-        virtual void EvaluateThisNode()  
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues()); 
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)  
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value); 
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1)  
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1)  
         {
             functionValues.SetValue(inputFunctionValues1);
             functionValues.ColumnElementMultiplyWith(inputFunctionValues0);
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 2) 
-                LogicError("DiagTimes operation requires two inputs.");
+            //if dimension not specified we assume two operands' dimensions should match
+            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->GetNumRows() == 0 && Inputs(1)->GetNumRows() != 0)
+                Inputs(0)->Resize(Inputs(1)->GetNumRows(), 1);
 
-            //if dimention not specified we assume two operants' dimentions should match
-            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0 && Inputs(1)->FunctionValues().GetNumRows() != 0)
+            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->GetNumRows() != 0 && Inputs(1)->GetNumRows() == 0)
+                Inputs(1)->Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
+
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("DiagTimes operation: one of the operands has 0 elements.");
+
+            if (isFinalValidationPass)
             {
-                Inputs(0)->FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), 1);
+                if (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows())
+                    LogicError("The Matrix dimension in the DiagTimes operation does not match.");
+
+                if (Inputs(0)->GetNumCols() != 1)
+                    LogicError("The first matrix should be a vector representing the diagonal of a square matrix in the DiagTimes operation.");
             }
 
-            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() != 0 && Inputs(1)->FunctionValues().GetNumRows() == 0)
-            {
-                Inputs(1)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            }
+            Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
+            m_innerproduct.Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
+            m_rightGradient.Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("DiagTimes operation: one of the operants has 0 element.");
-
-            if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows())
-                LogicError("The Matrix dimension in the DiagTimes operation does not match.");
-
-            if (1 != Inputs(0)->FunctionValues().GetNumCols())
-                LogicError("The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            m_innerproduct.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            m_rightGradient.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -2078,12 +1951,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1);
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -2110,20 +1983,21 @@ private:
     template class DiagTimesNode<float>; 
     template class DiagTimesNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// CosDistanceNode (left, right)
+    // -----------------------------------------------------------------------
+
     //The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation
     template<class ElemType>
-    class CosDistanceNode : public ComputationNode<ElemType>
+    class CosDistanceNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"CosDistance"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosDistanceNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"CosDistance";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2140,16 +2014,13 @@ private:
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) 
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override 
         {
-            if (inputIndex > 1)
-                InvalidArgument("CosDistance operation only takes two inputs.");
-
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = this->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = this->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             if (inputIndex == 0)  //left derivative
             {
@@ -2161,7 +2032,7 @@ private:
             }
         }
 
-        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues, 
+        /*TODO: merge with call site*/void ComputeInputPartialLeft(const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues, 
             Matrix<ElemType>& temp, Matrix<ElemType>& rightTerm, Matrix<ElemType>& leftTerm, // the temporary variables
             const Matrix<ElemType>& in0, const Matrix<ElemType>& in1, const Matrix<ElemType>& gradientValues,
             Matrix<ElemType>& inputGradientValues)
@@ -2169,7 +2040,7 @@ private:
             ComputeInputPartialS(0, invNorm0, invNorm1, functionValues, temp, rightTerm, leftTerm, in0, in1, gradientValues, inputGradientValues);
         }
 
-        static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues, 
+        /*TODO: merge with call site*/void ComputeInputPartialRight(const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues, 
             Matrix<ElemType>& temp, Matrix<ElemType>& rightTerm, Matrix<ElemType>& leftTerm, // the temporary variables
             const Matrix<ElemType>& in0, const Matrix<ElemType>& in1, const Matrix<ElemType>& gradientValues,
             Matrix<ElemType>& inputGradientValues)  
@@ -2181,7 +2052,7 @@ private:
         // temp, rightTerm, leftTerm - temporary matrices
         // in0, in1 - input functionValues from other nodes
         // inputGradientValues(x) - gradients to update, where x matches inputIndex
-        static void WINAPI ComputeInputPartialS(const size_t inputIndex, const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues, 
+        /*TODO: merge with call site*/void ComputeInputPartialS(const size_t inputIndex, const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues, 
             Matrix<ElemType>& temp, Matrix<ElemType>& rightTerm, Matrix<ElemType>& leftTerm, // the temporary variables
             const Matrix<ElemType>& in0, const Matrix<ElemType>& in1, const Matrix<ElemType>& gradientValues,
             Matrix<ElemType>& inputGradientValues)  
@@ -2213,21 +2084,22 @@ private:
             //Matrix<ElemType>::AddScaledDifference(1, leftTerm, rightTerm, inputGradientValues);
         }
 
-        virtual void EvaluateThisNode()  
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
         {
             EvaluateThisNodeS(m_invNorm0, m_invNorm1, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());  
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) 
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override 
         {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(m_invNorm0, m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value);  
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1, 
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1, 
             Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1)  
         {
             invNorm0.AssignVectorNorm2Of(in0, true); // seems to modify input (in0)
@@ -2241,39 +2113,36 @@ private:
             functionValues.ElementMultiplyWith(invNorm1);
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 2) 
-                LogicError("CosDistance operation requires two inputs.");
-
-            //if dimention is missing make the two operatants to have same size
+            //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
             index = 1;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("CosDistance operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("CosDistance operation: one of the operands has 0 elements.");
 
-            if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() || 
-                Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
+            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
                 LogicError("The Matrix dimension in the CosDistance operation does not match.");
 
-            FunctionValues().Resize(1, Inputs(1)->FunctionValues().GetNumCols());
+            Resize(1, Inputs(1)->GetNumCols());
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -2286,12 +2155,12 @@ private:
             m_outputHeight = 1;        
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -2329,19 +2198,19 @@ private:
     template class CosDistanceNode<float>; 
     template class CosDistanceNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// KhatriRaoProductNode (left, right)
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class KhatriRaoProductNode : public ComputationNode<ElemType>
+    class KhatriRaoProductNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"KhatriRaoProduct"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         KhatriRaoProductNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"KhatriRaoProduct";} 
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2358,54 +2227,55 @@ private:
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) 
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override 
         {
             if (inputIndex > 1)
                 InvalidArgument("KhatriRaoProduct operation only takes two inputs.");
 
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             if (inputIndex == 0)  //left derivative
             {
-                Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 ComputeInputPartialLeft(sliceInput1Value, sliceInput0Grad, sliceOutputGrad); 
             }
             else  //right derivative
             {
-                Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 ComputeInputPartialRight(sliceInput0Value, sliceInput1Grad, sliceOutputGrad); 
             }
         }
 
-        static void WINAPI ComputeInputPartialLeft(Matrix<ElemType>& childFunctionValues, Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& childFunctionValues, Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& gradientValues)
         {
             childGradientValues.AddColumnReshapeProductOf(gradientValues, childFunctionValues, false);
         }
 
-        static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& childFunctionValues, Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& gradientValues)  
+        /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& childFunctionValues, Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& gradientValues)  
         {
             childGradientValues.AddColumnReshapeProductOf(gradientValues, childFunctionValues, true);
         }
 
-        virtual void EvaluateThisNode()  
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());  
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)  
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, sliceInput1Value); 
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1)  
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1)  
         {
             functionValues.AssignKhatriRaoProductOf(in0,in1);
 #if NANCHECK
@@ -2413,36 +2283,32 @@ private:
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 2) 
-                LogicError("KhatriRaoProduct operation requires two inputs.");
+            //support automatic dimension inference for learnable parameters
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            //support automatic dimention inference for learnable parameters
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
-
-            if (rows0 == 0 || rows1 == 0)
-                throw logic_error("KhatriRaoProduct operation: The number of rows in the input should not be 0.");
+            //if (rows0 == 0 || rows1 == 0)
+            //    LogicError("KhatriRaoProduct operation: The number of rows in the input should not be 0.");
 
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && cols1 != 0)
-                Inputs(0)->FunctionValues().Resize(rows0, cols1);
+                Inputs(0)->Resize(rows0, cols1);
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && cols1 == 0)
-                Inputs(1)->FunctionValues().Resize(rows1, cols0);
+                Inputs(1)->Resize(rows1, cols0);
 
             //cols may be changed before this line and so cannot use cached cols values below
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("KhatriRaoProduct operation: One of the operants has 0 elements.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("KhatriRaoProduct operation: One of the operands has 0 elements.");
 
-            if (Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
-            {
+            if (isFinalValidationPass && Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())
                 LogicError("The Matrices should have same number of columns.");
-            }
 
-            FunctionValues().Resize(rows0 * rows1, Inputs(0)->FunctionValues().GetNumCols());
+            Resize(rows0 * rows1, Inputs(0)->GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
 
@@ -2458,32 +2324,32 @@ private:
             m_outputChannels =  1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        {
-            m_children.resize(2);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
+        //{
+        //    m_children.resize(2);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //}
     };
 
     template class KhatriRaoProductNode<float>; 
     template class KhatriRaoProductNode<double>;
 
-    template<class ElemType>
-    class CosDistanceWithNegativeSamplesNode : public ComputationNode<ElemType>
-    {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+    // -----------------------------------------------------------------------
+    /// CosDistanceWithNegativeSamplesNode (left, right, shift, neg)
+    // -----------------------------------------------------------------------
 
+    template<class ElemType>
+    class CosDistanceWithNegativeSamplesNode : public ComputationNode<ElemType>, public NumInputs<4>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"CosDistanceWithNegativeSamples"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         CosDistanceWithNegativeSamplesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
             m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"CosDistanceWithNegativeSamples"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2493,16 +2359,16 @@ private:
             ComputeInputPartialS(inputIndex, m_invNorm0, m_invNorm1, FunctionValues(), m_temp, m_rightTerm, m_leftTerm, m_invNormSquare, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 1)
                 InvalidArgument("CosDistanceWithNegativeSamples operation only takes grdients on the first two inputs.");
 
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceThisGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceThisGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialS(inputIndex, m_invNorm0, m_invNorm1, sliceOutputValue, m_temp, m_rightTerm, m_leftTerm, m_invNormSquare, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), sliceInputGrad, sliceThisGrad);
         }
@@ -2511,7 +2377,7 @@ private:
         // temp, rightTerm, leftTerm - temporary matrices
         // in0, in1, in2, in3 - input functionValues from other nodes
         // inputGradientValues(x) - gradients to update, where x matches inputIndex
-        static void WINAPI ComputeInputPartialS(const size_t inputIndex, const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues,
+        /*TODO: merge with call site*/void ComputeInputPartialS(const size_t inputIndex, const Matrix<ElemType>& invNorm0, const Matrix<ElemType>& invNorm1, const Matrix<ElemType>& functionValues,
             Matrix<ElemType>& temp, Matrix<ElemType>& rightTerm, Matrix<ElemType>& leftTerm, Matrix<ElemType>& invNormSquare, // the temporary variables
             const Matrix<ElemType>& in0, const Matrix<ElemType>& in1, const Matrix<ElemType>& in2, const Matrix<ElemType>& in3,
             Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& thisGradientValues)
@@ -2608,21 +2474,22 @@ private:
             }
         }
 
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             EvaluateThisNodeS(m_invNorm0, m_invNorm1, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), m_leftTerm, m_rightTerm);
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(m_invNorm0, m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), m_leftTerm, m_rightTerm);
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1,
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1,
             Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& in3, Matrix<ElemType>& leftTermTemp, Matrix<ElemType>& rightTermTemp)
         {
             invNorm0.AssignVectorNorm2Of(in0, true); // seems to modify input (in0)
@@ -2647,42 +2514,39 @@ private:
             functionValues.AssignElementProductOf(leftTermTemp, rightTermTemp);
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 4)
-                LogicError("CosDistanceWithNegativeSamples operation requires 4 inputs.");
-
-            //if dimention is missing make the two operatants to have same size
+            //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
             index = 1;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("CosDistanceWithNegativeSamples operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("CosDistanceWithNegativeSamples operation: one of the operands has 0 elements.");
 
-            if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() ||
-                Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
+            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
                 LogicError("The Matrix dimension in the CosDistanceWithNegativeSamples operation does not match.");
 
             // input(2) is shift, input(3) is the #neg
             size_t negNumber = (size_t)Inputs(3)->FunctionValues()(0, 0);
 
-            FunctionValues().Resize(negNumber + 1, Inputs(1)->FunctionValues().GetNumCols());
+            Resize(negNumber + 1, Inputs(1)->GetNumCols());
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -2695,14 +2559,14 @@ private:
             m_outputHeight = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr shiftNode, const ComputationNodePtr negNode)
-        {
-            m_children.resize(4);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-            m_children[2] = shiftNode;
-            m_children[3] = negNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr shiftNode, const ComputationNodePtr negNode)
+        //{
+        //    m_children.resize(4);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //    m_children[2] = shiftNode;
+        //    m_children[3] = negNode;
+        //}
 
         virtual void MoveMatricesToDevice(const short deviceId)
         {
@@ -2743,21 +2607,22 @@ private:
     template class CosDistanceWithNegativeSamplesNode<float>;
     template class CosDistanceWithNegativeSamplesNode<double>;
 
+    // -----------------------------------------------------------------------
+    /// TransposeNode (input matrix)
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class TransposeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class TransposeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Transpose"; }
 
         Matrix<ElemType> mOnes; 
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         TransposeNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             mOnes(deviceId)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Transpose"; }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -2767,7 +2632,7 @@ private:
             ComputeInputPartialS(Inputs(0)->GradientValues(), mOnes, GradientValues());
         }
 
-        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& ones, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& ones, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             gradientValues.Print("Gradient-in");
@@ -2783,12 +2648,12 @@ private:
 #endif
         }
 
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
         }
 
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0)
         {
 #if DUMPOUTPUT
             input0.Print("TransposeNode- Input0");
@@ -2802,20 +2667,18 @@ private:
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 1)
-                LogicError("Transpose operation requires one input.");
+            size_t rows0 = Inputs(0)->GetNumRows();   // , cols0 = Inputs(0)->GetNumCols();
 
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
+            //if (rows0 == 0 || cols0 == 0)
+            //    throw logic_error("Transpose operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 ");
 
-            if (rows0 == 0 || cols0 == 0)
-                throw logic_error("Transpose operation: Inputs(0)->FunctionValues().GetNumRows() and Inputs(1)->FunctionValues().GetNumCols() should not be 0 ");
-
-            FunctionValues().Resize(cols0, rows0);
+            Resize(Inputs(0));
             mOnes = Matrix<ElemType>::Ones(rows0, rows0, m_deviceId);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
 
@@ -2825,19 +2688,23 @@ private:
 
             //after multiplication the structure is lost
             m_outputWidth = 1;
-            m_outputHeight = Inputs(0)->FunctionValues().GetNumCols();
+            m_outputHeight = Inputs(0)->GetNumCols();
             m_outputChannels = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode)
-        {
-            m_children.resize(1);
-            m_children[0] = leftNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode)
+        //{
+        //    m_children.resize(1);
+        //    m_children[0] = leftNode;
+        //}
     };
 
     template class TransposeNode<float>;
     template class TransposeNode<double>;
+
+    // -----------------------------------------------------------------------
+    /// StrideTimesNode (left, right, stride)
+    // -----------------------------------------------------------------------
 
     /**
     Has a stride in particular dimensions of left matrix when doing times operation. 
@@ -2858,9 +2725,10 @@ private:
     Notice that s is equal to k. 
     */
     template<class ElemType>
-    class StrideTimesNode : public ComputationNode<ElemType>
+    class StrideTimesNode : public ComputationNode<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"StrideTimes"; }
 
         size_t m_StrideDim; // the dimension index on which stride works 
         size_t m_Stride;    // the stride 
@@ -2870,42 +2738,38 @@ private:
             m_Stride = input1.GetNumCols();
         }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         StrideTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_Stride(1)
         { }
         // BUGBUG: This node needs to serialize and CopyTo m_Stride
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"StrideTimes"; }
-
         virtual void ComputeInputPartial(const size_t) { NOT_IMPLEMENTED; }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 1)
                 InvalidArgument("StrideTimes operation only takes two inputs.");
 
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             if (m_StrideDim == 1) /// column stride
             {
                 if (inputIndex == 0)  //left derivative
                 {
-                    Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
 
 //                    TimesNode<ElemType>::ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
 
                     Matrix<ElemType> mTmp1(sliceInput1Value.GetDeviceId());
-                    size_t r = Inputs(0)->FunctionValues().GetNumRows();
-                    size_t T1 = Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep;
+                    size_t r = Inputs(0)->GetNumRows();
+                    size_t T1 = Inputs(0)->GetNumCols() / GetNumParallelSequences();
                     mTmp1.Resize(r, T1);
                     Matrix<ElemType> mTmp2(sliceInput1Value.GetDeviceId());
                     Matrix<ElemType> mTmp3(sliceInput1Value.GetDeviceId());
 
-                    for (size_t k = 0; k < m_samplesInRecurrentStep; k++)
+                    for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
                         mTmp1.SetValue(0);
                         mTmp2 = sliceInput1Value.ColumnSlice(k, 1);
@@ -2915,25 +2779,25 @@ private:
 
                         for (size_t t = 0; t < T1; t++)
                         {
-                            Inputs(0)->GradientValues().ColumnSlice(t*m_samplesInRecurrentStep + k, 1) += mTmp1.ColumnSlice(t, 1);
+                            Inputs(0)->GradientValues().ColumnSlice(t*GetNumParallelSequences() + k, 1) += mTmp1.ColumnSlice(t, 1);
                         }
                     }
                 }
                 else  //right derivative
                 {
-                    Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                     //                    TimesNode<ElemType>::ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
 
-                    for (size_t k = 0; k < m_samplesInRecurrentStep; k++)
+                    for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
                         Matrix<ElemType> mTmp1(sliceOutputGrad.GetDeviceId());
-                        size_t r = Inputs(0)->FunctionValues().GetNumRows();
-                        size_t T1 = Inputs(0)->FunctionValues().GetNumCols() / m_samplesInRecurrentStep;
+                        size_t r = Inputs(0)->GetNumRows();
+                        size_t T1 = Inputs(0)->GetNumCols() / GetNumParallelSequences();
                         mTmp1.Resize(r, T1);
                         for (size_t t = 0; t < T1; t++)
                         {
-                            mTmp1.ColumnSlice(t, 1).SetValue(Inputs(0)->FunctionValues().ColumnSlice(t*m_samplesInRecurrentStep + k, 1));
+                            mTmp1.ColumnSlice(t, 1).SetValue(Inputs(0)->FunctionValues().ColumnSlice(t*GetNumParallelSequences() + k, 1));
                         }
                         Matrix<ElemType> mTmp2(sliceOutputGrad.GetDeviceId());
                         mTmp2 = sliceInput1Grad.ColumnSlice(k, 1);
@@ -2948,13 +2812,13 @@ private:
             {
                 if (inputIndex == 0)  //left derivative
                 {
-                    Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-                    for (size_t k = 0; k < m_samplesInRecurrentStep; k++)
+                    for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
                         Matrix<ElemType> mTmp1(sliceInput1Value.GetDeviceId());
-                        size_t d = Inputs(1)->FunctionValues().GetNumRows();
-                        size_t T1 = Inputs(0)->FunctionValues().GetNumRows() / m_samplesInRecurrentStep;
+                        size_t d = Inputs(1)->GetNumRows();
+                        size_t T1 = Inputs(0)->GetNumRows() / GetNumParallelSequences();
                         mTmp1.Resize(d, T1);
                         Matrix<ElemType> mTmp2(sliceInput1Value.GetDeviceId());
                         mTmp2 = sliceInput1Value.ColumnSlice(k, 1);
@@ -2967,18 +2831,18 @@ private:
                         {
                             mTmp4 = mTmp1.ColumnSlice(t, 1);
                             mTmp4.Reshape(1, d);
-                            Inputs(0)->GradientValues().AddToRowSliceValuesOf(mTmp4, t*m_samplesInRecurrentStep + k, 1);
+                            Inputs(0)->GradientValues().AddToRowSliceValuesOf(mTmp4, t*GetNumParallelSequences() + k, 1);
                         }
                     }
                 }
                 else  //right derivative
                 {
-                    Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                    Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-                    for (size_t k = 0; k < m_samplesInRecurrentStep; k++)
+                    for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
-                        size_t d = Inputs(1)->FunctionValues().GetNumRows();
-                        size_t T1 = Inputs(0)->FunctionValues().GetNumRows() / m_samplesInRecurrentStep;
+                        size_t d = Inputs(1)->GetNumRows();
+                        size_t T1 = Inputs(0)->GetNumRows() / GetNumParallelSequences();
 
                         Matrix<ElemType> mTmp0(sliceOutputGrad.GetDeviceId());
                         mTmp0.Resize(1, d);
@@ -2988,7 +2852,7 @@ private:
                         for (size_t t = 0; t < T1; t++)
                         {
                             mTmp0.SetValue(0);
-                            mTmp0.AddWithRowSliceValuesOf(Inputs(0)->FunctionValues(), t * m_samplesInRecurrentStep + k, 1);
+                            mTmp0.AddWithRowSliceValuesOf(Inputs(0)->FunctionValues(), t * GetNumParallelSequences() + k, 1);
                             mTmp1.AssignToRowSliceValuesOf(mTmp0, t, 1);
                         }
                         Matrix<ElemType> mTmp2(sliceOutputGrad.GetDeviceId());
@@ -3002,7 +2866,7 @@ private:
             }
         }
 
-        static void WINAPI ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT   
             gradientValues.Print("Gradient-in");   
@@ -3020,7 +2884,7 @@ private:
 #endif
         }
 
-        static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT   
             gradientValues.Print("Gradient-in");   
@@ -3033,14 +2897,14 @@ private:
 #endif
         }
 
-        virtual void EvaluateThisNode()
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
             UpdateStride(Inputs(1)->FunctionValues());
             if (m_StrideDim == 0)
-                FunctionValues().Resize(rows0 / m_samplesInRecurrentStep, cols1);
+                Resize(rows0 / GetNumParallelSequences(), cols1);
             if (m_StrideDim == 1)
-                FunctionValues().Resize(rows0, cols1);
+                Resize(rows0, cols1);
 
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_Stride, m_StrideDim);
 #ifdef DEBUG_DECODER
@@ -3049,17 +2913,18 @@ private:
 #endif
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange)
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             UpdateStride(sliceInput1Value);
             if (m_StrideDim == 0)
-                FunctionValues().Resize(rows0 / m_samplesInRecurrentStep, cols1);
+                Resize(rows0 / GetNumParallelSequences(), cols1);
             if (m_StrideDim == 1)
-                FunctionValues().Resize(rows0, cols1);
-            Matrix<ElemType> sliceOutputValue = m_functionValues->FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+                Resize(rows0, cols1);
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value, m_Stride, m_StrideDim);
         }
@@ -3082,7 +2947,7 @@ private:
 
         strideDim : 0 or 1
         */
-        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1, const size_t stride, const size_t strideDim)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1, const size_t stride, const size_t strideDim)
         {
 #if DUMPOUTPUT
             input0.Print("StrideTimesNode - Input0");
@@ -3144,22 +3009,19 @@ private:
         input1: right matrix
         stridedim: single element no gradient matrix, 0 row stride / 1 column stride
         */
-        virtual void /*ComputationNodeBase::*/Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 3)
-                LogicError("StrideTimes operation requires three inputs.");
-
-            //support automatic dimention inference for learnable parameters
-            if (Inputs(2)->FunctionValues().GetNumElements() != 1)
-                LogicError("StrideTimes : input(2) should be a single element matrix");
+            //support automatic dimension inference for learnable parameters
+            if (isFinalValidationPass && Inputs(2)->FunctionValues().GetNumElements() != 1)
+                RuntimeError("StrideTimes : input(2) should be a single element matrix");
 
             m_StrideDim = (size_t) Inputs(2)->FunctionValues().Get00Element();
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            if (m_StrideDim != 0 && m_StrideDim != 1)
+            if (isFinalValidationPass && m_StrideDim != 0 && m_StrideDim != 1)
                 LogicError("StrideTimes : stride dim must be either 0 (row) or 1 (column)");
 
             if (Inputs(2)->NeedGradient())
@@ -3168,20 +3030,21 @@ private:
             //cols0 and rows1 may have been changed so don't use them in the following check
             if (m_StrideDim == 0)
             {
-                if (rows1 != cols0)
+                if (isFinalValidationPass && rows1 != cols0)
                     LogicError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", m_StrideDim, cols0, rows1);
                 size_t T1 = rows0 / m_Stride;
-                FunctionValues().Resize(T1, cols1);
+                Resize(T1, cols1);
             }
 
             //cols0 and rows1 may have been changed so don't use them in the following check
             if (m_StrideDim == 1)
             {
-                if (cols0/m_Stride != rows1)
+                if (isFinalValidationPass && cols0 / m_Stride != rows1)
                     LogicError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", m_StrideDim, cols0, rows1);
-                FunctionValues().Resize(rows0, cols1);
+                Resize(rows0, cols1);
             }
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -3191,17 +3054,17 @@ private:
 
             //after multiplication the structure is lost
             m_outputWidth = 1;
-            m_outputHeight = Inputs(0)->FunctionValues().GetNumRows();
+            m_outputHeight = Inputs(0)->GetNumRows();
             m_outputChannels = 1;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr strideNode)
-        {
-            m_children.resize(3);
-            m_children[0] = leftNode;
-            m_children[1] = rightNode;
-            m_children[2] = strideNode;
-        }
+        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr strideNode)
+        //{
+        //    m_children.resize(3);
+        //    m_children[0] = leftNode;
+        //    m_children[1] = rightNode;
+        //    m_children[2] = strideNode;
+        //}
     };
 
     template class StrideTimesNode<float>;

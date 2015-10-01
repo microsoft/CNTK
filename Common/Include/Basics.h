@@ -27,6 +27,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // ThrowFormatted() - template function to throw a std::exception with a formatted error string
+#pragma warning(push)
+#pragma warning(disable : 4996)
     template<class E>
     __declspec_noreturn static inline void ThrowFormatted(const char * format, ...)
     {
@@ -36,6 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         vsprintf(buffer, format, args);
         throw E(buffer);
     };
+#pragma warning(pop)
 
     // if it receives a lonely std::string then throw that directly
     template<class E>
@@ -50,6 +53,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     __declspec_noreturn static inline void InvalidArgument(_Types&&... _Args) { ThrowFormatted<std::invalid_argument>(forward<_Types>(_Args)...); }
 
     // Warning - warn with a formatted error string
+#pragma warning(push)
+#pragma warning(disable : 4996)
     static inline void Warning(const char * format, ...)
     {
         va_list args;
@@ -57,6 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         va_start(args, format);
         vsprintf(buffer, format, args);
     };
+#pragma warning(pop)
     static inline void Warning(const string & message) { Warning("%s", message.c_str()); }
 
     // ----------------------------------------------------------------------------
