@@ -178,8 +178,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (!m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))    // don't propagate boundary frames or gaps
                         {
                             // TODO: we need a way to do this with a FrameRange object and DataSlice()
-                            Matrix<ElemType> frm = m_gradientValues.ColumnSlice(t * mNbr + id, 1);
-                            Matrix<ElemType> to = Inputs(0)->GradientValues().ColumnSlice(t_delayed * mNbr + id, 1);
+                            Matrix<ElemType> frm = GradientSlice(frameRange.Sequence(id));
+                            Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(t_delayed).Sequence(id));
                             to += frm;
                         }
                     }
@@ -248,8 +248,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t id = 0; id < GetNumParallelSequences(); id++)
                 {
                     // TODO: we need a way to do this with a FrameRange object and DataSlice()
-                    size_t mNbr = GetNumParallelSequences();
-                    Matrix<ElemType> out = m_functionValues.ColumnSlice(t * mNbr + id, 1);
+                    Matrix<ElemType> out = ValueSlice(frameRange.Sequence(id));
 
                     if (m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End))
                         out.SetValue(m_initialActivationValue);     // crossed a boundary
@@ -257,9 +256,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         // inside the sequence: access delayed value
                         if (outside)
-                            inp = m_delayedActivation.ColumnSlice((t_delayed - direction * T) * mNbr + id, 1); // delay reaches in previous minibatch
+                            inp = DataSlice(m_delayedActivation, FrameRange(t_delayed - direction * T).Sequence(id)); // delay reaches in previous minibatch
                         else
-                            inp = Inputs(0)->FunctionValues().ColumnSlice(t_delayed * mNbr + id, 1);
+                            inp = Inputs(0)->ValueSlice(FrameRange(t_delayed).Sequence(id));
 
                         out.SetValue(inp);
                     }

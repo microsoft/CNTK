@@ -1301,7 +1301,7 @@ void DoCommand(const ConfigParameters& config)
             if (action[j] == "train" || action[j] == "trainRNN")
             {
                 wstring modelPath = commandParams("modelPath");
-                std::wcout << "CNTKModelPath: " << modelPath << endl;
+                std::wcerr << "CNTKModelPath: " << modelPath << endl;
                 std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
                 DoTrain<ElemType>(commandParams);
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
