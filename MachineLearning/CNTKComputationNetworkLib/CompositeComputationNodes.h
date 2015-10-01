@@ -904,6 +904,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<TimeReverseNode<ElemType>>(nodeP);
+                // TODO: m_memory is never used inside this class, just assigned. Can it not be assigned?
                 node->m_memory = m_memory;
             }
         }
@@ -919,18 +920,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex > 0)
-                InvalidArgument("TimeReverse operation only takes one input.");
-            ComputationNodePtr child = Inputs(inputIndex);
-            ComputeInputPartialS(GradientValues(), child->GradientValues(), GetNumParallelSequences());
-        }
+            assert(inputIndex == 0); inputIndex;
+#if 1
+            VerifySize(Inputs(0));
 
-        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& gradientValues, Matrix<ElemType>& inputGradientValues, int nSamples)
-        {
-    #if DUMPOUTPUT
-
-            functionValues.Print("TimeReverseNode");
-    #endif
+            size_t nS = GetNumParallelSequences();
+            size_t nT = GetNumTimeSteps();
+            for (size_t t = 0; t < nT; t++)
+            {
+                Matrix<ElemType> g = GradientSlice(FrameRange(t, nS));
+                Matrix<ElemType> ig = Inputs(0)->GradientSlice(FrameRange(nT - 1 - t, nS));
+                ig += g;
+            }
+#else
+            ComputationNodePtr child = Inputs(0);
+            Matrix<ElemType>& gradientValues = GradientValues();
+            Matrix<ElemType>& inputGradientValues = child->GradientValues();
+            int nSamples = GetNumParallelSequences();
             size_t nc = inputGradientValues.GetNumCols();
             size_t nr = inputGradientValues.GetNumRows();
             if (nc != gradientValues.GetNumCols() || nr != gradientValues.GetNumRows())
@@ -945,45 +951,57 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> ii = inputGradientValues.ColumnSlice(nc - i - nSamples, nSamples);
                 ii += ig;
             }
-
-    #if DUMPOUTPUT
-            inputGradientValues.Print("child Gradient-out");
-    #endif
+#endif
         }
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            if (m_hasComputed == false)
+            // BUGBUG: We must flip the layout, too.
+            //         Challenge: When we flip it back, it will be yet another layout. Turns out, to handle this, ALL nodes must compare layouts now upon Evaluate(), and by comparing content!
+            if (GetNumParallelSequences() != 1)
+                LogicError("%ls %ls operation not implemented for multiple parallel sequences. It does not flip the layout either.");
+            if (!m_hasComputed)
             {
-                EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), GetNumParallelSequences());
+                // this assumes this reverse node is called once, so it can set, instead add to, the function values
+                Resize(Inputs(0));
+
+#if 1
+                size_t nS = GetNumParallelSequences();
+                size_t nT = GetNumTimeSteps();
+                for (size_t t = 0; t < nT; t++)
+                {
+                    Matrix<ElemType> v = Inputs(0)->ValueSlice(FrameRange(t, nS));
+                    ValueSlice(FrameRange(nT - 1 - t, nS)).SetValue(v);
+                }
+#else
+                Matrix<ElemType>& functionValues = EvaluateThisNodeS(FunctionValues();
+                Matrix<ElemType>& inputFunctionValues = Inputs(0)->FunctionValues();
+                int nSamples = GetNumParallelSequences());
+                for (size_t i = 0; i < cols0; i += nSamples)
+                {
+                    Matrix<ElemType> ig = inputFunctionValues.ColumnSlice(i, nSamples);
+                    functionValues.ColumnSlice(cols0 - i - nSamples, nSamples).SetValue(ig);
+                }
+#endif
+
+#if NANCHECK
+                m_functionValues.HasNan("TimeReverse");
+#endif
+#if DUMPOUTPUT
+                functionValues.Print("TimeReverseNode");
+#endif
+
                 m_memory.SetValue(FunctionValues());
             }
-        }
-
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues, int nSamples)
-        {
-            /// this assumes this reverse node is called once, so it can set, instead add to, the function values
-            size_t rows0 = inputFunctionValues.GetNumRows(), cols0 = inputFunctionValues.GetNumCols();
-            functionValues.Resize(rows0, cols0);
-
-            for (size_t i = 0; i < cols0; i += nSamples)
-            {
-                Matrix<ElemType> ig = inputFunctionValues.ColumnSlice(i, nSamples);
-                functionValues.ColumnSlice(cols0 - i - nSamples, nSamples).SetValue(ig);
-            }
-
-    #if NANCHECK
-            m_functionValues.HasNan("TimeReverse");
-    #endif
-    #if DUMPOUTPUT
-            functionValues.Print("TimeReverseNode");
-    #endif
+            // TODO: don't need to set m_hasCompute? Or what is it for?
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
             InferMBLayoutFromInputsForStandardCase();
+            if (isFinalValidationPass && !m_pMBLayout)
+                RuntimeError("%ls %ls operation makes no sense without a MB layout.", NodeName().c_str(), OperationName().c_str());
             Resize(Inputs(0));
             InferImageDimsFromInput(0);
         }

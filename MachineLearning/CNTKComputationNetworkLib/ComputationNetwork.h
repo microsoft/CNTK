@@ -7,7 +7,7 @@
 #pragma once
 
 // TODOs:
-//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, it should already be covered by Node::SetFunctionAndGradientMBSize() which is called from inside the Eval loop
+//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, it should already be covered by Node::UpdateFunctionAndGradientMBSize() which is called from inside the Eval loop
 //  - complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
 //  - apply 
 // => many ComputationNode implementations only have two functions EvaluateThisNode(FrameRange) and ComputePartial(), as it was meant to be!
@@ -19,6 +19,8 @@
 //  - BUGBUG: All frameRange.Check() expressions are wrong that operate on children, since the wrong layout pointer is passed in (for most nodes it is identical to the correct one though).
 //    This will get fixed as we remove these Check() expressions when absorbing EvaluateThisNodeS().
 //  - verify that all readers return layouts
+//  - BUGBUG (in the future): Once we have > 1 layout in the system, all nodes must compare their actual layouts upon Evaluate().
+//    Example: TimeReverse must create a new layout. A second TimeReverse ideally would revert back, but can't know. Hence, all consumers of layouts must compare upon Evaluate().
 
 // The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
 
@@ -613,22 +615,20 @@ public:
                     if (!pMBLayout || nodeIter->GetMBLayout() != pMBLayout)
                         LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
                                    nodeIter->NodeName().c_str(), recurrentNodes[0]->NodeName().c_str());
-                    //nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize); // TODO: this will go
                 }
-
-                //const size_t T = m_actualMBSize / GetNumParallelSequences();
 
                 // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
                 if (recInfo->m_isForwardLoop)
                 {
                     // note: the number of time steps may increase as we go along, e.g. for Decoder networks that decide the end based on network output
                     // TODO: ^^ that's actually not yet implemented, but we can already be prepared for it
+                    // TODO: this loop should be controlled by an iterator, under control of the main Delay node in this loop.
                     for (size_t t = 0; t < pMBLayout->GetNumTimeSteps(); t++)
                     {
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
-                            (*nodeIter)->SetFunctionAndGradientMBSize();
-                            (*nodeIter)->EvaluateThisNodeGivenInputs(t);
+                            (*nodeIter)->UpdateFunctionAndGradientMBSize();
+                            (*nodeIter)->EvaluateThisNode(FrameRange(t, GetNumParallelSequences()));
                             if (IsNodeReqMultiSeqHandling(*nodeIter))
                                 (*nodeIter)->MaskMissingValuesColumnsToZero(t);
                             (*nodeIter)->UpdateEvalTimeStamp();
@@ -641,8 +641,8 @@ public:
                     {
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
-                            (*nodeIter)->SetFunctionAndGradientMBSize();
-                            (*nodeIter)->EvaluateThisNodeGivenInputs(t);
+                            (*nodeIter)->UpdateFunctionAndGradientMBSize();
+                            (*nodeIter)->EvaluateThisNode(FrameRange(t, GetNumParallelSequences()));
                             if (IsNodeReqMultiSeqHandling(*nodeIter))
                                 (*nodeIter)->MaskMissingValuesColumnsToZero(t);
                             (*nodeIter)->UpdateEvalTimeStamp();
@@ -665,8 +665,8 @@ public:
 #endif
                 // evaluate the node for all frames concurrently (map)
                 // we manage time stamp here so that derived classes don't need to worry about it
-                (*nodeIter)->SetFunctionAndGradientMBSize();
-                (*nodeIter)->EvaluateThisNodeGivenInputs();
+                (*nodeIter)->UpdateFunctionAndGradientMBSize();
+                (*nodeIter)->EvaluateThisNode(FrameRange());
                 if (IsNodeReqMultiSeqHandling(*nodeIter))
                     (*nodeIter)->MaskMissingValuesColumnsToZero();
                 (*nodeIter)->UpdateEvalTimeStamp();
@@ -690,7 +690,7 @@ public:
         // resize function values and gradients of everything in m_recurrentInfo
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
-                nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize);
+                nodeIter->UpdateFunctionAndGradientMBSize(m_actualMBSize);
 
         return m_actualMBSize;
     }
