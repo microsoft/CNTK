@@ -4562,6 +4562,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return (DEVICEID_TYPE)GPUMatrix<ElemType>::GetBestGPUDeviceId();
     }
 
+    // TODO: these are scalar operations--why are they in Matrix?
     template<class ElemType>
     ElemType Matrix<ElemType>::Exp10(ElemType num)
     {
@@ -4575,8 +4576,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (y <= 0)
             throw std::logic_error("y is smaller than zero");
 
-        ElemType r = x - y * floor(x / y);
-        return r; 
+        return x - y * floor(x / y);
     }
 
     template<class ElemType>
@@ -4584,8 +4584,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         ElemType temp, diff, z;
 
-        if (x < y) {
-            temp = x; x = y; y = temp;
+        if (x < y)
+        {
+            temp = x; x = y; y = temp;  // TODO: ::swap(x,y)?
         }
         diff = y - x;
         if (diff < MINLOGEXP)
@@ -4595,7 +4596,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             z = exp(diff);
-                        return (ElemType) (x + log(1.0 + z));
+            return (ElemType)(x + log(1.0 + z));
         }
     }
 
