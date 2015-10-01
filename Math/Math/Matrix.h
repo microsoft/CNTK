@@ -667,42 +667,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct FrameRange
     {
         const size_t timeIdxInSeq;              // start frame
-        const size_t samplesInRecurrentStep;    // number of samples in this step       --BUGBUG: this should be part of MBLayout, not FrameRange
+
         // can construct from a single size_t -> a single-frame range
-        //FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(0)/*FIX THIS*/{}
-        FrameRange(size_t timeIdxInSeq, size_t samplesInRecurrentStep) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(samplesInRecurrentStep){}
+        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq){}
+
         // or without arguments -> entire minibatch / no frame-range
-        FrameRange() : timeIdxInSeq(0), samplesInRecurrentStep(SIZE_MAX/*all frames (map)*/) {}
+        FrameRange() : timeIdxInSeq(SIZE_MAX) {}
+
         // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
         // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).
         size_t t() const { EnsureNotAllFrames(); return timeIdxInSeq; }
         // multi-frame slice case: these two get startFrame and numFrames
-        size_t StartColumn() const { EnsureNotAllFrames(); return timeIdxInSeq * samplesInRecurrentStep; }
-        size_t NumCols() const { EnsureNotAllFrames(); return samplesInRecurrentStep; }
+        //size_t StartColumn() const { EnsureNotAllFrames(); return timeIdxInSeq * samplesInRecurrentStep; }
+        //size_t NumCols() const { EnsureNotAllFrames(); return samplesInRecurrentStep; }
         // TODO: remove these ^^ two in favor of these vv
-        size_t StartColumn(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); VerifyMBLayout(pMBLayout); return timeIdxInSeq * pMBLayout->GetNumParallelSequences(); }
-        size_t NumCols(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); VerifyMBLayout(pMBLayout); return pMBLayout->GetNumParallelSequences(); }
-        bool IsAllFrames() const { return samplesInRecurrentStep == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
+        size_t StartColumn(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); return timeIdxInSeq * pMBLayout->GetNumParallelSequences(); }
+        size_t NumCols(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); return pMBLayout->GetNumParallelSequences(); }
+        bool IsAllFrames() const { return timeIdxInSeq == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
 
         const FrameRange & Check(size_t expectedStartColumn, size_t expectedNumCols, const shared_ptr<MBLayout> & pMBLayout) const
         {
-            if (!IsAllFrames() && (samplesInRecurrentStep != pMBLayout->GetNumParallelSequences() || expectedStartColumn != StartColumn(pMBLayout) || expectedNumCols != NumCols(pMBLayout)))
+            if (!IsAllFrames() && (expectedStartColumn != StartColumn(pMBLayout) || expectedNumCols != NumCols(pMBLayout)))
                 LogicError("FrameRange::Check: FrameRange object gives different range than original explicit code. Logic is borked.");
             return *this;
         }
     private:
-        FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
+        FrameRange(const FrameRange & other);
         void operator=(const FrameRange &);
         void EnsureNotAllFrames() const
         {
             if (IsAllFrames())
                 LogicError("FrameRange::t() called when frame range refers to whole minibatch");
-        }
-        // TODO: this will go away once we remove samplesInRecurrentStep from this class
-        void VerifyMBLayout(const shared_ptr<MBLayout> & pMBLayout) const
-        {
-            if (pMBLayout->GetNumParallelSequences() != samplesInRecurrentStep)
-                LogicError("VerifyMBLayout: MBLayout inconsistent with local copy of samplesInRecurrentStep");
         }
     };
 
