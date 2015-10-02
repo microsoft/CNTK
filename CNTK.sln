@@ -195,14 +195,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{5F733BBA-F
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{19EE975B-232D-49F0-94C7-6F1C6424FB53}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\Speech\LSTM\baseline.cpu.txt = Tests\Speech\LSTM\baseline.cpu.txt
-		Tests\Speech\LSTM\baseline.gpu.txt = Tests\Speech\LSTM\baseline.gpu.txt
-		Tests\Speech\LSTM\baseline.windows.cpu.txt = Tests\Speech\LSTM\baseline.windows.cpu.txt
-		Tests\Speech\LSTM\baseline.windows.gpu.txt = Tests\Speech\LSTM\baseline.windows.gpu.txt
 		Tests\Speech\LSTM\cntk.config = Tests\Speech\LSTM\cntk.config
 		Tests\Speech\LSTM\lstmp-3layer_WithSelfStab.ndl = Tests\Speech\LSTM\lstmp-3layer_WithSelfStab.ndl
-		Tests\Speech\LSTM\run-test = Tests\Speech\LSTM\run-test
-		Tests\Speech\LSTM\testcases.yml = Tests\Speech\LSTM\testcases.yml
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ParseConfig", "MachineLearning\ParseConfig\ParseConfig.vcxproj", "{7C4E77C9-6B17-4B02-82C1-DB62EEE2635B}"
@@ -334,6 +328,26 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Kaldi2Reader", "Kaldi2Reade
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SequenceTraining", "MachineLearning\SequenceTraining\SequenceTraining.vcxproj", "{EAD17188-072C-4726-B840-A769C36DAD1B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Truncated", "Truncated", "{88F85A64-105D-4CDA-8199-B7A312FC8A27}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\LSTM\Truncated\baseline.cpu.txt = Tests\Speech\LSTM\Truncated\baseline.cpu.txt
+		Tests\Speech\LSTM\Truncated\baseline.gpu.txt = Tests\Speech\LSTM\Truncated\baseline.gpu.txt
+		Tests\Speech\LSTM\Truncated\baseline.windows.cpu.txt = Tests\Speech\LSTM\Truncated\baseline.windows.cpu.txt
+		Tests\Speech\LSTM\Truncated\baseline.windows.gpu.txt = Tests\Speech\LSTM\Truncated\baseline.windows.gpu.txt
+		Tests\Speech\LSTM\Truncated\run-test = Tests\Speech\LSTM\Truncated\run-test
+		Tests\Speech\LSTM\Truncated\testcases.yml = Tests\Speech\LSTM\Truncated\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FullUtterance", "FullUtterance", "{8241108A-7824-4FF2-BECA-7521A9D89DCF}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\LSTM\FullUtterance\baseline.cpu.txt = Tests\Speech\LSTM\FullUtterance\baseline.cpu.txt
+		Tests\Speech\LSTM\FullUtterance\baseline.gpu.txt = Tests\Speech\LSTM\FullUtterance\baseline.gpu.txt
+		Tests\Speech\LSTM\FullUtterance\baseline.windows.cpu.txt = Tests\Speech\LSTM\FullUtterance\baseline.windows.cpu.txt
+		Tests\Speech\LSTM\FullUtterance\baseline.windows.gpu.txt = Tests\Speech\LSTM\FullUtterance\baseline.windows.gpu.txt
+		Tests\Speech\LSTM\FullUtterance\run-test = Tests\Speech\LSTM\FullUtterance\run-test
+		Tests\Speech\LSTM\FullUtterance\testcases.yml = Tests\Speech\LSTM\FullUtterance\testcases.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -446,8 +460,6 @@ Global
 		{CE429AA2-3778-4619-8FD1-49BA3B81197B} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{065AF55D-AF02-448B-BFCD-52619FDA4BD0} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
 		{3ED0465D-23E7-4855-9694-F788717B6533} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
-		{3E9C89B1-C045-4F42-92B2-F9FFFFC2DBD4} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
-		{C70E1572-20FF-496C-A0A9-10AA6755A07C} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
 		{98D2C32B-0C1F-4E19-A626-65F7BA4600CF} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
 		{EA67F51F-1FE8-462D-9F3E-01161685AD59} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
 		{DE1A06BA-EC5C-4E0D-BCA8-3EA555310C58} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
@@ -461,5 +473,10 @@ Global
 		{B6725C9F-A6D2-4269-9B74-7888A90F7884} = {5E666C53-2D82-49C9-9127-3FDDC321C741}
 		{B27DD434-EECD-4EE0-A03B-1150EB87258E} = {B6725C9F-A6D2-4269-9B74-7888A90F7884}
 		{A4884465-CFBB-4A64-A9DE-690E1A63EF7E} = {B6725C9F-A6D2-4269-9B74-7888A90F7884}
+		{3E9C89B1-C045-4F42-92B2-F9FFFFC2DBD4} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
+		{C70E1572-20FF-496C-A0A9-10AA6755A07C} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
+		{EAD17188-072C-4726-B840-A769C36DAD1B} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
+		{88F85A64-105D-4CDA-8199-B7A312FC8A27} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
+		{8241108A-7824-4FF2-BECA-7521A9D89DCF} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
 	EndGlobalSection
 EndGlobal

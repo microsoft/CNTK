@@ -19,11 +19,6 @@
 
 #include "rollingwindowsource.h"        // minibatch sources
 #include "utterancesourcemulti.h"
-#include "utterancesource.h"
-#include "utterancesourcemulti.h"
-#ifdef _WIN32
-#include "readaheadsource.h"
-#endif
 #include "chunkevalsource.h"
 #include "minibatchiterator.h"
 #define DATAREADER_EXPORTS  // creating the exports here
@@ -58,14 +53,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
         void HTKMLFReader<ElemType>::Init(const ConfigParameters& readerConfig)
         {
-            m_cudaAllocator = nullptr;
-            m_mbiter = NULL;
-            m_frameSource = NULL;
-#ifdef _WIN32
-            m_readAheadSource = NULL;
-#endif
-            m_lattices = NULL;
-
             m_truncated = readerConfig("Truncated", "false");
             m_fullutt = readerConfig("FullUtt", "false"); //read full utt in truncated mode
             m_convertLabelsToTargets = false;
@@ -137,13 +124,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<size_t> numContextRight;
 
             // for the multi-utterance process
-            m_featuresBufferMultiUtt.assign(m_numberOfuttsPerMinibatch,NULL);
+            m_featuresBufferMultiUtt.assign(m_numberOfuttsPerMinibatch, nullptr);
             m_featuresBufferAllocatedMultiUtt.assign(m_numberOfuttsPerMinibatch,0);
-            m_labelsBufferMultiUtt.assign(m_numberOfuttsPerMinibatch,NULL);
+            m_labelsBufferMultiUtt.assign(m_numberOfuttsPerMinibatch, nullptr);
             m_labelsBufferAllocatedMultiUtt.assign(m_numberOfuttsPerMinibatch,0);
 
             // for the multi-utterance process for lattice and phone boundary
-            m_latticeBufferMultiUtt.assign(m_numberOfuttsPerMinibatch, NULL);
+            m_latticeBufferMultiUtt.assign(m_numberOfuttsPerMinibatch, nullptr);
             m_labelsIDBufferMultiUtt.resize(m_numberOfuttsPerMinibatch);
             m_phoneboundaryIDBufferMultiUtt.resize(m_numberOfuttsPerMinibatch);
             std::vector<std::wstring> featureNames;
@@ -349,11 +336,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 randomize = randomizeAuto;
             }
 
-            // see if they want to use readAhead
-#ifdef _WIN32
-            m_readAhead = readerConfig("readAhead", "false");
-#endif
-
             // read all input files (from multiple inputs)
             // TO DO: check for consistency (same number of files in each script file)
             numFiles=0;
@@ -452,13 +434,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!_stricmp(readMethod.c_str(),"blockRandomize"))
             {
                 // construct all the parameters we don't need, but need to be passed to the constructor...
-                m_lattices = new msra::dbn::latticesource(latticetocs, m_hset.getsymmap());
+                m_lattices.reset(new msra::dbn::latticesource(latticetocs, m_hset.getsymmap()));
 
                 // now get the frame source. This has better randomization and doesn't create temp files
-                m_frameSource = new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_framemode);
+                m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_framemode));
                 m_frameSource->setverbosity(verbosity);
-                //m_frameSource = new msra::dbn::minibatchutterancesource(infilesmulti[0], labelsmulti[0], m_featDims[0], m_labelDims[0], numContextLeft[0], numContextRight[0], randomize, *m_lattices, m_latticeMap, m_framemode);
-
             }
             else if (!_stricmp(readMethod.c_str(),"rollingWindow"))
             {
@@ -530,9 +510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 const bool mayhavenoframe=false;
                 int addEnergy = 0;
 
-                //m_frameSourceMultiIO = new msra::dbn::minibatchframesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, randomize, pagepath, mayhavenoframe, addEnergy);
-                //m_frameSourceMultiIO->setverbosity(verbosity);
-                m_frameSource = new msra::dbn::minibatchframesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, pagePaths, mayhavenoframe, addEnergy);
+                m_frameSource.reset(new msra::dbn::minibatchframesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, pagePaths, mayhavenoframe, addEnergy));
                 m_frameSource->setverbosity(verbosity);
             }
             else
@@ -640,7 +618,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_inputFilesMultiIO.push_back(filelist);
             }
 
-            m_fileEvalSource = new msra::dbn::FileEvalSource(realDims, numContextLeft, numContextRight, evalchunksize);
+            m_fileEvalSource.reset(new msra::dbn::FileEvalSource(realDims, numContextLeft, numContextRight, evalchunksize));
         }
 
 
@@ -649,13 +627,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
         HTKMLFReader<ElemType>::~HTKMLFReader()
         {
-            delete m_mbiter;
-#ifdef _WIN32
-            delete m_readAheadSource;
-#endif
-            delete m_frameSource;
-            delete m_lattices;
-
             if (!m_featuresBufferMultiIO.empty())
             {
                 if (m_featuresBufferMultiIO[0] != nullptr)
@@ -680,25 +651,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i ++)
                 {
-                    if (m_featuresBufferMultiUtt[i] != NULL)
-                    {
-                        delete[] m_featuresBufferMultiUtt[i];
-                        m_featuresBufferMultiUtt[i] = NULL;
-                    }
-                    if (m_labelsBufferMultiUtt[i] != NULL)
-                    {
-                        delete[] m_labelsBufferMultiUtt[i];
-                        m_labelsBufferMultiUtt[i] = NULL;
-                    }
-
-                    if (m_latticeBufferMultiUtt[i] != NULL)
-                    {
-                        m_latticeBufferMultiUtt[i].reset();
+                    m_featuresBufferMultiUtt[i] = nullptr;
+                    m_labelsBufferMultiUtt[i] = nullptr;
+                    m_latticeBufferMultiUtt[i].reset();
                 }
-            }        
-
-            }        
-            delete m_cudaAllocator;
+            }
         }
 
     //StartMinibatchLoop - Startup a minibatch loop 
@@ -754,9 +711,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void HTKMLFReader<ElemType>::StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples)
         {
             size_t datapasses=1;
-            //size_t totalFrames = m_frameSource->totalframes();
-            size_t totalFrames;
-            totalFrames = m_frameSource->totalframes();
+            size_t totalFrames = m_frameSource->totalframes();
 
             size_t extraFrames = totalFrames%mbSize;
             size_t minibatches = totalFrames/mbSize;
@@ -784,25 +739,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 requestedEpochSamples = totalFrames;
             }
 
-            // delete the old one first (in case called more than once)
-            delete m_mbiter;
-            msra::dbn::minibatchsource* source = m_frameSource;
-#ifdef _WIN32
-            if (m_readAhead)
-            {
-                if (m_readAheadSource == NULL)
-                {
-                    m_readAheadSource = new msra::dbn::minibatchreadaheadsource (*source, requestedEpochSamples);
-                }
-                else if (m_readAheadSource->epochsize() != requestedEpochSamples)
-                {
-                    delete m_readAheadSource;
-                    m_readAheadSource = new msra::dbn::minibatchreadaheadsource (*source, requestedEpochSamples);
-                }
-                source = m_readAheadSource;
-            }
-#endif
-            m_mbiter = new msra::dbn::minibatchiterator(*source, epoch, requestedEpochSamples, mbSize, subsetNum, numSubsets, datapasses);
+            m_mbiter.reset(new msra::dbn::minibatchiterator(*m_frameSource, epoch, requestedEpochSamples, mbSize, subsetNum, numSubsets, datapasses));
             if (!m_featuresBufferMultiIO.empty())
             {
                 if (m_featuresBufferMultiIO[0] != nullptr) // check first feature, if it isn't NULL, safe to assume all are not NULL? 
@@ -834,13 +771,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_featuresBufferMultiUtt[u] != NULL)
                     {
-                        delete[] m_featuresBufferMultiUtt[u];
                         m_featuresBufferMultiUtt[u] = NULL;
                         m_featuresBufferAllocatedMultiUtt[u] = 0;
                     }
                     if (m_labelsBufferMultiUtt[u] != NULL)
                     {
-                        delete[] m_labelsBufferMultiUtt[u];
                         m_labelsBufferMultiUtt[u] = NULL;
                         m_labelsBufferAllocatedMultiUtt[u] = 0;
                     }
@@ -858,7 +793,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_fileEvalSource->Reset();
             m_fileEvalSource->SetMinibatchSize(mbSize);
-            //m_chunkEvalSourceMultiIO->reset();
             m_inputFileIndex=0;
 
             if (m_featuresBufferMultiIO[0] != nullptr) // check first feature, if it isn't NULL, safe to assume all are not NULL? 
@@ -869,7 +803,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_featuresBufferAllocatedMultiIO[i]=0;
                 }
             }
-
         }
 
         template<class ElemType>
@@ -1180,7 +1113,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j = startFr,k = 0; j < endFr; j++,k++) // column major, so iterate columns
                                         {
                                             // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i][j * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
+                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[j * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
                                         }
                                     }
                                     else
@@ -1188,7 +1121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j=startFr,k=0; j < endFr; j++,k++) // column major, so iterate columns in outside loop
                                         {
                                             for (int d = 0; d < dim; d++)
-                                                m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i][j * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
+                                                m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[j * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
                                         }
                                     }
                                 }
@@ -1206,7 +1139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     for (size_t j = startFr,k=0; j < endFr; j++,k++)
                                     {
                                         for (int d = 0; d < dim; d++)
-                                            m_labelsBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i][j * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
+                                            m_labelsBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[j * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
                                     }
                                 }
                             }
@@ -1241,7 +1174,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j = startFr,k = 0; j < endFr; j++,k++) // column major, so iterate columns
                                         {
                                             // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i][j * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
+                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[j * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
                                         }
                                     }
                                     else
@@ -1250,7 +1183,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         {
                                             for (int d = 0; d < dim; d++)
                                             {
-                                                m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i][j * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
+                                                m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[j * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
                                             }
                                         }
                                     }
@@ -1268,7 +1201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     for (size_t j = startFr,k=0; j < endFr; j++,k++)
                                     {
                                         for (int d = 0; d < dim; d++)
-                                            m_labelsBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i][j * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
+                                            m_labelsBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[j * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
                                     }
                                 }
                             }
@@ -1296,7 +1229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j = startFr,k = 0; j < endFr; j++,k++) // column major, so iterate columns
                                         {
                                             // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i][k * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
+                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[k * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
                                         }
                                     }
                                     else
@@ -1304,7 +1237,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j=startFr,k=0; j < endFr; j++,k++) // column major, so iterate columns in outside loop
                                         {
                                             for (int d = 0; d < dim; d++)
-                                                m_featuresBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i][k * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
+                                                m_featuresBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[k * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
                                         }
                                     }
                                 }
@@ -1315,7 +1248,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     for (size_t j = startFr,k=0; j < endFr; j++,k++)
                                     {
                                         for (int d = 0; d < dim; d++)
-                                            m_labelsBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i][k * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
+                                            m_labelsBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[k * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
                                     }
                                 }
                             }
@@ -1510,7 +1443,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         for (size_t j = 0, k = startFr; j < framenum; j++, k++) // column major, so iterate columns
                         {
                             // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + channelIndex)*dim], sizeof(ElemType)*dim, &m_featuresBufferMultiUtt[sourceChannelIndex][j*dim + m_featuresStartIndexMultiUtt[id + sourceChannelIndex*numOfFea]], sizeof(ElemType)*dim);
+                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + channelIndex)*dim], sizeof(ElemType)*dim, &m_featuresBufferMultiUtt[sourceChannelIndex].get()[j*dim + m_featuresStartIndexMultiUtt[id + sourceChannelIndex*numOfFea]], sizeof(ElemType)*dim);
                         }
                     }
                     else
@@ -1519,7 +1452,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             for (int d = 0; d < dim; d++)
                             {
-                                m_featuresBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + channelIndex)*dim + d] = m_featuresBufferMultiUtt[sourceChannelIndex][j*dim + d + m_featuresStartIndexMultiUtt[id + sourceChannelIndex*numOfFea]];
+                                m_featuresBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + channelIndex)*dim + d] = m_featuresBufferMultiUtt[sourceChannelIndex].get()[j*dim + d + m_featuresStartIndexMultiUtt[id + sourceChannelIndex*numOfFea]];
                             }
                         }
                     }
@@ -1548,7 +1481,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (int d = 0; d < dim; d++)
                         {
-                            m_labelsBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + channelIndex)*dim + d] = m_labelsBufferMultiUtt[sourceChannelIndex][j*dim + d + m_labelsStartIndexMultiUtt[id + sourceChannelIndex*numOfLabel]];
+                            m_labelsBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + channelIndex)*dim + d] = m_labelsBufferMultiUtt[sourceChannelIndex].get()[j*dim + d + m_labelsStartIndexMultiUtt[id + sourceChannelIndex*numOfLabel]];
                         }
                     }
                 }
@@ -1688,17 +1621,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_featuresStartIndexMultiUtt[id+i*numOfFea] = totalFeatNum;
                 totalFeatNum = fdim * actualmbsizeOri + m_featuresStartIndexMultiUtt[id+i*numOfFea];
             }
-            if (m_featuresBufferMultiUtt[i]==NULL)
+            if ((m_featuresBufferMultiUtt[i] == NULL) || (m_featuresBufferAllocatedMultiUtt[i] < totalFeatNum))
             {
-                m_featuresBufferMultiUtt[i] = new ElemType[totalFeatNum];
+                m_featuresBufferMultiUtt[i] = AllocateIntermediateBuffer(-1 /*CPU*/, totalFeatNum);
                 m_featuresBufferAllocatedMultiUtt[i] = totalFeatNum;
             }                    
-            else if (m_featuresBufferAllocatedMultiUtt[i] < totalFeatNum) //buffer size changed. can be partial minibatch
-            {
-                delete[] m_featuresBufferMultiUtt[i];
-                m_featuresBufferMultiUtt[i] = new ElemType[totalFeatNum];
-                m_featuresBufferAllocatedMultiUtt[i] = totalFeatNum;
-            }
 
             size_t totalLabelsNum = 0;
             for (auto it = m_labelNameToIdMap.begin(); it != m_labelNameToIdMap.end(); ++it) 
@@ -1712,19 +1639,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 totalLabelsNum = m_labelsStartIndexMultiUtt[id+i*numOfLabel] + dim * actualmbsizeOri;
             }
 
-            if (m_labelsBufferMultiUtt[i]==NULL)
+            if ((m_labelsBufferMultiUtt[i] == NULL) || (m_labelsBufferAllocatedMultiUtt[i] < totalLabelsNum))
             {
-                m_labelsBufferMultiUtt[i] = new ElemType[totalLabelsNum];
-                m_labelsBufferAllocatedMultiUtt[i] = totalLabelsNum;
-            }
-            else if (m_labelsBufferAllocatedMultiUtt[i] < totalLabelsNum)
-            {
-                delete[] m_labelsBufferMultiUtt[i];
-                m_labelsBufferMultiUtt[i] = new ElemType[totalLabelsNum];
+                m_labelsBufferMultiUtt[i] = AllocateIntermediateBuffer(-1 /*CPU */, totalLabelsNum);
                 m_labelsBufferAllocatedMultiUtt[i] = totalLabelsNum;
             }
 
-            memset(m_labelsBufferMultiUtt[i],0,sizeof(ElemType)*totalLabelsNum);
+            memset(m_labelsBufferMultiUtt[i].get(), 0, sizeof(ElemType)*totalLabelsNum);
 
             bool first = true;
             foreach_index(id, m_featuresBufferMultiIO)
@@ -1751,7 +1672,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (int k = 0; k < actualmbsizeOri; k++) // column major, so iterate columns
                     {
                         // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                        memcpy_s(&m_featuresBufferMultiUtt[i][k*fdim+m_featuresStartIndexMultiUtt[id+i*numOfFea]],sizeof(ElemType)*fdim,&featOri(0,k),sizeof(ElemType)*fdim);
+                        memcpy_s(&m_featuresBufferMultiUtt[i].get()[k*fdim + m_featuresStartIndexMultiUtt[id + i*numOfFea]], sizeof(ElemType)*fdim, &featOri(0, k), sizeof(ElemType)*fdim);
                     }
                 }
                 else
@@ -1760,7 +1681,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (int d = 0; d < featOri.rows(); d++)
                         {
-                            m_featuresBufferMultiUtt[i][k*featOri.rows()+d+m_featuresStartIndexMultiUtt[id+i*numOfFea]] = featOri(d,k);
+                            m_featuresBufferMultiUtt[i].get()[k*featOri.rows() + d + m_featuresStartIndexMultiUtt[id + i*numOfFea]] = featOri(d, k);
                         }
                     }
                 }
@@ -1783,7 +1704,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         size_t labelId = uids[k];
                         for (int j = 0; j < dim; j++)
                         {
-                            m_labelsBufferMultiUtt[i][k*dim + j + m_labelsStartIndexMultiUtt[id+i*numOfLabel]] = m_labelToTargetMapMultiIO[id][labelId][j];
+                            m_labelsBufferMultiUtt[i].get()[k*dim + j + m_labelsStartIndexMultiUtt[id + i*numOfLabel]] = m_labelToTargetMapMultiIO[id][labelId][j];
                         }
                     }
                 }
@@ -1795,7 +1716,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         assert(uids[k] < dim);
                         //labels(uids[i], i) = (ElemType)1;
-                        m_labelsBufferMultiUtt[i][k*dim+uids[k]+m_labelsStartIndexMultiUtt[id+i*numOfLabel]]=(ElemType)1;
+                        m_labelsBufferMultiUtt[i].get()[k*dim + uids[k] + m_labelsStartIndexMultiUtt[id + i*numOfLabel]] = (ElemType)1;
                     }
                 }
             }
@@ -1819,9 +1740,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             return true;    
         }
-
-
-
 
     // GetLabelMapping - Gets the label mapping from integer to type in file 
     // mappingTable - a map from numeric datatype to native label type stored as a string 
