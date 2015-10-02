@@ -1222,7 +1222,7 @@ public:
 
     // Note: keyword "noexcept" was added so that stl vector first looks for
     //       the move constructor instead of the private copy constructor.
-    ssematrixfrombuffer (ssematrixfrombuffer && other) noexcept { move (other); }
+    ssematrixfrombuffer (ssematrixfrombuffer && other) { move (other); }
 };
 
 
