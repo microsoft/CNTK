@@ -1277,30 +1277,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             mPostProb.Resize(nrow, ncol);
 
             FunctionValues().SetValue(0.0);
-            Matrix<ElemType> funcVal = FunctionValues();
+            Matrix<ElemType> funcVal = FunctionValues();    // TODO: This just creates a 1x1 matrix set to 0.
 
             size_t nS = Inputs(0)->GetNumParallelSequences();
-            size_t nT = Inputs(0)->GetNumTimeSteps();
-            size_t nstep = ncol / nS;
-            assert(nstep == nT); nT;
-            for (size_t i = 0; i < nS; i++) // BUGBUG: seems this should be a loop over time frames
+            if (nS != 1)
+                LogicError("CRFNode: >1 parallel sequences are curently not implemented correctly. To fix this, we need Matrix::RowSlice(), which is a major change");
+            for (size_t i = 0; i < nS; i++)     // process parallel sequences one by one
             {
-                Matrix<ElemType> postProbSlice = mPostProb.ColumnSlice(i * nstep, nstep);   // BUGBUG: going in blocks and steps of nT is most likely wrong
-                Matrix<ElemType> alphaSlice = mAlpha.ColumnSlice(i * nstep, nstep);
-                Matrix<ElemType> betaSlice = mBeta.ColumnSlice(i * nstep, nstep);
-                Matrix<ElemType> labelSlice = Inputs(0)->FunctionValues().ColumnSlice(i * nstep, nstep);
-                Matrix<ElemType> posScoreSlice = Inputs(1)->FunctionValues().ColumnSlice(i * nstep, nstep);
-
-                EvaluateThisNodeS(postProbSlice,
-                    alphaSlice,
-                    betaSlice,
+                FrameRange sequenceRange = FrameRange().Sequence(i);    // FrameRange to select one sequence
+                // BUGBUG: This ^^ is currently not supported. To implement it, we'd need Matrix::RowSlice().
+                EvaluateThisNodeS(
+                    DataSlice(mPostProb, sequenceRange, Inputs(0)->GetMBLayout()),
+                    DataSlice(mAlpha,    sequenceRange, Inputs(0)->GetMBLayout()),
+                    DataSlice(mBeta,     sequenceRange, Inputs(0)->GetMBLayout()),
                     funcVal,
-                    labelSlice, 
-                    posScoreSlice,
-                    Inputs(2)->FunctionValues(),
-                    mStartLbl, mEndLbl);
+                    Inputs(0)->ValueSlice(sequenceRange),
+                    Inputs(1)->ValueSlice(sequenceRange),
+                    Inputs(2)->FunctionValues(), mStartLbl,
+                    mEndLbl);
 
-                FunctionValues() += funcVal;
+                FunctionValues() += funcVal;    // aggregate over sequences
             }
         }
 
@@ -1314,20 +1310,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ErrorSignalToPostitionDependentNode(GradientValues(), Inputs(0)->FunctionValues(), mPostProb, Inputs(inputIndex)->GradientValues());
             else if (inputIndex == 2)
             {
-                size_t nS = Inputs(0)->GetNumParallelSequences();
-                size_t nT = Inputs(0)->GetNumTimeSteps();
-
-                size_t ncol = mAlpha.GetNumCols();
-                size_t nstep = ncol / nS;
-                assert(nstep == nT); nT;
                 assert(Inputs(inputIndex)->GradientValues().GetNumElements() > 0);
-                for (size_t i = 0; i < nS; i++) // BUGBUG: seems this is meant to be a loop over time
+                size_t nS = Inputs(0)->GetNumParallelSequences();
+                for (size_t i = 0; i < nS; i++)         // process all sequences one by one
                 {
-                    // BUGBUG: This ColumnSlice() expression seems very wrong. It takes nT consecutive columns, but those are not T consecutive frames (layout is different).
+                    FrameRange sequenceRange = FrameRange().Sequence(i);    // FrameRange to select one sequence
                     ErrorSignalToTransitionNode(
-                        Inputs(0)->FunctionValues().ColumnSlice(i * nstep, nstep),      // TODO: use ValueSlice() here
-                        mAlpha.ColumnSlice(i * nstep, nstep),                           // TODO: use DataSlice() here
-                        mBeta.ColumnSlice(i * nstep, nstep),
+                        Inputs(0)->ValueSlice(sequenceRange),
+                        DataSlice(mAlpha,     sequenceRange, Inputs(0)->GetMBLayout()),
+                        DataSlice(mBeta,      sequenceRange, Inputs(0)->GetMBLayout()),
                         Inputs(inputIndex)->FunctionValues(),
                         Inputs(inputIndex)->GradientValues(),
                         mStartLbl, 1);
@@ -1356,14 +1347,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         /// compute forward backward algorithm
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& postprob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, int& firstLbl, int& lastLbl, const int iStep = 1)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType> postprob, Matrix<ElemType> alpha, Matrix<ElemType> beta, Matrix<ElemType> & functionValues, const Matrix<ElemType> & lbls, const Matrix<ElemType> & pos_scores, const Matrix<ElemType> & pair_scores, int& firstLbl, int& lastLbl, const int iStep = 1)
         {
             /// to-do, each slice is for one sentence
             /// to-do, number of slices correspond to number of frames 
             /// this implementation only supports one sentence per minibatch
-
-            if (Inputs(0)->GetNumParallelSequences() != 1)
-                LogicError("CRFNode: Currently only supports one sentence per minibatch.");
 
             int nObs = lbls.GetNumCols();
 
