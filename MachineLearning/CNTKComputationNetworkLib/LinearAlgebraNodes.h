@@ -81,17 +81,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("Negate operation: the input node has 0 element.");
-
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
+            ValidateUnaryMap(isFinalValidationPass);
         }
 
         //virtual void AttachInputs(const ComputationNodePtr singleInput) 
@@ -163,14 +155,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("SumElements operation: the input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("SumElements operation: the input node has 0 element.");
 
-            FunctionValues().Resize(1, 1);
+            Resize(1, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
         }
@@ -253,14 +245,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("SumColumnElements operation: the input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("SumColumnElements operation: the input node has 0 element.");
 
-            FunctionValues().Resize(1, Inputs(0)->FunctionValues().GetNumCols());
+            Resize(1, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -384,17 +376,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                LogicError("RowSlice operation: the input node has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0)
+            //    LogicError("RowSlice operation: the input node has 0 element.");
 
-            if (Inputs(0)->FunctionValues().GetNumRows() < m_startIndex + m_numRows)
-                LogicError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
+            if (isFinalValidationPass && Inputs(0)->GetNumRows() < m_startIndex + m_numRows)
+                RuntimeError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
 
-            FunctionValues().Resize(m_numRows, Inputs(0)->FunctionValues().GetNumCols());
+            Resize(m_numRows, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -475,7 +467,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            EvaluateThisNodeS(m_functionValues, m_inputMatrices,  0, Inputs(0)->FunctionValues().GetNumCols());
+            EvaluateThisNodeS(m_functionValues, m_inputMatrices,  0, Inputs(0)->GetNumCols());
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
@@ -495,14 +487,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0) == nullptr)   // TODO: Base::Validate() will fail for this
-                LogicError("RowStack operation: the input node is NULL.");
+            //if (Inputs(0) == nullptr)   // TODO: Base::Validate() will fail for this
+            //    LogicError("RowStack operation: the input node is NULL.");
 
-            size_t numCols = Inputs(0)->FunctionValues().GetNumCols();
+            size_t numCols = Inputs(0)->GetNumCols();
             m_startRowIndices.resize(ChildrenSize()+1);
             m_inputMatrices.resize(ChildrenSize());
 
@@ -511,15 +503,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (int i = 0; i < ChildrenSize(); i++)
             {
-                if (Inputs(i) == nullptr)
-                    LogicError("RowStack operation: the input node is NULL.");
+                //if (Inputs(i) == nullptr)
+                //    LogicError("RowStack operation: the input node is NULL.");
 
                 Matrix<ElemType>& childMatrix = Inputs(i)->FunctionValues();
                 size_t numRows = childMatrix.GetNumRows();
-                if (numRows == 0)
-                    LogicError("RowStack operation: the input node %ls has 0 rows.", Inputs(i)->NodeName().c_str());
+                //if (numRows == 0)
+                //    LogicError("RowStack operation: the input node %ls has 0 rows.", Inputs(i)->NodeName().c_str());
                 
-                if (childMatrix.GetNumCols() != numCols)
+                if (isFinalValidationPass && childMatrix.GetNumCols() != numCols)
                     LogicError("RowStack operation: the input node %ls has different number of columns.", Inputs(i)->NodeName().c_str());
 
                 totalRows += numRows;
@@ -527,7 +519,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_startRowIndices[i + 1] = m_startRowIndices[i] + numRows;
             }
 
-            FunctionValues().Resize(totalRows, numCols);
+            Resize(totalRows, numCols);
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -535,7 +527,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_outputHeight = FunctionValues().GetNumRows();
+            m_outputHeight = GetNumRows();
 
             //WARNING: this node will destroy the image size information from the child
             if (m_inputWidth * m_inputChannels != 1)
@@ -642,18 +634,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("Scale operation: one of the operands has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("Scale operation: one of the operands has 0 elements.");
 
-            if (Inputs(0)->FunctionValues().GetNumRows() != 1 || Inputs(0)->FunctionValues().GetNumCols() != 1)
-                LogicError("The left value of ScaleNode must be a scalar value.");
+            // left Node must be a scalar
+            if (isFinalValidationPass && (Inputs(0)->GetNumRows() != 1 || Inputs(0)->GetNumCols() != 1))
+                RuntimeError("The left value of ScaleNode must be a scalar value.");
 
-            FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            //left Node must be a scalar
+            Resize(Inputs(1));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -757,24 +749,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
-        {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
-#ifdef DEBUG_DECODER
-            fprintf(stderr, "Times node %ls output norm = %.8e, input(0) norm = %.8e, input(1) norm = %.8e\n", this->NodeName().c_str(), FunctionValues().FrobeniusNorm(), 
-                Inputs(0)->FunctionValues().FrobeniusNorm(), Inputs(1)->FunctionValues().FrobeniusNorm());
-#endif
-        }
+        //void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
+        //{
+        //    EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+        //}
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
-            FunctionValues().Resize(rows0, cols1);
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
+            VerifySize(rows0, cols1);
 
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
         }
@@ -793,32 +780,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             //support automatic dimension inference for learnable parameters
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            if ((rows0 == 0 || cols1 == 0 ) && this->GetLoopId() < 0)
-                throw logic_error("Times operation: Inputs(0)->FunctionValues().GetNumRows() and Inputs(1)->FunctionValues().GetNumCols() should not be 0 since it cannot be automatically inferred");
+            if (isFinalValidationPass && (rows0 == 0 || (cols1 == 0 && !Inputs(1)->GetMBLayout())))
+                RuntimeError("Times operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 since it cannot be automatically inferred");
 
+            // limited automatic dimension inference for *children*, useful for CNN since it can be hard to know the size of each input parameter without deep knowledge how CNN is implemented (padding, stride)
+            // TODO: ^^ There must be a better solution. Maybe MBLayout as well?
             // TODO: use dynamic_pointer_cast
-            // TODO: why should these nodes even care whether their inputs are LearnableParmaeters? If needed, can the base class do this?
-            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && this->GetLoopId() < 0)
-                Inputs(0)->FunctionValues().Resize(rows0, rows1);
+            // infer cols0 as rows1
+            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && (cols0 == 0 && !Inputs(0)->GetMBLayout()) && rows1 != 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
+                Inputs(0)->Resize(rows0, rows1);
 
+            // infer rows1 as cols0
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
-                Inputs(1)->FunctionValues().Resize(cols0, cols1);
+                Inputs(1)->Resize(cols0, cols1);
 
-            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->GetLoopId() < 0)
-                LogicError("Times operation: One of the operants has 0 elements.");
+            //if ((Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
+            //    LogicError("Times operation: One of the operands has 0 elements.");
 
-            //cols0 and rows1 may have been changed so don't use them in the following check
-            if ((Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumCols()) && this->GetLoopId() < 0)
+            // cols0 and rows1 may have been changed so don't use them in the following check
+            // TODO: why not check this when part of a loop?
+            if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumCols())
                 LogicError("The Matrix dimension in the Times operation does not match.");
-            FunctionValues().Resize(rows0, cols1);
+            Resize(rows0, cols1);
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
@@ -830,7 +821,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //after multiplication the structure is lost
             m_outputWidth = 1;
-            m_outputHeight = Inputs(0)->FunctionValues().GetNumRows();
+            m_outputHeight = Inputs(0)->GetNumRows();
             m_outputChannels =  1;
         }
 
@@ -956,33 +947,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             //support automatic dimension inference for learnable parameters
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            if ((rows0 == 0 || cols1 == 0) && this->GetLoopId() < 0)
-                throw logic_error("TransposeTimes operation: Inputs(0)->FunctionValues().GetNumRows() and Inputs(1)->FunctionValues().GetNumCols() should not be 0 since it cannot be automatically inferred");
+            if (isFinalValidationPass && (rows0 == 0 || cols1 == 0))
+                RuntimeError("TransposeTimes operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 since it cannot be automatically inferred");
 
-            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && this->GetLoopId() < 0)
-                Inputs(0)->FunctionValues().Resize(rows0, rows1);
+            if ((Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && rows1 != 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
+                Inputs(0)->Resize(rows0, rows1);
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
-                Inputs(1)->FunctionValues().Resize(cols0, cols1);
+                Inputs(1)->Resize(cols0, cols1);
 
-            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->GetLoopId() < 0)
-                LogicError("TransposeTimes operation: One of the operants has 0 elements.");
+            //if ((Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
+            //    LogicError("TransposeTimes operation: One of the operands has 0 elements.");
 
             //cols0 and rows1 may have been changed so don't use them in the following check
-            if ((Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows()) && this->GetLoopId() < 0)
-            {
+            if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows())
                 LogicError("The Matrix dimension in the TransposeTimes operation does not match.");
-            }
-            FunctionValues().Resize(cols0, cols1);
-            InferMBLayoutFromInputsForStandardCase();
+
+            Resize(cols0, cols1);
+            InferMBLayoutFromInputsForStandardCase();   // TODO: what does the MBLayout mean in the context of TransposeTimes? Can the left arg have an MBLayout?
             InferImageDimsFromInputs();
         }
 
@@ -992,7 +982,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //after multiplication the structure is lost
             m_outputWidth = 1;
-            m_outputHeight = Inputs(0)->FunctionValues().GetNumRows();
+            m_outputHeight = Inputs(0)->GetNumRows();
             m_outputChannels = 1;
         }
 
@@ -1075,31 +1065,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
+            ValidateBinaryZip(isFinalValidationPass, false/*allowMultiple*/);
+#if 0
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
             {
                 if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
                 {
-                    size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                    size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                    Inputs(index)->FunctionValues().Resize(rows, cols);
+                    size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
+                    size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
+                    Inputs(index)->Resize(rows, cols);
                 }
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("ElementTimes operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("ElementTimes operation: one of the operands has 0 elements.");
 
-            if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() ||
-                Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
-                LogicError("The Matrix<ElemType> dimension in the ElementTimes operation does not match.");
+            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
+                LogicError("The Matrix dimension in the ElementTimes operation does not match.");
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+            Resize(Inputs);
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
+#endif
         }
 
         virtual void InferImageDimsFromInputs()
@@ -1224,20 +1214,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("RowElementTimes operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("RowElementTimes operation: one of the operands has 0 elements.");
 
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
-
-            if (cols0 != cols1 || rows1 != 1)
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols(); rows0;
+            if (isFinalValidationPass && cols0 != cols1 || rows1 != 1)
                 LogicError("RowElementTimes: Either the second operand is not a row vector or the number of columns of operands does not match.");
 
-            FunctionValues().Resize(rows0, cols0);
+            Resize(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -1367,31 +1356,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             //derive number of rows if possible
             for (size_t index = 0; index < 2; index++)
             {
                 if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
                 {
-                    size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                    size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                    Inputs(index)->FunctionValues().Resize(rows, cols);
+                    size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
+                    size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
+                    Inputs(index)->Resize(rows, cols);
                 }
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("ColumnElementTimes operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("ColumnElementTimes operation: one of the operands has 0 elements.");
 
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
-
-            if (rows0 != rows1 || cols1 != 1)
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols(); cols0;
+            if (isFinalValidationPass && (rows0 != rows1 || cols1 != 1))
                 LogicError("ColumnElementTimes: Either the second operand is not a column vector or the number of rows of operands does not match.");
 
-            FunctionValues().Resize(rows0, cols0);
+            Resize(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
@@ -1447,7 +1435,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             //only the one with more columns can be sliced, if both have same columns both are sliced
-            size_t cols0 = Inputs(inputIndex)->FunctionValues().GetNumCols(), cols1=Inputs(1-inputIndex)->FunctionValues().GetNumCols();
+            size_t cols0 = Inputs(inputIndex)->GetNumCols(), cols1=Inputs(1-inputIndex)->GetNumCols();
 
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -1514,38 +1502,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-
-        //void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
-        //{
-        //    EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
-        //}
-
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            //size_t cols0 = Inputs(0)->FunctionValues().GetNumCols(), cols1=Inputs(1)->FunctionValues().GetNumCols();
-
-            {
-                // TODO: this will become code shared between Validate() and this
-                size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-                size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
-                FunctionValues().Resize(max(rows0, rows1), max(cols0, cols1));
-            }
-
-            Matrix<ElemType> functionValues = ValueSlice(frameRange);
             // note that ValueSlice will consider whether that input has an MB layout or not (in the latter case it will not slice)
+            Matrix<ElemType> functionValues = ValueSlice(frameRange);
             Matrix<ElemType> inputFunctionValues0 = Inputs(0)->ValueSlice(frameRange);
             Matrix<ElemType> inputFunctionValues1 = Inputs(1)->ValueSlice(frameRange);
 
-            //EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
-        //}
-
-        ///*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1)
-        //{
-            // TODO: rethink/reinterpret this cols0 < cols1 business, what does it really mean in the context of MBLayouts?
             size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
             size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
-            //functionValues.Resize(max(rows0, rows1), max(cols0,cols1)); // BUGBUG: in loop, cols0 == #slices?? This only works because growOnly defaults to true
 
             if ((rows0 == rows1 && cols0 == cols1) || ((rows0 == 1 || rows1 == 1) && cols0 == cols1))
             {
@@ -1579,7 +1544,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
             else
             {
-                LogicError("Plus node not supported format");
+                LogicError("%ls node not supported format", OperationName().c_str());
             }
 #if NANCHECK
             functionValues.HasNan("Plus");
@@ -1589,51 +1554,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            //if dimension not specified we assume two operants' dimensions should be the same
-            size_t index = 0;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
-            }
-
-            index = 1;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
-            }
-
-            if ((Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements()) && this->GetLoopId() < 0)
-                LogicError("Plus operation: one of the operants has 0 element.");
-
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
-
-            if ((!(rows0 == rows1 && cols0 == cols1) &&  //match size
-                !((rows0 == 1 || rows1 == 1) && cols0 == cols1) && //one is row vec
-                !(  (cols0 > cols1 && cols0 % cols1 == 0) || 
-                    (cols0 == 1 && rows1 % rows0 == 0) || 
-                    (cols1 == 1 && rows0 % rows1 == 0))) && this->GetLoopId() < 0) //one is col vec with divisable rows, including scalar
-            {
-                LogicError("The Matrix dimension in the Plus operation does not match.");
-            }       
-
-            FunctionValues().Resize(max(rows0, rows1), max(cols0,cols1) );
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
+            ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
         }
 
         virtual void InferImageDimsFromInputs() //based on the matrix with larger size
         {
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
             if (rows0 > rows1 || cols0 > cols1) //child 0 is larger
                 InferImageDimsFromInput(0);
@@ -1680,8 +1609,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // prepare a matrix of ones as needed
             ComputationNodePtr child = Inputs(inputIndex);
-            size_t rowsc = child->FunctionValues().GetNumRows(), colsc = child->FunctionValues().GetNumCols();
-            size_t rowsp = FunctionValues().GetNumRows(), colsp = FunctionValues().GetNumCols();
+            size_t rowsc = child->GetNumRows(), colsc = child->GetNumCols();
+            size_t rowsp = GetNumRows(), colsp = GetNumCols();
 
             Matrix<ElemType> ones = Matrix<ElemType>();
             if (colsc == 1 && colsp != 1)
@@ -1707,7 +1636,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override 
         {
             //only the one with more columns can be sliced, if both have same columns both are sliced
-            size_t cols0 = Inputs(inputIndex)->FunctionValues().GetNumCols(), cols1=Inputs(1-inputIndex)->FunctionValues().GetNumCols();
+            size_t cols0 = Inputs(inputIndex)->GetNumCols(), cols1=Inputs(1-inputIndex)->GetNumCols();
 
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -1717,8 +1646,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Matrix<ElemType> ones = Matrix<ElemType>();
 
-            size_t rowsc = Inputs(inputIndex)->FunctionValues().GetNumRows(), rowsp = FunctionValues().GetNumRows();
-            size_t colsp = FunctionValues().GetNumCols();
+            size_t rowsc = Inputs(inputIndex)->GetNumRows(), rowsp = GetNumRows();
+            size_t colsp = GetNumCols();
 
             if (cols0 >= cols1) //indicates cols0 == functionValue.cols
             {
@@ -1818,7 +1747,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            size_t cols0 = Inputs(0)->FunctionValues().GetNumCols(), cols1=Inputs(1)->FunctionValues().GetNumCols();
+            size_t cols0 = Inputs(0)->GetNumCols(), cols1=Inputs(1)->GetNumCols();
 
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
@@ -1873,49 +1802,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
-
-            //if dimension is missing make the two operatants to have same size
-            size_t index = 0;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
-            }
-
-            index = 1;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
-            }
-
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("Minus operation: one of the operants has 0 element.");
-
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
-
-            if (!(rows0 == rows1 && cols0 == cols1) &&  //match size
-                !((rows0 == 1 || rows1 == 1) && cols0 == cols1) && //one is row vec
-                !((cols0 == 1 && rows1 % rows0 == 0) || (cols1 == 1 && rows0 % rows1 == 0)))  //one is col vec with divisable rows, including scalar
-            {
-                LogicError("The Matrix dimension in the Minus operation does not match.");
-            }       
-
-            FunctionValues().Resize(max(rows0, rows1), max(cols0,cols1) );
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
+            ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
         }
 
         virtual void InferImageDimsFromInputs() //based on the matrix with larger size
         {
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
             if (rows0 > rows1 || cols0 > cols1) //child 0 is larger
                 InferImageDimsFromInput(0);
@@ -2020,29 +1915,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             functionValues.ColumnElementMultiplyWith(inputFunctionValues0);
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            //if dimension not specified we assume two operants' dimensions should match
-            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0 && Inputs(1)->FunctionValues().GetNumRows() != 0)
-                Inputs(0)->FunctionValues().Resize(Inputs(1)->FunctionValues().GetNumRows(), 1);
+            //if dimension not specified we assume two operands' dimensions should match
+            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->GetNumRows() == 0 && Inputs(1)->GetNumRows() != 0)
+                Inputs(0)->Resize(Inputs(1)->GetNumRows(), 1);
 
-            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() != 0 && Inputs(1)->FunctionValues().GetNumRows() == 0)
-                Inputs(1)->FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
+            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->GetNumRows() != 0 && Inputs(1)->GetNumRows() == 0)
+                Inputs(1)->Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("DiagTimes operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("DiagTimes operation: one of the operands has 0 elements.");
 
-            if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows())
-                LogicError("The Matrix dimension in the DiagTimes operation does not match.");
+            if (isFinalValidationPass)
+            {
+                if (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows())
+                    LogicError("The Matrix dimension in the DiagTimes operation does not match.");
 
-            if (1 != Inputs(0)->FunctionValues().GetNumCols())
-                LogicError("The first matrix should be a vector regpresting the diagonal of a square matrix in the DiagTimes operation.");
+                if (Inputs(0)->GetNumCols() != 1)
+                    LogicError("The first matrix should be a vector representing the diagonal of a square matrix in the DiagTimes operation.");
+            }
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            m_innerproduct.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            m_rightGradient.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
+            Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
+            m_innerproduct.Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
+            m_rightGradient.Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
@@ -2215,35 +2113,34 @@ private:
             functionValues.ElementMultiplyWith(invNorm1);
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
             index = 1;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("CosDistance operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("CosDistance operation: one of the operands has 0 elements.");
 
-            if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() || 
-                Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
+            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
                 LogicError("The Matrix dimension in the CosDistance operation does not match.");
 
-            FunctionValues().Resize(1, Inputs(1)->FunctionValues().GetNumCols());
+            Resize(1, Inputs(1)->GetNumCols());
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
@@ -2386,33 +2283,31 @@ private:
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             //support automatic dimension inference for learnable parameters
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            if (rows0 == 0 || rows1 == 0)
-                LogicError("KhatriRaoProduct operation: The number of rows in the input should not be 0.");
+            //if (rows0 == 0 || rows1 == 0)
+            //    LogicError("KhatriRaoProduct operation: The number of rows in the input should not be 0.");
 
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && cols1 != 0)
-                Inputs(0)->FunctionValues().Resize(rows0, cols1);
+                Inputs(0)->Resize(rows0, cols1);
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && cols1 == 0)
-                Inputs(1)->FunctionValues().Resize(rows1, cols0);
+                Inputs(1)->Resize(rows1, cols0);
 
             //cols may be changed before this line and so cannot use cached cols values below
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("KhatriRaoProduct operation: One of the operants has 0 elements.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("KhatriRaoProduct operation: One of the operands has 0 elements.");
 
-            if (Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
-            {
+            if (isFinalValidationPass && Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())
                 LogicError("The Matrices should have same number of columns.");
-            }
 
-            FunctionValues().Resize(rows0 * rows1, Inputs(0)->FunctionValues().GetNumCols());
+            Resize(rows0 * rows1, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
@@ -2619,38 +2514,37 @@ private:
             functionValues.AssignElementProductOf(leftTermTemp, rightTermTemp);
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
             index = 1;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("CosDistanceWithNegativeSamples operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("CosDistanceWithNegativeSamples operation: one of the operands has 0 elements.");
 
-            if (Inputs(1)->FunctionValues().GetNumRows() != Inputs(0)->FunctionValues().GetNumRows() ||
-                Inputs(1)->FunctionValues().GetNumCols() != Inputs(0)->FunctionValues().GetNumCols())
+            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
                 LogicError("The Matrix dimension in the CosDistanceWithNegativeSamples operation does not match.");
 
             // input(2) is shift, input(3) is the #neg
             size_t negNumber = (size_t)Inputs(3)->FunctionValues()(0, 0);
 
-            FunctionValues().Resize(negNumber + 1, Inputs(1)->FunctionValues().GetNumCols());
+            Resize(negNumber + 1, Inputs(1)->GetNumCols());
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
@@ -2773,16 +2667,16 @@ private:
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows();   // , cols0 = Inputs(0)->GetNumCols();
 
-            if (rows0 == 0 || cols0 == 0)
-                throw logic_error("Transpose operation: Inputs(0)->FunctionValues().GetNumRows() and Inputs(1)->FunctionValues().GetNumCols() should not be 0 ");
+            //if (rows0 == 0 || cols0 == 0)
+            //    throw logic_error("Transpose operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 ");
 
-            FunctionValues().Resize(cols0, rows0);
+            Resize(Inputs(0));
             mOnes = Matrix<ElemType>::Ones(rows0, rows0, m_deviceId);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
@@ -2794,7 +2688,7 @@ private:
 
             //after multiplication the structure is lost
             m_outputWidth = 1;
-            m_outputHeight = Inputs(0)->FunctionValues().GetNumCols();
+            m_outputHeight = Inputs(0)->GetNumCols();
             m_outputChannels = 1;
         }
 
@@ -2869,8 +2763,8 @@ private:
 //                    TimesNode<ElemType>::ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
 
                     Matrix<ElemType> mTmp1(sliceInput1Value.GetDeviceId());
-                    size_t r = Inputs(0)->FunctionValues().GetNumRows();
-                    size_t T1 = Inputs(0)->FunctionValues().GetNumCols() / GetNumParallelSequences();
+                    size_t r = Inputs(0)->GetNumRows();
+                    size_t T1 = Inputs(0)->GetNumCols() / GetNumParallelSequences();
                     mTmp1.Resize(r, T1);
                     Matrix<ElemType> mTmp2(sliceInput1Value.GetDeviceId());
                     Matrix<ElemType> mTmp3(sliceInput1Value.GetDeviceId());
@@ -2898,8 +2792,8 @@ private:
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
                         Matrix<ElemType> mTmp1(sliceOutputGrad.GetDeviceId());
-                        size_t r = Inputs(0)->FunctionValues().GetNumRows();
-                        size_t T1 = Inputs(0)->FunctionValues().GetNumCols() / GetNumParallelSequences();
+                        size_t r = Inputs(0)->GetNumRows();
+                        size_t T1 = Inputs(0)->GetNumCols() / GetNumParallelSequences();
                         mTmp1.Resize(r, T1);
                         for (size_t t = 0; t < T1; t++)
                         {
@@ -2923,8 +2817,8 @@ private:
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
                         Matrix<ElemType> mTmp1(sliceInput1Value.GetDeviceId());
-                        size_t d = Inputs(1)->FunctionValues().GetNumRows();
-                        size_t T1 = Inputs(0)->FunctionValues().GetNumRows() / GetNumParallelSequences();
+                        size_t d = Inputs(1)->GetNumRows();
+                        size_t T1 = Inputs(0)->GetNumRows() / GetNumParallelSequences();
                         mTmp1.Resize(d, T1);
                         Matrix<ElemType> mTmp2(sliceInput1Value.GetDeviceId());
                         mTmp2 = sliceInput1Value.ColumnSlice(k, 1);
@@ -2947,8 +2841,8 @@ private:
 
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
-                        size_t d = Inputs(1)->FunctionValues().GetNumRows();
-                        size_t T1 = Inputs(0)->FunctionValues().GetNumRows() / GetNumParallelSequences();
+                        size_t d = Inputs(1)->GetNumRows();
+                        size_t T1 = Inputs(0)->GetNumRows() / GetNumParallelSequences();
 
                         Matrix<ElemType> mTmp0(sliceOutputGrad.GetDeviceId());
                         mTmp0.Resize(1, d);
@@ -3005,12 +2899,12 @@ private:
 
         void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
             UpdateStride(Inputs(1)->FunctionValues());
             if (m_StrideDim == 0)
-                FunctionValues().Resize(rows0 / GetNumParallelSequences(), cols1);
+                Resize(rows0 / GetNumParallelSequences(), cols1);
             if (m_StrideDim == 1)
-                FunctionValues().Resize(rows0, cols1);
+                Resize(rows0, cols1);
 
             EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_Stride, m_StrideDim);
 #ifdef DEBUG_DECODER
@@ -3022,14 +2916,14 @@ private:
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             UpdateStride(sliceInput1Value);
             if (m_StrideDim == 0)
-                FunctionValues().Resize(rows0 / GetNumParallelSequences(), cols1);
+                Resize(rows0 / GetNumParallelSequences(), cols1);
             if (m_StrideDim == 1)
-                FunctionValues().Resize(rows0, cols1);
+                Resize(rows0, cols1);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value, m_Stride, m_StrideDim);
@@ -3115,19 +3009,19 @@ private:
         input1: right matrix
         stridedim: single element no gradient matrix, 0 row stride / 1 column stride
         */
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             //support automatic dimension inference for learnable parameters
-            if (Inputs(2)->FunctionValues().GetNumElements() != 1)
-                LogicError("StrideTimes : input(2) should be a single element matrix");
+            if (isFinalValidationPass && Inputs(2)->FunctionValues().GetNumElements() != 1)
+                RuntimeError("StrideTimes : input(2) should be a single element matrix");
 
             m_StrideDim = (size_t) Inputs(2)->FunctionValues().Get00Element();
-            size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
-            size_t rows1 = Inputs(1)->FunctionValues().GetNumRows(), cols1 = Inputs(1)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            if (m_StrideDim != 0 && m_StrideDim != 1)
+            if (isFinalValidationPass && m_StrideDim != 0 && m_StrideDim != 1)
                 LogicError("StrideTimes : stride dim must be either 0 (row) or 1 (column)");
 
             if (Inputs(2)->NeedGradient())
@@ -3136,18 +3030,18 @@ private:
             //cols0 and rows1 may have been changed so don't use them in the following check
             if (m_StrideDim == 0)
             {
-                if (rows1 != cols0)
+                if (isFinalValidationPass && rows1 != cols0)
                     LogicError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and rows %d in B.", m_StrideDim, cols0, rows1);
                 size_t T1 = rows0 / m_Stride;
-                FunctionValues().Resize(T1, cols1);
+                Resize(T1, cols1);
             }
 
             //cols0 and rows1 may have been changed so don't use them in the following check
             if (m_StrideDim == 1)
             {
-                if (cols0/m_Stride != rows1)
+                if (isFinalValidationPass && cols0 / m_Stride != rows1)
                     LogicError("The Matrix dimension in the StrideTimes operation in dim %d does not match for cols %d in A and row number %d in B.", m_StrideDim, cols0, rows1);
-                FunctionValues().Resize(rows0, cols1);
+                Resize(rows0, cols1);
             }
 
             InferMBLayoutFromInputsForStandardCase();
@@ -3160,7 +3054,7 @@ private:
 
             //after multiplication the structure is lost
             m_outputWidth = 1;
-            m_outputHeight = Inputs(0)->FunctionValues().GetNumRows();
+            m_outputHeight = Inputs(0)->GetNumRows();
             m_outputChannels = 1;
         }
 

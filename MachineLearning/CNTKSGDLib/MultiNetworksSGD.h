@@ -255,7 +255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
                 ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(), node->FunctionValues().GetNumCols(), node->FunctionValues().GetDeviceId()));
+                smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(), node->GetNumCols(), node->FunctionValues().GetDeviceId()));
             }
 
             vector<double> epochCriterion;
@@ -559,7 +559,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
                 ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(), node->FunctionValues().GetNumCols(), node->FunctionValues().GetDeviceId()));
+                smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(), node->GetNumCols(), node->FunctionValues().GetDeviceId()));
             }
 
             double epochCriterion, avgCriterion, prevCriterion;
@@ -1033,8 +1033,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (size_t itry = 0; itry < min((size_t)10, node->FunctionValues().GetNumElements()); itry++)
                     {
 
-                        int irow = (int)fmod(rand(), node->FunctionValues().GetNumRows() - 1);
-                        int icol = (int)fmod(rand(), node->FunctionValues().GetNumCols() - 1);
+                        int irow = (int)fmod(rand(), node->GetNumRows() - 1);
+                        int icol = (int)fmod(rand(), node->GetNumCols() - 1);
                         irow = max(0, irow);
                         icol = max(0, icol);
 

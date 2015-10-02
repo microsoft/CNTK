@@ -848,7 +848,10 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
                 }
             }
         }
-    } 
+    }
+
+    // create the respective MBLayout
+    m_pMBLayout->Init(1, actualmbsize, false/*means it is not sequential*/);
 
     // if we are writing out to the caching writer, do it now
     if (m_cachingWriter)
