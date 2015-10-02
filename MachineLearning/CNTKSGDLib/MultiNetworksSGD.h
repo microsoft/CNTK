@@ -294,7 +294,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (startEpoch > 0)
                 learnRateInitialized = this->LoadCheckPointInfo(startEpoch - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, m_prevChosenMinibatchSize);
 
-            if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
+            if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesParam.size() <= startEpoch)
                 throw std::invalid_argument("When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, or an explicit learning rate must be specified in config for the starting epoch.");
 
             ULONG dropOutSeed = 1;
@@ -311,9 +311,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNetwork::SetDropoutRate<ElemType>(*decoderNet, decoderCriterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
                 //learning rate adjustment
-                if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
+                if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesParam.size() > 0 && m_learningRatesParam.size() > i))
                 {
-                    learnRatePerSample = m_learningRatesPerSample[i];
+                    learnRatePerSample = GetLearningRatePerSample(i/*BUGBUG workaround:*/, encoderTrainSetDataReader->GetNumParallelSequences());
                 }
                 else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
                 {
@@ -386,7 +386,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                     avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion)* avgCriterion + epochCriterion[0]) / (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
 
-                if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_learningRatesPerSample.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
+                if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_learningRatesParam.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
                 {
                     if (prevCriterion - avgCriterion < 0 && prevCriterion != std::numeric_limits<double>::infinity())
                     {

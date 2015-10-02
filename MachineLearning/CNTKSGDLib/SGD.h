@@ -94,6 +94,8 @@ struct SGDParams
     template<class ElemType>    // (needed for default value of m_gradientBits)
     SGDParams(const ConfigParameters& configSGD, ElemType exampleElemType/*for type deduction*/);
 
+    //SGDParams(SGDParams&&) = default;
+
     //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
     SGDParams(const floatargvector& learningRatesPerMB,
               const floatargvector& learningRatesPerSample,
