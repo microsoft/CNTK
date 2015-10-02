@@ -45,8 +45,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using SGDBase::m_doUnitTest;
         using SGDBase::m_learnRateAdjustInterval;
         using SGDBase::m_mbSize;
-        using SGDBase::m_momentumPerSample;
-        using SGDBase::m_learningRatesPerSample;
+        using SGDBase::m_momentumParam; using SGDBase::m_learningRatesParam;
+        using SGDBase::GetLearningRatePerSample; using SGDBase::GetMomentumPerSample;
         using SGDBase::m_dropoutRates;
         using SGDBase::m_autoLearnRateSearchType;
         using SGDBase::m_minLearnRate;
@@ -615,7 +615,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     /*out*/ dummyMinibatchSize);
             }
 
-            if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
+            if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesParam.size() <= startEpoch)
                 throw std::invalid_argument("When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, or an explicit learning rate must be specified in config for the starting epoch.");
 
             ULONG dropOutSeed = 1;
@@ -637,9 +637,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 //learning rate adjustment
-                if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
+                if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || (m_learningRatesParam.size() > 0 && m_learningRatesParam.size() > i))
                 {
-                    learnRatePerSample = m_learningRatesPerSample[i];
+                    learnRatePerSample = GetLearningRatePerSample(i/*BUGBUG workaround:*/, trainDataReader[0]->GetNumParallelSequences());
                 }
                 else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
                 {
@@ -716,7 +716,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                     avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion)* avgCriterion + epochCriterion) / (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
 
-                if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_learningRatesPerSample.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
+                if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_learningRatesParam.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
                 {
                     if (prevCriterion - avgCriterion < 0 && prevCriterion != std::numeric_limits<double>::infinity())
                     {
@@ -932,7 +932,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         ComputationNodeBasePtr node = *nodeIter;
                         Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
 
-                        UpdateWeights(node, smoothedGradient, learnRatePerSample, m_momentumPerSample[epochNumber], actualMBSize, m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
+                        UpdateWeights(node, smoothedGradient, learnRatePerSample, GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, dataReader[0]->GetNumParallelSequences()), actualMBSize, m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
                     }
                 }
 

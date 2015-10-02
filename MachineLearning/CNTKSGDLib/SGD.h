@@ -89,12 +89,149 @@ struct GradientUpdateInfo
     }
 };
 
+struct SGDParams
+{
+    // learning rate per sample provided outside
+    floatargvector m_learningRatesParam;
+    intargvector m_learningRatesSpecifiedForMBSize;       // 1 for per sample, m_mbSize[] for per MB
+    floatargvector m_momentumParam;
+    intargvector m_momentumSpecifiedForMBSize;
+
+protected:
+    // Determine the MB size used for mapping a given learning-rate or momentum parameter to a per-sample value.
+    // MB size is the number of samples across all time steps and parallel sequences.
+    // This function exists to post-fix a design bug in SGD:
+    // In BPTT, the 'minibatchSize' parameter given to the SGD module really means the truncation size,
+    // while the MB size to be used is (truncation size * number of parallel sequences).
+    // SGD does not even know truncation size or that it runs in BPTT mode (the reader knows).
+    // SGD also does not know #parallel sequences upfront.
+    static size_t FixUpEffectiveMBSize(size_t specifiedMBSize, size_t numParallelSequences)
+    {
+        // remedy the bug that truncation size is incorrectly passed as MB size
+        if (specifiedMBSize > 1 && numParallelSequences > 1)    // currently only happens in this mode
+            return specifiedMBSize * numParallelSequences;      // assume 'specifiedMBSize' refers to truncation size
+        // end bug post-fix
+        // TODO: This ^^ should go away once SGD gets fixed to take the truncation size as a parameter.
+
+        return specifiedMBSize;
+    }
+public:
+    // helpers to convert learning rates to per-sample values used in the actual algorithms
+    // 'numParallelSequences' must be specified because of the definitional bug in SGD mentioned above, and should go away once that is sorted out.
+    double GetLearningRatePerSample(size_t epoch/*BUGBUG workaround:*/, size_t numParallelSequences) const
+    {
+        return m_learningRatesParam[epoch] / FixUpEffectiveMBSize(m_learningRatesSpecifiedForMBSize[epoch], numParallelSequences);
+    }
+    double GetMomentumPerSample(size_t epoch/*BUGBUG workaround:*/, size_t numParallelSequences) const
+    {
+        return pow(m_momentumParam[epoch], 1.0 / FixUpEffectiveMBSize(m_learningRatesSpecifiedForMBSize[epoch], numParallelSequences));
+    }
+
+    // only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
+    //bool m_needToNormalizeLRByParallUtterance;          // TODO: should go away
+    //bool m_needToNormalizeMomentumByParallUtterance;
+
+    intargvector m_mbSize;
+
+    // the number of samples in each epoch (0 means, use all the samples in each epoch).
+    size_t m_epochSize;
+    size_t m_maxComputedEpochSize;
+
+    // the total number of epochs to run.
+    size_t m_maxEpochs;
+
+    bool m_gradientClippingWithTruncation;
+    double m_clippingThresholdPerSample;
+
+    wstring m_modelPath;
+    wstring m_trainCriterionNodeName;
+    wstring m_evalCriterionNodeName;
+
+    intargvector m_numMiniBatch4LRSearch;
+    size_t m_numBestSearchEpoch;
+
+    LearningRateSearchAlgorithm m_autoLearnRateSearchType;
+
+    AdaptationRegType m_adaptationRegType;
+    double m_adaptationRegWeight;
+    bool m_needAdaptRegularization;
+
+    bool m_loadBestModel;
+    double m_reduceLearnRateIfImproveLessThan;
+    bool m_continueReduce;
+
+    // determine after how many epochs the learning rate should be auto adjusted.
+    size_t m_learnRateAdjustInterval;
+
+    bool m_useCVSetControlLRIfCVExists;
+    bool m_useEvalCriterionControlLR;
+
+    double m_increaseLearnRateIfImproveMoreThan;
+    double m_learnRateIncreaseFactor;
+    double m_learnRateDecreaseFactor;
+    size_t m_prevChosenMinibatchSize;
+    bool m_autoAdjustMinibatch;
+    size_t m_minibatchSearchCriterionErrorMargin;
+    size_t m_minibatchSizeTuningFrequency;
+    size_t m_minibatchSizeTuningMax;
+
+    floatargvector m_dropoutRates;
+    size_t m_maxTempMemSizeInSamplesForCNN;
+
+    int m_traceLevel;
+
+    size_t m_numPrevLearnRates;
+
+    double m_minLearnRate;
+
+    GradientUpdateInfo m_gradType;
+    RMSPropInfo m_rpi;
+
+    bool m_keepCheckPointFiles;
+
+    int m_numMBsToShowResult;
+    int m_numMBsToCUDAProfile;
+
+    bool m_doGradientCheck;
+    double m_gradientCheckSigDigit;
+
+    bool m_doUnitTest;
+
+    bool m_validateAfterModelReloading;
+
+    bool m_useAllDataForPreComputedNode;
+
+    // Parallel training
+    ParallelizationMethod m_parallelizationMethod;
+    int m_numGradientBits;
+    bool m_zeroThresholdFor1Bit;
+    bool m_enableDistributedMBReading;
+    int m_parallelizationStartEpochNum;
+
+    // Parallel training related with MA 
+    // decide how much information we want to show MA performance stats (seconds spend on sync, seconds since last sync etc.) ?  
+    // 0: means no perfomance stats show
+    // 1: means show stats every sync 
+    // n>1: means show stats after every n sync
+    int    m_iMASyncStatsTrace;
+    size_t m_nFramesBetweenMASync;
+
+    bool m_needAveMultiplier;
+    double m_L2RegWeight;
+    double m_L1RegWeight;
+
+    //sequence trainning
+    double m_hsmoothingWeight;
+    double m_frameDropThresh;
+    bool m_doreferencealign;
+};
+
 template<class ElemType> class IDistGradAggregator;
 
 // TODO: make this independent of ElemType. Then these repeated dynamic_pointer_casts will go away
 // TODO: why is this a class, and not just a procedure? Then we wouldn't have to include the massive header
 template<class ElemType>
-class SGD
+class SGD : public SGDParams
 {
 protected:
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
@@ -344,109 +481,8 @@ public:
 
 protected:
 
-    // learning rate per sample provided outside
-    floatargvector m_learningRatesPerSample;
-
-    // only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
-    bool m_needToNormalizeLRByParallUtterance;
-    bool m_needToNormalizeMomentumByParallUtterance;
-
-    intargvector m_mbSize;
-
-    // the number of samples in each epoch (0 means, use all the samples in each epoch).
-    size_t m_epochSize;
-    size_t m_maxComputedEpochSize;
-
-    // the total number of epochs to run.
-    size_t m_maxEpochs;
-
-    floatargvector m_momentumPerSample;
-    bool m_gradientClippingWithTruncation;
-    double m_clippingThresholdPerSample;
-
-    wstring m_modelPath;
-    wstring m_trainCriterionNodeName;
-    wstring m_evalCriterionNodeName;
-
-    intargvector m_numMiniBatch4LRSearch;
-    size_t m_numBestSearchEpoch;
-
-    LearningRateSearchAlgorithm m_autoLearnRateSearchType;
-
-    AdaptationRegType m_adaptationRegType;
-    double m_adaptationRegWeight;
-    bool m_needAdaptRegularization;
-
-    bool m_loadBestModel;
-    double m_reduceLearnRateIfImproveLessThan;
-    bool m_continueReduce;
-
-    // determine after how many epochs the learning rate should be auto adjusted.
-    size_t m_learnRateAdjustInterval;
-
-    bool m_useCVSetControlLRIfCVExists;
-    bool m_useEvalCriterionControlLR;
-
-    double m_increaseLearnRateIfImproveMoreThan;
-    double m_learnRateIncreaseFactor;
-    double m_learnRateDecreaseFactor;
-    size_t m_prevChosenMinibatchSize;
-    bool m_autoAdjustMinibatch;
-    size_t m_minibatchSearchCriterionErrorMargin;
-    size_t m_minibatchSizeTuningFrequency;
-    size_t m_minibatchSizeTuningMax;
-
-    floatargvector m_dropoutRates;
-    size_t m_maxTempMemSizeInSamplesForCNN;
-
-    int m_traceLevel;
-
-    size_t m_numPrevLearnRates;
-
-    double m_minLearnRate;
-
-    GradientUpdateInfo m_gradType;
-    RMSPropInfo m_rpi;
-
-    bool m_keepCheckPointFiles;
-
-    int m_numMBsToShowResult;
-    int m_numMBsToCUDAProfile;
-
-    bool m_doGradientCheck;
-    double m_gradientCheckSigDigit;
-
-    bool m_doUnitTest;
-
-    bool m_validateAfterModelReloading;
-
-    bool m_useAllDataForPreComputedNode;
-
-    // Parallel training
-    ParallelizationMethod m_parallelizationMethod;
     IDistGradAggregator<ElemType>* m_distGradAgg;
     struct DistGradHeader* m_gradHeader;
-    int m_numGradientBits;
-    bool m_zeroThresholdFor1Bit;
-    bool m_enableDistributedMBReading;
-    int m_parallelizationStartEpochNum;
-
-    // Parallel training related with MA 
-    // decide how much information we want to show MA performance stats (seconds spend on sync, seconds since last sync etc.) ?  
-    // 0: means no perfomance stats show
-    // 1: means show stats every sync 
-    // n>1: means show stats after every n sync
-    int    m_iMASyncStatsTrace;
-    size_t m_nFramesBetweenMASync;
-
-    bool m_needAveMultiplier;
-    double m_L2RegWeight;
-    double m_L1RegWeight;
-
-    //sequence trainning
-    ElemType m_hsmoothingWeight;
-    ElemType m_frameDropThresh;
-    bool m_doreferencealign;
 };
 
 }}}

@@ -1703,7 +1703,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
             Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType> & gammaFromLattice,
-            const ElemType & hsmoothingWeight, const ElemType & frameDropThresh)
+            double hsmoothingWeight, double frameDropThresh)
         {
 #if DUMPOUTPUT
             softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
@@ -1712,8 +1712,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
 #endif  
             
-            inputGradientValues.AssignSequenceError(hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());            
-            inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, frameDropThresh);    
+            inputGradientValues.AssignSequenceError((ElemType)hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());            
+            inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType)frameDropThresh);
 #if DUMPOUTPUT
             inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
 #endif
@@ -1878,11 +1878,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return &m_hmm;
         }
 
-        void SetSmoothWeight(const ElemType hsmoothingWeight)
+        void SetSmoothWeight(double hsmoothingWeight)
         {
             m_hsmoothingWeight = hsmoothingWeight;
         }
-        void SetFrameDropThresh(const ElemType frameDropThresh)
+        void SetFrameDropThresh(double frameDropThresh)
         {
             m_frameDropThresh = frameDropThresh;
         }
@@ -1903,8 +1903,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m_softmaxOfRight;
         Matrix<ElemType> m_gammaFromLattice;
         Matrix<ElemType> m_maskOfFramedrop;
-        ElemType m_frameDropThresh;
-        ElemType m_hsmoothingWeight;
+        double m_frameDropThresh;
+        double m_hsmoothingWeight;
         bool m_doreferencealign;
         std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> m_lattice;
         msra::asr::simplesenonehmm m_hmm;

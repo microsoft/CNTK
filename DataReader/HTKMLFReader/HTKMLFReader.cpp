@@ -623,6 +623,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
 
+#if 0
     // destructor - virtual so it gets called properly 
     template<class ElemType>
         HTKMLFReader<ElemType>::~HTKMLFReader()
@@ -658,6 +659,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
         }
+#endif
 
     //StartMinibatchLoop - Startup a minibatch loop 
     // mbSize - [in] size of the minibatch (number of frames, etc.)

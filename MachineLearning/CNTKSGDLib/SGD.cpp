@@ -70,8 +70,6 @@ template<class ElemType>
     SGD<ElemType>::SGD(const ConfigParameters& configSGD)
     {
         ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB", "");
-        m_needToNormalizeLRByParallUtterance = false;
-        m_needToNormalizeMomentumByParallUtterance = false;
         floatargvector learningRatesPerMB = learningRatesPerMBStr;
 
         ConfigArray learningRatesPerSampleStr = configSGD("learningRatesPerSample", "");
@@ -412,19 +410,13 @@ template<class ElemType>
         }
         else if (learningRatesPerSample.size() > 0)
         {
-            m_learningRatesPerSample = learningRatesPerSample;
+            m_learningRatesParam = learningRatesPerSample;
+            m_learningRatesSpecifiedForMBSize = intargvector(L"1");
         }
-        else if (learningRatesPerMB.size() > 0)
+        else if (learningRatesPerMB.size() > 0)     // this actually means per specified minibatch size
         {
-            int LRSize = (int) max(learningRatesPerMB.size(), m_mbSize.size());
-            m_learningRatesPerSample.resize(LRSize);
-            for (int i = 0; i < LRSize; i++)
-            {
-                m_learningRatesPerSample[i] = learningRatesPerMB[i] / m_mbSize[i];
-                // Note: this may get further updated w.r.t. unit-gain momentum
-                // BUGBUG: No, it's not! But it should. Ugh!!
-            }
-            m_needToNormalizeLRByParallUtterance = true;
+            m_learningRatesParam = learningRatesPerMB;
+            m_learningRatesSpecifiedForMBSize = m_mbSize;
         }
 
         if (momentumPerSample.size() > 0 && momentumPerMB.size() > 0)
@@ -433,39 +425,26 @@ template<class ElemType>
                                         "and momentumPerMB. Please comment "
                                         "out one of them.");
         }
-        else if (momentumPerSample.size() > 0)
+        else if (momentumPerSample.size() > 0)         // TODO: noone should use this; change to MomentumTimeConstant
         {
-            m_momentumPerSample = momentumPerSample;
-            int momentumVectorSize = m_momentumPerSample.size();
-            for (int i = 0; i < momentumVectorSize; i++)
-            {
-                if ((m_momentumPerSample[i] >= 1) || (m_momentumPerSample[i] < 0))
-                {
-                    throw std::invalid_argument("momentumPerSample must be in [0, 1).");
-                }
-            }
+            m_momentumParam = momentumPerSample;
+            m_learningRatesSpecifiedForMBSize = intargvector(L"1");
         }
         else if (momentumPerMB.size() > 0)
         {
-            int momentumVectorSize = (int)max(momentumPerMB.size(), m_mbSize.size());
-            m_momentumPerSample.resize(momentumVectorSize);
-            for (int i = 0; i < momentumVectorSize; i++)
-            {
-                if ((momentumPerMB[i] >= 1) || (momentumPerMB[i] < 0))
-                    InvalidArgument("momentumPerMB must be in [0, 1).");
-                m_momentumPerSample[i] = (float)pow(momentumPerMB[i], 1.0 / m_mbSize[i]); 
-            }
-            // BUGBUG: This must also compensate for non-unit gain interpretation of momentum
-
-            m_needToNormalizeMomentumByParallUtterance = true;
+            m_momentumParam = momentumPerMB;
+            m_learningRatesSpecifiedForMBSize = m_mbSize;
         }
-        else    // default: momentumPerMB = 0.9 assuming MB size 256
+        else    // default: momentumPerMB = 0.9 per MB
         {
-            int momentumVectorSize = m_mbSize.size();
-            m_momentumPerSample.resize(momentumVectorSize);
-            for (int i = 0; i < momentumVectorSize; i++)
-                m_momentumPerSample[i] = (float)pow(0.9f, 1.0 / m_mbSize[i]);
-            }
+            m_momentumParam = floatargvector(L"0.9");
+            m_learningRatesSpecifiedForMBSize = m_mbSize;
+        }
+        for (int i = 0; i < m_momentumParam.size(); i++)
+        {
+            if (m_momentumParam[i] >= 1.0 || m_momentumParam[i] < 0.0)
+                InvalidArgument("Momentum parameter must be in [0, 1).");
+        }
 
         if (m_learnRateDecreaseFactor > 1 || m_learnRateIncreaseFactor < 1)
             InvalidArgument("learnRateIncreaseFactor must be >= 1 and learnRateDecreaseFactor must be <= 1.");
@@ -715,7 +694,7 @@ template<class ElemType>
                 auto * functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues();
                 assert(functionValues->GetNumCols() == net.GetMBLayoutPtr()->GetNumTimeSteps());
                 (*inputMatrices)[node->NodeName()] = functionValues;
-        }
+            }
         }
 
         //get hmm file for sequence training
@@ -788,9 +767,9 @@ template<class ElemType>
             net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
         }
 
-        // Learning rates and momentum are not always specified per sample.
+        // BUGBUG: This is where the trainSetDataReader->GetNumParallelSequences() is used to further normalize
+#if 0
         // In these cases, we need to post-patch the learning-rate parameters.
-        // BUGBUG: but this is done on a class member. Wouldn't that compound as we do >1 epoch?
         if (m_needToNormalizeLRByParallUtterance)
         {
             for (auto& x : m_learningRatesPerSample)
@@ -801,6 +780,7 @@ template<class ElemType>
             for (auto& x : m_momentumPerSample)
                 x = (float)pow(x, 1.0 / trainSetDataReader->GetNumParallelSequences());
         }
+#endif
 
         bool learnRateInitialized = false;
         if (startEpoch > 0)
@@ -816,7 +796,7 @@ template<class ElemType>
         }
 
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
-            !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
+            !learnRateInitialized && m_learningRatesParam.size() <= startEpoch)
         {
             InvalidArgument(
                 "When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, "
@@ -833,11 +813,11 @@ template<class ElemType>
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode)
             ComputationNetwork::SetMaxTempMemSizeForCNN(refNet, refNode, m_maxTempMemSizeInSamplesForCNN);
 
-        // --- MAIN EPOCH LOOP
-
-		//sequence trainning
+        // likewise for sequence training parameters
         if (isSequenceTrainingCriterion)
             ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hsmoothingWeight, m_frameDropThresh, m_doreferencealign);
+
+        // --- MAIN EPOCH LOOP
 
         for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {
@@ -853,10 +833,9 @@ template<class ElemType>
             ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
             // learning rate adjustment
-            if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None ||
-                (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
+            if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || i < m_learningRatesParam.size())
             {
-                learnRatePerSample = m_learningRatesPerSample[i];
+                learnRatePerSample = GetLearningRatePerSample(i/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
             }
             else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
             {
@@ -919,14 +898,18 @@ template<class ElemType>
                 // use the explicitly set minibatch size
                 chosenMinibatchSize = m_mbSize[i];
             }
-            
+
+#if 1
+            actualMinibatchSize = FixUpEffectiveMBSize(chosenMinibatchSize/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
+#else
             actualMinibatchSize = chosenMinibatchSize;
-            if (trainSetDataReader->GetNumParallelSequences() > 1 && m_needToNormalizeMomentumByParallUtterance)
+            if (m_needToNormalizeMomentumByParallUtterance)
                 actualMinibatchSize = chosenMinibatchSize * trainSetDataReader->GetNumParallelSequences();
+#endif
 
             // TODO: show momentum also as a time constant
-            fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
-                    i + 1, learnRatePerSample, MomentumPerMB(m_momentumPerSample[i], actualMinibatchSize));
+            fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f \n",
+                    i + 1, learnRatePerSample, MomentumPerMB(GetMomentumPerSample(i/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences()), actualMinibatchSize));
 
             TrainOneEpoch(net,
                           refNet, 
@@ -1021,7 +1004,7 @@ template<class ElemType>
             }
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
-                m_learningRatesPerSample.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
+                m_learningRatesParam.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
             {
                 if (std::isnan(avgCriterion) || (prevCriterion - avgCriterion < 0 && prevCriterion != std::numeric_limits<double>::infinity()))
                 {
@@ -1449,7 +1432,7 @@ template<class ElemType>
         // do some pre-adjustment based on LR
         // Basically we assume that the LR for epoch 1 is safe for mbsize.
         // If LR control led to a smaller LR, then we can safely increase the lower bound of the MB size.
-        double learningRateChangeSoFar = m_learningRatesPerSample[epochNumber] / m_learningRatesPerSample[0];
+        double learningRateChangeSoFar = GetLearningRatePerSample(epochNumber/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences()) / GetLearningRatePerSample(0/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
         learningRateChangeSoFar *= learningRateAdjustmentFactor;
 
         // increasing by the full factor is found to be too aggressive; sqrt() seems more robust
@@ -1911,7 +1894,7 @@ template<class ElemType>
                     Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
 
                     UpdateWeights(node, smoothedGradient, learnRatePerSample,
-                                  m_momentumPerSample[epochNumber], aggregateNumSamples,
+                                  GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, net.GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
                                   m_L2RegWeight, m_L1RegWeight,
                                   m_needAveMultiplier);
                 }
