@@ -31,7 +31,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
         { }
 
-        void Reset()
+        void Reset()        // TODO: what is this??
         {
         }
 
@@ -49,8 +49,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             inputFunctionValues0.VectorMax(maxIndexes0, maxValues, true);
             inputFunctionValues1.VectorMax(maxIndexes1, maxValues, true);
-            curNode->MaskMissingColumnsToZero(maxIndexes0); //we are fine since it will only be called with full minibatch
-            curNode->MaskMissingColumnsToZero(maxIndexes1);
+            curNode->MaskMissingColumnsToZero(maxIndexes0, Inputs(0)->GetMBLayout());   // we are fine since it will only be called with full minibatch
+            curNode->MaskMissingColumnsToZero(maxIndexes1, Inputs(1)->GetMBLayout());
             functionValues.AssignNumOfDiff(maxIndexes0, maxIndexes1);
         #if NANCHECK
             functionValues.HasNan("ErrorPrediction");

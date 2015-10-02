@@ -119,10 +119,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_pMBLayout->Is(i, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
                     {
-                        //we set timeStep-1 elements following it to be SequenceStart until met NoInput
+                        // we set timeStep-1 elements following it to be SequenceStart until met NoInput
                         for (size_t j = 0; j < numRows; j++)        // j = stream
                         {
-                            //we use & since ((int) MinibatchPackingFlags::SequenceStart) may come with NoLabel
+                            // we use & since ((int) MinibatchPackingFlags::SequenceStart) may come with NoLabel
                             if (m_pMBLayout->Is(j, i, SequenceStart_or_End))
                                 numResetLeft[j] = m_timeStep;
                             else if (m_pMBLayout->Is(j, i, MinibatchPackingFlags::NoFeature))
@@ -130,21 +130,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         }
                     }
 
-                    //now set the sequence-boundary flag
-                    //bool valueChanged = false;
+                    // now set the sequence-boundary flag
                     for (size_t j = 0; j < numRows; j++)
                     {
                         if (numResetLeft[j]-- > 0)
                         {
-                            //m_pShiftedMBLayout->m_sentenceBoundaryFlags(j, i) = (float)(((int)SequenceStart_or_End) | ((int)m_pShiftedMBLayout->m_sentenceBoundaryFlags(j, i) & ((int)MinibatchPackingFlags::NoLabel)));
                             m_pShiftedMBLayout->Mask(j, i, MinibatchPackingFlags::NoLabel); // keep only this flag
                             m_pShiftedMBLayout->Set(j, i, SequenceStart_or_End);            // now implant the boundary flag
-                            //valueChanged = true;
                         }
                     }
-
-                    //if (valueChanged)
-                    //    m_pShiftedMBLayout->m_minibatchPackingFlags[i] |= SequenceStart_or_End;
                 }
             }
         }
@@ -161,48 +155,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // recursive call to ourselves
                 if (dir < 0) for (size_t t = GetNumTimeSteps(); t --> 0; )
-                    ComputeInputPartial(inputIndex, FrameRange(t, GetNumParallelSequences()));
+                    ComputeInputPartial(inputIndex, FrameRange(t));
                 else for (size_t t = 0; t < m_pMBLayout->GetNumTimeSteps(); t++)
-                    ComputeInputPartial(inputIndex, FrameRange(t, GetNumParallelSequences()));
+                    ComputeInputPartial(inputIndex, FrameRange(t));
                 return;
             }
 
             size_t t = frameRange.t();
+            MaskMissingGradientColumnsToZero(t);
 
-            assert(m_functionValues->GetNumRows() == GradientValues().GetNumRows());
-
-            // this is the result of refactoring; feel free to clean up further:
-            Matrix<ElemType>& inputGradientValues = Inputs(0)->GradientValues();
-            //const auto frameLayout = m_pShiftedMBLayout->GetFrame(t);
-            //const Matrix<float>& colBoundaryFlags = frameLayout.first;
-            //MinibatchPackingFlags minibatchPackingFlags = frameLayout.second;
-
-            Base::MaskMissingColumnsToZero(m_gradientValues, t);
-
-            // TODO: change this to FrameRange/GradientSlice()
-            size_t mNbr = m_pMBLayout->GetNumParallelSequences();
-            if (mNbr != frameRange.NumCols()) LogicError("ComputeInputPartial: inconsistency between m_pMBLayout->GetNumParallelSequences() and frameRange.NumCols()");
-            if (t + direction * m_timeStep >= 0 && t + direction * m_timeStep < m_gradientValues.GetNumCols())
+            // if delayed input is within valid time range then add its gradient
+            if (t + direction * m_timeStep >= 0 && t + direction * m_timeStep < GetNumTimeSteps())
             {
-                // if there is a bondary in this frame, we treat each stream separately; otherwise we do all in one go
-                if (m_pShiftedMBLayout->Is(t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))
+                // if there is a boundary in this frame, we treat each stream separately; otherwise we do all in one go
+                if (m_pShiftedMBLayout->Is(t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature)) // true if at least one parallel sequence has a boundary or gap
                 {
-                    for (int id = 0; id < mNbr; id++)
+                    size_t mNbr = m_pMBLayout->GetNumParallelSequences();
+                    for (size_t id = 0; id < mNbr; id++)
                     {
                         if (!m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))    // don't propagate boundary frames or gaps
                         {
-                            Matrix<ElemType> to = inputGradientValues.ColumnSlice((t + direction * m_timeStep)*mNbr + id, 1);
-                            Matrix<ElemType> frm = m_gradientValues.ColumnSlice(t * mNbr + id, 1);
+                            // TODO: we need a way to do this with a FrameRange object and DataSlice()
+                            Matrix<ElemType> to = Inputs(0)->GradientValues().ColumnSlice((t + direction * m_timeStep)*mNbr + id, 1);
+                            Matrix<ElemType> frm = m_gradientValues->ColumnSlice(t * mNbr + id, 1);
                             to += frm;
                         }
                     }
 
                 }
-                else
+                else    // operate on entire time step in one go (over all parallel sequences)
                 {
-                    // TODO: can we use GradientSlice() here?
-                    Matrix<ElemType> frm = m_gradientValues.ColumnSlice(t * mNbr, mNbr);
-                    Matrix<ElemType> to = inputGradientValues.ColumnSlice((t + direction * m_timeStep)*mNbr, mNbr);
+                    Matrix<ElemType> frm = GradientSlice(t);
+                    Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(t + direction * m_timeStep));
                     to += frm;
                 }
             }
@@ -219,16 +203,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 // recursive call to ourselves
                 if (dir < 0) for (size_t t = 0; t < m_pMBLayout->GetNumTimeSteps(); t++)
-                    EvaluateThisNode(FrameRange(t, GetNumParallelSequences()));
+                    EvaluateThisNode(FrameRange(t));
                 else for (size_t t = GetNumTimeSteps(); t--> 0; )
-                    EvaluateThisNode(FrameRange(t, GetNumParallelSequences()));
+                    EvaluateThisNode(FrameRange(t));
                 return;
             }
 
             size_t t = frameRange.t();
 
             // starting condition
-            bool isFirstFrame = dir < 0 ? t == 0 : t == Inputs(0)->GetNumTimeSteps() - 1;
+            bool isFirstFrame = (dir < 0) ? (t == 0) : (t == Inputs(0)->GetNumTimeSteps() - 1);
 
             // first time for this minibatch: update our post-prcoessed version of the layout
             if (isFirstFrame)
@@ -240,62 +224,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_delayedActivation = Inputs(0)->FunctionValues();
             // TODO: don't we need to set m_historyAlreadySet now?
 
-            // this is the result of refactoring; feel free to clean up further
-            const Matrix<ElemType>& inputFunctionValues = Inputs(0)->FunctionValues();
-            //const auto frameLayout = m_pShiftedMBLayout->GetFrame(t);
-            //const Matrix<float> & colBoundaryFlags = frameLayout.first;
-            //MinibatchPackingFlags minibatchPackingFlags = frameLayout.second;
+            Resize(Inputs(0));
 
             size_t mNbr = m_pMBLayout->GetNumParallelSequences();
-            if (mNbr != frameRange.NumCols()) LogicError("EvaluateThisNode: inconsistency between m_pMBLayout->GetNumParallelSequences() and frameRange.NumCols()");
             assert(m_timeStep > 0);
-            if (m_functionValues.GetNumRows() != inputFunctionValues.GetNumRows() || m_functionValues.GetNumCols() != inputFunctionValues.GetNumCols())
-            {
-                // TODO: do we need this test^^ ? Resize() should test by itself
-                m_functionValues.Resize(inputFunctionValues.GetNumRows(), inputFunctionValues.GetNumCols());
-            }
-
-            int delayedIndex = (int)(t + direction * m_timeStep) * mNbr;
+            int delayedIndex = (int)(t + direction * m_timeStep) * mNbr;    // this might end up exceeding the range
             int d = delayedIndex;
-            if (d < 0 || d >= inputFunctionValues.GetNumCols())
-                d = (int)m_functionValues.Mod((float)delayedIndex, (float)m_delayedActivation.GetNumCols());
+            if (d < 0 || d >= Inputs(0)->FunctionValues().GetNumCols())
+                d = (int)m_functionValues->Mod((float)delayedIndex, (float)m_delayedActivation.GetNumCols());
             // this can point to the past activation of the previous minibatch
 
-            Matrix<ElemType> inp((DEVICEID_TYPE)m_functionValues.GetDeviceId());
+            Matrix<ElemType> inp((DEVICEID_TYPE)m_functionValues->GetDeviceId());
 
             // TODO: change this to FrameRange/GradientSlice()
             if (m_pShiftedMBLayout->Is(t, SequenceStart_or_End))
             {
                 for (int id = 0; id < mNbr; id++)
                 {
-                    Matrix<ElemType> out = m_functionValues.ColumnSlice(t * mNbr + id, 1);
+                    Matrix<ElemType> out = m_functionValues->ColumnSlice(t * mNbr + id, 1);
 
                     if (m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End))
                         out.SetValue(m_initialActivationValue);
                     else
                     {
-                        if (delayedIndex < 0 || delayedIndex >= inputFunctionValues.GetNumCols())
+                        if (delayedIndex < 0 || delayedIndex >= Inputs(0)->FunctionValues().GetNumCols())
                             inp = m_delayedActivation.ColumnSlice(d + id, 1);
                         else
-                            inp = inputFunctionValues.ColumnSlice(d + id, 1);
+                            inp = Inputs(0)->FunctionValues().ColumnSlice(d + id, 1);
 
                         out.SetValue(inp);
                     }
                 }
             }
-            else
+            else        // frame has no flags: use ValueSlice directly
             {
                 Matrix<ElemType> out = ValueSlice(frameRange);
 
-                if (delayedIndex < 0 || delayedIndex >= inputFunctionValues.GetNumCols())
+                if (delayedIndex < 0 || delayedIndex >= Inputs(0)->FunctionValues().GetNumCols())   // BUGBUG: time steps?
                     inp = m_delayedActivation.ColumnSlice(d, mNbr);
                 else
-                    inp = inputFunctionValues.ColumnSlice(d, mNbr);
+                    inp = Inputs(0)->FunctionValues().ColumnSlice(d, mNbr);
 
                 out.SetValue(inp);
             }
 
-            Base::MaskMissingColumnsToZero(m_functionValues, t); // TODO: make this take a FrameRange
+            MaskMissingValuesColumnsToZero(t); // TODO: make this take a FrameRange
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -628,7 +601,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (int timeIdxInSeq = nT - GetNumParallelSequences(); timeIdxInSeq >= 0; timeIdxInSeq -= GetNumParallelSequences())
                 {
-                    FrameRange frameRange(timeIdxInSeq, GetNumParallelSequences());
+                    FrameRange frameRange(timeIdxInSeq);
                     Matrix<ElemType> sliceObs = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceOutput = ValueSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceState = DataSlice(m_State, frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
@@ -1019,7 +992,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += GetNumParallelSequences())
                 {
-                    FrameRange frameRange(timeIdxInSeq, GetNumParallelSequences());
+                    FrameRange frameRange(timeIdxInSeq);
                     Matrix<ElemType> sliceObs = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceOutput = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceState = DataSlice(m_State, frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));

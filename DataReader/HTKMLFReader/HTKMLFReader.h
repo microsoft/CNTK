@@ -19,19 +19,15 @@ private:
     const static size_t m_htkRandomizeAuto = 0;
     const static size_t m_htkRandomizeDisable = (size_t)-1;
 
-    msra::dbn::minibatchiterator* m_mbiter;
-    msra::dbn::minibatchsource* m_frameSource;
-#ifdef _WIN32
-    msra::dbn::minibatchreadaheadsource* m_readAheadSource;
-#endif
-    msra::dbn::FileEvalSource* m_fileEvalSource; 
-    msra::dbn::latticesource* m_lattices;
-    map<wstring,msra::lattices::lattice::htkmlfwordsequence> m_latticeMap;
+    unique_ptr<msra::dbn::minibatchiterator> m_mbiter;
+    unique_ptr<msra::dbn::minibatchsource> m_frameSource;
+    unique_ptr<msra::dbn::FileEvalSource> m_fileEvalSource;
+    unique_ptr<msra::dbn::latticesource> m_lattices;
+    map<wstring, msra::lattices::lattice::htkmlfwordsequence> m_latticeMap;
     
     vector<bool> m_sentenceEnd;
-    bool m_readAhead;
     bool m_truncated;
-	bool m_fullutt;              //read full utterance every time
+    bool m_fullutt;              //read full utterance every time
     bool m_framemode;
     vector<size_t> m_processedFrame;
     intargvector m_numberOfuttsPerMinibatchForAllEpochs;
@@ -40,9 +36,9 @@ private:
     size_t m_mbSize;
     vector<size_t> m_toProcess;
     vector<size_t> m_switchFrame;
-	vector<size_t> m_validFrame;       //valid frame number in each channel
-	vector<size_t> m_extraUttsPerMinibatch;
-	size_t m_extraUttNum;
+    vector<size_t> m_validFrame;       //valid frame number in each channel
+    vector<size_t> m_extraUttsPerMinibatch;
+    size_t m_extraUttNum;
     bool m_noData;
     bool m_trainOrTest; // if false, in file writing mode
     using LabelType = typename IDataReader<ElemType>::LabelType;
@@ -52,33 +48,36 @@ private:
     
     bool m_partialMinibatch; // allow partial minibatches?
     
-    std::vector<ElemType*> m_featuresBufferMultiUtt;
+    std::vector<std::shared_ptr<ElemType>> m_featuresBufferMultiUtt;
     std::vector<size_t> m_featuresBufferAllocatedMultiUtt;
-    std::vector<ElemType*> m_labelsBufferMultiUtt;
+    std::vector<std::shared_ptr<ElemType>> m_labelsBufferMultiUtt;
     std::vector<size_t> m_labelsBufferAllocatedMultiUtt;
     std::vector<size_t> m_featuresStartIndexMultiUtt;
     std::vector<size_t> m_labelsStartIndexMultiUtt;
 
-    CUDAPageLockedMemAllocator* m_cudaAllocator;
+    unique_ptr<CUDAPageLockedMemAllocator> m_cudaAllocator;
     std::vector<std::shared_ptr<ElemType>> m_featuresBufferMultiIO;
     std::vector<size_t> m_featuresBufferAllocatedMultiIO;
     std::vector<std::shared_ptr<ElemType>> m_labelsBufferMultiIO;
     std::vector<size_t> m_labelsBufferAllocatedMultiIO;
-	//for lattice uids and phoneboundaries
-	std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>  m_latticeBufferMultiUtt;
-	std::vector<std::vector<size_t>> m_labelsIDBufferMultiUtt;
-	std::vector<std::vector<size_t>> m_phoneboundaryIDBufferMultiUtt;
-	std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>  m_extraLatticeBufferMultiUtt;
-	std::vector<std::vector<size_t>> m_extraLabelsIDBufferMultiUtt;
-	std::vector<std::vector<size_t>> m_extraPhoneboundaryIDBufferMultiUtt;
-	//hmm 
-	msra::asr::simplesenonehmm m_hset;
+
+    //for lattice uids and phoneboundaries
+    std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>  m_latticeBufferMultiUtt;
+    std::vector<std::vector<size_t>> m_labelsIDBufferMultiUtt;
+    std::vector<std::vector<size_t>> m_phoneboundaryIDBufferMultiUtt;
+    std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>  m_extraLatticeBufferMultiUtt;
+    std::vector<std::vector<size_t>> m_extraLabelsIDBufferMultiUtt;
+    std::vector<std::vector<size_t>> m_extraPhoneboundaryIDBufferMultiUtt;
+
+    //hmm 
+    msra::asr::simplesenonehmm m_hset;
 
     std::map<std::wstring,size_t> m_featureNameToIdMap;
     std::map<std::wstring,size_t> m_labelNameToIdMap;
     std::map<std::wstring,size_t> m_nameToTypeMap;
     std::map<std::wstring,size_t> m_featureNameToDimMap;
     std::map<std::wstring,size_t> m_labelNameToDimMap;
+
     // for writing outputs to files (standard single input/output network) - deprecate eventually
     bool m_checkDictionaryKeys;
     bool m_convertLabelsToTargets;
@@ -95,8 +94,8 @@ private:
     void PrepareForWriting(const ConfigParameters& config);
     
     bool GetMinibatchToTrainOrTest(std::map<std::wstring, Matrix<ElemType>*>&matrices);
-	bool GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, std::vector<size_t> &extrauttmap);
-	void fillOneUttDataforParallelmode(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t startFr, size_t framenum, size_t channelIndex, size_t sourceChannelIndex);
+    bool GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, std::vector<size_t> &extrauttmap);
+    void fillOneUttDataforParallelmode(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t startFr, size_t framenum, size_t channelIndex, size_t sourceChannelIndex);
     bool GetMinibatchToWrite(std::map<std::wstring, Matrix<ElemType>*>&matrices);
     
     void StartMinibatchLoopToTrainOrTest(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples = requestDataSize);
@@ -108,7 +107,7 @@ private:
     void SetNumParallelSequences(const size_t) { };
 
      void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels,
-		 std::vector<std::wstring>& hmms, std::vector<std::wstring>& lattices);
+         std::vector<std::wstring>& hmms, std::vector<std::wstring>& lattices);
     
     size_t ReadLabelToTargetMappingFile (const std::wstring& labelToTargetMappingFile, const std::wstring& labelListFile, std::vector<std::vector<ElemType>>& labelToTargetMap);
     
@@ -122,20 +121,19 @@ private:
     };
 
 private:
-    CUDAPageLockedMemAllocator* GetCUDAAllocator(int deviceID)
+    unique_ptr<CUDAPageLockedMemAllocator>& GetCUDAAllocator(int deviceID)
     {
         if (m_cudaAllocator != nullptr)
         {
             if (m_cudaAllocator->GetDeviceId() != deviceID)
             {
-                delete m_cudaAllocator;
-                m_cudaAllocator = nullptr;
+                m_cudaAllocator.reset(nullptr);
             }
         }
 
         if (m_cudaAllocator == nullptr)
         {
-            m_cudaAllocator = new CUDAPageLockedMemAllocator(deviceID);
+            m_cudaAllocator.reset(new CUDAPageLockedMemAllocator(deviceID));
         }
 
         return m_cudaAllocator;
@@ -192,8 +190,8 @@ public:
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
-	virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap);
-	virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm);
+    virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> & latticeinput, vector<size_t> &uids, vector<size_t> &boundaries, vector<size_t> &extrauttmap);
+    virtual bool GetHmmData(msra::asr::simplesenonehmm * hmm);
 
     virtual bool DataEnd(EndDataType endDataType);
     void CopyMBLayoutTo(MBLayoutPtr);

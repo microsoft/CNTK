@@ -8,10 +8,10 @@ else
   exit 3
 fi
 
-configFile=$TEST_DIR/cntk.config
+configFile=$TEST_DIR/../cntk.config
 RunDir=$TEST_RUN_DIR
 DataDir=$TEST_DATA_DIR
-NDLDir=$TEST_DIR
+NDLDir=$TEST_DIR/..
 
 if [ "$OS" == "Windows_NT" ]; then
   # When running on cygwin translating /cygdrive/xxx paths to proper windows paths:
@@ -21,7 +21,7 @@ if [ "$OS" == "Windows_NT" ]; then
   NDLDir=$(cygpath -aw $NDLDir)
 fi
 
-CNTK_ARGS="configFile=$configFile RunDir=$RunDir DataDir=$DataDir DeviceId=$CNTK_DEVICE_ID NDLDir=$NDLDir"
+CNTK_ARGS="configFile=$configFile RunDir=$RunDir DataDir=$DataDir DeviceId=$CNTK_DEVICE_ID NDLDir=$NDLDir Truncated=false speechTrain=[reader=[nbruttsineachrecurrentiter=1]] speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]] speechTrain=[SGD=[numMBsToShowResult=1]]"
 MODELS_DIR=$TEST_RUN_DIR/models
 [ -d $MODELS_DIR ] && rm -rf $MODELS_DIR
 mkdir -p $MODELS_DIR || exit $?

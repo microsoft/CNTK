@@ -306,7 +306,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: I can't see a clear pattern when ClearCache() is called. E.g. at the start of each epoch? Or never in normal operation (init only at construction)?
     // Note: under some circumstances, one must call FormRecurrentNodes() on this node before calling this. TODO: Not clear which ones.
     // TODO: ^^ is this really needed? Can we just call it inside?
-    void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr rootNode)
+    void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr& rootNode)
     {
         fprintf(stderr, "\n\nValidating node %ls \n", rootNode->NodeName().c_str());
 

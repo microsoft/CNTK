@@ -123,8 +123,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numRows = 0; 
             size_t numCols = 0; 
             auto array = File::LoadMatrixFromTextFile<ElemType>(msra::strfun::utf8(reviseFromFilePath), numRows, numCols); // TODO: change pathname to wstring
-            size_t nRows = m_functionValues.GetNumRows(); 
-            size_t nCols = m_functionValues.GetNumCols(); 
+            size_t nRows = m_functionValues->GetNumRows(); 
+            size_t nCols = m_functionValues->GetNumCols(); 
 
             if (numRows != nRows || numCols != nCols)
             {
