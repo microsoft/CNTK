@@ -410,7 +410,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //}
         // evaluate only N frames at time index timeIdxInSeq
         // Normally, N is 1 or it spans the entire minibatch.
+        virtual void OnEvaluateBeginIteration() { }      // called before first iteration step of EvaluateThisNode()
         virtual void EvaluateThisNode(const FrameRange &) = 0;
+        virtual void OnEvaluateEndIteration() { }        // called after last iteration step of EvaluateThisNode()
         virtual void ComputeGradientForChildren() = 0;
         virtual void ComputeGradientForChildren(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
 
