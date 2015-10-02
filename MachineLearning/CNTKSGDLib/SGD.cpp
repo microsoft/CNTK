@@ -108,6 +108,7 @@ template<class ElemType>
 
         ConfigArray minibatchSize = configSGD("minibatchSize", "256");
         intargvector mbSize = minibatchSize;
+        bool truncated = configSGD("Truncated", "false");
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         size_t epochSize = configSGD("epochSize", "0");
@@ -228,6 +229,7 @@ template<class ElemType>
         Init(learningRatesPerMB,
              learningRatesPerSample,
              mbSize,
+             truncated,
              epochSize,
              maxEpochs,
              modelPath,
@@ -279,6 +281,7 @@ template<class ElemType>
     void SGD<ElemType>::Init(const floatargvector& learningRatesPerMB,
               const floatargvector& learningRatesPerSample,
               const intargvector& mbSize,
+              bool truncated,
               const size_t epochSize,
               const size_t maxEpochs,
               const wstring& modelPath,
@@ -334,6 +337,7 @@ template<class ElemType>
         m_minibatchSearchCriterionErrorMargin = minibatchSearchCriterionErrorMargin;
 
         m_mbSize = mbSize;
+        m_truncated = truncated;
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         m_epochSize = epochSize;

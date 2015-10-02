@@ -101,15 +101,14 @@ protected:
     // Determine the MB size used for mapping a given learning-rate or momentum parameter to a per-sample value.
     // MB size is the number of samples across all time steps and parallel sequences.
     // This function exists to post-fix a design bug in SGD:
-    // In BPTT, the 'minibatchSize' parameter given to the SGD module really means the truncation size,
+    // In the case of BPTT, the 'minibatchSize' parameter given to the SGD module really means the truncation size,
     // while the MB size to be used is (truncation size * number of parallel sequences).
-    // SGD does not even know truncation size or that it runs in BPTT mode (the reader knows).
     // SGD also does not know #parallel sequences upfront.
-    static size_t FixUpEffectiveMBSize(size_t specifiedMBSize, size_t numParallelSequences)
+    size_t FixUpEffectiveMBSize(size_t specifiedMBSize, size_t numParallelSequences) const
     {
         // remedy the bug that truncation size is incorrectly passed as MB size
-        if (specifiedMBSize > 1 && numParallelSequences > 1)    // currently only happens in this mode
-            return specifiedMBSize * numParallelSequences;      // assume 'specifiedMBSize' refers to truncation size
+        if (m_truncated && specifiedMBSize > 1)         // currently only happens in this mode
+            specifiedMBSize *= numParallelSequences;    // assume 'specifiedMBSize' refers to truncation size
         // end bug post-fix
         // TODO: This ^^ should go away once SGD gets fixed to take the truncation size as a parameter.
 
@@ -117,7 +116,7 @@ protected:
     }
 public:
     // helpers to convert learning rates to per-sample values used in the actual algorithms
-    // 'numParallelSequences' must be specified because of the definitional bug in SGD mentioned above, and should go away once that is sorted out.
+    // 'numParallelSequences' must be specified because of the definitional MB-size bug in SGD mentioned above, and should go away once that is sorted out.
     double GetLearningRatePerSample(size_t epoch/*BUGBUG workaround:*/, size_t numParallelSequences) const
     {
         return m_learningRatesParam[epoch] / FixUpEffectiveMBSize(m_learningRatesSpecifiedForMBSize[epoch], numParallelSequences);
@@ -132,6 +131,11 @@ public:
     //bool m_needToNormalizeMomentumByParallUtterance;
 
     intargvector m_mbSize;
+    bool m_truncated;           // do BPTT
+    // BUGBUG: The 'Truncated' option is duplicated in the reader and must be set to the same there (e.g. by defining in the config on an outer enclosing level, like current samples).
+    //         We really should only read it in SGD and pass it ourselves on to the Reader, instead of it being a Reader parameter.
+    // BUGBUG: If m_truncated, then m_mbSize is interpreted as truncation length; the actual MB size is a combination of that and the #parallel sequences specified in the reader.
+    // TODO: do not specify 'Truncated' but 'TruncatedLength', set m_truncated so given, and let m_mbSize control how many #parallel sequences the reader is allowed to pack into an MB.
 
     // the number of samples in each epoch (0 means, use all the samples in each epoch).
     size_t m_epochSize;
@@ -241,9 +245,11 @@ public:
     SGD(const ConfigParameters& configSGD);
 
     //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
+    // TODO: move Init() to SGDParams
     void Init(const floatargvector& learningRatesPerMB,
               const floatargvector& learningRatesPerSample,
               const intargvector& mbSize,
+              bool truncated,
               const size_t epochSize,
               const size_t maxEpochs,
               const wstring& modelPath,
