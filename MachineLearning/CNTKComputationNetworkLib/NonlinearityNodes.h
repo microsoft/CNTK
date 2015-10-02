@@ -43,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         NonlinearityNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
+            Base(deviceId, name)
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryMap(isFinalValidationPass);
-            m_gradient.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_gradient->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
 #if 0
             //if (Inputs(0)->GetNumRows() == 0)
             //    LogicError("Nonlinearity operation: the input node has 0 element.");
@@ -726,8 +726,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //get the right slice 
             const size_t colsPrior = Inputs(0)->GetNumCols();
 
-            Matrix<ElemType> sliceGradientValue = DataSlice(m_gradientValues, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> slicePosterior = DataSlice(m_posterior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceGradientValue = DataSlice(*m_gradientValues, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> slicePosterior = DataSlice(*m_posterior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                 
             switch (inputIndex)
             {
@@ -738,14 +738,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     else
                     {
                         Matrix<ElemType> sliceUnnormedPriorGradient = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-                        Matrix<ElemType> slicePrior = DataSlice(m_prior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                        Matrix<ElemType> slicePrior = DataSlice(*m_prior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                         ComputeInputPartialUnnormedPrior(sliceUnnormedPriorGradient, sliceGradientValue, slicePrior, slicePosterior, *m_temp);
                     }
                 }
                 break;
             case 1:
                 {
-                      Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                      Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(*m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                       if (colsPrior == 1)
                         ComputeInputPartialMean(Inputs(1)->GradientValues(), sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
                     else
@@ -757,7 +757,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 break;
             case 2:
                 {
-                    Matrix<ElemType> sliceNormedDeviation = DataSlice(m_normedDeviation, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                    Matrix<ElemType> sliceNormedDeviation = DataSlice(*m_normedDeviation, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                     if (colsPrior == 1)
                         ComputeInputPartialLogStddev(Inputs(2)->GradientValues(), sliceGradientValue, sliceNormedDeviation, slicePosterior, *m_temp);
                     else
@@ -769,7 +769,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 break;
             case 3:
                 {
-                    Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                    Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(*m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceFeatureGradient = Inputs(3)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                     ComputeInputPartialFeature(sliceFeatureGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, *m_temp);
                 }
@@ -856,9 +856,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 featureGradientValues.AddWithRowSliceValuesOf(temp, i*featureSize, featureSize);
         }
 
-        virtual size_t SetFunctionAndGradientMBSize(size_t numCols)
+        virtual size_t UpdateFunctionAndGradientMBSize(size_t numCols)
         {
-            numCols = Base::SetFunctionAndGradientMBSize(numCols);
+            numCols = Base::UpdateFunctionAndGradientMBSize(numCols);
             // ^^ if numCols is SIZE_MAX then we let base determine the value based on MB layout
             if (!m_pMBLayout)            // if no layout, this node contains parameters independent of MB size, don't resize
                 return numCols;         // BUGBUG: what do we return here?
@@ -894,9 +894,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //get the right slice 
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceFeature = Inputs(3)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceNormedDeviation = DataSlice(m_normedDeviation, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> slicePosterior = DataSlice(m_posterior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceNormedDeviation = DataSlice(*m_normedDeviation, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(*m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> slicePosterior = DataSlice(*m_posterior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
             if (colsPrior == 1)
             {
@@ -909,8 +909,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> sliceMean = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
                 Matrix<ElemType> sliceLogstddev = Inputs(2)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-                Matrix<ElemType> slicePrior = DataSlice(m_prior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-                Matrix<ElemType> sliceStddev = DataSlice(m_stddev, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> slicePrior = DataSlice(*m_prior, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceStddev = DataSlice(*m_stddev, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
                 EvaluateThisNodeS(sliceOutputValue, sliceUnnormedPrior, sliceMean, sliceLogstddev, sliceFeature,
                     slicePrior, sliceStddev, sliceNormedDeviationVectors, sliceNormedDeviation, slicePosterior, *m_temp);
@@ -1146,7 +1146,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
             {
-                sliceMask = DataSlice(m_maskOfDropout, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                sliceMask = DataSlice(*m_maskOfDropout, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             }
 
             ComputeInputPartialS(m_dropoutRate, sliceInput0Grad, sliceMask, sliceOutputGrad);
@@ -1178,8 +1178,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_dropoutRate > 0)
             {
                 Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-                m_maskOfDropout.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-                sliceMask = DataSlice(m_maskOfDropout, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                m_maskOfDropout->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+                sliceMask = DataSlice(*m_maskOfDropout, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             }
 
             sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
@@ -1227,7 +1227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryMap(isFinalValidationPass);
-            m_maskOfDropout.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_maskOfDropout->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
 #if 0
             if (Inputs(0)->GetNumRows() == 0)
                 LogicError("Dropout operation: the input node has 0 element.");

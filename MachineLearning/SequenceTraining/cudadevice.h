@@ -19,7 +19,6 @@ class objectondevice
 {
 protected:
     size_t deviceid;                    // CUDA card in which this matrix lives ("virtual" index amongst cards allocated to this process); default: 0
-    CUcontext getdevicecontext() const { return msra::cuda::getdevicecontext (deviceid); }
 protected:
     objectondevice (size_t d = 0) : deviceid (d) { }
 public:

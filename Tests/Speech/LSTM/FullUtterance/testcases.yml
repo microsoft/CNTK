@@ -1,4 +1,4 @@
-dataDir: ../Data
+dataDir: ../../Data
 tags:
      # running on every BVT job in 'L' (LSTM) leg in Debug-GPU and Release-CPU configurations:
      - bvt-l  (flavor=='debug') ^ (device=='cpu')
@@ -19,14 +19,14 @@ testCases:
   Epochs must be finished with expected results:
     patterns:
       - ^Finished Epoch[{{integer}} of {{integer}}]
-      - TrainLossPerSample = {{float,tolerance=1%}}
-      - EvalErrPerSample = {{float,tolerance=1%}}
+      - TrainLossPerSample = {{float,tolerance=.1%}}
+      - EvalErrPerSample = {{float,tolerance=.1%}}
       - Ave LearnRatePerSample = {{float,tolerance=0%}}
 
   Per-minibatch training results must match:
     patterns:
       - ^ Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}} of {{integer}}]
       - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=1%}}
-      - EvalErr[0]PerSample = {{float,tolerance=1%}}
+      - TrainLossPerSample = {{float,tolerance=.1%}}
+      - EvalErr[0]PerSample = {{float,tolerance=.1%}}
 
