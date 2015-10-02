@@ -27,8 +27,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"ErrorPrediction"; }
     public:
         ErrorPredictionNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
-            m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
+            Base(deviceId, name)
         { }
 
         void Reset()        // TODO: what is this??
@@ -42,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues, shared_from_this());
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), *m_maxIndexes0, *m_maxIndexes1, *m_maxValues, shared_from_this());
         }
 
         void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& maxIndexes0, Matrix<ElemType>& maxIndexes1, Matrix<ElemType>& maxValues, ComputationNodePtr curNode)
@@ -79,9 +78,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
                 Inputs(index)->Resize(rows, cols);
-                m_maxIndexes0.Resize(1,cols);
-                m_maxIndexes1.Resize(1,cols);
-                m_maxValues.Resize(1,cols);
             }
 
             //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
@@ -96,12 +92,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
-
-            // resize the temporaries to their proper size
-            size_t cols = Inputs(0)->GetNumCols();
-            m_maxIndexes0.Resize(1,cols);
-            m_maxIndexes1.Resize(1,cols);
-            m_maxValues.Resize(1,cols);
         }
 
         virtual void InferImageDimsFromInputs()
@@ -123,9 +113,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_maxIndexes0.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_maxIndexes1.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_maxValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_maxIndexes0->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_maxIndexes1->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
+            m_maxValues->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -134,17 +124,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<ErrorPredictionNode<ElemType>>(nodeP);
-                node->m_maxIndexes0 = m_maxIndexes0;
-                node->m_maxIndexes1 = m_maxIndexes1;
-                node->m_maxValues = m_maxValues;
+                *node->m_maxIndexes0 = *m_maxIndexes0;
+                *node->m_maxIndexes1 = *m_maxIndexes1;
+                *node->m_maxValues = *m_maxValues;
             }
         }
+
+        //request matrices needed to do node function value evaluation
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeEval(matrixPool);
+            RequestMatrixFromPool(m_maxIndexes0, matrixPool);
+            RequestMatrixFromPool(m_maxIndexes1, matrixPool);
+            RequestMatrixFromPool(m_maxValues, matrixPool);
+        }
+
+        //release temp matrices that are only used by forward computation
+        //don't release matrices that need to be used in the gradient computation
+        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterEval(matrixPool);
+            ReleaseMatrixToPool(m_maxIndexes0, matrixPool);
+            ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
+            ReleaseMatrixToPool(m_maxValues, matrixPool);
+        }
+
 protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
     private:
-        Matrix<ElemType> m_maxIndexes0, m_maxIndexes1;
-        Matrix<ElemType> m_maxValues;
+        shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
+        shared_ptr<Matrix<ElemType>> m_maxValues;
     };
 
     template class ErrorPredictionNode<float>; 

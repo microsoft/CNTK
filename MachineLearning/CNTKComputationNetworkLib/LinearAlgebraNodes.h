@@ -198,8 +198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"SumColumnElements"; }
     public:
         SumColumnElementsNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
-            m_sumValue(deviceId)
+            Base(deviceId, name)
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -278,12 +277,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<SumColumnElementsNode<ElemType>>(nodeP);
-                node->m_sumValue = m_sumValue;
             }
         }
 
-    private:
-        Matrix<ElemType> m_sumValue;
     };
 
     template class SumColumnElementsNode<float>;
@@ -1122,8 +1118,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"RowElementTimes"; }
     public:
         RowElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
-            m_tempMatrix(deviceId)
+            Base(deviceId, name)
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -1133,11 +1128,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 0)
             {
-                ComputeInputPartialLeftS(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues(), m_tempMatrix);
+                ComputeInputPartialLeftS(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues(), *m_tempMatrix);
             }
             else
             {
-                ComputeInputPartialRightS(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues(), m_tempMatrix);
+                ComputeInputPartialRightS(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues(), *m_tempMatrix);
             }
         }
 
@@ -1153,11 +1148,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 0)
             {
-                ComputeInputPartialLeftS(sliceInput1Value, sliceInput0Grad, sliceOutputGrad, m_tempMatrix);
+                ComputeInputPartialLeftS(sliceInput1Value, sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
             }
             else
             {
-                ComputeInputPartialRightS(sliceInput1Value, sliceInput0Grad, sliceOutputGrad, m_tempMatrix);
+                ComputeInputPartialRightS(sliceInput1Value, sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
             }
         }
 
@@ -1247,11 +1242,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_tempMatrix->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+        }
+
+        //request matrices that are needed for gradient computation
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            RequestMatrixFromPool(m_tempMatrix, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            ReleaseMatrixToPool(m_tempMatrix, matrixPool);
         }
 
     private:
-        Matrix<ElemType> m_tempMatrix;
+        shared_ptr<Matrix<ElemType>> m_tempMatrix;
     };
 
     template class RowElementTimesNode<float>;
@@ -1268,8 +1277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"ColumnElementTimes"; }
     public:
         ColumnElementTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
-            m_tempMatrix(deviceId)
+            Base(deviceId, name)
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -1279,11 +1287,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (inputIndex == 0)
             {
-                ComputeInputPartialLeftS(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues(), m_tempMatrix);
+                ComputeInputPartialLeftS(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues(), *m_tempMatrix);
             }
             else
             {
-                ComputeInputPartialRightS(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues(), m_tempMatrix);
+                ComputeInputPartialRightS(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues(), *m_tempMatrix);
             }
         }
 
@@ -1295,12 +1303,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-                ComputeInputPartialLeftS(Inputs(1)->FunctionValues(), sliceInput0Grad, sliceOutputGrad, m_tempMatrix);
+                ComputeInputPartialLeftS(Inputs(1)->FunctionValues(), sliceInput0Grad, sliceOutputGrad, *m_tempMatrix);
             }
             else
             {
                 Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-                ComputeInputPartialRightS(sliceInput0Value, Inputs(1)->GradientValues(), sliceOutputGrad, m_tempMatrix);
+                ComputeInputPartialRightS(sliceInput0Value, Inputs(1)->GradientValues(), sliceOutputGrad, *m_tempMatrix);
             }
         }
 
@@ -1400,11 +1408,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_tempMatrix->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+        }
+
+        //request matrices that are needed for gradient computation
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            RequestMatrixFromPool(m_tempMatrix, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            ReleaseMatrixToPool(m_tempMatrix, matrixPool);
         }
 
     private:
-        Matrix<ElemType> m_tempMatrix;
+        shared_ptr<Matrix<ElemType>> m_tempMatrix;
     };
 
     template class ColumnElementTimesNode<float>;
@@ -1847,8 +1869,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"DiagTimes"; }
     public:
         DiagTimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
-            m_innerproduct(deviceId), m_rightGradient(deviceId)
+            Base(deviceId, name)
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -1856,9 +1877,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 1)
                 InvalidArgument("DiagTimes operation only takes two inputs.");
             else if (inputIndex == 0)  //left derivative
-                ComputeInputPartialLeft(m_innerproduct, Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
+                ComputeInputPartialLeft(*m_innerproduct, Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
             else  //right derivative
-                ComputeInputPartialRight(m_rightGradient, Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
+                ComputeInputPartialRight(*m_rightGradient, Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
@@ -1872,12 +1893,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex == 0)  //left derivative
             {
                 Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-                ComputeInputPartialLeft(m_innerproduct, sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
+                ComputeInputPartialLeft(*m_innerproduct, sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
             }
             else  //right derivative
             {
                 Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-                ComputeInputPartialRight(m_rightGradient, Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
+                ComputeInputPartialRight(*m_rightGradient, Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
             }
         }
 
@@ -1939,8 +1960,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
-            m_innerproduct.Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
-            m_rightGradient.Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
+            //m_innerproduct.Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
+            //m_rightGradient.Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
@@ -1961,8 +1982,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_innerproduct.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_rightGradient.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_innerproduct->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_rightGradient->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1971,13 +1992,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<DiagTimesNode<ElemType>>(nodeP);
-                node->m_innerproduct = m_innerproduct;
-                node->m_rightGradient = m_rightGradient;
+                *node->m_innerproduct = *m_innerproduct;
+                *node->m_rightGradient = *m_rightGradient;
             }
         }
+
+        //request matrices that are needed for gradient computation
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            RequestMatrixFromPool(m_innerproduct, matrixPool);
+            RequestMatrixFromPool(m_rightGradient, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            ReleaseMatrixToPool(m_innerproduct, matrixPool);
+            ReleaseMatrixToPool(m_rightGradient, matrixPool);
+        }
+
 private:
-        Matrix<ElemType> m_innerproduct;
-        Matrix<ElemType> m_rightGradient;
+        shared_ptr<Matrix<ElemType>> m_innerproduct;
+        shared_ptr<Matrix<ElemType>> m_rightGradient;
     };
 
     template class DiagTimesNode<float>; 
@@ -1995,8 +2033,7 @@ private:
         static const std::wstring TypeName() { return L"CosDistance"; }
     public:
         CosDistanceNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
-            m_invNorm0(deviceId), m_invNorm1(deviceId), m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
+            Base(deviceId, name)
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -2006,11 +2043,11 @@ private:
 
             if (inputIndex == 0)  //left derivative
             {
-                ComputeInputPartialLeft(m_invNorm0, m_invNorm1, FunctionValues(), m_temp, m_rightTerm, m_leftTerm, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), GradientValues(), Inputs(inputIndex)->GradientValues());
+                ComputeInputPartialLeft(*m_invNorm0, *m_invNorm1, FunctionValues(), *m_temp, *m_rightTerm, *m_leftTerm, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), GradientValues(), Inputs(inputIndex)->GradientValues());
             }
             else  //right derivative
             {
-                ComputeInputPartialRight(m_invNorm0, m_invNorm1, FunctionValues(), m_temp, m_rightTerm, m_leftTerm, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), GradientValues(), Inputs(inputIndex)->GradientValues());
+                ComputeInputPartialRight(*m_invNorm0, *m_invNorm1, FunctionValues(), *m_temp, *m_rightTerm, *m_leftTerm, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), GradientValues(), Inputs(inputIndex)->GradientValues());
             }
         }
 
@@ -2024,11 +2061,11 @@ private:
 
             if (inputIndex == 0)  //left derivative
             {
-                ComputeInputPartialLeft(m_invNorm0, m_invNorm1, sliceOutputValue, m_temp, m_rightTerm, m_leftTerm, sliceInput0Value, sliceInput1Value, sliceOutputGrad, sliceInputGrad);
+                ComputeInputPartialLeft(*m_invNorm0, *m_invNorm1, sliceOutputValue, *m_temp, *m_rightTerm, *m_leftTerm, sliceInput0Value, sliceInput1Value, sliceOutputGrad, sliceInputGrad);
             }
             else  //right derivative
             {
-                ComputeInputPartialRight(m_invNorm0, m_invNorm1, sliceOutputValue, m_temp, m_rightTerm, m_leftTerm, sliceInput0Value, sliceInput1Value, sliceOutputGrad, sliceInputGrad);
+                ComputeInputPartialRight(*m_invNorm0, *m_invNorm1, sliceOutputValue, *m_temp, *m_rightTerm, *m_leftTerm, sliceInput0Value, sliceInput1Value, sliceOutputGrad, sliceInputGrad);
             }
         }
 
@@ -2086,7 +2123,7 @@ private:
 
         void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
         {
-            EvaluateThisNodeS(m_invNorm0, m_invNorm1, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());  
+            EvaluateThisNodeS(*m_invNorm0, *m_invNorm1, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());  
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override 
@@ -2096,7 +2133,7 @@ private:
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            EvaluateThisNodeS(m_invNorm0, m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value);  
+            EvaluateThisNodeS(*m_invNorm0, *m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value);  
         }
 
         /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1, 
@@ -2165,11 +2202,11 @@ private:
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_invNorm0.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_invNorm1.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_leftTerm.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_rightTerm.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_invNorm0->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_invNorm1->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_leftTerm->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_rightTerm->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_temp->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -2178,21 +2215,50 @@ private:
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
-                node->m_invNorm0 = m_invNorm0;
-                node->m_invNorm1 = m_invNorm1;
-                node->m_leftTerm = m_leftTerm;
-                node->m_rightTerm = m_rightTerm;
-                node->m_temp = m_temp;
+                *node->m_invNorm0 = *m_invNorm0;
+                *node->m_invNorm1 = *m_invNorm1;
+                *node->m_leftTerm = *m_leftTerm;
+                *node->m_rightTerm = *m_rightTerm;
+                *node->m_temp = *m_temp;
             }
         }
+
+        //request matrices needed to do node function value evaluation
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeEval(matrixPool);
+            RequestMatrixFromPool(m_invNorm0, matrixPool);
+            RequestMatrixFromPool(m_invNorm1, matrixPool);
+        }
+
+        //request matrices that are needed for gradient computation
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            RequestMatrixFromPool(m_leftTerm, matrixPool);
+            RequestMatrixFromPool(m_rightTerm, matrixPool);
+            RequestMatrixFromPool(m_temp, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            ReleaseMatrixToPool(m_invNorm0, matrixPool);
+            ReleaseMatrixToPool(m_invNorm1, matrixPool);
+            ReleaseMatrixToPool(m_leftTerm, matrixPool);
+            ReleaseMatrixToPool(m_rightTerm, matrixPool);
+            ReleaseMatrixToPool(m_temp, matrixPool);
+        }
+
 private:
         // invNorm nodes tranfer data between EvaluateThisNode and ComputeInputPartial
-        Matrix<ElemType> m_invNorm0;
-        Matrix<ElemType> m_invNorm1;
+        shared_ptr<Matrix<ElemType>> m_invNorm0;
+        shared_ptr<Matrix<ElemType>> m_invNorm1;
         // the rest are temporaries, values don't need to be maintained
-        Matrix<ElemType> m_leftTerm;
-        Matrix<ElemType> m_rightTerm;
-        Matrix<ElemType> m_temp;
+        shared_ptr<Matrix<ElemType>> m_leftTerm;
+        shared_ptr<Matrix<ElemType>> m_rightTerm;
+        shared_ptr<Matrix<ElemType>> m_temp;
     };
 
     template class CosDistanceNode<float>; 
@@ -2346,9 +2412,7 @@ private:
         static const std::wstring TypeName() { return L"CosDistanceWithNegativeSamples"; }
     public:
         CosDistanceWithNegativeSamplesNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
-            m_invNorm0(deviceId), m_invNorm1(deviceId), m_invNormSquare(deviceId), 
-            m_leftTerm(deviceId), m_rightTerm(deviceId), m_temp(deviceId)
+            Base(deviceId, name)
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -2356,7 +2420,7 @@ private:
             if (inputIndex > 1)
                 InvalidArgument("CosDistanceWithNegativeSamples operation only takes grdients on the first two inputs.");
 
-            ComputeInputPartialS(inputIndex, m_invNorm0, m_invNorm1, FunctionValues(), m_temp, m_rightTerm, m_leftTerm, m_invNormSquare, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
+            ComputeInputPartialS(inputIndex, *m_invNorm0, *m_invNorm1, FunctionValues(), *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
@@ -2370,7 +2434,7 @@ private:
             Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceThisGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            ComputeInputPartialS(inputIndex, m_invNorm0, m_invNorm1, sliceOutputValue, m_temp, m_rightTerm, m_leftTerm, m_invNormSquare, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), sliceInputGrad, sliceThisGrad);
+            ComputeInputPartialS(inputIndex, *m_invNorm0, *m_invNorm1, sliceOutputValue, *m_temp, *m_rightTerm, *m_leftTerm, *m_invNormSquare, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), sliceInputGrad, sliceThisGrad);
         }
 
         // functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
@@ -2476,7 +2540,7 @@ private:
 
         void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
-            EvaluateThisNodeS(m_invNorm0, m_invNorm1, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), m_leftTerm, m_rightTerm);
+            EvaluateThisNodeS(*m_invNorm0, *m_invNorm1, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), *m_leftTerm, *m_rightTerm);
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
@@ -2486,7 +2550,7 @@ private:
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
 
-            EvaluateThisNodeS(m_invNorm0, m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), m_leftTerm, m_rightTerm);
+            EvaluateThisNodeS(*m_invNorm0, *m_invNorm1, sliceOutputValue, sliceInput0Value, sliceInput1Value, Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), *m_leftTerm, *m_rightTerm);
         }
 
         /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& invNorm0, Matrix<ElemType>& invNorm1,
@@ -2571,12 +2635,12 @@ private:
         virtual void MoveMatricesToDevice(const short deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_invNorm0.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_invNorm1.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_invNormSquare.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_leftTerm.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_rightTerm.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_invNorm0->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_invNorm1->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_invNormSquare->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_leftTerm->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_rightTerm->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_temp->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -2585,23 +2649,54 @@ private:
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<CosDistanceWithNegativeSamplesNode<ElemType>>(nodeP);
-                node->m_invNorm0 = m_invNorm0;
-                node->m_invNorm1 = m_invNorm1;
-                node->m_invNormSquare = m_invNormSquare;
-                node->m_leftTerm = m_leftTerm;
-                node->m_rightTerm = m_rightTerm;
-                node->m_temp = m_temp;
+                *node->m_invNorm0 = *m_invNorm0;
+                *node->m_invNorm1 = *m_invNorm1;
+                *node->m_invNormSquare = *m_invNormSquare;
+                *node->m_leftTerm = *m_leftTerm;
+                *node->m_rightTerm = *m_rightTerm;
+                *node->m_temp = *m_temp;
             }
         }
+
+        //request matrices needed to do node function value evaluation
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeEval(matrixPool);
+            RequestMatrixFromPool(m_invNorm0, matrixPool);
+            RequestMatrixFromPool(m_invNorm1, matrixPool);
+            RequestMatrixFromPool(m_leftTerm, matrixPool);
+            RequestMatrixFromPool(m_rightTerm, matrixPool);
+        }
+
+        //request matrices that are needed for gradient computation
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeGradientComp(matrixPool);
+            RequestMatrixFromPool(m_invNormSquare, matrixPool);
+            RequestMatrixFromPool(m_temp, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            ReleaseMatrixToPool(m_invNorm0, matrixPool);
+            ReleaseMatrixToPool(m_invNorm1, matrixPool);
+            ReleaseMatrixToPool(m_leftTerm, matrixPool);
+            ReleaseMatrixToPool(m_rightTerm, matrixPool);
+            ReleaseMatrixToPool(m_invNormSquare, matrixPool);
+            ReleaseMatrixToPool(m_temp, matrixPool);
+        }
+
 private:
         // invNorm nodes tranfer data between EvaluateThisNode and ComputeInputPartial
-        Matrix<ElemType> m_invNorm0;
-        Matrix<ElemType> m_invNorm1;
+        shared_ptr<Matrix<ElemType>> m_invNorm0;
+        shared_ptr<Matrix<ElemType>> m_invNorm1;
+        shared_ptr<Matrix<ElemType>> m_leftTerm;
+        shared_ptr<Matrix<ElemType>> m_rightTerm;
         // the rest are temporaries, values don't need to be maintained
-        Matrix<ElemType> m_leftTerm;
-        Matrix<ElemType> m_rightTerm;
-        Matrix<ElemType> m_invNormSquare;
-        Matrix<ElemType> m_temp;
+        shared_ptr<Matrix<ElemType>> m_invNormSquare;
+        shared_ptr<Matrix<ElemType>> m_temp;
     };
 
     template class CosDistanceWithNegativeSamplesNode<float>;
@@ -2617,11 +2712,9 @@ private:
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Transpose"; }
 
-        Matrix<ElemType> mOnes; 
     public:
         TransposeNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
-            mOnes(deviceId)
+            Base(deviceId, name)
         { }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
@@ -2629,10 +2722,10 @@ private:
             if (inputIndex > 1)
                 InvalidArgument("Times operation only takes two inputs.");
 
-            ComputeInputPartialS(Inputs(0)->GradientValues(), mOnes, GradientValues());
+            ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& ones, const Matrix<ElemType>& gradientValues)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             gradientValues.Print("Gradient-in");
@@ -2640,8 +2733,7 @@ private:
             inputFunctionValues.Print("child Function values");
 #endif
 
-            if (ones.GetNumRows() != inputGradientValues.GetNumRows() || ones.GetNumCols() != inputGradientValues.GetNumRows())
-                ones = Matrix<ElemType>::Ones(inputGradientValues.GetNumRows(), inputGradientValues.GetNumRows(), inputGradientValues.GetDeviceId());
+            const Matrix<ElemType>& ones = ConstOnes(inputGradientValues.GetNumRows(), inputGradientValues.GetNumRows(), inputGradientValues.GetDeviceId());
             Matrix<ElemType>::MultiplyAndAdd(ones, false, gradientValues, true, inputGradientValues);
 #if DUMPOUTPUT
             inputGradientValues.Print("child Gradient-out");
@@ -2671,13 +2763,10 @@ private:
         {
             Base::Validate(isFinalValidationPass);
 
-            size_t rows0 = Inputs(0)->GetNumRows();   // , cols0 = Inputs(0)->GetNumCols();
-
             //if (rows0 == 0 || cols0 == 0)
             //    throw logic_error("Transpose operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 ");
 
             Resize(Inputs(0));
-            mOnes = Matrix<ElemType>::Ones(rows0, rows0, m_deviceId);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }

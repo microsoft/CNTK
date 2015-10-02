@@ -1366,6 +1366,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             matrixPool.Release<ElemType>(matrixPtr);
         }
 
+        //this function is used to create matrices for those needed before matrix pool is available
+        //e.g., for model parameters and input nodes you will need to resize the functions based on NDL
+        //and before matrix pool is available
         void CreateMatrixIfNull(shared_ptr<Matrix<ElemType>>& matrixPtr)
         {
             if (matrixPtr == nullptr)
@@ -1511,7 +1514,10 @@ public: \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
     using Base::SaveToFile; using Base::UpdateFunctionAndGradientMBSize; using Base::SetInput; \
-    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildren
+    using Base::RequestMatricesBeforeEval; using Base::ReleaseMatricesAfterEval; \
+    using Base::RequestMatricesBeforeGradientComp; using Base::ReleaseMatricesAfterGradientComp; \
+    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; \
+    using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildren
 
 #define UsingComputationNodeMembersBoilerplate \
 protected:    /* some boilerplate goes here */ \
