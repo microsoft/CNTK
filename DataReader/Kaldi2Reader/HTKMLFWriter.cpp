@@ -14,8 +14,6 @@
 //#ifndef __unix__
 #include "ssematrix.h"
 //#endif
-//#include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)
-//#include "simplesenonehmm.h"            // for MMI scoring
 //#include "msra_mgram.h"                 // for unigram scores of ground-truth path in sequence training
 
 //#include "rollingwindowsource.h"        // minibatch sources

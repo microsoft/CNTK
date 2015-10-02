@@ -452,6 +452,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }       
 
             Resize(1,1);
+#endif
             //m_logOfRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             //m_leftDivRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
             InferImageDimsFromInputs(); 

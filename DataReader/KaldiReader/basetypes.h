@@ -1195,12 +1195,11 @@ public:
 These macros are used for sentence segmentation information.
 TODO: get rid of this, no need
 */
-//#define ((int) MinibatchPackingFlags::SequenceStart) ((int) MinibatchPackingFlags::SequenceStart)
-//#define ((int) MinibatchPackingFlags::None) ((int) MinibatchPackingFlags::None)
-//#define ((int) MinibatchPackingFlags::SequenceEnd) ((int) MinibatchPackingFlags::SequenceEnd)
-//#define ((int) MinibatchPackingFlags::NoInput) ((int) MinibatchPackingFlags::NoInput)
-//#define ((int) MinibatchPackingFlags::NoFeature) ((int) MinibatchPackingFlags::NoFeature)
-//#define ((int) MinibatchPackingFlags::NoLabel) ((int) MinibatchPackingFlags::NoLabel)
+#define SEQUENCE_START ((int) MinibatchPackingFlags::SequenceStart)
+#define SEQUENCE_MIDDLE ((int) MinibatchPackingFlags::None)
+#define SEQUENCE_END ((int) MinibatchPackingFlags::SequenceEnd)
+#define NO_INPUT ((int) MinibatchPackingFlags::NoInput)
+#define NO_LABEL ((int) MinibatchPackingFlags::NoLabel)
 
 enum class MinibatchPackingFlags : unsigned char
 {
@@ -1211,9 +1210,9 @@ enum class MinibatchPackingFlags : unsigned char
     NoLabel = 1 << 3,      //binary 1000
 
     NoInput = NoFeature | NoLabel, //when we refactorize reader, NoInput will no longer needed
-    SequenceStartOrNoFeature = SequenceStart | NoFeature,
-    SequenceEndOrNoFeature = SequenceEnd | NoFeature,
-    SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
+    SequenceStartOrNoInput = SequenceStart | NoInput,
+    SequenceEndOrNoInput = SequenceEnd | NoInput,
+    SequenceStartOrEndOrNoInput = SequenceStart | SequenceEnd | NoInput,
 };
 
 inline MinibatchPackingFlags operator| (MinibatchPackingFlags a, MinibatchPackingFlags b)
@@ -1227,9 +1226,10 @@ inline MinibatchPackingFlags& operator|= (MinibatchPackingFlags& a, MinibatchPac
     return a;
 }
 
+
 inline bool operator& (MinibatchPackingFlags a, MinibatchPackingFlags b)
 {
-    return (static_cast<unsigned char>(a)& static_cast<unsigned char>(b)) != 0;
+    return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
 }
 
 template<class F>
