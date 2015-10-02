@@ -800,11 +800,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (first)  // initialize MBLayout
                             {
                                 // entire minibatch is one utterance
-                                m_pMBLayout->Resize(1, actualmbsize);
-                                m_pMBLayout->Reset(0, 0,                MinibatchPackingFlags::SequenceStart);  // TODO: can't we use Set()?
-                                m_pMBLayout->Reset(0, actualmbsize - 1, MinibatchPackingFlags::SequenceEnd);
+                                m_pMBLayout->Init(1, actualmbsize, !m_framemode);
+                                if (m_pMBLayout->RequireSentenceSeg())       // in framemode we leave the flags empty
+                                {
+                                    m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
+                                    m_pMBLayout->SetWithoutOr(0, actualmbsize - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
+                                }
                                 first = false;
                             }
+                            else
+                                if (m_pMBLayout->GetNumTimeSteps() != actualmbsize)
+                                    RuntimeError("GetMinibatch: Multiple feature streams with inconsistent minibatch size detected, e.g. %d vs. %d.", (int)m_pMBLayout->GetNumTimeSteps(), (int)actualmbsize);
+
 
                             assert (actualmbsize == m_mbiter->currentmbframes());
                             skip = (!m_partialMinibatch && m_mbiter->requestedframes() != actualmbsize && m_frameSource->totalframes() > actualmbsize);
@@ -948,7 +955,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t numOfFea = m_featuresBufferMultiIO.size();
                     size_t numOfLabel = m_labelsBufferMultiIO.size();
 
-                    m_pMBLayout->Resize(m_numberOfuttsPerMinibatch, m_mbSize);
+                    m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_mbSize, true/*sequential*/);
 
                     vector<size_t> actualmbsize;
                     actualmbsize.assign(m_numberOfuttsPerMinibatch,0);
@@ -963,13 +970,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 m_sentenceEnd[i] = false;
                                 m_switchFrame[i] = m_mbSize+1;
                                 if (m_processedFrame[i] == 1)
-                                    m_pMBLayout->Reset(i, 0, MinibatchPackingFlags::SequenceEnd);   // TODO: shouldn't both Start and End be set? TODO: can we just use Set()?
+                                    m_pMBLayout->SetWithoutOr(i, 0, MinibatchPackingFlags::SequenceEnd);   // TODO: shouldn't both Start and End be set? TODO: can we just use Set()?
                             }
                             else
                             {
                                 m_sentenceEnd[i] = true;
                                 m_switchFrame[i] = 0;
-                                m_pMBLayout->Reset(i, 0, MinibatchPackingFlags::SequenceStart);
+                                m_pMBLayout->SetWithoutOr(i, 0, MinibatchPackingFlags::SequenceStart);
                             }
                             actualmbsize[i] = m_mbSize;
                             endFr = startFr + actualmbsize[i];
@@ -1122,7 +1129,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_switchFrame[i] = actualmbsize[i];
                             
                             if (actualmbsize[i] < m_mbSize)
-                                m_pMBLayout->Set(i, actualmbsize[i], MinibatchPackingFlags::SequenceStart); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector 
+                                m_pMBLayout->Set(i, actualmbsize[i], MinibatchPackingFlags::SequenceStart); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
                             if (actualmbsize[i] == m_mbSize)
                                 m_pMBLayout->Set(i, actualmbsize[i] - 1, MinibatchPackingFlags::SequenceEnd); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
                             startFr = m_switchFrame[i];
@@ -1271,9 +1278,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
                         if (first)
                         {
-                            m_pMBLayout->Resize(1, feat.cols());
-                            m_pMBLayout->Reset(0, 0,               MinibatchPackingFlags::SequenceStart);   // TODO: can't we use Set()?
-                            m_pMBLayout->Reset(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);
+                            m_pMBLayout->Init(1, feat.cols(), true/*sequential*/);
+                            m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
+                            m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
                             first = false;
                         }
 
@@ -1592,10 +1599,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
         void HTKMLFReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
         {
-            if (!m_framemode)
-                pMBLayout->CopyFrom(m_pMBLayout);
-            else
-                pMBLayout->SetAllNone();    // no flags in frame mode
+            pMBLayout->CopyFrom(m_pMBLayout);
         }
 
     // GetFileConfigNames - determine the names of the features and labels sections in the config file
