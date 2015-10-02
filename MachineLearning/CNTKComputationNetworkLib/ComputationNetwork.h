@@ -1388,19 +1388,19 @@ public:
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedEvaluate = false;
 
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+        for (auto &nodeIter : allNodes)
         {
-            if ((*nodeIter)->HasLoop())
+            if (nodeIter->HasLoop())
             {
-                RecurrentInfo * recInfo = FindInRecurrentLoops((*nodeIter));
+                RecurrentInfo * recInfo = FindInRecurrentLoops(nodeIter);
                 assert(recInfo != nullptr);
                 if (recInfo->m_completedEvaluate == false)
                 {
                     const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
-                    for (auto nodeLoopIter = recurrentNodes.begin(); nodeLoopIter != recurrentNodes.end(); nodeLoopIter++)
+                    for (auto &nodeLoopIter : recurrentNodes)
                     {
-                        (*nodeLoopIter)->RequestMatricesBeforeEval(m_matrixPool);
-                        (*nodeLoopIter)->ReleaseMatricesAfterEval(m_matrixPool);
+                        nodeLoopIter->RequestMatricesBeforeEval(m_matrixPool);
+                        nodeLoopIter->ReleaseMatricesAfterEval(m_matrixPool);
                     }
 
                     recInfo->m_completedEvaluate = true;
@@ -1408,8 +1408,8 @@ public:
             }
             else
             {
-                (*nodeIter)->RequestMatricesBeforeEval(m_matrixPool);
-                (*nodeIter)->ReleaseMatricesAfterEval(m_matrixPool); 
+                nodeIter->RequestMatricesBeforeEval(m_matrixPool);
+                nodeIter->ReleaseMatricesAfterEval(m_matrixPool); 
             }
         }
     }
@@ -1424,36 +1424,35 @@ public:
 
         //determine children size
         std::map<ComputationNodeBasePtr, int> childrenCount;
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+        for (auto &nodeIter : allNodes)
         {
-            childrenCount[*nodeIter] = (*nodeIter)->ChildrenSize();
+            childrenCount[nodeIter] = nodeIter->ChildrenSize();
         }
 
         //now, simulate the gradient computation order to determine how to allocate matrices
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedGradient = false;
 
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+        for (auto &n : allNodes)
         {
-            ComputationNodeBasePtr n = *nodeIter;
             if (n->HasLoop())
             {
                 std::vector<ComputationNodeBasePtr> recurrentNodes;
-                RecurrentInfo * recInfo = FindInRecurrentLoops((*nodeIter));
+                RecurrentInfo * recInfo = FindInRecurrentLoops(n);
                 if (recInfo && recInfo->m_completedGradient == false)
                 {
                     const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
                     //loops are computed sample by sample so we have to allocate them all 
-                    for (auto nodeIterInLoop = recurrentNodes.rbegin(); nodeIterInLoop != recurrentNodes.rend(); ++nodeIterInLoop)
+                    for (auto &nodeIterInLoop : recurrentNodes)
                     {
-                        (*nodeIterInLoop)->RequestMatricesBeforeGradientComp(m_matrixPool);
+                        nodeIterInLoop->RequestMatricesBeforeGradientComp(m_matrixPool);
                     }
                     
                     recInfo->m_completedGradient = true;
 
-                    for (auto nodeIterInLoop = recurrentNodes.rbegin(); nodeIterInLoop != recurrentNodes.rend(); ++nodeIterInLoop)
+                    for (auto &nodeIterInLoop : recurrentNodes)
                     {
-                        ReleaseMatricesAfterGradientCompForParents((*nodeIterInLoop), childrenCount);
+                        ReleaseMatricesAfterGradientCompForParents(nodeIterInLoop, childrenCount);
                     }
                 }
             }
