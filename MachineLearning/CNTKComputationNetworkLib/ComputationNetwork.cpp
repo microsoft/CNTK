@@ -660,7 +660,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This sets index, lowLink, m_visited, m_inStack
     void ComputationNetwork::getStrongSCC(const ComputationNodeBasePtr rootNode)    // TODO: method names start uppercase
     {
-        /// notice that this graph including graphs from a parent networks if two or more networks are connected via PairNode
+        /// notice that this graph including graphs from a parent networks if two or more networks are connected via PairNetworkNode
         std::unordered_set<ComputationNodeBasePtr> visited;
         std::list<ComputationNodeBasePtr> sccStack;
         size_t index = 0;

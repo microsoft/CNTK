@@ -375,13 +375,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool HasLoop() const { return m_hasloop; }
         void SetLoop(bool hasLoop) { m_hasloop = hasLoop; }
 
-        virtual ComputationNodeBasePtr FindChildInASet(const std::list<ComputationNodeBasePtr>& loop) const
-        {
-            for (int i = 0; i < this->m_children.size(); i++)
-            if (std::find(loop.begin(), loop.end(), this->m_children[i]) != loop.end())
-                return this->m_children[i];
-            return nullptr;
-        }
+        //virtual ComputationNodeBasePtr FindChildInASet(const std::list<ComputationNodeBasePtr>& loop) const
+        //{
+        //    for (int i = 0; i < this->m_children.size(); i++)
+        //    if (std::find(loop.begin(), loop.end(), this->m_children[i]) != loop.end())
+        //        return this->m_children[i];
+        //    return nullptr;
+        //}
 
         virtual void InferImageDimsFromInputs()
         {
@@ -404,26 +404,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) = 0;
 
-        //void EvaluateThisNode()   // this is gone; instead, call it this way directly
-        //{
-        //    EvaluateThisNode(FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
-        //}
-        // evaluate only N frames at time index timeIdxInSeq
-        // Normally, N is 1 or it spans the entire minibatch.
-        virtual void OnEvaluateBeginIteration() { }      // called before first iteration step of EvaluateThisNode()
-        virtual void EvaluateThisNode(const FrameRange &) = 0;
-        virtual void OnEvaluateEndIteration() { }        // called after last iteration step of EvaluateThisNode()
+        virtual void OnEvaluateBeginIteration() { }             // called before first iteration step of EvaluateThisNode()
+        virtual void EvaluateThisNode(const FrameRange &) = 0;  // forward prop for one minibatch
+        virtual void OnEvaluateEndIteration() { }               // called after last iteration step of EvaluateThisNode()
         virtual void ComputeGradientForChildren() = 0;
         virtual void ComputeGradientForChildren(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
 
+        // masking
         // overridden by <ElemType> variant only
+        // TODO: we need a section for those; and ComputationNode<> should mark those as 'final'
         virtual void MaskMissingValuesColumnsToZero() = 0;
         virtual void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
         virtual void MaskMissingGradientColumnsToZero() = 0;
         virtual void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
 
         // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
-        // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNode, LSTMNode)
+        // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNetworkNode, LSTMNode)
+        // The need for this seems an artifact of the old inconsistent layout architecture. In the future, this can probably just go away.
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return false; }
 
     protected:
@@ -1388,7 +1385,7 @@ public: \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
-    using Base::EvaluateThisNode; using Base::FindChildInASet; using Base::FunctionValues; \
+    using Base::EvaluateThisNode; using Base::FunctionValues; \
     using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
     using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \

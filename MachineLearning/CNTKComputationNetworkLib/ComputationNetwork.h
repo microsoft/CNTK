@@ -8,16 +8,13 @@
 
 // TODOs:
 //  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, it should already be covered by Node::UpdateFunctionAndGradientMBSize() which is called from inside the Eval loop
-//  - complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
-//  - apply 
-// => many ComputationNode implementations only have two functions EvaluateThisNode(FrameRange) and ComputePartial(), as it was meant to be!
-//  - remove SetHistory() in recurrent nodes; statefulness is sufficiently well defined that there is no need
+//  - everywhere complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial; also make the same change for ComputePartial()
 //  - need Matrix::RowSlice() (problem: currently has no 'lead' dimension separate from numRows)
 //  - revise constructors, merge by means of default parameters
 //  - add a runtime check that nodes deriving from ComputeNodeNonLooping may never participate in a loop
 //  - ClassbasedCrossEntropyWithSoftmax::EvaluateThisNodeS()'s calls to MaskMissingColumnsToZero() are likely wrong.
 //    Need to understand what this does, then implement it correctly w.r.t. MBLayout.
-//  - CRFNode::ComputeInputPartial() has strange usage of layout which seems incorrect structurally (swapping id and t).
+//  - CRFNode::ComputeInputPartial() fails for >1 parallel seqeunce due to DataSlice() not being able to return whole sequences
 //  - BUGBUG: All frameRange.Check() expressions are wrong that operate on children, since the wrong layout pointer is passed in (for most nodes it is identical to the correct one though).
 //    This will get fixed as we remove these Check() expressions when absorbing EvaluateThisNodeS().
 //  - implement reading of MB Layout in Binary, DSSM, LivbSVM, and SparsePCReader
