@@ -171,8 +171,8 @@ public:
     {
     }
     virtual void Init(const ConfigParameters& config);
-    virtual void Destroy() {delete this;}
-    virtual ~HTKMLFReader();
+    virtual void Destroy() { delete this; }
+    virtual ~HTKMLFReader() { }
 
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
     {
