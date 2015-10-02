@@ -103,11 +103,11 @@ private:
 
     bool ReNewBufferForMultiIO(size_t i);
 
-    size_t GetNumParallelSequences() { return m_numberOfuttsPerMinibatch; } 
+    size_t GetNumParallelSequences();
     void SetNumParallelSequences(const size_t) { };
 
-     void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels,
-         std::vector<std::wstring>& hmms, std::vector<std::wstring>& lattices);
+    void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels,
+                                std::vector<std::wstring>& hmms, std::vector<std::wstring>& lattices);
     
     size_t ReadLabelToTargetMappingFile (const std::wstring& labelToTargetMappingFile, const std::wstring& labelListFile, std::vector<std::vector<ElemType>>& labelToTargetMap);
     

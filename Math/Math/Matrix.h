@@ -581,6 +581,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_minibatchPackingFlags[t] |= f;
         }
 
+        // TODO: This can go away once frame mode returns multiple sequence sof one frame each; or we can test against cols==1
+        // HAH! This function is only ever used for Decimate(). It can completely go away, as can methods of the same name in the readers!
         bool RequireSentenceSeg() const { return m_dataIsSequential; }        // this is the name of a function on DataReader which really belongs here
 
     private:
