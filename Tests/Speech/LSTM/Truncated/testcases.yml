@@ -1,9 +1,9 @@
-dataDir: ../Data
+dataDir: ../../Data
 tags:
-     # running on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
-     - bvt-s  (flavor=='debug') ^ (device=='cpu')
-     # running unconditionally on every Nightly job in 'S' leg
-     - nightly-s
+     # running on every BVT job in 'L' (LSTM) leg in Debug-GPU and Release-CPU configurations:
+     - bvt-l  (flavor=='debug') ^ (device=='cpu')
+     # running unconditionally on every Nightly job in 'L' leg
+     - nightly-l
 
 testCases:
   CNTK Run must be completed:

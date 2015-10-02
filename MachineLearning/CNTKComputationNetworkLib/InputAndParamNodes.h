@@ -58,7 +58,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::SaveToFile(fstream);
             fstream << m_needGradient;
-            fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
+            fstream << GetNumRows() << GetNumCols(); 
             fstream << FunctionValues();
         }
 
@@ -88,7 +88,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         const ElemType initValueScale,
                         bool initOnCPUOnly) // if true then always init on CPU, making initialization consistent across both (for testing)
         {
-            size_t inputSize = FunctionValues().GetNumCols();
+            size_t inputSize = GetNumCols();
 
             // the random seed offset is set via the "randomSeedOffset" parameter in config
             if (initOnCPUOnly)
@@ -138,9 +138,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override {}
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
         }
 
@@ -149,7 +149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
-            sprintf(str, "[%lu,%lu]  ", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            sprintf(str, "[%lu,%lu]  ", GetNumRows(), GetNumCols());
             fstream << string(str);
             sprintf(str, "NeedGradient=%s", NeedGradient()? "true" : "false");
             fstream << string(str);
@@ -186,7 +186,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             LearnableParameter<ElemType>::LoadFromFile(fstream, modelVersion);
             m_gradientValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);       // TODO: needed? Constructor already sets this
-            m_gradientValues.Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            m_gradientValues.Resize(GetNumRows(), GetNumCols());
         }
     };
 
@@ -197,6 +197,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // InputValue (/*no input*/)
     // an input value (typically fed by a DataReader)
     // this covers four types: (regular vs. image) x (non-sparse vs. sparse)
+    // TODO: There is still debate whether an InputValue without layout makes sense.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -204,6 +205,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
         virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+        static const std::wstring TypeName() { return L"InputValue"; }
+        static const std::wstring SparseTypeName() { return L"SparseInputValue"; }    // special case used by old NDL
         // BUGBUG: This node identifies its sparseness through a different OperationName(). Hence we must do a non-standard dance ^^ to declare the boilerplate stuff.
         //         This is bad. It should just write m_isSparse, or be a different type.
 
@@ -265,8 +268,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
-            fstream << FunctionValues().GetNumRows() << FunctionValues().GetNumCols(); 
-            fstream << m_outputWidth << m_outputHeight << m_outputChannels; 
+            size_t rows = GetNumRows();                     // using explicitly typed variables to be 100% symmetrical to LoadFromFile()
+            size_t cols = m_pMBLayout ? 0 : GetNumCols();   // if this Input depends on MB size, we write it as having 0 dimensions
+            fstream << rows << cols;
+            fstream << m_outputWidth << m_outputHeight << m_outputChannels;
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
@@ -275,43 +280,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t rows, cols;
             fstream >> rows >> cols;
-            if (rows * cols == 0) 
-                LogicError("This InputValue dimension is 0.");
-
+            if (m_pMBLayout)    // some older files retained the #columns when saving, which is meaningless
+                cols = 0;
             fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels; 
 
             if (m_isSparse)
                 ConvertToSparseMatrix();
 
             m_functionValues.Resize(rows, cols);
-            m_needGradient = false;
+            m_functionValues.SetValue(0.0);         // (if cols > 0, Resize() alone is not guaranteed to clear to 0; this eliminates potential left-overs)
+            m_needGradient = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
         }
 
-        // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type; this special-casing will cause grief
+        // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type. This causes some unnecessary special-casing.
         virtual const std::wstring OperationName() const { return m_isSparse ? SparseTypeName() : TypeName(); }
-
-        static const std::wstring TypeName() { return L"InputValue"; }
-        static const std::wstring SparseTypeName() { return L"SparseInputValue"; }    // special case used by old NDL
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override {}
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
 
-        virtual void /*ComputationNodeBase::*/Validate() override
-        {
-            Base::Validate();
-            if (!m_pMBLayout)
-                RuntimeError("Validate: Input node '%ls' should have been assigned an MBLayout, but hasn't.");
-        }
-
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
-            sprintf(str, "[%lu,%lu]", FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-            fstream << string(str);        
+            sprintf(str, "[%lu,%lu]", GetNumRows(), GetNumCols());
+            fstream << string(str);         // TODO: string(.) necessary?
         }
     private:
         bool m_isSparse = false;
@@ -330,6 +325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // LookupTableNode (weight matrix, bag-of-word representation of the inputs)
     // originally designed to extract word embedding representation from bag-of-word
+    // TODO: what does this do?
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -455,27 +451,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             functionValues.Reshape(rows * wordsInEachSample, cols1);
         }
             
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (Inputs(1)->FunctionValues().GetNumRows() % Inputs(0)->FunctionValues().GetNumCols() != 0)
-                throw invalid_argument("Mismatched dimension. rows in input1 must be multiples of cols in input0.");
+            if (isFinalValidationPass && Inputs(1)->GetNumRows() % Inputs(0)->GetNumCols() != 0)
+                InvalidArgument("Mismatched dimension. Rows in input1 must be multiples of cols in input0.");
 
-            int wordsInEachSample = Inputs(1)->FunctionValues().GetNumRows() / Inputs(0)->FunctionValues().GetNumCols();
+            int wordsInEachSample = Inputs(1)->GetNumRows() / Inputs(0)->GetNumCols();
 
-            FunctionValues().Resize(Inputs(0)->FunctionValues().GetNumRows() * wordsInEachSample, Inputs(1)->FunctionValues().GetNumCols());
+            Resize(Inputs(0)->GetNumRows() * wordsInEachSample, Inputs(1)->GetNumCols());
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs(); 
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
 
         bool UnitTest()
         {
@@ -485,17 +474,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nHidden = 3;
                 size_t nOutput = 3;
 
-                Inputs(0)->FunctionValues().Resize(nInput, nHidden);
+                Inputs(0)->Resize(nInput, nHidden);
                 Inputs(0)->FunctionValues().SetValue(1.0);
                 Inputs(1)->FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
                 Inputs(1)->FunctionValues().SwitchToMatrixType(DENSE, matrixFormatDense, false);
-                Inputs(1)->FunctionValues().Resize(nHidden, nOutput);
+                Inputs(1)->Resize(nHidden, nOutput);
                 Inputs(1)->FunctionValues().SetValue(0.0);
                 Inputs(1)->FunctionValues().SetValue(0, 0, 1.0);
                 Inputs(1)->FunctionValues().SetValue(1, 1, 2.0);
                 Inputs(1)->FunctionValues().TransferFromDeviceToDevice(CPUDEVICE, m_deviceId, true);
                 Inputs(1)->FunctionValues().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
-                FunctionValues().Resize(nInput, nOutput);
+                Resize(nInput, nOutput);
 
                 EvaluateThisNode(FrameRange());
 
@@ -512,7 +501,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 GradientValues().SetValue(1.0);
                 for (size_t i = 0; i < 2; i++)
                 {
-                    Inputs(i)->GradientValues().Resize(Inputs(i)->FunctionValues().GetNumRows(), Inputs(i)->FunctionValues().GetNumCols());
+                    Inputs(i)->GradientValues().Resize(Inputs(i)->GetNumRows(), Inputs(i)->GetNumCols());
                     Inputs(i)->GradientValues().SetValue(0);
                 }
                 for (size_t i = 0; i < 2; i++)
@@ -613,16 +602,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             mTmp.SetValue(Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout)));
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (!(Inputs(0) == nullptr))    // TODO: Base::Validate() will fail on NULL inputs
-            {
-                size_t rows0 = Inputs(0)->FunctionValues().GetNumRows(), cols0 = Inputs(0)->FunctionValues().GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+            if (rows0 > 0 && cols0 > 0) // TODO: is this check needed?
+                Resize(Inputs(0));
 
-                if (rows0 > 0 && cols0 > 0) FunctionValues().Resize(rows0, cols0);
-            }
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }

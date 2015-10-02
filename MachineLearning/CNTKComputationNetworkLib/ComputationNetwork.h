@@ -7,26 +7,20 @@
 #pragma once
 
 // TODOs:
-//  - add a runtime check that nodes deriving from ComputeNodeNonLooping may never participate in a loop
-//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, instead change Node::SetFunctionAndGradientMBSize()
-//    to infer the dimensions, and call it during the Evaluate() loop (maybe directly from EvaluateThisNode(FrameRange()), i.e. eliminate it as well or replace the virtual by a helper function)
-//    For moving into EvaluateThisNode directly,
-//    PRO:
-//     - doing it for every call allows to dynamically grow MB and layout frame-by-frame, allowing sophisticated models and ways
-//     - more code gone from individual nodes
-//     - the (void) version already does that, sneakily through Matrix. Need a unified approach.
-//    CON:
-//     - if moved out from Validate(), errors are not caught during validation (early failure is valuable).
-//       Although Validate() can check dimensions other than MB size, while MB-size consistency itself is ensured through layout sharing (and the Matrix functions as a last resort)
-//     - inside a loop
-//        - it has to check for every frame, although only the first frame really will make a difference
-//        - it's weird if it is called for a singe frame to update the size for the whole minibatch
-//  - fold EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
-//     - PROBLEM: Matrix sneakily resizes result matrices, but only for EvaluateThisNode(void), not for frame-wise ones. Need a unified solution.
-//  - also eliminate EvaluateThisNodeGivenInputs()--that stuff is at least as much responsibility of Network
-//    We can also replace IsNodeReqMultiSeqHandling() to a check against the node set itself inside Network --one more Node member gone (and a weird, unneccessary one at that)
-//  - finally, revise constructors, merge by means of default parameters
+//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, it should already be covered by Node::UpdateFunctionAndGradientMBSize() which is called from inside the Eval loop
+//  - complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
+//  - apply 
 // => many ComputationNode implementations only have two functions EvaluateThisNode(FrameRange) and ComputePartial(), as it was meant to be!
+//  - revise constructors, merge by means of default parameters
+//  - add a runtime check that nodes deriving from ComputeNodeNonLooping may never participate in a loop
+//  - ClassbasedCrossEntropyWithSoftmax::EvaluateThisNodeS()'s calls to MaskMissingColumnsToZero() are likely wrong.
+//    Need to understand what this does, then implement it correctly w.r.t. MBLayout.
+//  - CRFNode::ComputeInputPartial() has strange usage of layout which seems incorrect structurally (swapping id and t).
+//  - BUGBUG: All frameRange.Check() expressions are wrong that operate on children, since the wrong layout pointer is passed in (for most nodes it is identical to the correct one though).
+//    This will get fixed as we remove these Check() expressions when absorbing EvaluateThisNodeS().
+//  - verify that all readers return layouts
+//  - BUGBUG (in the future): Once we have > 1 layout in the system, all nodes must compare their actual layouts upon Evaluate().
+//    Example: TimeReverse must create a new layout. A second TimeReverse ideally would revert back, but can't know. Hence, all consumers of layouts must compare upon Evaluate().
 
 // The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
 
@@ -56,17 +50,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class ComputationNetwork : public ScriptableObjects::Object, public ScriptableObjects::HasToString, public ScriptableObjects::IConfigRecord
 {
 protected:
-    // TODO: comment: what info is stored here? For what?
+    // recurrent loops in CNTK are like little local ComputationNetworks, but stored in a completely separate set of structures
+    // This structure stores that little sub-network.
     struct RecurrentInfo
     {
-        std::vector<ComputationNodeBasePtr> m_recurrentNodes;
+        std::vector<ComputationNodeBasePtr> m_recurrentNodes;               // all nodes involved in thisloop
         std::vector<ComputationNodeBasePtr> m_recurrentNodesForForward;
         ComputationNodeBasePtr m_sourceNode;
-        int m_loopId;
+        int m_loopId;                                                       // the loop id (index in xxx array)
         bool m_completedGradient;
         bool m_completedEvaluate;
         bool m_loopClosed;
-        bool m_isForwardLoop; 
+        bool m_isForwardLoop;                                               // true if left to right (t=0..T-1), false otherwise (t=T-1..0)
 
         void Reset()
         {
@@ -75,8 +70,9 @@ protected:
             m_loopClosed = false;
         }
 
+#if 0
         // TODO: why is this not a copy constructor or assignment operator?
-        void Copy(const RecurrentInfo& src)
+        void Copy(const RecurrentInfo & src)
         {
             m_recurrentNodes = src.m_recurrentNodes;
             m_recurrentNodesForForward = src.m_recurrentNodesForForward;
@@ -85,7 +81,9 @@ protected:
             m_completedGradient = src.m_completedGradient;
             m_completedEvaluate = src.m_completedEvaluate;
             m_loopClosed = src.m_loopClosed;
+            // m_isForwardLoop??
         }
+#endif
     };
 
 public:
@@ -566,17 +564,20 @@ public:
     // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
     // TODO: pass a set of nodes instead of only one
     // TODO: rename to ForwardProp()? To make it very clear?
+    // TODO: big stuff like this should be in the CPP
+    // This calls EvaluateThisNode() on all nodes in order of data flow through the network.
+    // By default, the network is applied concurrently on all frames in a minibatch in parallel (a "map" operation)
+    // Recurrent loops deviate:
+    //  - a recurrent loop is the loop of nodes that make up computation for one time step (e.g. Times -> Plus -> Sigmoid -> Delay)
+    //  - these must be executed frame by frame rather than as a map
+    //  - such a loop is treated as if they were a little nested network; this is done inside here
+    //  - these little nested networks are defined in m_recurrentInfo[]
     void Evaluate(const ComputationNodeBasePtr rootNode)
     {
-        // We have a matching layout structure that matches pMBLayout in number of sequences while not having any flags set.
-        // This is used for nodes that do not need recurrent processing, but can be done in batch.
-        // TODO: Does it harm if we have flags, for those that can be done in batch? I.e. why don't we just always provide flags?
-        //m_pMBNoLayout->Resize(m_pMBLayout->GetNumParallelSequences(), 0);   // TODO: this is not nice, but we currently have no trigger to detect changes in layout
-
         // prepare to compute with the subnetwork that this rootNode depends on, including
         //  - auto-detecting recurrent loops
-        //  - calling Validate() on all nodes, which, a.o, resizes the matrices
-        //  - ...more stuff
+        //  - collect input and learnable nodes
+        //  - calling Validate() on all nodes lazily, which sizes all matrices (column dimensions get updated to MB size)
         BuildAndValidateSubNetwork(rootNode);
 
         // determines order of evaluation, such that children get evaluated before their parent nodes
@@ -604,23 +605,30 @@ public:
 
             if (recInfo && IsFuncValueOlderThanInputs(recInfo->m_recurrentNodesForForward) && !recInfo->m_completedEvaluate)
             {
-                const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
                 // node participates in a recurrent loop: process the loop frame by frame
-                // TODO: move this out of the loop, always do it; gives nodes change to update internal cached layout
-                //       ^^ not that simple, since some should not be scaled, such as parameters and criterion nodes
-                for (auto & nodeIter : recurrentNodes)
-                    nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize);
+                const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
 
-                const size_t T = m_actualMBSize / GetNumParallelSequences();
+                // get layout associated with this loop
+                auto pMBLayout = recurrentNodes[0]->GetMBLayout();
+                for (auto & nodeIter : recurrentNodes)  // layout must be shared by all nodes in the loop
+                {
+                    if (!pMBLayout || nodeIter->GetMBLayout() != pMBLayout)
+                        LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
+                                   nodeIter->NodeName().c_str(), recurrentNodes[0]->NodeName().c_str());
+                }
 
-                // for every time step run through all nodes in this particular loop
+                // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
                 if (recInfo->m_isForwardLoop)
                 {
-                    for (size_t t = 0; t < T; t ++)
+                    // note: the number of time steps may increase as we go along, e.g. for Decoder networks that decide the end based on network output
+                    // TODO: ^^ that's actually not yet implemented, but we can already be prepared for it
+                    // TODO: this loop should be controlled by an iterator, under control of the main Delay node in this loop.
+                    for (size_t t = 0; t < pMBLayout->GetNumTimeSteps(); t++)
                     {
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
-                            (*nodeIter)->EvaluateThisNodeGivenInputs(t);
+                            (*nodeIter)->UpdateFunctionAndGradientMBSize();
+                            (*nodeIter)->EvaluateThisNode(FrameRange(t));
                             if (IsNodeReqMultiSeqHandling(*nodeIter))
                                 (*nodeIter)->MaskMissingValuesColumnsToZero(t);
                             (*nodeIter)->UpdateEvalTimeStamp();
@@ -629,11 +637,12 @@ public:
                 }
                 else
                 {
-                    for (size_t t = T - 1; t --> 0; )
+                    for (size_t t = pMBLayout->GetNumTimeSteps() - 1; t--> 0;)
                     {
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
-                            (*nodeIter)->EvaluateThisNodeGivenInputs(t);
+                            (*nodeIter)->UpdateFunctionAndGradientMBSize();
+                            (*nodeIter)->EvaluateThisNode(FrameRange(t));
                             if (IsNodeReqMultiSeqHandling(*nodeIter))
                                 (*nodeIter)->MaskMissingValuesColumnsToZero(t);
                             (*nodeIter)->UpdateEvalTimeStamp();
@@ -654,9 +663,10 @@ public:
 #if DUMPOUTPUT
                 fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
 #endif
+                // evaluate the node for all frames concurrently (map)
                 // we manage time stamp here so that derived classes don't need to worry about it
-                // TODO: is this the whole-batch evaluation?
-                (*nodeIter)->EvaluateThisNodeGivenInputs(); 
+                (*nodeIter)->UpdateFunctionAndGradientMBSize();
+                (*nodeIter)->EvaluateThisNode(FrameRange());
                 if (IsNodeReqMultiSeqHandling(*nodeIter))
                     (*nodeIter)->MaskMissingValuesColumnsToZero();
                 (*nodeIter)->UpdateEvalTimeStamp();
@@ -665,7 +675,7 @@ public:
     }
 
     // propagate the features' MB size to all nodes of the network
-    // TODO: only resizes nodes participating in recurrent loops ... but can't just resize all since that would also hit, for example, parameter or criterion nodes
+    // TODO: This function should go. Resizing is now part of Validate() and EvaluateThisNode().
     size_t SetActualMiniBatchSizeFromFeatures()
     {
         m_actualMBSize = DetermineActualMBSizeFromFeatures();
@@ -680,7 +690,7 @@ public:
         // resize function values and gradients of everything in m_recurrentInfo
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
-                nodeIter->SetFunctionAndGradientMBSize(m_actualMBSize);
+                nodeIter->UpdateFunctionAndGradientMBSize(m_actualMBSize);
 
         return m_actualMBSize;
     }
@@ -799,7 +809,12 @@ public:
             // --- second, do whole-batch operation if not recurrent
 
             if (IsNodeReqMultiSeqHandling(*nodeIter))
+            {
+                // batch is done only for feed-forward nodes
+                if ((*nodeIter)->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
+                    LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
                 (*nodeIter)->MaskMissingGradientColumnsToZero();
+            }
             (*nodeIter)->ComputeGradientForChildren();
         }
 
@@ -1558,12 +1573,12 @@ protected:
         return vector<std::vector<ComputationNodeBasePtr>*> { &m_features, &m_labels, &m_finalCriteria, &m_evalNodes, &m_outputNodes, &m_pairNodes, &m_requestNodesMultiSeqHandling };
     }
 
-    std::vector<RecurrentInfo> m_recurrentInfo;     // [index--TODO: comment what this is indexed with]
+    std::vector<RecurrentInfo> m_recurrentInfo;     // [loopId] each entry is one recurrent loop (local little network that implements a recurrence)
 
     // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
     MBLayoutPtr m_pMBLayout;    // note that this must be installed before doing anything that needs it (default leaves a nullptr)
-    MBLayoutPtr m_pMBNoLayout;  // this alternative one is passed when no layout is available/should be used
+    //MBLayoutPtr m_pMBNoLayout;  // this alternative one is passed when no layout is available/should be used
 
     size_t m_actualMBSize;      // current MB size in columns --note: this is not #frames, if we have multiple parallel sequences, cf. MBLayout
 

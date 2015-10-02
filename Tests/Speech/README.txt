@@ -21,10 +21,15 @@ bin/cntk configFile=Tests/Speech/QuickE2E/cntk.config RunDir=Tests/Speech/RunDir
 
 # TODO: can stderr refer to RunDir?
 
---- LSTM:
+--- LSTM\Truncated:
 
 WORKING DIR: $(SolutionDir)Tests\Speech\Data
-COMMAND:     configFile=$(SolutionDir)Tests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\LSTM\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\LSTM  NdlDir=$(SolutionDir)Tests\Speech\LSTM  DataDir=$(SolutionDir)Tests\Speech\Data  DeviceId=Auto
+COMMAND:     configFile=$(SolutionDir)Tests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\LSTM\Truncated\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\LSTM\Truncated  NdlDir=$(SolutionDir)Tests\Speech\LSTM  DataDir=$(SolutionDir)Tests\Speech\Data  DeviceId=Auto
+
+--- LSTM\FullUtterance:
+
+WORKING DIR: $(SolutionDir)Tests\Speech\Data
+COMMAND:     configFile=$(SolutionDir)Tests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\LSTM\FullUtterance\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\LSTM\FullUtterance  NdlDir=$(SolutionDir)Tests\Speech\LSTM  DataDir=$(SolutionDir)Tests\Speech\Data  DeviceId=Auto Truncated=false speechTrain=[reader=[nbruttsineachrecurrentiter=1]] speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]]  speechTrain=[SGD=[numMBsToShowResult=1]]
 
 --- MNIST:
 

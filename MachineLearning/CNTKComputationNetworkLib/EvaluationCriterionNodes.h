@@ -31,7 +31,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_maxIndexes0(deviceId), m_maxIndexes1(deviceId), m_maxValues(deviceId)
         { }
 
-        void Reset()
+        void Reset()        // TODO: what is this??
         {
         }
 
@@ -49,8 +49,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             inputFunctionValues0.VectorMax(maxIndexes0, maxValues, true);
             inputFunctionValues1.VectorMax(maxIndexes1, maxValues, true);
-            curNode->MaskMissingColumnsToZero(maxIndexes0); //we are fine since it will only be called with full minibatch
-            curNode->MaskMissingColumnsToZero(maxIndexes1);
+            curNode->MaskMissingColumnsToZero(maxIndexes0, Inputs(0)->GetMBLayout());   // we are fine since it will only be called with full minibatch
+            curNode->MaskMissingColumnsToZero(maxIndexes1, Inputs(1)->GetMBLayout());
             functionValues.AssignNumOfDiff(maxIndexes0, maxIndexes1);
         #if NANCHECK
             functionValues.HasNan("ErrorPrediction");
@@ -60,45 +60,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
             size_t index = 0;
             // TODO: use dynamic_pointer_cast instead
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
             }
 
             index = 1;
             if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
-                size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0? Inputs(1-index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
-                size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0? Inputs(1-index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
-                Inputs(index)->FunctionValues().Resize(rows, cols);
+                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                Inputs(index)->Resize(rows, cols);
                 m_maxIndexes0.Resize(1,cols);
                 m_maxIndexes1.Resize(1,cols);
                 m_maxValues.Resize(1,cols);
             }
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements())
-                LogicError("ErrorPrediction operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
+            //    LogicError("ErrorPrediction operation: one of the operands has 0 elements.");
 
-            if (((!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows()  &&  //match size
-                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()) )) && Inputs(0)->GetLoopId() < 0)
-            {
-                LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
-            }       
+            if (isFinalValidationPass)
+                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
+                {
+                    LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
+                }       
 
-            FunctionValues().Resize(1,1);
+            Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
 
             // resize the temporaries to their proper size
-            size_t cols = Inputs(0)->FunctionValues().GetNumCols();
+            size_t cols = Inputs(0)->GetNumCols();
             m_maxIndexes0.Resize(1,cols);
             m_maxIndexes1.Resize(1,cols);
             m_maxValues.Resize(1,cols);

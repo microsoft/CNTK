@@ -170,17 +170,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /// need to feed in pseudo label data, which tells the decoder what is the beginning
         /// and ending output symbol. these symbols will constrain the search space
-        virtual void /*ComputationNodeBase::*/Validate() override
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            Base::Validate();
+            Base::Validate(isFinalValidationPass);
 
-            if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&  // position dependent and pair scores have same number of labels
-                Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
-                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() && // position dependent and pair scores have the same observation numbers
-                Inputs(2)->FunctionValues().GetNumCols() == Inputs(2)->FunctionValues().GetNumRows()))
-            {
-                LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
-            }
+            if (isFinalValidationPass)
+                if (!(Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows() &&  // position dependent and pair scores have same number of labels
+                    Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
+                    Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
+                    Inputs(2)->GetNumCols() == Inputs(2)->GetNumRows()))
+                {
+                    LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
+                }
+            // BUGBUG: Not resizing FunctionValues?
 
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();

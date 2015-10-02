@@ -421,6 +421,8 @@ template<class ElemType>
             for (int i = 0; i < LRSize; i++)
             {
                 m_learningRatesPerSample[i] = learningRatesPerMB[i] / m_mbSize[i];
+                // Note: this may get further updated w.r.t. unit-gain momentum
+                // BUGBUG: No, it's not! But it should. Ugh!!
             }
             m_needToNormalizeLRByParallUtterance = true;
         }
@@ -453,10 +455,11 @@ template<class ElemType>
                     InvalidArgument("momentumPerMB must be in [0, 1).");
                 m_momentumPerSample[i] = (float)pow(momentumPerMB[i], 1.0 / m_mbSize[i]); 
             }
+            // BUGBUG: This must also compensate for non-unit gain interpretation of momentum
 
             m_needToNormalizeMomentumByParallUtterance = true;
         }
-        else
+        else    // default: momentumPerMB = 0.9 assuming MB size 256
         {
             int momentumVectorSize = m_mbSize.size();
             m_momentumPerSample.resize(momentumVectorSize);
@@ -697,16 +700,22 @@ template<class ElemType>
         auto & criterionNodes = GetTrainCriterionNodes(net);
         auto & evaluationNodes = GetEvalCriterionNodes(net);
 
-        std::map<std::wstring, Matrix<ElemType>*>* inputMatrices = new std::map<std::wstring, Matrix<ElemType>*>();
-        for (size_t i = 0; i < featureNodes.size(); i++)
-        {
-            // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
-            (*inputMatrices)[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
-        }
+        // give the layout something to validate with (some code below validates the network before actually receiving data)
+        // Note: yak!
 
-        for (size_t i = 0; i < labelNodes.size(); i++)
+        // get feature and label nodes into an array of matrices that will be passed to GetMinibatch()
+        // TODO: instead, remember the nodes directly, to be able to handle both float and double nodes; current version will crash for mixed networks
+        std::map<std::wstring, Matrix<ElemType>*>* inputMatrices = new std::map<std::wstring, Matrix<ElemType>*>();
+        for (size_t pass = 0; pass < 2; pass++)
         {
-            (*inputMatrices)[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->FunctionValues();
+            auto & nodes = (pass == 0) ? featureNodes : labelNodes;
+            for (size_t i = 0; i < nodes.size(); i++)
+            {
+                auto & node = nodes[i];
+                auto * functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues();
+                assert(functionValues->GetNumCols() == net.GetMBLayoutPtr()->GetNumTimeSteps());
+                (*inputMatrices)[node->NodeName()] = functionValues;
+        }
         }
 
         //get hmm file for sequence training
@@ -718,6 +727,7 @@ template<class ElemType>
             auto  hmm = node->gethmm();
             trainSetDataReader->GetHmmData(hmm);
         }
+
         // used for KLD regularized adaptation. For all other adaptation techniques
         // use MEL to edit the model and using normal training algorithm
         std::vector<ComputationNodeBasePtr> refFeatureNodes;
@@ -736,14 +746,15 @@ template<class ElemType>
 
         //initializing weights and gradient holder
         //only one criterion so far TODO: support multiple ones?
+        // BUGBUG: fails here in validation--MBLayout not set yet
         auto & learnableNodes = net.LearnableNodes(criterionNodes[0]);
         std::list<Matrix<ElemType>> smoothedGradients;
 
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
         {
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-            smoothedGradients.push_back(Matrix<ElemType>(node->FunctionValues().GetNumRows(),
-                                                         node->FunctionValues().GetNumCols(),
+            smoothedGradients.push_back(Matrix<ElemType>(node->GetNumRows(),
+                                                         node->GetNumCols(),
                                                          net.GetDeviceId()));
         }
 
@@ -824,7 +835,7 @@ template<class ElemType>
 
         // --- MAIN EPOCH LOOP
 
-        //sequence trainning
+		//sequence trainning
         if (isSequenceTrainingCriterion)
             ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hsmoothingWeight, m_frameDropThresh, m_doreferencealign);
 
@@ -1158,7 +1169,6 @@ template<class ElemType>
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0);
         else                                    // using only one epoch
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, m_epochSize);
-
 #if 1
         size_t actualMBSize;
         while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSize))
@@ -1202,7 +1212,7 @@ template<class ElemType>
     double SGD<ElemType>::SearchForBestLearnRate(ComputationNetwork& net,
                                     ComputationNetwork& refNet,
                                     const ComputationNodeBasePtr refNode, const int epochNumber,
-                                    const double curLearnRate,
+                                  const double curLearnRate,
                                     IDataReader<ElemType>* trainSetDataReader,
                                     const std::vector<ComputationNodeBasePtr> & featureNodes,
                                     const std::vector<ComputationNodeBasePtr> & labelNodes,
@@ -1212,7 +1222,7 @@ template<class ElemType>
                                     const std::list<ComputationNodeBasePtr> & learnableNodes,
                                     std::list<Matrix<ElemType>>& smoothedGradients,
                                     const bool learnRateInitialized,
-                                    const double largestPrevLearnRatePerSample)
+                                  const double largestPrevLearnRatePerSample)
     {
         double epochCriterion = std::numeric_limits<double>::infinity();
         double prevCriterion = std::numeric_limits<double>::infinity();
@@ -1965,7 +1975,7 @@ template<class ElemType>
 
                     if (epochNumber > 0 || (int) epochSize > 0)
                     {
-                        string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of %d]: SamplesSeen = %d; TrainLossPerSample = " +
+                       string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of %d]: SamplesSeen = %d; TrainLossPerSample = " +
                                               GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
                         fprintf(stderr, formatString.c_str(),
                                 prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
@@ -1990,7 +2000,7 @@ template<class ElemType>
 
                     double totalTimePerSample = (1000.0 * totalTimeInMBs) / numSamplesLastMBs;
                     string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 5, totalTimeInMBs) + "s; TotalTimePerSample = " +
-                                          GeneratePaddedFloatOrExpFormat(0, 5, totalTimePerSample) + "ms; SamplesPerSecond = %d\n";
+                                   GeneratePaddedFloatOrExpFormat(0, 5, totalTimePerSample) + "ms; SamplesPerSecond = %d\n";
                     fprintf(stderr, formatString.c_str(),
                             totalTimeInMBs, totalTimePerSample,
                             static_cast<int>(numSamplesLastMBs / totalTimeInMBs));
@@ -2502,8 +2512,8 @@ template<class ElemType>
             for (size_t itry = 0; itry < min((size_t)50, node->FunctionValues().GetNumElements()); itry++)
             {
                 /// no support to sparse matrix yet
-                int irow = (int) fmod(rand(), node->FunctionValues().GetNumRows() - 1);
-                int icol = (int) fmod(rand(), node->FunctionValues().GetNumCols() - 1);
+                int irow = (int) fmod(rand(), node->GetNumRows() - 1);
+                int icol = (int) fmod(rand(), node->GetNumCols() - 1);
                 irow = max(0, irow);
                 icol = max(0, icol);
 

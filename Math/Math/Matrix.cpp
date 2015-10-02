@@ -774,31 +774,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return slice;
     }
 
-    // special convenience function to apply ColumnSlice() to getting a frame range
-#if 0
-    // It assumes that columns are frames, and returns a sub-range.
-    // TODO: decide whether this belongs here or elsewhere
-    // TODO: remove this one, as it does not take #slices explicitly, which will be needed in the future
-    template<class ElemType>
-    Matrix<ElemType> Matrix<ElemType>::FrameSlice(const FrameRange & frameRange
-        // TODO: temporary only until this has been tested to work:
-        , size_t expectedStartColumn, size_t expectedNumCols
-        ) const
-    {
-        if (frameRange.IsAllFrames()) return ColumnSlice(0, GetNumCols());  // TODO: can we just return a reference to ourselves? --ownership problem
-        // TODO: temporary only until this has been tested to work:
-        if (expectedStartColumn != frameRange.StartColumn() || expectedNumCols != frameRange.NumCols())
-            LogicError("FrameSlice: FrameRange object gives different range than original explicit code. Logic is borked.");
-        return ColumnSlice(frameRange.StartColumn(), frameRange.NumCols());
-    }
-#endif
-    template<class ElemType>
-    Matrix<ElemType> Matrix<ElemType>::FrameSlice(const FrameRange & frameRange, const shared_ptr<MBLayout> & pMBLayout) const
-    {
-        if (frameRange.IsAllFrames()) return ColumnSlice(0, GetNumCols());  // TODO: can we just return a reference to ourselves? --ownership problem
-        return ColumnSlice(frameRange.StartColumn(pMBLayout), frameRange.NumCols(pMBLayout));
-    }
-
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
     {            

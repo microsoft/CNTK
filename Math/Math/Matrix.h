@@ -152,10 +152,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
 
-        // special convenience function to apply ColumnSlice() to getting a frame range
-        //Matrix<ElemType> FrameSlice(const struct FrameRange & frameRange, size_t expectedStartColumn, size_t expectedNumCols) const;
-        Matrix<ElemType> FrameSlice(const struct FrameRange & frameRange, const shared_ptr<struct MBLayout> & pMBLayout) const;
-
         // difference between AssignColumnSlice and SetColumnSlice 
         // AssignColumnSlice :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, startColumn: startColumn+numCols-1) 
         // SetColumnSlice    :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, 0: startColumn+numCols-1) 
@@ -176,10 +172,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: should Reshape() return a new Matrix object that contains a reference to the original?
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
-        /// similarly to the repmat operation in matlab or octave
+
+        // update number of columns
+        // TODO: a future version may want to enforce retaining the content, to allow dynamically growing layouts column by column (when size is not known upfront)
+        void ResizeColumns(const size_t numCols) { Resize(GetNumRows(), numCols); }
+
+        // similarl to the repmat operation in matlab or octave
         static Matrix<ElemType> RepMat(const Matrix<ElemType>& frmMat, const size_t rows, const size_t cols);
+
         size_t GetAllocatedSize() const;
-        void Reset(); //reset for sparse matrix
+        void Reset(); // reset for sparse matrix
 
         const ElemType operator() (const size_t row, const size_t col) const;
         ElemType& operator() (const size_t row, const size_t col);
@@ -485,13 +487,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - a column-wise OR of those flags for fast testing entire time steps at once
     // This object allocates its storage lazily, i.e. if there are no flags ever set, no memory is allocated. This is transparent to the caller.
     // Note: With truncated BPTT, it is possible to have sequential data, yet not a single flag set in a minibatch (if all frames are sequence-internal ranges).
-    // TODO: move this to an appropriate place and name it properly
+    // Contract between ComputationNode, ComputationNetwork, and MBLayout:
+    //  - if a node has no MBLayout, m_{function,gradient}Values are not samples (they are not activations or input data), but e.g. model parameters
+    //  - ComputationNode::GetNumCols() == MBLayout::GetNumTimeSteps() * MBLayout::GetNumParallelSequences()
+    //  - ComputationNetwork ensures that m_{function,gradient}Values are allocated correctly before calling EvaluateThisNode() on a node
+    // TODO: move this to an appropriate place and name it properly. This class has no relationship with Matrix
     // NOTE: This class represents an ongoing abstraction of an originally distributed/code-duped way of defining and accessing the MB layout.
     //       Some code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
     //       Some wackiness below is explained by this.
     // TODO: frame-randomized MBs are now represented as one stream of many frames. This is wrong; they should be one-frame utterances with many streams. Once we fully abstract out Data access, this can be changed easily.
     struct MBLayout
-    {   
+    {
         typedef std::shared_ptr<MBLayout> MBLayoutPtr;
 
         MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { Init(1, 0, false); }
@@ -519,6 +525,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t GetNumTimeSteps()         const { return m_numTimeSteps; }
         size_t GetNumParallelSequences() const { return m_numParallelSequences; }   // note: if initialized as a dummy, m_numParallelSequences is set to 1
+
+        // how many columns the MB should be allocated for
+        size_t GetNumCols()              const { return GetNumTimeSteps() * GetNumParallelSequences(); }
 
     private:
         // test whether we have not allocated anything (will also return true if the minibatch is empty)
@@ -658,42 +667,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     struct FrameRange
     {
         const size_t timeIdxInSeq;              // start frame
-        const size_t samplesInRecurrentStep;    // number of samples in this step       --BUGBUG: this should be part of MBLayout, not FrameRange
+
         // can construct from a single size_t -> a single-frame range
-        //FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(0)/*FIX THIS*/{}
-        FrameRange(size_t timeIdxInSeq, size_t samplesInRecurrentStep) : timeIdxInSeq(timeIdxInSeq), samplesInRecurrentStep(samplesInRecurrentStep){}
+        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq){}
+
         // or without arguments -> entire minibatch / no frame-range
-        FrameRange() : timeIdxInSeq(0), samplesInRecurrentStep(SIZE_MAX/*all frames (map)*/) {}
+        FrameRange() : timeIdxInSeq(SIZE_MAX) {}
+
         // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
         // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).
         size_t t() const { EnsureNotAllFrames(); return timeIdxInSeq; }
         // multi-frame slice case: these two get startFrame and numFrames
-        size_t StartColumn() const { EnsureNotAllFrames(); return timeIdxInSeq * samplesInRecurrentStep; }
-        size_t NumCols() const { EnsureNotAllFrames(); return samplesInRecurrentStep; }
+        //size_t StartColumn() const { EnsureNotAllFrames(); return timeIdxInSeq * samplesInRecurrentStep; }
+        //size_t NumCols() const { EnsureNotAllFrames(); return samplesInRecurrentStep; }
         // TODO: remove these ^^ two in favor of these vv
-        size_t StartColumn(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); VerifyMBLayout(pMBLayout); return timeIdxInSeq * pMBLayout->GetNumParallelSequences(); }
-        size_t NumCols(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); VerifyMBLayout(pMBLayout); return pMBLayout->GetNumParallelSequences(); }
-        bool IsAllFrames() const { return samplesInRecurrentStep == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
+        size_t StartColumn(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); return timeIdxInSeq * pMBLayout->GetNumParallelSequences(); }
+        size_t NumCols(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); return pMBLayout->GetNumParallelSequences(); }
+        bool IsAllFrames() const { return timeIdxInSeq == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
 
         const FrameRange & Check(size_t expectedStartColumn, size_t expectedNumCols, const shared_ptr<MBLayout> & pMBLayout) const
         {
-            if (!IsAllFrames() && (samplesInRecurrentStep != pMBLayout->GetNumParallelSequences() || expectedStartColumn != StartColumn(pMBLayout) || expectedNumCols != NumCols(pMBLayout)))
-                LogicError("FrameSlice: FrameRange object gives different range than original explicit code. Logic is borked.");
+            if (!IsAllFrames() && (expectedStartColumn != StartColumn(pMBLayout) || expectedNumCols != NumCols(pMBLayout)))
+                LogicError("FrameRange::Check: FrameRange object gives different range than original explicit code. Logic is borked.");
             return *this;
         }
     private:
-        FrameRange(const FrameRange & other);// : timeIdxInSeq(other.timeIdxInSeq), numFrames(other.numFrames) { }
+        FrameRange(const FrameRange & other);
         void operator=(const FrameRange &);
         void EnsureNotAllFrames() const
         {
             if (IsAllFrames())
                 LogicError("FrameRange::t() called when frame range refers to whole minibatch");
-        }
-        // TODO: this will go away once we remove samplesInRecurrentStep from this class
-        void VerifyMBLayout(const shared_ptr<MBLayout> & pMBLayout) const
-        {
-            if (pMBLayout->GetNumParallelSequences() != samplesInRecurrentStep)
-                LogicError("VerifyMBLayout: MBLayout inconsistent with local copy of samplesInRecurrentStep");
         }
     };
 
