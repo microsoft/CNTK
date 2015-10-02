@@ -17,10 +17,6 @@
 #include "msra_mgram.h"                 // for unigram scores of ground-truth path in sequence training
 
 #include "rollingwindowsource.h"        // minibatch sources
-#include "utterancesource.h"
-#ifdef _WIN32
-#include "readaheadsource.h"
-#endif
 #include "chunkevalsource.h"
 #define DATAREADER_EXPORTS
 #include "DataReader.h"
