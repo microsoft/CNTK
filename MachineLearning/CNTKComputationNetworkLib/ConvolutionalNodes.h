@@ -40,7 +40,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
-            m_tempMatrix(deviceId),
             m_kernelWidth(SIZE_MAX), m_kernelHeight(SIZE_MAX),
             // initialize to dummy values so we catch missing initialization
             m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX),
@@ -50,7 +49,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0) :
             Base(deviceId, name),
-            m_tempMatrix(deviceId),
             m_kernelWidth(kernelWidth), m_kernelHeight(kernelHeight),
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample),
             m_zeroPadding(zeroPadding), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
@@ -88,7 +86,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 node->m_maxTempMemSizeInSamples = m_maxTempMemSizeInSamples;
 
-                node->m_tempMatrix = m_tempMatrix;
+                *node->m_tempMatrix = *m_tempMatrix;
             }
         }
 
@@ -109,11 +107,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));   // BUGBUG: GetNumParallelSequences() must be from Inputs(1)
 
             if (inputIndex == 0)  //derivative with regard to the weight matrix
-                ComputeInputPartialOverWeight(sliceOutputGrad, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix, !frameRange.IsAllFrames());
+                ComputeInputPartialOverWeight(sliceOutputGrad, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix, !frameRange.IsAllFrames());
             else  // derivative with regard to the input feature
             {
                 Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-                ComputeInputPartialOverInputFeature(sliceOutputGrad, sliceInput1Grad, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
+                ComputeInputPartialOverInputFeature(sliceOutputGrad, sliceInput1Grad, Inputs(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix);
             }
         }
 
@@ -212,7 +210,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
+            EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix);
         }
 
     private:
@@ -334,7 +332,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
-            m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
+            m_tempMatrix->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -357,12 +355,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
         }
 
+        //request matrices needed to do node function value evaluation
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeEval(matrixPool);
+            RequestMatrixFromPool(m_tempMatrix, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            ReleaseMatrixToPool(m_tempMatrix, matrixPool);
+        }
+
     private:
         size_t m_kernelWidth, m_kernelHeight;
         size_t m_horizontalSubsample, m_verticalSubsample;
         bool m_zeroPadding;
 
-        Matrix<ElemType> m_tempMatrix; 
+        shared_ptr<Matrix<ElemType>> m_tempMatrix;
         size_t m_maxTempMemSizeInSamples; // can change during runtime
     };
 
