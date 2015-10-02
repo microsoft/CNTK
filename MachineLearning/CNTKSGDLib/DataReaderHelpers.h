@@ -14,6 +14,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     /*static*/ struct DataReaderHelpers
     {
+#if 0   // no longer needed since frame mode now uses N sequences with 1 frame each
         // decimate minibatch for parallelization--in frame mode
         // We sub-sample the individual frames (= matrix columns).
         template<class ElemType>
@@ -64,11 +65,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("DecimateMinibatch: Number of columns inconsistent with layout (%d vs. %d).", (int)nCols, (int)pMBLayout->GetNumTimeSteps());
             pMBLayout->Init(1, colEnd - colBegin, false);
         }
+#endif
 
         // decimate minibatch for parallelization--in utterance mode, also requires presence of parallel utterances
         // We sub-sample the utterances.
         template<class ElemType> 
-        static void DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb,  /* (input) matrix to be decimated */
+        static void DecimateMinibatchSequences(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb,  /* (input) matrix to be decimated */
                                                    int numprocs, int rank,                                    /* (input) rank info */
                                                    MBLayoutPtr pMBLayout)                                     // gets decimated as well
         {
@@ -158,8 +160,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (T * nOrigParallelUtts != nCols) // (should really not happen)
                     LogicError("ERROR: minibatch size %d, but with %d parallel utterances --layout information borked\n", nCols, nOrigParallelUtts);
 
-                // for RNN, T happens to be the size of truncated BPTT
-                // TODO: ^^ but we don't care here, do we?
                 if (sent_end == sent_start)
                 {
                     // should never happen, print debug info
@@ -248,10 +248,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // decimate if needed. Decimation happens in-place.
             if (wasDataRead && !useDistributedMBReading && useParallelTrain)
             {
-                if (pMBLayout->RequireSentenceSeg())   // decimate in sequences
-                    DecimateMinibatchWithSentences(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
-                else        // frame mode: decimate in frames
-                    DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
+                //if (pMBLayout->RequireSentenceSeg())   // decimate in sequences
+                    DecimateMinibatchSequences(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
+                //else        // frame mode: decimate in frames
+                //    DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
+                // Note: we decimate parallel sequences now also in frame mode, where one frame is one sequence
             }
 
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
