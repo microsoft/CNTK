@@ -1303,8 +1303,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_labelsBufferAllocatedMultiIO[id] = dim*m_mbSize*m_numberOfuttsPerMinibatch;
                     }
 
-                    /*if (channelIndex == 0)
-                        memset(m_labelsBufferMultiIO[id], 0, sizeof(ElemType)*dim*m_mbSize*m_numberOfuttsPerMinibatch);*/
                     for (size_t j = 0, k = startFr; j < framenum; j++, k++)
                     {
                         for (int d = 0; d < dim; d++)
@@ -1544,7 +1542,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (int k=0; k < actualmbsizeOri; k++)
                     {
                         assert(uids[k] < dim);
-                        //labels(uids[i], i) = (ElemType)1;
                         m_labelsBufferMultiUtt[i].get()[k*dim + uids[k] + m_labelsStartIndexMultiUtt[id + i*numOfLabel]] = (ElemType)1;
                     }
                 }
