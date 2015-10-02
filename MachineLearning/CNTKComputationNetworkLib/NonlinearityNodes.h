@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryMap(isFinalValidationPass);
-            m_gradient->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            //m_gradient->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
 #if 0
             //if (Inputs(0)->GetNumRows() == 0)
             //    LogicError("Nonlinearity operation: the input node has 0 element.");

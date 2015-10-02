@@ -22,6 +22,12 @@
 #include <limits>       // for NaN
 #include <malloc.h>
 
+#ifndef _MSC_VER
+#define NOEXCEPT noexcept
+#else
+#define NOEXCEPT
+#endif
+
 namespace msra { namespace math {
 
 // ===========================================================================
@@ -1256,7 +1262,7 @@ public:
 
     // Note: keyword "noexcept" was added so that stl vector first looks for
     //       the move constructor instead of the private copy constructor.
-    ssematrixstriperef (ssematrixstriperef && other) noexcept { move (other); }
+    ssematrixstriperef(ssematrixstriperef && other) NOEXCEPT{ move(other); }
 
     // getting a one-column sub-view on this
     ssematrixstriperef col (size_t j) { return ssematrixstriperef (*this, j, 1); }
