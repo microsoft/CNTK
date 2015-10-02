@@ -14,7 +14,7 @@ testCases:
     patterns:
       - ^Starting Epoch {{integer}}
       - learning rate per sample = {{float}}
-      - momentum = {{float,tolerance=.001%}}
+      - momentum = {{float,tolerance=.01%}}
 
   Epochs must be finished with expected results:
     patterns:
