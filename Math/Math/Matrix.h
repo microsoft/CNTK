@@ -726,6 +726,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("FrameRange::Check: FrameRange object gives different range than original explicit code. Logic is borked.");
             return *this;
         }
+        const FrameRange & Check_t(size_t expectedNumCols, const shared_ptr<MBLayout> & pMBLayout) const
+        {
+            if (!IsAllFrames())
+                Check(t() * expectedNumCols, expectedNumCols, pMBLayout);
+            return *this;
+        }
     private:
         void EnsureNotAllFrames() const
         {

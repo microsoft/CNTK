@@ -537,8 +537,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
@@ -677,8 +677,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             //only feature (input0) and output needs to be sliced
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
             EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues());
         }
@@ -833,7 +833,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.t() == 0)    // for first frame, check that we got all in memory  --TODO: is this comment correct? How about going backwards?
                 assert(ValueSlice(FrameRange(0, GetNumParallelSequences())).FrobeniusNorm() == DataSlice(m_memory, FrameRange(0, GetNumParallelSequences())).FrobeniusNorm());
                 //assert(FunctionValues().ColumnSlice(0, GetNumParallelSequences()), m_pMBLayout).FrobeniusNorm() == m_memory.ColumnSlice(0, GetNumParallelSequences()), m_pMBLayout).FrobeniusNorm());
-            FunctionValues().SetValue(DataSlice(m_memory, frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout)));
+            FunctionValues().SetValue(DataSlice(m_memory, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout)));
             assert(GetNumCols() == GetNumParallelSequences());
         }
 #endif
