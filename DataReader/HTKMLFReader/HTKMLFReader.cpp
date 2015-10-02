@@ -627,6 +627,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
         HTKMLFReader<ElemType>::~HTKMLFReader()
         {
+            // TODO: What does this do? All of these get destructed automatically, right?
             if (!m_featuresBufferMultiIO.empty())
             {
                 if (m_featuresBufferMultiIO[0] != nullptr)
@@ -927,10 +928,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (first)  // initialize MBLayout
                             {
                                 // entire minibatch is one utterance
-                                // TODO: in frame mode, do instead: m_pMBLayout->Init(actualmbsize, 1, false);
-                                m_pMBLayout->Init(1, actualmbsize, !m_framemode);
-                                if (m_pMBLayout->RequireSentenceSeg())       // in framemode we leave the flags empty
+                                if (m_framemode)
                                 {
+                                    //m_pMBLayout->Init(1, actualmbsize, false/*means not sequential*/);  // original
+                                    m_pMBLayout->Init(actualmbsize, 1, false/*means not sequential*/);
+                                }
+                                else
+                                {
+                                    m_pMBLayout->Init(1, actualmbsize, true/*sequential*/);
                                     m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
                                     m_pMBLayout->SetWithoutOr(0, actualmbsize - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
                                 }
@@ -1864,7 +1869,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
         void HTKMLFReader<ElemType>::CopyMBLayoutTo(MBLayoutPtr pMBLayout)
         {
-                pMBLayout->CopyFrom(m_pMBLayout);
+            pMBLayout->CopyFrom(m_pMBLayout);
+        }
+
+    template<class ElemType>
+        size_t HTKMLFReader<ElemType>::GetNumParallelSequences()
+        {
+            if (!m_framemode)
+                if (m_numberOfuttsPerMinibatch != m_pMBLayout->GetNumParallelSequences())
+                    LogicError("HTKMLFReader: Number of parallel sequences in m_pMBLayout did not get set to m_numberOfuttsPerMinibatch.");
+            return m_pMBLayout->GetNumParallelSequences();  // (this function is only used for validation anyway)
         }
 
 

@@ -21,6 +21,8 @@
 //  - BUGBUG (in the future): Once we have > 1 layout in the system, all nodes must compare their actual layouts upon Evaluate().
 //    Example: TimeReverse must create a new layout. A second TimeReverse ideally would revert back, but can't know. Hence, all consumers of layouts must compare upon Evaluate().
 //  - more informative CUDA errors (show original error, machine name, and card id; maybe even a time stamp), to better be able to handle hardware issues
+//  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
+//  - BUGBUG: DecimateMinibatch() must be changed w.r.t. new frame (Ha! It can just go away!!))-rand layout; also UCIFastReader
 
 // The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
 
