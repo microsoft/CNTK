@@ -66,8 +66,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::invalid_argument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
     }
 
-template<class ElemType>
-    SGD<ElemType>::SGD(const ConfigParameters& configSGD)
+    template<class ElemType>
+    SGDParams::SGDParams(const ConfigParameters& configSGD, ElemType/*for type deduction*/)
     {
         ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB", "");
         floatargvector learningRatesPerMB = learningRatesPerMBStr;
@@ -138,8 +138,8 @@ template<class ElemType>
         double clippingThresholdPerSample = configSGD("clippingThresholdPerSample", "1#INF");
 
         //sequence training
-        ElemType hsmoothingWeight = configSGD("hsmoothingWeight", "0.95");
-        ElemType frameDropThresh = configSGD("frameDropThresh", "1e-10");
+        double hsmoothingWeight = configSGD("hsmoothingWeight", "0.95");
+        double frameDropThresh = configSGD("frameDropThresh", "1e-10");
         bool doReferenceAlign = configSGD("doReferenceAlign", "false");
         ConfigArray dropoutRatesStr = configSGD("dropoutRate", "0.0");
         floatargvector dropoutRates = dropoutRatesStr;
@@ -180,16 +180,67 @@ template<class ElemType>
 
         if (doGradientCheck && sizeof(ElemType) != sizeof(double))
             LogicError("Gradient check needs to use precision = double");
-        m_doUnitTest = configSGD("unittest", "false");
 
         bool validateAfterModelReloading = configSGD("validateAfterModelReloading", "true");
 
         bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
 
+        // TODO: the number of parameters of this function is waaay to little!
+        // TODO: it may be easier to write the values directly into the members
+        *this = SGDParams(learningRatesPerMB,
+                          learningRatesPerSample,
+                          mbSize,
+                          truncated,
+                          epochSize,
+                          maxEpochs,
+                          modelPath,
+                          momentumPerMB,
+                          momentumPerSample,
+                          gradientClippingWithTruncation,
+                          clippingThresholdPerSample,
+                          autoAdjustLRType,
+                          increaseLearnRateIfImproveMoreThan,
+                          learnRateIncreaseFactor,
+                          reduceLearnRateIfImproveLessThan,
+                          continueReduce,
+                          learnRateDecreaseFactor,
+                          dropoutRates,
+                          loadBestModel,
+                          numMiniBatch4LRSearch,
+                          numPrevLearnRates,
+                          numBestSearchEpoch,
+                          traceLevel,
+                          numMBsToShowResult,
+                          numMBsToCUDAProfile,
+                          maxTempMemSizeInSamplesForCNN,
+                          gUpdateInfo,
+                          keepCheckPointFiles,
+                          adaptationRegType,
+                          adaptationRegWeight,
+                          trainCriterionNodeName,
+                          evalCriterionNodeName,
+                          doGradientCheck,
+                          gradientCheckSigDigit,
+                          validateAfterModelReloading,
+                          rpi,
+                          learnRateAdjustInterval,
+                          UsingAllDataForPreComputedNode,
+                          needAveMultiplier,
+                          L2RegWeight,
+                          L1RegWeight,
+                          autoAdjustMinibatch,
+                          minibatchSizeTuningFrequency,
+                          minibatchSizeTuningMax,
+                          useCVSetControlLRIfCVExists,
+                          useEvalCriterionControlLR,
+                          minibatchSearchCriterionErrorMargin,
+                          hsmoothingWeight, frameDropThresh, doReferenceAlign);
+
+        // BUGBUG: these are not passed to Init()
+        m_doUnitTest = configSGD("unittest", "false");
+
         // Parallel training
         m_parallelizationMethod = ParallelizationMethod::None;
-        m_distGradAgg = nullptr;
-        m_gradHeader = nullptr;
         m_numGradientBits = 32;
         m_zeroThresholdFor1Bit = true;
         m_enableDistributedMBReading = false;
@@ -222,112 +273,60 @@ template<class ElemType>
                 m_nFramesBetweenMASync = configMASGD("SyncFrequencyInFrames", "40000"); 
                 m_iMASyncStatsTrace = configMASGD("MAPerfStats", "0");
             }
-                
         }
-
-        // TODO: the number of parameters of this function is waaay to little!
-        Init(learningRatesPerMB,
-             learningRatesPerSample,
-             mbSize,
-             truncated,
-             epochSize,
-             maxEpochs,
-             modelPath,
-             momentumPerMB,
-             momentumPerSample,
-             gradientClippingWithTruncation,
-             clippingThresholdPerSample,
-             autoAdjustLRType,
-             increaseLearnRateIfImproveMoreThan,
-             learnRateIncreaseFactor,
-             reduceLearnRateIfImproveLessThan,
-             continueReduce,
-             learnRateDecreaseFactor,
-             dropoutRates,
-             loadBestModel,
-             numMiniBatch4LRSearch,
-             numPrevLearnRates,
-             numBestSearchEpoch,
-             traceLevel,
-             numMBsToShowResult,
-             numMBsToCUDAProfile,
-             maxTempMemSizeInSamplesForCNN,
-             gUpdateInfo,
-             keepCheckPointFiles,
-             adaptationRegType,
-             adaptationRegWeight,
-             trainCriterionNodeName,
-             evalCriterionNodeName,
-             doGradientCheck,
-             gradientCheckSigDigit,
-             validateAfterModelReloading,
-             rpi,
-             learnRateAdjustInterval,
-             UsingAllDataForPreComputedNode,
-             needAveMultiplier,
-             L2RegWeight,
-             L1RegWeight,
-             autoAdjustMinibatch,
-             minibatchSizeTuningFrequency,
-             minibatchSizeTuningMax,
-             useCVSetControlLRIfCVExists,
-             useEvalCriterionControlLR,
-             minibatchSearchCriterionErrorMargin,
-             hsmoothingWeight, frameDropThresh, doReferenceAlign);
     }
 
     //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
-    template<class ElemType>
-    void SGD<ElemType>::Init(const floatargvector& learningRatesPerMB,
-              const floatargvector& learningRatesPerSample,
-              const intargvector& mbSize,
-              bool truncated,
-              const size_t epochSize,
-              const size_t maxEpochs,
-              const wstring& modelPath,
-              const floatargvector& momentumPerMB,
-              const floatargvector& momentumPerSample,
-              const bool gradientClippingWithTruncation,
-              const double clippingThresholdPerSample,
-              const LearningRateSearchAlgorithm autoLearnRateSearchType,
-              const double increaseLearnRateIfImproveMoreThan,
-              const double learnRateIncreaseFactor,
-              const double reduceLearnRateIfImproveLessThan,
-              const bool continueReduce,
-              const double learnRateDecreaseFactor,
-              floatargvector dropoutRates,
-              const bool loadBestModel,
-              const intargvector& numMiniBatch4LRSearch,
-              const size_t numPrevLearnRates,
-              const size_t numBestSearchEpoch,
-              const int traceLevel,
-              const size_t numMBsToShowResult,
-              const size_t numMBsToCUDAProfile,
-              const size_t maxTempMemSizeInSamplesForCNN,
-              const GradientUpdateInfo gradUpdateType,
-              const bool keepCheckPointFiles,
-              const AdaptationRegType adaptationRegType,
-              const double adaptationRegWeight,
-              const wstring trainCriterionNodeName,
-              const wstring evalCriterionNodeName,
-              const bool doGradientCheck,
-              const double gradientCheckSigDigit,
-              const bool validateAfterModelReloading,
-              RMSPropInfo rpi,
-              size_t learnRateAdjustInterval,
-              const bool UsingAllDataForPreComputed,
-              const bool needAveMultiplier,
-              const double L2RegWeight,
-              const double L1RegWeight,
-              const bool autoAdjustMinibatch,
-              const size_t minibatchSizeTuningFrequency,
-              const size_t minibatchSizeTuningMax,
-              const bool useCVSetControlLRIfCVExists,
-              const bool useEvalCriterionControlLR,
-              const size_t minibatchSearchCriterionErrorMargin,
-              const ElemType hsmoothingWeight,
-              const ElemType frameDropThresh,
-              const bool doreferencealign)
+    SGDParams::SGDParams(const floatargvector& learningRatesPerMB,
+                         const floatargvector& learningRatesPerSample,
+                         const intargvector& mbSize,
+                         bool truncated,
+                         const size_t epochSize,
+                         const size_t maxEpochs,
+                         const wstring& modelPath,
+                         const floatargvector& momentumPerMB,
+                         const floatargvector& momentumPerSample,
+                         const bool gradientClippingWithTruncation,
+                         const double clippingThresholdPerSample,
+                         const LearningRateSearchAlgorithm autoLearnRateSearchType,
+                         const double increaseLearnRateIfImproveMoreThan,
+                         const double learnRateIncreaseFactor,
+                         const double reduceLearnRateIfImproveLessThan,
+                         const bool continueReduce,
+                         const double learnRateDecreaseFactor,
+                         floatargvector dropoutRates,
+                         const bool loadBestModel,
+                         const intargvector& numMiniBatch4LRSearch,
+                         const size_t numPrevLearnRates,
+                         const size_t numBestSearchEpoch,
+                         const int traceLevel,
+                         const size_t numMBsToShowResult,
+                         const size_t numMBsToCUDAProfile,
+                         const size_t maxTempMemSizeInSamplesForCNN,
+                         const GradientUpdateInfo gradUpdateType,
+                         const bool keepCheckPointFiles,
+                         const AdaptationRegType adaptationRegType,
+                         const double adaptationRegWeight,
+                         const wstring trainCriterionNodeName,
+                         const wstring evalCriterionNodeName,
+                         const bool doGradientCheck,
+                         const double gradientCheckSigDigit,
+                         const bool validateAfterModelReloading,
+                         RMSPropInfo rpi,
+                         size_t learnRateAdjustInterval,
+                         const bool UsingAllDataForPreComputed,
+                         const bool needAveMultiplier,
+                         const double L2RegWeight,
+                         const double L1RegWeight,
+                         const bool autoAdjustMinibatch,
+                         const size_t minibatchSizeTuningFrequency,
+                         const size_t minibatchSizeTuningMax,
+                         const bool useCVSetControlLRIfCVExists,
+                         const bool useEvalCriterionControlLR,
+                         const size_t minibatchSearchCriterionErrorMargin,
+                         const double hsmoothingWeight,
+                         const double frameDropThresh,
+                         const bool doreferencealign)
     {
         m_numPrevLearnRates = numPrevLearnRates;
         m_prevChosenMinibatchSize = 0;
@@ -470,9 +469,22 @@ template<class ElemType>
 
         m_useCVSetControlLRIfCVExists = useCVSetControlLRIfCVExists;
         m_useEvalCriterionControlLR = useEvalCriterionControlLR;
+    }
+
+    template<class ElemType>
+    SGD<ElemType>::SGD(SGDParams && sgdParams) :
+        SGDParams(move(sgdParams)), // TODO: somehow this move() has no effect
+        m_distGradAgg(nullptr),
+        m_gradHeader(nullptr)
+    {
+        if (m_doGradientCheck && sizeof(ElemType) != sizeof(double))
+            InvalidArgument("Gradient check needs to use precision = double");
 
         msra::files::make_intermediate_dirs(m_modelPath);
     }
+
+    template<class ElemType>
+    SGD<ElemType>::SGD(const ConfigParameters& configSGD) : SGD(SGDParams(configSGD, ElemType(0))) { }
 
     template<class ElemType>
     void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,

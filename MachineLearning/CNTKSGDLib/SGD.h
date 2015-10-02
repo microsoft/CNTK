@@ -91,13 +91,68 @@ struct GradientUpdateInfo
 
 struct SGDParams
 {
+    template<class ElemType>    // (needed for default value of m_gradientBits)
+    SGDParams(const ConfigParameters& configSGD, ElemType exampleElemType/*for type deduction*/);
+
+    //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
+    SGDParams(const floatargvector& learningRatesPerMB,
+              const floatargvector& learningRatesPerSample,
+              const intargvector& mbSize,
+              bool truncated,
+              const size_t epochSize,
+              const size_t maxEpochs,
+              const wstring& modelPath,
+              const floatargvector& momentumPerMB,
+              const floatargvector& momentumPerSample,
+              const bool gradientClippingWithTruncation,
+              const double clippingThresholdPerSample,
+              const LearningRateSearchAlgorithm autoLearnRateSearchType,
+              const double increaseLearnRateIfImproveMoreThan,
+              const double learnRateIncreaseFactor,
+              const double reduceLearnRateIfImproveLessThan,
+              const bool continueReduce,
+              const double learnRateDecreaseFactor,
+              floatargvector dropoutRates,
+              const bool loadBestModel,
+              const intargvector& numMiniBatch4LRSearch,
+              const size_t numPrevLearnRates,
+              const size_t numBestSearchEpoch,
+              const int traceLevel,
+              const size_t numMBsToShowResult,
+              const size_t numMBsToCUDAProfile,
+              const size_t maxTempMemSizeInSamplesForCNN,
+              const GradientUpdateInfo gradUpdateType,
+              const bool keepCheckPointFiles,
+              const AdaptationRegType adaptationRegType,
+              const double adaptationRegWeight,
+              const wstring trainCriterionNodeName,
+              const wstring evalCriterionNodeName,
+              const bool doGradientCheck,
+              const double gradientCheckSigDigit,
+              const bool validateAfterModelReloading,
+              RMSPropInfo rpi,
+              size_t learnRateAdjustInterval,
+              const bool UsingAllDataForPreComputed,
+              const bool needAveMultiplier,
+              const double L2RegWeight,
+              const double L1RegWeight,
+              const bool autoAdjustMinibatch,
+              const size_t minibatchSizeTuningFrequency,
+              const size_t minibatchSizeTuningMax,
+              const bool useCVSetControlLRIfCVExists,
+              const bool useEvalCriterionControlLR,
+              const size_t minibatchSearchCriterionErrorMargin,
+              const double hsmoothingWeight,
+              const double frameDropThresh,
+              const bool doreferencealign);
+
+protected:
     // learning rate per sample provided outside
     floatargvector m_learningRatesParam;
     intargvector m_learningRatesSpecifiedForMBSize;       // 1 for per sample, m_mbSize[] for per MB
     floatargvector m_momentumParam;
     intargvector m_momentumSpecifiedForMBSize;
 
-protected:
     // Determine the MB size used for mapping a given learning-rate or momentum parameter to a per-sample value.
     // MB size is the number of samples across all time steps and parallel sequences.
     // This function exists to post-fix a design bug in SGD:
@@ -114,7 +169,7 @@ protected:
 
         return specifiedMBSize;
     }
-public:
+
     // helpers to convert learning rates to per-sample values used in the actual algorithms
     // 'numParallelSequences' must be specified because of the definitional MB-size bug in SGD mentioned above, and should go away once that is sorted out.
     double GetLearningRatePerSample(size_t epoch/*BUGBUG workaround:*/, size_t numParallelSequences) const
@@ -243,59 +298,7 @@ protected:
 
 public:
     SGD(const ConfigParameters& configSGD);
-
-    //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
-    // TODO: move Init() to SGDParams
-    void Init(const floatargvector& learningRatesPerMB,
-              const floatargvector& learningRatesPerSample,
-              const intargvector& mbSize,
-              bool truncated,
-              const size_t epochSize,
-              const size_t maxEpochs,
-              const wstring& modelPath,
-              const floatargvector& momentumPerMB,
-              const floatargvector& momentumPerSample,
-              const bool gradientClippingWithTruncation,
-              const double clippingThresholdPerSample,
-              const LearningRateSearchAlgorithm autoLearnRateSearchType,
-              const double increaseLearnRateIfImproveMoreThan,
-              const double learnRateIncreaseFactor,
-              const double reduceLearnRateIfImproveLessThan,
-              const bool continueReduce,
-              const double learnRateDecreaseFactor,
-              floatargvector dropoutRates,
-              const bool loadBestModel,
-              const intargvector& numMiniBatch4LRSearch,
-              const size_t numPrevLearnRates,
-              const size_t numBestSearchEpoch,
-              const int traceLevel,
-              const size_t numMBsToShowResult,
-              const size_t numMBsToCUDAProfile,
-              const size_t maxTempMemSizeInSamplesForCNN,
-              const GradientUpdateInfo gradUpdateType,
-              const bool keepCheckPointFiles,
-              const AdaptationRegType adaptationRegType,
-              const double adaptationRegWeight,
-              const wstring trainCriterionNodeName,
-              const wstring evalCriterionNodeName,
-              const bool doGradientCheck,
-              const double gradientCheckSigDigit,
-              const bool validateAfterModelReloading,
-              RMSPropInfo rpi,
-              size_t learnRateAdjustInterval,
-              const bool UsingAllDataForPreComputed,
-              const bool needAveMultiplier,
-              const double L2RegWeight,
-              const double L1RegWeight,
-              const bool autoAdjustMinibatch,
-              const size_t minibatchSizeTuningFrequency,
-              const size_t minibatchSizeTuningMax,
-              const bool useCVSetControlLRIfCVExists,
-              const bool useEvalCriterionControlLR,
-              const size_t minibatchSearchCriterionErrorMargin,
-              const ElemType hsmoothingWeight = 1.0,
-              const ElemType frameDropThresh = 1e-10,
-              const bool doreferencealign = false);
+    SGD(SGDParams && sgdParams);
 
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader<ElemType>* trainSetDataReader,
