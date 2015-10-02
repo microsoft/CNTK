@@ -994,6 +994,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             if (first)  // initialize MBLayout
                             {
                                 // entire minibatch is one utterance
+                                // TODO: in frame mode, do instead: m_pMBLayout->Init(actualmbsize, 1, false);
                                 m_pMBLayout->Init(1, actualmbsize, !m_framemode);
                                 if (m_pMBLayout->RequireSentenceSeg())       // in framemode we leave the flags empty
                                 {
@@ -1211,7 +1212,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                             m_processedFrame[i] += m_mbSize;
                         }
-                        else
+                        else    // we get here if there are not enough frames in the utterance to fill the BPTT minibatch
                         {
                             actualmbsize[i] = m_toProcess[i] - m_processedFrame[i];
                             endFr = startFr + actualmbsize[i];

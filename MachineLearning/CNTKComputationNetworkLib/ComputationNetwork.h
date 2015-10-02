@@ -613,6 +613,11 @@ public:
 
                 // get layout associated with this loop
                 auto pMBLayout = recurrentNodes[0]->GetMBLayout();
+
+                // tell all that loop is about to commence
+                for (auto & nodeIter : recurrentNodes)
+                    nodeIter->OnEvaluateBeginIteration();
+
                 for (auto & nodeIter : recurrentNodes)  // layout must be shared by all nodes in the loop
                 {
                     if (!pMBLayout || nodeIter->GetMBLayout() != pMBLayout)
@@ -653,6 +658,10 @@ public:
                     }
                 }
     
+                // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
+                for (auto & nodeIter : recurrentNodes)
+                    nodeIter->OnEvaluateEndIteration();
+
                 recInfo->m_completedEvaluate = true;
             }
 
@@ -669,9 +678,11 @@ public:
                 // evaluate the node for all frames concurrently (map)
                 // we manage time stamp here so that derived classes don't need to worry about it
                 (*nodeIter)->UpdateFunctionAndGradientMBSize();
+                (*nodeIter)->OnEvaluateBeginIteration();
                 (*nodeIter)->EvaluateThisNode(FrameRange());
                 if (IsNodeReqMultiSeqHandling(*nodeIter))
                     (*nodeIter)->MaskMissingValuesColumnsToZero();
+                (*nodeIter)->OnEvaluateEndIteration();
                 (*nodeIter)->UpdateEvalTimeStamp();
             }
         }
@@ -1373,6 +1384,7 @@ public:
         }
     };
 
+    // only called from FindBestPath() and FindbestPathWithVariableLength()
     template<class ElemType>
     void SetHistory(map<wstring, Matrix<ElemType>>& history)
     {

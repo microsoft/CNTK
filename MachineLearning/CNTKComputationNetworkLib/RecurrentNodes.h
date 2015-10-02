@@ -192,6 +192,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        virtual void OnEvaluateBeginIteration() override      // called before first iteration step of EvaluateThisNode()
+        {
+            CacheMBLayout();
+        }
+
+        virtual void OnEvaluateEndIteration() override        // called after last iteration step of EvaluateThisNode()
+        {
+            // reset past activation as it reached the beginning of a minibatch
+            // the node pointed hasn't yet updated, so it is the past activation
+            // This is for carrying over state across minibatches (truncated BPTT).
+            // Note: It seems obvious that this should be done at the end of this function, but actually
+            // the value will not have been filled in until all participants of the loop have completed.
+            // By doing it on first frame, m
+            // BUGBUG: This is nasty. FunctionValues may have been resized and become invalid.
+            if (!m_historyAlreadySet/*means it's externally managed*/)      // BUGBUG: this conflicts now
+            {
+                m_delayedActivation = Inputs(0)->FunctionValues();
+                // TODO: technically we only need to copy a sub-range of m_timeStep frames.
+                if (!m_delayedActivationMBLayout) m_delayedActivationMBLayout = make_shared<MBLayout>();
+                m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
+            }
+        }
+
         // Note: This function must be called in correct order and not leaving out any frame, since inside we rely on checking the time index for state control.
         virtual void EvaluateThisNode(const FrameRange & frameRange) override
         {
@@ -211,25 +234,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             size_t t = frameRange.t();
-
-            // starting condition
-            bool isFirstFrame = (dir < 0) ? (t == 0) : (t == Inputs(0)->GetNumTimeSteps() - 1);
-
-            // first time for this minibatch: update our post-prcoessed version of the layout
-            if (isFirstFrame)
-                CacheMBLayout();
-
-            // reset past activation as it reached the beginning of a minibatch
-            // the node pointed hasn't yet updated, so it is the past activation
-            // This is for carrying over state across minibatches (truncated BPTT).
-            // BUGBUG: Is this wrong? This should be set at the END of the loop, when all is done, no?
-            if (isFirstFrame && !m_historyAlreadySet/*means it's externally managed*/)
-            {
-                m_delayedActivation = Inputs(0)->FunctionValues();
-                // TODO: technically we only need to copy a sub-range of m_timeStep frames.
-                if (!m_delayedActivationMBLayout) m_delayedActivationMBLayout = make_shared<MBLayout>();
-                m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
-            }
 
             Resize(Inputs(0));
 
