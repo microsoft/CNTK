@@ -12,7 +12,7 @@ testCases:
       - ^MPI Rank {{integer}}
       - Starting Epoch {{integer}}
       - learning rate per sample = {{float}}
-      - momentum = {{float}}
+      - momentum = {{float,tolerance=0.01%}}
 
   Epochs must be finished with expected results for each MPI Rank:
     patterns:
