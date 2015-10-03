@@ -172,7 +172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // copy the respective columns
                 MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), newNumParallelSequences*T, mat.GetPreferredDeviceId(), mat.GetMatrixType());
                 for (size_t t = 0; t < T; t++)
-                    tmp.SetColumnSlice(mat.ColumnSlice(nOrigParallelUtts*t + sent_start, sent_end - sent_start), t*newNumParallelSequences, newNumParallelSequences);
+                    tmp.SetColumnSlice(mat.ColumnSlice(t*nOrigParallelUtts + sent_start, newNumParallelSequences), t*newNumParallelSequences, newNumParallelSequences);
                 mat.SetValue(tmp);      // update matrix in-place (new matrix has less parallel streams)
                 // TODO: ^^ If had Matrix::RowSlice(), this would be simpler.
             }
