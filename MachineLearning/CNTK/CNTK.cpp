@@ -1289,6 +1289,8 @@ void DoCommand(const ConfigParameters& config)
         std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
     }
 
+    // summarize command info upfront in the log and stdout
+    size_t fullTotalMaxEpochs = 0;
     for (int i = 0; i < command.size(); i++)
     {
         //get the configuration parameters that match the command
@@ -1302,6 +1304,27 @@ void DoCommand(const ConfigParameters& config)
             {
                 wstring modelPath = commandParams("modelPath");
                 std::wcerr << "CNTKModelPath: " << modelPath << endl;
+                ConfigParameters configSGD(commandParams("SGD"));
+                size_t maxEpochs = configSGD("maxEpochs");
+                std::cerr << "CNTKCommandTrainInfo: " + command[i] << " : " << maxEpochs << endl;
+                fullTotalMaxEpochs += maxEpochs;
+            }
+        }
+    }
+    std::cerr << "CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : " << fullTotalMaxEpochs << endl;
+
+    // execute the commands
+    for (int i = 0; i < command.size(); i++)
+    {
+        //get the configuration parameters that match the command
+        ConfigParameters commandParams(config(command[i]));
+        ConfigArray action = commandParams("action", "train");
+
+        // determine the action to perform, and do it
+        for (int j = 0; j < action.size(); j++)
+        {
+            if (action[j] == "train" || action[j] == "trainRNN")
+            {
                 std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
                 DoTrain<ElemType>(commandParams);
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
