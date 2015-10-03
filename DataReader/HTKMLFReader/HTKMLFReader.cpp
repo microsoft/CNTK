@@ -902,7 +902,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             m_mbSize = m_toProcess[i];
                     }
 
-                    m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_mbSize, !m_framemode);
+                    if (m_framemode)
+                    {
+                        assert(m_numberOfuttsPerMinibatch == 1);
+                        m_pMBLayout->Init(m_mbSize, 1, false/*means not sequential*/);
+                    }
+                    else
+                    {
+                        m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_mbSize, true/*sequential*/);
+                    }
 
                     skip = (m_framemode && !m_partialMinibatch && (m_mbiter->requestedframes() != m_mbSize) && (m_frameSource->totalframes() > m_mbSize));
                     for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
