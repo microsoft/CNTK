@@ -624,7 +624,19 @@ public:
                 }
 
                 // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
-#if 0
+#if 1
+                FrameRangeIteration range(pMBLayout, recInfo->m_isForwardLoop ? -1 : +1);
+                for (auto t = range.begin(); t != range.end(); t++)
+                {
+                    for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+                    {
+                        (*nodeIter)->UpdateFunctionAndGradientMBSize();
+                        (*nodeIter)->EvaluateThisNode(t);
+                        if (IsNodeReqMultiSeqHandling(*nodeIter))
+                            (*nodeIter)->MaskMissingValuesColumnsToZero(t.t());  // TODO: This should take a FrameRange as well
+                        (*nodeIter)->UpdateEvalTimeStamp();
+                    }
+                } 
 #else
                 if (recInfo->m_isForwardLoop)
                 {
@@ -789,6 +801,20 @@ public:
                 if (recInfo->m_completedGradient == false)
                 {
                     const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+#if 1
+                    auto pMBLayout = recurrentNodes[0]->GetMBLayout();
+                    FrameRangeIteration range(pMBLayout, recInfo->m_isForwardLoop ? -1 : +1);
+                    for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iteration
+                    {
+                        for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                        {
+                            (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
+                            if (IsNodeReqMultiSeqHandling(*nodeIter))
+                                (*nodeIter)->MaskMissingGradientColumnsToZero(t.t());   // TODO: should accept a FrameRange as well
+                            (*nodeIter)->ComputeGradientForChildren(t.t());             // TODO: should accept a FrameRange as well
+                        }
+                    }
+#else
                     size_t T = m_actualMBSize / GetNumParallelSequences();
                     if (recInfo->m_isForwardLoop)
                     {
@@ -816,6 +842,7 @@ public:
                             }
                         }
                     }
+#endif
 
                     recInfo->m_completedGradient = true;
                 }
