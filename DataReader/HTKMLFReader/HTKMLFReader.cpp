@@ -61,14 +61,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (int i = 0; i < m_numberOfuttsPerMinibatchForAllEpochs.size(); i++)
             {
-                m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[i];
-                if (m_numberOfuttsPerMinibatch < 1)
+                if (m_numberOfuttsPerMinibatchForAllEpochs[i] < 1)
                 {
                     LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.");
                 }
+                // this loop is weird because this gets overwritten below
+                //m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[i];
             }
 
             m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[0];
+            m_pMBLayout->Init(m_numberOfuttsPerMinibatch, 0, true); // (SGD will ask before entering actual reading --TODO: This is hacky.)
 
             m_actualnumberOfuttsPerMinibatch = m_numberOfuttsPerMinibatch;
             m_sentenceEnd.assign(m_numberOfuttsPerMinibatch, true);
@@ -667,6 +669,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_mbSize = mbSize;
 
             m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[epoch];
+            m_pMBLayout->Init(m_numberOfuttsPerMinibatch, 0, !m_framemode); // (SGD will ask before entering actual reading --TODO: This is hacky.)
 
             m_actualnumberOfuttsPerMinibatch = m_numberOfuttsPerMinibatch;
             m_sentenceEnd.assign(m_numberOfuttsPerMinibatch, true);
@@ -686,6 +689,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
 
                     m_numberOfuttsPerMinibatch = (m_numberOfuttsPerMinibatch / numSubsets) + ((subsetNum < (m_numberOfuttsPerMinibatch % numSubsets)) ? 1 : 0);
+                    m_pMBLayout->Init(m_numberOfuttsPerMinibatch, 0, true); // (SGD will ask before entering actual reading --TODO: This is hacky.)
                 }
 
                 StartMinibatchLoopToTrainOrTest(mbSize, epoch, subsetNum, numSubsets, requestedEpochSamples);
@@ -697,6 +701,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     LogicError("Distributed reading of mini-batches is only supported for training or testing");
                 }
+                m_pMBLayout->Init(mbSize, 0, false); // (SGD will ask before entering actual reading --TODO: This is hacky.)
 
                 StartMinibatchLoopToWrite(mbSize,epoch,requestedEpochSamples);    
             }
@@ -1707,8 +1712,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t HTKMLFReader<ElemType>::GetNumParallelSequences()
         {
             if (!m_framemode)
-            if (m_numberOfuttsPerMinibatch != m_pMBLayout->GetNumParallelSequences())
-                LogicError("HTKMLFReader: Number of parallel sequences in m_pMBLayout did not get set to m_numberOfuttsPerMinibatch.");
+                if (m_numberOfuttsPerMinibatch != m_pMBLayout->GetNumParallelSequences())
+                    LogicError("HTKMLFReader: Number of parallel sequences in m_pMBLayout did not get set to m_numberOfuttsPerMinibatch.");
             return m_pMBLayout->GetNumParallelSequences();  // (this function is only used for validation anyway)
         }
 
