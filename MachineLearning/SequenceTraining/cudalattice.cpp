@@ -33,17 +33,8 @@ template<typename VECTORTYPE,typename OPSTYPE> class vectorbaseimpl :
     size_t capacity;                                // amount of allocated storage (like capacity() vs. vectorref::n = size())
     void release() { ondevice no (deviceid); free (this->reset (NULL, 0)); }
 public:
-    vectorbaseimpl() : capacity (0) { }
+    vectorbaseimpl(size_t deviceid) : capacity(0), objectondevice(deviceid) {}
     ~vectorbaseimpl() { release(); }
-    void setdevice (size_t deviceid)            // just remembers it here
-    {
-        if (deviceid == getdevice()) return;    // no change
-        if (size() != 0)                        // cannot migrate across devices
-            throw std::logic_error ("setdevice: device cannot be changed once matrix is allocated");
-        if (capacity != 0)                      // if we still hold memory, it is valid to get rid of it
-            release();
-        objectondevice::setdevice (deviceid);
-    }
     void allocate (size_t sz)
     {
         if (sz > capacity)                                      // need to grow
@@ -95,6 +86,10 @@ matrixref<float> tomatrixref(const Microsoft::MSR::CNTK::Matrix<float>& m)
 
 class latticefunctionsimpl : public vectorbaseimpl<latticefunctions,latticefunctionsops>
 {
+public:
+    latticefunctionsimpl(size_t deviceid) : vectorbaseimpl(deviceid) {}
+
+private:
     void edgealignment (const lrhmmdefvector & hmms, const lr3transPvector & transPs, const size_t spalignunitid, 
                         const size_t silalignunitid, const Microsoft::MSR::CNTK::Matrix<float>& logLLs, const nodeinfovector & nodes, 
                         const edgeinfowithscoresvector & edges, const aligninfovector & aligns,
@@ -203,19 +198,19 @@ class latticefunctionsimpl : public vectorbaseimpl<latticefunctions,latticefunct
     }
 };
 
-latticefunctions * newlatticefunctions() { lazyinit(); return new latticefunctionsimpl(); }
+latticefunctions * newlatticefunctions(size_t deviceid) { return new latticefunctionsimpl(deviceid); }
 
 // implementation of lrhmmdefvector
 // Class has no vector-level member functions, so no need for an extra type
-lrhmmdefvector * newlrhmmdefvector() { lazyinit(); return new vectorbaseimpl<lrhmmdefvector,vectorref<lrhmmdef>>(); }
-lr3transPvector * newlr3transPvector() { lazyinit(); return new vectorbaseimpl<lr3transPvector,vectorref<lr3transP>>(); }
-ushortvector * newushortvector() { lazyinit(); return new vectorbaseimpl<ushortvector,vectorref<unsigned short>>(); }
-uintvector * newuintvector() { lazyinit(); return new vectorbaseimpl<uintvector,vectorref<unsigned int>>(); }
-floatvector * newfloatvector() { lazyinit(); return new vectorbaseimpl<floatvector,vectorref<float>>(); }
-doublevector * newdoublevector() { lazyinit(); return new vectorbaseimpl<doublevector,vectorref<double>>(); }
-sizetvector * newsizetvector() { lazyinit(); return new vectorbaseimpl<sizetvector,vectorref<size_t>>(); }
-nodeinfovector * newnodeinfovector() { lazyinit(); return new vectorbaseimpl<nodeinfovector,vectorref<nodeinfo>>(); }
-edgeinfowithscoresvector * newedgeinfovector() { lazyinit(); return new vectorbaseimpl<edgeinfowithscoresvector,vectorref<edgeinfowithscores>>(); }
-aligninfovector * newaligninfovector() { lazyinit(); return new vectorbaseimpl<aligninfovector,vectorref<aligninfo>>(); }
+lrhmmdefvector * newlrhmmdefvector(size_t deviceid) { return new vectorbaseimpl<lrhmmdefvector, vectorref<lrhmmdef>>(deviceid); }
+lr3transPvector * newlr3transPvector(size_t deviceid) { return new vectorbaseimpl<lr3transPvector, vectorref<lr3transP>>(deviceid); }
+ushortvector * newushortvector(size_t deviceid) { return new vectorbaseimpl<ushortvector, vectorref<unsigned short>>(deviceid); }
+uintvector * newuintvector(size_t deviceid) { return new vectorbaseimpl<uintvector, vectorref<unsigned int>>(deviceid); }
+floatvector * newfloatvector(size_t deviceid) { return new vectorbaseimpl<floatvector, vectorref<float>>(deviceid); }
+doublevector * newdoublevector(size_t deviceid) { return new vectorbaseimpl<doublevector, vectorref<double>>(deviceid); }
+sizetvector * newsizetvector(size_t deviceid) { return new vectorbaseimpl<sizetvector, vectorref<size_t>>(deviceid); }
+nodeinfovector * newnodeinfovector(size_t deviceid) { return new vectorbaseimpl<nodeinfovector, vectorref<nodeinfo>>(deviceid); }
+edgeinfowithscoresvector * newedgeinfovector(size_t deviceid) { return new vectorbaseimpl<edgeinfowithscoresvector, vectorref<edgeinfowithscores>>(deviceid); }
+aligninfovector * newaligninfovector(size_t deviceid) { return new vectorbaseimpl<aligninfovector, vectorref<aligninfo>>(deviceid); }
 
 };};

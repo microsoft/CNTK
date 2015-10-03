@@ -35,7 +35,6 @@ namespace msra { namespace cuda {
 template<typename ELEMTYPE> struct/*interface*/ vectorbase
 {
     virtual ~vectorbase() { }
-    virtual void setdevice(size_t deviceid) = 0;
     virtual void allocate(size_t n) = 0;
     virtual size_t size() const throw() = 0;
     virtual void assign(const ELEMTYPE * p, size_t n, bool synchronize) = 0;
@@ -103,32 +102,17 @@ struct latticefunctions : public vectorbase<msra::lattices::empty>
 // factor methods
 // ---------------------------------------------------------------------------
 
-#ifndef NOCUDA
-somedatavector * newsomedatavector();
-ushortvector * newushortvector();
-uintvector * newuintvector();
-floatvector * newfloatvector();
-doublevector * newdoublevector();
-sizetvector * newsizetvector();
-latticefunctions * newlatticefunctions();
-lrhmmdefvector * newlrhmmdefvector();
-lr3transPvector * newlr3transPvector();
-nodeinfovector * newnodeinfovector();
-edgeinfowithscoresvector * newedgeinfovector();
-aligninfovector * newaligninfovector();
-#else           // dummies when building without CUDA
-static inline somedatavector * newsomedatavector() { throw std::runtime_error ("should not be here"); }
-static inline ushortvector * newushortvector() { throw std::runtime_error ("should not be here"); }
-static inline uintvector * newuintvector() { throw std::runtime_error ("should not be here"); }
-static inline floatvector * newfloatvector() { throw std::runtime_error ("should not be here"); }
-static inline doublevector * newdoublevector() { throw std::runtime_error ("should not be here"); }
-static inline sizetvector * newsizetvector() { throw std::runtime_error ("should not be here"); }
-static inline latticefunctions * newlatticefunctions() { throw std::runtime_error ("should not be here"); }
-static inline lrhmmdefvector * newlrhmmdefvector() { throw std::runtime_error ("should not be here"); }
-static inline lr3transPvector * newlr3transPvector() { throw std::runtime_error ("should not be here"); }
-static inline nodeinfovector * newnodeinfovector() { throw std::runtime_error ("should not be here"); }
-static inline edgeinfowithscoresvector * newedgeinfovector() { throw std::runtime_error ("should not be here"); }
-static inline aligninfovector * newaligninfovector() { throw std::runtime_error ("should not be here"); }
-#endif
+somedatavector * newsomedatavector(size_t deviceid);
+ushortvector * newushortvector(size_t deviceid);
+uintvector * newuintvector(size_t deviceid);
+floatvector * newfloatvector(size_t deviceid);
+doublevector * newdoublevector(size_t deviceid);
+sizetvector * newsizetvector(size_t deviceid);
+latticefunctions * newlatticefunctions(size_t deviceid);
+lrhmmdefvector * newlrhmmdefvector(size_t deviceid);
+lr3transPvector * newlr3transPvector(size_t deviceid);
+nodeinfovector * newnodeinfovector(size_t deviceid);
+edgeinfowithscoresvector * newedgeinfovector(size_t deviceid);
+aligninfovector * newaligninfovector(size_t deviceid);
 
 };};

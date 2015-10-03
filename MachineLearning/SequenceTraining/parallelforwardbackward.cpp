@@ -353,19 +353,25 @@ namespace msra { namespace lattices {
     struct parallelstateimpl
     {
         bool emulation;
-        parallelstateimpl() : emulation (false),    // change this to true to switch to emulation
+        size_t deviceid;
+        parallelstateimpl(size_t deviceid) : deviceid(deviceid), emulation(false),    // change this to true to switch to emulation
             // models
-            lr3transPgpu (msra::cuda::newlr3transPvector()), hmmsgpu (msra::cuda::newlrhmmdefvector()), spalignunitid (SIZE_MAX), silalignunitid (SIZE_MAX),
+            lr3transPgpu(msra::cuda::newlr3transPvector(deviceid)), hmmsgpu(msra::cuda::newlrhmmdefvector(deviceid)), spalignunitid(SIZE_MAX), silalignunitid(SIZE_MAX),
             // current lattice, logLLs, and return values
-            edgesgpu (msra::cuda::newedgeinfovector()), nodesgpu (msra::cuda::newnodeinfovector()), aligngpu (msra::cuda::newaligninfovector()),
-            alignresult (msra::cuda::newushortvector()), alignoffsetsgpu (msra::cuda::newuintvector()),
-            edgeacscoresgpu(msra::cuda::newfloatvector()), cudalogLLs(new Microsoft::MSR::CNTK::Matrix<float>()), logppsgpu(msra::cuda::newdoublevector()),
-            logalphasgpu (msra::cuda::newdoublevector()), logbetasgpu (msra::cuda::newdoublevector()), logaccalphasgpu (msra::cuda::newdoublevector()),
-            logaccbetasgpu (msra::cuda::newdoublevector()), logframescorrectedgegpu (msra::cuda::newdoublevector()), Eframescorrectbufgpu (msra::cuda::newdoublevector()), 
-            logEframescorrectgpu (msra::cuda::newdoublevector()), uidsgpu (msra::cuda::newushortvector()), senone2classmapgpu (msra::cuda::newushortvector()),
-            errorsignalgpu(new Microsoft::MSR::CNTK::Matrix<float>()), errorsignalneggpu(new Microsoft::MSR::CNTK::Matrix<float>()), errorsignalgpustorage(new Microsoft::MSR::CNTK::Matrix<float>()),
-            errorsignalneggpustorage(new Microsoft::MSR::CNTK::Matrix<float>()), backptrstoragegpu(msra::cuda::newushortvector()), backptroffsetsgpu(msra::cuda::newsizetvector())
+            edgesgpu(msra::cuda::newedgeinfovector(deviceid)), nodesgpu(msra::cuda::newnodeinfovector(deviceid)), aligngpu(msra::cuda::newaligninfovector(deviceid)),
+            alignresult(msra::cuda::newushortvector(deviceid)), alignoffsetsgpu(msra::cuda::newuintvector(deviceid)),
+            edgeacscoresgpu(msra::cuda::newfloatvector(deviceid)), cudalogLLs(new Microsoft::MSR::CNTK::Matrix<float>((int)deviceid)), logppsgpu(msra::cuda::newdoublevector(deviceid)),
+            logalphasgpu(msra::cuda::newdoublevector(deviceid)), logbetasgpu(msra::cuda::newdoublevector(deviceid)), logaccalphasgpu(msra::cuda::newdoublevector(deviceid)),
+            logaccbetasgpu(msra::cuda::newdoublevector(deviceid)), logframescorrectedgegpu(msra::cuda::newdoublevector(deviceid)), Eframescorrectbufgpu(msra::cuda::newdoublevector(deviceid)),
+            logEframescorrectgpu(msra::cuda::newdoublevector(deviceid)), uidsgpu(msra::cuda::newushortvector(deviceid)), senone2classmapgpu(msra::cuda::newushortvector(deviceid)),
+            errorsignalgpu(new Microsoft::MSR::CNTK::Matrix<float>((int)deviceid)), errorsignalneggpu(new Microsoft::MSR::CNTK::Matrix<float>((int)deviceid)), errorsignalgpustorage(new Microsoft::MSR::CNTK::Matrix<float>((int)deviceid)),
+            errorsignalneggpustorage(new Microsoft::MSR::CNTK::Matrix<float>((int)deviceid)), backptrstoragegpu(msra::cuda::newushortvector(deviceid)), backptroffsetsgpu(msra::cuda::newsizetvector(deviceid))
         {
+        }
+
+        size_t getdevice()
+        {
+            return deviceid;
         }
 
         // models
@@ -615,12 +621,12 @@ namespace msra { namespace lattices {
         }
     };
 
-    void lattice::parallelstate::setmode(bool pcpumode)
+    void lattice::parallelstate::setdevice(size_t deviceid)
     {
-        
+        bool pcpumode = (deviceid == CPUDEVICE);
         if (!pcpumode)
         {
-            pimpl = new parallelstateimpl();
+            pimpl = new parallelstateimpl(deviceid);
         }
         else
         {
@@ -628,6 +634,11 @@ namespace msra { namespace lattices {
             pimpl = NULL;
         }
         // else we leave it at NULL
+    }
+
+    size_t lattice::parallelstate::getdevice()
+    {
+        return pimpl->getdevice();
     }
 
     void lattice::parallelstate::release(bool pcpumode)
@@ -683,7 +694,7 @@ namespace msra { namespace lattices {
                                              edgeacscores, edgealignments, backpointers); // inouts
 
             // launch the kernel
-            std::unique_ptr<latticefunctions> latticefunctions (msra::cuda::newlatticefunctions());
+            std::unique_ptr<latticefunctions> latticefunctions (msra::cuda::newlatticefunctions(parallelstate.getdevice()));
             latticefunctions->edgealignment(*parallelstate->hmmsgpu.get(), *parallelstate->lr3transPgpu.get(), 
                                             parallelstate->spalignunitid, parallelstate->silalignunitid,
                                             *parallelstate->cudalogLLs.get(), *parallelstate->nodesgpu.get(), 
@@ -765,7 +776,7 @@ namespace msra { namespace lattices {
             const bool allocateaccvectors = returnEframescorrect;
             parallelstate->allocfwbwvectors (edges, nodes, uidsuint, allocateframescorrect, copyuids, allocateaccvectors);
 
-            std::unique_ptr<latticefunctions> latticefunctions (msra::cuda::newlatticefunctions());     // final CUDA call
+            std::unique_ptr<latticefunctions> latticefunctions(msra::cuda::newlatticefunctions(parallelstate.getdevice()));     // final CUDA call
             latticefunctions->forwardbackwardlattice (&batchsizeforward[0], &batchsizebackward[0], batchsizeforward.size(), batchsizebackward.size(),
                                                       parallelstate->spalignunitid, parallelstate->silalignunitid,
                                                       *parallelstate->edgeacscoresgpu.get(), *parallelstate->edgesgpu.get(), 
@@ -838,7 +849,7 @@ namespace msra { namespace lattices {
             const bool cacheerrorsignalneg = true;
             parallelstate->cacheerrorsignal (errorsignal, cacheerrorsignalneg);
 
-            std::unique_ptr<latticefunctions> latticefunctions (msra::cuda::newlatticefunctions());
+            std::unique_ptr<latticefunctions> latticefunctions(msra::cuda::newlatticefunctions(parallelstate.getdevice()));
             latticefunctions->sMBRerrorsignal (*parallelstate->alignresult.get(), *parallelstate->alignoffsetsgpu.get(), *parallelstate->edgesgpu.get(),
                                               *parallelstate->nodesgpu.get(), *parallelstate->logppsgpu.get(),amf, *parallelstate->logEframescorrectgpu.get(), 
                                               logEframescorrecttotal,
@@ -866,7 +877,7 @@ namespace msra { namespace lattices {
             const bool cacheerrorsignalneg = false;     // we do not need it in mmi mode
             parallelstate->cacheerrorsignal (errorsignal, cacheerrorsignalneg);
             
-            std::unique_ptr<latticefunctions> latticefunctions (msra::cuda::newlatticefunctions());
+            std::unique_ptr<latticefunctions> latticefunctions(msra::cuda::newlatticefunctions(parallelstate.getdevice()));
             latticefunctions->mmierrorsignal (*parallelstate->alignresult.get(), *parallelstate->alignoffsetsgpu.get(), *parallelstate->edgesgpu.get(),
                                                *parallelstate->nodesgpu.get(), *parallelstate->logppsgpu.get(), *parallelstate->errorsignalgpu.get());
 
