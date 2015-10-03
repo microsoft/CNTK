@@ -1277,6 +1277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Resize() -- change matrix size
     // This function is cheap if the matrix size does not change.
     // Current content is not preserved.
+    // BUGBUG: There is code that relies on zero initialization (without, we get subtle variations of output). That is wrong--we should initialize to QNaN and see where it fails.
     // If growOnly is true, resize will not reallocate memory if the current memory is large enough (i.e., will not shrink).
     // If this object does not own its memory then new memory cannot be allocated (one can still shrink and/or reshape).
     template<class ElemType>
@@ -1295,8 +1296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (!OwnBuffer())
                     throw logic_error("Resize: Resizing an matrix you don't own is not supported.");
-                pArray = new ElemType[numElements];
-                //SetValue(0);  // (new initializes to 0 already)
+                pArray = new ElemType[numElements]();
             }
             // success: update the object
             if (OwnBuffer())
