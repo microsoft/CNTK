@@ -77,8 +77,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (numprocs == 1)
                 return;
 
-            assert(pMBLayout->RequireSentenceSeg());
-
             // For RNN, a input Matrix is organized in the following way: 
             //   | x_t^1  x_t^2 ... x_t^N |  .... | x_{t+T-1}^1 ... x_{t+T-1}^N | 
             //   |<----   block 1    ---->|  .... |<------  block T       ----->| 
