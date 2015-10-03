@@ -20,9 +20,8 @@ class objectondevice
 protected:
     size_t deviceid;                    // CUDA card in which this matrix lives ("virtual" index amongst cards allocated to this process); default: 0
 protected:
-    objectondevice (size_t d = 0) : deviceid (d) { }
+    objectondevice (size_t d) : deviceid (d) { }
 public:
-    void setdevice (size_t deviceid) { this->deviceid = deviceid; }    // just remembers it here
     size_t getdevice() const {return deviceid;} 
 };
 
@@ -32,8 +31,8 @@ public:
 class ondevice
 {
 public:
-    ondevice (size_t /*deviceid*/) { /*setdevicecontext (deviceid);*/ }
-    ~ondevice() { /*cleardevicecontext(); */}
+    ondevice (size_t deviceid) { cudaSetDevice((int)deviceid) || "cudaSetDevice failed!"; }
+    ~ondevice() {}
 };
 
 }}
