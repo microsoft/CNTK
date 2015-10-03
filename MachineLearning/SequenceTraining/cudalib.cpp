@@ -34,35 +34,12 @@ static void operator|| (cudaError_t rc, const char * msg)
     }
 }
 
-static size_t deviceCurrent = 0;
-
-size_t GetCurrentDevice()
-{
-    return deviceCurrent;
-}
-
 cudaStream_t GetCurrentStream() { return cudaStreamDefault; }
 
-// initialize CUDA system
-void lazyinit()
-{
-}
-
-// get number of devices
-size_t numdevices()
-{
-    if (devicesallocated < 0)
-        throw std::logic_error ("numdevices: called when not initialized");
-    return devicesallocated;
-}
-
 // synchronize with ongoing thread
-
 void join() 
 { 
-//#ifndef ASYNCCOPY // no-sync framework should have sync commands where necessary in the code, not a join() function
     cudaDeviceSynchronize() || "cudaDeviceSynchronize failed";
-//#endif
 } 
 
 // allocate a stack to store the devices that have been pushed
