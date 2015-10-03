@@ -673,19 +673,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: This may not belong here, but having it in ComputeNode would require syntax changes, while having it as a member here only requires a local find-replace. Let's make it work first, then decide how to refactor.
     // the looping versions of EvaluateThisNode(FrameRange()) and ComputeInputPartial() take a frame range, through this structure
     // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
-    // TODO: GetNumParallelSequences() should be subsumed here & removed from nodes
-    // TODO: We should also have a FrameRange that selects a single sequence instead of all.
-    // TODO: Where this design currently breaks:
+    // TODO: We should also have a FrameRange that selects a single sequence instead of all. Currently now possible since that would require Matrix::RowSlice()
+    // TODO: Where this design currently breaks:  // <- BUGBUG: I think these are outdated
     //  - BatchModeNodes must access GetNumParallelSequences(), yet operate on the whole sequence
     //  - likewise, LSTMNode does its own iteration, hence needs access to GetNumParallelSequences() or NumCols() in the whole-batch iterator
-    //  - RecurrentNodes access frames with a time shift, where out-of-bounds ones access a different matrix' values
-    //  - RecurrentNodes iterate over individual slices--need a sub-setting constructor from a FrameRange to another?
-    //  - RecurrentNodes access boundary info with a similar pattern, but boundary info has a different #streams (namely, 1)
     // TODO: This will in the future be able to hold sub-ranges for nested loops as well.
     // BUGBUG: These are currently broken and will need to be fixed:
-    //  - ClassBasedCrossEntropyWithSoftmaxNode:
-    //      FrameRange frameRange(t, 1);
-    //    using a different #sequences. Solve by treating all frames as one sequence (in FrameRange)
+    //  - ClassBasedCrossEntropyWithSoftmaxNode and CRFNode do not support > 1 parallel sequence
     //  - ReshapeNode:
     //      Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep, m_pMBLayout));
     //    using a differeren #sequences. Find out what this really means.
@@ -738,6 +732,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (IsAllFrames())
                 LogicError("FrameRange::t() called when frame range refers to whole minibatch");
         }
+    };
+
+    class FrameRangeIterator
+    {
+        MBLayoutPtr m_pMBLayout;
+        int m_direction;
+    public:
+        class FrameRangeIterand : public FrameRange
+        {
+            int step;
+        public:
+            FrameRangeIterand(const FrameRange & begin, int step) : FrameRange(begin), step(step) { }
+            bool operator==(const FrameRangeIterand & other) const { return timeIdxInSeq == other.timeIdxInSeq; }
+            void operator++() { timeIdxInSeq = (size_t)(step + (int)timeIdxInSeq); }    // going through (int) to avoid undefined behavior
+        };
+        FrameRangeIterand begin() const
+        {
+            if (m_direction < 0) return FrameRangeIterand(FrameRange(0), +1);
+            else return FrameRangeIterand(FrameRange(m_pMBLayout->GetNumTimeSteps()-1), -1);
+        }
+        FrameRangeIterand end() const
+        {
+            if (m_direction > 0) return FrameRangeIterand(FrameRange((size_t)-1), 0);
+            else return FrameRangeIterand(FrameRange(m_pMBLayout->GetNumTimeSteps()), 0);
+        }
+        FrameRangeIterand rbegin() const
+        {
+            if (m_direction > 0) return FrameRangeIterand(FrameRange(0), -1);
+            else return FrameRangeIterand(FrameRange(m_pMBLayout->GetNumTimeSteps() - 1), +1);
+        }
+        FrameRangeIterand rend() const
+        {
+            if (m_direction < 0) return FrameRangeIterand(FrameRange((size_t)-1), 0);
+            else return FrameRangeIterand(FrameRange(m_pMBLayout->GetNumTimeSteps()), 0);
+        }
+        // one-dimensional iterator (time sequences)
+        FrameRangeIterator(MBLayoutPtr pMBLayout, int direction) : m_pMBLayout(pMBLayout), m_direction(direction) { }
+        // in the future we may consier multi-dimensional iterators such as iterators over images
     };
 
 }}}

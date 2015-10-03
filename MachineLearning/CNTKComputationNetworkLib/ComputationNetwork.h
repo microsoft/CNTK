@@ -624,6 +624,8 @@ public:
                 }
 
                 // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
+#if 0
+#else
                 if (recInfo->m_isForwardLoop)
                 {
                     // note: the number of time steps may increase as we go along, e.g. for Decoder networks that decide the end based on network output
@@ -655,6 +657,7 @@ public:
                         }
                     }
                 }
+#endif
     
                 // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
                 for (auto & nodeIter : recurrentNodes)
