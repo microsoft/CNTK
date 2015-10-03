@@ -12,17 +12,10 @@
 namespace msra { namespace cuda {
 
 // helper functions
-void lazyinit();
-size_t numdevices();
 void join();            // wait until current launch or other async operation is completed
 
 // managing device context switching
-cudaStream_t GetStream(size_t deviceid);
-cudaEvent_t GetEvent(size_t deviceid);
-size_t GetCurrentDevice();
 cudaStream_t GetCurrentStream();
-cudaEvent_t GetCurrentEvent();
-
 
 // memory allocation and copying
 void * mallocbytes (size_t nelem, size_t sz);
