@@ -734,41 +734,56 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-    class FrameRangeIterator
+    // class for defining an iteration over a sequence
+    // Currently supports time sequences, forward and backward.
+    // TODO: It is meant to some day generalize to multi-dimensional iterations, e.g. across an image:
+    //  - abstract delay direction to be multi-dimensional (let's call it FrameStep)
+    //  - DelayedValueNode::direction gets replaced with a FrameStep
+    //  - recInfo->m_isForwardLoop will be replaced by a FrameStep
+    //  - FrameRangeIterator derives from FrameStep, and operator++ adds tat to FrameRange
+    // Longer-term, we will also have nested structures. For those, FrameRangeIterations will be able to be instantiated from FrameRange objects to loop over their nested dimension.
+    class FrameRangeIteration
     {
         MBLayoutPtr m_pMBLayout;
-        int m_direction;
+        int m_delay;
     public:
-        class FrameRangeIterand : public FrameRange
+        // This class is returned by begin() and end().
+        // It is a FrameRange with additions ++ and != operators needed in the for loop.
+        class FrameRangeIterator : public FrameRange
         {
-            int step;
+            ptrdiff_t m_step;
         public:
-            FrameRangeIterand(const FrameRange & begin, int step) : FrameRange(begin), step(step) { }
-            bool operator==(const FrameRangeIterand & other) const { return timeIdxInSeq == other.timeIdxInSeq; }
-            void operator++() { timeIdxInSeq = (size_t)(step + (int)timeIdxInSeq); }    // going through (int) to avoid undefined behavior
+            FrameRangeIterator(const FrameRange & begin, ptrdiff_t step) : FrameRange(begin), m_step(step) { }
+            bool operator!=(const FrameRangeIterator & other) const { return timeIdxInSeq != other.timeIdxInSeq; }
+            void operator++(int) { timeIdxInSeq = (size_t)(m_step + (ptrdiff_t)timeIdxInSeq); }    // going through (int) to avoid undefined behavior
         };
-        FrameRangeIterand begin() const
+        // iterators for iterating forward
+        FrameRangeIterator begin() const
         {
-            if (m_direction < 0) return FrameRangeIterand(FrameRange(0), +1);
-            else return FrameRangeIterand(FrameRange(m_pMBLayout->GetNumTimeSteps()-1), -1);
+            if (m_delay < 0) return FrameRangeIterator(FrameRange(0), +1);
+            else return FrameRangeIterator(FrameRange(m_pMBLayout->GetNumTimeSteps()-1), -1);
         }
-        FrameRangeIterand end() const
+        FrameRangeIterator end() const
         {
-            if (m_direction > 0) return FrameRangeIterand(FrameRange((size_t)-1), 0);
-            else return FrameRangeIterand(FrameRange(m_pMBLayout->GetNumTimeSteps()), 0);
+            if (m_delay > 0) return FrameRangeIterator(FrameRange((size_t)-1), 0);
+            else return FrameRangeIterator(FrameRange(m_pMBLayout->GetNumTimeSteps()), 0);
         }
-        FrameRangeIterand rbegin() const
+        // iterators for iterating in reverse order (as needed for gradient update)
+        FrameRangeIterator rbegin() const
         {
-            if (m_direction > 0) return FrameRangeIterand(FrameRange(0), -1);
-            else return FrameRangeIterand(FrameRange(m_pMBLayout->GetNumTimeSteps() - 1), +1);
+            if (m_delay > 0) return FrameRangeIterator(FrameRange(0), +1);
+            else return FrameRangeIterator(FrameRange(m_pMBLayout->GetNumTimeSteps() - 1), -1);
         }
-        FrameRangeIterand rend() const
+        FrameRangeIterator rend() const
         {
-            if (m_direction < 0) return FrameRangeIterand(FrameRange((size_t)-1), 0);
-            else return FrameRangeIterand(FrameRange(m_pMBLayout->GetNumTimeSteps()), 0);
+            if (m_delay < 0) return FrameRangeIterator(FrameRange((size_t)-1), 0);
+            else return FrameRangeIterator(FrameRange(m_pMBLayout->GetNumTimeSteps()), 0);
         }
-        // one-dimensional iterator (time sequences)
-        FrameRangeIterator(MBLayoutPtr pMBLayout, int direction) : m_pMBLayout(pMBLayout), m_direction(direction) { }
+        // one-dimensional iteration (time sequences)
+        // Delay specifies from which side the delayed value comes from:
+        //  - for left-to-right models -> pass delay = -1
+        //  - for right-to-left models -> pass delay = +1
+        FrameRangeIteration(MBLayoutPtr pMBLayout, int delay) : m_pMBLayout(pMBLayout), m_delay(delay) { }
         // in the future we may consier multi-dimensional iterators such as iterators over images
     };
 

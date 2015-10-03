@@ -851,6 +851,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // learning rate adjustment
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || i < m_learningRatesParam.size())
             {
+                // BUGBUG: GetNumParallelSequences() returns 1 under certain situations; it seems when restarting from checkpoint
                 learnRatePerSample = GetLearningRatePerSample(i/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
             }
             else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)

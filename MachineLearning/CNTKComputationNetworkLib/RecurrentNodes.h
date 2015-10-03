@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // The two differ in the step direction, some loop directions, and sequence-boundary flags.
     // -----------------------------------------------------------------------
 
-    template<class ElemType, int direction/*-1 or +1*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
+    template<class ElemType, int direction/*-1 for Past/left-to-right or +1 for Future/right-to-left*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
     class DelayedValueNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
@@ -113,6 +113,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numSeq = GetNumParallelSequences();
 
             // each row has a number to indicate how many values should be reset for that utterance
+            // TODO: This algorithm is not obvious and should be explained. E.g. how come it is direction independent?
             vector<int> numResetLeft(numSeq, 0);
             for (size_t i = 0; i < GetNumTimeSteps(); i++)   // i = frame index (time)
             {
@@ -152,10 +153,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.IsAllFrames())
             {
                 // recursive call to ourselves
-                if (dir < 0) for (size_t t = GetNumTimeSteps(); t --> 0; )
-                    ComputeInputPartial(inputIndex, FrameRange(t));
-                else for (size_t t = 0; t < GetNumTimeSteps(); t++)
-                    ComputeInputPartial(inputIndex, FrameRange(t));
+                FrameRangeIteration range(m_pMBLayout, dir);
+                for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iterator
+                    ComputeInputPartial(inputIndex, t);
+                //if (dir < 0) for (size_t t = GetNumTimeSteps(); t --> 0; )
+                //    ComputeInputPartial(inputIndex, FrameRange(t));
+                //else for (size_t t = 0; t < GetNumTimeSteps(); t++)
+                //    ComputeInputPartial(inputIndex, FrameRange(t));
                 return;
             }
 
@@ -225,10 +229,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.IsAllFrames())
             {
                 // recursive call to ourselves
-                if (dir < 0) for (size_t t = 0; t < GetNumTimeSteps(); t++)
-                    EvaluateThisNode(FrameRange(t));
-                else for (size_t t = GetNumTimeSteps(); t--> 0; )
-                    EvaluateThisNode(FrameRange(t));
+                FrameRangeIteration range(m_pMBLayout, dir);
+                for (auto t = range.begin(); t != range.end(); t++)
+                    EvaluateThisNode(t);
                 return;
             }
 
