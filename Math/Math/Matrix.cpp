@@ -186,7 +186,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numTimesDeviceChanged = 0;
         m_numTimesMatrixTypeChanged = 0;
         m_devicesTransferedTo[1] = m_devicesTransferedTo[0] = CPUDEVICE - 1;
-        }
+    }
 
     //this function is used to indicate where (CPUDense, CPUSparse, GPUDense, GPUSparse) the most updated results are in
     //after the actual matrix is updated.
