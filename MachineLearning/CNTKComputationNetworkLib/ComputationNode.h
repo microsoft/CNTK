@@ -1148,10 +1148,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         enum ValueOrGradient { VALUE, GRADIENT };
         Matrix<ElemType> DataSlice(ValueOrGradient valueOrGradient/*as it says*/,
-            const FrameRange & frameRange/*select frame or entire batch*/)
+                                   const FrameRange & frameRange/*select frame or entire batch*/)
         {
             Matrix<ElemType> & data = (valueOrGradient == VALUE) ? FunctionValues() : GradientValues();
-            return DataSlice(data, frameRange);
+            try
+            {
+                return DataSlice(data, frameRange);
+            }
+            catch (const logic_error & e)
+            {
+                LogicError("%s In %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());  // :( DataSlice is static and has no access; so we post-patch it into the error string here...
+            }
         }
         Matrix<ElemType> ValueSlice(const FrameRange & frameRange/*select frame or entire batch*/)
         {
