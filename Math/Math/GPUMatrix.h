@@ -42,31 +42,6 @@ typedef struct CUstream_st *cudaStream_t;
 void MATH_API SetStream(cudaStream_t stream);
 cudaStream_t MATH_API GetStream();
 
-// Error handling
-template<typename ERRTYPE> static const char * CudaErrString(ERRTYPE x);
-template<typename ERRTYPE> static void CudaCall(ERRTYPE retCode, const char * exprString, const char * libName, ERRTYPE successCode)
-{
-    if (retCode != successCode)
-    {
-        const char * hostname = getenv("COMPUTERNAME"); // TODO: This is for Windows; likely different on Linux.
-        // how to get the current GPU id?
-        int gpuId = -1;
-        try
-        {
-            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, CudaErrString(retCode), gpuId, hostname, exprString);
-        }
-        catch (const std::exception & e)    // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
-        {
-            std::cerr << e.what() << std::endl;
-            throw;
-        }
-    }
-}
-#define CUDA_CALL(expr)     (CudaCall((expr), #expr, "CUDA", cudaSuccess))
-#define CUBLAS_CALL(expr)   (CudaCall((expr), #expr, "CUBLAS", CUBLAS_STATUS_SUCCESS))
-#define CUSPARSE_CALL(expr) (CudaCall((expr), #expr, "CUSPARSE", CUSPARSE_STATUS_SUCCESS))
-#define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND", CURAND_STATUS_SUCCESS))
-
 namespace Microsoft { namespace MSR { namespace CNTK {    
 
     void PrepareDevice(DEVICEID_TYPE deviceId);
@@ -471,3 +446,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef GPUMatrix<float> GPUSingleMatrix;
 
 }}}
+
+// Error handling
+template<typename ERRTYPE> static const char * CudaErrString(ERRTYPE x);
+template<typename ERRTYPE> static void CudaCall(ERRTYPE retCode, const char * exprString, const char * libName, ERRTYPE successCode)
+{
+    if (retCode != successCode)
+    {
+        try
+        {
+            const char * hostname = getenv("COMPUTERNAME"); // TODO: This is the easy way for Windows; likely different on Linux.
+            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, CudaErrString(retCode), Microsoft::MSR::CNTK::GPUMatrix<float>::GetBestGPUDeviceId(), hostname ? hostname : "?", exprString);
+        }
+        catch (const std::exception & e)    // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
+        {
+            std::cerr << e.what() << std::endl;
+            throw;
+        }
+    }
+}
+#define CUDA_CALL(expr)     (CudaCall((expr), #expr, "CUDA", cudaSuccess))
+#define CUBLAS_CALL(expr)   (CudaCall((expr), #expr, "CUBLAS", CUBLAS_STATUS_SUCCESS))
+#define CUSPARSE_CALL(expr) (CudaCall((expr), #expr, "CUSPARSE", CUSPARSE_STATUS_SUCCESS))
+#define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND", CURAND_STATUS_SUCCESS))

@@ -22,6 +22,7 @@
 //    Example: TimeReverse must create a new layout. A second TimeReverse ideally would revert back, but can't know. Hence, all consumers of layouts must compare upon Evaluate().
 //  - more informative CUDA errors (show original error, machine name, and card id; maybe even a time stamp), to better be able to handle hardware issues
 //  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
+//  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
 
 // The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
 
