@@ -80,7 +80,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_indexInLoop(0),
             m_visited(false),
             m_inStack(false),
-            //m_maskMissingColumnsToZero(false),
+            m_inputWidth(1), m_inputHeight(1), m_inputChannels(1),      // BUGBUG: How to default-init these? Impacts partial validation.
+            m_outputWidth(1), m_outputHeight(1), m_outputChannels(1),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name)
         {
         }
@@ -732,6 +733,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
         size_t m_inputWidth, m_inputHeight, m_inputChannels;  //how to interpret each column in the input as an image
         size_t m_outputWidth, m_outputHeight, m_outputChannels;  //how to interpret each column in the output as an image
+        // TODO: These ^^ should be grouped into some struct, and also there is a redundancy w.r.t. GetNumCols() we need to remove.
 
         std::wstring m_nodeName;
 
