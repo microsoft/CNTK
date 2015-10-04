@@ -48,12 +48,10 @@ template<typename ERRTYPE> static void CudaCall(ERRTYPE retCode, const char * ex
 {
     if (retCode != successCode)
     {
-        const char * hostname = getenv("COMPUTERNAME"); // TODO: This is for Windows; likely different on Linux.
-        // how to get the current GPU id?
-        int gpuId = -1;
         try
         {
-            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, CudaErrString(retCode), gpuId, hostname, exprString);
+            const char * hostname = getenv("COMPUTERNAME"); // TODO: This is the easy way for Windows; likely different on Linux.
+            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, CudaErrString(retCode), GetBestGPUDeviceId(), hostname ? hostname : "?", exprString);
         }
         catch (const std::exception & e)    // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
         {

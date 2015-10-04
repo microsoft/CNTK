@@ -64,9 +64,9 @@ cudaStream_t MATH_API GetStream()
     return t_stream;
 }
 
-static const char * CudaErrString(cudaError_t x)    { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
-static const char * CudaErrString(cublasStatus_t x) { cudaDeviceSynchronize(); return x*0+"(TODO: CUBLAS error string goes here)"; }
-static const char * CudaErrString(curandStatus x)   { cudaDeviceSynchronize(); return x*0+"(TODO: CURAND error string goes here)"; }
+static const char * CudaErrString(cudaError_t x)  { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
+static const char * CudaErrString(cublasStatus_t) { cudaDeviceSynchronize(); return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)"; }
+static const char * CudaErrString(curandStatus)   { cudaDeviceSynchronize(); return "(see curand.h & look for curandStatus or CURAND_STATUS_xxx)"; }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
