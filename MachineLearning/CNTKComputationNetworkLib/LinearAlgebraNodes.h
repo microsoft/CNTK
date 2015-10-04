@@ -808,7 +808,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // cols0 and rows1 may have been changed so don't use them in the following check
             // TODO: why not check this when part of a loop?
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumCols())
-                LogicError("The Matrix dimension in the Times operation does not match.");
+                LogicError("The Matrix dimension in the %ls %ls operation does not match.", NodeName().c_str(), OperationName().c_str());
             Resize(rows0, cols1);
 
             InferMBLayoutFromInputsForStandardCase();
