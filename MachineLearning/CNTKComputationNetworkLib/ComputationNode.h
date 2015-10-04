@@ -404,7 +404,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) = 0;
 
-        virtual void OnEvaluateBeginIteration() { }             // called before first iteration step of EvaluateThisNode()
+        virtual void OnEvaluateBeginIteration()
+        {
+            //fprintf(stderr, "Trace: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+        }             // called before first iteration step of EvaluateThisNode()
         virtual void EvaluateThisNode(const FrameRange &) = 0;  // forward prop for one minibatch
         virtual void OnEvaluateEndIteration() { }               // called after last iteration step of EvaluateThisNode()
         virtual void ComputeGradientForChildren() = 0;

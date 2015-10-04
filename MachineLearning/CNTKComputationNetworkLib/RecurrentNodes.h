@@ -195,6 +195,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void OnEvaluateBeginIteration() override      // called before first iteration step of EvaluateThisNode()
         {
+            Base::OnEvaluateBeginIteration();
             CacheMBLayout();
         }
 
@@ -215,6 +216,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!m_delayedActivationMBLayout) m_delayedActivationMBLayout = make_shared<MBLayout>();
                 m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
             }
+
+            Base::OnEvaluateEndIteration();
         }
 
         // This function assumes OnEvaluateBegin/EndIteration() to be called before/after the iteration loop.
