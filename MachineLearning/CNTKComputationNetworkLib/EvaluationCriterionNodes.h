@@ -45,16 +45,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             EvaluateThisNodeS(m_functionValues, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues, m_topK, shared_from_this());
         }
 
-        void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& maxIndexes0, Matrix<ElemType>& maxIndexes1, Matrix<ElemType>& maxValues, ComputationNodePtr curNode)
+        void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& maxIndexes0, Matrix<ElemType>& maxIndexes1, Matrix<ElemType>& maxValues, int topK, ComputationNodePtr curNode)
         {
             inputFunctionValues0.VectorMax(maxIndexes0, maxValues, true);
             inputFunctionValues1.VectorMax(maxIndexes1, maxValues, true, topK);
             curNode->MaskMissingColumnsToZero(maxIndexes0, Inputs(0)->GetMBLayout());   // we are fine since it will only be called with full minibatch
             curNode->MaskMissingColumnsToZero(maxIndexes1, Inputs(1)->GetMBLayout());
             functionValues.AssignNumOfDiff(maxIndexes0, maxIndexes1, topK > 1);
-        #if NANCHECK
+#if NANCHECK
             functionValues.HasNan("ErrorPrediction");
-        #endif
+#endif
 #if DUMPOUTPUT
             functionValues.Print("ErrorPredictionNode");
 #endif
@@ -96,22 +96,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
                 {
                     LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
-                }       
+                }
             if (((!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&  //match size
                 Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()))) && Inputs(0)->GetLoopId() < 0)
             {
                 LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
             }
 
-            Resize(1,1);
+            Resize(1, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
+            InferImageDimsFromInputs();
 
             // resize the temporaries to their proper size
             size_t cols = Inputs(0)->GetNumCols();
-            m_maxIndexes0.Resize(m_topK,cols);
-            m_maxIndexes1.Resize(m_topK,cols);
-            m_maxValues.Resize(m_topK,cols);
+            m_maxIndexes0.Resize(m_topK, cols);
+            m_maxIndexes1.Resize(m_topK, cols);
+            m_maxValues.Resize(m_topK, cols);
         }
 
         virtual void InferImageDimsFromInputs()
@@ -140,7 +140,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_maxValues = m_maxValues;
             }
         }
-protected:
+    protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
     private:
@@ -149,7 +149,7 @@ protected:
         int m_topK;
     };
 
-    template class ErrorPredictionNode<float>; 
+    template class ErrorPredictionNode<float>;
     template class ErrorPredictionNode<double>;
 
 }}}
