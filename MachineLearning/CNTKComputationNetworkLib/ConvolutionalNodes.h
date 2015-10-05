@@ -29,9 +29,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // ConvolutionNode (convolutionWeights, inputFeature)
     // -----------------------------------------------------------------------
 
-    //convolutional network 
-    //follow "high performance convolutional neural networks for document processing" by Kumar chellapilla, Sidde Puri, and Patrice Simard
-    //assume each column is an input sample. Each sample is stored in [channel, row, col]  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
+    // convolutional network 
+    // This follows "high performance convolutional neural networks for document processing" by Kumar Chellapilla, Sidde Puri, and Patrice Simard.
+    // Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
     template<class ElemType>
     class ConvolutionNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
@@ -373,8 +373,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // PoolingNodeBase (input)
     // -----------------------------------------------------------------------
 
-    //Max/Average Pooling: support multi channel
-    //assume each column is an input sample. Each sample is stored in  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
+    // Max/Average Pooling: support multi channel
+    // Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
     template<class ElemType>
     class PoolingNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
