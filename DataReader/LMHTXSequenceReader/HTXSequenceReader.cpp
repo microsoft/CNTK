@@ -152,7 +152,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     if (debughtx == 1)
         fprintf(stderr, "debughtx set to one, will give a lot of debug output....\n");
 
-    if ((int)(readerConfig("randomize", "1")) == 1)
+    if (strcmp(readerConfig("randomize", "1"), "1") == 1)
         randomize = true;
     else
         randomize = false;
