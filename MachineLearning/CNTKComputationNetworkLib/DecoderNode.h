@@ -192,9 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
 
         /// label : output label vector of [0:T-1]

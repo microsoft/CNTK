@@ -171,9 +171,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
-            m_outputChannels = 1;
+            m_outputImageLayout = ImageLayout();
         }
 
         //virtual void AttachInputs(const ComputationNodePtr singleInput) 
@@ -261,9 +259,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputWidth = 1;
-            m_outputHeight = 1;
-            m_outputChannels = 1;
+            m_outputImageLayout = ImageLayout();
         }
 
         //virtual void AttachInputs(const ComputationNodePtr singleInput)
@@ -394,10 +390,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_outputHeight = m_numRows;        
+            m_outputImageLayout.height = m_numRows;        
 
             //WARNING: this node will destroy the image size information from the child
-            if (m_inputWidth * m_inputChannels != 1)
+            if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
                 fprintf(stderr, "WARNING: RowSlice operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
@@ -527,10 +523,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, true);
-            m_outputHeight = GetNumRows();
+            m_outputImageLayout.height = GetNumRows();
 
             //WARNING: this node will destroy the image size information from the child
-            if (m_inputWidth * m_inputChannels != 1)
+            if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
                 fprintf(stderr, "WARNING: RowStack operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
@@ -820,9 +816,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's columnwise
 
             //after multiplication the structure is lost
-            m_outputWidth = 1;
-            m_outputHeight = Inputs(0)->GetNumRows();
-            m_outputChannels =  1;
+            m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumRows(), 1);
         }
 
         //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
@@ -981,9 +975,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
-            m_outputWidth = 1;
-            m_outputHeight = Inputs(0)->GetNumRows();
-            m_outputChannels = 1;
+            m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumRows(), 1);
         }
 
         //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
@@ -2150,9 +2142,7 @@ private:
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }
 
         //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
@@ -2319,9 +2309,7 @@ private:
             InferImageDimsFromInput(1, false); 
 
             //after KhatriRaoProduct the structure is lost
-            m_outputWidth = 1;
-            m_outputHeight = m_functionValues.GetNumRows();
-            m_outputChannels =  1;
+            m_outputImageLayout = ImageLayout(1, m_functionValues.GetNumRows(), 1);
         }
 
         //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
@@ -2554,9 +2542,7 @@ private:
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
 
         //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr shiftNode, const ComputationNodePtr negNode)
@@ -2687,9 +2673,7 @@ private:
             InferImageDimsFromInput(0, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
-            m_outputWidth = 1;
-            m_outputHeight = Inputs(0)->GetNumCols();
-            m_outputChannels = 1;
+            m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumCols(), 1);
         }
 
         //virtual void AttachInputs(const ComputationNodePtr leftNode)
@@ -3027,9 +3011,7 @@ private:
             InferImageDimsFromInput(1, false); //the second one is the input since it's column wize
 
             //after multiplication the structure is lost
-            m_outputWidth = 1;
-            m_outputHeight = Inputs(0)->GetNumRows();
-            m_outputChannels = 1;
+            m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumRows(), 1);
         }
     };
 

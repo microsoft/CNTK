@@ -119,9 +119,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> static ElemType MakeNan(size_t payload);
-    template<> static float MakeNan<float>(size_t /*payload*/) { return nanf(""); }
-    template<> static double MakeNan<double>(size_t /*payload*/) { return nan(""); }
-    template<> static char MakeNan<char>(size_t) { return 0; }   // (needed for completeness)
+    template<> /*static*/ float  MakeNan<float>(size_t /*payload*/)  { return nanf(""); }
+    template<> /*static*/ double MakeNan<double>(size_t /*payload*/) { return nan(""); }
+    template<> /*static*/ char   MakeNan<char>(size_t)               { return 0; }   // (needed for completeness)
 
     // helper to allocate an array of ElemType
     // Use this instead of new[] to get NaN initialization for debugging.
@@ -129,7 +129,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static ElemType * NewArray(size_t n)
     {
         ElemType * p = new ElemType[n]();
-#if 1 // _DEBUG
+#if _DEBUG  // BUGBUG BUGBUG: If I comment this in in Release, two Release tests fail. Track this down!!
         ElemType nan = MakeNan<ElemType>(__LINE__);
         for (size_t i = 0; i < n; i++)
             p[i] = nan;

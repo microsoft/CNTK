@@ -113,17 +113,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }       
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -281,18 +272,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }
-
-        //leftNode should be the empirical
-        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = label;
-        //    m_children[1] = prediction;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -434,18 +415,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }
-
-        //leftNode should be the empirical
-        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = label;
-        //    m_children[1] = prediction;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -535,16 +506,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = singleInput;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -627,16 +590,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = singleInput;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -804,9 +759,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
@@ -1126,20 +1079,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr input,
-        //    const ComputationNodePtr inputweight, const ComputationNodePtr clsProbBeforeSoftmax)
-        //{
-        //    m_children.resize(4);
-        //    m_children[0] = label;
-        //    m_children[1] = input;
-        //    m_children[2] = inputweight;
-        //    m_children[3] = clsProbBeforeSoftmax;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1441,20 +1382,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr label,
-        //    const ComputationNodePtr position_dependent_score,
-        //    const ComputationNodePtr transition_score)
-        //{
-        //    m_children.resize(3);
-        //    m_children[0] = label;
-        //    m_children[1] = position_dependent_score;
-        //    m_children[2] = transition_score;
-        //}
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -1567,18 +1496,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction) 
-        //{
-        //    m_children.resize(3);
-        //    m_children[0] = objectives;
-        //    m_children[1] = derivatives;
-        //    m_children[2] = prediction;
-        //}
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     };
@@ -1753,20 +1672,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
-
-        //leftNode should be the empirical
-        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood)
-        //{
-        //    m_children.resize(3);
-        //    m_children[0] = label;
-        //    m_children[1] = prediction;
-        //    m_children[2] = loglikelihood;
-        //    loglikelihood->NeedGradient() = false;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {

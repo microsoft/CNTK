@@ -108,9 +108,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }
 
         //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
