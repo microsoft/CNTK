@@ -508,15 +508,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             Inputs(0)->MaskMissingValuesColumnsToZero();
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
-        }
-
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues)
-        {
             VerifySize(1, 1);
-            functionValues.SetValue(inputFunctionValues.MatrixNorm1());
+            FunctionValues().SetValue(Inputs(0)->FunctionValues().MatrixNorm1());
 #if NANCHECK
-            functionValues.HasNan("MatrixL1Reg");
+            FunctionValues().HasNan("MatrixL1Reg");
 #endif
         }
 
@@ -606,15 +601,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             Inputs(0)->MaskMissingValuesColumnsToZero();
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
-        }
-
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues)
-        {
             VerifySize(1,1);
-            functionValues.SetValue(inputFunctionValues.FrobeniusNorm());
+            FunctionValues().SetValue(Inputs(0)->FunctionValues().FrobeniusNorm());
 #if NANCHECK
-            functionValues.HasNan("MatrixL2Reg");
+            FunctionValues().HasNan("MatrixL2Reg");
 #endif
         }
 
