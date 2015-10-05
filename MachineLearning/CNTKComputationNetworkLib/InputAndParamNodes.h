@@ -40,17 +40,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         {
             m_needGradient = true;
-            m_outputWidth = 1;
-            m_outputHeight = SIZE_MAX;
-            m_outputChannels = 1;
+            m_outputImageLayout = ImageLayout(1, SIZE_MAX, 1);
         }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
             Base(deviceId, name)
         {
             m_needGradient = true;
-            m_outputWidth = 1;
-            m_outputHeight = rows;
-            m_outputChannels = 1;
+            m_outputImageLayout = ImageLayout(1, rows, 1);
             m_functionValues.Resize(rows, cols);
         }
 
@@ -77,9 +73,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_functionValues.Resize(rows, cols);
             fstream >> m_functionValues;
 
-            m_outputWidth = 1;
-            m_outputHeight = rows;
-            m_outputChannels = 1;
+            m_outputImageLayout = ImageLayout(1, rows, 1);
         }
 
         // initialize with random numbers
@@ -223,17 +217,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         {
-            m_outputWidth = SIZE_MAX;
-            m_outputHeight = SIZE_MAX;
-            m_outputChannels = SIZE_MAX;
+            m_outputImageLayout.Invalidate();
             Init(0, 0, false);
         }
         InputValue(DEVICEID_TYPE deviceId, const wstring & name, bool isSparse) :
             Base(deviceId, name)
         {
-            m_outputWidth = SIZE_MAX;
-            m_outputHeight = SIZE_MAX;
-            m_outputChannels = SIZE_MAX;
+            m_outputImageLayout.Invalidate();
             Init(0, 0, isSparse);
         }
         // ^^ TODO: merge the two above with optional arg
@@ -243,24 +233,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rows * cols == 0)
                 LogicError("This InputValue dimension is 0.");
 
-            m_outputWidth = 1;
-            m_outputHeight = rows;
-            m_outputChannels = 1;
-
+            m_outputImageLayout = ImageLayout(1, rows, 1);
             Init(rows, cols, isSparse);
         }
-        InputValue(DEVICEID_TYPE deviceId, const wstring & name, size_t imageWidth, size_t imageHeight, size_t imageChannels, size_t numImages, bool isSparse = false) :
+        InputValue(DEVICEID_TYPE deviceId, const wstring & name, const ImageLayout & imageLayout, size_t numImages, bool isSparse = false) :
             Base(deviceId, name)
         {
-            size_t rows = imageWidth * imageHeight * imageChannels;
+            size_t rows = imageLayout.GetNumElements();
             size_t cols = numImages;
 
             if (rows * cols == 0)
                 LogicError("This InputValue dimension is 0.");
 
-            m_outputWidth = imageWidth;
-            m_outputHeight = imageHeight;
-            m_outputChannels = imageChannels;
+            m_outputImageLayout = imageLayout;
 
             Init(rows, cols, isSparse);
         }
@@ -271,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows = GetNumRows();                     // using explicitly typed variables to be 100% symmetrical to LoadFromFile()
             size_t cols = m_pMBLayout ? 0 : GetNumCols();   // if this Input depends on MB size, we write it as having 0 dimensions
             fstream << rows << cols;
-            fstream << m_outputWidth << m_outputHeight << m_outputChannels;
+            fstream << m_outputImageLayout.width << m_outputImageLayout.height << m_outputImageLayout.channels;
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
@@ -282,7 +267,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> rows >> cols;
             if (m_pMBLayout)    // some older files retained the #columns when saving, which is meaningless
                 cols = 0;
-            fstream >> m_outputWidth >> m_outputHeight >> m_outputChannels; 
+            fstream >> m_outputImageLayout.width >> m_outputImageLayout.height >> m_outputImageLayout.channels; 
 
             if (m_isSparse)
                 ConvertToSparseMatrix();

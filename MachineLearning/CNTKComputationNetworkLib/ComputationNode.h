@@ -53,6 +53,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         copyNodeChildrenCrossNetwork=4, // allow a cross network child copy
     };
 
+    // describes inner layout of feature vector that is an image
+    // TODO: This will grow into a more general tensor mechanism.
+    // TODO: SaveToFile() and LoadFromFile() currenrly use individual elements; provide an overload for the entire object.
+    struct ImageLayout
+    {
+        size_t width, height, channels;
+        // BUGBUG: This initialization is not correct. This must match GetNumRows(). We probably cannot have all three members here.
+        // Idea: We could construct this thing with a ref to the enclosing ComputationNode, and replace 'width' by an expression.
+        ImageLayout() : width(1), height(1), channels(1) { }
+        ImageLayout(size_t width, size_t height, size_t channels) : width(width), height(height), channels(channels) { }
+        //void Set(size_t width, size_t height, size_t channels) { this->width = width; this->height = height; this->channels = channels; }
+        void Invalidate() { width = SIZE_MAX; height = SIZE_MAX; channels = SIZE_MAX; } // TODO: clean up the valid/invalid situation (this is currently done inconsistently)
+        size_t GetNumElements() const { return width * height * channels; }
+    };
+
 #pragma region base computation class
 
     // =======================================================================
@@ -230,8 +245,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             m_deviceId(deviceId),
             m_needGradient(false),
-            m_inputWidth(1), m_inputHeight(1), m_inputChannels(1),      // BUGBUG: How to default-init these? Impacts partial validation.
-            m_outputWidth(1), m_outputHeight(1), m_outputChannels(1),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name)
         {
         }
@@ -251,13 +264,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_needGradient = m_needGradient;
                 node->m_nodeName = newName;
 
-                node->m_inputWidth = m_inputWidth;
-                node->m_inputHeight = m_inputHeight;
-                node->m_inputChannels = m_inputChannels;
-
-                node->m_outputWidth = m_outputWidth;
-                node->m_outputHeight = m_outputHeight;
-                node->m_outputChannels = m_outputChannels;
+                node->m_inputImageLayout = m_inputImageLayout;
+                node->m_outputImageLayout = m_outputImageLayout;
 
                 ComputationNetworkOwnedNodeState::CopyTo(*node);
             }
@@ -431,7 +439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const char * mbSizeMark = child->m_pMBLayout ? "MBSize " : "";
                     if (IsChildAnImage(i))  //image
                         fprintf(stderr, "%ls[%lu {W=%lu, H=%lu, C=%lu}, %s%lu]", child->NodeName().c_str(), child->GetNumRows(),
-                                child->m_outputWidth, child->m_outputHeight, child->m_outputChannels, mbSizeMark, child->GetNumCols());
+                                child->m_outputImageLayout.width, child->m_outputImageLayout.height, child->m_outputImageLayout.channels, mbSizeMark, child->GetNumCols());
                     else
                         fprintf(stderr, "%ls[%lu, %s%lu]", child->NodeName().c_str(), child->GetNumRows(), mbSizeMark, child->GetNumCols());
                 }
@@ -463,7 +471,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool IsChildAnImage(const size_t index) const
         {
-            return m_children[index]->m_outputWidth != 1 || m_children[index]->m_outputChannels != 1;
+            return m_children[index]->m_outputImageLayout.width != 1 || m_children[index]->m_outputImageLayout.channels != 1;
         }
 
         const size_t ChildrenSize() const { return m_children.size(); }
@@ -506,18 +514,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             const auto & child = m_children[index];
             if (child != nullptr)
-            {
-                m_inputWidth = child->m_outputWidth;
-                m_inputHeight = child->m_outputHeight;
-                m_inputChannels = child->m_outputChannels;
-            }
-
+                m_inputImageLayout = child->m_outputImageLayout;
             if (outputSameAsInput)
-            {
-                m_outputWidth = m_inputWidth;
-                m_outputHeight = m_inputHeight;
-                m_outputChannels = m_inputChannels;
-            }
+                m_outputImageLayout = m_inputImageLayout;
         }
 
         void InferMBLayoutFromInputsForStandardCase();
@@ -805,8 +804,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::vector<ComputationNodeBasePtr> m_children;
 
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
-        size_t m_inputWidth, m_inputHeight, m_inputChannels;  //how to interpret each column in the input as an image
-        size_t m_outputWidth, m_outputHeight, m_outputChannels;  //how to interpret each column in the output as an image
+        ImageLayout m_inputImageLayout;     // how to interpret each column in the input as an image
+        ImageLayout m_outputImageLayout;    // and the output
         // TODO: These ^^ should be grouped into some struct, and also there is a redundancy w.r.t. GetNumCols() we need to remove.
     };
     typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
@@ -1435,8 +1434,8 @@ protected: \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; \
     using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; \
     using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
-    using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
-    using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; \
+    using Base::m_inputImageLayout; using Base::m_outputImageLayout; \
+    using Base::m_needGradient; using Base::m_nodeName; using Base::s_constOnes; \
     using Base::shared_from_this; \
 public: \
     using Base::CreateUniqId; \
