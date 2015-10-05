@@ -906,7 +906,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> weightForClass = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);
                 Matrix<ElemType> obs = Inputs(1)->ValueSlice(frameRange);   // hidden activation vector for current word token
                 Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
-                Matrix<ElemType> grd_to_cls_prob = DataSlice(m_clsLogSoftmax, frameRange);
+                Matrix<ElemType> grd_to_cls_prob = DataSlice(m_clsLogSoftmax, frameRange, Inputs(3)->GetMBLayout());
 
                 switch (inputIndex)
                 {
@@ -922,7 +922,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     break;
                 case 3:
                     grd_t = Inputs(3)->GradientSlice(frameRange);
-                    grd_t.SetValue(DataSlice(m_clsSoftmax, frameRange));
+                    grd_t.SetValue(DataSlice(m_clsSoftmax, frameRange, Inputs(3)->GetMBLayout()));
                     ComputeCEPartialToSoftmaxInputs(grd_t, GradientValues(), c_t);
                     break;
                 }
