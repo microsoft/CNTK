@@ -850,7 +850,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             noRecurrentNodes = rootNode->ReshuffleNodes(recurrentNodes);
 
-            nodes.sort(IsSmaller);
+            nodes.sort(ComputationNodeBase::IsSmaller);
 
             ReorderLoops(nodes, recurrentNodes, noRecurrentNodes);
 

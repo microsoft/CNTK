@@ -1060,7 +1060,7 @@ private:
             m_maskOfDropout(deviceId),
             m_dropoutRate(0)
         {
-            m_randomSeed = (unsigned long)atomic_fetch_add(&s_timeStampCounter, (unsigned long long int)1);
+            m_randomSeed = (unsigned long)CreateUniqId();
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
