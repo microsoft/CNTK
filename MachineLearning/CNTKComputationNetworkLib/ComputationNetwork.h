@@ -110,15 +110,6 @@ public:
     }
 
     // -----------------------------------------------------------------------
-    // evaluation
-    // -----------------------------------------------------------------------
-
-    static bool IsSmaller(const ComputationNodeBasePtr lhs, const ComputationNodeBasePtr rhs)
-    {
-        return lhs->GetVisitedOrder() < rhs->GetVisitedOrder();
-    }
-
-    // -----------------------------------------------------------------------
     // construction
     // -----------------------------------------------------------------------
 

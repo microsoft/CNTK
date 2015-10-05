@@ -104,11 +104,111 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
     // ComputationNetworkOwnedNodeState -- class to collect ComputationNode members that are really owned by ComputationNetwork
     // These members are only to be set, changed, and read by ComputationNetwork code.
+    // TODO: We could go much further and move all network-level evaluation routines into here as well.
+    //       I won't do it now as it will create a massive diff that would make merging of other ongoing changes much harder.
     // =======================================================================
 
+    class ComputationNetwork;
     struct ComputationNetworkOwnedNodeState
     {
         friend class ComputationNetwork;
+
+        ComputationNetworkOwnedNodeState() :
+            m_loopId(-1),
+            m_visitedOrder(-1),
+            m_index(-1),
+            m_lowLink(-1),
+            m_indexInLoop(0),
+            m_visited(false),
+            m_inStack(false)
+        { }
+
+        void ClearCache()
+        {
+            m_loopId = -1;
+            m_visitedOrder = -1;
+            m_index = -1;
+            m_lowLink = -1;
+            m_indexInLoop = 0;
+            m_visited = false;
+            m_inStack = false;
+        }
+
+        void SetLoopId(const int id) { m_loopId = id; }
+        int GetLoopId() const { return m_loopId; }
+
+        void SetVisitedOrder(const int id) { m_visitedOrder = id; }
+        size_t GetVisitedOrder() const { return m_visitedOrder; }
+
+        void SetIndex(const size_t ind) { m_index = ind; }
+        size_t GetIndex() const { return m_index; }
+
+        void SetLowLink(const size_t lowlink) { m_lowLink = lowlink; }
+        size_t GetLowLink() const { return m_lowLink; }
+
+        void SetVisited(const bool visited) { m_visited = visited; }
+        bool IsVisisted() const { return m_visited; }
+
+        void SetInStack(const bool instack) { m_inStack = instack; }
+        bool IsInStack() const { return m_inStack; }
+
+        void SetIndexInLoop(const size_t index) { m_indexInLoop = index; }
+        size_t GetIndexInLoop() const { return m_indexInLoop; }
+
+        void InitRecurrentNode()    // this initialization says that this node is not inside a loop
+        {
+            SetLoop(false);
+        }
+
+        bool HasLoop() const { return m_hasloop; }
+        void SetLoop(bool hasLoop) { m_hasloop = hasLoop; }
+
+        void CopyTo(ComputationNetworkOwnedNodeState & other) const
+        {
+            other.m_evalTimeStamp = m_evalTimeStamp;
+            other.m_hasloop = m_hasloop;
+        }
+
+        int64_t UpdateEvalTimeStamp()
+        {
+            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);    // TODO: does this really need to be atomic? We are not multi-threaded
+            return m_evalTimeStamp;
+        }
+
+        void ResetEvalTimeStamp()
+        {
+            m_evalTimeStamp = s_timeStampCounter;
+        }
+
+        int64_t GetEvalTimeStamp() const { return m_evalTimeStamp; }
+
+        int64_t CreateUniqId() const
+        {
+            return atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
+        }
+
+        static bool IsSmaller(const ComputationNetworkOwnedNodeState * lhs, const ComputationNetworkOwnedNodeState * rhs)
+        {
+            return lhs->m_visitedOrder < rhs->m_visitedOrder;
+        }
+
+    private:
+
+        // for loop nodes
+        bool m_hasloop;
+
+        static atomic_ullong s_timeStampCounter;
+        int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
+
+        int     m_loopId;
+
+        /// the order in reverse graph. 
+        int m_visitedOrder;
+        int m_index;
+        int m_lowLink;          // TODO: comment this, as it is not obvious
+        bool m_visited;
+        bool m_inStack;
+        int m_indexInLoop;
     };
 
     // =======================================================================
@@ -118,7 +218,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     class ComputationNodeBase :
         public IComputationNode,
-        protected ComputationNetworkOwnedNodeState,
+        public/*protected*/ ComputationNetworkOwnedNodeState,  // TODO: figure this out, somehow the 'friend' thing does not work
         public ScriptableObjects::ComputationNodeObject,
         public ScriptableObjects::WithTag, public ScriptableObjects::HasName, public ScriptableObjects::HasToString,
         public std::enable_shared_from_this<ComputationNodeBase>
@@ -130,14 +230,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             m_deviceId(deviceId),
             m_needGradient(false),
-            m_loopId(-1),
-            m_samplesInRecurrentStep(1),
-            m_visitedOrder(-1),
-            m_index(-1),
-            m_lowLink(-1),
-            m_indexInLoop(0),
-            m_visited(false),
-            m_inStack(false),
             m_inputWidth(1), m_inputHeight(1), m_inputChannels(1),      // BUGBUG: How to default-init these? Impacts partial validation.
             m_outputWidth(1), m_outputHeight(1), m_outputChannels(1),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name)
@@ -158,10 +250,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_deviceId = m_deviceId;
                 node->m_needGradient = m_needGradient;
                 node->m_nodeName = newName;
-                node->m_evalTimeStamp = m_evalTimeStamp;
-
-                //node->m_hasloop = m_hasloop;
-                node->SetLoop(HasLoop());
 
                 node->m_inputWidth = m_inputWidth;
                 node->m_inputHeight = m_inputHeight;
@@ -171,7 +259,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_outputHeight = m_outputHeight;
                 node->m_outputChannels = m_outputChannels;
 
-                //node->m_maskMissingColumnsToZero = m_maskMissingColumnsToZero;
+                ComputationNetworkOwnedNodeState::CopyTo(*node);
             }
         }
 
@@ -276,44 +364,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
         bool HasMBLayout() const { return !!m_pMBLayout; }
 
-        void ClearCache()
-        {
-            m_loopId = -1;
-            m_visitedOrder = -1;
-            m_index = -1;
-            m_lowLink = -1;
-            m_indexInLoop = 0;
-            m_visited = false;
-            m_inStack = false;
-        }
-
-        void SetLoopId(const int id) { m_loopId = id; }
-        int GetLoopId() const { return m_loopId; }
-
-        void SetVisitedOrder(const int id) { m_visitedOrder = id; }
-        size_t GetVisitedOrder() const { return m_visitedOrder; }
-
-        void SetIndex(const size_t ind) { m_index = ind; }
-        size_t GetIndex() const { return m_index; }
-
-        void SetLowLink(const size_t lowlink) { m_lowLink = lowlink; }
-        size_t GetLowLink() const { return m_lowLink; }
-
-        void SetVisited(const bool visited) { m_visited = visited; }
-        bool IsVisisted() const { return m_visited; }
-
-        void SetInStack(const bool instack) { m_inStack = instack; }
-        bool IsInStack() const { return m_inStack; }
-
-        void SetIndexInLoop(const size_t index) { m_indexInLoop = index; }
-        size_t GetIndexInLoop() const { return m_indexInLoop; }
-
         std::wstring GetName() const { return m_nodeName; }
 
         // temporary function that is called to verify stuff is called as I think it is. Delete if this does not fire for a while.
         void VerifyNumParallelSequences(size_t bsz)
         {
-            //m_samplesInRecurrentStep = bsz;
             if (bsz != m_pMBLayout->GetNumParallelSequences())
                 LogicError("VerifyNumParallelSequences: value inconsistent with MB layout");
         }
@@ -348,17 +403,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_pMBLayout->GetNumTimeSteps();
         }
     public:
-
-        int64_t UpdateEvalTimeStamp()
-        {
-            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);    // TODO: does this really need to be atomic? We are not multi-threaded
-            return m_evalTimeStamp;
-        }
-
-        void ResetEvalTimeStamp()
-        {
-            m_evalTimeStamp = s_timeStampCounter;
-        }
 
         // implemented by ComputationNode<ElemType>
         // for debugging purpose
@@ -410,22 +454,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool IsLeaf() const { return ChildrenSize() == 0; }
         bool& NeedGradient() { return m_needGradient; }
         const bool& NeedGradient() const { return m_needGradient; }
-
-        void InitRecurrentNode()    // this initialization says that this node is not inside a loop
-        {
-            SetLoop(false);
-        }
-
-        bool HasLoop() const { return m_hasloop; }
-        void SetLoop(bool hasLoop) { m_hasloop = hasLoop; }
-
-        //virtual ComputationNodeBasePtr FindChildInASet(const std::list<ComputationNodeBasePtr>& loop) const
-        //{
-        //    for (int i = 0; i < this->m_children.size(); i++)
-        //    if (std::find(loop.begin(), loop.end(), this->m_children[i]) != loop.end())
-        //        return this->m_children[i];
-        //    return nullptr;
-        //}
 
         virtual void /*IComputationNode::*/InferImageDimsFromInputs()
         {
@@ -498,7 +526,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static bool IsSmaller(const ComputationNodeBasePtr lhs, const ComputationNodeBasePtr rhs)
         {
-            return lhs->m_visitedOrder < rhs->m_visitedOrder;
+            return ComputationNetworkOwnedNodeState::IsSmaller(lhs.get(), rhs.get());
         }
 
         bool IsEqualTo(const ComputationNodeBasePtr other) const //this will be used to determine whehter two nodes are the same
@@ -572,7 +600,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
 
                 if (recurrent)
-                    m_visitedOrder = result.size();
+                    SetVisitedOrder(result.size());
             }
         }
     public:
@@ -672,7 +700,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i<ChildrenSize(); i++)
             {
                 //the second condition is used when the time stamp change from positive to negative
-                if (m_children[i]->m_evalTimeStamp >= m_evalTimeStamp || m_children[i]->m_evalTimeStamp + 1e10 < m_evalTimeStamp)
+                if (m_children[i]->GetEvalTimeStamp() >= GetEvalTimeStamp() || m_children[i]->GetEvalTimeStamp() + 1e10 < GetEvalTimeStamp())
                     return true;
             }
 
@@ -730,7 +758,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RpcStringFreeW((RPC_WSTR*)&szUuid);
             }
 #else
-            int64_t id = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
+            int64_t id = CreateUniqId();
             std::wstring base = L"AutoName";
             std::wstringstream sstm;
             sstm << base.c_str() << id;
@@ -769,39 +797,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     protected:
         // data members
+        DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
+        std::wstring m_nodeName;
+
+        MBLayoutPtr m_pMBLayout;
+
         std::vector<ComputationNodeBasePtr> m_children;
 
-        DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
         size_t m_inputWidth, m_inputHeight, m_inputChannels;  //how to interpret each column in the input as an image
         size_t m_outputWidth, m_outputHeight, m_outputChannels;  //how to interpret each column in the output as an image
         // TODO: These ^^ should be grouped into some struct, and also there is a redundancy w.r.t. GetNumCols() we need to remove.
-
-        std::wstring m_nodeName;
-
-        static atomic_ullong s_timeStampCounter;
-        int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
-
-        int     m_loopId;
-        size_t  m_samplesInRecurrentStep;
-
-        /// the order in reverse graph. 
-        int m_visitedOrder;
-        int m_index;
-        int m_lowLink;          // TODO: comment this, as it is not obvious
-        bool m_visited;
-        bool m_inStack;
-        int m_indexInLoop;
-        MBLayoutPtr m_pMBLayout;
-
-    private:
-        // for loop nodes
-        bool m_hasloop;
-
-        //bool m_maskMissingColumnsToZero;  // indicates whether user requested that the results of operation should be masked to handle the cases that the utterances have different lengths when grouped together as a minibatch.
-        // The obvious cases--recurrence, training criterion, and parameter gradients--are already handled automatically.
-        // The user must only set this flag for special cases where current CNTK does not do stuff right.
-        // Once we handle inconsistent layouts, this will go away.
     };
     typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
@@ -1424,17 +1430,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #define UsingComputationNodeMembers /*-WithoutOperationName needed to support inconsistent pattern of InputValue */    \
 protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  /*TODO: can we just use 'using?' */ \
-    using Base::m_loopId; using Base::m_samplesInRecurrentStep; \
-    using Base::m_visitedOrder; using Base::m_index; using Base::m_lowLink; using Base::m_visited; using Base::m_inStack; using Base::m_indexInLoop; \
     using Base::Resize; using Base::GetNumRows; using Base::GetNumCols; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; \
     using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; \
-    using Base::m_children; using Base::m_deviceId; using Base::m_evalTimeStamp; using Base::m_functionValues; using Base::m_gradientValues; \
+    using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputChannels; using Base::m_inputHeight; using Base::m_inputWidth; using Base::m_needGradient; using Base::m_nodeName; \
-    using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; using Base::s_timeStampCounter; \
+    using Base::m_outputChannels; using Base::m_outputHeight; using Base::m_outputWidth; using Base::s_constOnes; \
     using Base::shared_from_this; \
 public: \
+    using Base::CreateUniqId; \
     using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifySize; \
     /*using Base::ComputeGradientForChildren; using Base::ComputeInputPartial;*/ using Base::ConstOnes; \
     using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
