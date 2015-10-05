@@ -939,7 +939,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Warning: The layout used here must match the matrix. E.g. don't pass a child's matrix from a criterion node (use Inputs(x)->MaskMissing{Values,Gradient}ColumnsToZero() instead.
         static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX)
         {
-            bool foundLabelOrFeatureMissing = false; /// set to true if either nolabel or feature missing is processed
+            bool foundLabelOrFeatureMissing = false;    // return value: set to true if either nolabel or feature missing is processed
 
             if (pMBLayout && !pMBLayout->IsAllNone())
             {
@@ -957,11 +957,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t t = startT; t < endT; t++)
                 {
-                    if (pMBLayout->Is(t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeature))
+                    FrameRange frameRange(t);
+                    if (pMBLayout->Is(t, MinibatchPackingFlags::NoInput))
                     {
-                        for (size_t id = startS; id < endS; id++)
-                            if (pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel | MinibatchPackingFlags::NoFeature))
-                                matrixToBeMasked.ColumnSlice(t * nS  +  id, 1).SetValue(0);
+                        for (size_t s = startS; s < endS; s++)
+                            if (pMBLayout->Is(s, t, MinibatchPackingFlags::NoInput))
+                                //matrixToBeMasked.ColumnSlice(t * nS  +  s, 1).SetValue(0);
+                                DataSlice(matrixToBeMasked, frameRange.Sequence(s), pMBLayout).SetValue(0);
                         foundLabelOrFeatureMissing = true;
                     }
                 }
