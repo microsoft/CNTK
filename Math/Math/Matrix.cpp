@@ -1043,9 +1043,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
     }
 
-    /*static*/ float  Matrix<float>::MakeNan(size_t /*payload*/)  { return nanf(""); }
-    /*static*/ double Matrix<double>::MakeNan(size_t /*payload*/) { return nan(""); }
-    /*static*/ char   Matrix<char>::MakeNan(size_t)               { return 0; }   // (needed for completeness)
+    template<> /*static*/ float  Matrix<float>::MakeNan(size_t /*payload*/)  { return nanf(""); }
+    template<> /*static*/ double Matrix<double>::MakeNan(size_t /*payload*/) { return nan(""); }
+    template<> /*static*/ char   Matrix<char>::MakeNan(size_t)               { return 0; }   // (needed for completeness)
 
     template<class ElemType>
     void Matrix<ElemType>::SetColumn(const ElemType* colPointer, size_t colInd)
