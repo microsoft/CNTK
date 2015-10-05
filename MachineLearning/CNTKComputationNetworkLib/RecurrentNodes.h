@@ -39,7 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_initialActivationValue = initialActivationValue;
             m_timeStep = 1;
-            m_functionValues.Resize(row_size, col_size);
+            Resize(row_size, col_size);
             //m_delayedActivation.Resize(row_size, col_size);     // TODO: relevance of col_size? Why not timeStep?
             m_isHistoryCarryOverManagedExternally = false;      // used for PairNetworkNode/PastValueNode combination
         }
@@ -49,7 +49,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name),
             m_delayedActivation(deviceId), m_pShiftedMBLayout(make_shared<MBLayout>())
         {
-                Init(1, 1);
+            Init(1, 1);
         }
         DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
             Base(deviceId, name),
@@ -62,8 +62,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_functionValues.SetValue(m_initialActivationValue);
             //m_delayedActivation.SetValue(m_initialActivationValue);
 
-            m_gradientValues.Resize(row_size, col_size);
-            m_gradientValues.SetValue(0.0f);
+            //m_gradientValues.Resize(row_size, col_size);
+            //m_gradientValues.SetValue(0.0f);
         }
     public:
         void SaveToFile(File& fstream) const
@@ -297,21 +297,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryMap(isFinalValidationPass);
-#if 0
-            //PrintSelfBeforeValidation();
-
-            size_t rows0 = Inputs(0)->GetNumRows();
-            size_t cols0 = Inputs(0)->GetNumCols();
-
-            // since this is a recurrent node in a loop, the child might not have been validated yet
-            if (rows0 > 0 && (cols0 > 0 || Inputs(0)->HasMBLayout()))
-                Resize(Inputs(0));
-            else if (GetMBLayout())
-                Resize(GetNumRows(), GetMBLayout()->GetNumCols());
-
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
-#endif
         }
 
         // this function is only used for PairNetworkNode (on PastValueNode)

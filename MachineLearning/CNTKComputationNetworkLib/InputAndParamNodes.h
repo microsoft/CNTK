@@ -47,7 +47,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_needGradient = true;
             m_outputImageLayout = ImageLayout(1, rows, 1);
-            m_functionValues.Resize(rows, cols);
+            Resize(rows, cols);
         }
 
         virtual void SaveToFile(File& fstream) const override
@@ -70,7 +70,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //if (rows * cols == 0) 
             //    LogicError("This LearnableParameter dimension is 0.");
 
-            m_functionValues.Resize(rows, cols);
+            Resize(rows, cols);
             fstream >> m_functionValues;
 
             m_outputImageLayout = ImageLayout(1, rows, 1);
@@ -210,7 +210,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isSparse)
                 ConvertToSparseMatrix();
 
-            m_functionValues.Resize(rows, cols);
+            Resize(rows, cols);
             m_needGradient = false;
         }
     public:
@@ -272,8 +272,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_isSparse)
                 ConvertToSparseMatrix();
 
-            m_functionValues.Resize(rows, cols);
-            m_functionValues.SetValue(0.0);         // (if cols > 0, Resize() alone is not guaranteed to clear to 0; this eliminates potential left-overs)
+            Resize(rows, cols);
+            //m_functionValues.SetValue(0.0);         // (TODO: not sure why one would load InputValues)
             m_needGradient = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
         }
 
@@ -300,7 +300,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows = m_functionValues.GetNumRows();
             size_t cols = m_functionValues.GetNumCols();
             m_functionValues.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, false);
-            m_functionValues.Resize(rows, cols); //SwitchToMatrixType does not reserve information right now.
+            Resize(rows, cols); //SwitchToMatrixType does not reserve information right now.
         }
     };
 
@@ -536,17 +536,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_functionValues.Resize(row_size, col_size);
         }
     public:
-        //PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name) :
-        //    Base(deviceId, name)
-        //{
-        //    Init(1, 1); // TODO: do we not need to resize m_gradientValues?
-        //}
         PairNetworkNode(DEVICEID_TYPE deviceId, const wstring & name, size_t row_size = 1, size_t col_size = 1) :
             Base(deviceId, name)
         {
             Init(row_size, col_size);
             m_gradientValues.Resize(row_size, col_size);
-            m_gradientValues.SetValue(0.0f);
+            m_gradientValues.SetValue(0.0f);    // TODO: why?
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
@@ -598,12 +593,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr inputNode)
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = inputNode;
-        //}
 
 #if 0   // folded into base function, to avoid virtual; that base function already knows about some node types anyway
         virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodePtr>& visited, std::list<ComputationNodePtr>& result,

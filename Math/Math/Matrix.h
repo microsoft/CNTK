@@ -172,6 +172,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: should Reshape() return a new Matrix object that contains a reference to the original?
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
+        void VerifySize(size_t rows, size_t cols)
+        {
+            if (rows != GetNumRows() || cols != GetNumCols())
+                LogicError("VerifySize: expected m_functionValues size %d x %d, but it is %d x %d",
+                (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
+        }
 
         // update number of columns
         // TODO: a future version may want to enforce retaining the content, to allow dynamically growing layouts column by column (when size is not known upfront)
@@ -192,6 +198,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format=matrixFormatSparseCSR);
         void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);  // set matrix sparsely
+        static ElemType MakeNan(size_t payload);
+        void Invalidate() { SetValue(MakeNan(__LINE__)); }
         void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
             const size_t nz, const size_t numRows, const size_t numCols);
 

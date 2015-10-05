@@ -118,11 +118,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ReadFromFile(f, matrixName);
     }
 
-    template<class ElemType> static ElemType MakeNan(size_t payload);
-    template<> /*static*/ float  MakeNan<float>(size_t /*payload*/)  { return nanf(""); }
-    template<> /*static*/ double MakeNan<double>(size_t /*payload*/) { return nan(""); }
-    template<> /*static*/ char   MakeNan<char>(size_t)               { return 0; }   // (needed for completeness)
-
     // helper to allocate an array of ElemType
     // Use this instead of new[] to get NaN initialization for debugging.
     template<class ElemType>
@@ -130,7 +125,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         ElemType * p = new ElemType[n]();
 #if _DEBUG  // BUGBUG BUGBUG: If I comment this in in Release, two Release tests fail. Track this down!!
-        ElemType nan = MakeNan<ElemType>(__LINE__);
+        ElemType nan = Matrix<ElemType>::MakeNan(__LINE__);
         for (size_t i = 0; i < n; i++)
             p[i] = nan;
 #endif
@@ -771,9 +766,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;
 
         Resize(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols());
-        size_t cpSize = deepCopyFrom.GetNumElements();
-        if (cpSize != 0)
-            memcpy(m_pArray, deepCopyFrom.m_pArray, cpSize*sizeof(ElemType));
+        memcpy(m_pArray, deepCopyFrom.m_pArray, deepCopyFrom.GetNumElements() * sizeof(ElemType));
     }
 
     template<class ElemType>
@@ -1792,6 +1785,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     //[this]=a ./ b
+    // TODO: This clips the divisor by a small value. Is that really what one would want?
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementDivisionOf (const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b)
     {

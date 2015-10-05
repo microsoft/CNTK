@@ -368,6 +368,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 SetDataLocation(GPU, DENSE);
             }
         }
+
+        SetValue(0);
     }
 
     template<class ElemType>
@@ -407,6 +409,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (matrixFlagDontOwnBuffer & matrixFlags || m_preferredDeviceId == MANAGEDEXTERN)
             m_baseMatrix->SetOwnBuffer(false);
+
+        SetValue(0);
     }
 
     //copy constructor, deep copy
@@ -816,8 +820,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //this function will change the matrix type between DENSE and SPARSE. 
     //WARNING: The correct implementation is to copy the matrix between DENSE and SPARSE
-    //         However, the convertion functions are not implemented yet and so it will always create 
-    //         a new blank matrix and destroy all info in the original matrix if different matrix type is asked. 
+    //         However, the conversion functions are not implemented yet and so it will always create 
+    //         a new blank matrix and destroy all info in the original matrix if different matrix type is asked.
+    // In case of !keepValues, the matrix content will be undefined.
     template<class ElemType>
     void Matrix<ElemType>::SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat, const bool keepValues)
     {
@@ -1037,6 +1042,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED
             );
     }
+
+    /*static*/ float  Matrix<float>::MakeNan(size_t /*payload*/)  { return nanf(""); }
+    /*static*/ double Matrix<double>::MakeNan(size_t /*payload*/) { return nan(""); }
+    /*static*/ char   Matrix<char>::MakeNan(size_t)               { return 0; }   // (needed for completeness)
 
     template<class ElemType>
     void Matrix<ElemType>::SetColumn(const ElemType* colPointer, size_t colInd)
@@ -1360,6 +1369,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    // Note: Resize() will leave the matrix content undefined.
     template<class ElemType>
     void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
     {
@@ -4435,7 +4445,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DecideAndMoveToRightDevice(a, b, *this);        
     
         if (a.GetMatrixType() == b.GetMatrixType())
-            {
+        {
             SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
             DISPATCH_MATRIX_ON_FLAG(&a,
@@ -4445,11 +4455,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 NOT_IMPLEMENTED, 
                 NOT_IMPLEMENTED
                 );                
-            }
-            else
-            {
-                NOT_IMPLEMENTED;                
-            }
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
         
         return *this;
     }
@@ -4604,11 +4614,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //[this]= (a right shift by n), padded with zeros
     // shift left, shift needs to be negative value
     // shift right, shift needs to be positive value
+    // BUGBUG: Leaves uninitialized values in the opened-up columns.
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, int shift)
     {
         if (a.IsEmpty())
             throw std::logic_error("Shift: Matrix is empty.");
+        else
+            LogicError("Shift: BUGBUG This function currently leaves uninitialized values. Fix the code or contact fseide@microsoft.com.");
 
         auto& us = *this;
         if (this != &a)

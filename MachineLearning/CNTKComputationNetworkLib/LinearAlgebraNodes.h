@@ -85,12 +85,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ValidateUnaryMap(isFinalValidationPass);
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = singleInput;
-        //}
     };
 
     template class NegateNode<float>; 
@@ -159,9 +153,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("SumElements operation: the input node has 0 element.");
-
             Resize(1, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs(); 
@@ -173,12 +164,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = singleInput;
-        //}
     };
 
     template class SumElementsNode<float>; 
@@ -261,12 +246,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr singleInput)
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = singleInput;
-        //}
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -376,9 +355,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("RowSlice operation: the input node has 0 element.");
-
             if (isFinalValidationPass && Inputs(0)->GetNumRows() < m_startIndex + m_numRows)
                 RuntimeError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
 
@@ -396,12 +372,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
                 fprintf(stderr, "WARNING: RowSlice operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = singleInput;
-        //}
 
     private:
         size_t m_startIndex, m_numRows;
@@ -487,9 +457,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            //if (Inputs(0) == nullptr)   // TODO: Base::Validate() will fail for this
-            //    LogicError("RowStack operation: the input node is NULL.");
-
             size_t numCols = Inputs(0)->GetNumCols();
             m_startRowIndices.resize(ChildrenSize()+1);
             m_inputMatrices.resize(ChildrenSize());
@@ -499,13 +466,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             for (int i = 0; i < ChildrenSize(); i++)
             {
-                //if (Inputs(i) == nullptr)
-                //    LogicError("RowStack operation: the input node is NULL.");
-
                 Matrix<ElemType>& childMatrix = Inputs(i)->FunctionValues();
                 size_t numRows = childMatrix.GetNumRows();
-                //if (numRows == 0)
-                //    LogicError("RowStack operation: the input node %ls has 0 rows.", Inputs(i)->NodeName().c_str());
                 
                 if (isFinalValidationPass && childMatrix.GetNumCols() != numCols)
                     LogicError("RowStack operation: the input node %ls has different number of columns.", Inputs(i)->NodeName().c_str());
@@ -529,14 +491,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
                 fprintf(stderr, "WARNING: RowStack operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
-
-        //virtual void AttachInputs(const std::vector<ComputationNodePtr>& inputs)
-        //{
-        //    unsigned int numInputs = inputs.size();
-        //    m_children.resize(numInputs);
-        //    for (unsigned int i = 0; i < numInputs; i++)
-        //        m_children[i] = inputs[i];
-        //}
 
     private:
         std::vector<size_t> m_startRowIndices; //start row number in the stacked matrix of each input (child)
@@ -634,9 +588,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-            //    LogicError("Scale operation: one of the operands has 0 elements.");
-
             // left Node must be a scalar
             if (isFinalValidationPass && (Inputs(0)->GetNumRows() != 1 || Inputs(0)->GetNumCols() != 1))
                 RuntimeError("The left value of ScaleNode must be a scalar value.");
@@ -650,13 +601,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(1); 
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr scalarValue, const ComputationNodePtr Value) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = scalarValue;
-        //    m_children[1] = Value;
-        //}
     };
 
 
@@ -798,9 +742,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
                 Inputs(1)->Resize(cols0, cols1);
 
-            //if ((Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
-            //    LogicError("Times operation: One of the operands has 0 elements.");
-
             // cols0 and rows1 may have been changed so don't use them in the following check
             // TODO: why not check this when part of a loop?
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumCols())
@@ -818,13 +759,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //after multiplication the structure is lost
             m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumRows(), 1);
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
     };
 
     template class TimesNode<float>; 
@@ -958,9 +892,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && rows1 == 0)
                 Inputs(1)->Resize(cols0, cols1);
 
-            //if ((Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
-            //    LogicError("TransposeTimes operation: One of the operands has 0 elements.");
-
             //cols0 and rows1 may have been changed so don't use them in the following check
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows())
                 LogicError("The Matrix dimension in the TransposeTimes operation does not match.");
@@ -977,13 +908,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //after multiplication the structure is lost
             m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumRows(), 1);
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
     };
 
     template class TransposeTimesNode<float>;
@@ -1086,18 +1010,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            if (IsChildAnImage(0))  //when conflict, give priority to child 0
+            if (IsChildAnImage(0))  // if conflict, give priority to child 0
                 InferImageDimsFromInput(0);
             else
                 InferImageDimsFromInput(1);
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
     };
 
     template class ElementTimesNode<float>; 
@@ -1210,9 +1127,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-            //    LogicError("RowElementTimes operation: one of the operands has 0 elements.");
-
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
             size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols(); rows0;
             if (isFinalValidationPass && cols0 != cols1 || rows1 != 1)
@@ -1225,16 +1139,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            //input 0 is the matrix and input 1 is a row vector
+            // input 0 is the matrix and input 1 is a row vector
             InferImageDimsFromInput(0);
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1363,9 +1270,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-            //    LogicError("ColumnElementTimes operation: one of the operands has 0 elements.");
-
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
             size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols(); cols0;
             if (isFinalValidationPass && (rows0 != rows1 || cols1 != 1))
@@ -1378,16 +1282,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void InferImageDimsFromInputs()
         {
-            //input 0 is the matrix and input 1 is a column vector
+            // input 0 is a matrix and input 1 is a column vector
             InferImageDimsFromInput(0);
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode)
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1568,13 +1465,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     InferImageDimsFromInput(1);
             }
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
     };
 
     template class PlusNode<float>; 
@@ -1663,11 +1553,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (cols0 == 1 && colsp != 1)
                 {
                     size_t colspExpand = rowsp*colsp/rowsc;
-                    ones = ConstOnes(colspExpand, 1,FunctionValues().GetDeviceId());
+                    ones = ConstOnes(colspExpand, 1, FunctionValues().GetDeviceId());
                 }
 
                 if (inputIndex == 0)  //left derivative
-            {
+                {
                     ComputeInputPartialLeft(sliceInput0Value, sliceInput0Grad, sliceOutputValue, sliceOutputGrad, ones); 
                 }
                 else  //right derivative
@@ -1678,12 +1568,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& childFunctionValues, Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& functionValues, /*const*/ Matrix<ElemType>& gradientValues, /*const*/ Matrix<ElemType>& ones)
-            {
+        {
             ComputeInputPartialS(0, childFunctionValues, childGradientValues, functionValues, gradientValues, ones);
         }
 
         /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& childFunctionValues, Matrix<ElemType>& childGradientValues, const Matrix<ElemType>& functionValues, /*const*/ Matrix<ElemType>& gradientValues, /*const*/ Matrix<ElemType>& ones)  
-                {
+        {
             ComputeInputPartialS(1, childFunctionValues, childGradientValues, functionValues, gradientValues, ones);
         }
 
@@ -1696,11 +1586,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (colsc == 1 && colsp != 1)
             {
                 size_t colspExpand = rowsp*colsp/rowsc;
-                ones.Resize(colspExpand, 1);
-                }
+                ones.VerifySize(colspExpand,  1);   // TODO: This was a Resize(), but Resize() does not preserve content. What is this for?
+            }
             else if (rowsc == 1 && rowsp != 1)
             {
-                ones.Resize(1, rowsp);
+                ones.VerifySize(1, rowsp);   // TODO: This was a Resize(), but Resize() does not preserve content. What is this for?
             }
 
             if (colsc == colsp && rowsc == rowsp)
@@ -1711,12 +1601,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     childGradientValues -= gradientValues;
             }
             else if (colsc == 1 && rowsc == 1)
-                {
+            {
                 if (inputIndex == 0)
                     childGradientValues += gradientValues.SumOfElements();
                 else
                     childGradientValues -= gradientValues.SumOfElements();
-                }
+            }
             else if (colsc == 1 && colsp != 1)
             {
                 size_t colspExpand = rowsp*colsp/rowsc;
@@ -1816,13 +1706,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     InferImageDimsFromInput(1);
             }
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
     };
 
     template class MinusNode<float>; 
@@ -1918,9 +1801,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->GetNumRows() != 0 && Inputs(1)->GetNumRows() == 0)
                 Inputs(1)->Resize(Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
 
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-            //    LogicError("DiagTimes operation: one of the operands has 0 elements.");
-
             if (isFinalValidationPass)
             {
                 if (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows())
@@ -1942,13 +1822,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(1);
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -2126,9 +1999,6 @@ private:
                 Inputs(index)->Resize(rows, cols);
             }
 
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-            //    LogicError("CosDistance operation: one of the operands has 0 elements.");
-
             if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
                 LogicError("The Matrix dimension in the CosDistance operation does not match.");
 
@@ -2144,13 +2014,6 @@ private:
 
             m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -2281,18 +2144,11 @@ private:
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
             size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            //if (rows0 == 0 || rows1 == 0)
-            //    LogicError("KhatriRaoProduct operation: The number of rows in the input should not be 0.");
-
             if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && cols0 == 0 && cols1 != 0)
                 Inputs(0)->Resize(rows0, cols1);
 
             if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && cols0 != 0 && cols1 == 0)
                 Inputs(1)->Resize(rows1, cols0);
-
-            //cols may be changed before this line and so cannot use cached cols values below
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-            //    LogicError("KhatriRaoProduct operation: One of the operands has 0 elements.");
 
             if (isFinalValidationPass && Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())
                 LogicError("The Matrices should have same number of columns.");
@@ -2311,13 +2167,6 @@ private:
             //after KhatriRaoProduct the structure is lost
             m_outputImageLayout = ImageLayout(1, m_functionValues.GetNumRows(), 1);
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
     };
 
     template class KhatriRaoProductNode<float>; 
@@ -2523,9 +2372,6 @@ private:
                 Inputs(index)->Resize(rows, cols);
             }
 
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-            //    LogicError("CosDistanceWithNegativeSamples operation: one of the operands has 0 elements.");
-
             if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
                 LogicError("The Matrix dimension in the CosDistanceWithNegativeSamples operation does not match.");
 
@@ -2544,15 +2390,6 @@ private:
 
             m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode, const ComputationNodePtr shiftNode, const ComputationNodePtr negNode)
-        //{
-        //    m_children.resize(4);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //    m_children[2] = shiftNode;
-        //    m_children[3] = negNode;
-        //}
 
         virtual void MoveMatricesToDevice(const short deviceId)
         {
@@ -2659,9 +2496,6 @@ private:
 
             size_t rows0 = Inputs(0)->GetNumRows();   // , cols0 = Inputs(0)->GetNumCols();
 
-            //if (rows0 == 0 || cols0 == 0)
-            //    throw logic_error("Transpose operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 ");
-
             Resize(Inputs(0));
             mOnes = Matrix<ElemType>::Ones(rows0, rows0, m_deviceId);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
@@ -2675,12 +2509,6 @@ private:
             //after multiplication the structure is lost
             m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumCols(), 1);
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode)
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = leftNode;
-        //}
     };
 
     template class TransposeNode<float>;
@@ -2795,14 +2623,12 @@ private:
 
                     for (size_t k = 0; k < GetNumParallelSequences(); k++)
                     {
-                        Matrix<ElemType> mTmp1(sliceInput1Value.GetDeviceId());
                         size_t d = Inputs(1)->GetNumRows();
                         size_t T1 = Inputs(0)->GetNumRows() / GetNumParallelSequences();
+                        Matrix<ElemType> mTmp1(sliceInput1Value.GetDeviceId());
                         mTmp1.Resize(d, T1);
-                        Matrix<ElemType> mTmp2(sliceInput1Value.GetDeviceId());
-                        mTmp2 = sliceInput1Value.ColumnSlice(k, 1);
-                        Matrix<ElemType> mTmp3(sliceInput1Value.GetDeviceId());
-                        mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
+                        Matrix<ElemType> mTmp2 = sliceInput1Value.ColumnSlice(k, 1);
+                        Matrix<ElemType> mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
                         ComputeInputPartialLeft(mTmp2, mTmp1, mTmp3);
 
                         Matrix<ElemType> mTmp4(sliceInput1Value.GetDeviceId());
@@ -2834,10 +2660,8 @@ private:
                             mTmp0.AddWithRowSliceValuesOf(Inputs(0)->FunctionValues(), t * GetNumParallelSequences() + k, 1);
                             mTmp1.AssignToRowSliceValuesOf(mTmp0, t, 1);
                         }
-                        Matrix<ElemType> mTmp2(sliceOutputGrad.GetDeviceId());
-                        mTmp2 = sliceInput1Grad.ColumnSlice(k, 1);
-                        Matrix<ElemType> mTmp3(sliceOutputGrad.GetDeviceId());
-                        mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
+                        Matrix<ElemType> mTmp2 = sliceInput1Grad.ColumnSlice(k, 1);
+                        Matrix<ElemType> mTmp3 = sliceOutputGrad.ColumnSlice(k, 1);
 
                         ComputeInputPartialRight(mTmp1, mTmp2, mTmp3);
                     }

@@ -102,12 +102,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = singleInput;
-        //}
-
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
@@ -493,21 +487,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddElementProductOf(diff, functionValues);
         }
 
-#if 0   // I don't understand why this is here. Seems to resize the output, then forward to base. Either way, resizing will be handled uniformly soon.
-        // BUGBUG: where is EvaluateThisNodeMap()?
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
-        {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            // need to resize
-            size_t r = Inputs(0)->GetNumRows(), c = Inputs(0)->GetNumCols();
-            // note: I moved this test before sliceInputValue=..., assuming it will not be affected by the assignment
-            if (m_functionValues.GetNumCols() != c ||
-                m_functionValues.GetNumRows() != r)
-                m_functionValues.Resize(r, c);
-            NonlinearityNode<ElemType>::EvaluateThisNode(frameRange);
-        }
-#endif
-
         /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             functionValues.AssignLogSoftmaxOf(inputFunctionValues, true);
@@ -520,15 +499,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryMap(isFinalValidationPass);
-#if 0
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("SoftmaxNode operation: the input node has 0 element.");
-
-            Resize(Inputs(0));
-            // TODO: differs from base in that it does not resize the gradient--why?
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
-#endif
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
@@ -609,15 +579,6 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryMap(isFinalValidationPass);
-#if 0
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("LogSoftmaxNode operation: the input node has 0 element.");
-
-            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-            // differs from base in that it does not resize the gradient
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
-#endif
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
@@ -1100,7 +1061,7 @@ private:
             Matrix<ElemType> sliceMask = Matrix<ElemType>();
             if (m_dropoutRate > 0)
             {
-                Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+                Resize(Inputs(0));
                 m_maskOfDropout.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
                 sliceMask = DataSlice(m_maskOfDropout, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             }
@@ -1151,21 +1112,7 @@ private:
         {
             ValidateUnaryMap(isFinalValidationPass);
             m_maskOfDropout.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-#if 0
-            if (Inputs(0)->GetNumRows() == 0)
-                LogicError("Dropout operation: the input node has 0 element.");
-
-            Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
-#endif
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr inputNode)
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = inputNode;
-        //}
 
         void SetDropoutRate(const double val)
         {
@@ -1550,9 +1497,6 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("RowRepeat  operation: the input node has 0 element.");
 
             Resize(Inputs(0)->GetNumRows() * m_numRepeat, Inputs(0)->GetNumCols());
             InferMBLayoutFromInputsForStandardCase();
