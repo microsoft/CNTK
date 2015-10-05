@@ -56,11 +56,69 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region base computation class
 
     // =======================================================================
+    // IComputationNode -- set of methods that are to be implemented (or optionally overridable) by node implementations.
+    // =======================================================================
+
+    class ComputationNodeBase;
+    struct/*interface*/ IComputationNode
+    {
+        typedef shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;
+
+        // --- these must be implemented by each node
+
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
+        // TODO: OperationName calls static TypeName which does not match the actual type names in that the 'Node' is missing.
+        virtual const std::wstring OperationName() const = 0;
+#define OperationNameOf(T) (T<float>::TypeName())    // we are templated, but for this the type param matters not. So we just pick one, and hide that fact.
+
+        virtual void OnEvaluateBeginIteration() = 0;
+        virtual void EvaluateThisNode(const FrameRange &) = 0;  // forward prop for one minibatch
+        virtual void OnEvaluateEndIteration() = 0;              // called after last iteration step of EvaluateThisNode()
+        virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) = 0;
+        virtual void ComputeInputPartial(const size_t inputIndex) = 0;   // TODO: this will be replaced by FrameRange version
+
+        // --- optional overrides
+
+        // Any override must call Base version as well.
+        // Default implementations are in ComputationNodeBase or ComputationNode<ElemType>.
+        // TODO: is this always just called with deviceId == m_deviceId?
+
+        virtual void Validate(bool isFinalValidationPass) = 0;          // main base validation function
+        virtual void InferImageDimsFromInputs() = 0;
+        virtual size_t UpdateFunctionAndGradientMBSize(size_t numCols = SIZE_MAX/*means take from layout--this is the main use*/) = 0;
+        virtual void SaveToFile(File& fstream) const = 0;
+        virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/) = 0;
+        virtual void CopyTo(const ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) = 0;
+        virtual void PrintSelfBeforeValidation() const = 0;             // called in validation loop right before Validate()
+        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const = 0;
+        virtual bool RequiresPreCompute() const = 0;                    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() = 0; // // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
+
+        // --- left-overs from refactoring--keeping it here for a while for debugging
+
+        // return true if the node's value should be computed in batch mode only, e.g., time-reverse node
+        //virtual bool RequiresBatchMode() const { return false; }  // not used actually
+    };
+
+    // =======================================================================
+    // ComputationNetworkOwnedNodeState -- class to collect ComputationNode members that are really owned by ComputationNetwork
+    // These members are only to be set, changed, and read by ComputationNetwork code.
+    // =======================================================================
+
+    struct ComputationNetworkOwnedNodeState
+    {
+        friend class ComputationNetwork;
+    };
+
+    // =======================================================================
     // ComputationNodeBase -- abstract base class for all computation nodes
     // TODO: decide the name. This does contain actual members such as the node name, so it's not really a pure interface.
     // =======================================================================
 
     class ComputationNodeBase :
+        public IComputationNode,
+        protected ComputationNetworkOwnedNodeState,
         public ScriptableObjects::ComputationNodeObject,
         public ScriptableObjects::WithTag, public ScriptableObjects::HasName, public ScriptableObjects::HasToString,
         public std::enable_shared_from_this<ComputationNodeBase>
@@ -86,9 +144,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
         virtual ~ComputationNodeBase(){}
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
 
-        virtual void CopyTo(const ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const
+        virtual void /*IComputationNode::*/CopyTo(const ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             if (OperationName() != node->OperationName())
                 RuntimeError("Cannot copy from one node type to another node type");
@@ -117,12 +174,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //node->m_maskMissingColumnsToZero = m_maskMissingColumnsToZero;
             }
         }
-        virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) = 0;
 
-        // TODO: OperationName calls static TypeName which does not match the actual type names in that the 'Node' is missing.
-        virtual const std::wstring OperationName() const = 0;
-#define OperationNameOf(T) (T<float>::TypeName())    // we are templated, but for this the type param matters not. So we just pick one, and hide that fact.
-        //static const std::wstring TypeName() { LogicError("TypeName() was called by abstract class"); }   // (we should never see this)
+        virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) = 0;
 
         // TODO: make sure this does not get implemented in any of the base classes
         DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }    // TODO: remove, only used from copy constructor which will go away
@@ -210,24 +263,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         const std::vector<ComputationNodeBasePtr> & GetChildren() const { return m_children; }
 
-        // TODO: is this always just called with deviceId == m_deviceId?
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) = 0;
-
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
-        virtual bool RequiresPreCompute() const { return false; }
-
-        // return true if the node's value should be computed in batch mode only, e.g., time-reverse node
-        //virtual bool RequiresBatchMode() const { return false; }  // not used actually
-
-        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const = 0;
+        virtual bool /*IComputationNode::*/RequiresPreCompute() const { return false; }
 
         /*HasName::*/void SetName(const std::wstring & newName) // also for use by ExperimentalNetworkBuilder
         {
             m_nodeName = newName;
             fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
         }
-
-        virtual size_t UpdateFunctionAndGradientMBSize(size_t numCols = SIZE_MAX/*means take from layout--this is the main use*/) = 0;
 
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
         MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
@@ -322,7 +365,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void PrintSelf(bool printMatrices = false) const = 0;
 
         // called in validation loop right before Validate()
-        virtual void PrintSelfBeforeValidation() const
+        virtual void /*IComputationNode::*/PrintSelfBeforeValidation() const
         {
             fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
 
@@ -384,7 +427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //    return nullptr;
         //}
 
-        virtual void InferImageDimsFromInputs()
+        virtual void /*IComputationNode::*/InferImageDimsFromInputs()
         {
             if (!IsLeaf())
                 InferImageDimsFromInput(0); //copy from child 0 by default.
@@ -399,18 +442,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr node) = 0;
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void /*IComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange &) = 0;    // (redeclaring, as compiler gets confused otherwise--will go away with ComputeInputPartial(t))
+        virtual void ComputeInputPartial(const size_t inputIndex)   // TODO: this will be replaced by FrameRange version
         {
             ComputeInputPartial(inputIndex, FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
         }
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) = 0;
-
-        virtual void OnEvaluateBeginIteration()
-        {
-            //fprintf(stderr, "Trace: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
-        }             // called before first iteration step of EvaluateThisNode()
-        virtual void EvaluateThisNode(const FrameRange &) = 0;  // forward prop for one minibatch
-        virtual void OnEvaluateEndIteration() { }               // called after last iteration step of EvaluateThisNode()
         virtual void ComputeGradientForChildren() = 0;
         virtual void ComputeGradientForChildren(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
 
@@ -426,6 +462,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNetworkNode, LSTMNode)
         // The need for this seems an artifact of the old inconsistent layout architecture. In the future, this can probably just go away.
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return false; }
+
+        virtual void /*IComputationNode::*/OnEvaluateBeginIteration()
+        {
+            //fprintf(stderr, "Trace: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+        }             // called before first iteration step of EvaluateThisNode()
+        virtual void /*IComputationNode::*/OnEvaluateEndIteration() { }               // called after last iteration step of EvaluateThisNode()
 
     protected:
 
