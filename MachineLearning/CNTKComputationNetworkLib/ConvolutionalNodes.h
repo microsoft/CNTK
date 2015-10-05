@@ -324,13 +324,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }    
         }
 
-        //virtual void AttachInputs(const ComputationNodePtr convolutionWeight, const ComputationNodePtr inputFeature) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = convolutionWeight;
-        //    m_children[1] = inputFeature;
-        //}
-
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);
@@ -468,9 +461,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && Inputs(0)->GetNumRows() != m_inputSizePerSample)
                 LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), m_inputSizePerSample);
 
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("PoolingNodeBase operation: the input node has 0 element.");
-
             m_functionValues.Resize(m_outputSizePerSample, Inputs(0)->GetNumCols());
         }
 
@@ -485,12 +475,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout.height = (m_inputImageLayout.height - m_windowHeight) / m_verticalSubsample + 1;
             m_outputImageLayout.channels = m_inputImageLayout.channels;
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr inputFeature)
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = inputFeature;
-        //}
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {

@@ -50,8 +50,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
-        //if (Inputs(0)->GetNumRows() == 0)
-        //    LogicError("Negate operation: the input node has 0 element.");
         Resize(m_children[0]->GetNumRows(), DetermineNumCols(m_children[0]));
         InferImageDimsFromInputs();
     }

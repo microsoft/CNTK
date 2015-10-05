@@ -334,12 +334,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs();
         }
 
-        //virtual void AttachInputs(const ComputationNodePtr singleInput)
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = singleInput;
-        //}
-
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             Base::CopyTo(nodeP, newName, flags);
@@ -457,19 +451,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //    LogicError("InvStdDev operation: the input node has 0 element.");
 
             size_t inputDim = Inputs(0)->GetNumRows();
-            m_mean.Resize(inputDim, 1);
-            m_var.Resize(inputDim, 1);
+            m_mean.Resize(inputDim, 1); m_mean.Invalidate();
+            m_var.Resize(inputDim, 1);  m_var.Invalidate();
 
             Resize(inputDim, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr singleInput)
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = singleInput;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -601,14 +589,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(2)->Resize(rows, 1);
             }
 
-            //if (Inputs(0)->GetNumRows() == 0 ||
-            //    Inputs(1)->GetNumRows() == 0 ||
-            //    Inputs(2)->GetNumRows() == 0)
-            //{
-            //    LogicError(
-            //        "PerDimMeanVarNormalizationNode operation: one of the operands has 0 elements.");
-            //}
-
             if (isFinalValidationPass)
             {
                 //match rows
@@ -628,15 +608,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
-
-        //leftNode should be the empirical
-        //virtual void AttachInputs(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev)
-        //{
-        //    m_children.resize(3);
-        //    m_children[0] = feature;
-        //    m_children[1] = mean;
-        //    m_children[2] = InvStdDev;
-        //}
     };
 
     template class PerDimMeanVarNormalizationNode<float>;
@@ -748,20 +719,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(2)->Resize(rows, 1);
             }
 
-            //if (Inputs(0)->GetNumRows() == 0 ||
-            //    Inputs(1)->GetNumRows() == 0 ||
-            //    Inputs(2)->GetNumRows() == 0)
-            //{
-            //    LogicError("PerDimMeanVarDeNormalizationNode operation: one of the operands has 0 elements.");
-            //}
-
             if (isFinalValidationPass)
             {
                 if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match rows
                     Inputs(2)->GetNumRows() == Inputs(1)->GetNumRows()))
                 {
-                    //Inputs(1)->Resize(Inputs(0)->GetNumRows(), 1);
-                    //Inputs(2)->Resize(Inputs(0)->GetNumRows(), 1);
                     LogicError("PerDimMeanVarDeNormalizationNode: All inputs should have same number of rows.");
                 }
 
@@ -779,15 +741,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
-
-        //leftNode should be the empirical
-        //virtual void AttachInputs(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev)
-        //{
-        //    m_children.resize(3);
-        //    m_children[0] = feature;
-        //    m_children[1] = mean;
-        //    m_children[2] = InvStdDev;
-        //}
     };
 
     template class PerDimMeanVarDeNormalizationNode<float>;
@@ -818,25 +771,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual bool HasComputed() const = 0;
         virtual void MarkComputed(const bool hasComputed) = 0;
-
-        //virtual bool RequiresBatchMode() const { return true; }
-
-#if 0   // I think this is a left-over. It does not seem to fit BatchMode
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
-        {
-            assert(m_memory.GetNumCols() > 0);
-
-            // BUGBUG: this is broken
-            // TODO: what is this? Derives from ComputationNodeNonLooping, yet implemented a frame loop?
-            //Resize(m_memory.GetNumRows(), GetNumParallelSequences());
-            Resize(m_memory.GetNumRows(), GetNumParallelSequences());   // extra space for one time step
-            if (frameRange.t() == 0)    // for first frame, check that we got all in memory  --TODO: is this comment correct? How about going backwards?
-                assert(ValueSlice(FrameRange(0, GetNumParallelSequences())).FrobeniusNorm() == DataSlice(m_memory, FrameRange(0, GetNumParallelSequences())).FrobeniusNorm());
-                //assert(FunctionValues().ColumnSlice(0, GetNumParallelSequences()), m_pMBLayout).FrobeniusNorm() == m_memory.ColumnSlice(0, GetNumParallelSequences()), m_pMBLayout).FrobeniusNorm());
-            FunctionValues().SetValue(DataSlice(m_memory, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout)));
-            assert(GetNumCols() == GetNumParallelSequences());
-        }
-#endif
 
         virtual void SaveToFile(File& fstream) const override
         {
@@ -1003,12 +937,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Resize(Inputs(0));
             InferImageDimsFromInput(0);
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr cNode)
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = cNode;
-        //}
 
     public:
         bool UnitTest() {

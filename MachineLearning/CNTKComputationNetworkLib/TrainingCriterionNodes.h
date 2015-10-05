@@ -75,38 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateBinaryReduce(isFinalValidationPass);
-#if 0
-            Base::Validate(isFinalValidationPass);
-
-            size_t index = 0;   // TODO: code dup
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
-            }
-
-            index = 1;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
-            }
-
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-            //    LogicError("SquareError operation: one of the operands has 0 elements.");
-
-            if (isFinalValidationPass && !(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
-                LogicError("The Matrix dimension in the SquareError operation does not match.");
-
-            Resize(1,1);
-#endif
             m_leftMinusRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-#if 0
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-#endif
         }
 
         virtual void InferImageDimsFromInputs()
@@ -227,43 +196,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateBinaryReduce(isFinalValidationPass);
-#if 0
-            Base::Validate(isFinalValidationPass);
-
-            // This breaks re-shaping of the label matrix
-            /*if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
-            LogicError("CrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");*/
-
-            //we may release the constraint that the first operant is an inputValue later so the following code should be kept
-            size_t index = 0;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
-            }
-
-            index = 1;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
-            }
-
-            if (isFinalValidationPass)
-            {
-                //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                //    LogicError("CrossEntropyWithSoftmaxNode operation: one of the operands has 0 elements.");
-
-                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
-                LogicError("The Matrix<ElemType>  dimension in the CrossEntropyWithSoftmaxNode operation does not match.");
-            }       
-
-            Resize(1,1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-#endif
             m_logSoftmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             m_softmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
         }
@@ -372,43 +304,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateBinaryReduce(isFinalValidationPass);
             if (Inputs(0)->OperationName() != L"InputValue")    // TODO: but labels could be post-processed, e.g. sub-sampled. This test should not be here.
                 LogicError("CrossEntropyNode criterion requires the first input to be the label.");
-#if 0
-            Base::Validate(isFinalValidationPass);
-
-            //we may release the constraint that the first operand is an inputValue later so the following code should be kept
-            size_t index = 0;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
-            }
-
-            index = 1;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
-            }
-
-            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                LogicError("CrossEntropyNode operation: one of the operands has 0 elements.");
-
-            if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows()  &&  //match size
-                Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()) )
-            {
-                LogicError("The Matrix dimension in the CrossEntropyNode operation does not match.");
-            }       
-
-            Resize(1,1);
-#endif
             m_logOfRight.Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());
             m_leftDivRight.Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());
-#if 0
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-#endif
         }
 
         virtual void InferImageDimsFromInputs()
@@ -489,16 +386,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryReduce(isFinalValidationPass);
-#if 0
-            Base::Validate(isFinalValidationPass);
-
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("MatrixL1Reg operation: the input node has 0 element.");
-
-            Resize(1,1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-#endif
             m_gradientOfL1Norm.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
         }
 
@@ -574,16 +461,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryReduce(isFinalValidationPass);
-#if 0
-            Base::Validate(isFinalValidationPass);
-
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("MatrixL2Reg operation: the input node has 0 element.");
-
-            Resize(1,1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-#endif
         }
 
         virtual void InferImageDimsFromInputs()
@@ -744,13 +621,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("The Matrix dimension for observation and weight in the NoiseContrastiveEstimationNode operation does not match.");
                 if (!(Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols())) // label and input same obs numbers
                     LogicError("The Matrix dimension for label and observation in the NoiseContrastiveEstimationNode operation does not match.");
-                //if (!(Inputs(0)->GetNumRows() == 3)) // label needs to be 4 rows
-            //  LogicError("The label in the NoiseContrastiveEstimationNode operation needs to be 4 rows.");
             }
 
             //cerr << Inputs(3)->GetNumCols() << "\t" << Inputs(0)->GetNumCols() << endl;
-            //if (!(Inputs(3)->GetNumCols() == Inputs(0)->GetNumCols())) // number of observations
-            //   LogicError("The number of observations in class log post probability and label in the NoiseContrastiveEstimationNode operation don't match.");
             Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
@@ -1627,25 +1500,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("SequenceWithSoftmaxNode criterion requires the first input to be the label.");
 
             ValidateInferBinaryChildren();  // update children dimensions
-            //we may release the constraint that the first operant is an inputValue later so the following code should be kept
-            //size_t index = 0;
-            //if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            //{
-            //    size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
-            //    size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-            //    Inputs(index)->Resize(rows, cols);
-            //}
-            //
-            //index = 1;
-            //if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            //{
-            //    size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
-            //    size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-            //    Inputs(index)->Resize(rows, cols);
-            //}
-
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0  || Inputs(2)->GetNumRows() == 0 )
-            //    LogicError("SequenceWithSoftmaxNode operation: one of the operands has 0 elements.");
 
             if (isFinalValidationPass)
                 if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match size

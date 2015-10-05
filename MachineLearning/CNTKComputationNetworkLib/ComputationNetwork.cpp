@@ -287,11 +287,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (minibatchDifferent)
         {
             for (ComputationNodeBasePtr node : inputs)
-            {
-                size_t cols = node->GetNumCols();
-                if (cols != minibatchMax)
-                    node->Resize(node->GetNumRows(), minibatchMax);
-            }
+                node->Resize(node->GetNumRows(), minibatchMax);
         }
     }
 

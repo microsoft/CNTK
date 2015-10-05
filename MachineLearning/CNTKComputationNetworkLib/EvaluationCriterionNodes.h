@@ -111,13 +111,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout = ImageLayout();
         }
 
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
-
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
             Base::MoveMatricesToDevice(deviceId);

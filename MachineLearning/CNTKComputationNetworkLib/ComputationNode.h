@@ -866,7 +866,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // our own output dimensions
         /*implement*/size_t GetNumRows() const { return FunctionValues().GetNumRows(); }
         /*implement*/size_t GetNumCols() const { return FunctionValues().GetNumCols(); }
-        /*implement*/void Resize(size_t rows, size_t cols) { FunctionValues().Resize(rows, cols); }
+        /*implement*/void Resize(size_t rows, size_t cols)
+        {
+            FunctionValues().Resize(rows, cols);
+#ifdef _DEBUG
+            FunctionValues().Invalidate();
+#endif
+        }
         /*implement*/double Get00Element() const { return FunctionValues().Get00Element(); }
 
         // recover a shared_ptr from ourselves if given a naked pointer
