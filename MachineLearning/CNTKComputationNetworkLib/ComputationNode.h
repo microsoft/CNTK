@@ -499,10 +499,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // The need for this seems an artifact of the old inconsistent layout architecture. In the future, this can probably just go away.
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return false; }
 
-        virtual void /*IComputationNode::*/OnEvaluateBeginIteration()
+        virtual void /*IComputationNode::*/OnEvaluateBeginIteration()             // called before first iteration step of EvaluateThisNode()
         {
             //fprintf(stderr, "Trace: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
-        }             // called before first iteration step of EvaluateThisNode()
+        }
         virtual void /*IComputationNode::*/OnEvaluateEndIteration() { }               // called after last iteration step of EvaluateThisNode()
 
     protected:
@@ -935,18 +935,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // update size (#columns) of m_{function,gradient}Values to match MBLayout
         // This must be called right before EvaluateThisNode() the first time for a given minibatch.
         // The 'numCols' parameter is legacy and will go away.
-        // Virtual, but currently only overridden by GMMLogLikelihoodNode (which allocates some internal temp memory).
+        // Currently overridden by
+        //  - InputValue, which verifies instead of resizing (since Resize() is specified to be destructive, it should not call it).
+        //  - LearnableParameters
+        //  - GMMLogLikelihoodNode (which allocates some internal temp memory).
         virtual size_t UpdateFunctionAndGradientMBSize(size_t numCols)
         {
             if (!m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
                 return numCols;             // BUGBUG: what to return here?
             if (numCols == SIZE_MAX)        // SIZE_MAX means determine from layout
                 numCols = m_pMBLayout->GetNumCols();
-            if (m_functionValues.GetNumRows() > 0 && numCols > 0)  // TODO: why skip this for 0 samples? BUGBUG: I think the 0 test is a left-over and no longer applicable since we can validate with 0-cols inputs.
-            {
-                m_functionValues.ResizeColumns(numCols); 
-                m_gradientValues.ResizeColumns(numCols); 
-            }
+            m_functionValues.ResizeColumns(numCols);
+            m_gradientValues.ResizeColumns(numCols);
             return numCols;
         }
 
@@ -990,7 +990,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // It is indirectly guarded by the m_maskMissingColumnsToZero flag, which, if false, will install a layout with IsAllNone() to be true. TODO: we better always install the same layout, and instead test m_maskMissingColumnsToZero here.
         // Note that existing 'reduce' style operations--the criterion nodes and gradient computation--already call this.  --BUGBUG: They can't, wrong layout!
         // Warning: The layout used here must match the matrix. E.g. don't pass a child's matrix from a criterion node (use Inputs(x)->MaskMissing{Values,Gradient}ColumnsToZero() instead.
-        static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX)
+    private:
+        static bool MaskMissingColumnsTo(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, size_t timeIdxInSeq, size_t seqIndex, ElemType val)
         {
             bool foundLabelOrFeatureMissing = false;    // return value: set to true if either nolabel or feature missing is processed
 
@@ -1015,14 +1016,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (size_t s = startS; s < endS; s++)
                             if (pMBLayout->Is(s, t, MinibatchPackingFlags::NoInput))
-                                //matrixToBeMasked.ColumnSlice(t * nS  +  s, 1).SetValue(0);
-                                DataSlice(matrixToBeMasked, frameRange.Sequence(s), pMBLayout).SetValue(0);
+                                //matrixToBeMasked.ColumnSlice(t * nS  +  s, 1).SetValue(val);
+                                DataSlice(matrixToBeMasked, frameRange.Sequence(s), pMBLayout).SetValue(val);
                         foundLabelOrFeatureMissing = true;
                     }
                 }
             }
 
             return foundLabelOrFeatureMissing;
+        }
+    public:
+        static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX)
+        {
+            return MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, timeIdxInSeq, seqIndex, 0);
         }
 
         // call static MaskMissingColumnsToZero() above with m_{function,gradient}Values with matching layout
@@ -1047,6 +1053,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /*implement*/void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq)
         {
             MaskMissingColumnsToZero(m_gradientValues, timeIdxInSeq);
+        }
+
+        // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
+        /*implement*/void MaskMissingValuesColumnsToNan()
+        {
+            MaskMissingColumnsTo(m_functionValues, m_pMBLayout, SIZE_MAX, SIZE_MAX, Matrix<ElemType>::MakeNan(__LINE__));
         }
 
         /*
@@ -1228,6 +1240,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             return DataSlice(GradientValues(), frameRange);
         }
+
+#ifdef _DEBUG
+        virtual void /*IComputationNode::*/OnEvaluateEndIteration()               // called after last iteration step of EvaluateThisNode()
+        {
+            MaskMissingValuesColumnsToZero();
+            if (m_functionValues.HasNan("OnEvaluateEndIteration"))
+                LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
+            MaskMissingValuesColumnsToNan();
+        }
+#endif
 
         // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
         /*implement*/void ComputeGradientForChildren() override

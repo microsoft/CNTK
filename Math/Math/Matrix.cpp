@@ -4536,13 +4536,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool Matrix<ElemType>::HasNan (const char * name) const
     {
+        // if GPU then first detect NaN there, will be faster
+        if (GetDeviceId() != CPUDEVICE)
+        {
+            Matrix<ElemType> sum;
+            sum.AssignSumOfElements(*this);
+            auto x = sum.Get00Element();
+            if (!std::isnan(x))
+                return false;
+        }
+
         // const auto & us = *this;
         const Matrix<ElemType> & us = *this;
 
         foreach_coord (i, j, us)
             if (std::isnan(us(i, j)))
             {
-                fprintf (stderr, "hasnan: NaN detected at %s (%ld,%ld)\n", name, i, j);
+                fprintf (stderr, "HasNan: NaN detected at %s (%ld,%ld) in (%d,%d) matrix\n", name, i, j, GetNumRows(), GetNumCols());
                 return true;
             }
             return false;
