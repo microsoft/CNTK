@@ -503,7 +503,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*IComputationNode::*/OnEvaluateBeginIteration()             // called before first iteration step of EvaluateThisNode()
         {
-            //fprintf(stderr, "Trace: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+            fprintf(stderr, "Trace: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
         }
         virtual void /*IComputationNode::*/OnEvaluateEndIteration() { }               // called after last iteration step of EvaluateThisNode()
 
@@ -872,6 +872,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             FunctionValues().Resize(rows, cols);
 #ifdef _DEBUG
+            fprintf(stderr, "Resize: Invalidating %ls %ls operation.\n", NodeName().c_str(), OperationName().c_str());
             FunctionValues().Invalidate();
 #endif
         }
