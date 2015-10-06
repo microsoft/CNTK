@@ -720,6 +720,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
     }
 
+    template<class ElemType>
+    void Matrix<ElemType>::Copy(size_t numRows, size_t numCols, ElemType* dst, size_t ldDst) const
+    {
+        DISPATCH_MATRIX_ON_FLAG(this,
+            nullptr,
+            m_CPUMatrix->Copy(numRows, numCols, dst, ldDst),
+            m_GPUMatrix->Copy(numRows, numCols, dst, ldDst),
+            NOT_IMPLEMENTED, 
+            NOT_IMPLEMENTED
+            );
+    }
+
     // BUGBUG: Some code checks before calling here whether one of the dimensions is 0.
     //         This function must handle that case properly, that is, preserving the non-zero dimension.
     template<class ElemType>

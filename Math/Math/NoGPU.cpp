@@ -420,6 +420,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return NULL;
     }
 
+    template<class ElemType> void GPUMatrix<ElemType>::Copy(size_t numRows, size_t numCols, ElemType* dst, size_t ldDst) const
+    {
+    }
+
     //memory will be allocated by the callee if not enough but need to be deleted by the caller after it's done
     //return number of elements copied
     template<class ElemType> size_t  GPUMatrix<ElemType>::CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const

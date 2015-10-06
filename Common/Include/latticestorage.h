@@ -13,6 +13,7 @@
 #include <string>       // for the error message in checkoverflow() only
 #include <stdexcept>
 #include <stdint.h>
+#include <cstdio>
 
 #undef INITIAL_STRANGE              // [v-hansu] intialize structs to strange values
 #define PARALLEL_SIL                // [v-hansu] process sil on CUDA, used in other files, please search this
@@ -25,7 +26,12 @@ static void checkoverflow (size_t fieldval, size_t targetval, const char * field
     if (fieldval != targetval)
     {
         char buf[1000];
-        sprintf(buf, "lattice: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, (unsigned int)targetval, (unsigned int)fieldval);
+#if _MSC_VER < 1900
+        sprintf_s
+#else
+        std::snprintf
+#endif
+            (buf, sizeof(buf), "lattice: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, (unsigned int)targetval, (unsigned int)fieldval);
         throw std::runtime_error (buf);
     }
 }

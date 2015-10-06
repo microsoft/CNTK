@@ -1361,6 +1361,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return numElements;
     }
 
+    template <typename ElemType>
+    void CPUMatrix<ElemType>::Copy(size_t /*numRows*/, size_t /*numCols*/, ElemType* /*dst*/, size_t /*ldDst*/) const
+    {
+        // REVIEW alexeyk: currently not used by CPU, but implement when possible.
+        RuntimeError("Not implemented.");
+    }
+
     template<class ElemType>
     inline size_t CPUMatrix<ElemType>::LocateColumn(const size_t col) const
     {
