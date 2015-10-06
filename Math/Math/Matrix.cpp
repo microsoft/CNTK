@@ -4552,7 +4552,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         foreach_coord (i, j, us)
             if (std::isnan(us(i, j)))
             {
-                fprintf (stderr, "HasNan: NaN detected at %s (%ld,%ld) in (%d,%d) matrix\n", name, i, j, GetNumRows(), GetNumCols());
+                fprintf(stderr, "HasNan: NaN detected at %s (%ld,%ld) in (%d,%d) matrix\n", name, i, j, (int)GetNumRows(), (int)GetNumCols());
                 return true;
             }
             return false;
