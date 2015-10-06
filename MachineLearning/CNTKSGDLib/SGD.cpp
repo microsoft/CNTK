@@ -1153,7 +1153,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        fprintf(stderr, "Found %lu PreCompute nodes\n", nodes.size());
+        fprintf(stderr, "\nPrecomputing --> %lu PreCompute nodes found.\n\n", nodes.size());
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
             auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
@@ -1192,6 +1192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
             node->MarkComputed(true/*done accumulating*/);
         }
+        fprintf(stderr, "\nPrecomputing --> Completed.\n\n");
 
         return true;
     }

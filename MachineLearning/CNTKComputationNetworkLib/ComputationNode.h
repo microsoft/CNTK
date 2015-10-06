@@ -876,8 +876,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             FunctionValues().Resize(rows, cols);
 #ifdef _DEBUG
-            fprintf(stderr, "Resize: Invalidating %ls %ls operation.\n", NodeName().c_str(), OperationName().c_str());
-            FunctionValues().Invalidate();
+            fprintf(stderr, "Resize: Destructive resize to (%d x %d) in %ls %ls operation.\n", (int)rows, (int)cols, NodeName().c_str(), OperationName().c_str());
 #endif
         }
         /*implement*/double Get00Element() const { return FunctionValues().Get00Element(); }
@@ -946,6 +945,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - InputValue, which verifies instead of resizing (since Resize() is specified to be destructive, it should not call it).
         //  - LearnableParameters
         //  - GMMLogLikelihoodNode (which allocates some internal temp memory).
+        // Important: Unless overridden, this function is destructive. Nodes cannot carry over minibatch-size dependent state across minibatches through m_functionValues because of this.
         virtual size_t UpdateFunctionAndGradientMBSize(size_t numCols)
         {
             if (!m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
@@ -1342,7 +1342,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 s_constOnes[rows].find(cols) == s_constOnes[rows].end()) //not found
             {
                 Matrix<ElemType>* matrix = new Matrix<ElemType>(rows, cols, (DEVICEID_TYPE)deviceId);
-                matrix->SetValue(ElemType(1.000));
+                matrix->SetValue(1);
                 s_constOnes[rows][cols] = matrix;
             }
 

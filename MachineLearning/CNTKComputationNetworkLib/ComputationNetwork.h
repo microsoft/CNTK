@@ -616,12 +616,12 @@ public:
 
                 // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
 #if 1
+                (*nodeIter)->UpdateFunctionAndGradientMBSize(); // TODO: for sequence-to-sequence models we will need to be able to grow this step by step since size is unknown upfront
                 FrameRangeIteration range(pMBLayout, recInfo->m_isForwardLoop ? -1 : +1);
                 for (auto t = range.begin(); t != range.end(); t++)
                 {
                     for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                     {
-                        (*nodeIter)->UpdateFunctionAndGradientMBSize();
                         (*nodeIter)->EvaluateThisNode(t);
                         if (IsNodeReqMultiSeqHandling(*nodeIter))
                             (*nodeIter)->MaskMissingValuesColumnsToZero(t.t());  // TODO: This should take a FrameRange as well
