@@ -689,6 +689,8 @@ public:
                 (*nodeIter)->OnEvaluateEndIteration();
                 (*nodeIter)->UpdateEvalTimeStamp();
             }
+            else
+                (*nodeIter)->OnEvaluateEndIteration();  // HACK to enforce NaN check
         }
     }
     template<class NODESET>

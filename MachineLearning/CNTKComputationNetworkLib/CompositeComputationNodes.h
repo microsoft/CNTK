@@ -275,7 +275,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_hasComputed;
     };
 
-#define UsingPreComputedNodeMembers UsingComputationNodeMembers; using Base::m_hasComputed
+#define UsingPreComputedNodeMembers UsingComputationNodeMembers; using Base::m_hasComputed; using Base::OperationName
 
     // -----------------------------------------------------------------------
     // MeanInvStdDevNodeBase (features)  -- common base class for Mean and InvStdDev
@@ -338,6 +338,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool IsAccumulating() const { return m_numSamples != SIZE_MAX; }
     };
 
+#define UsingMeanInvStdDevNodeBaseNodeMembers ComputationNodeBoilerplate; UsingPreComputedNodeMembers; using Base::m_numSamples; using Base::IsAccumulating
+
     // -----------------------------------------------------------------------
     // MeanNode (features)
     // -----------------------------------------------------------------------
@@ -345,7 +347,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class MeanNode : public MeanInvStdDevNodeBase<ElemType>
     {
-        typedef MeanInvStdDevNodeBase<ElemType> Base; ComputationNodeBoilerplate; UsingPreComputedNodeMembers;
+        typedef MeanInvStdDevNodeBase<ElemType> Base; UsingMeanInvStdDevNodeBaseNodeMembers;
         static const std::wstring TypeName() { return L"Mean"; }
     public:
         MeanNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -397,7 +399,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class InvStdDevNode : public MeanInvStdDevNodeBase<ElemType>
     {
-        typedef MeanInvStdDevNodeBase<ElemType> Base; ComputationNodeBoilerplate; UsingPreComputedNodeMembers;
+        typedef MeanInvStdDevNodeBase<ElemType> Base; UsingMeanInvStdDevNodeBaseNodeMembers;
         static const std::wstring TypeName() { return L"InvStdDev"; }
     public:
         InvStdDevNode(DEVICEID_TYPE deviceId, const wstring & name) :

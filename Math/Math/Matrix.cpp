@@ -1367,9 +1367,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 NOT_IMPLEMENTED
                 );
         }
-#ifdef _DEBUG
-        //Invalidate();
-#endif
     }
 
     // Note: Resize() will leave the matrix content undefined.
@@ -1384,6 +1381,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false),
             m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false)
             );
+#ifdef _DEBUG
+        Invalidate();
+#endif
     }
 
     template<class ElemType>

@@ -128,9 +128,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (Inputs(i)->OperationName() == OperationNameOf(LearnableParameter))
         {
             Inputs(i)->Resize(rows, cols);
+            Inputs(i)->Validate(true);  // validate it properly
             // big BUGBUG: This should do random initialization.
             Inputs(i)->FunctionValues().SetValue(0);
-            Inputs(i)->Validate(true);  // validate it properly
+            fprintf(stderr, "ValidateInferInputSize: %ls %ls operation inferred, resized to (%d x %d), and (incorrectly) initialized to 0.\n", Inputs(i)->NodeName().c_str(), Inputs(i)->OperationName().c_str(), (int)rows, (int)cols);
         }
     }
 
