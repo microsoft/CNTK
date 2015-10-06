@@ -759,7 +759,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //return true if precomputation is executed.
-        bool PreCompute(ComputationNetwork& net,
+        bool EvaluateBatchModeNodes(ComputationNetwork& net,
                         const std::vector<ComputationNodeBasePtr>& featureNodes)
         {
             batchComputeNodes = net.GetNodesRequiringBatchMode();
@@ -923,7 +923,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t maxSize = min(maxMbSize, mbSize);
 
             ResetPreCompute();
-            PreCompute(*evalnet, featureNodes);
+            EvaluateBatchModeNodes(*evalnet, featureNodes);
 
             /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
@@ -1094,7 +1094,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t itdx = 0;
 
             ResetPreCompute();
-            PreCompute(*evalnet, featureNodes);
+            EvaluateBatchModeNodes(*evalnet, featureNodes);
 
             /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence

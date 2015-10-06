@@ -1367,6 +1367,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 NOT_IMPLEMENTED
                 );
         }
+#ifdef _DEBUG
+        //Invalidate();
+#endif
     }
 
     // Note: Resize() will leave the matrix content undefined.

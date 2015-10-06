@@ -135,6 +135,7 @@ ifeq ("$(BUILDTYPE)","debug")
   endif
 
   CXXFLAGS += -g
+  CPPFLAGS += -D_DEBUG
   CUFLAGS += -O0 -G -lineinfo  $(GENCODE_FLAGS)
 endif
 

@@ -240,7 +240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t t = frameRange.t();
 
-            Resize(Inputs(0));
+            VerifySize(Inputs(0));
 
             size_t T = GetNumTimeSteps();
             size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0;  // (note: should never happen in full-sequence mode)
