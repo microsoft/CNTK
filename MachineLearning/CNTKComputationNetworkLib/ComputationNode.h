@@ -469,6 +469,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InferImageDimsFromInput(0); //copy from child 0 by default.
         }
 
+        virtual void ValidateInferInputSize(size_t i, size_t rows, size_t cols) = 0;
+
         bool IsChildAnImage(const size_t index) const
         {
             return m_children[index]->m_outputImageLayout.width != 1 || m_children[index]->m_outputImageLayout.channels != 1;
@@ -949,6 +951,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradientValues.ResizeColumns(numCols);
             return numCols;
         }
+
+        void ValidateInferInputSize(size_t i, size_t rows, size_t cols) override final;
 
 #if 0   // (this function cannot be used currently since sentenceBegin is not a Matrix<ElemType> anymore; only affects LSTMNode which is no longer used)
         static void WINAPI SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
@@ -1480,7 +1484,7 @@ public: \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
     using Base::SaveToFile; using Base::UpdateFunctionAndGradientMBSize; using Base::SetInput; \
-    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildren
+    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildren; using Base::ValidateInferInputSize
 
 #define UsingComputationNodeMembersBoilerplate \
 protected:    /* some boilerplate goes here */ \
