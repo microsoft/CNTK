@@ -2488,9 +2488,9 @@ private:
         {
             Base::Validate(isFinalValidationPass);
 
-            size_t rows0 = Inputs(0)->GetNumRows();   // , cols0 = Inputs(0)->GetNumCols();
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
 
-            Resize(Inputs(0));
+            Resize(cols0, rows0);
             mOnes = Matrix<ElemType>::Ones(rows0, rows0, m_deviceId);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
