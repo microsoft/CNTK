@@ -250,7 +250,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            Resize(Inputs(0)->GetNumRows(), 1);
+            if (!m_hasComputed) // this node retains state, and state gets destroyed by Resize(), so we must be careful
+                Resize(Inputs(0)->GetNumRows(), 1);
+            else
+                VerifySize(Inputs(0)->GetNumRows(), 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
         }
@@ -309,19 +312,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 Matrix<ElemType> &samples = Inputs(0)->FunctionValues();
                 Matrix<ElemType> &avg = FunctionValues();
-    #if NANCHECK
+#if 1//NANCHECK
                 samples.HasNan("Mean-Samples");
-    #endif
+#endif
 
                 size_t numNewSamples = samples.GetNumCols();
                 Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + samples.GetNumCols()), samples, false,
                                                          ConstOnes(numNewSamples, 1, samples.GetDeviceId()),
                                                          false, (ElemType)m_numSamples / (m_numSamples + numNewSamples), avg);
 
-    #if NANCHECK
+#if 1//NANCHECK
                 avg.HasNan("Mean-avg");
-                ones.HasNan("Mean-ones");
-    #endif
+                //ones.HasNan("Mean-ones");
+#endif
 
                 m_numSamples += numNewSamples;
             }
@@ -385,12 +388,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ElemType sqrtFloor = 1e-10f;
 
                 m_var.InplaceTruncateBottom(sqrtFloor); //prevent too small variance (and negative square roots)
-#if NANCHECK
+#if 1//NANCHECK
                 m_var.HasNan("MarkComputed-InplaceTruncateBottom");
 #endif
                 m_var.InplaceSqrt();
 
-#if NANCHECK
+#if 1//NANCHECK
                 m_var.HasNan("MarkComputed-InplaceSqrt");
 #endif
                 m_var.ElementInverse();
@@ -414,9 +417,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!m_hasComputed)
             {
                 Matrix<ElemType> &samples = Inputs(0)->FunctionValues();
-    #if NANCHECK
+#if 1//NANCHECK
                 samples.HasNan("InvStdDev-Samples");
-    #endif
+#endif
                 m_temp.SetValue(m_mean);
                 size_t numNewSample = samples.GetNumCols();
                 Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + numNewSample), samples, false,
@@ -434,9 +437,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                          ConstOnes(numNewSample, 1, samples.GetDeviceId()),
                                                          false, (ElemType)m_numSamples / (m_numSamples + numNewSample), m_var);
 
-    #if NANCHECK
+#if 1//NANCHECK
                 m_var.HasNan("InvStdDev-m_var");
-    #endif
+#endif
 
                 m_numSamples += samples.GetNumCols();
             }
