@@ -210,12 +210,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_hasComputed = false;
         }
 
-        virtual bool HasComputed() const = 0;
-        virtual void MarkComputed(const bool hasComputed) = 0;
+        // interface through which this node is operated on are these two functions
+        virtual bool HasComputed() const { return m_hasComputed; }
+        virtual void MarkComputed(const bool hasComputed)       // override this for further finalizing operation
+        {
+            m_hasComputed = hasComputed;
+        }
 
-        virtual bool RequiresPreCompute() const { return true;}
+        virtual bool RequiresPreCompute() const override { return true; }
 
-        virtual void SaveToFile(File& fstream)  const override
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream << m_hasComputed;
@@ -242,8 +246,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             PrintNodeValuesToFile(printValues, fstream);
         }
 
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+            Resize(Inputs(0)->GetNumRows(), 1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+            InferImageDimsFromInputs();
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -256,10 +268,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_hasComputed;
     };
 
-    #define UsingPreComputedNodeMembers UsingComputationNodeMembersBoilerplate; using Base::m_hasComputed
-
-    //template class PreComputedNode<float>;
-    //template class PreComputedNode<double>;
+#define UsingPreComputedNodeMembers UsingComputationNodeMembersBoilerplate; using Base::m_hasComputed
 
     // -----------------------------------------------------------------------
     // MeanNode (features)
@@ -282,16 +291,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSamples = 0;   // TODO: intended? Not loaded from file?
         }
 
-        virtual bool HasComputed() const { return m_hasComputed; }        // why are these not in the base class?
-
-        virtual void MarkComputed(const bool hasComputed)
+        virtual void /*PreComputedNode::*/MarkComputed(const bool hasComputed)
         {
-            m_hasComputed = hasComputed;
+            Base::MarkComputed(hasComputed);
             if (m_hasComputed)
                 m_numSamples = 0;
         }
-
-        virtual bool RequiresPreCompute() const { return true; }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)
         {
@@ -302,8 +307,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!m_hasComputed)
             {
-                Matrix<ElemType> &samples =Inputs(0)->FunctionValues();
-                Matrix<ElemType> &avg =FunctionValues();
+                Matrix<ElemType> &samples = Inputs(0)->FunctionValues();
+                Matrix<ElemType> &avg = FunctionValues();
     #if NANCHECK
                 samples.HasNan("Mean-Samples");
     #endif
@@ -325,13 +330,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("Mean operation: the input node has 0 element.");
-
-            Resize(Inputs(0)->GetNumRows(), 1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs();
+            FunctionValues().SetValue(0);    // reset accumulator
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -373,39 +372,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSamples = 0;   // TODO: intended? not loading from file?
         }
 
-        virtual bool HasComputed() const { return m_hasComputed; }
-
-        virtual void MarkComputed(const bool hasComputed)
+        virtual void /*PreComputedNode::*/MarkComputed(const bool hasComputed) override
         {
-            m_hasComputed = hasComputed;
+            Base::MarkComputed(hasComputed);
 
             if (m_hasComputed && m_numSamples > 0)  //m_numSamples>0 means it's not called from model loading
             {
                 ElemType sqrtFloor = 1e-10f;
 
                 m_var.InplaceTruncateBottom(sqrtFloor); //prevent too small variance (and negative square roots)
-    #if NANCHECK
+#if NANCHECK
                 m_var.HasNan("MarkComputed-InplaceTruncateBottom");
-    #endif
+#endif
                 m_var.InplaceSqrt();
 
-    #if NANCHECK
+#if NANCHECK
                 m_var.HasNan("MarkComputed-InplaceSqrt");
-    #endif
+#endif
                 m_var.ElementInverse();
 
-    #if NANCHECK
+#if NANCHECK
                 m_var.HasNan("MarkComputed-ElementInverse()");
-    #endif
+#endif
                 FunctionValues().SetValue(m_var);
 
                 m_numSamples = 0;
             }
         }
 
-        virtual bool RequiresPreCompute() const { return true; }
-
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/)
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/) override
         {
             LogicError("InvStdDev operation should not be involved in the gradient calculation.");
         }
@@ -447,19 +442,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("InvStdDev operation: the input node has 0 element.");
-
             size_t inputDim = Inputs(0)->GetNumRows();
-            m_mean.Resize(inputDim, 1); m_mean.Invalidate();
-            m_var.Resize(inputDim, 1);  m_var.Invalidate();
-
-            Resize(inputDim, 1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs();
+            m_mean.Resize(inputDim, 1);
+            m_var.Resize(inputDim, 1);
+            // reset accumulators
+            m_mean.SetValue(0);
+            m_var.SetValue(0);
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
             Base::MoveMatricesToDevice(deviceId);
             m_mean.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
@@ -467,7 +458,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)

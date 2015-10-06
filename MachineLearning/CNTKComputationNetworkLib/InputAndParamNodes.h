@@ -128,9 +128,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
         }
 
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override {}
+        // computation functions don't do anything for parameter nodes
+        virtual size_t UpdateFunctionAndGradientMBSize(size_t /*numCols*/) override { return 0; }
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/) override { }
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) override { }
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override { }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
@@ -279,6 +281,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type. This causes some unnecessary special-casing.
         virtual const std::wstring OperationName() const { return m_isSparse ? SparseTypeName() : TypeName(); }
+
+        // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.
+        virtual size_t UpdateFunctionAndGradientMBSize(size_t numCols)
+        {
+            if (!m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
+                return numCols;             // BUGBUG: what to return here?
+            if (numCols == SIZE_MAX)        // SIZE_MAX means determine from layout
+                numCols = m_pMBLayout->GetNumCols();
+            VerifySize(GetNumRows(), numCols);
+            return numCols;
+        }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override {}
 
