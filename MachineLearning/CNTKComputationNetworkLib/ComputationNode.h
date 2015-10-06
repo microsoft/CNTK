@@ -503,9 +503,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*IComputationNode::*/OnEvaluateBeginIteration()             // called before first iteration step of EvaluateThisNode()
         {
-            fprintf(stderr, "Trace: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+            fprintf(stderr, "OnEvaluateBeginIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
         }
-        virtual void /*IComputationNode::*/OnEvaluateEndIteration() { }               // called after last iteration step of EvaluateThisNode()
+        virtual void /*IComputationNode::*/OnEvaluateEndIteration()               // called after last iteration step of EvaluateThisNode()
+        {
+            fprintf(stderr, "OnEvaluateEndIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+        }
 
     protected:
 
@@ -823,6 +826,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ComputationNode : public ComputationNodeBase // abstract class that cannot be instantiated
     {
+        typedef ComputationNodeBase Base;
     protected:
         //std containers such as list and map does not support class reference so we need to use pointer
         typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
@@ -1249,6 +1253,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #ifdef _DEBUG
         virtual void /*IComputationNode::*/OnEvaluateEndIteration()               // called after last iteration step of EvaluateThisNode()
         {
+            Base::OnEvaluateEndIteration();
             MaskMissingValuesColumnsToZero();
             if (m_functionValues.HasNan("OnEvaluateEndIteration"))
                 LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
@@ -1487,11 +1492,13 @@ public: \
     using Base::SaveToFile; using Base::UpdateFunctionAndGradientMBSize; using Base::SetInput; \
     using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildren; using Base::ValidateInferInputSize
 
-#define UsingComputationNodeMembersBoilerplate \
+#define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \
     virtual const std::wstring OperationName() const override { return TypeName(); } \
-    virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); } \
-    UsingComputationNodeMembers
+    virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
+
+#define UsingComputationNodeMembersBoilerplate \
+    ComputationNodeBoilerplate; UsingComputationNodeMembers
 
 #pragma endregion base computation class
 
