@@ -61,9 +61,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //Matrix<ElemType> endOfFile =  Matrix<ElemType>((size_t)1,(size_t)1);
             //endOfFile(0,0)=0;
 
-            //evaluate with minibatches
+            // evaluate with minibatches
             dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
             dataReader.SetNumParallelSequences(1);
+
+            m_net.StartEvaluateMinibatchLoop(outputNodes);
 
             size_t totalEpochSamples = 0;
             std::map<std::wstring, void *, nocase_compare> outputMatrices;
@@ -107,7 +109,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //clean up
             
         }
-        
 
         void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples=requestDataSize)
         {
@@ -142,9 +143,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i=0; i<featureNodes.size(); i++)
                 inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
-                        
-            //evaluate with minibatches
+
+            // evaluate with minibatches
             dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
+
+            m_net.StartEvaluateMinibatchLoop(outputNodes);
 
             size_t totalEpochSamples = 0;
             size_t numMBsRun = 0;

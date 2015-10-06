@@ -204,15 +204,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers;
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
-        PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name)
-        {
-            // further initializations
-            m_hasComputed = false;
-        }
+        PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name),
+            m_hasComputed(false)
+        { }
 
         // interface through which this node is operated on are these two functions
+
+        // check whether node has already undergone precomputation
         virtual bool HasComputed() const { return m_hasComputed; }
-        virtual void MarkComputed(const bool hasComputed)       // override this for further finalizing operation
+
+        // call this with 'false' at start and with 'true' at end
+        // This is used for resetting and updating from accumulators.
+        virtual void MarkComputed(const bool hasComputed)
         {
             m_hasComputed = hasComputed;
         }
@@ -223,7 +227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::SaveToFile(fstream);
             fstream << m_hasComputed;
-            fstream << m_functionValues;
+            fstream << m_functionValues;    // TODO: why serialize if not yet computed?
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
@@ -271,34 +275,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_hasComputed;
     };
 
-#define UsingPreComputedNodeMembers UsingComputationNodeMembersBoilerplate; using Base::m_hasComputed
+#define UsingPreComputedNodeMembers UsingComputationNodeMembers; using Base::m_hasComputed
 
     // -----------------------------------------------------------------------
-    // MeanNode (features)
+    // MeanInvStdDevNodeBase (features)  -- common base class for Mean and InvStdDev
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class MeanNode : public PreComputedNode<ElemType>, public NumInputs<1>
+    class MeanInvStdDevNodeBase : public PreComputedNode<ElemType>, public NumInputs<1>
     {
         typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
-        static const std::wstring TypeName() { return L"Mean"; }
+        //static const std::wstring TypeName() { return L"MeanInvStdDev (base)"; }
     public:
-        MeanNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        MeanInvStdDevNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             PreComputedNode<ElemType>(deviceId, name),
-            m_numSamples(0)
+            m_numSamples(SIZE_MAX)
         { }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
-            m_numSamples = 0;   // TODO: intended? Not loaded from file?
+            m_numSamples = SIZE_MAX;
         }
 
         virtual void /*PreComputedNode::*/MarkComputed(const bool hasComputed)
         {
             Base::MarkComputed(hasComputed);
-            if (m_hasComputed)
+            if (!m_hasComputed)     // initialize
+            {
+                if (IsAccumulating())
+                    LogicError("%ls %ls operation: MarkComputed(false) has been called while accumulating.", NodeName().c_str(), OperationName().c_str());
                 m_numSamples = 0;
+            }
+            else                    // finalize
+            {
+                if (!IsAccumulating())
+                    LogicError("%ls %ls operation: MarkComputed(true) has been called without MarkComputed(false) first.", NodeName().c_str(), OperationName().c_str());
+                if (m_numSamples == 0)
+                    LogicError("%ls %ls operation: No data accumulated during precomputation.", NodeName().c_str(), OperationName().c_str());
+                m_numSamples = SIZE_MAX;
+            }
         }
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)
@@ -306,51 +322,68 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("Mean operation should not be involved in the gradient calculation.");
         }
 
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
-        {
-            if (!m_hasComputed)
-            {
-                Matrix<ElemType> &samples = Inputs(0)->FunctionValues();
-                Matrix<ElemType> &avg = FunctionValues();
-#if 1//NANCHECK
-                samples.HasNan("Mean-Samples");
-#endif
-
-                size_t numNewSamples = samples.GetNumCols();
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + samples.GetNumCols()), samples, false,
-                                                         ConstOnes(numNewSamples, 1, samples.GetDeviceId()),
-                                                         false, (ElemType)m_numSamples / (m_numSamples + numNewSamples), avg);
-
-#if 1//NANCHECK
-                avg.HasNan("Mean-avg");
-                //ones.HasNan("Mean-ones");
-#endif
-
-                m_numSamples += numNewSamples;
-            }
-        }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            Base::Validate(isFinalValidationPass);
-            if (!m_hasComputed)
-            {
-                FunctionValues().SetValue(0);    // reset accumulator
-                fprintf(stderr, "Mean: SetValue(0)\n");
-            }
-        }
-
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                auto node = dynamic_pointer_cast<MeanNode<ElemType>>(nodeP);
-                node->m_numSamples = m_numSamples;
+                if (m_numSamples != SIZE_MAX)
+                    LogicError("%ls %ls operation: CopyTo() called while accumulating.", NodeName().c_str(), OperationName().c_str());
+                auto node = dynamic_pointer_cast<MeanInvStdDevNodeBase<ElemType>>(nodeP);
+                node->m_numSamples = SIZE_MAX;
             }
         }
-    private:
-        size_t m_numSamples;    // TODO: move to base class?
+    protected:
+        size_t m_numSamples;    // (SIZE_MAX while outside accumulation state)
+        bool IsAccumulating() const { return m_numSamples != SIZE_MAX; }
+    };
+
+    // -----------------------------------------------------------------------
+    // MeanNode (features)
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class MeanNode : public MeanInvStdDevNodeBase<ElemType>
+    {
+        typedef MeanInvStdDevNodeBase<ElemType> Base; ComputationNodeBoilerplate; UsingPreComputedNodeMembers;
+        static const std::wstring TypeName() { return L"Mean"; }
+    public:
+        MeanNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void /*PreComputedNode::*/MarkComputed(const bool hasComputed)
+        {
+            Base::MarkComputed(hasComputed);
+            if (!m_hasComputed)     // initialize accumulation
+                FunctionValues().SetValue(0);
+            // no else branch because EvaluateThisNodeNonLooping() already leaves a valid mean in m_functionValues
+        }
+
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        {
+            if (m_hasComputed)
+                return;     // not accumulating
+
+            if (!IsAccumulating())
+                LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
+
+            Matrix<ElemType> &samples = Inputs(0)->FunctionValues();
+            Matrix<ElemType> &avg = FunctionValues();
+
+#if 1//NANCHECK
+            samples.HasNan("Mean-Samples");
+#endif
+            size_t numNewSamples = samples.GetNumCols();
+            Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + samples.GetNumCols()), samples, false,
+                                                        ConstOnes(numNewSamples, 1, samples.GetDeviceId()),
+                                                        false, (ElemType)m_numSamples / (m_numSamples + numNewSamples), avg);
+#if 1//NANCHECK
+            avg.HasNan("Mean-avg");
+#endif
+
+            m_numSamples += numNewSamples;
+        }
     };
 
     template class MeanNode<float>;
@@ -362,32 +395,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class InvStdDevNode : public PreComputedNode<ElemType>, public NumInputs<1>
+    class InvStdDevNode : public MeanInvStdDevNodeBase<ElemType>
     {
-        typedef PreComputedNode<ElemType> Base; UsingPreComputedNodeMembers;
+        typedef MeanInvStdDevNodeBase<ElemType> Base; ComputationNodeBoilerplate; UsingPreComputedNodeMembers;
         static const std::wstring TypeName() { return L"InvStdDev"; }
     public:
         InvStdDevNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            PreComputedNode<ElemType>(deviceId, name),
-            m_mean(deviceId), m_var(deviceId), m_temp(deviceId),
-            m_numSamples(0)
+            Base(deviceId, name),
+            m_mean(deviceId), m_var(deviceId), m_temp(deviceId)
         { }
-
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
-        {
-            Base::LoadFromFile(fstream, modelVersion);
-            m_numSamples = 0;   // TODO: intended? not loading from file?
-        }
 
         virtual void /*PreComputedNode::*/MarkComputed(const bool hasComputed) override
         {
             Base::MarkComputed(hasComputed);
 
-            if (m_hasComputed && m_numSamples > 0)  //m_numSamples>0 means it's not called from model loading
+            if (!m_hasComputed) // initialize
+            {
+                // reset accumulators
+                size_t inputDim = Inputs(0)->GetNumRows();
+                m_mean.Resize(inputDim, 1);
+                m_var.Resize(inputDim, 1);
+                m_mean.SetValue(0);
+                m_var.SetValue(0);
+                FunctionValues().SetValue(0);   // also set this because not doing it may flag during debugging; avoids special-casing this
+            }
+            else                // finalize
             {
                 ElemType sqrtFloor = 1e-10f;
-
-                m_var.InplaceTruncateBottom(sqrtFloor); //prevent too small variance (and negative square roots)
+                m_var.InplaceTruncateBottom(sqrtFloor);     // prevent too small variance (and negative square roots due to numeric inaccuracy)
 #if 1//NANCHECK
                 m_var.HasNan("MarkComputed-InplaceTruncateBottom");
 #endif
@@ -402,63 +437,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_var.HasNan("MarkComputed-ElementInverse()");
 #endif
                 FunctionValues().SetValue(m_var);
-
-                m_numSamples = 0;
             }
-        }
-
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/) override
-        {
-            LogicError("InvStdDev operation should not be involved in the gradient calculation.");
         }
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            if (!m_hasComputed)
-            {
-                Matrix<ElemType> &samples = Inputs(0)->FunctionValues();
+            if (m_hasComputed)
+                return;     // not accumulating
+
+            if (!IsAccumulating())
+                LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
+
+            Matrix<ElemType> &samples = Inputs(0)->FunctionValues();
 #if 1//NANCHECK
-                samples.HasNan("InvStdDev-Samples");
+            samples.HasNan("InvStdDev-Samples");
 #endif
-                m_temp.SetValue(m_mean);
-                size_t numNewSample = samples.GetNumCols();
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + numNewSample), samples, false,
-                                                         ConstOnes(numNewSample, 1, samples.GetDeviceId()),
-                                                         false, (ElemType)m_numSamples / (m_numSamples + numNewSample), m_mean);
+            m_temp.SetValue(m_mean);
+            size_t numNewSample = samples.GetNumCols();
+            Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + numNewSample), samples, false,
+                                                        ConstOnes(numNewSample, 1, samples.GetDeviceId()),
+                                                        false, (ElemType)m_numSamples / (m_numSamples + numNewSample), m_mean);
 
-                m_temp -= m_mean;
-                m_temp.AssignElementPowerOf(m_temp, 2);
-                m_var += m_temp;
+            m_temp -= m_mean;
+            m_temp.AssignElementPowerOf(m_temp, 2);
+            m_var += m_temp;
 
-                m_temp.AssignDifferenceOf(samples, m_mean);
-                m_temp.AssignElementPowerOf(m_temp, 2);
+            m_temp.AssignDifferenceOf(samples, m_mean);
+            m_temp.AssignElementPowerOf(m_temp, 2);
 
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + numNewSample), m_temp, false,
-                                                         ConstOnes(numNewSample, 1, samples.GetDeviceId()),
-                                                         false, (ElemType)m_numSamples / (m_numSamples + numNewSample), m_var);
+            Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + numNewSample), m_temp, false,
+                                                        ConstOnes(numNewSample, 1, samples.GetDeviceId()),
+                                                        false, (ElemType)m_numSamples / (m_numSamples + numNewSample), m_var);
 
 #if 1//NANCHECK
-                m_var.HasNan("InvStdDev-m_var");
+            m_var.HasNan("InvStdDev-m_var");
 #endif
 
-                m_numSamples += samples.GetNumCols();
-            }
-        }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            Base::Validate(isFinalValidationPass);
-
-            if (!m_hasComputed)
-            {
-                size_t inputDim = Inputs(0)->GetNumRows();
-                m_mean.Resize(inputDim, 1);
-                m_var.Resize(inputDim, 1);
-                // reset accumulators
-                m_mean.SetValue(0);
-                m_var.SetValue(0);
-                fprintf(stderr, "InvStdDev: SetValue(0)\n");
-            }
+            m_numSamples += samples.GetNumCols();
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
@@ -475,15 +490,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 auto node = dynamic_pointer_cast<InvStdDevNode<ElemType>>(nodeP);
-                node->m_numSamples = m_numSamples;
-
                 node->m_mean = m_mean;
                 node->m_var = m_var;
-                node-> m_temp =  m_temp;
+                node->m_temp =  m_temp;
             }
         }
     private:
-        size_t m_numSamples;
         Matrix<ElemType> m_mean;
         Matrix<ElemType> m_var;
         Matrix<ElemType>  m_temp;

@@ -122,6 +122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 evalResultsLastMBs.push_back((ElemType)0);
 
             dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+            m_net.StartEvaluateMinibatchLoop(evalNodes);
 
             while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
@@ -191,6 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //returns error rate
+        // TODO: What does this function do?
         double EvaluateUnroll(IDataReader<ElemType>* dataReader, const size_t mbSize, double &evalSetCrossEntropy, const wchar_t* output = nullptr, const size_t testSize = requestDataSize)
         {
             std::vector<ComputationNodeBasePtr> & featureNodes = m_net.FeatureNodes();
@@ -211,6 +213,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputMatrices[L"numberobs"] = new Matrix<ElemType>(1, 1, m_net.GetDeviceId());
 
             dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+            m_net.StartEvaluateMinibatchLoop(criterionNodes, evaluationNodes);
 
             double epochEvalError = 0;
             double epochCrossEntropy = 0;
@@ -415,9 +418,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             double evalResultsLastMBs = (double)0;
 
             for (auto ptr = dataReaders.begin(); ptr != dataReaders.end(); ptr++)
-            {
                 (*ptr)->StartMinibatchLoop(mbSize, 0, testSize);
-            }
+            // BUGBUG: Code below will fail because we now must call StartMinibatchLoop(), but I can't tell from below which nodes to call it for.
+            //for (auto & ptr : nets)
+            //    ptr->StartMinibatchLoop(xxx);
 
             bool bContinueDecoding = true;
             while (bContinueDecoding)
@@ -743,7 +747,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        //return true if precomputation is executed.
+        // (only called by FindBestPath...())
         void ResetPreCompute()
         {
             //mark false
@@ -766,6 +770,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
+
+            net.StartEvaluateMinibatchLoop(batchComputeNodes);  // TODO: Is this correct? There is no StartMinibatchLoop() for a reader.
 
             net.SetActualMiniBatchSizeFromFeatures();
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)

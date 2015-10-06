@@ -430,7 +430,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    // prepares the network for computation
+    bool ComputationNetwork::BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode)
+    {
+        return m_built.find(rootNode) != m_built.end();
+    }
+
+    // prepare to compute with the subnetwork that this rootNode depends on, including
+    //  - auto-detecting recurrent loops
+    //  - collect input and learnable nodes
+    //  - calling Validate() on all nodes lazily, which sizes all matrices (column dimensions get updated to MB size)
     // Done lazily, called for every minibatch's invocation of EvaluateNode(), but memoizing which nodes were done already.
     // BUGBUG? Lazy triggers on the root node. I.e. for two different root nodes (training, eval), it validates twice.
     void ComputationNetwork::BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode)
@@ -558,53 +566,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 #endif
 
-    template<class N> void ComputationNetwork::GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequirePreComputation, const ComputationNodeBasePtr rootNode, bool checkComputed)
+    template<class N> void ComputationNetwork::GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequiringX, const ComputationNodeBasePtr rootNode, bool checkComputed)
     {
-        if (rootNode == nullptr)        // find nodes from all available nodes
+        if (!rootNode)              // find nodes from all available nodes
         {
-            for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+            for (const auto & nodep : m_nameToNodeMap)
             {
-                ComputationNodeBasePtr node = nodeIter->second;
-                if (node->RequiresPreCompute()) // TODO: why not check directly for the type with a dynamic_cast?
+                auto node = dynamic_pointer_cast<N>(nodep.second);
+                if (node)
                 {
-                    auto preComputedNode = static_pointer_cast<N>(node);
-                    if (!checkComputed || !preComputedNode->HasComputed())
-                        nodesRequirePreComputation.push_back(node);
+                    assert(node->RequiresPreCompute());
+                    if (!checkComputed || !node->HasComputed())
+                        nodesRequiringX.push_back(node);
                 }
             }
         }
         else                            // or for calculating a specific node
         {
-            const auto & nodes = GetEvalOrder(rootNode, false);
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+            for (const auto & nodei : GetEvalOrder(rootNode, false))
             {
-                ComputationNodeBasePtr node = *nodeIter;
-                if (node->RequiresPreCompute()) // TODO: why not check directly for the type with a dynamic_cast?
+                auto node = dynamic_pointer_cast<N>(nodei);
+                if (node)
                 {
-                    auto preComputedNode = static_pointer_cast<N>(node);
-                    if (!checkComputed || !preComputedNode->HasComputed())
-                        nodesRequirePreComputation.push_back(node);
+                    assert(node->RequiresPreCompute());
+                    if (!checkComputed || !node->HasComputed())
+                        nodesRequiringX.push_back(node);
                 }
             }
         }
+        nodesRequiringX.unique();
     }
 
     //return list of nodes that require precomputation and not precomputed yet.
     std::list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringPreComputation(const ComputationNodeBasePtr rootNode, bool checkComputed)
     {
-        std::list<ComputationNodeBasePtr> nodesRequirePreComputation;
-        GetNodesRequiringX<PreComputedNode<float>>(nodesRequirePreComputation, rootNode, checkComputed);
-        GetNodesRequiringX<PreComputedNode<double>>(nodesRequirePreComputation, rootNode, checkComputed);
-        return nodesRequirePreComputation;
+        std::list<ComputationNodeBasePtr> nodesRequiringX;
+        GetNodesRequiringX<PreComputedNode<float>>(nodesRequiringX, rootNode, checkComputed);
+        GetNodesRequiringX<PreComputedNode<double>>(nodesRequiringX, rootNode, checkComputed);
+        return nodesRequiringX;
     }
 
     //return list of nodes that require batch mode and not precomputed yet.
     std::list<ComputationNodeBasePtr> ComputationNetwork::GetNodesRequiringBatchMode(const ComputationNodeBasePtr rootNode, bool checkComputed)
     {
-        std::list<ComputationNodeBasePtr> nodesRequirePreComputation;
-        GetNodesRequiringX<BatchModeNode<float>>(nodesRequirePreComputation, rootNode, checkComputed);
-        GetNodesRequiringX<BatchModeNode<double>>(nodesRequirePreComputation, rootNode, checkComputed);
-        return nodesRequirePreComputation;
+        std::list<ComputationNodeBasePtr> nodesRequiringX;
+        GetNodesRequiringX<BatchModeNode<float>>(nodesRequiringX, rootNode, checkComputed);
+        GetNodesRequiringX<BatchModeNode<double>>(nodesRequiringX, rootNode, checkComputed);
+        return nodesRequiringX;
     }
 
     // The methods below determine evaluation order, which is tricky in presence of recurrent loops.

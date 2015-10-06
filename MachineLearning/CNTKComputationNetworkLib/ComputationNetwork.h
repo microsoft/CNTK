@@ -565,13 +565,12 @@ public:
     //  - these must be executed frame by frame rather than as a map
     //  - such a loop is treated as if they were a little nested network; this is done inside here
     //  - these little nested networks are defined in m_recurrentInfo[]
-    void Evaluate(const ComputationNodeBasePtr rootNode)
+    void Evaluate(const ComputationNodeBasePtr & rootNode)
     {
-        // prepare to compute with the subnetwork that this rootNode depends on, including
-        //  - auto-detecting recurrent loops
-        //  - collect input and learnable nodes
-        //  - calling Validate() on all nodes lazily, which sizes all matrices (column dimensions get updated to MB size)
-        BuildAndValidateSubNetwork(rootNode);
+        // caller must call BuildAndValidateSubNetwork() before
+        // TODO: Some places are hard to fix, e.g. encoder-decoder best-path functions. Those may be broken; this message will tell you.
+        if (!BuiltAndValidatedSubNetwork(rootNode))
+            LogicError("Evaluate for node %ls %ls: BuildAndValidateSubNetwork() has not been called on this node.");
 
         // determines order of evaluation, such that children get evaluated before their parent nodes
         std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode, false);
@@ -691,6 +690,12 @@ public:
                 (*nodeIter)->UpdateEvalTimeStamp();
             }
         }
+    }
+    template<class NODESET>
+    void Evaluate(const NODESET & nodes)
+    {
+        for (auto & node : nodes)
+            Evaluate(node);
     }
 
     // propagate the features' MB size to all nodes of the network
@@ -1233,6 +1238,24 @@ private:
 public:
     // prepares the network for computation
     void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
+    // and for a set of nodes
+    void StartEvaluateMinibatchLoop(const ComputationNodeBasePtr & rootNode)  // (ugly name; meant to be unique so we can rename if needed)
+    {
+        BuildAndValidateSubNetwork(rootNode);
+    }
+    template<class NODESET>
+    void StartEvaluateMinibatchLoop(const NODESET & nodes)  // (ugly name; meant to be unique so we can rename if needed)
+    {
+        for (auto & node : nodes)
+            StartEvaluateMinibatchLoop(node);
+    }
+    template<class NODESET>
+    void StartEvaluateMinibatchLoop(const NODESET & nodes1, const NODESET & nodes2) // often needed for two sets (training & evaluation criteria)
+    {
+        StartEvaluateMinibatchLoop(nodes1);
+        StartEvaluateMinibatchLoop(nodes2);
+    }
+    bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 
     //this function will need to be called before actual validation and execution to 
     //predetermine how to share matrices to reduce memory usage.

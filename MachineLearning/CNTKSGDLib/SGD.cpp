@@ -1145,7 +1145,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     std::vector<ComputationNodeBasePtr> & labelNodes,
                     std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
     {
-        std::list<ComputationNodeBasePtr> nodes = net.GetNodesRequiringPreComputation();
+        std::list<ComputationNodeBasePtr> nodes = net.GetNodesRequiringPreComputation();    // this tests all HasComputed() flags
 
         if (nodes.size() == 0)
         {
@@ -1169,39 +1169,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0);
         else                                    // using only one epoch
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, m_epochSize);
-#if 1
-        size_t actualMBSize;
-        while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSize))
+        net.StartEvaluateMinibatchLoop(nodes);
+
+        // initialize
+        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        {
+            auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
+            node->MarkComputed(false/*begin accumulating*/);
+        }
+        size_t actualMBSizeDummy;
+        while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy))
         {
             // TODO: move these into GetMinibatchIntoNetwork()  --but those are passed around; necessary? Can't we get them from 'net'?
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
             ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-            for (auto & node : nodes)   // this loops over all pertinent PreComputeNodes
-                net.Evaluate(node);
+            net.Evaluate(nodes);
         }
-#else
-        while (trainSetDataReader->GetMinibatch(*inputMatrices))
-        {
-            // TODO: use GetMinibatchIntoNetwork(), should be easy
-            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-            ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
-
-            net.SetActualMiniBatchSizeFromFeatures();
-            trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
-            net.VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
-
-            // TODO: Exactly this loop should be INSIDE ComputationNetwork--pass the nodes array instead!
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-                net.Evaluate(*nodeIter);
-        }
-#endif
-
-        // mark done
+        // finalize
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
             auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
-            node->MarkComputed(true);
+            node->MarkComputed(true/*done accumulating*/);
         }
 
         return true;
@@ -1714,13 +1703,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         int numMBsRun = 0;
 
-        size_t numEvalNodes = epochEvalErrors.size();
-
         // NOTE: the following two local matrices are not used in distGradAgg path
         // assume only one training criterion node for each epoch.
         // The criterion values are accumulated here over the minibatches (without having to pull them off the GPU).
         Matrix<ElemType> localEpochCriterion(1, 1, net.GetDeviceId());
-        Matrix<ElemType> localEpochEvalErrors(1, numEvalNodes, net.GetDeviceId());
+        Matrix<ElemType> localEpochEvalErrors(1, epochEvalErrors.size(), net.GetDeviceId());
 
         localEpochCriterion.SetValue(0);
         localEpochEvalErrors.SetValue(0);
@@ -1740,7 +1727,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (useGradientAggregation)
         {
             epochCriterion = double(0.0);
-            epochEvalErrors.assign(numEvalNodes, double(0.0));
+            epochEvalErrors.assign(epochEvalErrors.size(), double(0.0));
         }
 
         Profiler profiler(m_numMBsToCUDAProfile);
@@ -1752,13 +1739,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                        m_enableDistributedMBReading &&
                                        trainSetDataReader->SupportsDistributedMBRead();
         if (useDistributedMBReading)
-        {
             trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, g_mpi->CurrentNodeRank(), g_mpi->NumNodesInUse(), m_epochSize);
-        }
         else
-        {
             trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, m_epochSize);
-        }
+        net.StartEvaluateMinibatchLoop(evaluationNodes);
+        net.StartEvaluateMinibatchLoop(criterionNodes);
+        if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode)
+            refNet.StartEvaluateMinibatchLoop(refNode);
 
         // TODO: what is this??
         AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, featureNodes, inputMatrices);
@@ -1829,10 +1816,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 //compute eval node first since when gradient is computed the forward function values
                 //may be changed and need to be recomputed when gradient and function value share the same matrix
-                for (size_t i = 0; i < numEvalNodes; i++)
-                {
-                    net.Evaluate(evaluationNodes[i]);
-                }
+                net.Evaluate(evaluationNodes);
 
                 // only compute gradient when learning rate is large enough
                 if (learnRatePerSample > m_minLearnRate * 0.01)
@@ -1872,7 +1856,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // criteria are in FunctionValues()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
                     Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(criterionNodes[0])->FunctionValues(),
                                                           0, 0, localEpochCriterion, 0, 0);
-                    for (size_t i = 0; i < numEvalNodes; i++)
+                    for (size_t i = 0; i < evaluationNodes.size(); i++)
                     {
                         Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(evaluationNodes[i])->FunctionValues(),
                                                               0, 0, localEpochEvalErrors, 0, i);
@@ -1882,14 +1866,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 //distributed gradient aggregation
-                LazyInitDistGradAgg(learnableNodes, numEvalNodes, m_traceLevel);
+                LazyInitDistGradAgg(learnableNodes, evaluationNodes.size(), m_traceLevel);
 
                 //prepare the header
-                m_gradHeader->numEvalNode = numEvalNodes;
+                m_gradHeader->numEvalNode = evaluationNodes.size();
                 m_gradHeader->numSamples = actualMBSize;
                 m_gradHeader->numSamplesWithLabel = numSamplesWithLabel;
                 m_gradHeader->criterion = actualMBSize > 0 ? criterionNodes[0]->Get00Element() : 0.0;
-                for (size_t i = 0; i < numEvalNodes; i++)
+                for (size_t i = 0; i < evaluationNodes.size(); i++)
                     m_gradHeader->evalErrors[i] = actualMBSize > 0 ? evaluationNodes[i]->Get00Element() : 0.0;
 
                 m_distGradAgg->AggregateGradients(m_gradHeader, epochNumber);
@@ -1897,7 +1881,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 aggregateNumSamples = m_gradHeader->numSamples;
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
                 epochCriterion += m_gradHeader->criterion;
-                for (size_t i = 0; i<numEvalNodes; i++)
+                for (size_t i = 0; i<epochEvalErrors.size(); i++)
                     epochEvalErrors[i] += m_gradHeader->evalErrors[i];
             }
 
@@ -1963,7 +1947,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         timer.Restart();
                         epochCriterion = localEpochCriterion.Get00Element();
-                        for (size_t i = 0; i < numEvalNodes; i++)
+                        for (size_t i = 0; i < epochEvalErrors.size(); i++)
                             epochEvalErrors[i] = localEpochEvalErrors(0, i);
                         timer.Stop();
 
@@ -1991,7 +1975,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_maxComputedEpochSize = numMBsRun * numSamplesLastMBs / m_numMBsToShowResult;
                     }
 
-                    for (size_t i = 0; i < numEvalNodes; i++)
+                    for (size_t i = 0; i < epochEvalErrors.size(); i++)
                     {
                         double evalError = (epochEvalErrors[i] - epochEvalErrorsLastMBs[i]) / numSamplesLastMBs;
                         string formatString = "EvalErr[%lu]PerSample = " + GeneratePaddedFloatOrExpFormat(0, 8, evalError) + "; ";
@@ -2012,7 +1996,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     numSamplesLastMBs = 0;
 
                     epochCriterionLastMBs = epochCriterion;
-                    for (size_t i = 0; i < numEvalNodes; i++)
+                    for (size_t i = 0; i < epochEvalErrorsLastMBs.size(); i++)
                         epochEvalErrorsLastMBs[i] = epochEvalErrors[i];
 
                     if (std::isnan(epochCriterion))
@@ -2057,7 +2041,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // with parallelization, we have them in regular variables
             epochCriterion /= float(totalEpochSamples);
-            for (size_t i = 0; i< numEvalNodes; i++)
+            for (size_t i = 0; i< epochEvalErrors.size(); i++)
                 epochEvalErrors[i] /= totalEpochSamples;
         }
         else
@@ -2067,7 +2051,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             localEpochEvalErrors /= float(totalEpochSamples);
 
             epochCriterion = localEpochCriterion.Get00Element();
-            for (size_t i = 0; i < numEvalNodes; i++)
+            for (size_t i = 0; i < epochEvalErrors.size(); i++)
                 epochEvalErrors[i] = localEpochEvalErrors(0, i);
         }
 
@@ -2495,6 +2479,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define EPSILON 1e-5
 
+    // this probes the automatic gradient computation with random inputs
     template<class ElemType>
     bool SGD<ElemType>::GradientCheck(ComputationNetwork& net,
                        const std::vector<ComputationNodeBasePtr> & criterionNodes,
@@ -2502,6 +2487,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                        int npos)
     {
         vector<string> errMsgs;
+
+        net.StartEvaluateMinibatchLoop(criterionNodes[npos]);
 
         // gradient checking
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
@@ -2524,7 +2511,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 node->UpdateEvalTimeStamp();
 
-                // use only the first criterion. Is
                 net.ComputeGradient<ElemType>(criterionNodes[npos]);
 
                 if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)
