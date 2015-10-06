@@ -17,8 +17,8 @@ testCases:
     patterns:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
-      - TrainLossPerSample = {{float,tolerance=0.5%}}
-      - EvalErrPerSample = {{float,tolerance=0.5%}}
+      - TrainLossPerSample = {{float,tolerance=0%}}
+      - EvalErrPerSample = {{float,tolerance=0%}}
       - Ave LearnRatePerSample = {{float,tolerance=0%}}
 
   Per-minibatch training results must match for each MPI Rank:
@@ -26,8 +26,8 @@ testCases:
       - ^MPI Rank {{integer}}
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}} of {{integer}}]
       - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=0.5%}}
-      - EvalErr[0]PerSample = {{float,tolerance=0.5%}}
+      - TrainLossPerSample = {{float,tolerance=0%}}
+      - EvalErr[0]PerSample = {{float,tolerance=0%}}
 
   DataParallelSGD training parameters must match for each MPI Rank:
     patterns:
