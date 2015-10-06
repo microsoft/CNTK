@@ -330,7 +330,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-            FunctionValues().SetValue(0);    // reset accumulator
+            if (!m_hasComputed)
+            {
+                FunctionValues().SetValue(0);    // reset accumulator
+                fprintf(stderr, "Mean: SetValue(0)\n");
+            }
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -442,12 +446,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            size_t inputDim = Inputs(0)->GetNumRows();
-            m_mean.Resize(inputDim, 1);
-            m_var.Resize(inputDim, 1);
-            // reset accumulators
-            m_mean.SetValue(0);
-            m_var.SetValue(0);
+            if (!m_hasComputed)
+            {
+                size_t inputDim = Inputs(0)->GetNumRows();
+                m_mean.Resize(inputDim, 1);
+                m_var.Resize(inputDim, 1);
+                // reset accumulators
+                m_mean.SetValue(0);
+                m_var.SetValue(0);
+                fprintf(stderr, "InvStdDev: SetValue(0)\n");
+            }
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
