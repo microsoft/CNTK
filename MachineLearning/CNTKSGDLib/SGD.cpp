@@ -1297,7 +1297,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                             /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                                             /*out*/ totalSamplesSeen, "AdaptiveLearnRateSearch:");
 
-                    } while (std::isnan(epochCriterion) || (epochCriterion > baseCriterion && learnRatePerSample > minLearnRate));
+        } while (std::isnan(epochCriterion) || (epochCriterion > baseCriterion && learnRatePerSample > minLearnRate));
 
         bestLearnRatePerSample = learnRatePerSample;
 

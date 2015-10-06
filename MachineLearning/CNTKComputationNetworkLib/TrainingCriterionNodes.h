@@ -1357,8 +1357,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (Inputs(1)->GetNumRows() != Inputs(2)->GetNumRows())
                 LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
             }
-            if (Inputs(1)->GetNumCols() != Inputs(2)->GetNumCols())
-                Inputs(1)->Resize(Inputs(1)->GetNumRows(), Inputs(2)->GetNumCols()); 
+            // TODO: What is this about?
+            //if (Inputs(1)->GetNumCols() != Inputs(2)->GetNumCols())
+            //    ValidateInferInputSize(1, Inputs(1)->GetNumRows(), Inputs(2)->GetNumCols()); 
 
             Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data

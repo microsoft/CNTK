@@ -568,16 +568,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     "type or (Mean, InvStdDev) so that the values will be saved.");
             }
 
-            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = (Inputs(1)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() : Inputs(1)->GetNumRows();
-                Inputs(1)->Resize(rows, 1);
+                ValidateInferInputSize(1, rows, 1);
             }
 
-            if (Inputs(2)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = (Inputs(2)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() : Inputs(2)->GetNumRows();
-                Inputs(2)->Resize(rows, 1);
+                ValidateInferInputSize(2, rows, 1);
             }
 
             if (isFinalValidationPass)
@@ -698,16 +696,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     "LearnableParameter type or (Mean, InvStdDev) so that the values will be saved.");
             }
 
-            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(1)->GetNumRows() == 0 ? Inputs(0)->GetNumRows() : Inputs(1)->GetNumRows();
-                Inputs(1)->Resize(rows, 1);
+                ValidateInferInputSize(1, rows, 1);
             }
 
-            if (Inputs(2)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(2)->GetNumRows() == 0? Inputs(0)->GetNumRows() : Inputs(2)->GetNumRows();
-                Inputs(2)->Resize(rows, 1);
+                ValidateInferInputSize(2, rows, 1);
             }
 
             if (isFinalValidationPass)

@@ -118,6 +118,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Resize(1, 1);
         InferImageDimsFromInputs();
     }
+    // helper function for validation
+    // In bad cases of convolution, dimensions are quite complex to know.
+    // This is a feature that allows a node to help resizing its input node to the expected value.
+    // TODO: This is shaky by design.
+    template<class ElemType>
+    void ComputationNode<ElemType>::ValidateInferInputSize(size_t i, size_t rows, size_t cols) //override final
+    {
+        if (Inputs(i)->OperationName() == OperationNameOf(LearnableParameter))
+        {
+            Inputs(i)->Resize(rows, cols);
+            // big BUGBUG: This should do random initialization.
+            Inputs(i)->FunctionValues().SetValue(0);
+            Inputs(i)->Validate(true);  // validate it properly
+        }
+    }
 
     // -----------------------------------------------------------------------
     // others
