@@ -378,8 +378,6 @@ CNTK_SRC =\
 	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
 	MachineLearning/CNTKSGDLib/Profiler.cpp \
 	MachineLearning/CNTKSGDLib/SGD.cpp \
-	MachineLearning/SequenceTraining/cudalattice.cpp \
-	MachineLearning/SequenceTraining/cudalib.cpp \
 	MachineLearning/SequenceTraining/latticeforwardbackward.cpp \
 	MachineLearning/SequenceTraining/parallelforwardbackward.cpp \
 	BrainScript/BrainScriptEvaluator.cpp \
@@ -390,7 +388,9 @@ CNTK_SRC =\
 
 ifdef CUDA_PATH
 CNTK_SRC +=\
-	MachineLearning/SequenceTraining/cudalatticeops.cu \
+	Math/Math/cudalatticeops.cu \
+	Math/Math/cudalattice.cpp \
+	Math/Math/cudalib.cpp \
 
 else
 CNTK_SRC +=\

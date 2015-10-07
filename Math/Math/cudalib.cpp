@@ -11,6 +11,7 @@
 #include "cudadevice.h"
 #include <string>
 #include <assert.h>
+#include <cublas_v2.h>
 
 #undef NOMULTIDEVICE       // define this to disable any context/driver stuff
 
@@ -18,6 +19,7 @@
 #pragma comment (lib, "cuda.lib")       // link CUDA device API
 #endif
 #pragma comment (lib, "cudart.lib")     // link CUDA runtime
+#pragma comment (lib, "cublas.lib")
 
 namespace msra { namespace cuda {
 

@@ -7,6 +7,7 @@
 
 #undef DIRECT_MODE          // [v-hansu] use the direct formula for smbr mode, proven makes no difference
 
+#include <cuda_runtime_api.h>
 #include <cuda.h>
 #include "cudalib.h"
 #include "cudabasetypes.h"
@@ -26,6 +27,8 @@
 #endif
 
 namespace msra { namespace cuda {
+
+    cudaStream_t GetCurrentStream();
 
     // auto_timer timer; run(); double seconds = timer; // now can abandon the object    
     #ifdef __unix__

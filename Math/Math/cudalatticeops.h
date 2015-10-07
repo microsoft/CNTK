@@ -23,16 +23,6 @@ namespace msra { namespace cuda {
 
 // The XXXvectorops classes must derive from vectorref<XXX>.
 
-// Find the kernels in cudalatticeops.cu.h.
-class somedatavectorops : protected vectorref<somedata>
-{
-protected:
-    int somedataoperation (size_t arg);
-};
-
-template <typename ElemType>
-void FetchFromGPUMatrix(const Microsoft::MSR::CNTK::Matrix<ElemType>& gpuMatrix, msra::math::ssematrixbase& cpuMatrix);
-
 class latticefunctionsops : protected vectorref<empty>
 {
 protected:

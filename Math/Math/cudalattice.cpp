@@ -20,7 +20,6 @@
 namespace msra { namespace cuda {
 
 extern void operator|| (cudaError_t rc, const char * msg);      // TODO: imported from cudamatrix.cpp --better move to cudalib.h
-extern void operator|| (CUresult rc, const char * msg);
 
 // this implements the basic operations of exported interface vectorbase<>, from which all vectors derive
 // TODO: This really should not be in cudalattice, since it is more general; we need a cudavector.cpp/h
