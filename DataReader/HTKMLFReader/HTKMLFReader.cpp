@@ -899,7 +899,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         return false;
                     }
 
-                    //decide the m_mbSize 
+                    // BUGBUG: We should decide how many utterances we are going to take, until the desired number of frames has been filled.
+                    //         Currently it seems to fill a fixed number of utterances, regardless of their length.
+
+                    // decide the m_mbSize
+                    // The MB size is determined by the longest utterance amongst the desired set.
                     m_mbSize = m_toProcess[0];
                     for (size_t i = 1; i < m_numberOfuttsPerMinibatch; i++)
                     {
@@ -917,6 +921,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_mbSize, true/*sequential*/);
                     }
 
+                    // create a MB with the desired utterance
+                    // Each utterance become a separate parallel sequence.
                     skip = (m_framemode && !m_partialMinibatch && (m_mbiter->requestedframes() != m_mbSize) && (m_frameSource->totalframes() > m_mbSize));
                     for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
                     {
@@ -941,9 +947,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         ReNewBufferForMultiIO(i);
                     }
 
+                    // insert extra utt to the channels with space
+                    // As long as there is a gap at the end of any parallel sequence that is large enough for another utterance, fill it in.
                     if (!skip)
                     {
-                        // insert extra utt to the channels with space
                         size_t nextMinibatchUttnum = 0;
                         bool inserted;
                         m_extraUttNum = 0;
@@ -1021,7 +1028,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         }
                     }
                 }
-                else
+                else    // m_truncated
                 {
                     // In truncated BPTT mode, a minibatch only consists of the truncation length, e.g. 20 frames.
                     // The reader maintains a set of current utterances, and each next minibatch contains the next 20 frames.
@@ -1258,6 +1265,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return true;
         }
 
+    // copy an utterance into the minibatch given a location (parallel-sequence index, start frame)
+    // TODO: This should use DataSlice(). But for that, DataSlice() will have to move out from ComputationNode.
     template<class ElemType>
         void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(std::map<std::wstring, Matrix<ElemType>*>& matrices, size_t startFr,
                                                                    size_t framenum, size_t channelIndex, size_t sourceChannelIndex)
