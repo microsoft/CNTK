@@ -883,7 +883,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
             size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
-            if (isFinalValidationPass && (rows0 == 0 || cols1 == 0))
+            if (isFinalValidationPass && (rows0 == 0 || (!Inputs(1)->HasMBLayout() && cols1 == 0)))
                 RuntimeError("TransposeTimes operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 since it cannot be automatically inferred");
 
             if (cols0 == 0 && rows1 != 0 && isFinalValidationPass)
