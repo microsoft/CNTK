@@ -19,9 +19,18 @@
     <CudaCompile Include="MatrixQuantizer_kernel.cu">
       <Filter>GPU\1bitSGD</Filter>
     </CudaCompile>
+    <CudaCompile Include="cudalatticeops.cu">
+      <Filter>GPU\SequenceTraining</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="cudalattice.cpp">
+      <Filter>GPU\SequenceTraining</Filter>
+    </ClCompile>
+    <ClCompile Include="cudalib.cpp">
+      <Filter>GPU\SequenceTraining</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -45,6 +54,27 @@
     </ClInclude>
     <ClInclude Include="ValueQuantizer.h">
       <Filter>GPU\1bitSGD</Filter>
+    </ClInclude>
+    <ClInclude Include="cudabasetypes.h">
+      <Filter>GPU\SequenceTraining</Filter>
+    </ClInclude>
+    <ClInclude Include="cudadevice.h">
+      <Filter>GPU\SequenceTraining</Filter>
+    </ClInclude>
+    <ClInclude Include="cudalattice.h">
+      <Filter>GPU\SequenceTraining</Filter>
+    </ClInclude>
+    <ClInclude Include="cudalatticeops.cu.h">
+      <Filter>GPU\SequenceTraining</Filter>
+    </ClInclude>
+    <ClInclude Include="cudalatticeops.h">
+      <Filter>GPU\SequenceTraining</Filter>
+    </ClInclude>
+    <ClInclude Include="cudalib.h">
+      <Filter>GPU\SequenceTraining</Filter>
+    </ClInclude>
+    <ClInclude Include="latticefunctionskernels.h">
+      <Filter>GPU\SequenceTraining</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -73,6 +103,9 @@
     </Filter>
     <Filter Include="GPU\1bitSGD">
       <UniqueIdentifier>{3415233d-9ef7-41c6-abbb-cec1b4f8d14c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GPU\SequenceTraining">
+      <UniqueIdentifier>{6a3569b1-6c9e-47b3-870f-bb581349e75e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

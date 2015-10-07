@@ -1814,24 +1814,22 @@ bool BatchSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample*/
 template<class ElemType>
 size_t BatchSequenceReader<ElemType>::GetNumParallelSequences()
 {
-    size_t sz = mToProcess.size();
-    if (sz == 0)
-        return mBlgSize;
-    return sz; 
+    return mToProcess.size();
 }
 
 template<class ElemType>
 bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-
     // get out if they didn't call StartMinibatchLoop() first
     if (m_mbSize == 0)
         return false;
 
     bool moreData = EnsureDataAvailable(m_mbStartSample);
-    if (moreData == false)
-        return false; 
-
+    if (!moreData)
+    {
+        m_pMBLayout->Init(mToProcess.size(), 0, true/*sequential*/);
+        return false;
+    }
     // actual size is the size of the next seqence
     size_t actualmbsize = 0;
 

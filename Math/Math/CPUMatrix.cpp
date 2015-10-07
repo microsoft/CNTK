@@ -118,6 +118,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ReadFromFile(f, matrixName);
     }
 
+    // helper to allocate an array of ElemType
+    // Use this instead of new[] to get NaN initialization for debugging.
+    template<class ElemType>
+    static ElemType * NewArray(size_t n)
+    {
+        ElemType * p = new ElemType[n]();
+#if 0//_DEBUG
+        ElemType nan = Matrix<ElemType>::MakeNan(__LINE__);
+        for (size_t i = 0; i < n; i++)
+            p[i] = nan;
+#endif
+        return p;
+    }
+
     template<class ElemType>
     CPUMatrix<ElemType>::CPUMatrix(const size_t numRows, const size_t numCols)
     {
@@ -128,10 +142,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_elemSizeAllocated = GetNumElements();
 
         if (m_elemSizeAllocated != 0)
-        {
-            m_pArray = new ElemType[m_elemSizeAllocated];
-            SetValue(0);
-        }
+            m_pArray = NewArray<ElemType>(m_elemSizeAllocated);
     }
 
     template<class ElemType>
@@ -229,11 +240,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType> CPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
     {
-        if (numCols == 0)
-            throw std::logic_error("The slice cannot have 0 columns.");
+        //if (numCols == 0)
+        //    throw std::logic_error("The slice cannot have 0 columns.");
 
         if (startColumn + numCols > m_numCols)
-            throw std::logic_error("The slice is out of range of the source matrix.");
+            InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)m_numCols);
             
         CPUMatrix<ElemType> slice;
 
@@ -248,14 +259,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // set this(:, 0:numCols-1) = fromMatrix(:, startColumn : startColumn+numCols-1)
+    // TODO: why not say *this = ColumnSlice()?
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
     {
-        if (numCols == 0)
-            throw std::logic_error("The slice cannot have 0 columns.");
+        //if (numCols == 0)
+        //    throw std::logic_error("The slice cannot have 0 columns.");
 
         if (startColumn + numCols > fromMatrix.m_numCols)
-            throw std::logic_error("The slice is out of range of the source matrix.");
+            InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)fromMatrix.m_numCols);
         
         Clear();
 
@@ -272,12 +284,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::SetColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
     {
-        if (numCols == 0)
-            throw std::logic_error("The slice cannot have 0 columns.");
+        //if (numCols == 0)
+        //    throw std::logic_error("The slice cannot have 0 columns.");
         if (startColumn + numCols > m_numCols)
             throw std::logic_error("The slice is out of range of the destination matrix.");
         if (numCols > fromMatrix.GetNumCols())
-            throw std::logic_error("The slice is out of range of the source matrix.");
+            InvalidArgument("The slice (%d) is out of range of the source matrix (%d).", (int)numCols, (int)fromMatrix.GetNumCols());
         if (m_numRows != fromMatrix.m_numRows)
             throw std::logic_error("The number of rows in source and destination matrices do not match");
 
@@ -754,9 +766,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return;
 
         Resize(deepCopyFrom.GetNumRows(), deepCopyFrom.GetNumCols());
-        size_t cpSize = deepCopyFrom.GetNumElements();
-        if (cpSize != 0)
-            memcpy(m_pArray, deepCopyFrom.m_pArray, cpSize*sizeof(ElemType));
+        memcpy(m_pArray, deepCopyFrom.m_pArray, deepCopyFrom.GetNumElements() * sizeof(ElemType));
     }
 
     template<class ElemType>
@@ -1267,7 +1277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         assert (numRows*numCols == GetNumElements());
         if (numRows*numCols != GetNumElements())
-            throw std::invalid_argument("Reshape: total number of elements does not match.");
+            throw std::invalid_argument("Reshape: Total number of elements does not match.");
 
         m_numRows = numRows;
         m_numCols = numCols;
@@ -1275,52 +1285,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Resize() -- change matrix size
     // This function is cheap if the matrix size does not change.
-    // If growONly is true, resize will not reallocate memory if the current memory is large enough (i.e., will not shrink).
+    // Current content is not preserved.
+    // BUGBUG: There is code that relies on zero initialization (without, we get subtle variations of output). That is wrong--we should initialize to QNaN and see where it fails.
+    // If growOnly is true, resize will not reallocate memory if the current memory is large enough (i.e., will not shrink).
+    // If this object does not own its memory then new memory cannot be allocated (one can still shrink and/or reshape).
     template<class ElemType>
     void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly /*=true*/)
     {
         if (m_numRows == numRows && m_numCols == numCols)
             return;
 
-        if (numRows * numCols != 0 && !OwnBuffer()) // (redundant, but doing this here so that we can see the current values in the debugger)
-            throw runtime_error("Resizing an matrix you don't own is not supported.");
-
-        m_numRows = numRows;
-        m_numCols = numCols;
-
-        size_t numElements = GetNumElements();
-        if (numElements > m_elemSizeAllocated || (!growOnly && (numElements != m_elemSizeAllocated)))
+        size_t numElements = numRows * numCols;
+        if (numElements > m_elemSizeAllocated ||                    // grow allocation
+            (!growOnly && (numElements != m_elemSizeAllocated)))    // shrink allocation (not if 'growOnly')
         {
-            if (OwnBuffer() && m_pArray)
-            {
-                delete[] m_pArray; //delete and reallocate
-                m_pArray = nullptr;
-            }
-            if (IsEmpty())
-            {
-                m_elemSizeAllocated = 0;
-                m_pArray = nullptr;
-            }
-            else
+            // reallocate buffer
+            ElemType * pArray = nullptr;
+            if (numElements > 0)
             {
                 if (!OwnBuffer())
-                    throw runtime_error("Resizing an matrix you don't own is not supported.");
-                m_elemSizeAllocated = numElements;
-                m_pArray = new ElemType[m_elemSizeAllocated];
-                SetValue(0);
+                    throw logic_error("Resize: Resizing an matrix you don't own is not supported.");
+                pArray = NewArray<ElemType>(numElements);
             }
+            // success: update the object
+            if (OwnBuffer())
+                delete[] m_pArray;
+            else
+                assert(pArray == nullptr);  // (if !OwnBuffer we can still resize to 0)
+            m_pArray = pArray;
+            m_elemSizeAllocated = numElements;
         }
+
+        // success
+        m_numRows = numRows;
+        m_numCols = numCols;
     }
 
     // allocated by the callee but should be deleted by the caller
-    // BAD DESIGN--use STL vector
+    // TODO: change to use STL vector instead
     template<class ElemType>
     ElemType* CPUMatrix<ElemType>::CopyToArray() const
     {
         size_t numElements = GetNumElements();
         if (numElements != 0)
         {
-            ElemType* arrayCopyTo = new ElemType[numElements];                    
+            ElemType* arrayCopyTo = NewArray<ElemType>(numElements);
             memcpy(arrayCopyTo, m_pArray, sizeof(ElemType)*numElements);
             return arrayCopyTo;
         }
@@ -1340,7 +1349,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (numElements > currentArraySize)
         {
             delete arrayCopyTo;
-            arrayCopyTo = new ElemType[numElements];  
+            arrayCopyTo = NewArray<ElemType>(numElements);
             currentArraySize = numElements;
         }
 
@@ -1350,6 +1359,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         return numElements;
+    }
+
+    template <typename ElemType>
+    void CPUMatrix<ElemType>::Copy(size_t /*numRows*/, size_t /*numCols*/, ElemType* /*dst*/, size_t /*ldDst*/) const
+    {
+        // REVIEW alexeyk: currently not used by CPU, but implement when possible.
+        RuntimeError("Not implemented.");
     }
 
     template<class ElemType>
@@ -1776,6 +1792,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     //[this]=a ./ b
+    // TODO: This clips the divisor by a small value. Is that really what one would want?
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementDivisionOf (const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b)
     {
@@ -2792,7 +2809,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void CPUMatrix<ElemType>::VectorNorm1(CPUMatrix<ElemType>& c, const bool isColWise) const
     {
         if (IsEmpty())
-            throw std::logic_error("VectorNormInf: Matrix is empty.");
+            throw std::logic_error("VectorNorm1: Matrix is empty.");
 
         auto& us=*this;
 

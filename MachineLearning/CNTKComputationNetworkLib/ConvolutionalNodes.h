@@ -29,9 +29,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // ConvolutionNode (convolutionWeights, inputFeature)
     // -----------------------------------------------------------------------
 
-    //convolutional network 
-    //follow "high performance convolutional neural networks for document processing" by Kumar chellapilla, Sidde Puri, and Patrice Simard
-    //assume each column is an input sample. Each sample is stored in [channel, row, col]  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
+    // convolutional network 
+    // This follows "high performance convolutional neural networks for document processing" by Kumar Chellapilla, Sidde Puri, and Patrice Simard.
+    // Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
     template<class ElemType>
     class ConvolutionNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
@@ -46,7 +46,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX),
             m_zeroPadding(false), m_maxTempMemSizeInSamples(SIZE_MAX)            
         {
-            m_outputChannels = 0;
+            m_outputImageLayout.channels = 0;
         }
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0) :
             Base(deviceId, name),
@@ -55,21 +55,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample),
             m_zeroPadding(zeroPadding), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
         {
-            m_outputChannels = outputChannels;
+            m_outputImageLayout.channels = outputChannels;
         }
 
         virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream <<  m_kernelWidth << m_kernelHeight << m_horizontalSubsample << m_verticalSubsample; 
-            fstream << m_outputChannels << m_zeroPadding << m_maxTempMemSizeInSamples; 
+            fstream << m_outputImageLayout.channels << m_zeroPadding << m_maxTempMemSizeInSamples; 
         }
 
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample; 
-            fstream >> m_outputChannels >> m_zeroPadding >> m_maxTempMemSizeInSamples; 
+            fstream >> m_outputImageLayout.channels >> m_zeroPadding >> m_maxTempMemSizeInSamples; 
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -105,14 +105,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override 
         {
-            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));   // BUGBUG: GetNumParallelSequences() must be from Inputs(1)
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));   // BUGBUG: GetNumParallelSequences() must be from Inputs(1)
 
             if (inputIndex == 0)  //derivative with regard to the weight matrix
                 ComputeInputPartialOverWeight(sliceOutputGrad, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix, !frameRange.IsAllFrames());
             else  // derivative with regard to the input feature
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
                 ComputeInputPartialOverInputFeature(sliceOutputGrad, sliceInput1Grad, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
             }
         }
@@ -121,11 +121,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ComputeInputPartialOverWeight(Matrix<ElemType> &gradientValues,
             Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix, const bool inLoop)
         {
-            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputChannels;
-            size_t packedInputColsPerSample = m_outputWidth * m_outputHeight;
+            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputImageLayout.channels;
+            size_t packedInputColsPerSample = m_outputImageLayout.width * m_outputImageLayout.height;
             size_t outputSizePerChannel = packedInputColsPerSample;
             //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            //size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;  //size of each input sample
+            //size_t inputDim = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;  //size of each input sample
 
             size_t batchSize = input1.GetNumCols(); //right child is the input sample
 
@@ -134,7 +134,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //const Matrix<ElemType> & weightMatrix = input0;
             //inputGradientValues.Resize(weightMatrix.GetNumRows(), weightMatrix.GetNumCols()); //should have been resized when preparing gradient computation
 
-            gradientValues.Reshape(m_outputChannels, outputSizePerChannel * batchSize);  //reshape to match the longernal operation
+            gradientValues.Reshape(m_outputImageLayout.channels, outputSizePerChannel * batchSize);  //reshape to match the longernal operation
 
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
             size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
@@ -152,8 +152,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                     Matrix<ElemType> inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
                     tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
-                                                            m_inputWidth, m_inputHeight, m_inputChannels,
-                                                            m_outputWidth, m_outputHeight, m_outputChannels,
+                                                            m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
+                                                            m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels,
                                                             m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample,
                                                             m_zeroPadding);
 
@@ -162,17 +162,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            gradientValues.Reshape(m_outputChannels * outputSizePerChannel, batchSize);  //change back
+            gradientValues.Reshape(m_outputImageLayout.channels * outputSizePerChannel, batchSize);  //change back
         }
 
         //compute gradient over the packed input and then convert the result to the original input
         void ComputeInputPartialOverInputFeature(Matrix<ElemType> &gradientValues, const Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix)
         {
-            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputChannels;
-            size_t packedInputColsPerSample = m_outputWidth * m_outputHeight;
+            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputImageLayout.channels;
+            size_t packedInputColsPerSample = m_outputImageLayout.width * m_outputImageLayout.height;
             size_t outputSizePerChannel = packedInputColsPerSample;
             //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            //size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;  //size of each input sample
+            //size_t inputDim = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;  //size of each input sample
 
             size_t batchSize = input1.GetNumCols(); //right child is the input sample
 
@@ -180,7 +180,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             const Matrix<ElemType> & weightMatrix = input0;
 
-            gradientValues.Reshape(m_outputChannels, outputSizePerChannel * batchSize);  //reshape to match the longernal operation
+            gradientValues.Reshape(m_outputImageLayout.channels, outputSizePerChannel * batchSize);  //reshape to match the longernal operation
 
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
             size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
@@ -197,21 +197,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 Matrix<ElemType> inputGradientSubBatch = inputGradientValues.ColumnSlice(startSampleID, smallBatchSize);
                 tempMatrix.UnpackConvolutionInput(inputGradientSubBatch,
-                                                  m_inputWidth, m_inputHeight, m_inputChannels,
-                                                  m_outputWidth, m_outputHeight, m_outputChannels,
+                                                  m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
+                                                  m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels,
                                                   m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample,
                                                   m_zeroPadding);
             }
 
-            gradientValues.Reshape(m_outputChannels * outputSizePerChannel, batchSize);  //change back
+            gradientValues.Reshape(m_outputImageLayout.channels * outputSizePerChannel, batchSize);  //change back
         }
     public:
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
         }
 
@@ -223,19 +223,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             input0.HasNan("Convolution-input0");
             input1.HasNan("Convolution-input1");
 #endif
-            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputChannels;
-            size_t packedInputColsPerSample = m_outputWidth * m_outputHeight;
+            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputImageLayout.channels;
+            size_t packedInputColsPerSample = m_outputImageLayout.width * m_outputImageLayout.height;
             size_t outputSizePerChannel = packedInputColsPerSample;
             //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            //size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;  //size of each input sample
+            //size_t inputDim = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;  //size of each input sample
 
             size_t batchSize = input1.GetNumCols();  //right child is the input sample
 
             size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0? batchSize : m_maxTempMemSizeInSamples);
 
             const Matrix<ElemType> & weightMatrix = input0;
-            assert(weightMatrix.GetNumCols() == packedInputRows && weightMatrix.GetNumRows() == m_outputChannels);
-            functionValues.Resize(m_outputChannels, outputSizePerChannel * batchSize);
+            assert(weightMatrix.GetNumCols() == packedInputRows && weightMatrix.GetNumRows() == m_outputImageLayout.channels);
+            functionValues.Resize(m_outputImageLayout.channels, outputSizePerChannel * batchSize);
 
             size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples); 
             size_t numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
@@ -249,8 +249,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Matrix<ElemType>  inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
                 tempMatrix.AssignPackedConvolutionInput(inputSubBatch, 
-                                                        m_inputWidth, m_inputHeight, m_inputChannels,
-                                                        m_outputWidth, m_outputHeight, m_outputChannels,
+                                                        m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
+                                                        m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels,
                                                         m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample, 
                                                         m_zeroPadding); 
 
@@ -258,7 +258,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType>::Multiply(weightMatrix, false, tempMatrix, false, outputSubBatch);
             }
 
-            functionValues.Reshape(m_outputChannels * outputSizePerChannel, batchSize);  //each sample becomes a column
+            functionValues.Reshape(m_outputImageLayout.channels * outputSizePerChannel, batchSize);  //each sample becomes a column
 
 #if NANCHECK
             functionValues.HasNan("Convolution");
@@ -281,17 +281,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
-            size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputChannels;
+            size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputImageLayout.channels;
 
-            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().HasNoElements())
-                Inputs(0)->Resize(m_outputChannels, weightCols);
+            if (Inputs(0)->FunctionValues().HasNoElements())
+                ValidateInferInputSize(0, m_outputImageLayout.channels, weightCols);
 
-            if (isFinalValidationPass && (Inputs(0)->GetNumCols() != weightCols || Inputs(0)->GetNumRows() != m_outputChannels))
-                LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_children[0]->NodeName().c_str(), m_outputChannels, weightCols);
+            if (isFinalValidationPass && (Inputs(0)->GetNumCols() != weightCols || Inputs(0)->GetNumRows() != m_outputImageLayout.channels))
+                LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_children[0]->NodeName().c_str(), m_outputImageLayout.channels, weightCols);
 
-            size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;
-            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(1)->GetNumRows() == 0)
-                Inputs(1)->Resize(inputDim, Inputs(1)->GetNumCols());
+            size_t inputDim = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;
+            if (Inputs(1)->GetNumRows() == 0)
+                ValidateInferInputSize(1, inputDim, Inputs(1)->GetNumCols());
 
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != inputDim)
                 LogicError("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), inputDim);
@@ -299,7 +299,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0 )
             //    LogicError("Convolution operation: one of the operands has 0 elements.");
             
-            size_t outputDim = m_outputWidth * m_outputHeight * m_outputChannels;
+            size_t outputDim = m_outputImageLayout.width * m_outputImageLayout.height * m_outputImageLayout.channels;
             Resize(outputDim, Inputs(1)->GetNumCols());
         }
 
@@ -307,29 +307,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(1, false);
 
-            if (m_inputWidth < m_kernelWidth || m_inputHeight < m_kernelHeight)
+            if (m_inputImageLayout.width < m_kernelWidth || m_inputImageLayout.height < m_kernelHeight)
                 InvalidArgument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");
 
             if (m_zeroPadding)
             {
                 const int kernelWidthCenter = m_kernelWidth % 2;
                 const int kernelHeightCenter = m_kernelHeight % 2;
-                m_outputWidth = (m_inputWidth-kernelWidthCenter)/m_horizontalSubsample + 1;
-                m_outputHeight = (m_inputHeight-kernelHeightCenter)/m_verticalSubsample + 1;
+                m_outputImageLayout.width = (m_inputImageLayout.width-kernelWidthCenter)/m_horizontalSubsample + 1;
+                m_outputImageLayout.height = (m_inputImageLayout.height-kernelHeightCenter)/m_verticalSubsample + 1;
             }
             else
             {
-                m_outputWidth = (m_inputWidth-m_kernelWidth)/m_horizontalSubsample + 1;
-                m_outputHeight = (m_inputHeight-m_kernelHeight)/m_verticalSubsample + 1;
+                m_outputImageLayout.width = (m_inputImageLayout.width-m_kernelWidth)/m_horizontalSubsample + 1;
+                m_outputImageLayout.height = (m_inputImageLayout.height-m_kernelHeight)/m_verticalSubsample + 1;
             }    
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr convolutionWeight, const ComputationNodePtr inputFeature) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = convolutionWeight;
-        //    m_children[1] = inputFeature;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -342,11 +335,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
-            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
+            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels);
             fstream << string(str);
             sprintf(str, "Kernel[Width:%lu, Height:%lu]  SubSample[Horizontal:%lu, Vertical:%lu]\n", m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample);
             fstream << string(str);
-            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_outputWidth, m_outputHeight, m_outputChannels);
+            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels);
             fstream << string(str);
             sprintf(str, "ZeroPadding=%ls  maxTempMemSizeInSamples=%lu\n", m_zeroPadding? L"true" : L"false", m_maxTempMemSizeInSamples);
             fstream << string(str);
@@ -373,8 +366,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // PoolingNodeBase (input)
     // -----------------------------------------------------------------------
 
-    //Max/Average Pooling: support multi channel
-    //assume each column is an input sample. Each sample is stored in  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
+    // Max/Average Pooling: support multi channel
+    // Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
     template<class ElemType>
     class PoolingNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
@@ -426,11 +419,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex > 0)
                 InvalidArgument("MaxPooling operation only takes one inputs.");
 
-            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
             ComputeInputPartialV(sliceOutputGrad, sliceInput0Grad, sliceInput0Value, sliceOutputValue);
         }
@@ -441,8 +434,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             EvaluateThisNodeV(sliceOutputValue, sliceInput0Value);
         }
 
@@ -459,17 +452,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
-            m_inputSizePerSample = m_inputWidth * m_inputHeight * m_inputChannels;
-            m_outputSizePerSample = m_outputWidth * m_outputHeight * m_outputChannels;
+            m_inputSizePerSample = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;
+            m_outputSizePerSample = m_outputImageLayout.width * m_outputImageLayout.height * m_outputImageLayout.channels;
 
-            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->GetNumRows() == 0)
-                Inputs(0)->Resize(m_inputSizePerSample, Inputs(0)->GetNumCols());
+            if (Inputs(0)->GetNumRows() == 0)
+                ValidateInferInputSize(0, m_inputSizePerSample, Inputs(0)->GetNumCols());
 
             if (isFinalValidationPass && Inputs(0)->GetNumRows() != m_inputSizePerSample)
                 LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), m_inputSizePerSample);
-
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("PoolingNodeBase operation: the input node has 0 element.");
 
             m_functionValues.Resize(m_outputSizePerSample, Inputs(0)->GetNumCols());
         }
@@ -478,30 +468,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            if (m_inputWidth < m_windowWidth || m_inputHeight < m_windowHeight)
+            if (m_inputImageLayout.width < m_windowWidth || m_inputImageLayout.height < m_windowHeight)
                 InvalidArgument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
-            m_outputWidth = (m_inputWidth - m_windowWidth) / m_horizontalSubsample + 1;
-            m_outputHeight = (m_inputHeight - m_windowHeight) / m_verticalSubsample + 1;
-            m_outputChannels = m_inputChannels;
+            m_outputImageLayout.width = (m_inputImageLayout.width - m_windowWidth) / m_horizontalSubsample + 1;
+            m_outputImageLayout.height = (m_inputImageLayout.height - m_windowHeight) / m_verticalSubsample + 1;
+            m_outputImageLayout.channels = m_inputImageLayout.channels;
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr inputFeature)
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = inputFeature;
-        //}
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
-            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
+            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels);
             fstream << string(str);
             sprintf(str, "PoolingWindow[Width:%lu, Height:%lu]  SubSampling[Horizontal:%lu, Vertical:%lu]\n", m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
             fstream << string(str);
-            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_outputWidth, m_outputHeight, m_outputChannels);
+            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels);
             fstream << string(str);
             sprintf(str, "TotalSizePerSample[Input:%lu, Output:%lu]  \n", m_inputSizePerSample, m_outputSizePerSample);
             fstream << string(str);
@@ -537,17 +521,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /*implement*/ void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues)
         {
-            inputGradientValues.AddMaxPoolingGradient(gradientValues, input0, functionValues, m_inputChannels,
-                                                      m_inputWidth, m_inputHeight, m_inputSizePerSample, 
-                                                      m_outputWidth, m_outputHeight, m_outputSizePerSample, 
+            inputGradientValues.AddMaxPoolingGradient(gradientValues, input0, functionValues, m_inputImageLayout.channels,
+                                                      m_inputImageLayout.width, m_inputImageLayout.height, m_inputSizePerSample, 
+                                                      m_outputImageLayout.width, m_outputImageLayout.height, m_outputSizePerSample, 
                                                       m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         }
 
         /*implement*/ void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0)
         {
-            functionValues.AssignMaxPoolingResult(input0, m_inputChannels,
-                                                  m_inputWidth, m_inputHeight, m_inputSizePerSample, 
-                                                  m_outputWidth, m_outputHeight, m_outputSizePerSample, 
+            functionValues.AssignMaxPoolingResult(input0, m_inputImageLayout.channels,
+                                                  m_inputImageLayout.width, m_inputImageLayout.height, m_inputSizePerSample, 
+                                                  m_outputImageLayout.width, m_outputImageLayout.height, m_outputSizePerSample, 
                                                   m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         }
     };
@@ -572,17 +556,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /*implement*/ void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/)
         {
-            inputGradientValues.AddAveragePoolingGradient(gradientValues, m_inputChannels,
-                                                          m_inputWidth, m_inputHeight, m_inputSizePerSample, 
-                                                          m_outputWidth, m_outputHeight, m_outputSizePerSample, 
+            inputGradientValues.AddAveragePoolingGradient(gradientValues, m_inputImageLayout.channels,
+                                                          m_inputImageLayout.width, m_inputImageLayout.height, m_inputSizePerSample, 
+                                                          m_outputImageLayout.width, m_outputImageLayout.height, m_outputSizePerSample, 
                                                           m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         }
 
         /*implement*/ void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0)
         {
-            functionValues.AssignAveragePoolingResult(input0, m_inputChannels,
-                                                      m_inputWidth, m_inputHeight, m_inputSizePerSample, 
-                                                      m_outputWidth, m_outputHeight, m_outputSizePerSample, 
+            functionValues.AssignAveragePoolingResult(input0, m_inputImageLayout.channels,
+                                                      m_inputImageLayout.width, m_inputImageLayout.height, m_inputSizePerSample, 
+                                                      m_outputImageLayout.width, m_outputImageLayout.height, m_outputSizePerSample, 
                                                       m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         }
     };

@@ -36,21 +36,13 @@ namespace msra { namespace lattices {
                 m_maxframenum = 0;
 
                 // prep for parallel implementation (CUDA)
-                if (DeviceId == CPUDEVICE)
-                    parallellattice.setmode(true);
-                else
-                {
-                        
-                    parallellattice.setmode(false);
-                }
-                        
+                parallellattice.setdevice(DeviceId);
                     
                 if (parallellattice.enabled())                   // send hmm set to GPU if GPU computation enabled
                     parallellattice.entercomputation(m_hset, mbrclassdef);       // cache senone2classmap if mpemode 
                 initialmark = true;
             }
         }
-        //void init(msra::asr::simplesenonehmm hset, int DeviceId);
             
             
         void calgammaformb(Microsoft::MSR::CNTK::Matrix<ElemType>& functionValues, std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> &lattices, const Microsoft::MSR::CNTK::Matrix<ElemType>& loglikelihood,

@@ -149,6 +149,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ElemType* CopyToArray() const; //allocated by the callee but need to be deleted by the caller
         size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;  //allocated by the callee but need to be deleted by the caller
+        // ldDst specifies leading dimension of dst.
+        // REVIEW alexeyk: come up with a better name (e.g. CopyTile or something). GPU version copies from device to host only, implement all versions (device <-> host).
+        void Copy(size_t numRows, size_t numCols, ElemType* dst, size_t ldDst) const; 
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
 
@@ -172,6 +175,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: should Reshape() return a new Matrix object that contains a reference to the original?
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
+        void VerifySize(size_t rows, size_t cols)
+        {
+            if (rows != GetNumRows() || cols != GetNumCols())
+                LogicError("VerifySize: expected m_functionValues size %d x %d, but it is %d x %d",
+                (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
+        }
 
         // update number of columns
         // TODO: a future version may want to enforce retaining the content, to allow dynamically growing layouts column by column (when size is not known upfront)
@@ -192,6 +201,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format=matrixFormatSparseCSR);
         void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);  // set matrix sparsely
+        static ElemType MakeNan(size_t payload);
+        void Invalidate() { SetValue(MakeNan(__LINE__)); }
         void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
             const size_t nz, const size_t numRows, const size_t numCols);
 
@@ -258,7 +269,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& ColumnElementDivideBy(const Matrix<ElemType>& a);
         Matrix<ElemType>& RowElementDivideBy(const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& ElementInverse ();
+        Matrix<ElemType>& ElementInverse();
         Matrix<ElemType>& AssignElementInverseOf (const Matrix<ElemType>& a);
 
         Matrix<ElemType>& InplaceLinearRectifierDerivative();
@@ -267,37 +278,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& InplaceSigmoidDerivative();
         Matrix<ElemType>& AssignSigmoidDerivativeOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceSigmoid ();
+        Matrix<ElemType>& InplaceSigmoid();
         Matrix<ElemType>& AssignSigmoidOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceTanh ();
+        Matrix<ElemType>& InplaceTanh();
         Matrix<ElemType>& AssignTanhOf (const Matrix<ElemType>& a);
 
         Matrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
         Matrix<ElemType>& AssignLogSoftmaxOf (const Matrix<ElemType>& a, const bool isColWise);
 
-		//sequence training 
-		Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold);
-		Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
-        Matrix<ElemType>& InplaceSqrt ();
+        //sequence training 
+        Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold);
+        Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
+
+        Matrix<ElemType>& InplaceSqrt();
         Matrix<ElemType>& AssignSqrtOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceExp ();
+        Matrix<ElemType>& InplaceExp();
         Matrix<ElemType>& AssignExpOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceLog ();
+        Matrix<ElemType>& InplaceLog();
         Matrix<ElemType>& AssignLogOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceCosine ();
+        Matrix<ElemType>& InplaceCosine();
         Matrix<ElemType>& AssignCosineOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceNegativeSine ();
+        Matrix<ElemType>& InplaceNegativeSine();
         Matrix<ElemType>& AssignNegativeSineOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceLog10 ();
+        Matrix<ElemType>& InplaceLog10();
         Matrix<ElemType>& AssignLog10Of (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceAbs ();
+        Matrix<ElemType>& InplaceAbs();
         Matrix<ElemType>& AssignAbsOf (const Matrix<ElemType>& a);
 
         Matrix<ElemType>& InplaceTruncateBottom (const ElemType threshold);
@@ -310,8 +322,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 
         DeviceBoundNumber<ElemType> Sum_AsDeviceBoundNum() const;
-        ElemType SumOfAbsElements () const; //sum of all abs(elements)
-        ElemType SumOfElements () const; //sum of all elements
+        ElemType SumOfAbsElements() const; //sum of all abs(elements)
+        ElemType SumOfElements() const; //sum of all elements
         Matrix<ElemType>& AssignSumOfElements(const Matrix<ElemType>& a);
 
         ElemType LogAddSumOfElements() const;
@@ -397,6 +409,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                  const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample, 
                                                  const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
     public:
+        // TODO: why are these not static? And why are they here?
         ElemType Exp10(ElemType num); 
         ElemType Mod(ElemType x , ElemType y);
         ElemType LogAdd(ElemType x, ElemType y);
@@ -579,7 +592,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_minibatchPackingFlags[t] |= f;
         }
 
+        // TODO: This can go away once frame mode returns multiple sequence sof one frame each; or we can test against cols==1
+        // HAH! This function is only ever used for Decimate(). It can completely go away, as can methods of the same name in the readers!
         bool RequireSentenceSeg() const { return m_dataIsSequential; }        // this is the name of a function on DataReader which really belongs here
+
+#if 0   // (I thought I need this, but don't. Keeping it anyway, maybe we need it again in the future.)
+        // compute the number of actual samples in this layout (not counting NoLabel ones)
+        // This is only expensive for a weirdo configuration of multiple variable-length sequences that still normalizes the gradient over the total # seen samples.
+        size_t DetermineActualNumSamples() const
+        {
+            size_t n = GetNumTimeSteps() * GetNumParallelSequences();
+            if (!IsAllNone())
+            {
+                for (size_t t = 0; t < GetNumTimeSteps(); t++)
+                {
+                    if (Is(t, MinibatchPackingFlags::NoInput)) for (size_t s = 0; s < GetNumParallelSequences(); s++)
+                    {
+                        if (Is(s, t, MinibatchPackingFlags::NoInput))
+                            n--;
+                    }
+                }
+            }
+            return n;
+        }
+#endif
 
     private:
         size_t m_numTimeSteps;
@@ -664,31 +700,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: This may not belong here, but having it in ComputeNode would require syntax changes, while having it as a member here only requires a local find-replace. Let's make it work first, then decide how to refactor.
     // the looping versions of EvaluateThisNode(FrameRange()) and ComputeInputPartial() take a frame range, through this structure
     // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
-    // TODO: GetNumParallelSequences() should be subsumed here & removed from nodes
-    // TODO: We should also have a FrameRange that selects a single sequence instead of all.
-    // TODO: Where this design currently breaks:
+    // TODO: We should also have a FrameRange that selects a single sequence instead of all. Currently now possible since that would require Matrix::RowSlice()
+    // TODO: Where this design currently breaks:  // <- BUGBUG: I think these are outdated
     //  - BatchModeNodes must access GetNumParallelSequences(), yet operate on the whole sequence
     //  - likewise, LSTMNode does its own iteration, hence needs access to GetNumParallelSequences() or NumCols() in the whole-batch iterator
-    //  - RecurrentNodes access frames with a time shift, where out-of-bounds ones access a different matrix' values
-    //  - RecurrentNodes iterate over individual slices--need a sub-setting constructor from a FrameRange to another?
-    //  - RecurrentNodes access boundary info with a similar pattern, but boundary info has a different #streams (namely, 1)
     // TODO: This will in the future be able to hold sub-ranges for nested loops as well.
     // BUGBUG: These are currently broken and will need to be fixed:
-    //  - ClassBasedCrossEntropyWithSoftmaxNode:
-    //      FrameRange frameRange(t, 1);
-    //    using a different #sequences. Solve by treating all frames as one sequence (in FrameRange)
+    //  - ClassBasedCrossEntropyWithSoftmaxNode and CRFNode do not support > 1 parallel sequence
     //  - ReshapeNode:
     //      Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep, m_pMBLayout));
     //    using a differeren #sequences. Find out what this really means.
     struct FrameRange
     {
-        const size_t timeIdxInSeq;              // start frame
+        size_t timeIdxInSeq;              // start frame; SIZE_MAX = all frames in MB
+        size_t seqIndex;                  // sequence index; SIZE_MAX = all sequences in MB (most common case)
 
         // can construct from a single size_t -> a single-frame range
-        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq){}
+        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), seqIndex(SIZE_MAX) {}
 
         // or without arguments -> entire minibatch / no frame-range
-        FrameRange() : timeIdxInSeq(SIZE_MAX) {}
+        FrameRange() : timeIdxInSeq(SIZE_MAX), seqIndex(SIZE_MAX) {}
+
+        // create a FrameRange that accesses a single sequence only
+        // FrameRange(t).Sequence(seq)
+        FrameRange Sequence(size_t s) const
+        {
+            FrameRange ret = *this;
+            ret.seqIndex = s;
+            return ret;
+        }
 
         // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
         // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).
@@ -707,14 +747,71 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("FrameRange::Check: FrameRange object gives different range than original explicit code. Logic is borked.");
             return *this;
         }
+        const FrameRange & Check_t(size_t expectedNumCols, const shared_ptr<MBLayout> & pMBLayout) const
+        {
+            if (!IsAllFrames())
+                Check(t() * expectedNumCols, expectedNumCols, pMBLayout);
+            return *this;
+        }
     private:
-        FrameRange(const FrameRange & other);
-        void operator=(const FrameRange &);
         void EnsureNotAllFrames() const
         {
             if (IsAllFrames())
                 LogicError("FrameRange::t() called when frame range refers to whole minibatch");
         }
+    };
+
+    // class for defining an iteration over a sequence
+    // Currently supports time sequences, forward and backward.
+    // TODO: It is meant to some day generalize to multi-dimensional iterations, e.g. across an image:
+    //  - abstract delay direction to be multi-dimensional (let's call it FrameStep)
+    //  - DelayedValueNode::direction gets replaced with a FrameStep
+    //  - recInfo->m_isForwardLoop will be replaced by a FrameStep
+    //  - FrameRangeIterator derives from FrameStep, and operator++ adds tat to FrameRange
+    // Longer-term, we will also have nested structures. For those, FrameRangeIterations will be able to be instantiated from FrameRange objects to loop over their nested dimension.
+    class FrameRangeIteration
+    {
+        MBLayoutPtr m_pMBLayout;
+        int m_delay;
+    public:
+        // This class is returned by begin() and end().
+        // It is a FrameRange with additions ++ and != operators needed in the for loop.
+        class FrameRangeIterator : public FrameRange
+        {
+            ptrdiff_t m_step;
+        public:
+            FrameRangeIterator(const FrameRange & begin, ptrdiff_t step) : FrameRange(begin), m_step(step) { }
+            bool operator!=(const FrameRangeIterator & other) const { return timeIdxInSeq != other.timeIdxInSeq; }
+            void operator++(int) { timeIdxInSeq = (size_t)(m_step + (ptrdiff_t)timeIdxInSeq); }    // going through (int) to avoid undefined behavior
+        };
+        // iterators for iterating forward
+        FrameRangeIterator begin() const
+        {
+            if (m_delay < 0) return FrameRangeIterator(FrameRange(0), +1);
+            else return FrameRangeIterator(FrameRange(m_pMBLayout->GetNumTimeSteps()-1), -1);
+        }
+        FrameRangeIterator end() const
+        {
+            if (m_delay > 0) return FrameRangeIterator(FrameRange((size_t)-1), 0);
+            else return FrameRangeIterator(FrameRange(m_pMBLayout->GetNumTimeSteps()), 0);
+        }
+        // iterators for iterating in reverse order (as needed for gradient update)
+        FrameRangeIterator rbegin() const
+        {
+            if (m_delay > 0) return FrameRangeIterator(FrameRange(0), +1);
+            else return FrameRangeIterator(FrameRange(m_pMBLayout->GetNumTimeSteps() - 1), -1);
+        }
+        FrameRangeIterator rend() const
+        {
+            if (m_delay < 0) return FrameRangeIterator(FrameRange((size_t)-1), 0);
+            else return FrameRangeIterator(FrameRange(m_pMBLayout->GetNumTimeSteps()), 0);
+        }
+        // one-dimensional iteration (time sequences)
+        // Delay specifies from which side the delayed value comes from:
+        //  - for left-to-right models -> pass delay = -1
+        //  - for right-to-left models -> pass delay = +1
+        FrameRangeIteration(MBLayoutPtr pMBLayout, int delay) : m_pMBLayout(pMBLayout), m_delay(delay) { }
+        // in the future we may consier multi-dimensional iterators such as iterators over images
     };
 
 }}}

@@ -186,7 +186,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numTimesDeviceChanged = 0;
         m_numTimesMatrixTypeChanged = 0;
         m_devicesTransferedTo[1] = m_devicesTransferedTo[0] = CPUDEVICE - 1;
-        }
+    }
 
     //this function is used to indicate where (CPUDense, CPUSparse, GPUDense, GPUSparse) the most updated results are in
     //after the actual matrix is updated.
@@ -368,6 +368,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 SetDataLocation(GPU, DENSE);
             }
         }
+
+        SetValue(0);
     }
 
     template<class ElemType>
@@ -407,6 +409,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (matrixFlagDontOwnBuffer & matrixFlags || m_preferredDeviceId == MANAGEDEXTERN)
             m_baseMatrix->SetOwnBuffer(false);
+
+        SetValue(0);
     }
 
     //copy constructor, deep copy
@@ -716,6 +720,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
     }
 
+    template<class ElemType>
+    void Matrix<ElemType>::Copy(size_t numRows, size_t numCols, ElemType* dst, size_t ldDst) const
+    {
+        DISPATCH_MATRIX_ON_FLAG(this,
+            nullptr,
+            m_CPUMatrix->Copy(numRows, numCols, dst, ldDst),
+            m_GPUMatrix->Copy(numRows, numCols, dst, ldDst),
+            NOT_IMPLEMENTED, 
+            NOT_IMPLEMENTED
+            );
+    }
+
     // BUGBUG: Some code checks before calling here whether one of the dimensions is 0.
     //         This function must handle that case properly, that is, preserving the non-zero dimension.
     template<class ElemType>
@@ -816,8 +832,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //this function will change the matrix type between DENSE and SPARSE. 
     //WARNING: The correct implementation is to copy the matrix between DENSE and SPARSE
-    //         However, the convertion functions are not implemented yet and so it will always create 
-    //         a new blank matrix and destroy all info in the original matrix if different matrix type is asked. 
+    //         However, the conversion functions are not implemented yet and so it will always create 
+    //         a new blank matrix and destroy all info in the original matrix if different matrix type is asked.
+    // In case of !keepValues, the matrix content will be undefined.
     template<class ElemType>
     void Matrix<ElemType>::SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat, const bool keepValues)
     {
@@ -1037,6 +1054,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED
             );
     }
+
+    template<> /*static*/ float  Matrix<float>::MakeNan(size_t /*payload*/)  { return nanf(""); }
+    template<> /*static*/ double Matrix<double>::MakeNan(size_t /*payload*/) { return nan(""); }
+    template<> /*static*/ char   Matrix<char>::MakeNan(size_t)               { return 0; }   // (needed for completeness)
 
     template<class ElemType>
     void Matrix<ElemType>::SetColumn(const ElemType* colPointer, size_t colInd)
@@ -1360,6 +1381,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    // Note: Resize() will leave the matrix content undefined.
     template<class ElemType>
     void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
     {
@@ -1371,6 +1393,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false),
             m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false)
             );
+#ifdef _DEBUG
+        Invalidate();   // Fill the matrix with NaNs to detect using the content which is undefined.
+#endif
     }
 
     template<class ElemType>
@@ -4435,7 +4460,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DecideAndMoveToRightDevice(a, b, *this);        
     
         if (a.GetMatrixType() == b.GetMatrixType())
-            {
+        {
             SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
             DISPATCH_MATRIX_ON_FLAG(&a,
@@ -4445,11 +4470,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 NOT_IMPLEMENTED, 
                 NOT_IMPLEMENTED
                 );                
-            }
-            else
-            {
-                NOT_IMPLEMENTED;                
-            }
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
         
         return *this;
     }
@@ -4526,13 +4551,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool Matrix<ElemType>::HasNan (const char * name) const
     {
+        // if GPU then first detect NaN there, will be faster
+        if (GetDeviceId() != CPUDEVICE)
+        {
+            Matrix<ElemType> sum;
+            sum.AssignSumOfElements(*this);
+            auto x = sum.Get00Element();
+            if (!std::isnan(x))
+                return false;
+        }
+
         // const auto & us = *this;
         const Matrix<ElemType> & us = *this;
 
         foreach_coord (i, j, us)
             if (std::isnan(us(i, j)))
             {
-                fprintf (stderr, "hasnan: NaN detected at %s (%ld,%ld)\n", name, i, j);
+                fprintf(stderr, "HasNan: NaN detected at %s (%ld,%ld) in (%d,%d) matrix\n", name, i, j, (int)GetNumRows(), (int)GetNumCols());
                 return true;
             }
             return false;
@@ -4562,6 +4597,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return (DEVICEID_TYPE)GPUMatrix<ElemType>::GetBestGPUDeviceId();
     }
 
+    // TODO: these are scalar operations--why are they in Matrix?
     template<class ElemType>
     ElemType Matrix<ElemType>::Exp10(ElemType num)
     {
@@ -4575,8 +4611,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (y <= 0)
             throw std::logic_error("y is smaller than zero");
 
-        ElemType r = x - y * floor(x / y);
-        return r; 
+        return x - y * floor(x / y);
     }
 
     template<class ElemType>
@@ -4584,8 +4619,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         ElemType temp, diff, z;
 
-        if (x < y) {
-            temp = x; x = y; y = temp;
+        if (x < y)
+        {
+            temp = x; x = y; y = temp;  // TODO: ::swap(x,y)?
         }
         diff = y - x;
         if (diff < MINLOGEXP)
@@ -4595,7 +4631,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             z = exp(diff);
-                        return (ElemType) (x + log(1.0 + z));
+            return (ElemType)(x + log(1.0 + z));
         }
     }
 
@@ -4603,11 +4639,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //[this]= (a right shift by n), padded with zeros
     // shift left, shift needs to be negative value
     // shift right, shift needs to be positive value
+    // BUGBUG: Leaves uninitialized values in the opened-up columns.
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, int shift)
     {
         if (a.IsEmpty())
             throw std::logic_error("Shift: Matrix is empty.");
+        else
+            LogicError("Shift: BUGBUG This function currently leaves uninitialized values. Fix the code or contact fseide@microsoft.com.");
 
         auto& us = *this;
         if (this != &a)

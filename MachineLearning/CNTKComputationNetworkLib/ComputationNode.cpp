@@ -50,8 +50,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
-        //if (Inputs(0)->GetNumRows() == 0)
-        //    LogicError("Negate operation: the input node has 0 element.");
         Resize(m_children[0]->GetNumRows(), DetermineNumCols(m_children[0]));
         InferImageDimsFromInputs();
     }
@@ -61,13 +59,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // if dimension not specified we assume two operands' dimensions should be the same
         for (size_t index = 0; index < m_children.size(); index++)
         {
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
+            auto in = Inputs(index);
+            if (in->OperationName() == OperationNameOf(LearnableParameter) && in->GetNumRows() == 0)
             {
-                auto in = Inputs(index);
                 auto other = Inputs(1 - index);
                 // borrow any unset dimension on one input from the other input
                 size_t rows = in->GetNumRows() == 0 ? other->GetNumRows() : in->GetNumRows();
                 size_t cols = (!HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols() : in->GetNumCols();
+                fprintf(stderr, "ValidateInferBinaryChildren: Inferring %ls %ls operation as (%d x %d)", NodeName().c_str(), OperationName().c_str(), (int)rows, (int)cols);
                 in->Resize(rows, cols);
             }
         }
@@ -120,6 +119,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Resize(1, 1);
         InferImageDimsFromInputs();
     }
+    // helper function for validation
+    // In bad cases of convolution, dimensions are quite complex to know.
+    // This is a feature that allows a node to help resizing its input node to the expected value.
+    // TODO: This is shaky by design.
+    template<class ElemType>
+    void ComputationNode<ElemType>::ValidateInferInputSize(size_t i, size_t rows, size_t cols) //override final
+    {
+        if (Inputs(i)->OperationName() == OperationNameOf(LearnableParameter))
+        {
+            Inputs(i)->Resize(rows, cols);
+            Inputs(i)->Validate(true);  // validate it properly
+            // big BUGBUG: This should do random initialization.
+            Inputs(i)->FunctionValues().SetValue(0);
+            fprintf(stderr, "ValidateInferInputSize: %ls %ls operation inferred, resized to (%d x %d), and (incorrectly) initialized to 0.\n", Inputs(i)->NodeName().c_str(), Inputs(i)->OperationName().c_str(), (int)rows, (int)cols);
+        }
+    }
 
     // -----------------------------------------------------------------------
     // others
@@ -157,7 +172,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef Matrix<float> FloatMatrix;
     typedef Matrix<double> DoubleMatrix;
 
-    atomic_ullong ComputationNodeBase::s_timeStampCounter = ATOMIC_VAR_INIT(0);
+    atomic_ullong ComputationNetworkOwnedNodeState::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
     template<> std::map<size_t, std::map<size_t, FloatMatrix*>>  ComputationNode<float>::s_constOnes{};
     template<> std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};

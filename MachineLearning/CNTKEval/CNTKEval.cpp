@@ -108,7 +108,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
         }
     case nodeOutput:
         {
-                       const auto & nodes = outputNodes;
+        const auto & nodes = outputNodes;
         for (auto & node : nodes)
         {
             std::wstring name = node->NodeName();
@@ -125,6 +125,14 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
         }
         break;
     }
+}
+
+// StartEvaluateMinibatchLoop - Prepare network for Evaluate() calls.
+// ouputNodeName - name of node that will be evaluated
+template<class ElemType>
+void CNTKEval<ElemType>::StartEvaluateMinibatchLoop(const std::wstring & outputNodeName)
+{
+    m_net->StartEvaluateMinibatchLoop(m_net->GetNodeFromName(outputNodeName));
 }
 
 // Evaluate - Evalute using the model with the given inputs and outputs

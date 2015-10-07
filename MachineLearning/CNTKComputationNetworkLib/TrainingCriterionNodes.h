@@ -75,55 +75,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateBinaryReduce(isFinalValidationPass);
-#if 0
-            Base::Validate(isFinalValidationPass);
-
-            size_t index = 0;   // TODO: code dup
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
-            }
-
-            index = 1;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
-            }
-
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-            //    LogicError("SquareError operation: one of the operands has 0 elements.");
-
-            if (isFinalValidationPass && !(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
-                LogicError("The Matrix dimension in the SquareError operation does not match.");
-
-            Resize(1,1);
-#endif
             m_leftMinusRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-#if 0
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-#endif
         }
 
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }       
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -236,43 +196,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateBinaryReduce(isFinalValidationPass);
-#if 0
-            Base::Validate(isFinalValidationPass);
-
-            // This breaks re-shaping of the label matrix
-            /*if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
-            LogicError("CrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");*/
-
-            //we may release the constraint that the first operant is an inputValue later so the following code should be kept
-            size_t index = 0;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
-            }
-
-            index = 1;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
-            }
-
-            if (isFinalValidationPass)
-            {
-                //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                //    LogicError("CrossEntropyWithSoftmaxNode operation: one of the operands has 0 elements.");
-
-                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
-                LogicError("The Matrix<ElemType>  dimension in the CrossEntropyWithSoftmaxNode operation does not match.");
-            }       
-
-            Resize(1,1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-#endif
             m_logSoftmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             m_softmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
         }
@@ -281,18 +204,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }
-
-        //leftNode should be the empirical
-        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = label;
-        //    m_children[1] = prediction;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -391,61 +304,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateBinaryReduce(isFinalValidationPass);
             if (Inputs(0)->OperationName() != L"InputValue")    // TODO: but labels could be post-processed, e.g. sub-sampled. This test should not be here.
                 LogicError("CrossEntropyNode criterion requires the first input to be the label.");
-#if 0
-            Base::Validate(isFinalValidationPass);
-
-            //we may release the constraint that the first operand is an inputValue later so the following code should be kept
-            size_t index = 0;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
-            }
-
-            index = 1;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
-            }
-
-            if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-                LogicError("CrossEntropyNode operation: one of the operands has 0 elements.");
-
-            if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows()  &&  //match size
-                Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()) )
-            {
-                LogicError("The Matrix dimension in the CrossEntropyNode operation does not match.");
-            }       
-
-            Resize(1,1);
-#endif
             m_logOfRight.Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());
             m_leftDivRight.Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());
-#if 0
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-#endif
         }
 
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }
-
-        //leftNode should be the empirical
-        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = label;
-        //    m_children[1] = prediction;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -508,31 +376,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             Inputs(0)->MaskMissingValuesColumnsToZero();
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
-        }
-
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues)
-        {
             VerifySize(1, 1);
-            functionValues.SetValue(inputFunctionValues.MatrixNorm1());
+            FunctionValues().SetValue(Inputs(0)->FunctionValues().MatrixNorm1());
 #if NANCHECK
-            functionValues.HasNan("MatrixL1Reg");
+            FunctionValues().HasNan("MatrixL1Reg");
 #endif
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryReduce(isFinalValidationPass);
-#if 0
-            Base::Validate(isFinalValidationPass);
-
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("MatrixL1Reg operation: the input node has 0 element.");
-
-            Resize(1,1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-#endif
             m_gradientOfL1Norm.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
         }
 
@@ -540,16 +393,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = singleInput;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -606,47 +451,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             Inputs(0)->MaskMissingValuesColumnsToZero();
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
-        }
-
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues,  Matrix<ElemType>& inputFunctionValues)
-        {
             VerifySize(1,1);
-            functionValues.SetValue(inputFunctionValues.FrobeniusNorm());
+            FunctionValues().SetValue(Inputs(0)->FunctionValues().FrobeniusNorm());
 #if NANCHECK
-            functionValues.HasNan("MatrixL2Reg");
+            FunctionValues().HasNan("MatrixL2Reg");
 #endif
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryReduce(isFinalValidationPass);
-#if 0
-            Base::Validate(isFinalValidationPass);
-
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("MatrixL2Reg operation: the input node has 0 element.");
-
-            Resize(1,1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
-#endif
         }
 
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr singleInput) 
-        //{
-        //    m_children.resize(1);
-        //    m_children[0] = singleInput;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -799,13 +621,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("The Matrix dimension for observation and weight in the NoiseContrastiveEstimationNode operation does not match.");
                 if (!(Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols())) // label and input same obs numbers
                     LogicError("The Matrix dimension for label and observation in the NoiseContrastiveEstimationNode operation does not match.");
-                //if (!(Inputs(0)->GetNumRows() == 3)) // label needs to be 4 rows
-            //  LogicError("The label in the NoiseContrastiveEstimationNode operation needs to be 4 rows.");
             }
 
             //cerr << Inputs(3)->GetNumCols() << "\t" << Inputs(0)->GetNumCols() << endl;
-            //if (!(Inputs(3)->GetNumCols() == Inputs(0)->GetNumCols())) // number of observations
-            //   LogicError("The number of observations in class log post probability and label in the NoiseContrastiveEstimationNode operation don't match.");
             Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
@@ -814,20 +632,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr input,
-        //    const ComputationNodePtr inputweight, const ComputationNodePtr biasWeight)
-        //{
-        //    m_children.resize(4);
-        //    m_children[0] = label;
-        //    m_children[1] = input;
-        //    m_children[2] = inputweight;
-        //    m_children[3] = biasWeight;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -843,14 +649,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m_softMax;
         Matrix<ElemType> m_ncePrediction;
 
-        /// gradient of cross entropy with respect to the input of softmax
-        /// a 1 row by \sum_t m_nbrWordsInEachTime[t] vector
-        /// one slice of size m_nbrWordsInEachTime[t] saves the input to softmax for word y_t
+        // gradient of cross entropy with respect to the input of softmax
+        // a 1 row by \sum_t m_nbrWordsInEachTime[t] vector
+        // one slice of size m_nbrWordsInEachTime[t] saves the input to softmax for word y_t
         Matrix<ElemType> m_grdToSoftMaxInput;
         bool m_needRecomputeGradientToSoftmaxInput;
 
         size_t m_nbrNoise;
-        //size_t           m_nbrCls;//number class
         size_t           m_totalNbrWords;
     private:
         NCEEvalMode m_evalMode;
@@ -860,9 +665,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     /// ClassBasedCrossEntropyWithSoftmaxNode (labels(.,t), input(.,t), inputweights, clsProbBeforeSoftmax(.,t))
+    // Inputs:
+    // Inputs(0) [4 x T] label in dense matrix in
+    //           (0,t) the first row is the word index
+    //           (1,t) the second row is the class index
+    //           (2,t) the third row is the first word index of the class
+    //           (3,t) the last row is the first word index of the next class
+    // Inputs(1) [hdsize x T] hidden layer activation to the node in. for a simple rnn, this is the hidden layer activty
+    // Inputs(2) [hdsize x vocab_size] weight matrix in, for speed-up, as per word matrix can be simply obtained as column slice
+    // Inputs(3) [nbr_cls x T] clsprob in dense matrix in. this input, if applied softmax on, is the posterior probabilty of class given observations
     // -----------------------------------------------------------------------
 
-    //calculates: -sum(left_i * log(softmax_i(right))) for class given history and for word given history
+    // calculates: -sum(left_i * log(softmax_i(right))) for class given history and for word given history
     // need to provide class probabilty from external node
     template<class ElemType>
     class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<4>
@@ -884,103 +698,87 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex != 1 && inputIndex != 2 && inputIndex != 3)
                 InvalidArgument("ClassCrossEntropyWithSoftmaxNode criterion only takes with respect to input, weight to the input and class log posterior probability.");
 
-            size_t nT = Inputs(0)->GetNumCols();
-
             ComputeSoftMaxPartial();
 
             Matrix<ElemType> grd_t;
             Matrix<ElemType> grd_to_wgt_t;
 
-            size_t sz = 0;
-            for (size_t t = 0; t < nT; t++) // BUGBUG: we loop over columns. We should rather loop over (id,t)
+            const size_t nT = Inputs(0)->GetNumTimeSteps();
+            const size_t nS = Inputs(0)->GetNumParallelSequences();
+            size_t sz = 0;     // iterate over the packed concatenated class-conditioned prob vectors
+            for (size_t s = 0; s < nS; s++) for (size_t t = 0; t < nT; t++)
             {
-                FrameRange frameRange(t);
-                // compute prb - 1 and prb
-                Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange);     // BUGBUG: this only works for num parallel seq == 1
-                size_t c_t = (size_t)lbl_t(1, 0);
-                size_t lft_bnd = (size_t)lbl_t(2, 0);
-                size_t rgt_bnd = (size_t)lbl_t(3, 0);
-                size_t nbr_wrd = rgt_bnd - lft_bnd; // number of words in the class
-                if (nbr_wrd == 0)
+                if (Inputs(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
                     continue;
+                FrameRange frameRange = FrameRange(t).Sequence(s);
 
-                Matrix<ElemType> input_weight_t = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);
-                Matrix<ElemType> obs = Inputs(1)->ValueSlice(frameRange);
+                Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange);
+                size_t c_t = (size_t)lbl_t(1, 0);
+                size_t lft_bnd = (size_t)lbl_t(2, 0); // index of first word belonging to current word token's class
+                size_t rgt_bnd = (size_t)lbl_t(3, 0); // and end of that range
+                size_t nbr_wrd = (rgt_bnd - lft_bnd); // number of words in the class
+
+                // compute prb - 1 and prb
+                Matrix<ElemType> weightForClass = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);
+                Matrix<ElemType> obs = Inputs(1)->ValueSlice(frameRange);   // hidden activation vector for current word token
                 Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
-                Matrix<ElemType> grd_to_cls_prob = DataSlice(m_clsLogSoftmax, frameRange);
+                Matrix<ElemType> grd_to_cls_prob = DataSlice(m_clsLogSoftmax, frameRange, Inputs(3)->GetMBLayout());
 
                 switch (inputIndex)
                 {
                 case 1:
                     // gradient to input
                     grd_t = Inputs(1)->GradientSlice(frameRange);
-                    ComputeInputPartialRight(input_weight_t, grd_t, grd_to_soft_max_input);
+                    Matrix<ElemType>::MultiplyAndAdd(weightForClass, false, grd_to_soft_max_input, true, grd_t);
                     break;
                 case 2:
                     // gradient to input weight
                     grd_to_wgt_t = Inputs(2)->GradientValues().ColumnSlice(lft_bnd, nbr_wrd);
-                    ComputeInputPartialLeft(obs, grd_to_wgt_t, grd_to_soft_max_input);
+                    Matrix<ElemType>::MultiplyAndAdd(obs, false, grd_to_soft_max_input, false, grd_to_wgt_t);
                     break;
                 case 3:
                     grd_t = Inputs(3)->GradientSlice(frameRange);
-                    grd_t.SetValue(DataSlice(m_clsSoftmax, frameRange));
+                    grd_t.SetValue(DataSlice(m_clsSoftmax, frameRange, Inputs(3)->GetMBLayout()));
                     ComputeCEPartialToSoftmaxInputs(grd_t, GradientValues(), c_t);
                     break;
-                default:
-                    RuntimeError("ClassCrossEntropyWithSoftmaxNode criterion only takes with respect to input, weight to the input and class log posterior probability.");
                 }
 
                 sz += nbr_wrd;
             }
         }
-
-        /*TODO: merge with call site*/void ComputeInputPartialRight(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
-        {
-            Matrix<ElemType>::MultiplyAndAdd(inputFunctionValues, false, gradientValues, true, inputGradientValues);
-        }
-
-        /*TODO: merge with call site*/void ComputeInputPartialLeft(const Matrix<ElemType>& obs, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
-        {
-            Matrix<ElemType>::MultiplyAndAdd(obs, false, gradientValues, false, inputGradientValues);
-        }
-
+    private:
         void ComputeCEPartialToSoftmaxInputs(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues, size_t y_t)
         {
             Matrix<ElemType>::MinusOneAt(inputGradientValues, y_t);
             Matrix<ElemType>::Scale(gradientValues, inputGradientValues);
         }
 
-        /// gradient of cross entropy w.r.t. to input to softmax
+        // gradient of cross entropy w.r.t. to input to softmax
         void ComputeSoftMaxPartial()
         {
             if (m_needRecomputeGradientToSoftmaxInput)
             {
-                m_grdToSoftMaxInput.Resize(1, m_totalNbrWords);
+                m_grdToSoftMaxInput.Resize(1, m_totalNbrWords); // buffer that contains a concatenation of class-conditional values
 
-                size_t nT = Inputs(1)->GetNumCols();
-                size_t sz = 0;
-                for (size_t t = 0; t < nT; t++)
+                const size_t nT = Inputs(0)->GetNumTimeSteps();
+                const size_t nS = Inputs(0)->GetNumParallelSequences();
+                size_t sz = 0;     // iterate over the packed concatenated class-conditioned prob vectors
+                for (size_t s = 0; s < nS; s++) for (size_t t = 0; t < nT; t++)
                 {
-                    FrameRange frameRange(t);
-                    /// compute prb - 1 and prb
-                    const Matrix<ElemType> & lbl_t = Inputs(0)->ValueSlice(frameRange);     // BUGBUG: this only works for num parallel seq == 1
-                    size_t y_t = (size_t)lbl_t(0, 0);
-                    size_t lft_bnd = (size_t)lbl_t(2, 0);
-                    size_t rgt_bnd = (size_t)lbl_t(3, 0);
-                    size_t nbr_wrd = rgt_bnd - lft_bnd;// number of words in the class
+                    if (Inputs(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
+                        continue;
+                    FrameRange frameRange = FrameRange(t).Sequence(s);
 
-                    if (nbr_wrd == 0)
-                    {
-                        if (y_t == 0)
-                            /// initialization of labels is usually zero, this case corresponds to no label is assigned at that time
-                            continue; /// skip this time, because there is no label
-                        else
-                            LogicError("ClassbasedCrossEntropyWithSoftmax::ComputeSoftMaxPartial label provided but the size of its class is zero. Should never happen. Probably misuse of ClassbasedCrossEntropyWithSoftmax.");
-                    }
+                    Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange);
+                    size_t y_t = (size_t)lbl_t(0, 0);       // word index
+                    size_t lft_bnd = (size_t)lbl_t(2, 0);   // index of first word belonging to current word token's class
+                    size_t rgt_bnd = (size_t)lbl_t(3, 0);   // and end of that range
+                    size_t nbr_wrd = (rgt_bnd - lft_bnd);   // number of words in the class
 
                     Matrix<ElemType> softMax = m_softMax.ColumnSlice(sz, nbr_wrd);
 
-                    ComputeCEPartialToSoftmaxInputs(softMax, GradientValues(), y_t - lft_bnd);
+                    size_t idx_in_class = y_t - lft_bnd;
+                    ComputeCEPartialToSoftmaxInputs(softMax, GradientValues(), idx_in_class);
 
                     m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd).SetValue(softMax);
 
@@ -990,117 +788,100 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_needRecomputeGradientToSoftmaxInput = false;
             }
         }
+    public:
 
         // -sum(left_i * log(softmax_i(right)))
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            if (Inputs(0)->GetNumParallelSequences() != 1)
-                LogicError("ClassBasedCrossEntropyWithSoftmax: This code currently does not support >1 parallel sequence.");
-            // TODO: ^^ Reason: children can only be accessed using their layout, but code below ignores parallel sequences.
-
             if (Inputs(0)->FunctionValues().GetDeviceId() != CPUDEVICE)
-                LogicError("ClassBasedCrossEntropyWithSoftmax: evaluatethisnode. the label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
+                LogicError("ClassBasedCrossEntropyWithSoftmax (EvaluateThisNodeNonLooping()): The label matrix is not using CPU device. This will make computation slow, even though the label data is probably saved on GPU. Because of the external loop over time with explicit class id retrieved from the label matrix, the computation will be very slow if the label matrix is saved on GPU. However, this is only a constraint for label matrix and other matrices such as data are suggested to reside on GPU. ");
 
             // (the below is left-over from refactoring)
             Matrix<ElemType>& functionValues = FunctionValues();
-            const Matrix<ElemType>& input_weight = Inputs(2)->FunctionValues();
-            Matrix<ElemType>& logSoftmax = m_logSoftmax;
-            Matrix<ElemType>& softMax = m_softMax;
-            Matrix<ElemType>& clsLogSoftmax = m_clsLogSoftmax;
-            Matrix<ElemType>& clsSoftmax = m_clsSoftmax;
-            size_t& totalWords = m_totalNbrWords;
             
-            // TODO: understand the following code and rewrite w.r.t. how MBLayout should be used
+            const size_t hdSize = Inputs(1)->GetNumRows();    // hdSize
+            assert(m_nbrCls == Inputs(3)->GetNumRows());
 
-            const size_t nT = Inputs(0)->GetNumCols();
-            const size_t nRow = Inputs(1)->GetNumRows();
+            // compute the class posteriors
+            m_clsLogSoftmax = Inputs(3)->FunctionValues();
+            m_clsLogSoftmax.InplaceLogSoftmax(true);        // log
+            m_clsSoftmax.AssignExpOf(m_clsLogSoftmax);      // non-log
 
-            // count totalWords
-            totalWords = 0;
-            for (size_t t = 0; t < nT; t++)
+            // create a large workspace to contain all class-conditioned probs concatenated
+            // 'sz' is the offset into that vector. We will iterate over these vectors at a few places. Always use this same boilerplate code.
+            // TODO: should we pull this iteration into an iterator, to reduce the code dup?
+            const size_t nT = Inputs(0)->GetNumTimeSteps();
+            const size_t nS = Inputs(0)->GetNumParallelSequences();
+            size_t sz = 0;
+            for (size_t s = 0; s < nS; s++) for (size_t t = 0; t < nT; t++)
             {
-                const Matrix<ElemType> & lblInfo = Inputs(0)->ValueSlice(FrameRange(t));
-                size_t lft_bnd = (size_t)lblInfo(2, 0);
-                size_t rgt_bnd = (size_t)lblInfo(3, 0);
-                totalWords += (rgt_bnd - lft_bnd);
-            }
+                if (Inputs(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
+                    continue;
+                FrameRange frameRange = FrameRange(t).Sequence(s);
 
-            size_t sz = totalWords;
-            softMax.Resize(1, sz);
-            logSoftmax.Resize(1, sz);
-            clsLogSoftmax.Resize(Inputs(3)->GetNumRows(), nT);
-            clsSoftmax.Resize(Inputs(3)->GetNumRows(), nT);
-
-            clsLogSoftmax = Inputs(3)->FunctionValues();
-            clsLogSoftmax.InplaceLogSoftmax(true); // 50 x nT
-            clsSoftmax.AssignExpOf(clsLogSoftmax);
-
-            /// loop over time
-            functionValues.SetValue(0);
-            sz = 0;
-            for (size_t t = 0; t < nT; t++)
-            {
-                const Matrix<ElemType> & lblInfo = Inputs(0)->ValueSlice(FrameRange(t));
-                size_t y_t = (size_t)lblInfo(0, 0);
-                size_t c_t = (size_t)lblInfo(1, 0);
-                size_t lft_bnd = (size_t)lblInfo(2, 0);
-                size_t rgt_bnd = (size_t)lblInfo(3, 0);
-                size_t nbr_wrd = rgt_bnd - lft_bnd;
-
+                const Matrix<ElemType> & lbl_t = Inputs(0)->ValueSlice(frameRange);
+                size_t lft_bnd = (size_t)lbl_t(2, 0);
+                size_t rgt_bnd = (size_t)lbl_t(3, 0);
+                size_t nbr_wrd = (rgt_bnd - lft_bnd);   // number of words in the class
                 if (nbr_wrd == 0)
-                {
-                    if (y_t == 0)
-                        /// initialization of labels is usually zero, this case corresponds to no label is assigned at that time
-                        /// skip this time
-                        continue;
-                    else
-                        LogicError("ClassbasedCrossEntropyWithSoftmax::EvaluateThisNode() label provided but the size of its class is zero. Should never happen. Probably misuse of ClassbasedCrossEntropyWithSoftmax.");
-                }
+                    LogicError("ClassBasedCrossEntropyWithSoftmax (EvaluateThisNodeNonLooping()): Encountered a class of size 0. This sample seems to lack an NoInput flag.");
 
-                /// e.g., 200 x 148
-                Matrix<ElemType> weightForClass = input_weight.ColumnSlice(lft_bnd, nbr_wrd);
+                sz += nbr_wrd;
+            }
+            m_totalNbrWords = sz;   // total size of concatenated vector
 
-                /// W x_t 
-                Matrix<ElemType> softMax_t = softMax.ColumnSlice(sz, nbr_wrd);
-                Matrix<ElemType> logSoftMax_t = logSoftmax.ColumnSlice(sz, nbr_wrd);
+            // buffer to hold the concatenated class-conditioned prob vectors
+            m_softMax.Resize(1, sz);
+            m_logSoftmax.Resize(1, sz);
 
-                // BUGBUG: This masking is most certainly wrong, as it operates on a sub-slice while still indexing with 't'.
-                //         I believe this is the correct refactoring of the old code, but I may be wrong.
-                if (!Base::MaskMissingColumnsToZero(logSoftMax_t, Inputs(0)->GetMBLayout(), t/*time index*/, 0/*seq index*/))
-                {
-                    Matrix<ElemType> obs = Inputs(1)->ValueSlice(FrameRange(t));  /// e.g., 200 x 1
-                    obs.Reshape(1, nRow);  /// 1 x 200
+            // accumulate objective
+            functionValues.SetValue(0);
+            sz = 0;     // iterate over the packed concatenated class-conditioned prob vectors
+            for (size_t s = 0; s < nS; s++) for (size_t t = 0; t < nT; t++)
+            {
+                if (Inputs(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
+                    continue;
+                FrameRange frameRange = FrameRange(t).Sequence(s);
 
-                    logSoftMax_t.AssignProductOf(obs, false, weightForClass, false); /// 1 x 148
+                const Matrix<ElemType> & lbl_t = Inputs(0)->ValueSlice(frameRange);
+                size_t y_t = (size_t)lbl_t(0, 0);     // current word token index
+                size_t c_t = (size_t)lbl_t(1, 0);     // current word token's class index
+                size_t lft_bnd = (size_t)lbl_t(2, 0); // index of first word belonging to current word token's class
+                size_t rgt_bnd = (size_t)lbl_t(3, 0); // and end of that range
+                size_t nbr_wrd = (rgt_bnd - lft_bnd);   // number of words in the class
 
-                    // log softmax(W x_t)
-                    logSoftMax_t.InplaceLogSoftmax(false); /// 1 x 148
-                    softMax_t.SetValue(logSoftMax_t);
-                    // softmax(W x_t)
-                    softMax_t.InplaceExp();  /// 1 x 148
+                // now get views of various arrays that correspond to the index range of words belonging to this class
 
-                    /// add the word log posterior probability
-                    if (y_t < lft_bnd)
-                        LogicError("ClassBasedCrossEntropyWithSoftmax::EvaluateThisNodeS : the word index is smaller than its left bound of its class. This could happen because of reader issues. ");
+                // get hidden vectors for the words in this class
+                Matrix<ElemType> weightForClass = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);    // [hdSize x nbr_wrd]
 
-                    size_t idx_in_class = y_t - lft_bnd;
-                    Matrix<ElemType>::AddElementToElement(logSoftMax_t, 0, idx_in_class, functionValues, 0, 0);
-                }
+                // buffer to hold the class-conditional distribution
+                Matrix<ElemType> softMax_t    =    m_softMax.ColumnSlice(sz, nbr_wrd);
+                Matrix<ElemType> logSoftMax_t = m_logSoftmax.ColumnSlice(sz, nbr_wrd);
+
+                Matrix<ElemType> obs = Inputs(1)->ValueSlice(frameRange);   // hidden activation vector for current word token
+
+                // multiply hidden activation with weight matrix (the slice of the weight matrix for the range of class members)
+                // TODO: can we use 'true' here instead? Above transposition hack won't work with row slices. 'obs' not used elsewhere
+                obs.Reshape(1, hdSize);  // transpose it (make it a column vector)
+                logSoftMax_t.AssignProductOf(obs/*(1 x hdSize)*/, false, weightForClass/*hdSize x nbr_wrd*/, false);  // -> 1 x nbr_word
+
+                // log softmax(W x_t)
+                logSoftMax_t.InplaceLogSoftmax(false);
+
+                // and non-log version
+                softMax_t.SetValue(logSoftMax_t);
+                softMax_t.InplaceExp();
+                // we now have a column vector of class-conditional probabilities over the class members
+
+                // add  the word's class-conditional log posterior
+                if (y_t < lft_bnd || y_t >= rgt_bnd)
+                    LogicError("ClassBasedCrossEntropyWithSoftmax (EvaluateThisNodeNonLooping()): Word index out of bounds of class-member index range (word not a class member).");
+                size_t idx_in_class = y_t - lft_bnd;
+                Matrix<ElemType>::AddElementToElement(logSoftMax_t, 0, idx_in_class, functionValues, 0, 0);   // (1x1)
 
                 // add the class log posterior probability
-                // TODO: Is this masking operation correct?
-                if (!Base::MaskMissingColumnsToZero(clsLogSoftmax, Inputs(0)->GetMBLayout(), t/*time index*/, 0/*seq index*/))
-                {
-                    try
-                    {
-                        Matrix<ElemType>::AddElementToElement(clsLogSoftmax, c_t, t, functionValues, 0, 0);
-                    }
-                    catch (...)
-                    {
-                        fprintf(stderr, "EvaluateThisNodeS for ClassBasedCrossEntropyWithSoftmaxNode : number of classes is smaller than the dimension to read. Check network builder such as nbrClass and vocabulary file with class index to see if the number of classes and the maximum class index match. The right number should be number of classes == maximum class index number + 1\n");
-                        throw;
-                    }
-                }
+                Matrix<ElemType>::AddElementToElement(m_clsLogSoftmax, c_t, t, functionValues, 0, 0);     // (1x1)
 
                 sz += nbr_wrd;
             }
@@ -1144,37 +925,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 #endif
 
-        /**
-        Inputs: [0] label in dense matrix in [4 x T]
-        the first row is the word index, the second row is the class index, the third row is the first word index of the class
-        the last row is the first word index of the next class
-        [1] hidden layer activity to the node in [hdsize x T]. for a simple rnn, this is the hidden layer activty
-        [2] weight matrix in [hdsize x vocab_size], for speed-up, as per word matrix can be simply obtained as column slice
-        [3] clsprob in dense matrix in [nbr_cls x T]. this input, if applied softmax on, is the posterior probabilty of class given observations
-        */
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            bool bad = true;
-            if (bad)
-                LogicError("ClassBasedCrossEntropyWithSoftmaxNode: The node of this code is currently broken (incorrect MBLayout usage). If you see this, contact fseide@microsoft.com, I will help to fix it.");
-
             Base::Validate(isFinalValidationPass);
 
-            if (Inputs(0)->OperationName() != OperationNameOf(InputValue))
+            if (Inputs(0)->OperationName() != OperationNameOf(InputValue))  // TODO: but why could that label not be post-processed through another node?
                 LogicError("ClassBasedCrossEntropyWithSoftmaxNode criterion requires the first input to be the label.");
             if (isFinalValidationPass)
             {
-                if (!(Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows())) // input and matrix can be timed
-                LogicError("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
-                if (!(Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols())) // label and input same obs numbers
-                LogicError("The Matrix<ElemType>  dimension for label and observation in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
-                if (!(Inputs(0)->GetNumRows() == 4)) // label needs to be 4 rows
-                LogicError("The label in the ClassBasedCrossEntropyWithSoftmaxNode operation needs to be 4 rows.");
-                if (!(Inputs(3)->GetNumCols() == Inputs(0)->GetNumCols())) // number of observations
-                LogicError("The number of observations in class log post probability and label in the ClassBasedCrossEntropyWithSoftmaxNode operation don't match.");
+                if (Inputs(0)->GetNumRows() != 4) // label needs to be 4 rows
+                    LogicError("The label in the ClassBasedCrossEntropyWithSoftmaxNode operation needs to be 4 rows.");
+                if (Inputs(1)->GetNumRows() != Inputs(2)->GetNumRows()) // input and matrix can be timed
+                    LogicError("The Matrix<ElemType>  dimension for observation and weight in the ClassBasedCrossEntropyWithSoftmaxNode operation does not match.");
+                if (Inputs(0)->GetMBLayout() != Inputs(1)->GetMBLayout() || Inputs(0)->GetMBLayout() != Inputs(3)->GetMBLayout())
+                    InvalidArgument("%ls %ls operation requires that the layouts of inputs 0 (label), 1 (hidden activation), and 3 (log softmax) match.", NodeName().c_str(), OperationName().c_str());
             }
 
-            Resize(1,1);
+            Resize(1, 1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
             InferImageDimsFromInputs();
 
@@ -1185,20 +952,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr input,
-        //    const ComputationNodePtr inputweight, const ComputationNodePtr clsProbBeforeSoftmax)
-        //{
-        //    m_children.resize(4);
-        //    m_children[0] = label;
-        //    m_children[1] = input;
-        //    m_children[2] = inputweight;
-        //    m_children[3] = clsProbBeforeSoftmax;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1277,30 +1032,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             mPostProb.Resize(nrow, ncol);
 
             FunctionValues().SetValue(0.0);
-            Matrix<ElemType> funcVal = FunctionValues();
+            Matrix<ElemType> funcVal = FunctionValues();    // TODO: This just creates a 1x1 matrix set to 0.
 
             size_t nS = Inputs(0)->GetNumParallelSequences();
-            size_t nT = Inputs(0)->GetNumTimeSteps();
-            size_t nstep = ncol / nS;
-            assert(nstep == nT); nT;
-            for (size_t i = 0; i < nS; i++) // BUGBUG: seems this should be a loop over time frames
+            if (nS != 1)
+                LogicError("CRFNode: >1 parallel sequences are curently not implemented correctly. To fix this, we need Matrix::RowSlice(), which is a major change");
+            for (size_t i = 0; i < nS; i++)     // process parallel sequences one by one
             {
-                Matrix<ElemType> postProbSlice = mPostProb.ColumnSlice(i * nstep, nstep);   // BUGBUG: going in blocks and steps of nT is most likely wrong
-                Matrix<ElemType> alphaSlice = mAlpha.ColumnSlice(i * nstep, nstep);
-                Matrix<ElemType> betaSlice = mBeta.ColumnSlice(i * nstep, nstep);
-                Matrix<ElemType> labelSlice = Inputs(0)->FunctionValues().ColumnSlice(i * nstep, nstep);
-                Matrix<ElemType> posScoreSlice = Inputs(1)->FunctionValues().ColumnSlice(i * nstep, nstep);
-
-                EvaluateThisNodeS(postProbSlice,
-                    alphaSlice,
-                    betaSlice,
+                FrameRange sequenceRange = FrameRange().Sequence(i);    // FrameRange to select one sequence
+                // BUGBUG: This ^^ is currently not supported. To implement it, we'd need Matrix::RowSlice().
+                EvaluateThisNodeS(
+                    DataSlice(mPostProb, sequenceRange, Inputs(0)->GetMBLayout()),
+                    DataSlice(mAlpha,    sequenceRange, Inputs(0)->GetMBLayout()),
+                    DataSlice(mBeta,     sequenceRange, Inputs(0)->GetMBLayout()),
                     funcVal,
-                    labelSlice, 
-                    posScoreSlice,
-                    Inputs(2)->FunctionValues(),
-                    mStartLbl, mEndLbl);
+                    Inputs(0)->ValueSlice(sequenceRange),
+                    Inputs(1)->ValueSlice(sequenceRange),
+                    Inputs(2)->FunctionValues(), mStartLbl,
+                    mEndLbl);
 
-                FunctionValues() += funcVal;
+                FunctionValues() += funcVal;    // aggregate over sequences
             }
         }
 
@@ -1314,20 +1065,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ErrorSignalToPostitionDependentNode(GradientValues(), Inputs(0)->FunctionValues(), mPostProb, Inputs(inputIndex)->GradientValues());
             else if (inputIndex == 2)
             {
-                size_t nS = Inputs(0)->GetNumParallelSequences();
-                size_t nT = Inputs(0)->GetNumTimeSteps();
-
-                size_t ncol = mAlpha.GetNumCols();
-                size_t nstep = ncol / nS;
-                assert(nstep == nT); nT;
                 assert(Inputs(inputIndex)->GradientValues().GetNumElements() > 0);
-                for (size_t i = 0; i < nS; i++) // BUGBUG: seems this is meant to be a loop over time
+                size_t nS = Inputs(0)->GetNumParallelSequences();
+                for (size_t i = 0; i < nS; i++)         // process all sequences one by one
                 {
-                    // BUGBUG: This ColumnSlice() expression seems very wrong. It takes nT consecutive columns, but those are not T consecutive frames (layout is different).
+                    FrameRange sequenceRange = FrameRange().Sequence(i);    // FrameRange to select one sequence
                     ErrorSignalToTransitionNode(
-                        Inputs(0)->FunctionValues().ColumnSlice(i * nstep, nstep),      // TODO: use ValueSlice() here
-                        mAlpha.ColumnSlice(i * nstep, nstep),                           // TODO: use DataSlice() here
-                        mBeta.ColumnSlice(i * nstep, nstep),
+                        Inputs(0)->ValueSlice(sequenceRange),
+                        DataSlice(mAlpha,     sequenceRange, Inputs(0)->GetMBLayout()),
+                        DataSlice(mBeta,      sequenceRange, Inputs(0)->GetMBLayout()),
                         Inputs(inputIndex)->FunctionValues(),
                         Inputs(inputIndex)->GradientValues(),
                         mStartLbl, 1);
@@ -1356,14 +1102,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         /// compute forward backward algorithm
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& postprob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& functionValues, const Matrix<ElemType>& lbls, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, int& firstLbl, int& lastLbl, const int iStep = 1)
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType> postprob, Matrix<ElemType> alpha, Matrix<ElemType> beta, Matrix<ElemType> & functionValues, const Matrix<ElemType> & lbls, const Matrix<ElemType> & pos_scores, const Matrix<ElemType> & pair_scores, int& firstLbl, int& lastLbl, const int iStep = 1)
         {
             /// to-do, each slice is for one sentence
             /// to-do, number of slices correspond to number of frames 
             /// this implementation only supports one sentence per minibatch
-
-            if (Inputs(0)->GetNumParallelSequences() != 1)
-                LogicError("CRFNode: Currently only supports one sentence per minibatch.");
 
             int nObs = lbls.GetNumCols();
 
@@ -1512,20 +1255,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr label,
-        //    const ComputationNodePtr position_dependent_score,
-        //    const ComputationNodePtr transition_score)
-        //{
-        //    m_children.resize(3);
-        //    m_children[0] = label;
-        //    m_children[1] = position_dependent_score;
-        //    m_children[2] = transition_score;
-        //}
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
@@ -1626,8 +1357,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (Inputs(1)->GetNumRows() != Inputs(2)->GetNumRows())
                 LogicError("The Matrix dimension in the DummyCriterionNode operation does not match.");
             }
-            if (Inputs(1)->GetNumCols() != Inputs(2)->GetNumCols())
-                Inputs(1)->Resize(Inputs(1)->GetNumRows(), Inputs(2)->GetNumCols()); 
+            // TODO: What is this about?
+            //if (Inputs(1)->GetNumCols() != Inputs(2)->GetNumCols())
+            //    ValidateInferInputSize(1, Inputs(1)->GetNumRows(), Inputs(2)->GetNumCols()); 
 
             Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
@@ -1638,18 +1370,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction) 
-        //{
-        //    m_children.resize(3);
-        //    m_children[0] = objectives;
-        //    m_children[1] = derivatives;
-        //    m_children[2] = prediction;
-        //}
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     };
@@ -1715,7 +1437,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
             Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType> & gammaFromLattice,
-            const ElemType & hsmoothingWeight, const ElemType & frameDropThresh)
+            double hsmoothingWeight, double frameDropThresh)
         {
 #if DUMPOUTPUT
             softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
@@ -1724,8 +1446,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
 #endif  
             
-            inputGradientValues.AssignSequenceError(hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());            
-            inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, frameDropThresh);    
+            inputGradientValues.AssignSequenceError((ElemType)hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());            
+            inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType)frameDropThresh);
 #if DUMPOUTPUT
             inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
 #endif
@@ -1779,25 +1501,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("SequenceWithSoftmaxNode criterion requires the first input to be the label.");
 
             ValidateInferBinaryChildren();  // update children dimensions
-            //we may release the constraint that the first operant is an inputValue later so the following code should be kept
-            //size_t index = 0;
-            //if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            //{
-            //    size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
-            //    size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-            //    Inputs(index)->Resize(rows, cols);
-            //}
-            //
-            //index = 1;
-            //if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            //{
-            //    size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
-            //    size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-            //    Inputs(index)->Resize(rows, cols);
-            //}
-
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0  || Inputs(2)->GetNumRows() == 0 )
-            //    LogicError("SequenceWithSoftmaxNode operation: one of the operands has 0 elements.");
 
             if (isFinalValidationPass)
                 if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match size
@@ -1824,20 +1527,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
-
-        //leftNode should be the empirical
-        //virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood)
-        //{
-        //    m_children.resize(3);
-        //    m_children[0] = label;
-        //    m_children[1] = prediction;
-        //    m_children[2] = loglikelihood;
-        //    loglikelihood->NeedGradient() = false;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
@@ -1890,11 +1581,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return &m_hmm;
         }
 
-        void SetSmoothWeight(const ElemType hsmoothingWeight)
+        void SetSmoothWeight(double hsmoothingWeight)
         {
             m_hsmoothingWeight = hsmoothingWeight;
         }
-        void SetFrameDropThresh(const ElemType frameDropThresh)
+        void SetFrameDropThresh(double frameDropThresh)
         {
             m_frameDropThresh = frameDropThresh;
         }
@@ -1915,8 +1606,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m_softmaxOfRight;
         Matrix<ElemType> m_gammaFromLattice;
         Matrix<ElemType> m_maskOfFramedrop;
-        ElemType m_frameDropThresh;
-        ElemType m_hsmoothingWeight;
+        double m_frameDropThresh;
+        double m_hsmoothingWeight;
         bool m_doreferencealign;
         std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> m_lattice;
         msra::asr::simplesenonehmm m_hmm;
