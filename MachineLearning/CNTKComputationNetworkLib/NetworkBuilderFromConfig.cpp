@@ -689,6 +689,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         }
 
         // TODO: what is missing is the dimensions
+        net->ValidateNetwork();
 #if 1
         wstring args = net->ToString();
         fprintf(stderr, "%ls\n", args.c_str());
