@@ -295,6 +295,60 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // evaluation
     // -----------------------------------------------------------------------
 
+    void ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t & todo)
+    {
+        todo = 0;           // returns how many nodes are to be redone
+        for (auto & node : nodes)
+        {
+            const auto & children = node->GetChildren();
+            const bool isLeaf = node->IsLeaf();
+            // only validate a node if it has at least one child
+            bool hasVisitedChild = false;
+            bool allChildrenVisited = true;
+            for (auto & child : children)
+            {
+                hasVisitedChild |= child->m_visited;    // if not a single visited child then no point in validating
+                allChildrenVisited &= child->m_visited;
+            }
+            // if there is not at least one visited child
+            bool valid = false;
+            if (hasVisitedChild || isLeaf)
+            {
+                // got at least one child: it makes sense to call Validate()
+                // keep state
+                MBLayoutPtr oldMBLayoutPtr = node->GetMBLayout();
+                auto dim = node->GetDims();
+                vector<pair<size_t, size_t>> childDims;
+                for (auto & child : children)
+                    childDims.push_back(child->GetDims());
+                //auto imageLayouts = node->GetImageLayouts();
+                // We do call validate(final) as many times as needed, since stuff may have changed underneath.
+                node->PrintSelfBeforeValidation();
+                node->Validate(isFinalValidationPass/*final*/);      // all nodes have been visited: do verification instead of just inference
+                fprintf(stderr, " -> [%lu, %s%lu]", node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
+                node->m_visited = true;
+                // check state --node will be valid if all nodes have been visited and node has not been updated
+                bool unchanged = true;
+                unchanged &= (oldMBLayoutPtr == node->GetMBLayout());
+                unchanged &= (dim == node->GetDims());
+                vector<pair<size_t, size_t>> newChildDims;
+                for (auto & child : children)
+                    newChildDims.push_back(child->GetDims());
+                unchanged &= (childDims == newChildDims);
+                if (isFinalValidationPass && !unchanged)
+                    LogicError("ValidateSubNetwork: %ls %ls operation changed during final validation.", node->NodeName().c_str(), node->OperationName().c_str());
+                if (isFinalValidationPass && !allChildrenVisited)
+                    LogicError("ValidateSubNetwork: %ls %ls operation in final validation although not all children were visited?", node->NodeName().c_str(), node->OperationName().c_str());
+                //willBeValid &= (imageLayouts == node->GetImageLayouts());     // TODO: why does the compiler not eat this?
+                // if all children valid then 
+                valid = (allChildrenVisited && unchanged) || isLeaf;
+            }
+            // count those that we need to redo
+            if (!valid)
+                todo++;
+        }
+    }
+
     // validate sub-network needed to evalute a specific output node
     // This calls Validate() on every node in evaluation order (allowing to propagate things forwards through the net).
     // This is called lazily but once only per node until next ClearCache().
@@ -325,139 +379,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             node->m_visited = false;
 
         // loop and validate until we are done
-        size_t todo = nodes.size();
+        // steps:
+        //  - validate (not final)          // not final means no dimension checks
+        //    Keep going through the list until all nodes have been validated and all inputs have been validated as well.
+        //  - validate (final)              // final means consistency checks
+        //    Fail if any change during this stage.
         size_t pass = 0;
-        bool allVisited = false;
-        while (todo > 0)
+        size_t toValidate = nodes.size();
+        while (toValidate > 0)
         {
             pass++;
-            fprintf(stderr, "\n\nValidating for node %ls. %d nodes to process in pass %d.\n", rootNode->NodeName().c_str(), (int)todo, (int)pass);
-
-            // validate in order
-            todo = 0;
-            allVisited = true;
-            for (auto & node : nodes)
-            {
-                // only validate a node if it has at least one child
-                bool hasVisitedChild = false;
-                const auto children = node->GetChildren();
-                for (auto & child : children)
-                    hasVisitedChild |= child->m_visited;    // if not a single visited child then no point in validating
-                bool isLeaf = node->IsLeaf();
-                // if there is not at least one visited child
-                bool valid = false;
-                if (hasVisitedChild || isLeaf)
-                {
-                    // got at least one child: it makes sense to call Validate()
-                    // keep state
-                    MBLayoutPtr oldMBLayoutPtr = node->GetMBLayout();
-                    auto dim = node->GetDims();
-                    vector<pair<size_t, size_t>> childDims;
-                    for (auto & child : children)
-                        childDims.push_back(child->GetDims());
-                    //auto imageLayouts = node->GetImageLayouts();
-                    // We do call validate(final) as many times as needed, since stuff may have changed underneath.
-                    node->PrintSelfBeforeValidation();
-                    node->Validate(allVisited/*final*/);      // all nodes have been visited: do verification instead of just inference
-                    fprintf(stderr, " -> [%lu, %s%lu]", node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
-                    node->m_visited = true;
-                    // check state --node will be valid if all nodes have been visited and node has not been updated
-                    bool willBeValid = allVisited;
-                    willBeValid &= (oldMBLayoutPtr == node->GetMBLayout());
-                    willBeValid &= (dim == node->GetDims());
-                    vector<pair<size_t, size_t>> newChildDims;
-                    for (auto & child : children)
-                        newChildDims.push_back(child->GetDims());
-                    willBeValid &= (childDims == newChildDims);
-                    //willBeValid &= (imageLayouts == node->GetImageLayouts());     // TODO: why does the compiler not eat this?
-                    // if all children valid then 
-                    valid = willBeValid || isLeaf;
-                }
-                else
-                    allVisited = false; // some were skipped
-                // count those that we need to redo
-                if (!valid)
-                    todo++;
-            }
+            fprintf(stderr, "\n\nValidating for node %ls. %d nodes to process in pass %d.\n", rootNode->NodeName().c_str(), (int)toValidate, (int)pass);
+            ValidateNodes(nodes, false/*isFinalValidationPass*/, toValidate);
         }
+        fprintf(stderr, "\n\nValidating for node %ls, final verification.\n", rootNode->NodeName().c_str());
+        ValidateNodes(nodes, true/*isFinalValidationPass*/, toValidate);
+        if (toValidate != 0)
+            LogicError("ValidateSubNetwork: ValidateNodes(true) unexpectedly returned with work left to do.");
 
-#if 0
-        // first phase: run all Validate() at least once, but only if they have at least one input that has run Validate() already
-        set<ComputationNodeBasePtr> partiallyValidated, fullyValidated;
-        list<ComputationNodeBasePtr> pendingNodes;
-        list<ComputationNodeBasePtr> nodesToFullyValidate;
-        for (auto nodesToProcess = nodes; !nodesToProcess.empty(); nodesToProcess = pendingNodes)
-        {
-            pendingNodes.clear();
-            for (auto & node : nodesToProcess)
-            {
-                // determine how many children of this node have size information
-                size_t numChildrenPartiallyValidated = 0;
-                size_t numChildrenFullyValidated = 0;
-                for (auto & child : node->GetChildren())
-                {
-                    if (!child)
-                        RuntimeError("ValidateSubNetwork: %ls %ls node has a NULL child", node->NodeName().c_str(), node->OperationName().c_str());
-                    if (fullyValidated.find(child) != fullyValidated.end())
-                        numChildrenFullyValidated++;
-                    else if (partiallyValidated.find(child) != partiallyValidated.end())
-                        numChildrenPartiallyValidated++;
-                }
-                // if no useful intput then defer
-                if (node->IsLeaf() || numChildrenPartiallyValidated + numChildrenFullyValidated > 0)
-                {
-                    bool isFinalValidationPass = numChildrenFullyValidated == node->ChildrenSize();
-                    // validate
-                    node->PrintSelfBeforeValidation();
-                    node->Validate(isFinalValidationPass);  // if all inputs fully validated--great
-                    fprintf(stderr, " -> [%lu, %s%lu]", node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
-                    if (!isFinalValidationPass)
-                    {
-                        partiallyValidated.insert(node);
-                        nodesToFullyValidate.push_back(node); // and remember in which order we did this
-                    }
-                    else
-                    {
-                        fullyValidated.insert(node);
-                    }
-                }
-                else
-                    pendingNodes.push_back(node);   // no input yet--need to try again later
-            }
-            if (pendingNodes.size() == nodesToProcess.size())
-                LogicError("ValidateSubNetwork: network has circular references");
-            if (!pendingNodes.empty())
-                fprintf(stderr, "\n---");
-        }
-        // at this point, all nodes had one call into Validate()
-
-        if (!nodesToFullyValidate.empty())
-            fprintf(stderr, "\n\nRevalidating\n\n");
-
-        // second phase: validate finally. This phase is quiet unless a size changes
-        bool done = false;
-        while (!done)
-        {
-            done = true;
-            for (auto & node : nodes)
-            {
-                // validate
-                size_t rows = node->GetNumRows(), cols = node->GetNumCols();
-                node->Validate(true);
-                if (rows != node->GetNumRows() || cols != node->GetNumCols())
-                {
-                    fprintf(stderr, "\nRevalidating --> %ls [%lu, %s%lu] changed to [%lu, %s%lu]", node->NodeName().c_str(),
-                            rows, node->HasMBLayout() ? "MBSize " : "", cols,
-                            node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
-                    done = false;
-                }
-            }
-            if (!done)
-            {
-                nodesToFullyValidate = nodes;   // need to do all
-            }
-        }
-#endif
         for (auto & node : nodes)
         {
             // verify that the contract with MB layout was obeyed by Validate()

@@ -1236,6 +1236,7 @@ public: // yak--used by NDLUtil. Will go away someday.
         }
     }
 private:
+    void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t & todo);
     void ValidateSubNetwork(const ComputationNodeBasePtr rootNode);
 public:
     // prepares the network for computation
