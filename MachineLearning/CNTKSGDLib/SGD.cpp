@@ -1908,12 +1908,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
                 {
                     ComputationNodeBasePtr node = *nodeIter;
-                    Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
+                    if (node->NeedGradient())
+                    {
+                        Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
 
-                    UpdateWeights(node, smoothedGradient, learnRatePerSample,
-                                  GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, net.GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
-                                  m_L2RegWeight, m_L1RegWeight,
-                                  m_needAveMultiplier);
+                        UpdateWeights(node, smoothedGradient, learnRatePerSample,
+                                      GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, net.GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
+                                      m_L2RegWeight, m_L1RegWeight,
+                                      m_needAveMultiplier);
+                    }
                 }
             }
 
@@ -2093,7 +2096,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                 {
                     ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                    learnParamsGradients.push_back(&(node->GradientValues()));
+                    if (node->NeedGradient())
+                    {
+                        learnParamsGradients.push_back(&(node->GradientValues()));
+                    }
                 }
 
                 m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(learnParamsGradients, numEvalNodes, m_numGradientBits, g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, traceLevel);
@@ -2317,6 +2323,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
         fprintf(stderr, "Update_%ls\n", node->NodeName().c_str());
 #endif
+        if (!node->NeedGradient())
+        {
+            LogicError("UpdateWeights() called for a learnable ComputationNode which has NeedGradient() == false!");
+        }
+
         UpdateWeightsS(this, dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->GradientValues(),
                        smoothedGradient, learnRatePerSample, momentumPerSample,
                        actualMBSize, L2RegWeight, L1RegWeight,
