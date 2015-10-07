@@ -1255,14 +1255,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return DataSlice(GradientValues(), frameRange);
         }
 
-#if 0//def _DEBUG
+#ifdef _DEBUG
         virtual void /*IComputationNode::*/OnEvaluateEndIteration()               // called after last iteration step of EvaluateThisNode()
         {
             Base::OnEvaluateEndIteration();
-            MaskMissingValuesColumnsToZero();
-            if (m_functionValues.HasNan("OnEvaluateEndIteration"))
-                LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
-            MaskMissingValuesColumnsToNan();
+            //MaskMissingValuesColumnsToZero();
+            //if (m_functionValues.HasNan("OnEvaluateEndIteration"))
+            //    LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
+            MaskMissingValuesColumnsToNan();    // blast NaNs into columns that are gaps in a packed layout
         }
 #endif
 
