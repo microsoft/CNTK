@@ -102,6 +102,14 @@ void Eval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimension
     m_eval->GetNodeDimensions(dimensions, nodeGroup);
 }
 
+// StartEvaluateMinibatchLoop - Prepare network for Evaluate() calls.
+// ouputNodeName - name of node that will be evaluated
+template<class ElemType>
+void Eval<ElemType>::StartEvaluateMinibatchLoop(const std::wstring & outputNodeName)
+{
+    m_eval->StartEvaluateMinibatchLoop(outputNodeName);
+}
+
 // Evaluate - Evalute using the model with the given inputs and outputs
 // inputs - map from node name to input vector
 // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation

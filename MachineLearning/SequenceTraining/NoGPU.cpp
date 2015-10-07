@@ -3,6 +3,7 @@
 #ifdef CPUONLY
 
 #include "cudalatticeops.h"
+#include "cudalattice.h"
 
 #pragma warning (disable: 4100) // unreferenced formal parameter, which is OK since all functions in here are dummies; disabling this allows to copy-paste prototypes here when we add new functions
 #pragma warning (disable: 4702) // unreachable code, which we get from the NOT_IMPLEMENTED macro which is OK
@@ -43,10 +44,18 @@ namespace msra { namespace cuda {
         const vectorref<msra::lattices::edgeinfowithscores> & edges, const vectorref<msra::lattices::nodeinfo> & nodes,
         const vectorref<double> & logqs, matrixref<float> & logacc) const {}
 
-    template <typename ElemType>
-    void FetchFromGPUMatrix(const Microsoft::MSR::CNTK::Matrix<ElemType>& gpuMatrix, msra::math::ssematrixbase& cpuMatrix) {}
+    latticefunctions * newlatticefunctions(size_t deviceid) { return nullptr; }
 
-    template void FetchFromGPUMatrix<float>(const Microsoft::MSR::CNTK::Matrix<float>& gpuMatrix, msra::math::ssematrixbase& cpuMatrix);
+    lrhmmdefvector * newlrhmmdefvector(size_t deviceid) { return nullptr; }
+    lr3transPvector * newlr3transPvector(size_t deviceid) { return nullptr; }
+    ushortvector * newushortvector(size_t deviceid) { return nullptr; }
+    uintvector * newuintvector(size_t deviceid) { return nullptr; }
+    floatvector * newfloatvector(size_t deviceid) { return nullptr; }
+    doublevector * newdoublevector(size_t deviceid) { return nullptr; }
+    sizetvector * newsizetvector(size_t deviceid) { return nullptr; }
+    nodeinfovector * newnodeinfovector(size_t deviceid) { return nullptr; }
+    edgeinfowithscoresvector * newedgeinfovector(size_t deviceid) { return nullptr; }
+    aligninfovector * newaligninfovector(size_t deviceid) { return nullptr; }
 }}
 
 #endif // CPUONLY

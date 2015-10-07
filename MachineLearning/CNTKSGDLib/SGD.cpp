@@ -66,12 +66,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::invalid_argument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
     }
 
-template<class ElemType>
-    SGD<ElemType>::SGD(const ConfigParameters& configSGD)
+    template<class ElemType>
+    SGDParams::SGDParams(const ConfigParameters& configSGD, ElemType/*for type deduction*/)
     {
         ConfigArray learningRatesPerMBStr = configSGD("learningRatesPerMB", "");
-        m_needToNormalizeLRByParallUtterance = false;
-        m_needToNormalizeMomentumByParallUtterance = false;
         floatargvector learningRatesPerMB = learningRatesPerMBStr;
 
         ConfigArray learningRatesPerSampleStr = configSGD("learningRatesPerSample", "");
@@ -110,6 +108,7 @@ template<class ElemType>
 
         ConfigArray minibatchSize = configSGD("minibatchSize", "256");
         intargvector mbSize = minibatchSize;
+        bool truncated = configSGD("Truncated", "false");
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         size_t epochSize = configSGD("epochSize", "0");
@@ -139,8 +138,8 @@ template<class ElemType>
         double clippingThresholdPerSample = configSGD("clippingThresholdPerSample", "1#INF");
 
         //sequence training
-        ElemType hsmoothingWeight = configSGD("hsmoothingWeight", "0.95");
-        ElemType frameDropThresh = configSGD("frameDropThresh", "1e-10");
+        double hsmoothingWeight = configSGD("hsmoothingWeight", "0.95");
+        double frameDropThresh = configSGD("frameDropThresh", "1e-10");
         bool doReferenceAlign = configSGD("doReferenceAlign", "false");
         ConfigArray dropoutRatesStr = configSGD("dropoutRate", "0.0");
         floatargvector dropoutRates = dropoutRatesStr;
@@ -181,16 +180,67 @@ template<class ElemType>
 
         if (doGradientCheck && sizeof(ElemType) != sizeof(double))
             LogicError("Gradient check needs to use precision = double");
-        m_doUnitTest = configSGD("unittest", "false");
 
         bool validateAfterModelReloading = configSGD("validateAfterModelReloading", "true");
 
         bool UsingAllDataForPreComputedNode = configSGD("UseAllDataForPreComputedNode", "true");
 
+        // TODO: the number of parameters of this function is waaay to little!
+        // TODO: it may be easier to write the values directly into the members
+        *this = SGDParams(learningRatesPerMB,
+                          learningRatesPerSample,
+                          mbSize,
+                          truncated,
+                          epochSize,
+                          maxEpochs,
+                          modelPath,
+                          momentumPerMB,
+                          momentumPerSample,
+                          gradientClippingWithTruncation,
+                          clippingThresholdPerSample,
+                          autoAdjustLRType,
+                          increaseLearnRateIfImproveMoreThan,
+                          learnRateIncreaseFactor,
+                          reduceLearnRateIfImproveLessThan,
+                          continueReduce,
+                          learnRateDecreaseFactor,
+                          dropoutRates,
+                          loadBestModel,
+                          numMiniBatch4LRSearch,
+                          numPrevLearnRates,
+                          numBestSearchEpoch,
+                          traceLevel,
+                          numMBsToShowResult,
+                          numMBsToCUDAProfile,
+                          maxTempMemSizeInSamplesForCNN,
+                          gUpdateInfo,
+                          keepCheckPointFiles,
+                          adaptationRegType,
+                          adaptationRegWeight,
+                          trainCriterionNodeName,
+                          evalCriterionNodeName,
+                          doGradientCheck,
+                          gradientCheckSigDigit,
+                          validateAfterModelReloading,
+                          rpi,
+                          learnRateAdjustInterval,
+                          UsingAllDataForPreComputedNode,
+                          needAveMultiplier,
+                          L2RegWeight,
+                          L1RegWeight,
+                          autoAdjustMinibatch,
+                          minibatchSizeTuningFrequency,
+                          minibatchSizeTuningMax,
+                          useCVSetControlLRIfCVExists,
+                          useEvalCriterionControlLR,
+                          minibatchSearchCriterionErrorMargin,
+                          hsmoothingWeight, frameDropThresh, doReferenceAlign);
+
+        // BUGBUG: these are not passed to Init()
+        m_doUnitTest = configSGD("unittest", "false");
+
         // Parallel training
         m_parallelizationMethod = ParallelizationMethod::None;
-        m_distGradAgg = nullptr;
-        m_gradHeader = nullptr;
         m_numGradientBits = 32;
         m_zeroThresholdFor1Bit = true;
         m_enableDistributedMBReading = false;
@@ -223,110 +273,60 @@ template<class ElemType>
                 m_nFramesBetweenMASync = configMASGD("SyncFrequencyInFrames", "40000"); 
                 m_iMASyncStatsTrace = configMASGD("MAPerfStats", "0");
             }
-                
         }
-
-        // TODO: the number of parameters of this function is waaay to little!
-        Init(learningRatesPerMB,
-             learningRatesPerSample,
-             mbSize,
-             epochSize,
-             maxEpochs,
-             modelPath,
-             momentumPerMB,
-             momentumPerSample,
-             gradientClippingWithTruncation,
-             clippingThresholdPerSample,
-             autoAdjustLRType,
-             increaseLearnRateIfImproveMoreThan,
-             learnRateIncreaseFactor,
-             reduceLearnRateIfImproveLessThan,
-             continueReduce,
-             learnRateDecreaseFactor,
-             dropoutRates,
-             loadBestModel,
-             numMiniBatch4LRSearch,
-             numPrevLearnRates,
-             numBestSearchEpoch,
-             traceLevel,
-             numMBsToShowResult,
-             numMBsToCUDAProfile,
-             maxTempMemSizeInSamplesForCNN,
-             gUpdateInfo,
-             keepCheckPointFiles,
-             adaptationRegType,
-             adaptationRegWeight,
-             trainCriterionNodeName,
-             evalCriterionNodeName,
-             doGradientCheck,
-             gradientCheckSigDigit,
-             validateAfterModelReloading,
-             rpi,
-             learnRateAdjustInterval,
-             UsingAllDataForPreComputedNode,
-             needAveMultiplier,
-             L2RegWeight,
-             L1RegWeight,
-             autoAdjustMinibatch,
-             minibatchSizeTuningFrequency,
-             minibatchSizeTuningMax,
-             useCVSetControlLRIfCVExists,
-             useEvalCriterionControlLR,
-             minibatchSearchCriterionErrorMargin,
-             hsmoothingWeight, frameDropThresh, doReferenceAlign);
     }
 
     //autoLearnRateSearchType is applied only if the learning rate for the epoch is not specified in learningRatesPerMB and learningRatesPerSample
-    template<class ElemType>
-    void SGD<ElemType>::Init(const floatargvector& learningRatesPerMB,
-              const floatargvector& learningRatesPerSample,
-              const intargvector& mbSize,
-              const size_t epochSize,
-              const size_t maxEpochs,
-              const wstring& modelPath,
-              const floatargvector& momentumPerMB,
-              const floatargvector& momentumPerSample,
-              const bool gradientClippingWithTruncation,
-              const double clippingThresholdPerSample,
-              const LearningRateSearchAlgorithm autoLearnRateSearchType,
-              const double increaseLearnRateIfImproveMoreThan,
-              const double learnRateIncreaseFactor,
-              const double reduceLearnRateIfImproveLessThan,
-              const bool continueReduce,
-              const double learnRateDecreaseFactor,
-              floatargvector dropoutRates,
-              const bool loadBestModel,
-              const intargvector& numMiniBatch4LRSearch,
-              const size_t numPrevLearnRates,
-              const size_t numBestSearchEpoch,
-              const int traceLevel,
-              const size_t numMBsToShowResult,
-              const size_t numMBsToCUDAProfile,
-              const size_t maxTempMemSizeInSamplesForCNN,
-              const GradientUpdateInfo gradUpdateType,
-              const bool keepCheckPointFiles,
-              const AdaptationRegType adaptationRegType,
-              const double adaptationRegWeight,
-              const wstring trainCriterionNodeName,
-              const wstring evalCriterionNodeName,
-              const bool doGradientCheck,
-              const double gradientCheckSigDigit,
-              const bool validateAfterModelReloading,
-              RMSPropInfo rpi,
-              size_t learnRateAdjustInterval,
-              const bool UsingAllDataForPreComputed,
-              const bool needAveMultiplier,
-              const double L2RegWeight,
-              const double L1RegWeight,
-              const bool autoAdjustMinibatch,
-              const size_t minibatchSizeTuningFrequency,
-              const size_t minibatchSizeTuningMax,
-              const bool useCVSetControlLRIfCVExists,
-              const bool useEvalCriterionControlLR,
-              const size_t minibatchSearchCriterionErrorMargin,
-              const ElemType hsmoothingWeight,
-              const ElemType frameDropThresh,
-              const bool doreferencealign)
+    SGDParams::SGDParams(const floatargvector& learningRatesPerMB,
+                         const floatargvector& learningRatesPerSample,
+                         const intargvector& mbSize,
+                         bool truncated,
+                         const size_t epochSize,
+                         const size_t maxEpochs,
+                         const wstring& modelPath,
+                         const floatargvector& momentumPerMB,
+                         const floatargvector& momentumPerSample,
+                         const bool gradientClippingWithTruncation,
+                         const double clippingThresholdPerSample,
+                         const LearningRateSearchAlgorithm autoLearnRateSearchType,
+                         const double increaseLearnRateIfImproveMoreThan,
+                         const double learnRateIncreaseFactor,
+                         const double reduceLearnRateIfImproveLessThan,
+                         const bool continueReduce,
+                         const double learnRateDecreaseFactor,
+                         floatargvector dropoutRates,
+                         const bool loadBestModel,
+                         const intargvector& numMiniBatch4LRSearch,
+                         const size_t numPrevLearnRates,
+                         const size_t numBestSearchEpoch,
+                         const int traceLevel,
+                         const size_t numMBsToShowResult,
+                         const size_t numMBsToCUDAProfile,
+                         const size_t maxTempMemSizeInSamplesForCNN,
+                         const GradientUpdateInfo gradUpdateType,
+                         const bool keepCheckPointFiles,
+                         const AdaptationRegType adaptationRegType,
+                         const double adaptationRegWeight,
+                         const wstring trainCriterionNodeName,
+                         const wstring evalCriterionNodeName,
+                         const bool doGradientCheck,
+                         const double gradientCheckSigDigit,
+                         const bool validateAfterModelReloading,
+                         RMSPropInfo rpi,
+                         size_t learnRateAdjustInterval,
+                         const bool UsingAllDataForPreComputed,
+                         const bool needAveMultiplier,
+                         const double L2RegWeight,
+                         const double L1RegWeight,
+                         const bool autoAdjustMinibatch,
+                         const size_t minibatchSizeTuningFrequency,
+                         const size_t minibatchSizeTuningMax,
+                         const bool useCVSetControlLRIfCVExists,
+                         const bool useEvalCriterionControlLR,
+                         const size_t minibatchSearchCriterionErrorMargin,
+                         const double hsmoothingWeight,
+                         const double frameDropThresh,
+                         const bool doreferencealign)
     {
         m_numPrevLearnRates = numPrevLearnRates;
         m_prevChosenMinibatchSize = 0;
@@ -336,6 +336,7 @@ template<class ElemType>
         m_minibatchSearchCriterionErrorMargin = minibatchSearchCriterionErrorMargin;
 
         m_mbSize = mbSize;
+        m_truncated = truncated;
 
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         m_epochSize = epochSize;
@@ -412,19 +413,13 @@ template<class ElemType>
         }
         else if (learningRatesPerSample.size() > 0)
         {
-            m_learningRatesPerSample = learningRatesPerSample;
+            m_learningRatesParam = learningRatesPerSample;
+            m_learningRatesSpecifiedForMBSize = intargvector(L"1");
         }
-        else if (learningRatesPerMB.size() > 0)
+        else if (learningRatesPerMB.size() > 0)     // this actually means per specified minibatch size
         {
-            int LRSize = (int) max(learningRatesPerMB.size(), m_mbSize.size());
-            m_learningRatesPerSample.resize(LRSize);
-            for (int i = 0; i < LRSize; i++)
-            {
-                m_learningRatesPerSample[i] = learningRatesPerMB[i] / m_mbSize[i];
-                // Note: this may get further updated w.r.t. unit-gain momentum
-                // BUGBUG: No, it's not! But it should. Ugh!!
-            }
-            m_needToNormalizeLRByParallUtterance = true;
+            m_learningRatesParam = learningRatesPerMB;
+            m_learningRatesSpecifiedForMBSize = m_mbSize;
         }
 
         if (momentumPerSample.size() > 0 && momentumPerMB.size() > 0)
@@ -433,39 +428,26 @@ template<class ElemType>
                                         "and momentumPerMB. Please comment "
                                         "out one of them.");
         }
-        else if (momentumPerSample.size() > 0)
+        else if (momentumPerSample.size() > 0)         // TODO: noone should use this; change to MomentumTimeConstant
         {
-            m_momentumPerSample = momentumPerSample;
-            int momentumVectorSize = m_momentumPerSample.size();
-            for (int i = 0; i < momentumVectorSize; i++)
-            {
-                if ((m_momentumPerSample[i] >= 1) || (m_momentumPerSample[i] < 0))
-                {
-                    throw std::invalid_argument("momentumPerSample must be in [0, 1).");
-                }
-            }
+            m_momentumParam = momentumPerSample;
+            m_learningRatesSpecifiedForMBSize = intargvector(L"1");
         }
         else if (momentumPerMB.size() > 0)
         {
-            int momentumVectorSize = (int)max(momentumPerMB.size(), m_mbSize.size());
-            m_momentumPerSample.resize(momentumVectorSize);
-            for (int i = 0; i < momentumVectorSize; i++)
-            {
-                if ((momentumPerMB[i] >= 1) || (momentumPerMB[i] < 0))
-                    InvalidArgument("momentumPerMB must be in [0, 1).");
-                m_momentumPerSample[i] = (float)pow(momentumPerMB[i], 1.0 / m_mbSize[i]); 
-            }
-            // BUGBUG: This must also compensate for non-unit gain interpretation of momentum
-
-            m_needToNormalizeMomentumByParallUtterance = true;
+            m_momentumParam = momentumPerMB;
+            m_learningRatesSpecifiedForMBSize = m_mbSize;
         }
-        else    // default: momentumPerMB = 0.9 assuming MB size 256
+        else    // default: momentumPerMB = 0.9 per MB
         {
-            int momentumVectorSize = m_mbSize.size();
-            m_momentumPerSample.resize(momentumVectorSize);
-            for (int i = 0; i < momentumVectorSize; i++)
-                m_momentumPerSample[i] = (float)pow(0.9f, 1.0 / m_mbSize[i]);
-            }
+            m_momentumParam = floatargvector(L"0.9");
+            m_learningRatesSpecifiedForMBSize = m_mbSize;
+        }
+        for (int i = 0; i < m_momentumParam.size(); i++)
+        {
+            if (m_momentumParam[i] >= 1.0 || m_momentumParam[i] < 0.0)
+                InvalidArgument("Momentum parameter must be in [0, 1).");
+        }
 
         if (m_learnRateDecreaseFactor > 1 || m_learnRateIncreaseFactor < 1)
             InvalidArgument("learnRateIncreaseFactor must be >= 1 and learnRateDecreaseFactor must be <= 1.");
@@ -487,9 +469,22 @@ template<class ElemType>
 
         m_useCVSetControlLRIfCVExists = useCVSetControlLRIfCVExists;
         m_useEvalCriterionControlLR = useEvalCriterionControlLR;
+    }
+
+    template<class ElemType>
+    SGD<ElemType>::SGD(SGDParams && sgdParams) :
+        SGDParams(move(sgdParams)), // TODO: somehow this move() has no effect
+        m_distGradAgg(nullptr),
+        m_gradHeader(nullptr)
+    {
+        if (m_doGradientCheck && sizeof(ElemType) != sizeof(double))
+            InvalidArgument("Gradient check needs to use precision = double");
 
         msra::files::make_intermediate_dirs(m_modelPath);
     }
+
+    template<class ElemType>
+    SGD<ElemType>::SGD(const ConfigParameters& configSGD) : SGD(SGDParams(configSGD, ElemType(0))) { }
 
     template<class ElemType>
     void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
@@ -715,7 +710,7 @@ template<class ElemType>
                 auto * functionValues = &dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues();
                 assert(functionValues->GetNumCols() == net.GetMBLayoutPtr()->GetNumTimeSteps());
                 (*inputMatrices)[node->NodeName()] = functionValues;
-        }
+            }
         }
 
         //get hmm file for sequence training
@@ -788,9 +783,9 @@ template<class ElemType>
             net.SaveToFile(GetModelNameForEpoch(int(startEpoch) - 1));
         }
 
-        // Learning rates and momentum are not always specified per sample.
+        // BUGBUG: This is where the trainSetDataReader->GetNumParallelSequences() is used to further normalize
+#if 0
         // In these cases, we need to post-patch the learning-rate parameters.
-        // BUGBUG: but this is done on a class member. Wouldn't that compound as we do >1 epoch?
         if (m_needToNormalizeLRByParallUtterance)
         {
             for (auto& x : m_learningRatesPerSample)
@@ -801,6 +796,7 @@ template<class ElemType>
             for (auto& x : m_momentumPerSample)
                 x = (float)pow(x, 1.0 / trainSetDataReader->GetNumParallelSequences());
         }
+#endif
 
         bool learnRateInitialized = false;
         if (startEpoch > 0)
@@ -816,7 +812,7 @@ template<class ElemType>
         }
 
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
-            !learnRateInitialized && m_learningRatesPerSample.size() <= startEpoch)
+            !learnRateInitialized && m_learningRatesParam.size() <= startEpoch)
         {
             InvalidArgument(
                 "When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, "
@@ -833,11 +829,11 @@ template<class ElemType>
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode)
             ComputationNetwork::SetMaxTempMemSizeForCNN(refNet, refNode, m_maxTempMemSizeInSamplesForCNN);
 
-        // --- MAIN EPOCH LOOP
-
-		//sequence trainning
+        // likewise for sequence training parameters
         if (isSequenceTrainingCriterion)
             ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hsmoothingWeight, m_frameDropThresh, m_doreferencealign);
+
+        // --- MAIN EPOCH LOOP
 
         for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {
@@ -853,10 +849,10 @@ template<class ElemType>
             ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropOutSeed);
 
             // learning rate adjustment
-            if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None ||
-                (m_learningRatesPerSample.size() > 0 && m_learningRatesPerSample.size() > i))
+            if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || i < m_learningRatesParam.size())
             {
-                learnRatePerSample = m_learningRatesPerSample[i];
+                // BUGBUG: GetNumParallelSequences() returns 1 under certain situations; it seems when restarting from checkpoint
+                learnRatePerSample = GetLearningRatePerSample(i/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
             }
             else if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::SearchBeforeEpoch)
             {
@@ -919,14 +915,18 @@ template<class ElemType>
                 // use the explicitly set minibatch size
                 chosenMinibatchSize = m_mbSize[i];
             }
-            
+
+#if 1
+            actualMinibatchSize = FixUpEffectiveMBSize(chosenMinibatchSize/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
+#else
             actualMinibatchSize = chosenMinibatchSize;
-            if (trainSetDataReader->GetNumParallelSequences() > 1 && m_needToNormalizeMomentumByParallUtterance)
+            if (m_needToNormalizeMomentumByParallUtterance)
                 actualMinibatchSize = chosenMinibatchSize * trainSetDataReader->GetNumParallelSequences();
+#endif
 
             // TODO: show momentum also as a time constant
-            fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  momentum = %f \n",
-                    i + 1, learnRatePerSample, MomentumPerMB(m_momentumPerSample[i], actualMinibatchSize));
+            fprintf(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f \n",
+                    i + 1, learnRatePerSample, MomentumPerMB(GetMomentumPerSample(i/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences()), actualMinibatchSize));
 
             TrainOneEpoch(net,
                           refNet, 
@@ -1021,7 +1021,7 @@ template<class ElemType>
             }
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
-                m_learningRatesPerSample.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
+                m_learningRatesParam.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
             {
                 if (std::isnan(avgCriterion) || (prevCriterion - avgCriterion < 0 && prevCriterion != std::numeric_limits<double>::infinity()))
                 {
@@ -1145,7 +1145,7 @@ template<class ElemType>
                     std::vector<ComputationNodeBasePtr> & labelNodes,
                     std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
     {
-        std::list<ComputationNodeBasePtr> nodes = net.GetNodesRequiringPreComputation();
+        std::list<ComputationNodeBasePtr> nodes = net.GetNodesRequiringPreComputation();    // this tests all HasComputed() flags
 
         if (nodes.size() == 0)
         {
@@ -1153,7 +1153,7 @@ template<class ElemType>
             return false;
         }
 
-        fprintf(stderr, "Found %lu PreCompute nodes\n", nodes.size());
+        fprintf(stderr, "\nPrecomputing --> %lu PreCompute nodes found.\n\n", nodes.size());
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
             auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
@@ -1169,40 +1169,30 @@ template<class ElemType>
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0);
         else                                    // using only one epoch
             trainSetDataReader->StartMinibatchLoop(m_mbSize[0], 0, m_epochSize);
-#if 1
-        size_t actualMBSize;
-        while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSize))
+        net.StartEvaluateMinibatchLoop(nodes);
+
+        // initialize
+        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+        {
+            auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
+            node->MarkComputed(false/*begin accumulating*/);
+        }
+        size_t actualMBSizeDummy;
+        while (DataReaderHelpers::GetMinibatchIntoNetwork(*trainSetDataReader, net, nullptr, false, false, *inputMatrices, actualMBSizeDummy))
         {
             // TODO: move these into GetMinibatchIntoNetwork()  --but those are passed around; necessary? Can't we get them from 'net'?
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
             ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-            for (auto & node : nodes)   // this loops over all pertinent PreComputeNodes
-                net.Evaluate(node);
+            net.Evaluate(nodes);
         }
-#else
-        while (trainSetDataReader->GetMinibatch(*inputMatrices))
-        {
-            // TODO: use GetMinibatchIntoNetwork(), should be easy
-            ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-            ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
-
-            net.SetActualMiniBatchSizeFromFeatures();
-            trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
-            net.VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
-
-            // TODO: Exactly this loop should be INSIDE ComputationNetwork--pass the nodes array instead!
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-                net.Evaluate(*nodeIter);
-        }
-#endif
-
-        // mark done
+        // finalize
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
             auto node = static_pointer_cast<PreComputedNode<ElemType>>(*nodeIter);
-            node->MarkComputed(true);
+            node->MarkComputed(true/*done accumulating*/);
         }
+        fprintf(stderr, "\nPrecomputing --> Completed.\n\n");
 
         return true;
     }
@@ -1297,7 +1287,7 @@ template<class ElemType>
                                             /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                                             /*out*/ totalSamplesSeen, "AdaptiveLearnRateSearch:");
 
-                    } while (std::isnan(epochCriterion) || (epochCriterion > baseCriterion && learnRatePerSample > minLearnRate));
+        } while (std::isnan(epochCriterion) || (epochCriterion > baseCriterion && learnRatePerSample > minLearnRate));
 
         bestLearnRatePerSample = learnRatePerSample;
 
@@ -1449,7 +1439,7 @@ template<class ElemType>
         // do some pre-adjustment based on LR
         // Basically we assume that the LR for epoch 1 is safe for mbsize.
         // If LR control led to a smaller LR, then we can safely increase the lower bound of the MB size.
-        double learningRateChangeSoFar = m_learningRatesPerSample[epochNumber] / m_learningRatesPerSample[0];
+        double learningRateChangeSoFar = GetLearningRatePerSample(epochNumber/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences()) / GetLearningRatePerSample(0/*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequences());
         learningRateChangeSoFar *= learningRateAdjustmentFactor;
 
         // increasing by the full factor is found to be too aggressive; sqrt() seems more robust
@@ -1713,13 +1703,11 @@ template<class ElemType>
 
         int numMBsRun = 0;
 
-        size_t numEvalNodes = epochEvalErrors.size();
-
         // NOTE: the following two local matrices are not used in distGradAgg path
         // assume only one training criterion node for each epoch.
         // The criterion values are accumulated here over the minibatches (without having to pull them off the GPU).
         Matrix<ElemType> localEpochCriterion(1, 1, net.GetDeviceId());
-        Matrix<ElemType> localEpochEvalErrors(1, numEvalNodes, net.GetDeviceId());
+        Matrix<ElemType> localEpochEvalErrors(1, epochEvalErrors.size(), net.GetDeviceId());
 
         localEpochCriterion.SetValue(0);
         localEpochEvalErrors.SetValue(0);
@@ -1739,7 +1727,7 @@ template<class ElemType>
         if (useGradientAggregation)
         {
             epochCriterion = double(0.0);
-            epochEvalErrors.assign(numEvalNodes, double(0.0));
+            epochEvalErrors.assign(epochEvalErrors.size(), double(0.0));
         }
 
         Profiler profiler(m_numMBsToCUDAProfile);
@@ -1751,13 +1739,13 @@ template<class ElemType>
                                        m_enableDistributedMBReading &&
                                        trainSetDataReader->SupportsDistributedMBRead();
         if (useDistributedMBReading)
-        {
             trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, g_mpi->CurrentNodeRank(), g_mpi->NumNodesInUse(), m_epochSize);
-        }
         else
-        {
             trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, m_epochSize);
-        }
+        net.StartEvaluateMinibatchLoop(evaluationNodes);
+        net.StartEvaluateMinibatchLoop(criterionNodes);
+        if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode)
+            refNet.StartEvaluateMinibatchLoop(refNode);
 
         // Attemps to compute the error signal for the whole utterance, which will
         // be fed to the neural network as features. Currently it is a workaround
@@ -1832,10 +1820,7 @@ template<class ElemType>
 
                 //compute eval node first since when gradient is computed the forward function values
                 //may be changed and need to be recomputed when gradient and function value share the same matrix
-                for (size_t i = 0; i < numEvalNodes; i++)
-                {
-                    net.Evaluate(evaluationNodes[i]);
-                }
+                net.Evaluate(evaluationNodes);
 
                 // only compute gradient when learning rate is large enough
                 if (learnRatePerSample > m_minLearnRate * 0.01)
@@ -1875,7 +1860,7 @@ template<class ElemType>
                     // criteria are in FunctionValues()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
                     Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(criterionNodes[0])->FunctionValues(),
                                                           0, 0, localEpochCriterion, 0, 0);
-                    for (size_t i = 0; i < numEvalNodes; i++)
+                    for (size_t i = 0; i < evaluationNodes.size(); i++)
                     {
                         Matrix<ElemType>::AddElementToElement(dynamic_pointer_cast<ComputationNode<ElemType>>(evaluationNodes[i])->FunctionValues(),
                                                               0, 0, localEpochEvalErrors, 0, i);
@@ -1885,14 +1870,14 @@ template<class ElemType>
             else
             {
                 //distributed gradient aggregation
-                LazyInitDistGradAgg(learnableNodes, numEvalNodes, m_traceLevel);
+                LazyInitDistGradAgg(learnableNodes, evaluationNodes.size(), m_traceLevel);
 
                 //prepare the header
-                m_gradHeader->numEvalNode = numEvalNodes;
+                m_gradHeader->numEvalNode = evaluationNodes.size();
                 m_gradHeader->numSamples = actualMBSize;
                 m_gradHeader->numSamplesWithLabel = numSamplesWithLabel;
                 m_gradHeader->criterion = actualMBSize > 0 ? criterionNodes[0]->Get00Element() : 0.0;
-                for (size_t i = 0; i < numEvalNodes; i++)
+                for (size_t i = 0; i < evaluationNodes.size(); i++)
                     m_gradHeader->evalErrors[i] = actualMBSize > 0 ? evaluationNodes[i]->Get00Element() : 0.0;
 
                 m_distGradAgg->AggregateGradients(m_gradHeader, epochNumber);
@@ -1900,7 +1885,7 @@ template<class ElemType>
                 aggregateNumSamples = m_gradHeader->numSamples;
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
                 epochCriterion += m_gradHeader->criterion;
-                for (size_t i = 0; i<numEvalNodes; i++)
+                for (size_t i = 0; i<epochEvalErrors.size(); i++)
                     epochEvalErrors[i] += m_gradHeader->evalErrors[i];
             }
 
@@ -1911,12 +1896,15 @@ template<class ElemType>
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
                 {
                     ComputationNodeBasePtr node = *nodeIter;
-                    Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
+                    if (node->NeedGradient())
+                    {
+                        Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
 
-                    UpdateWeights(node, smoothedGradient, learnRatePerSample,
-                                  m_momentumPerSample[epochNumber], aggregateNumSamples,
-                                  m_L2RegWeight, m_L1RegWeight,
-                                  m_needAveMultiplier);
+                        UpdateWeights(node, smoothedGradient, learnRatePerSample,
+                                      GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, net.GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
+                                      m_L2RegWeight, m_L1RegWeight,
+                                      m_needAveMultiplier);
+                    }
                 }
             }
 
@@ -1966,7 +1954,7 @@ template<class ElemType>
                     {
                         timer.Restart();
                         epochCriterion = localEpochCriterion.Get00Element();
-                        for (size_t i = 0; i < numEvalNodes; i++)
+                        for (size_t i = 0; i < epochEvalErrors.size(); i++)
                             epochEvalErrors[i] = localEpochEvalErrors(0, i);
                         timer.Stop();
 
@@ -1994,7 +1982,7 @@ template<class ElemType>
                         m_maxComputedEpochSize = numMBsRun * numSamplesLastMBs / m_numMBsToShowResult;
                     }
 
-                    for (size_t i = 0; i < numEvalNodes; i++)
+                    for (size_t i = 0; i < epochEvalErrors.size(); i++)
                     {
                         double evalError = (epochEvalErrors[i] - epochEvalErrorsLastMBs[i]) / numSamplesLastMBs;
                         string formatString = "EvalErr[%lu]PerSample = " + GeneratePaddedFloatOrExpFormat(0, 8, evalError) + "; ";
@@ -2015,7 +2003,7 @@ template<class ElemType>
                     numSamplesLastMBs = 0;
 
                     epochCriterionLastMBs = epochCriterion;
-                    for (size_t i = 0; i < numEvalNodes; i++)
+                    for (size_t i = 0; i < epochEvalErrorsLastMBs.size(); i++)
                         epochEvalErrorsLastMBs[i] = epochEvalErrors[i];
 
                     if (std::isnan(epochCriterion))
@@ -2064,7 +2052,7 @@ template<class ElemType>
         {
             // with parallelization, we have them in regular variables
             epochCriterion /= float(totalEpochSamples);
-            for (size_t i = 0; i< numEvalNodes; i++)
+            for (size_t i = 0; i< epochEvalErrors.size(); i++)
                 epochEvalErrors[i] /= totalEpochSamples;
         }
         else
@@ -2074,7 +2062,7 @@ template<class ElemType>
             localEpochEvalErrors /= float(totalEpochSamples);
 
             epochCriterion = localEpochCriterion.Get00Element();
-            for (size_t i = 0; i < numEvalNodes; i++)
+            for (size_t i = 0; i < epochEvalErrors.size(); i++)
                 epochEvalErrors[i] = localEpochEvalErrors(0, i);
         }
 
@@ -2100,7 +2088,10 @@ template<class ElemType>
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                 {
                     ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                    learnParamsGradients.push_back(&(node->GradientValues()));
+                    if (node->NeedGradient())
+                    {
+                        learnParamsGradients.push_back(&(node->GradientValues()));
+                    }
                 }
 
                 m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(learnParamsGradients, numEvalNodes, m_numGradientBits, g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, traceLevel);
@@ -2324,6 +2315,11 @@ template<class ElemType>
 #if DUMPOUTPUT
         fprintf(stderr, "Update_%ls\n", node->NodeName().c_str());
 #endif
+        if (!node->NeedGradient())
+        {
+            LogicError("UpdateWeights() called for a learnable ComputationNode which has NeedGradient() == false!");
+        }
+
         UpdateWeightsS(this, dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->GradientValues(),
                        smoothedGradient, learnRatePerSample, momentumPerSample,
                        actualMBSize, L2RegWeight, L1RegWeight,
@@ -2502,6 +2498,7 @@ template<class ElemType>
 
 #define EPSILON 1e-5
 
+    // this probes the automatic gradient computation with random inputs
     template<class ElemType>
     bool SGD<ElemType>::GradientCheck(ComputationNetwork& net,
                        const std::vector<ComputationNodeBasePtr> & criterionNodes,
@@ -2509,6 +2506,8 @@ template<class ElemType>
                        int npos)
     {
         vector<string> errMsgs;
+
+        net.StartEvaluateMinibatchLoop(criterionNodes[npos]);
 
         // gradient checking
         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
@@ -2531,7 +2530,6 @@ template<class ElemType>
 
                 node->UpdateEvalTimeStamp();
 
-                // use only the first criterion. Is
                 net.ComputeGradient<ElemType>(criterionNodes[npos]);
 
                 if (node->GradientValues().GetMatrixType() == MatrixType::SPARSE)

@@ -125,6 +125,13 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="ColumnQuantizer.h" />
     <ClInclude Include="CommonMatrix.h" />
+    <ClInclude Include="cudabasetypes.h" />
+    <ClInclude Include="cudadevice.h" />
+    <ClInclude Include="cudalattice.h" />
+    <ClInclude Include="cudalatticeops.cu.h" />
+    <ClInclude Include="cudalatticeops.h" />
+    <ClInclude Include="cudalib.h" />
+    <ClInclude Include="latticefunctionskernels.h" />
     <ClInclude Include="ValueQuantizer.h" />
     <None Include="GPUWatcher.h">
       <FileType>CppHeader</FileType>
@@ -138,12 +145,17 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="cudalatticeops.cu">
+      <FileType>CppCode</FileType>
+    </CudaCompile>
     <CudaCompile Include="GPUSparseMatrix.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
     <CudaCompile Include="GPUWatcher.cu">
       <FileType>CppCode</FileType>
     </CudaCompile>
+    <ClCompile Include="cudalattice.cpp" />
+    <ClCompile Include="cudalib.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

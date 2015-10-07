@@ -47,7 +47,8 @@ public:
 
     virtual void LoadModel(const std::wstring& modelFileName)=0;
     virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup)=0; 
-    virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)=0; 
+    virtual void StartEvaluateMinibatchLoop(const std::wstring & outputNodeName) = 0;
+    virtual void Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs) = 0;
     virtual void ResetState() = 0;
 };
 
@@ -91,6 +92,10 @@ public:
     // dimensions - map from name of node to dimension of the node
     // nodeGroup - type of node we are requesting (input/output/specified)
     virtual void GetNodeDimensions(std::map<std::wstring, size_t>& dimensions, NodeGroup nodeGroup);
+
+    // StartEvaluateMinibatchLoop - Prepare network for Evaluate() calls.
+    // ouputNodeName - name of node that will be evaluated
+    virtual void StartEvaluateMinibatchLoop(const std::wstring & outputNodeName);
 
     // Evaluate - Evalute using the model with the given inputs and outputs
     // inputs - map from node name to input vector

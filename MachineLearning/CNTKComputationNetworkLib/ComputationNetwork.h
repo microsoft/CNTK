@@ -8,19 +8,21 @@
 
 // TODOs:
 //  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, it should already be covered by Node::UpdateFunctionAndGradientMBSize() which is called from inside the Eval loop
-//  - complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
-//  - apply 
-// => many ComputationNode implementations only have two functions EvaluateThisNode(FrameRange) and ComputePartial(), as it was meant to be!
+//  - everywhere complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial; also make the same change for ComputePartial()
+//  - need Matrix::RowSlice() (problem: currently has no 'lead' dimension separate from numRows)
 //  - revise constructors, merge by means of default parameters
 //  - add a runtime check that nodes deriving from ComputeNodeNonLooping may never participate in a loop
 //  - ClassbasedCrossEntropyWithSoftmax::EvaluateThisNodeS()'s calls to MaskMissingColumnsToZero() are likely wrong.
 //    Need to understand what this does, then implement it correctly w.r.t. MBLayout.
-//  - CRFNode::ComputeInputPartial() has strange usage of layout which seems incorrect structurally (swapping id and t).
+//  - CRFNode::ComputeInputPartial() fails for >1 parallel seqeunce due to DataSlice() not being able to return whole sequences
 //  - BUGBUG: All frameRange.Check() expressions are wrong that operate on children, since the wrong layout pointer is passed in (for most nodes it is identical to the correct one though).
 //    This will get fixed as we remove these Check() expressions when absorbing EvaluateThisNodeS().
-//  - verify that all readers return layouts
+//  - implement reading of MB Layout in Binary, DSSM, LivbSVM, and SparsePCReader
 //  - BUGBUG (in the future): Once we have > 1 layout in the system, all nodes must compare their actual layouts upon Evaluate().
 //    Example: TimeReverse must create a new layout. A second TimeReverse ideally would revert back, but can't know. Hence, all consumers of layouts must compare upon Evaluate().
+//  - more informative CUDA errors (show original error, machine name, and card id; maybe even a time stamp), to better be able to handle hardware issues
+//  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
+//  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
 
 // The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
 
@@ -105,15 +107,6 @@ public:
     virtual ~ComputationNetwork()
     {
         ClearNet();
-    }
-
-    // -----------------------------------------------------------------------
-    // evaluation
-    // -----------------------------------------------------------------------
-
-    static bool IsSmaller(const ComputationNodeBasePtr lhs, const ComputationNodeBasePtr rhs)
-    {
-        return lhs->GetVisitedOrder() < rhs->GetVisitedOrder();
     }
 
     // -----------------------------------------------------------------------
@@ -572,13 +565,12 @@ public:
     //  - these must be executed frame by frame rather than as a map
     //  - such a loop is treated as if they were a little nested network; this is done inside here
     //  - these little nested networks are defined in m_recurrentInfo[]
-    void Evaluate(const ComputationNodeBasePtr rootNode)
+    void Evaluate(const ComputationNodeBasePtr & rootNode)
     {
-        // prepare to compute with the subnetwork that this rootNode depends on, including
-        //  - auto-detecting recurrent loops
-        //  - collect input and learnable nodes
-        //  - calling Validate() on all nodes lazily, which sizes all matrices (column dimensions get updated to MB size)
-        BuildAndValidateSubNetwork(rootNode);
+        // caller must call BuildAndValidateSubNetwork() before
+        // TODO: Some places are hard to fix, e.g. encoder-decoder best-path functions. Those may be broken; this message will tell you.
+        if (!BuiltAndValidatedSubNetwork(rootNode))
+            LogicError("Evaluate for node %ls %ls: BuildAndValidateSubNetwork() has not been called on this node.");
 
         // determines order of evaluation, such that children get evaluated before their parent nodes
         std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode, false);
@@ -610,6 +602,11 @@ public:
 
                 // get layout associated with this loop
                 auto pMBLayout = recurrentNodes[0]->GetMBLayout();
+
+                // tell all that loop is about to commence
+                for (auto & nodeIter : recurrentNodes)
+                    nodeIter->OnEvaluateBeginIteration();
+
                 for (auto & nodeIter : recurrentNodes)  // layout must be shared by all nodes in the loop
                 {
                     if (!pMBLayout || nodeIter->GetMBLayout() != pMBLayout)
@@ -618,6 +615,20 @@ public:
                 }
 
                 // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
+#if 1
+                (*nodeIter)->UpdateFunctionAndGradientMBSize(); // TODO: for sequence-to-sequence models we will need to be able to grow this step by step since size is unknown upfront
+                FrameRangeIteration range(pMBLayout, recInfo->m_isForwardLoop ? -1 : +1);
+                for (auto t = range.begin(); t != range.end(); t++)
+                {
+                    for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+                    {
+                        (*nodeIter)->EvaluateThisNode(t);
+                        if (IsNodeReqMultiSeqHandling(*nodeIter))
+                            (*nodeIter)->MaskMissingValuesColumnsToZero(t.t());  // TODO: This should take a FrameRange as well
+                        (*nodeIter)->UpdateEvalTimeStamp();
+                    }
+                } 
+#else
                 if (recInfo->m_isForwardLoop)
                 {
                     // note: the number of time steps may increase as we go along, e.g. for Decoder networks that decide the end based on network output
@@ -649,7 +660,12 @@ public:
                         }
                     }
                 }
+#endif
     
+                // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
+                for (auto & nodeIter : recurrentNodes)
+                    nodeIter->OnEvaluateEndIteration();
+
                 recInfo->m_completedEvaluate = true;
             }
 
@@ -666,12 +682,22 @@ public:
                 // evaluate the node for all frames concurrently (map)
                 // we manage time stamp here so that derived classes don't need to worry about it
                 (*nodeIter)->UpdateFunctionAndGradientMBSize();
+                (*nodeIter)->OnEvaluateBeginIteration();
                 (*nodeIter)->EvaluateThisNode(FrameRange());
                 if (IsNodeReqMultiSeqHandling(*nodeIter))
                     (*nodeIter)->MaskMissingValuesColumnsToZero();
+                (*nodeIter)->OnEvaluateEndIteration();
                 (*nodeIter)->UpdateEvalTimeStamp();
             }
+            else
+                (*nodeIter)->OnEvaluateEndIteration();  // HACK to enforce NaN check
         }
+    }
+    template<class NODESET>
+    void Evaluate(const NODESET & nodes)
+    {
+        for (auto & node : nodes)
+            Evaluate(node);
     }
 
     // propagate the features' MB size to all nodes of the network
@@ -774,6 +800,20 @@ public:
                 if (recInfo->m_completedGradient == false)
                 {
                     const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+#if 1
+                    auto pMBLayout = recurrentNodes[0]->GetMBLayout();
+                    FrameRangeIteration range(pMBLayout, recInfo->m_isForwardLoop ? -1 : +1);
+                    for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iteration
+                    {
+                        for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                        {
+                            (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
+                            if (IsNodeReqMultiSeqHandling(*nodeIter))
+                                (*nodeIter)->MaskMissingGradientColumnsToZero(t.t());   // TODO: should accept a FrameRange as well
+                            (*nodeIter)->ComputeGradientForChildren(t.t());             // TODO: should accept a FrameRange as well
+                        }
+                    }
+#else
                     size_t T = m_actualMBSize / GetNumParallelSequences();
                     if (recInfo->m_isForwardLoop)
                     {
@@ -801,6 +841,7 @@ public:
                             }
                         }
                     }
+#endif
 
                     recInfo->m_completedGradient = true;
                 }
@@ -859,8 +900,8 @@ public:
     static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes);
     template<class ElemType> // TODO: dropoutRate change to double
     static void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
-	template<class ElemType>
-	static void SetSeqParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const ElemType hsmoothingWeight, const ElemType frameDropThresh, const bool doreferencealign);
+    template<class ElemType>
+    static void SetSeqParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
     static void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------
@@ -1195,10 +1236,29 @@ public: // yak--used by NDLUtil. Will go away someday.
         }
     }
 private:
+    void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t & todo);
     void ValidateSubNetwork(const ComputationNodeBasePtr rootNode);
 public:
     // prepares the network for computation
     void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
+    // and for a set of nodes
+    void StartEvaluateMinibatchLoop(const ComputationNodeBasePtr & rootNode)  // (ugly name; meant to be unique so we can rename if needed)
+    {
+        BuildAndValidateSubNetwork(rootNode);
+    }
+    template<class NODESET>
+    void StartEvaluateMinibatchLoop(const NODESET & nodes)  // (ugly name; meant to be unique so we can rename if needed)
+    {
+        for (auto & node : nodes)
+            StartEvaluateMinibatchLoop(node);
+    }
+    template<class NODESET>
+    void StartEvaluateMinibatchLoop(const NODESET & nodes1, const NODESET & nodes2) // often needed for two sets (training & evaluation criteria)
+    {
+        StartEvaluateMinibatchLoop(nodes1);
+        StartEvaluateMinibatchLoop(nodes2);
+    }
+    bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 
     //this function will need to be called before actual validation and execution to 
     //predetermine how to share matrices to reduce memory usage.
@@ -1370,6 +1430,7 @@ public:
         }
     };
 
+    // only called from FindBestPath() and FindbestPathWithVariableLength()
     template<class ElemType>
     void SetHistory(map<wstring, Matrix<ElemType>>& history)
     {

@@ -71,18 +71,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class BaseMatrix
     {
     public:
-        MatrixFormat GetFormat() const {return m_format;}
-        void SetFormat(MatrixFormat format) {m_format = format;}
-        size_t GetNumRows() const {return m_numRows;}
-        size_t GetNumCols() const {return m_numCols;}
-        size_t GetNumElements() const {return m_numRows * m_numCols;}
-        bool IsEmpty() const {return m_numRows  == 0 || m_numCols == 0; }
-        ElemType* GetArray() {return m_pArray;}
-        void SetArray(ElemType *parray) {m_pArray = parray;}
+        MatrixFormat GetFormat() const { return m_format; }
+        void SetFormat(MatrixFormat format) { m_format = format; }
+        size_t GetNumRows() const { return m_numRows; }
+        size_t GetNumCols() const { return m_numCols; }
+        size_t GetNumElements() const { return m_numRows * m_numCols; }
+        bool IsEmpty() const { return m_numRows  == 0 || m_numCols == 0; }
+        ElemType* GetArray() { return m_pArray; }
+        void SetArray(ElemType *parray) { m_pArray = parray; }
         virtual DEVICEID_TYPE GetComputeDeviceId() const {return m_computeDevice;}
-        void SetComputeDeviceId(const DEVICEID_TYPE computeId) const {m_computeDevice = computeId;}
+        void SetComputeDeviceId(const DEVICEID_TYPE computeId) const { m_computeDevice = computeId; }
         bool OwnBuffer() const {return !m_externalBuffer && m_computeDevice != MANAGEDEXTERN;}
-        void SetOwnBuffer(bool own) {m_externalBuffer = !own;}
+        void SetOwnBuffer(bool own) { m_externalBuffer = !own; }
         wchar_t* GetMatrixName() const { return m_matrixName; }
         size_t NzCount() const {return m_nz;}
         void SetNzCount(const size_t nz) { m_nz = nz; }

@@ -984,8 +984,9 @@ public:
         void getedgeacscores (std::vector<float> & edgeacscores);
         void getedgealignments (std::vector<unsigned short> & edgealignments);
 		//to work with CNTK's GPU memory
-		void setmode(bool cpumode/*, size_t DeviceId*/);
-		void release(bool cpumode);		
+		void setdevice(size_t DeviceId);
+        size_t getdevice();
+		void release(bool cpumode);
 		void setloglls(const Microsoft::MSR::CNTK::Matrix<float>& loglls);
         void setloglls(const Microsoft::MSR::CNTK::Matrix<double>& loglls);
 		void getgamma(Microsoft::MSR::CNTK::Matrix<float>& loglls);

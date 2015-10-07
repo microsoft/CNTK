@@ -192,25 +192,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
+            m_outputImageLayout = ImageLayout();
         }
-
-        /// label : output label vector of [0:T-1]
-        /// position_dependent_score : score from position dependent node,
-        /// in the R-CRF case, it is the RNN output score before softmax
-        /// transition score : score from the transition node, 
-        /// in the R-CRF case, it is the transition probability between labels
-        //virtual void AttachInputs(const ComputationNodePtr label,
-        //    const ComputationNodePtr position_dependent_score,
-        //    const ComputationNodePtr transition_score)
-        //{
-        //    m_children.resize(3);
-        //    m_children[0] = label;
-        //    m_children[1] = position_dependent_score;
-        //    m_children[2] = transition_score;
-        //}
     };
  
 
