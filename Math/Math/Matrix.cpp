@@ -1381,7 +1381,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false),
             m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false)
             );
-#ifdef _DEBUG
+#if 0//def _DEBUG
         Invalidate();
 #endif
     }

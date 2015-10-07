@@ -505,11 +505,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*IComputationNode::*/OnEvaluateBeginIteration()             // called before first iteration step of EvaluateThisNode()
         {
-            fprintf(stderr, "OnEvaluateBeginIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+            //fprintf(stderr, "OnEvaluateBeginIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
         }
         virtual void /*IComputationNode::*/OnEvaluateEndIteration()               // called after last iteration step of EvaluateThisNode()
         {
-            fprintf(stderr, "OnEvaluateEndIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+            //fprintf(stderr, "OnEvaluateEndIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
         }
 
     protected:
@@ -877,7 +877,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /*implement*/void Resize(size_t rows, size_t cols)
         {
             FunctionValues().Resize(rows, cols);
-#ifdef _DEBUG
+#if 0//def _DEBUG
             fprintf(stderr, "Resize: Destructive resize to (%d x %d) in %ls %ls operation.\n", (int)rows, (int)cols, NodeName().c_str(), OperationName().c_str());
 #endif
         }
@@ -1255,7 +1255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return DataSlice(GradientValues(), frameRange);
         }
 
-#ifdef _DEBUG
+#if 0//def _DEBUG
         virtual void /*IComputationNode::*/OnEvaluateEndIteration()               // called after last iteration step of EvaluateThisNode()
         {
             Base::OnEvaluateEndIteration();

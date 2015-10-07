@@ -331,7 +331,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         while (todo > 0)
         {
             pass++;
-            fprintf(stderr, "\n\nValidating for node %ls. Processing %d nodes in pass %d.\n", rootNode->NodeName().c_str(), (int)todo, (int)pass);
+            fprintf(stderr, "\n\nValidating for node %ls. %d nodes to process in pass %d.\n", rootNode->NodeName().c_str(), (int)todo, (int)pass);
 
             // validate in order
             todo = 0;

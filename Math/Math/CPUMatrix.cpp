@@ -124,7 +124,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     static ElemType * NewArray(size_t n)
     {
         ElemType * p = new ElemType[n]();
-#if _DEBUG  // BUGBUG BUGBUG: If I comment this in in Release, two Release tests fail. Track this down!!
+#if 0//_DEBUG
         ElemType nan = Matrix<ElemType>::MakeNan(__LINE__);
         for (size_t i = 0; i < n; i++)
             p[i] = nan;
