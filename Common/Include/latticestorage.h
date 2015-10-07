@@ -26,7 +26,7 @@ static void checkoverflow (size_t fieldval, size_t targetval, const char * field
     if (fieldval != targetval)
     {
         char buf[1000];
-#if _MSC_VER < 1900
+#if defined(_MSC_VER) && _MSC_VER < 1900
         sprintf_s
 #else
         std::snprintf
