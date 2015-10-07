@@ -126,7 +126,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void ComputationNode<ElemType>::ValidateInferInputSize(size_t i, size_t rows, size_t cols) //override final
     {
-        if (Inputs(i)->OperationName() == OperationNameOf(LearnableParameter))
+        if (Inputs(i)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(i)->GetNumRows() == 0)
         {
             Inputs(i)->Resize(rows, cols);
             Inputs(i)->Validate(true);  // validate it properly
