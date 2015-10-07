@@ -304,8 +304,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: ^^ is this really needed? Can we just call it inside?
     void ComputationNetwork::ValidateSubNetwork(const ComputationNodeBasePtr rootNode)
     {
-        fprintf(stderr, "\n\nValidating node %ls \n", rootNode->NodeName().c_str());
-
         // set up MBLayout links of inputs (all others get propagated upwards through Validate())
         // TODO: Once we support mismatching layouts, this will be more involved. For now, everything shares the one layout that the Network knows about.
         for (auto node : InputNodes(rootNode))
@@ -323,6 +321,67 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Nodes validated on partial input (i.e. some children not yet validated) will be revisited.
         const auto & nodes = GetEvalOrder(rootNode, false);
 
+        for (auto & node : nodes)
+            node->m_visited = false;
+
+        // loop and validate until we are done
+        size_t todo = nodes.size();
+        size_t pass = 0;
+        bool allVisited = false;
+        while (todo > 0)
+        {
+            pass++;
+            fprintf(stderr, "\n\nValidating for node %ls. Processing %d nodes in pass %d.\n", rootNode->NodeName().c_str(), (int)todo, (int)pass);
+
+            // validate in order
+            todo = 0;
+            allVisited = true;
+            for (auto & node : nodes)
+            {
+                // only validate a node if it has at least one child
+                bool hasVisitedChild = false;
+                const auto children = node->GetChildren();
+                for (auto & child : children)
+                    hasVisitedChild |= child->m_visited;    // if not a single visited child then no point in validating
+                bool isLeaf = node->IsLeaf();
+                // if there is not at least one visited child
+                bool valid = false;
+                if (hasVisitedChild || isLeaf)
+                {
+                    // got at least one child: it makes sense to call Validate()
+                    // keep state
+                    MBLayoutPtr oldMBLayoutPtr = node->GetMBLayout();
+                    auto dim = node->GetDims();
+                    vector<pair<size_t, size_t>> childDims;
+                    for (auto & child : children)
+                        childDims.push_back(child->GetDims());
+                    //auto imageLayouts = node->GetImageLayouts();
+                    // We do call validate(final) as many times as needed, since stuff may have changed underneath.
+                    node->PrintSelfBeforeValidation();
+                    node->Validate(allVisited/*final*/);      // all nodes have been visited: do verification instead of just inference
+                    fprintf(stderr, " -> [%lu, %s%lu]", node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
+                    node->m_visited = true;
+                    // check state --node will be valid if all nodes have been visited and node has not been updated
+                    bool willBeValid = allVisited;
+                    willBeValid &= (oldMBLayoutPtr == node->GetMBLayout());
+                    willBeValid &= (dim == node->GetDims());
+                    vector<pair<size_t, size_t>> newChildDims;
+                    for (auto & child : children)
+                        newChildDims.push_back(child->GetDims());
+                    willBeValid &= (childDims == newChildDims);
+                    //willBeValid &= (imageLayouts == node->GetImageLayouts());     // TODO: why does the compiler not eat this?
+                    // if all children valid then 
+                    valid = willBeValid || isLeaf;
+                }
+                else
+                    allVisited = false; // some were skipped
+                // count those that we need to redo
+                if (!valid)
+                    todo++;
+            }
+        }
+
+#if 0
         // first phase: run all Validate() at least once, but only if they have at least one input that has run Validate() already
         set<ComputationNodeBasePtr> partiallyValidated, fullyValidated;
         list<ComputationNodeBasePtr> pendingNodes;
@@ -398,6 +457,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 nodesToFullyValidate = nodes;   // need to do all
             }
         }
+#endif
         for (auto & node : nodes)
         {
             // verify that the contract with MB layout was obeyed by Validate()

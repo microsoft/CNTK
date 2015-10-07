@@ -59,13 +59,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // if dimension not specified we assume two operands' dimensions should be the same
         for (size_t index = 0; index < m_children.size(); index++)
         {
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
+            auto in = Inputs(index);
+            if (in->OperationName() == OperationNameOf(LearnableParameter) && in->GetNumRows() == 0)
             {
-                auto in = Inputs(index);
                 auto other = Inputs(1 - index);
                 // borrow any unset dimension on one input from the other input
                 size_t rows = in->GetNumRows() == 0 ? other->GetNumRows() : in->GetNumRows();
                 size_t cols = (!HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols() : in->GetNumCols();
+                fprintf(stderr, "ValidateInferBinaryChildren: Inferring %ls %ls operation as (%d x %d)", NodeName().c_str(), OperationName().c_str(), (int)rows, (int)cols);
                 in->Resize(rows, cols);
             }
         }
