@@ -930,12 +930,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
                     {
                         ComputationNodeBasePtr node = *nodeIter;
-                        Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
+                        if (node->NeedGradient())
+                        {
+                            Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
 
-                        UpdateWeights(node, smoothedGradient, learnRatePerSample, GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, dataReader[0]->GetNumParallelSequences()), actualMBSize, m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
+                            UpdateWeights(node, smoothedGradient, learnRatePerSample, GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, dataReader[0]->GetNumParallelSequences()), actualMBSize, m_L2RegWeight, m_L1RegWeight, m_needAveMultiplier);
+                        }
                     }
                 }
-
 
                 endComputeMBTime = clock();
                 numMBsRun++;
