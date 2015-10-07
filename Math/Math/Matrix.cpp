@@ -1381,8 +1381,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false),
             m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false)
             );
-#if 0//def _DEBUG
-        Invalidate();
+#ifdef _DEBUG
+        Invalidate();   // Fill the matrix with NaNs to detect using the content which is undefined.
 #endif
     }
 
