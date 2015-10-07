@@ -209,15 +209,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
 
-        // for loop nodes
-        bool m_hasloop;
-
         static atomic_ullong s_timeStampCounter;
         int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 
-        int     m_loopId;
+        // for loop nodes
+        bool m_hasloop;
+        int m_loopId;           // index into recurrent info array (TODO: verify this)
 
-        /// the order in reverse graph. 
+        // the order in reverse graph. 
         int m_visitedOrder;
         int m_index;
         int m_lowLink;          // TODO: comment this, as it is not obvious
@@ -291,6 +290,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: Not nice. This would go away if we abstracted out the matrix type as well from float/double.
         virtual size_t GetNumRows() const = 0;
         virtual size_t GetNumCols() const = 0;
+        pair<size_t, size_t> GetDims() { return make_pair(GetNumRows(), GetNumCols()); }
         virtual void Resize(size_t rows, size_t cols) = 0;
         virtual void Resize(ComputationNodeBasePtr node) { Resize(node->GetNumRows(), node->GetNumCols()); }
         void VerifySize(size_t rows, size_t cols)
@@ -475,6 +475,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             return m_children[index]->m_outputImageLayout.width != 1 || m_children[index]->m_outputImageLayout.channels != 1;
         }
+
+        pair<ImageLayout, ImageLayout> GetImageLayouts() const { return make_pair(m_inputImageLayout, m_outputImageLayout); }
 
         const size_t ChildrenSize() const { return m_children.size(); }
 
@@ -808,10 +810,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         std::vector<ComputationNodeBasePtr> m_children;
 
-        bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
+        bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.        --TODO: rename to m_needsUpdate; and new m_needsGradient then means anywhere in the tree needs a gradient
+
         ImageLayout m_inputImageLayout;     // how to interpret each column in the input as an image
         ImageLayout m_outputImageLayout;    // and the output
-        // TODO: These ^^ should be grouped into some struct, and also there is a redundancy w.r.t. GetNumCols() we need to remove.
     };
     typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
@@ -953,7 +955,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (numCols == SIZE_MAX)        // SIZE_MAX means determine from layout
                 numCols = m_pMBLayout->GetNumCols();
             m_functionValues.ResizeColumns(numCols);
-            m_gradientValues.ResizeColumns(numCols);
+            if (m_needGradient)
+                m_gradientValues.ResizeColumns(numCols);
+            else
+                m_gradientValues.Resize(0,0);
             return numCols;
         }
 

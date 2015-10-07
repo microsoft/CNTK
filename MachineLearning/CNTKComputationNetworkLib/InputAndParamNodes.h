@@ -48,6 +48,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_needGradient = true;
             m_outputImageLayout = ImageLayout(1, rows, 1);
             Resize(rows, cols);
+            FunctionValues().SetValue(0);
         }
 
         virtual void SaveToFile(File& fstream) const override
