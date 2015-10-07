@@ -248,6 +248,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return numElements;
     }
 
+    template <typename ElemType>
+    void GPUMatrix<ElemType>::Copy(size_t numRows, size_t numCols, ElemType* dst, size_t ldDst) const
+    {
+        CUBLAS_CALL(cublasGetMatrix((int)numRows, (int)numCols, sizeof(ElemType),
+            m_pArray, (int)GetNumRows(), dst, (int)ldDst));
+    }
+
     template<class ElemType>
     void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
     {

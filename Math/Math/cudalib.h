@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <cuda_runtime_api.h>
 #include "cudabasetypes.h"
 #include <vector>
 #include <memory>
@@ -13,9 +12,6 @@ namespace msra { namespace cuda {
 
 // helper functions
 void join();            // wait until current launch or other async operation is completed
-
-// managing device context switching
-cudaStream_t GetCurrentStream();
 
 // memory allocation and copying
 void * mallocbytes (size_t nelem, size_t sz);

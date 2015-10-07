@@ -149,6 +149,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ElemType* CopyToArray() const; //allocated by the callee but need to be deleted by the caller
         size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;  //allocated by the callee but need to be deleted by the caller
+        // ldDst specifies leading dimension of dst.
+        // REVIEW alexeyk: come up with a better name (e.g. CopyTile or something). GPU version copies from device to host only, implement all versions (device <-> host).
+        void Copy(size_t numRows, size_t numCols, ElemType* dst, size_t ldDst) const; 
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
 
