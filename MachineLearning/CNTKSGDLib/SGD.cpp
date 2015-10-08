@@ -431,17 +431,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (momentumPerSample.size() > 0)         // TODO: noone should use this; change to MomentumTimeConstant
         {
             m_momentumParam = momentumPerSample;
-            m_learningRatesSpecifiedForMBSize = intargvector(L"1");
+            m_momentumSpecifiedForMBSize = intargvector(L"1");
         }
         else if (momentumPerMB.size() > 0)
         {
             m_momentumParam = momentumPerMB;
-            m_learningRatesSpecifiedForMBSize = m_mbSize;
+            m_momentumSpecifiedForMBSize = m_mbSize;
         }
         else    // default: momentumPerMB = 0.9 per MB
         {
             m_momentumParam = floatargvector(L"0.9");
-            m_learningRatesSpecifiedForMBSize = m_mbSize;
+            m_momentumSpecifiedForMBSize = m_mbSize;
         }
         for (int i = 0; i < m_momentumParam.size(); i++)
         {
