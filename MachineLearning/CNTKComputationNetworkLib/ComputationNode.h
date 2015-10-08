@@ -342,7 +342,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ValidateUnaryReduce(bool isFinalValidationPass);
         void ValidateInferBinaryChildrenDims();
         void ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples);
-        void ValidateBinaryReduce(bool isFinalValidationPass);
+        void ValidateBinaryCriterion(bool isFinalValidationPass);
     public:
 
         virtual bool UnitTest() { return true; }
@@ -1496,7 +1496,7 @@ public: \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
     using Base::SaveToFile; using Base::UpdateFunctionAndGradientMBSize; using Base::SetInput; \
-    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildrenDims; using Base::ValidateInferChildDims
+    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryCriterion; using Base::ValidateInferBinaryChildrenDims; using Base::ValidateInferChildDims
 
 #define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \

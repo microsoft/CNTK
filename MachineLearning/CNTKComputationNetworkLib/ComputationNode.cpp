@@ -90,11 +90,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         InferImageDimsFromInputs();
     }
     // binary reduce-to-(1,1) operation, e.g. CrossEntropyWithSoftmaxNode
-    void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
+    // Called -Criterion and not -Reduce because generic -Reduce might want to infer child dims, while criterion nodes should never do that.
+    void ComputationNodeBase::ValidateBinaryCriterion(bool isFinalValidationPass)
     {
         ComputationNodeBase::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-        ValidateInferBinaryChildrenDims();
         if (isFinalValidationPass && !(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         Resize(1, 1);
