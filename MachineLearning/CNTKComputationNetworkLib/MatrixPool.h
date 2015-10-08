@@ -31,7 +31,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
              GetReleasedMatrices(releasedMatrices);
              if (freeMatrix == nullptr)
                   RuntimeError("MatrixPool::Release: freeMatrix should not be null.");
-                  releasedMatrices->push_back(freeMatrix);
+#ifdef _DEBUG
+             for (int i = 0; i < releasedMatrices->size(); i++)
+             {
+                 if ((*releasedMatrices)[i] == freeMatrix)
+                     RuntimeError("MatrixPool::Release: freeMatrix is already in the released pool.");
+             }
+
+#endif
+             releasedMatrices->push_back(freeMatrix);
         }
 
         template<class ElemType>

@@ -173,8 +173,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         // helper functions for common cases
-    private:
+
         ComputationNodeBasePtr Inputs(size_t index) const { return m_children[index]; } // TODO: delete this; change to m_children
+
+    private:
         // determine number of columns from a child and/or layout
         size_t DetermineNumCols(const ComputationNodeBasePtr & child) const
         {
@@ -209,17 +211,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         const std::vector<ComputationNodeBasePtr> & GetChildren() const { return m_children; }
 
-        const size_t ParentSize() const { return m_parents.size(); }
-        void ClearParents() { m_parents.clear(); }
-        void AddParent(const ComputationNodeBasePtr& pNode) { m_parents.push_back(pNode); }
-        inline ComputationNodeBasePtr Parent(const size_t parentIndex) const
-        {
-#ifdef DEBUG // profile shows this is range check very expensive in release mode, skip it  
-            if (parentIndex >= m_parents.size())
-                InvalidArgument("parentIndex is out of range.");
-#endif
-            return m_parents[parentIndex];
-        }
+        //const size_t ParentSize() const { return m_parents.size(); }
+        //void ClearParents() { m_parents.clear(); }
+        //void AddParent(const ComputationNodeBasePtr& pNode) { m_parents.push_back(pNode); }
+//        inline ComputationNodeBasePtr Parent(const size_t parentIndex) const
+//        {
+//#ifdef DEBUG // profile shows this is range check very expensive in release mode, skip it  
+//            if (parentIndex >= m_parents.size())
+//                InvalidArgument("parentIndex is out of range.");
+//#endif
+//            return m_parents[parentIndex];
+//        }
 
         // TODO: is this always just called with deviceId == m_deviceId?
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) = 0;
@@ -238,7 +240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
         }
 
-        virtual size_t UpdateFunctionAndGradientMBSize(size_t numCols = SIZE_MAX/*means take from layout--this is the main use*/) = 0;
+        virtual size_t UpdateFunctionMBSize(size_t numCols = SIZE_MAX/*means take from layout--this is the main use*/) = 0;
 
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
         MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
@@ -432,7 +434,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MaskMissingGradientColumnsToZero() = 0;
         virtual void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
 
-        virtual void ComputeGradient(const size_t timeIdxInSeq = -1) = 0;
+        //virtual void ComputeGradient(const size_t timeIdxInSeq = -1) = 0;
 
         // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
         // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNode, LSTMNode)
@@ -648,8 +650,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        virtual void ClearGradientForChildren(const int /*iActMiniBatchSize*/) = 0;
+        //virtual void ClearGradientForChildren(const int /*iActMiniBatchSize*/) = 0;
+        virtual void ClearGradientForChildren() = 0;
         virtual void ClearGradient(const bool clearExistingGradientValue) = 0;
+
+        void MarkGradientInitialized(const bool isInitialized)  { m_gradientInitialized = isInitialized; }
+
+        bool IsGradientInitialized() const { return m_gradientInitialized; }
 
         typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
         // [1/13/2015 erw] add to enumerate all the edges 
@@ -727,8 +734,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         // data members
         std::vector<ComputationNodeBasePtr> m_children;
-        std::vector<ComputationNodeBasePtr> m_parents; //m_parents are dynamically determined based on the root node you want to compute
-        std::vector<bool> m_childrenGradientComputed; //used to indicate which child's gradient has been computed.
+        //std::vector<ComputationNodeBasePtr> m_parents; //m_parents are dynamically determined based on the root node you want to compute
+        //std::vector<bool> m_childrenGradientComputed; //used to indicate which child's gradient has been computed.
+        bool m_gradientInitialized; //indicate whether the gradient matrix has been resized and initialzed to 0
 
         DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
         bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.
@@ -876,10 +884,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!IsLeaf() && !RequiresPreCompute())
             {
-                if (m_gradientValues->GetMatrixType() != SPARSE)  //since we don't have a sparse pool yet
+                if (m_gradientValues != nullptr && m_gradientValues->GetMatrixType() != SPARSE)  //since we don't have a sparse pool yet
                     ReleaseMatrixToPool(m_gradientValues, matrixPool);
 
-                //ReleaseMatrixToPool(m_functionValues, matrixPool);
+                ReleaseMatrixToPool(m_functionValues, matrixPool);
             }
         }
 
@@ -913,7 +921,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This must be called right before EvaluateThisNode() the first time for a given minibatch.
         // The 'numCols' parameter is legacy and will go away.
         // Virtual, but currently only overridden by GMMLogLikelihoodNode (which allocates some internal temp memory).
-        virtual size_t UpdateFunctionAndGradientMBSize(size_t numCols)
+        virtual size_t UpdateFunctionMBSize(size_t numCols)
         {
             if (!m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
                 return numCols;             // BUGBUG: what to return here?
@@ -922,7 +930,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_functionValues->GetNumRows() > 0 && numCols > 0)  // TODO: why skip this for 0 samples? BUGBUG: I think the 0 test is a left-over and no longer applicable since we can validate with 0-cols inputs.
             {
                 m_functionValues->ResizeColumns(numCols); 
-                m_gradientValues->ResizeColumns(numCols); 
+                //m_gradientValues->ResizeColumns(numCols);  //gradient matrix will be resized only when needed
             }
             return numCols;
         }
@@ -1184,45 +1192,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //if existing gradient values need to be cleared it needs to be done separately
         //this is to make it consistent with the per sample version to avoid setting samples to 0 one by one
         //if timeIdxInSeq = -1 we treat it as batch
-        virtual void ComputeGradient(const size_t timeIdxInSeq = -1)
-        {
-            //no need to compute gradient at all if NeedGradient is false
-            if (!NeedGradient())
-            {
-                return;
-            }
+        //virtual void ComputeGradient(const size_t timeIdxInSeq = -1)
+        //{
+        //    //no need to compute gradient at all if NeedGradient is false
+        //    if (!NeedGradient())
+        //    {
+        //        return;
+        //    }
 
-            if (ParentSize() == 0)  // root node
-            {
-                assert(timeIdxInSeq == (size_t)-1);  //should not be used in a loop
-                GradientValues().Resize(1, 1);
-                GradientValues().SetValue(1);
-            }
-            else
-            {
-                //call each parent's ComputeInputPartial function
-                for (int i = 0; i < ParentSize(); i++)
-                {
-                    ComputationNodePtr pNode = UpCast(m_parents[i]);
-                    bool inLoop = !(timeIdxInSeq == (size_t)-1);
+        //    if (ParentSize() == 0)  // root node
+        //    {
+        //        assert(timeIdxInSeq == (size_t)-1);  //should not be used in a loop
+        //        GradientValues().Resize(1, 1);
+        //        GradientValues().SetValue(1);
+        //    }
+        //    else
+        //    {
+        //        //call each parent's ComputeInputPartial function
+        //        for (int i = 0; i < ParentSize(); i++)
+        //        {
+        //            ComputationNodePtr pNode = UpCast(m_parents[i]);
+        //            bool inLoop = !(timeIdxInSeq == (size_t)-1);
 
-                    // [need check] now we set this information in computationNetwork
-                    //if (!(pNode->UseCustomizedMultiSeqHandling()))
-                    //    pNode->MaskToZeroWhenLabelAndFeatureMissing(pNode->GradientValues());
+        //            // [need check] now we set this information in computationNetwork
+        //            //if (!(pNode->UseCustomizedMultiSeqHandling()))
+        //            //    pNode->MaskToZeroWhenLabelAndFeatureMissing(pNode->GradientValues());
 
-                    int j = pNode->GetChildIdForGradientComputation(shared_from_this(), inLoop);
+        //            int j = pNode->GetChildIdForGradientComputation(shared_from_this(), inLoop);
 
-                    if (!inLoop)
-                    {
-                        pNode->ComputeInputPartial(j);
-                    }
-                    else
-                    {
-                        pNode->ComputeInputPartial(j, FrameRange(timeIdxInSeq));
-                    }
-                }
-            }
-        }
+        //            if (!inLoop)
+        //            {
+        //                pNode->ComputeInputPartial(j);
+        //            }
+        //            else
+        //            {
+        //                pNode->ComputeInputPartial(j, FrameRange(timeIdxInSeq));
+        //            }
+        //        }
+        //    }
+        //}
 
         virtual void ComputeGradientForChildren() override
         {
@@ -1242,6 +1250,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
                     fprintf(stderr,"Backprop%d_%ls\n",i,NodeName().c_str());
 #endif
+                    if (! child->IsGradientInitialized())
+                    {
+                        child->ClearGradient(true);
+                        child->MarkGradientInitialized(true);
+                    }
+
                     ComputeInputPartial(i); //this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
@@ -1265,6 +1279,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         (msra::strfun::utf8 (child->OperationName())).c_str(),
                         (msra::strfun::utf8 (child->NodeName())).c_str());
 #endif              
+                    if (! child->IsGradientInitialized())
+                    {
+                        child->ClearGradient(true);
+                        child->MarkGradientInitialized(true);
+                    }
+
                     ComputeInputPartial(i, FrameRange(timeIdxInSeq)); //this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
@@ -1275,20 +1295,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        /*implement*/void ClearGradientForChildren(const int /*iActMiniBatchSize*/)
+        ///*implement*/void ClearGradientForChildren(const int /*iActMiniBatchSize*/)
+        //{
+        //    for (size_t i=0; i<m_children.size(); i++)
+        //    {
+        //        ComputationNodePtr child = Inputs(i);
+        //        child->ClearGradient(true);
+        //    }
+        //}
+
+        /*implement*/void ClearGradientForChildren()
         {
-            for (size_t i=0; i<m_children.size(); i++)
+            for (size_t i = 0; i<m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
-                child->ClearGradient(true);
+                child->MarkGradientInitialized(false);
             }
         }
-
         virtual void ClearGradient(const bool clearExistingGradientValue)
         {
             if (NeedGradient())
             {
-                ClearChildGradientComputationFlag();
+                //ClearChildGradientComputationFlag();
 
                 if (clearExistingGradientValue)
                 {
@@ -1513,7 +1541,7 @@ public: \
     using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
-    using Base::SaveToFile; using Base::UpdateFunctionAndGradientMBSize; using Base::SetInput; \
+    using Base::SaveToFile; using Base::UpdateFunctionMBSize; using Base::SetInput; \
     using Base::RequestMatricesBeforeEval; using Base::ReleaseMatricesAfterEval; \
     using Base::RequestMatricesBeforeGradientComp; using Base::ReleaseMatricesAfterGradientComp; \
     using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; \
