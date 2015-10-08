@@ -719,12 +719,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void Matrix<ElemType>::Copy(size_t numRows, size_t numCols, ElemType* dst, size_t ldDst) const
+    void Matrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            m_CPUMatrix->Copy(numRows, numCols, dst, ldDst),
-            m_GPUMatrix->Copy(numRows, numCols, dst, ldDst),
+            m_CPUMatrix->CopySection(numRows, numCols, dst, colStride),
+            m_GPUMatrix->CopySection(numRows, numCols, dst, colStride),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -4549,8 +4549,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(&a,
             &a,
             return CPUMatrix<ElemType>::HasElement(*a.m_CPUMatrix, value),
-            NOT_IMPLEMENTED; return false,
             return GPUMatrix<ElemType>::HasElement(*a.m_GPUMatrix, value),
+            NOT_IMPLEMENTED; return false,
             NOT_IMPLEMENTED; return false
             );
     }

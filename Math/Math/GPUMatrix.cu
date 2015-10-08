@@ -249,10 +249,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template <typename ElemType>
-    void GPUMatrix<ElemType>::Copy(size_t numRows, size_t numCols, ElemType* dst, size_t ldDst) const
+    void GPUMatrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const
     {
         CUBLAS_CALL(cublasGetMatrix((int)numRows, (int)numCols, sizeof(ElemType),
-            m_pArray, (int)GetNumRows(), dst, (int)ldDst));
+            m_pArray, (int)GetNumRows(), dst, (int)colStride));
     }
 
     template<class ElemType>
@@ -3786,25 +3786,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty())
             throw std::logic_error("HasElement: the input matrix is empty.");
 
-        bool bResult = false; 
+        bool bResult = false;
         a.PrepareDevice();
         ElemType *res = new ElemType[2];
-        res[0] = 0;
-        res[1] = v;
+        res[0] = v;
+        res[1] = 0;
         ElemType *d_res = NULL;
         CUDA_CALL(cudaMalloc((void**)&d_res, sizeof(ElemType) * 2));
         CUDA_CALL(cudaMemcpy(d_res, res, sizeof(ElemType) * 2, cudaMemcpyHostToDevice));
         CUDA_LONG N = (CUDA_LONG)a.GetNumElements();
         int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
-        _hasElement<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(a.m_pArray, N, d_res);
+        _hasElement<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(a.m_pArray, N, d_res);
         CUDA_CALL(cudaMemcpy(res, d_res, sizeof(ElemType) * 2, cudaMemcpyDeviceToHost));
         CUDA_CALL(cudaFree(d_res));
         if (res[1] != 0)
-            bResult = true; 
+            bResult = true;
         else
             bResult = false;
 
-        delete [] res;
+        delete[] res;
         return bResult;
     }
 
