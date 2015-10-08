@@ -23,34 +23,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void UtteranceDerivativeBuffer<ElemType>::ProcessUttInfo(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
-        const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlags>& minibatchPackingFlags,
+        const MBLayoutPtr pMBLayout,
         std::vector<std::vector<std::pair<
             wstring, std::pair<size_t, size_t>>>>* uttInfoInMinibatch) const
     {
         assert(uttInfoInMinibatch != NULL);
         assert(uttInfo.size() == m_numUttsPerMinibatch);
-        assert(sentenceBegin.GetNumRows() == m_numUttsPerMinibatch);
-        assert(minibatchPackingFlags.size() == sentenceBegin.GetNumCols());
+        assert(pMBLayout->GetNumParallelSequences() == m_numUttsPerMinibatch);
         uttInfoInMinibatch->clear();
         uttInfoInMinibatch->resize(uttInfo.size());
         for (size_t i = 0; i < uttInfo.size(); ++i)
         {
             size_t startFrameIndexInMinibatch = 0;
             size_t numFrames = 0;
-            for (size_t j = 0; j < sentenceBegin.GetNumCols(); ++j)
+            for (size_t j = 0; j < pMBLayout->GetNumTimeSteps(); ++j)
             {
-                if (((int)sentenceBegin(i, j) & NO_LABEL) == NO_LABEL)
+                if (pMBLayout->Is(i, j, MinibatchPackingFlags::NoLabel))
                 {
                     continue;
                 }
-                if (((int)sentenceBegin(i, j) & NO_FEATURE) == NO_FEATURE)
+                if (pMBLayout->Is(i, j, MinibatchPackingFlags::NoFeature))
                 {
                     continue;
                 }
                 numFrames += 1;
-                if ((((int)sentenceBegin(i, j) & SEQUENCE_END) == SEQUENCE_END)
-                         || j == sentenceBegin.GetNumCols() - 1)
+                if (pMBLayout->Is(i, j, MinibatchPackingFlags::SequenceEnd)
+                         || j == pMBLayout->GetNumTimeSteps() - 1)
                 {
                     size_t uttIndex = (*uttInfoInMinibatch)[i].size();
                     wstring uttID = uttInfo[i][uttIndex].first;
@@ -74,8 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     bool UtteranceDerivativeBuffer<ElemType>::SetLikelihood(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& logLikelihoodIn,
-        const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlags>& minibatchPackingFlags)
+        const MBLayoutPtr pMBLayout)
     {
         assert(m_needLikelihood == true);
         assert(m_epochEnd == false);
@@ -88,8 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         std::vector<std::vector<
             std::pair<wstring, std::pair<size_t, size_t>>>> uttInfoInMinibatch;
-        ProcessUttInfo(uttInfo, sentenceBegin,
-                       minibatchPackingFlags, &uttInfoInMinibatch);
+        ProcessUttInfo(uttInfo, pMBLayout, &uttInfoInMinibatch);
 
         // Checks if we need to move data to CPU.
         Matrix<ElemType> logLikelihood(logLikelihoodIn);
@@ -99,7 +95,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 logLikelihood.GetDeviceId(), CPUDEVICE, true, false, false);
         }
 
-        size_t currentMBSize = minibatchPackingFlags.size();
+        size_t currentMBSize = pMBLayout->GetNumTimeSteps();
         for (size_t i = 0; i < uttInfo.size(); ++i)
         {
             assert(uttInfo[i].size() == uttInfoInMinibatch[i].size());
@@ -173,21 +169,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool UtteranceDerivativeBuffer<ElemType>::GetDerivative(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
-        const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlags>& minibatchPackingFlags,
+        const MBLayoutPtr pMBLayout,
         Matrix<ElemType>* derivativesOut)
     {
         assert(derivativesOut != NULL);
         assert(m_needLikelihood == false);
         std::vector<std::vector<
             std::pair<wstring, std::pair<size_t, size_t>>>> uttInfoInMinibatch;
-        ProcessUttInfo(uttInfo, sentenceBegin,
-                       minibatchPackingFlags, &uttInfoInMinibatch);
+        ProcessUttInfo(uttInfo, pMBLayout, &uttInfoInMinibatch);
 
         m_currentObj = 0;
         Matrix<ElemType> derivatives(CPUDEVICE);
-        derivatives.Resize(m_dimension,
-            sentenceBegin.GetNumCols() * sentenceBegin.GetNumRows());
+        derivatives.Resize(m_dimension, pMBLayout->GetNumCols());
         for (size_t i = 0; i < uttInfo.size(); ++i)
         {
             assert(uttInfo[i].size() == uttInfoInMinibatch[i].size());

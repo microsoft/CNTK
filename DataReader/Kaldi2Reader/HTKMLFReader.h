@@ -35,10 +35,10 @@ private:
     {
         std::vector<std::vector<ElemType>> features;
         std::vector<std::vector<ElemType>> labels;
-        Matrix<ElemType> sentenceBegin;
-        vector<MinibatchPackingFlags> minibatchPackingFlag;
+        MBLayoutPtr pMBLayout;
         std::vector<std::vector<std::pair<wstring, size_t>>> minibatchUttInfo;
         size_t currentMBSize;
+        MinibatchBufferUnit() : pMBLayout(make_shared<MBLayout>()), currentMBSize(0) {}
     };
     bool m_doMinibatchBuffering;
     bool m_getMinibatchCopy;
@@ -151,35 +151,14 @@ private:
 
 
 public:
+    MBLayoutPtr m_pMBLayout;
    
-    /// a matrix of n_stream x n_length
-    /// n_stream is the number of streams
-    /// n_length is the maximum lenght of each stream
-    /// for example, two sentences used in parallel in one minibatch would be
-    /// [2 x 5] if the max length of one of the sentences is 5
-    /// the elements of the matrix is 0, 1, or -1, defined as SEQUENCE_START, SEQUENCE_MIDDLE, NO_INPUT in cbasetype.h 
-    /// 0 1 1 0 1
-    /// 1 0 1 0 0 
-    /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
-    /// the second data stream has two sentences, with 0 indicating begining of sentences
-    /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
-    /// frame.
-    Matrix<ElemType> m_sentenceBegin;
-
-    /// a matrix of 1 x n_length
-    /// 1 denotes the case that there exists sentnece begin or no_labels case in this frame
-    /// 0 denotes such case is not in this frame
-
-
-    vector<MinibatchPackingFlags> m_minibatchPackingFlags;
-
     /// by default it is false
     /// if true, reader will set to SEQUENCE_MIDDLE for time positions that are orignally correspond to SEQUENCE_START
     /// set to true so that a current minibatch can uses state activities from the previous minibatch. 
     /// default will have truncated BPTT, which only does BPTT inside a minibatch
-
     bool mIgnoreSentenceBeginTag;
-    HTKMLFReader() : m_sentenceBegin(CPUDEVICE) {
+    HTKMLFReader() : m_pMBLayout(make_shared<MBLayout>()){
     }
 
     virtual void Init(const ConfigParameters& config);
@@ -195,19 +174,18 @@ public:
     virtual bool GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         std::map<std::wstring, Matrix<ElemType>*>& matrices,
-        Matrix<ElemType>& sentenceBegin,
-        vector<MinibatchPackingFlags>& sentenceExistsBeginOrNoLabels);
+        MBLayoutPtr pMBLayout);
     virtual bool SetNetOutput(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& outputs,
-        const Matrix<ElemType>& sentenceBegin,
-        const vector<MinibatchPackingFlags>& sentenceExistsBeginOrNoLabels);
+        const MBLayoutPtr pMBLayout);
 
     virtual bool DataEnd(EndDataType endDataType);
     void SetSentenceEndInBatch(vector<size_t> &/*sentenceEnd*/);
     void SetSentenceEnd(int /*actualMbSize*/){};
 
-    void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlags>& sentenceExistsBeginOrNoLabels);
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { pMBLayout->CopyFrom(m_pMBLayout); }
+    bool RequireSentenceSeg() const override { return !m_framemode; };
 };
 
 }}}

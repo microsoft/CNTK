@@ -1634,24 +1634,23 @@ template<class ElemType>
         return lastTriedTrialMinibatchSize;
     }
 
-    // Tries to compute derivatives for the whole utterances, which will be
-    // fed to the neural network as features.
-    // This function currently does nothing in the Windows build (no version of GetMinibatchCopy() does anything),
-    // but it is currently used in the Kaldi reader to support parallelizing more utterances in sequence and CTC training. Only implemented inside Kaldi reader right now.
+    // Attemps to compute the error signal for the whole utterance, which will
+    // be fed to the neural network as features. Currently it is a workaround
+    // for the two-forward-pass sequence and ctc training, which allows
+    // processing more utterances at the same time. Only used in Kaldi2Reader.
+    // TODO: move the two-forward-pass support out of the reader.
     template<class ElemType>
     void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetwork& net,
                                             IDataReader<ElemType>* trainSetDataReader,
                                             const std::vector<ComputationNodeBasePtr> & featureNodes,
                                             std::map<std::wstring, Matrix<ElemType>*>* inputMatrices)
     {
-        // Tries to read an utterance and run forward computation on the
-        // whole utterance.
         assert(trainSetDataReader != NULL);
         std::vector<std::vector<std::pair<wstring, size_t>>> uttInfo;
         auto pMBLayout = make_shared<MBLayout>();
+        // TODO: use GetMinibatchIntoNetwork().
         while (trainSetDataReader->GetMinibatchCopy(uttInfo, *inputMatrices, pMBLayout))
         {
-            // TODO: should use GetMinibatchIntoNetwork(), but can't because GetMinibatchCopy() is not the same (whatever it is)
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
             auto & outputNodes = net.OutputNodes();
@@ -1766,7 +1765,11 @@ template<class ElemType>
             trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, m_epochSize);
         }
 
-        // TODO: what is this??
+        // Attemps to compute the error signal for the whole utterance, which will
+        // be fed to the neural network as features. Currently it is a workaround
+        // for the two-forward-pass sequence and ctc training, which allows
+        // processing more utterances at the same time. Only used in Kaldi2Reader.
+        // TODO: move the two-forward-pass support out of the reader.
         AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, featureNodes, inputMatrices);
 
         fprintf(stderr, "\nStarting minibatch loop");
@@ -2038,7 +2041,11 @@ template<class ElemType>
             // DataEnd does reader specific process if sentence ending is reached
             trainSetDataReader->DataEnd(EndDataType::endDataSentence);
 
-            // Tries to set up derivative features for the next utterance.
+            // Attemps to compute the error signal for the whole utterance, which will
+            // be fed to the neural network as features. Currently it is a workaround
+            // for the two-forward-pass sequence and ctc training, which allows
+            // processing more utterances at the same time. Only used in Kaldi2Reader.
+            // TODO: move the two-forward-pass support out of the reader.
             AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, featureNodes, inputMatrices);
 
             profiler.NextSample();
