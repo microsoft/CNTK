@@ -409,8 +409,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (matrixFlagDontOwnBuffer & matrixFlags || m_preferredDeviceId == MANAGEDEXTERN)
             m_baseMatrix->SetOwnBuffer(false);
-
-        SetValue(0);
     }
 
     //copy constructor, deep copy
