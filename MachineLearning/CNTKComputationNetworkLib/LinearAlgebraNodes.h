@@ -736,11 +736,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: use dynamic_pointer_cast
             // infer cols0 as rows1
             if (cols0 == 0 && !Inputs(0)->GetMBLayout() && rows1 != 0 && isFinalValidationPass)
-                ValidateInferInputSize(0, rows0, rows1);
+                ValidateInferChildDims(0, rows0, rows1);
 
             // infer rows1 as cols0
             if (cols0 != 0 && rows1 == 0)
-                ValidateInferInputSize(1, cols0, cols1);
+                ValidateInferChildDims(1, cols0, cols1);
 
             // cols0 and rows1 may have been changed so don't use them in the following check
             // TODO: why not check this when part of a loop?
@@ -887,10 +887,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("TransposeTimes operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 since it cannot be automatically inferred");
 
             if (cols0 == 0 && rows1 != 0 && isFinalValidationPass)
-                ValidateInferInputSize(0, rows0, rows1);
+                ValidateInferChildDims(0, rows0, rows1);
 
             if (cols0 != 0 && rows1 == 0)
-                ValidateInferInputSize(1, cols0, cols1);
+                ValidateInferChildDims(1, cols0, cols1);
 
             //cols0 and rows1 may have been changed so don't use them in the following check
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows())
@@ -992,7 +992,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
                     size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-                    ValidateInferInputSize(index, rows, cols);
+                    ValidateInferChildDims(index, rows, cols);
                 }
             }
 
@@ -1264,7 +1264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferInputSize(index, rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
@@ -1793,10 +1793,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //if dimension not specified we assume two operands' dimensions should match
             if (Inputs(0)->GetNumRows() == 0 && Inputs(1)->GetNumRows() != 0)
-                ValidateInferInputSize(0, Inputs(1)->GetNumRows(), 1);
+                ValidateInferChildDims(0, Inputs(1)->GetNumRows(), 1);
 
             if (Inputs(0)->GetNumRows() != 0 && Inputs(1)->GetNumRows() == 0)
-                ValidateInferInputSize(1, Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
+                ValidateInferChildDims(1, Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
 
             if (isFinalValidationPass)
             {
@@ -1984,14 +1984,14 @@ private:
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferInputSize(index, rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             index = 1;
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferInputSize(index, rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
@@ -2140,10 +2140,10 @@ private:
             size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
             if (cols0 == 0 && cols1 != 0)
-                ValidateInferInputSize(0, rows0, cols1);
+                ValidateInferChildDims(0, rows0, cols1);
 
             if (cols0 != 0 && cols1 == 0)
-                ValidateInferInputSize(1, rows1, cols0);
+                ValidateInferChildDims(1, rows1, cols0);
 
             if (isFinalValidationPass && Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())
                 LogicError("The Matrices should have same number of columns.");
@@ -2356,14 +2356,14 @@ private:
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferInputSize(index, rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             index = 1;
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferInputSize(index, rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))

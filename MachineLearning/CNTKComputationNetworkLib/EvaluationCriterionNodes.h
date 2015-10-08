@@ -68,14 +68,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferInputSize(index, rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             index = 1;
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferInputSize(index, rows, cols);
+                ValidateInferChildDims(index, rows, cols);
                 m_maxIndexes0.Resize(1,cols);
                 m_maxIndexes1.Resize(1,cols);
                 m_maxValues.Resize(1,cols);

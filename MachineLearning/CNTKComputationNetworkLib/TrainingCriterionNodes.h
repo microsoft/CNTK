@@ -1359,7 +1359,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             // TODO: What is this about?
             //if (Inputs(1)->GetNumCols() != Inputs(2)->GetNumCols())
-            //    ValidateInferInputSize(1, Inputs(1)->GetNumRows(), Inputs(2)->GetNumCols()); 
+            //    ValidateInferChildDims(1, Inputs(1)->GetNumRows(), Inputs(2)->GetNumCols()); 
 
             Resize(1,1);
             m_pMBLayout = nullptr;    // this node does not hold mini-batch data
@@ -1500,7 +1500,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
                 LogicError("SequenceWithSoftmaxNode criterion requires the first input to be the label.");
 
-            ValidateInferBinaryChildren();  // update children dimensions
+            ValidateInferBinaryChildrenDims();  // update children dimensions
 
             if (isFinalValidationPass)
                 if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match size

@@ -340,7 +340,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         void ValidateUnaryMap(bool isFinalValidationPass);
         void ValidateUnaryReduce(bool isFinalValidationPass);
-        void ValidateInferBinaryChildren();
+        void ValidateInferBinaryChildrenDims();
         void ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples);
         void ValidateBinaryReduce(bool isFinalValidationPass);
     public:
@@ -470,7 +470,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InferImageDimsFromInput(0); //copy from child 0 by default.
         }
 
-        virtual void ValidateInferInputSize(size_t i, size_t rows, size_t cols) = 0;
+        virtual void ValidateInferChildDims(size_t i, size_t rows, size_t cols) = 0;
 
         bool IsChildAnImage(const size_t index) const
         {
@@ -963,7 +963,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return numCols;
         }
 
-        void ValidateInferInputSize(size_t i, size_t rows, size_t cols) override final;
+        void ValidateInferChildDims(size_t i, size_t rows, size_t cols) override final;
 
 #if 0   // (this function cannot be used currently since sentenceBegin is not a Matrix<ElemType> anymore; only affects LSTMNode which is no longer used)
         static void WINAPI SetToInitStateValueForResetSeg(const Matrix<ElemType>& sentenceBegin,
@@ -1496,7 +1496,7 @@ public: \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
     using Base::SaveToFile; using Base::UpdateFunctionAndGradientMBSize; using Base::SetInput; \
-    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildren; using Base::ValidateInferInputSize
+    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildrenDims; using Base::ValidateInferChildDims
 
 #define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \
