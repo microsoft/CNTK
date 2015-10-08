@@ -783,7 +783,7 @@ namespace CNTKMathTest
             Matrix<float> srcM(crow, ccol, src, matrixFlagNormal, deviceId);
             // Test full copy.
             CPUMatrix<float> actualM(crow, ccol);
-            srcM.Copy(actualM.GetNumRows(), actualM.GetNumCols(), actualM.BufferPointer(), actualM.GetNumRows());
+            srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.BufferPointer(), actualM.GetNumRows());
 
             std::vector<float> expected = {
                 1.0f, 3.0f, 4.0f,
@@ -792,12 +792,34 @@ namespace CNTKMathTest
             
             // Test tile copy.
             actualM.Resize(crow - 1, ccol - 1);
-            // REVIEW alexeyk: on my machine next call actually does not set values to QNAN (incorrect asm code), verify.
             actualM.SetValue(std::numeric_limits<float>::quiet_NaN());
-            srcM.Copy(actualM.GetNumRows(), actualM.GetNumCols(), actualM.BufferPointer(), actualM.GetNumRows());
+            srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.BufferPointer(), actualM.GetNumRows());
 
             expected = { 1.0f, 3.0f };
             Assert::IsTrue(actualM.IsEqualTo(CPUMatrix<float>(actualM.GetNumRows(), actualM.GetNumCols(), expected.data(), matrixFlagNormal)));
+        }
+
+        TEST_METHOD(MatrixHasElement)
+        {
+            for (int deviceId : { -1, 0 })
+            {
+                const size_t size = 3;
+                float src[size] = { 0.0f, 1.0f, 2.0f };
+                SingleMatrix m1(1, size, src, matrixFlagNormal, deviceId);
+                Assert::IsTrue(SingleMatrix::HasElement(m1, 1.0f));
+                Assert::IsFalse(SingleMatrix::HasElement(m1, -1.0f));
+
+                float qnan = std::numeric_limits<float>::quiet_NaN();
+                Assert::IsFalse(SingleMatrix::HasElement(m1, qnan));
+                float posInf = std::numeric_limits<float>::infinity();
+                Assert::IsFalse(SingleMatrix::HasElement(m1, posInf));
+
+                m1(0, 1) = qnan;
+                Assert::IsTrue(SingleMatrix::HasElement(m1, qnan));
+
+                m1(0, 1) = posInf;
+                Assert::IsTrue(SingleMatrix::HasElement(m1, posInf));
+            }
         }
     };
 }
