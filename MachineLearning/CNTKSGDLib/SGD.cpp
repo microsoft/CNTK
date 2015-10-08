@@ -700,6 +700,12 @@ template<class ElemType>
         auto & criterionNodes = GetTrainCriterionNodes(net);
         auto & evaluationNodes = GetEvalCriterionNodes(net);
 
+        //allocate memory for backward computation
+        //we intentionally separate it from above loop to make sure forward computing gets the right matrices
+        fprintf(stderr, "\n\nAllocate matrices for gradient computing\n");
+        for (int i = 0; i < criterionNodes.size(); i++)
+            net.AllocateGradientMatrices(criterionNodes[i]);
+
         // give the layout something to validate with (some code below validates the network before actually receiving data)
         // Note: yak!
 

@@ -7,7 +7,7 @@
 #pragma once
 
 // TODOs:
-//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, it should already be covered by Node::UpdateFunctionAndGradientMBSize() which is called from inside the Eval loop
+//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, it should already be covered by Node::UpdateFunctionMBSize() which is called from inside the Eval loop
 //  - complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
 //  - apply 
 // => many ComputationNode implementations only have two functions EvaluateThisNode(FrameRange) and ComputePartial(), as it was meant to be!
@@ -617,6 +617,13 @@ public:
                                    nodeIter->NodeName().c_str(), recurrentNodes[0]->NodeName().c_str());
                 }
 
+                //since we share memory we need to resize function value matrices correctly
+                for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+                {
+                    (*nodeIter)->UpdateFunctionMBSize();
+                    (*nodeIter)->Validate(true);
+                }
+
                 // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
                 if (recInfo->m_isForwardLoop)
                 {
@@ -627,7 +634,7 @@ public:
                     {
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
-                            (*nodeIter)->UpdateFunctionAndGradientMBSize();
+                            (*nodeIter)->UpdateFunctionMBSize();
                             (*nodeIter)->EvaluateThisNode(FrameRange(t));
                             if (IsNodeReqMultiSeqHandling(*nodeIter))
                                 (*nodeIter)->MaskMissingValuesColumnsToZero(t);
@@ -641,7 +648,7 @@ public:
                     {
                         for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                         {
-                            (*nodeIter)->UpdateFunctionAndGradientMBSize();
+                            (*nodeIter)->UpdateFunctionMBSize();
                             (*nodeIter)->EvaluateThisNode(FrameRange(t));
                             if (IsNodeReqMultiSeqHandling(*nodeIter))
                                 (*nodeIter)->MaskMissingValuesColumnsToZero(t);
@@ -665,7 +672,8 @@ public:
 #endif
                 // evaluate the node for all frames concurrently (map)
                 // we manage time stamp here so that derived classes don't need to worry about it
-                (*nodeIter)->UpdateFunctionAndGradientMBSize();
+                (*nodeIter)->UpdateFunctionMBSize();
+                (*nodeIter)->Validate(true);  //since we use mem share we need to resize it correctly
                 (*nodeIter)->EvaluateThisNode(FrameRange());
                 if (IsNodeReqMultiSeqHandling(*nodeIter))
                     (*nodeIter)->MaskMissingValuesColumnsToZero();
@@ -690,7 +698,7 @@ public:
         // resize function values and gradients of everything in m_recurrentInfo
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
-                nodeIter->UpdateFunctionAndGradientMBSize(m_actualMBSize);
+                nodeIter->UpdateFunctionMBSize(m_actualMBSize);
 
         return m_actualMBSize;
     }
@@ -762,7 +770,7 @@ public:
     //    }
     //}
 
-
+    /*
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
     // TODO: pass a set of nodes instead of only one
     template<class ElemType>
@@ -869,110 +877,111 @@ public:
         //resetTimeStampAfterComputation is by default false because ComputeGradient in normal case is followed by new batch of input
         if (resetTimeStampAfterComputation)
             ResetEvalTimeStamp();
-    }
+    } */
 
-    /*
-    // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
-    // TODO: pass a set of nodes instead of only one
-    template<class ElemType>
-    void ComputeGradient(const ComputationNodeBasePtr& rootNode, 
-                         bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
-                         const Matrix<ElemType>* rootGradientInitValue = nullptr,
-                         bool bClearGradient = true,
-                         bool resetTimeStampAfterComputation = false
-                    )
-    {
-        if (bResetToOne && (rootNode->GetNumRows() != 1 || rootNode->GetNumCols() != 1))
-            RuntimeError("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
-
-        //run forward pass first
-        // TODO: feels out of place; can't we stick for ForwardProp()/BackwardProp()?
-        Evaluate(rootNode);
-
-        // TODO: comment what the purpose of this is
-        if (bClearGradient)
-            ClearGradientForAllNodes(rootNode);
-
-        //run backward pass
-        std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
-
-        // TODO: do a runtime check for float vs. double. Also use the Is/AsPtr macros
-        if (bResetToOne)
+        // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
+        // TODO: pass a set of nodes instead of only one
+        template<class ElemType>
+        void ComputeGradient(const ComputationNodeBasePtr rootNode,
+            bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
+            const Matrix<ElemType>* rootGradientInitValue = nullptr,
+            bool bClearGradient = true,
+            bool resetTimeStampAfterComputation = false
+            )
         {
-            dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().Resize(1, 1);   // TODO: make this a function of ComputationNode; but first need to get rid of Matrix<ElemType> here, or make it a local template parameter
-            dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(1);
-        }
+            //run forward pass first
+            // TODO: feels out of place; can't we stick for ForwardProp()/BackwardProp()?
+            Evaluate(rootNode);
 
-        if (rootGradientInitValue != nullptr)
-            dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
+            if (bResetToOne && (rootNode->GetNumRows() != 1 || rootNode->GetNumCols() != 1))
+                RuntimeError("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
 
-        // process nodes in pre-determined order
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-        {
-#ifdef DISPLAY_DEBUG
-            fprintf(stderr, "Compute Gradient For Node: %s(%s) Against Children\n",
-                        (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
-                        (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
-#endif
-            // --- first, perform recurrent loops if this node participates in one
+            // TODO: comment what the purpose of this is
+            if (bClearGradient)
+                ClearGradientForAllNodes(rootNode);
 
-            RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);
-            if (recInfo)
+            //run backward pass
+            std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
+
+            // TODO: do a runtime check for float vs. double. Also use the Is/AsPtr macros
+            if (bResetToOne)
             {
-                if (recInfo->m_completedGradient == false)
-                {
-                    const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
-                    size_t T = m_actualMBSize / GetNumParallelSequences();
-                    if (recInfo->m_isForwardLoop)
-                    {
-                        for (size_t t = T; t--> 0;)
-                        {
-                            for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
-                            {
-                                (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
-                                if (IsNodeReqMultiSeqHandling(*nodeIter))
-                                    (*nodeIter)->MaskMissingGradientColumnsToZero(t);
-                                (*nodeIter)->ComputeGradientForChildren(t);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for (size_t t = 0; t < T; t++)
-                        {
-                            for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
-                            {
-                                (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
-                                if (IsNodeReqMultiSeqHandling(*nodeIter))
-                                    (*nodeIter)->MaskMissingGradientColumnsToZero(t);
-                                (*nodeIter)->ComputeGradientForChildren(t);
-                            }
-                        }
-                    }
+                dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().Resize(1, 1);   // TODO: make this a function of ComputationNode; but first need to get rid of Matrix<ElemType> here, or make it a local template parameter
+                dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(1);
+            }
 
-                    recInfo->m_completedGradient = true;
+            if (rootGradientInitValue != nullptr)
+                dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
+
+            // process nodes in pre-determined order
+            for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+            {
+#ifdef DISPLAY_DEBUG
+                fprintf(stderr, "Compute Gradient For Node: %s(%s) Against Children\n",
+                    (msra::strfun::utf8((*nodeIter)->OperationName())).c_str(),
+                    (msra::strfun::utf8((*nodeIter)->NodeName())).c_str());
+#endif
+                // --- first, perform recurrent loops if this node participates in one
+
+                RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);
+                if (recInfo)
+                {
+                    if (recInfo->m_completedGradient == false)
+                    {
+                        const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+                        size_t T = m_actualMBSize / GetNumParallelSequences();
+                        if (recInfo->m_isForwardLoop)
+                        {
+                            for (size_t t = T; t--> 0;)
+                            {
+                                for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                                {
+                                    (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
+                                    if (IsNodeReqMultiSeqHandling(*nodeIter))
+                                        (*nodeIter)->MaskMissingGradientColumnsToZero(t);
+                                    (*nodeIter)->ComputeGradientForChildren(t);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            for (size_t t = 0; t < T; t++)
+                            {
+                                for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                                {
+                                    (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
+                                    if (IsNodeReqMultiSeqHandling(*nodeIter))
+                                        (*nodeIter)->MaskMissingGradientColumnsToZero(t);
+                                    (*nodeIter)->ComputeGradientForChildren(t);
+                                }
+                            }
+                        }
+
+                        recInfo->m_completedGradient = true;
+                    }
+                }
+
+                // --- second, do whole-batch operation if not recurrent
+                else
+                {
+                    if (IsNodeReqMultiSeqHandling(*nodeIter))
+                    {
+                        // batch is done only for feed-forward nodes
+                        if ((*nodeIter)->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
+                            LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
+                        (*nodeIter)->MaskMissingGradientColumnsToZero();
+                    }
+                    (*nodeIter)->ComputeGradientForChildren();
                 }
             }
 
-            // --- second, do whole-batch operation if not recurrent
-
-            if (IsNodeReqMultiSeqHandling(*nodeIter))
-            {
-                // batch is done only for feed-forward nodes
-                if ((*nodeIter)->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
-                    LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
-                (*nodeIter)->MaskMissingGradientColumnsToZero();
-            }
-            (*nodeIter)->ComputeGradientForChildren();
+            //since we now allow sharing of the matrix for function value and gradient value. the function values are now destroyed
+            //after gradient computation and need to be recomputed. This is indicated by the timestamp updated using this function
+            //resetTimeStampAfterComputation is by default false because ComputeGradient in normal case is followed by new batch of input
+            if (resetTimeStampAfterComputation)
+                ResetEvalTimeStamp();
         }
 
-        //since we now allow sharing of the matrix for function value and gradient value. the function values are now destroyed
-        //after gradient computation and need to be recomputed. This is indicated by the timestamp updated using this function
-        //resetTimeStampAfterComputation is by default false because ComputeGradient in normal case is followed by new batch of input
-        if (resetTimeStampAfterComputation)
-            ResetEvalTimeStamp();
-    }
-    */
 
     //for debugging purpose
     void PrintComputationTree(const ComputationNodeBasePtr& rootNode,
@@ -1300,7 +1309,7 @@ public: // yak--used by NDLUtil. Will go away someday.
         if (FeatureNodes().size() == 0 && !allowFragment)
             RuntimeError("No Feature nodes specified");
 
-        AllocateMatrices(EvaluationNodes(), OutputNodes(), FinalCriterionNodes());
+        AllocateAllEvalMatrices(EvaluationNodes(), OutputNodes(), FinalCriterionNodes());
 
         // first give criteria nodes as root node
         if (FinalCriterionNodes().size() > 0)
@@ -1355,9 +1364,9 @@ public:
 
     //this function will need to be called before actual validation and execution to 
     //predetermine how to share matrices to reduce memory usage.
-    //evalRootNodes do not need gradient computation
-    //trainRootNodes need gradient computation
-    void AllocateMatrices(std::vector<ComputationNodeBasePtr>& evalRootNodes, 
+    //TODO: find a simple topological order and allocateEvalMatrices on that order directly
+    //without passing in eval, out, and train nodes.
+    void AllocateAllEvalMatrices(std::vector<ComputationNodeBasePtr>& evalRootNodes, 
                           std::vector<ComputationNodeBasePtr>& outValueRootNodes,
                           std::vector<ComputationNodeBasePtr>& trainRootNodes)
     {
@@ -1371,12 +1380,6 @@ public:
 
         for (int i = 0; i < trainRootNodes.size(); i++)
             AllocateEvalMatrices(trainRootNodes[i]);
-
-        //allocate memory for backward computation
-        //we intentionally separate it from above loop to make sure forward computing gets the right matrices
-        fprintf(stderr, "\n\nAllocate matrices for backward computing\n");
-        for (int i = 0; i < trainRootNodes.size(); i++)
-            AllocateGradientMatrices(trainRootNodes[i]);
     }
 
     void AllocateEvalMatrices(ComputationNodeBasePtr rootNode)
@@ -1384,6 +1387,17 @@ public:
         FormRecurrentLoops(rootNode);
 
         std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode, false);
+
+        //determine parent size
+        std::map<ComputationNodeBasePtr, int> parentCount;
+        for (auto &n : allNodes)
+        {
+            for (int i = 0; i < n->ChildrenSize(); i++)
+            {
+                ComputationNodeBasePtr pNode = n->Inputs(i);
+                parentCount[pNode] ++;
+            }
+        }
 
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedEvaluate = false;
@@ -1400,17 +1414,34 @@ public:
                     for (auto &nodeLoopIter : recurrentNodes)
                     {
                         nodeLoopIter->RequestMatricesBeforeEval(m_matrixPool);
-                        nodeLoopIter->ReleaseMatricesAfterEval(m_matrixPool);
                     }
 
                     recInfo->m_completedEvaluate = true;
+
+                    for (auto &nodeLoopIter : recurrentNodes)
+                    {
+                        ReleaseMatricesAfterEvalForChildren(nodeLoopIter, parentCount);
+                    }
                 }
             }
             else
             {
                 nodeIter->RequestMatricesBeforeEval(m_matrixPool);
-                nodeIter->ReleaseMatricesAfterEval(m_matrixPool); 
+                //we only release matrices for the children since the root node's informatioin will be used and should not be shared
+                //with others
+                ReleaseMatricesAfterEvalForChildren(nodeIter, parentCount);
             }
+        }
+    }
+
+    void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& parentCount)
+    {
+        for (int i = 0; i < n->ChildrenSize(); i++)
+        {
+            ComputationNodeBasePtr pNode = n->Inputs(i);
+            parentCount[pNode] --;
+            if (parentCount[pNode] == 0)
+                pNode->ReleaseMatricesAfterEval(m_matrixPool);
         }
     }
 
@@ -1418,20 +1449,23 @@ public:
     {
         FormRecurrentLoops(rootNode);
 
-        PopulateParents(rootNode);
+        //PopulateParents(rootNode);
 
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
         //determine children size
-        std::map<ComputationNodeBasePtr, int> childrenCount;
-        for (auto &nodeIter : allNodes)
-        {
-            childrenCount[nodeIter] = nodeIter->ChildrenSize();
-        }
+        //std::map<ComputationNodeBasePtr, int> childrenCount;
+        //for (auto &nodeIter : allNodes)
+        //{
+        //    childrenCount[nodeIter] = nodeIter->ChildrenSize();
+        //}
 
         //now, simulate the gradient computation order to determine how to allocate matrices
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedGradient = false;
+
+        //we need to call it here since we always compute gradients for children and root node is not children of other node
+        rootNode->RequestMatricesBeforeGradientComp(m_matrixPool);
 
         for (auto &n : allNodes)
         {
@@ -1443,44 +1477,48 @@ public:
                 {
                     const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
                     //loops are computed sample by sample so we have to allocate them all 
-                    for (auto &nodeIterInLoop : recurrentNodes)
+                    for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                     {
-                        nodeIterInLoop->RequestMatricesBeforeGradientComp(m_matrixPool);
+                        AllocateGradientMatricesForChildren(*nodeIter);
                     }
                     
                     recInfo->m_completedGradient = true;
 
-                    for (auto &nodeIterInLoop : recurrentNodes)
+                    for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                     {
-                        ReleaseMatricesAfterGradientCompForParents(nodeIterInLoop, childrenCount);
+                        (*nodeIter)->ReleaseMatricesAfterGradientComp(m_matrixPool);
                     }
                 }
             }
             else
             {
-                n->RequestMatricesBeforeGradientComp(m_matrixPool);
-                ReleaseMatricesAfterGradientCompForParents(n, childrenCount);
+                AllocateGradientMatricesForChildren(n);
+                if (n != rootNode)  //root node's informatioin will be used and should not be shared with others, also it's small (1x1)
+                    n->ReleaseMatricesAfterGradientComp(m_matrixPool);
             }
         }
     }
 
-    void ReleaseMatricesAfterGradientCompForParents(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& childrenCount)
-    {
-        for (int i = 0; i < n->ParentSize(); i++)
-        {
-            ComputationNodeBasePtr pNode = n->Parent(i);
-            childrenCount[pNode] --;
-            if (childrenCount[pNode] == 0)
-                pNode->ReleaseMatricesAfterGradientComp(m_matrixPool);
-        }
-    }
+    //void ReleaseMatricesAfterGradientCompForParents(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& childrenCount)
+    //{
+    //    for (int i = 0; i < n->ParentSize(); i++)
+    //    {
+    //        ComputationNodeBasePtr pNode = n->Parent(i);
+    //        childrenCount[pNode] --;
+    //        if (childrenCount[pNode] == 0)
+    //            pNode->ReleaseMatricesAfterGradientComp(m_matrixPool);
+    //    }
+    //}
   
 
     void AllocateGradientMatricesForChildren(ComputationNodeBasePtr parentNode)
     {
         std::vector<ComputationNodeBasePtr> children = parentNode->GetChildren();
         for (int i = 0; i < children.size(); i++)
-            children[i]->RequestMatricesBeforeGradientComp(m_matrixPool);
+        {
+            if (children[i]->NeedGradient())
+                children[i]->RequestMatricesBeforeGradientComp(m_matrixPool);
+        }
     }
 
     /**
@@ -1676,15 +1714,28 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
+    //void ClearGradientForAllNodes(const ComputationNodeBasePtr& rootNode)
+    //{
+    //    std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
+
+    //    for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+    //        (*nodeIter)->ClearGradientForChildren((int)m_actualMBSize);
+
+    //    //for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
+    //    //    (*nodeIter).m_completedGradient = false;
+
+    //    for (int i = 0; i < m_recurrentInfo.size(); i++)
+    //        m_recurrentInfo[i].m_completedGradient = false;
+    //}
+
     void ClearGradientForAllNodes(const ComputationNodeBasePtr& rootNode)
     {
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-            (*nodeIter)->ClearGradientForChildren((int)m_actualMBSize);
+        for (auto &node : allNodes)
+            node->ClearGradientForChildren();
 
-        //for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
-        //    (*nodeIter).m_completedGradient = false;
+//            node->MarkGradientInitialized(false);
 
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedGradient = false;
@@ -1707,23 +1758,23 @@ public:
 private:
 
     //this will determine the parents for each node. Parents info will be used by the gradient computation
-    void PopulateParents(const ComputationNodeBasePtr& rootNode)
-    {
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
+    //void PopulateParents(const ComputationNodeBasePtr& rootNode)
+    //{
+    //    std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
 
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-        {
-            ComputationNodeBasePtr n = (*nodeIter);
+    //    for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
+    //    {
+    //        ComputationNodeBasePtr n = (*nodeIter);
 
-            //clear parents
-            n->ClearParents(); 
+    //        //clear parents
+    //        n->ClearParents(); 
 
-            //add it to children's parents. children's parent collection has alraedy been cleared
-            std::vector<ComputationNodeBasePtr> children = n->GetChildren();
-            for (int i = 0; i < children.size(); i++)
-                children[i]->AddParent(n);
-        }
-    }
+    //        //add it to children's parents. children's parent collection has alraedy been cleared
+    //        std::vector<ComputationNodeBasePtr> children = n->GetChildren();
+    //        for (int i = 0; i < children.size(); i++)
+    //            children[i]->AddParent(n);
+    //    }
+    //}
 
 
     static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
