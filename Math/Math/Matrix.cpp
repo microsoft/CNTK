@@ -1394,7 +1394,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false)
             );
 #ifdef _DEBUG
-        Invalidate();   // Fill the matrix with NaNs to detect using the content which is undefined.
+        if (GetMatrixType() != MatrixType::SPARSE)
+            Invalidate();   // Fill the matrix with NaNs to detect using the content which is undefined. Unfortunately this won't work for sparse matrices.
 #endif
     }
 
