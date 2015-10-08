@@ -856,9 +856,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 featureGradientValues.AddWithRowSliceValuesOf(temp, i*featureSize, featureSize);
         }
 
-        virtual size_t UpdateFunctionAndGradientMBSize(size_t numCols)
+        virtual size_t UpdateFunctionMBSize(size_t numCols)
         {
-            numCols = Base::UpdateFunctionAndGradientMBSize(numCols);
+            numCols = Base::UpdateFunctionMBSize(numCols);
             // ^^ if numCols is SIZE_MAX then we let base determine the value based on MB layout
             if (!m_pMBLayout)            // if no layout, this node contains parameters independent of MB size, don't resize
                 return numCols;         // BUGBUG: what do we return here?
