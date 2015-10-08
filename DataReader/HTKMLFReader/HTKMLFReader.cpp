@@ -929,11 +929,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (!skip)
                         {
                             m_validFrame[i] = m_toProcess[i];
-                            if (m_pMBLayout->RequireSentenceSeg())       // in framemode we leave the flags empty
-                            {
-                                m_pMBLayout->Set(i, 0, MinibatchPackingFlags::SequenceStart);
-                                m_pMBLayout->Set(i, m_validFrame[i] - 1, MinibatchPackingFlags::SequenceEnd);
-                            }
+                            if (!m_framemode)       // in framemode we leave the flags empty
+                                m_pMBLayout->SetAsSentence(i, 0, m_validFrame[i]);
 
                             m_extraUttsPerMinibatch.push_back(i);
                             fillOneUttDataforParallelmode(matrices, 0, m_validFrame[i], i, i);
@@ -975,11 +972,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                 m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
                                             }
                                             fillOneUttDataforParallelmode(matrices, m_validFrame[j], framenum, j, i);
-                                            if (m_pMBLayout->RequireSentenceSeg())       // in framemode we leave the flags empty
-                                            {
-                                                m_pMBLayout->Set(j, m_validFrame[j], MinibatchPackingFlags::SequenceStart);
-                                                m_pMBLayout->Set(j, m_validFrame[j] + framenum - 1, MinibatchPackingFlags::SequenceEnd);
-                                            }
+                                            assert(!m_framemode);
+                                            m_pMBLayout->SetAsSentence(j, m_validFrame[j], m_validFrame[j] + framenum);
 
                                             ReNewBufferForMultiIO(i);
                                             m_validFrame[j] += framenum;
@@ -996,14 +990,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                         }
 
-                        if (m_pMBLayout->RequireSentenceSeg())       // in framemode we leave the flags empty
+                        if (!m_framemode)
                         {
                             for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
                             {
-                                for (size_t t = m_validFrame[i]; t < m_mbSize; t++)
-                                {
-                                    m_pMBLayout->Set(i, t, MinibatchPackingFlags::NoInput);
-                                }
+                                m_pMBLayout->SetAsNoInput(i, m_validFrame[i], m_mbSize);
                             }
                         }
 

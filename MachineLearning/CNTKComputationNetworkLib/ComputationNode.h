@@ -8,7 +8,7 @@
 #include "Basics.h"
 #include "Matrix.h"
 #include "ScriptableObjects.h"
-
+#include "Sequences.h"
 #include "MatrixPool.h"
 
 #include <unordered_set>
