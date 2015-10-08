@@ -321,7 +321,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 vector<pair<size_t, size_t>> childDims;
                 for (auto & child : children)
                     childDims.push_back(child->GetDims());
-                //auto imageLayouts = node->GetImageLayouts();
+                auto imageLayouts = node->GetImageLayouts();
                 // We do call validate(final) as many times as needed, since stuff may have changed underneath.
                 node->PrintSelfBeforeValidation();
                 node->Validate(isFinalValidationPass/*final*/);      // all nodes have been visited: do verification instead of just inference
@@ -335,11 +335,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto & child : children)
                     newChildDims.push_back(child->GetDims());
                 unchanged &= (childDims == newChildDims);
+                unchanged &= (imageLayouts == node->GetImageLayouts());
                 if (isFinalValidationPass && !unchanged)
                     LogicError("ValidateSubNetwork: %ls %ls operation changed during final validation.", node->NodeName().c_str(), node->OperationName().c_str());
                 if (isFinalValidationPass && !allChildrenVisited)
                     LogicError("ValidateSubNetwork: %ls %ls operation in final validation although not all children were visited?", node->NodeName().c_str(), node->OperationName().c_str());
-                //willBeValid &= (imageLayouts == node->GetImageLayouts());     // TODO: why does the compiler not eat this?
                 // if all children valid then 
                 valid = (allChildrenVisited && unchanged) || isLeaf;
             }

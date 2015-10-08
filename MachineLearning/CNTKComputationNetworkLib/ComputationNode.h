@@ -66,6 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //void Set(size_t width, size_t height, size_t channels) { this->width = width; this->height = height; this->channels = channels; }
         void Invalidate() { width = SIZE_MAX; height = SIZE_MAX; channels = SIZE_MAX; } // TODO: clean up the valid/invalid situation (this is currently done inconsistently)
         size_t GetNumElements() const { return width * height * channels; }
+        bool operator==(const ImageLayout & other) const { return width == other.width && height == other.height &&channels == other.channels; }
     };
 
 #pragma region base computation class
