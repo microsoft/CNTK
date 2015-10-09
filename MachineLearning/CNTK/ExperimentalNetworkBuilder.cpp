@@ -146,7 +146,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // We prepend a few standard definitions, and also definition of deviceId and precision, which all objects will pull out again when they are being constructed.
             // BUGBUG: We are not getting TextLocations right in this way! Do we need to inject location markers into the source?
             let expr = BS::ParseConfigString(BS::standardFunctions + BS::computationNodes + BS::commonMacros
-                + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%s' ; network = new ComputationNetwork ", (int)m_deviceId, ElemTypeName<ElemType>())  // TODO: check if typeid needs postprocessing
+                + msra::strfun::wstrprintf(L"deviceId = %d ; precision = '%ls' ; network = new ComputationNetwork ", (int)m_deviceId, ElemTypeName<ElemType>())  // TODO: check if typeid needs postprocessing
                 + m_sourceCode);    // source code has the form [ ... ]
             // evaluate the parse tree--specifically the top-level field 'network'--which will create the network
             let object = EvaluateField(expr, L"network");                               // this comes back as a BS::Object
