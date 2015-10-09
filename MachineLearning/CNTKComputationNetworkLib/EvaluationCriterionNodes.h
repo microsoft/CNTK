@@ -66,19 +66,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t index = 0;
             {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
                 ValidateInferChildDims(index, rows, cols);
             }
 
             index = 1;
             {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
+                size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
+                size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
                 ValidateInferChildDims(index, rows, cols);
-                m_maxIndexes0.Resize(1,cols);
-                m_maxIndexes1.Resize(1,cols);
-                m_maxValues.Resize(1,cols);
+                m_maxIndexes0.Resize(1, cols);
+                m_maxIndexes1.Resize(1, cols);
+                m_maxValues.Resize(1, cols);
             }
 
             m_topK = 1;
@@ -93,10 +93,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //    LogicError("ErrorPrediction operation: one of the operands has 0 elements.");
 
             if (isFinalValidationPass)
+            {
                 if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
                 {
                     LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
                 }
+            }
+
             if (((!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&  //match size
                 Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()))) && Inputs(0)->GetLoopId() < 0)
             {
