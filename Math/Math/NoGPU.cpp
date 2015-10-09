@@ -420,7 +420,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return NULL;
     }
 
-    template<class ElemType> void GPUMatrix<ElemType>::Copy(size_t numRows, size_t numCols, ElemType* dst, size_t ldDst) const
+    template<class ElemType> void GPUMatrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const
     {
     }
 

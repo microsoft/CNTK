@@ -595,12 +595,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             {
                 size_t rows = (Inputs(1)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() : Inputs(1)->GetNumRows();
-                ValidateInferInputSize(1, rows, 1);
+                ValidateInferChildDims(1, rows, 1);
             }
 
             {
                 size_t rows = (Inputs(2)->GetNumRows() == 0) ? Inputs(0)->GetNumRows() : Inputs(2)->GetNumRows();
-                ValidateInferInputSize(2, rows, 1);
+                ValidateInferChildDims(2, rows, 1);
             }
 
             if (isFinalValidationPass)
@@ -723,12 +723,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             {
                 size_t rows = Inputs(1)->GetNumRows() == 0 ? Inputs(0)->GetNumRows() : Inputs(1)->GetNumRows();
-                ValidateInferInputSize(1, rows, 1);
+                ValidateInferChildDims(1, rows, 1);
             }
 
             {
                 size_t rows = Inputs(2)->GetNumRows() == 0? Inputs(0)->GetNumRows() : Inputs(2)->GetNumRows();
-                ValidateInferInputSize(2, rows, 1);
+                ValidateInferChildDims(2, rows, 1);
             }
 
             if (isFinalValidationPass)

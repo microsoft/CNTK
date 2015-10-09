@@ -658,8 +658,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (IsEmpty())
             throw std::logic_error("SetValue: Matrix is empty.");
-
-        if (v == 0)
+        bool isFinite = std::numeric_limits<ElemType>::is_integer || std::isfinite((double)v);
+        if (isFinite && v == 0)
         {
             memset(m_pArray, 0, sizeof(ElemType) * GetNumElements());
         }
@@ -1362,7 +1362,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template <typename ElemType>
-    void CPUMatrix<ElemType>::Copy(size_t /*numRows*/, size_t /*numCols*/, ElemType* /*dst*/, size_t /*ldDst*/) const
+    void CPUMatrix<ElemType>::CopySection(size_t /*numRows*/, size_t /*numCols*/, ElemType* /*dst*/, size_t /*colStride*/) const
     {
         // REVIEW alexeyk: currently not used by CPU, but implement when possible.
         RuntimeError("Not implemented.");
@@ -3233,17 +3233,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty())
             throw std::logic_error("AssignSignOf: Matrix a is empty.");
 
-        auto& us=*this;
+        auto& us = *this;
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
-        foreach_column(j,us)
+        foreach_column(j, us)
         {
-            foreach_row(i,us)
+            foreach_row(i, us)
             {
-                ElemType v = a(i,j);
-                us(i,j) =  (v == (ElemType)0? (ElemType)0 : (v > 0? (ElemType)1 : (ElemType)(-1)));
+                ElemType v = a(i, j);
+                if (!std::isnan(v))
+                    us(i, j) = (v == (ElemType)0 ? (ElemType)0 : (v > 0 ? (ElemType)1 : (ElemType)(-1)));
+                else
+                    us(i, j) = v;
             }
         }
 
@@ -3256,17 +3259,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (a.IsEmpty())
             throw std::logic_error("AddSignOf: Matrix a is empty.");
 
-        auto& us=*this;
+        auto& us = *this;
         if (this != &a)
             Resize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
-        foreach_column(j,us)
+        foreach_column(j, us)
         {
-            foreach_row(i,us)
+            foreach_row(i, us)
             {
-                ElemType v = a(i,j);
-                us(i,j) +=  (v == (ElemType)0? (ElemType)0 : (v > 0? (ElemType)1 : (ElemType)(-1)));
+                ElemType v = a(i, j);
+                if (!std::isnan(v))
+                    us(i, j) += (v == (ElemType)0 ? (ElemType)0 : (v > 0 ? (ElemType)1 : (ElemType)(-1)));
+                else
+                    us(i, j) = v;
             }
         }
 
@@ -4695,11 +4701,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         bool bHas = false;
 
+        bool isvFinite = std::isfinite(v);
 #pragma omp parallel for     
         for (long j = 0; j < mat.GetNumElements(); j++)
         {
-            if (mat.m_pArray[j] == v) 
-                bHas = true;
+#pragma omp flush(bHas)
+            if (!bHas)
+            {
+                ElemType cur = mat.m_pArray[j];
+                if (isvFinite && std::isfinite(cur))
+                {
+                    if (cur == v)
+                        bHas = true;
+                }
+                else if (std::isnan(v) && std::isnan(cur))
+                    bHas = true;
+                else if (std::isinf(v) && std::isinf(cur) && std::signbit(v) == std::signbit(cur))
+                    bHas = true;
+            }
         }
 
         return bHas;

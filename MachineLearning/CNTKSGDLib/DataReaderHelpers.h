@@ -209,7 +209,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // verify some DataReader calls that are redundant since the MBLayout refactoring (keep verifying for a while for cosy feeling)
             net.VerifyActualNumParallelSequences(trainSetDataReader.GetNumParallelSequences()); // info already contained in MBLayout
-            assert(trainSetDataReader.RequireSentenceSeg() == pMBLayout->RequireSentenceSeg()); // this one is redundant, too
+            //assert(trainSetDataReader.RequireSentenceSeg() == pMBLayout->RequireSentenceSeg()); // this one is redundant, too
 
             if ((criterionNode != nullptr) && (criterionNode->OperationName() == L"SequenceWithSoftmax"))
             {

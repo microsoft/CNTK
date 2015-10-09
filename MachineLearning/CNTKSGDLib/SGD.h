@@ -180,7 +180,7 @@ protected:
     }
     double GetMomentumPerSample(size_t epoch/*BUGBUG workaround:*/, size_t numParallelSequences) const
     {
-        return pow(m_momentumParam[epoch], 1.0 / FixUpEffectiveMBSize(m_learningRatesSpecifiedForMBSize[epoch], numParallelSequences));
+        return pow(m_momentumParam[epoch], 1.0 / FixUpEffectiveMBSize(m_momentumSpecifiedForMBSize[epoch], numParallelSequences));
     }
 
     // only true when the user specify LearningRatePerMB and the number of parallel utterances in Reader > 1
