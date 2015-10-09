@@ -642,7 +642,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         {
             let & value = config[id];
             if (value.Is<ComputationNodeBase>())
-                workList.push_back((ComputationNodeBasePtr&)value);
+                workList.push_back(/*auto typecast*/value);
         }
         // process work list
         // Also call FinalizeInit where we must.

@@ -2,6 +2,7 @@
 
 #include "Matrix.h"
 #include "basetypes.h"
+#include "Sequences.h"
 #include "UtteranceDerivativeComputationInterface.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {

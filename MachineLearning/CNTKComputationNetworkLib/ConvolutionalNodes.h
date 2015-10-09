@@ -284,14 +284,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputImageLayout.channels;
 
             if (Inputs(0)->FunctionValues().HasNoElements())
-                ValidateInferInputSize(0, m_outputImageLayout.channels, weightCols);
+                ValidateInferChildDims(0, m_outputImageLayout.channels, weightCols);
 
             if (isFinalValidationPass && (Inputs(0)->GetNumCols() != weightCols || Inputs(0)->GetNumRows() != m_outputImageLayout.channels))
                 LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_children[0]->NodeName().c_str(), m_outputImageLayout.channels, weightCols);
 
             size_t inputDim = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;
             if (Inputs(1)->GetNumRows() == 0)
-                ValidateInferInputSize(1, inputDim, Inputs(1)->GetNumCols());
+                ValidateInferChildDims(1, inputDim, Inputs(1)->GetNumCols());
 
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != inputDim)
                 LogicError("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), inputDim);
@@ -456,7 +456,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputSizePerSample = m_outputImageLayout.width * m_outputImageLayout.height * m_outputImageLayout.channels;
 
             if (Inputs(0)->GetNumRows() == 0)
-                ValidateInferInputSize(0, m_inputSizePerSample, Inputs(0)->GetNumCols());
+                ValidateInferChildDims(0, m_inputSizePerSample, Inputs(0)->GetNumCols());
 
             if (isFinalValidationPass && Inputs(0)->GetNumRows() != m_inputSizePerSample)
                 LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), m_inputSizePerSample);

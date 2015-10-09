@@ -172,6 +172,7 @@
     <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h" />
     <ClInclude Include="..\..\Common\Include\Platform.h" />
     <ClInclude Include="..\..\Common\Include\ScriptableObjects.h" />
+    <ClInclude Include="..\..\Common\Include\Sequences.h" />
     <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
     <ClInclude Include="..\..\Math\Math\CPUMatrix.h" />
     <ClInclude Include="..\..\Math\Math\Matrix.h" />

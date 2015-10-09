@@ -112,7 +112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static cublasHandle_t GetCublasHandle(int computeDevice=-1);
         ElemType* CopyToArray() const; //allocated by the callee but need to be deleted by the caller
         size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;  //allocated by the callee but need to be deleted by the caller
-        void Copy(size_t numRows, size_t numCols, ElemType* dst, size_t ldDst) const; 
+        void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const; 
 
         void ChangeDeviceTo(DEVICEID_TYPE to_id);
 
