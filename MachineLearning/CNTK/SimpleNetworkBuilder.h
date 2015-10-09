@@ -115,6 +115,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (m_deviceId == AUTOPLACEMATRIX)
                 m_deviceId = Matrix<ElemType>::GetBestGPUDeviceId();
+            m_deviceId = EnforceOneGPUOnly(m_deviceId);      // see EnforceOneGPUOnly() for comment on what this is
 
             m_net->SetDeviceId(m_deviceId);
             if (m_deviceId < 0)

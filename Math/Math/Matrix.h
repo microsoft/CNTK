@@ -415,7 +415,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType LogAdd(ElemType x, ElemType y);
 
     public:
-        static DEVICEID_TYPE GetBestGPUDeviceId(); //{ return GPUMatrix<ElemType>::GetBestGPUDeviceId();}
+        static DEVICEID_TYPE GetBestGPUDeviceId();
 
         //static BLAS functions
 
