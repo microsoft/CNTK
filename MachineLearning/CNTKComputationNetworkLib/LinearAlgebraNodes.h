@@ -736,11 +736,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: use dynamic_pointer_cast
             // infer cols0 as rows1
             if (cols0 == 0 && !Inputs(0)->GetMBLayout() && rows1 != 0 && isFinalValidationPass)
-                ValidateInferInputSize(0, rows0, rows1);
+                ValidateInferChildDims(0, rows0, rows1);
 
             // infer rows1 as cols0
             if (cols0 != 0 && rows1 == 0)
-                ValidateInferInputSize(1, cols0, cols1);
+                ValidateInferChildDims(1, cols0, cols1);
 
             // cols0 and rows1 may have been changed so don't use them in the following check
             // TODO: why not check this when part of a loop?
@@ -887,10 +887,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("TransposeTimes operation: Inputs(0)->GetNumRows() and Inputs(1)->GetNumCols() should not be 0 since it cannot be automatically inferred");
 
             if (cols0 == 0 && rows1 != 0 && isFinalValidationPass)
-                ValidateInferInputSize(0, rows0, rows1);
+                ValidateInferChildDims(0, rows0, rows1);
 
             if (cols0 != 0 && rows1 == 0)
-                ValidateInferInputSize(1, cols0, cols1);
+                ValidateInferChildDims(1, cols0, cols1);
 
             //cols0 and rows1 may have been changed so don't use them in the following check
             if (isFinalValidationPass && Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows())
@@ -992,7 +992,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
                     size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-                    ValidateInferInputSize(index, rows, cols);
+                    ValidateInferChildDims(index, rows, cols);
                 }
             }
 
@@ -1264,7 +1264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferInputSize(index, rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
@@ -1427,11 +1427,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     tmpMat = Matrix<ElemType>::RepMat(inputFunctionValues1.ColumnSlice(i, 1), 1, ratio);
                     functionValues.ColumnSlice(i*ratio, ratio).SetValue(tmpMat + inputFunctionValues0.ColumnSlice(i * ratio, ratio)); 
                 }
-            }       
-            else
-            {
-                LogicError("%ls node not supported format", OperationName().c_str());
             }
+            else
+                LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
 #if NANCHECK
             functionValues.HasNan("Plus");
 #endif
@@ -1532,18 +1530,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
 
                 if (rowsc == 1 && rowsp != 1)
-        {
+                {
                     ones = ConstOnes(1, rowsp, FunctionValues().GetDeviceId());
                 }
     
                 if (inputIndex == 0)  //left derivative
-            {
-                    ComputeInputPartialLeft(sliceInput0Value, sliceInput0Grad, sliceOutputValue, sliceOutputGrad, ones); 
-            }
+                {
+                    ComputeInputPartialLeft(sliceInput0Value, sliceInput0Grad, sliceOutputValue, sliceOutputGrad, ones);
+                }
                 else  //right derivativeAzqz
-            {
-                    ComputeInputPartialRight(sliceInput0Value, sliceInput0Grad, sliceOutputValue, sliceOutputGrad, ones); 
-            }
+                {
+                    ComputeInputPartialRight(sliceInput0Value, sliceInput0Grad, sliceOutputValue, sliceOutputGrad, ones);
+                }
             }
             else // cols0 < cols1 -> cols0=1
             {
@@ -1617,65 +1615,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("Minus partial: unexpected condition.");
         }
 
-
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
-        {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());  
-        }
-
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            size_t cols0 = Inputs(0)->GetNumCols(), cols1=Inputs(1)->GetNumCols();
+            // note that ValueSlice will consider whether that input has an MB layout or not (in the latter case it will not slice)
+            Matrix<ElemType> functionValues = ValueSlice(frameRange);
+            Matrix<ElemType> inputFunctionValues0 = Inputs(0)->ValueSlice(frameRange);
+            Matrix<ElemType> inputFunctionValues1 = Inputs(1)->ValueSlice(frameRange);
 
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-            //only the one with more columns can be sliced, if both have same columns both are sliced
-            if (cols0 == cols1)
-            {
-                Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-                EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, sliceInput1Value);
-            }
-            else if (cols0 > cols1)
-            {
-                Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-                EvaluateThisNodeS(sliceOutputValue, sliceInput0Value, Inputs(1)->FunctionValues());
-            }
-            else //cols0 < cols1)
-            {
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-                EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
-            }
-        }
-
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& in0, Matrix<ElemType>& in1)  
-        {
-            size_t rows0 = in0.GetNumRows(), cols0 = in0.GetNumCols();
-            size_t rows1 = in1.GetNumRows(), cols1 = in1.GetNumCols();
+            size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
+            size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
             functionValues.Resize(max(rows0, rows1), max(cols0,cols1));
 
             if ((rows0 == rows1 && cols0 == cols1) || ((rows0 == 1 || rows1 == 1) && cols0 == cols1))
             {
-                functionValues.AssignDifferenceOf(in0, in1);
+                functionValues.AssignDifferenceOf(inputFunctionValues0, inputFunctionValues1);
             }
             else if (cols0 == 1 && rows1 % rows0 == 0)  //one is col vec with divisable rows, including scalar
             {
-                in1.Reshape(rows0, rows1 * cols1 / rows0);
-                functionValues.AssignDifferenceOf(in0, in1);
-                in1.Reshape(rows1, cols1);
+                inputFunctionValues1.Reshape(rows0, rows1 * cols1 / rows0);
+                functionValues.AssignDifferenceOf(inputFunctionValues0, inputFunctionValues1);
+                inputFunctionValues1.Reshape(rows1, cols1);
                 functionValues.Reshape(max(rows0, rows1), max(cols0,cols1));
             }
             else if (cols1 == 1 && rows0 % rows1 == 0)  //one is col vec with divisable rows, including scalar
             {
-                in0.Reshape(rows1, rows0 * cols0 / rows1);
-                functionValues.AssignDifferenceOf(in0, in1);
-                in0.Reshape(rows0, cols0);
-                functionValues.Reshape(max(rows0, rows1), max(cols0,cols1));
-            }      
+                inputFunctionValues0.Reshape(rows1, rows0 * cols0 / rows1);
+                functionValues.AssignDifferenceOf(inputFunctionValues0, inputFunctionValues1);
+                inputFunctionValues0.Reshape(rows0, cols0);
+                functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
+            }
+            else
+                LogicError("%ls %ls operation's Validate() function let invalid dimensions slip by.", NodeName().c_str(), OperationName().c_str());
 #if NANCHECK
             functionValues.HasNan("Minus");
 #endif
@@ -1793,10 +1763,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             //if dimension not specified we assume two operands' dimensions should match
             if (Inputs(0)->GetNumRows() == 0 && Inputs(1)->GetNumRows() != 0)
-                ValidateInferInputSize(0, Inputs(1)->GetNumRows(), 1);
+                ValidateInferChildDims(0, Inputs(1)->GetNumRows(), 1);
 
             if (Inputs(0)->GetNumRows() != 0 && Inputs(1)->GetNumRows() == 0)
-                ValidateInferInputSize(1, Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
+                ValidateInferChildDims(1, Inputs(0)->GetNumRows(), Inputs(1)->GetNumCols());
 
             if (isFinalValidationPass)
             {
@@ -1984,14 +1954,14 @@ private:
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferInputSize(index, rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             index = 1;
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferInputSize(index, rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
@@ -2140,10 +2110,10 @@ private:
             size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
             if (cols0 == 0 && cols1 != 0)
-                ValidateInferInputSize(0, rows0, cols1);
+                ValidateInferChildDims(0, rows0, cols1);
 
             if (cols0 != 0 && cols1 == 0)
-                ValidateInferInputSize(1, rows1, cols0);
+                ValidateInferChildDims(1, rows1, cols0);
 
             if (isFinalValidationPass && Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols())
                 LogicError("The Matrices should have same number of columns.");
@@ -2356,14 +2326,14 @@ private:
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferInputSize(index, rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             index = 1;
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0 ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0 ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferInputSize(index, rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))

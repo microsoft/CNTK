@@ -25,6 +25,7 @@
 
 #include "Basics.h"
 #include "Matrix.h"
+#include "Sequences.h"
 #include "commandArgUtil.h" // for ConfigParameters
 #include <map>
 #include <string>
