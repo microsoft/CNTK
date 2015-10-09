@@ -833,7 +833,7 @@ namespace msra { namespace lattices {
 
             if (errorsignal.rows() > 0 && errorsignal.cols() > 0)
             {
-                parallelstate->errorsignalgpu->Copy(errorsignal.rows(), errorsignal.cols(), &errorsignal(0, 0), errorsignal.getcolstride());
+                parallelstate->errorsignalgpu->CopySection(errorsignal.rows(), errorsignal.cols(), &errorsignal(0, 0), errorsignal.getcolstride());
             }
         }
         else
