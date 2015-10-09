@@ -21,12 +21,7 @@
 #include "fileutil.h"   // for saving and reading matrices
 #include <limits>       // for NaN
 #include <malloc.h>
-
-#ifndef _MSC_VER
-#define NOEXCEPT noexcept
-#else
-#define NOEXCEPT
-#endif
+#include "Platform.h"
 
 namespace msra { namespace math {
 
