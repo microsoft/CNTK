@@ -1106,14 +1106,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // We initialize the sentence boundary information before we process
             // the utterances.
             m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_currentMBSize, !m_framemode);
-            for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
-            {
-                for (size_t j = 0; j < m_currentMBSize; j++)
-                {
-                    m_pMBLayout->SetWithoutOr(i, j, MinibatchPackingFlags::None);
-                }
-            }
-
             // Iterates over utterances. m_numberOfuttsPerMinibatch = 1 is a
             // special case.
             for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
