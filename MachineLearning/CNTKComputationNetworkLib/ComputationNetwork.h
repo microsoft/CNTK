@@ -200,6 +200,7 @@ public:
             m_deviceId = Matrix<float>::GetBestGPUDeviceId();
         else
             m_deviceId = deviceId;
+        m_deviceId = EnforceOneGPUOnly(m_deviceId);      // see EnforceOneGPUOnly() for comment on what this is
     }
 
     DEVICEID_TYPE GetDeviceId() { return m_deviceId; }

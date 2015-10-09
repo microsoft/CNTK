@@ -404,7 +404,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  TODO: should be replaced by BestGpu class instead, it's much better
     template<class ElemType> int GPUMatrix<ElemType>::GetBestGPUDeviceId() //returns -1 if no GPUs can be used
     {
-        return -1; // CPU
+        return EnforceOneGPUOnly(-1); // CPU
     }
 
     // PrepareDevice - Setup the correct cuda context for an operation
