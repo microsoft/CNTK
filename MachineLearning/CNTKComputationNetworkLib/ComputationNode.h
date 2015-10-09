@@ -510,8 +510,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 assert(!recurrent);     // TODO: not sure if required, but currently only called this way
 
-                // TODO: comment why can't directly reverse(); what's wrong with EnumerateNodes()' result?
-                nodes.sort(IsSmaller);  // sort nodes by m_visitedOrder   --TODO: why? What about nodes with visitedOrder -1? Will they stay the same? Comment please!!!
                 nodes.reverse();        // and go backwards
             }
 
@@ -735,7 +733,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // data members
         std::vector<ComputationNodeBasePtr> m_children;
         //std::vector<ComputationNodeBasePtr> m_parents; //m_parents are dynamically determined based on the root node you want to compute
-        //std::vector<bool> m_childrenGradientComputed; //used to indicate which child's gradient has been computed.
         bool m_gradientInitialized; //indicate whether the gradient matrix has been resized and initialzed to 0
 
         DEVICEID_TYPE m_deviceId; //CPU=-1, >=0 GPU
@@ -1353,32 +1350,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
-
-        //m_childrenGradientComputed is a flag to indicate which child has been computed. 
-        //this is needed because the same child can be the child of node multiple times, e.g, Y=X*X
-        void ClearChildGradientComputationFlag()
-        {
-            m_childrenGradientComputed.resize(ChildrenSize());
-
-            for (int i = 0; i < ChildrenSize(); i++)
-                m_childrenGradientComputed[i] = false;
-        }
-
-        //decide which child to compute based on the child pointer passed in and the flag which a child has been computed
-        int GetChildIdForGradientComputation(ComputationNodeBasePtr n, const bool inLoop)
-        {
-            for (int i = 0; i < ChildrenSize(); i++)
-            {
-                if (m_children[i] == n && (inLoop || !m_childrenGradientComputed[i]))
-                {
-                    m_childrenGradientComputed[i] = true;
-                    return i;
-                }
-            }
-
-            LogicError("GetChildIdForGradientComputation: cannot find a matched child node that has not been computed yet.\n");
-            return -1; //should not go here
-        }
 
         void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
         {
