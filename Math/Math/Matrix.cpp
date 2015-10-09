@@ -409,8 +409,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (matrixFlagDontOwnBuffer & matrixFlags || m_preferredDeviceId == MANAGEDEXTERN)
             m_baseMatrix->SetOwnBuffer(false);
-
-        SetValue(0);
     }
 
     //copy constructor, deep copy
@@ -721,12 +719,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void Matrix<ElemType>::Copy(size_t numRows, size_t numCols, ElemType* dst, size_t ldDst) const
+    void Matrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const
     {
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
-            m_CPUMatrix->Copy(numRows, numCols, dst, ldDst),
-            m_GPUMatrix->Copy(numRows, numCols, dst, ldDst),
+            m_CPUMatrix->CopySection(numRows, numCols, dst, colStride),
+            m_GPUMatrix->CopySection(numRows, numCols, dst, colStride),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -1093,7 +1091,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             this->m_CPUMatrix->SetColumn(*colMat.m_CPUMatrix,colInd), 
-			this->m_GPUMatrix->SetColumn(*colMat.m_GPUMatrix, colInd),            
+            this->m_GPUMatrix->SetColumn(*colMat.m_GPUMatrix, colInd),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED);
     }
@@ -1896,11 +1894,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignDifferenceOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
     {
-        if (this != &a)
+        // if first arg broadcasts, we swap first and the flip the sign
+        // This is because there is no equivalent to operator-=() that works the other way round.
+        // TODO: We need ternary ops where the output storage is separate.
+        if (a.GetNumRows() < b.GetNumRows() || a.GetNumCols() < b.GetNumCols())
         {
-            Resize(a.GetNumRows(), a.GetNumCols());
-            SetValue(a);
+            if (a.GetNumRows() > b.GetNumRows() || a.GetNumCols() > b.GetNumCols())
+                LogicError("AssignDifferenceOf: Invalid dimensions.");
+            AssignDifferenceOf(b, a);
+            *this *= -1;
+            return *this;
         }
+        if (this != &a)
+            SetValue(a);
         (*this) -= b;
         return *this;
     }
@@ -4114,7 +4120,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return Matrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, false, b, false, 0.0, c);
     }
 
-
     /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + c</summary>
     /// if a is a column vector, add to all columns of c 
     /// if a is a row vector, add to all rows of c    
@@ -4122,7 +4127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// <param name="a">Input matrix</param>
     /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
     template<class ElemType>
-    void Matrix<ElemType>::ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
+    /*static*/void Matrix<ElemType>::ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
     {
         if (a.IsEmpty() || c.IsEmpty())
             throw std::logic_error("ScaleAndAdd:  one of the input matrices is empty."); 
@@ -4130,7 +4135,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DecideAndMoveToRightDevice(c, a);        
 
         if (a.GetMatrixType() == c.GetMatrixType())
-            {
+        {
             DISPATCH_MATRIX_ON_FLAG(&c,
                 &c,
                 CPUMatrix<ElemType>::ScaleAndAdd(alpha,*a.m_CPUMatrix,*c.m_CPUMatrix), 
@@ -4144,7 +4149,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DISPATCH_MATRIX_ON_FLAG(&c,
                 nullptr,
                 CPUSparseMatrix<ElemType>::ScaleAndAdd(alpha,*a.m_CPUSparseMatrix,*c.m_CPUMatrix); c.SetDataLocation(CPU),
-            if (a.m_GPUSparseMatrix->GetFormat() == MatrixFormat::matrixFormatSparseCSC) {
+                if (a.m_GPUSparseMatrix->GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+                {
                     GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha,*a.m_GPUSparseMatrix,1,*c.m_GPUMatrix,*c.m_GPUMatrix); 
                 }
                 else // new GPU sparse matrix code 
@@ -4152,11 +4158,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha,*a.m_GPUSparseMatrix,*c.m_GPUMatrix); 
                 }
                 c.SetDataLocation(GPU), 
-                NOT_IMPLEMENTED, 
-                c.m_GPUMatrix = new GPUMatrix<ElemType>(c.m_GPUSparseMatrix->CopyToDenseMatrix());
-                GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha,*a.m_GPUMatrix,1,*c.m_GPUSparseMatrix,*c.m_GPUMatrix);                
+                NOT_IMPLEMENTED,
+                {
+                    c.m_GPUMatrix = new GPUMatrix<ElemType>(c.m_GPUSparseMatrix->CopyToDenseMatrix());
+                    GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUMatrix, 1, *c.m_GPUSparseMatrix, *c.m_GPUMatrix);
                     delete c.m_GPUSparseMatrix; c.m_GPUSparseMatrix = NULL;
-                    c.SetDataLocation(GPU, DENSE)
+                    c.SetDataLocation(GPU, DENSE);
+                }
                 );                
         }       
     }
@@ -4541,8 +4549,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(&a,
             &a,
             return CPUMatrix<ElemType>::HasElement(*a.m_CPUMatrix, value),
-            NOT_IMPLEMENTED; return false,
             return GPUMatrix<ElemType>::HasElement(*a.m_GPUMatrix, value),
+            NOT_IMPLEMENTED; return false,
             NOT_IMPLEMENTED; return false
             );
     }

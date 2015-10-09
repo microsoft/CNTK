@@ -642,7 +642,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         {
             let & value = config[id];
             if (value.Is<ComputationNodeBase>())
-                workList.push_back((ComputationNodeBasePtr&)value);
+                workList.push_back((const ComputationNodeBasePtr&)value);
         }
         // process work list
         // Also call FinalizeInit where we must.
@@ -716,7 +716,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             else if (precision == L"double")
                 return DualPrecisionHelpers<double, Cdouble>::MakeRuntimeObject(config);
             else
-                RuntimeError("invalid value for 'precision', must be 'float' or 'double'");
+                RuntimeError("invalid value '%ls' for 'precision', must be 'float' or 'double'", precision.c_str());
         };
         rtInfo.isConfigRecord = is_base_of<IConfigRecord, Cfloat>::value;
         static_assert(is_base_of<IConfigRecord, Cfloat>::value == is_base_of<IConfigRecord, Cdouble>::value, "");   // we assume that both float and double have the same behavior
