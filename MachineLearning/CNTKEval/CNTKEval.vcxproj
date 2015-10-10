@@ -122,6 +122,7 @@
     <ClInclude Include="..\..\Common\Include\Eval.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
+    <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
     <ClInclude Include="EvalReader.h" />
     <ClInclude Include="EvalWriter.h" />
@@ -138,6 +139,9 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\DebugUtil.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />

@@ -485,6 +485,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols) { return *this; }
 
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols) { return *this; }
+    template<class ElemType> GPUMatrix<ElemType> GPUMatrix<ElemType>::Diagonal() const
+    {
+        GPUMatrix<ElemType> diag;
+        return diag;
+    }
 
     //for each column of a, we assign numRows starting from startIndex to this
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
@@ -532,7 +537,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> void GPUMatrix<ElemType>::SetDiagonalValue(const ElemType v) { }
 
-    template<class ElemType> void GPUMatrix<ElemType>::SetDiagonalValue(GPUMatrix<ElemType>& vector) { }
+    template<class ElemType> void GPUMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector) { }
 
     template<class ElemType> void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed) { }
 

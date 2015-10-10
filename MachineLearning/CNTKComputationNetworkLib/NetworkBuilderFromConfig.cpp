@@ -422,7 +422,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 else if (cnNodeType == OperationNameOf(RowRepeatNode))
                 {
                     if (parameter.size() != 2)
-                        RuntimeError("RowRepeat should have two parameters. Usage: RowRepeat(origNodeName, numRepeats.");
+                        RuntimeError("RowRepeat should have two parameters. Usage: RowRepeat(origNodeName, numRepeats).");
 
                     nodeParamCount = 1;
                     nodeParamStart = 0;
@@ -443,6 +443,12 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 {
                     // inputs /*one*/, numRepeats, needGradient=false
                     node = New<RowRepeatNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRepeats"]);
+                    node->NeedGradient() = config[L"needGradient"];
+                }
+                else if (OpIs(DiagonalNode))
+                {
+                    // inputs /*one*/, numRepeats, needGradient=false
+                    node = New<DiagonalNode<ElemType>>(deviceId, nodeName);
                     node->NeedGradient() = config[L"needGradient"];
                 }
 #if 0

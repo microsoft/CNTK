@@ -15,6 +15,7 @@
 #endif
 
 #include "basetypes.h"
+#include "Basics.h"
 #include "fileutil.h"
 #include <stdio.h>
 #include <string.h>
@@ -34,6 +35,7 @@
 #include <errno.h>
 
 using namespace std;
+using Microsoft::MSR::CNTK::RuntimeError;
 
 // ----------------------------------------------------------------------------
 // fopenOrDie(): like fopen() but terminate with err msg in case of error.

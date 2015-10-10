@@ -98,7 +98,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Resize(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
+            InferImageDimsFromInputs();
 #endif
         }
 
@@ -144,13 +144,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
             inputGradientValues.Print("RecitifiedLinearNode-Partial-in");
 #endif
-            inputGradientValues.AddElementProductOf(gradientValues, gradient); 
+            inputGradientValues.AddElementProductOf(gradientValues, gradient);
 #if DUMPOUTPUT
             inputGradientValues.Print("RecitifiedLinearNode-Partial-out");
 #endif
         }
 
-        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
         {
             functionValues.AssignTruncateBottomOf(inputFunctionValues, 0);
 #if NANCHECK
@@ -162,7 +162,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-    template class RectifiedLinearNode<float>; 
+    template class RectifiedLinearNode<float>;
     template class RectifiedLinearNode<double>;
 
     // -----------------------------------------------------------------------
@@ -207,7 +207,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddElementProductOf(gradientValues, gradient);
         }
 
-        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
         {
             functionValues.AssignSigmoidOf(inputFunctionValues);
 #if NANCHECK
@@ -216,7 +216,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-    template class SigmoidNode<float>; 
+    template class SigmoidNode<float>;
     template class SigmoidNode<double>;
 
     // -----------------------------------------------------------------------
@@ -263,7 +263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddElementProductOf(gradientValues, gradient); // += d .* ((1-v) .* v))
         }
 
-        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
         {
             functionValues.AssignTanhOf(inputFunctionValues);
 #if NANCHECK
@@ -272,7 +272,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-    template class TanhNode<float>; 
+    template class TanhNode<float>;
     template class TanhNode<double>;
 
     // -----------------------------------------------------------------------
@@ -427,7 +427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddElementProductOf(gradientValues, gradient);
         }
 
-        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
         {
             functionValues.AssignCosineOf(inputFunctionValues);
 #if NANCHECK
@@ -436,7 +436,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-    template class CosineNode<float>; 
+    template class CosineNode<float>;
     template class CosineNode<double>;
 
     // -----------------------------------------------------------------------
@@ -487,7 +487,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddElementProductOf(diff, functionValues);
         }
 
-        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)  
+        /*virtual*/ void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
         {
             functionValues.AssignLogSoftmaxOf(inputFunctionValues, true);
             functionValues.InplaceExp();
@@ -516,11 +516,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_diff = m_diff;
             }
         }
-private:
+    private:
         Matrix<ElemType> m_diff;
     };
 
-    template class SoftmaxNode<float>; 
+    template class SoftmaxNode<float>;
     template class SoftmaxNode<double>;
 
     // -----------------------------------------------------------------------
@@ -596,7 +596,7 @@ private:
                 node->m_softmax = m_softmax;
             }
         }
-private:
+    private:
         Matrix<ElemType> m_softmax;
     };
 
@@ -648,52 +648,52 @@ private:
 
             Matrix<ElemType> sliceGradientValue = DataSlice(m_gradientValues, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> slicePosterior = DataSlice(m_posterior, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                
+
             switch (inputIndex)
             {
             case 0:
+            {
+                if (colsPrior == 1)
+                    ComputeInputPartialUnnormedPrior(Inputs(0)->GradientValues(), sliceGradientValue, m_prior, slicePosterior, m_temp);
+                else
                 {
-                    if (colsPrior == 1)
-                        ComputeInputPartialUnnormedPrior(Inputs(0)->GradientValues(), sliceGradientValue, m_prior, slicePosterior, m_temp);
-                    else
-                    {
-                        Matrix<ElemType> sliceUnnormedPriorGradient = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                        Matrix<ElemType> slicePrior = DataSlice(m_prior, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                        ComputeInputPartialUnnormedPrior(sliceUnnormedPriorGradient, sliceGradientValue, slicePrior, slicePosterior, m_temp);
-                    }
+                    Matrix<ElemType> sliceUnnormedPriorGradient = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                    Matrix<ElemType> slicePrior = DataSlice(m_prior, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                    ComputeInputPartialUnnormedPrior(sliceUnnormedPriorGradient, sliceGradientValue, slicePrior, slicePosterior, m_temp);
                 }
-                break;
+            }
+            break;
             case 1:
+            {
+                Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                if (colsPrior == 1)
+                    ComputeInputPartialMean(Inputs(1)->GradientValues(), sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, m_temp);
+                else
                 {
-                      Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                      if (colsPrior == 1)
-                        ComputeInputPartialMean(Inputs(1)->GradientValues(), sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, m_temp);
-                    else
-                    {
-                        Matrix<ElemType> sliceMeanGradient = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                        ComputeInputPartialMean(sliceMeanGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, m_temp);
-                    }
+                    Matrix<ElemType> sliceMeanGradient = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                    ComputeInputPartialMean(sliceMeanGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, m_temp);
                 }
-                break;
+            }
+            break;
             case 2:
+            {
+                Matrix<ElemType> sliceNormedDeviation = DataSlice(m_normedDeviation, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                if (colsPrior == 1)
+                    ComputeInputPartialLogStddev(Inputs(2)->GradientValues(), sliceGradientValue, sliceNormedDeviation, slicePosterior, m_temp);
+                else
                 {
-                    Matrix<ElemType> sliceNormedDeviation = DataSlice(m_normedDeviation, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                    if (colsPrior == 1)
-                        ComputeInputPartialLogStddev(Inputs(2)->GradientValues(), sliceGradientValue, sliceNormedDeviation, slicePosterior, m_temp);
-                    else
-                    {
-                        Matrix<ElemType> sliceLotStddevGradient = Inputs(2)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                        ComputeInputPartialLogStddev(sliceLotStddevGradient, sliceGradientValue, sliceNormedDeviation, slicePosterior, m_temp);
-                    }
+                    Matrix<ElemType> sliceLotStddevGradient = Inputs(2)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                    ComputeInputPartialLogStddev(sliceLotStddevGradient, sliceGradientValue, sliceNormedDeviation, slicePosterior, m_temp);
                 }
-                break;
+            }
+            break;
             case 3:
-                {
-                    Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                    Matrix<ElemType> sliceFeatureGradient = Inputs(3)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                    ComputeInputPartialFeature(sliceFeatureGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, m_temp);
-                }
-                break;
+            {
+                Matrix<ElemType> sliceNormedDeviationVectors = DataSlice(m_normedDeviationVectors, frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                Matrix<ElemType> sliceFeatureGradient = Inputs(3)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                ComputeInputPartialFeature(sliceFeatureGradient, sliceGradientValue, sliceNormedDeviationVectors, slicePosterior, m_temp);
+            }
+            break;
             default:
                 InvalidArgument("GMMLogLikelihoodNode criterion only takes four inputs.");
             }
@@ -705,7 +705,7 @@ private:
             temp.AssignDifferenceOf(posterior, prior);
             temp.RowElementMultiplyWith(gradientValues);
             if (prior.GetNumCols() == posterior.GetNumCols())
-                unnormedPriorGradientValues += temp; 
+                unnormedPriorGradientValues += temp;
             else if (prior.GetNumCols() == 1)
                 Matrix<ElemType>::MultiplyAndAdd(temp, false, ConstOnes(posterior.GetNumCols(), 1, unnormedPriorGradientValues.GetDeviceId()), false, unnormedPriorGradientValues);
             else
@@ -715,7 +715,7 @@ private:
         /*TODO: merge with call site*/void ComputeInputPartialMean(Matrix<ElemType>& meanGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& normedDeviationVectors,
             Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
-            size_t numComponent = posterior.GetNumRows(); 
+            size_t numComponent = posterior.GetNumRows();
             size_t numSamples = posterior.GetNumCols();
             size_t featureSize = normedDeviationVectors.GetNumRows() / numComponent;
 
@@ -800,7 +800,7 @@ private:
         void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
         {
             // all internal matrices will be automatically resized since all of them are assigned to a value so no resize is needed here.
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), 
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(),
                 m_prior, m_stddev, m_normedDeviationVectors, m_normedDeviation, m_posterior, m_temp);
         }
 
@@ -841,7 +841,7 @@ private:
 
         //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
         //If we want to speed up we need to replace following code with a several specialized GPU functions
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& unnormedPrior, const Matrix<ElemType>& mean,  Matrix<ElemType>& logstddev,
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& unnormedPrior, const Matrix<ElemType>& mean, Matrix<ElemType>& logstddev,
             const Matrix<ElemType>& feature, Matrix<ElemType>& prior, Matrix<ElemType>& stddev, Matrix<ElemType>& normedDeviationVectors,
             Matrix<ElemType>& normedDeviation, Matrix<ElemType>& posterior, Matrix<ElemType>& temp)
         {
@@ -941,7 +941,7 @@ private:
                 if (rows[0] != rows[2])
                     LogicError("GMMLogLikelihoodNode: UnnormedPrior (first input) should have same dimension as logStddev (third input), i.e., all dimensions in each Gaussian component share the same stddev.");
 
-                if (rows[1] != rows[0]*rows[3])
+                if (rows[1] != rows[0] * rows[3])
                     LogicError("GMMLogLikelihoodNode: the number of rows in mean (second input) should equal rows(unnormedPrior(first input) * rows(feature(fourth input)).");
             }
 
@@ -1143,7 +1143,7 @@ private:
                 node->m_maskOfDropout = m_maskOfDropout;
             }
         }
-private:
+    private:
         double m_dropoutRate;
         unsigned long m_randomSeed;
 
@@ -1412,6 +1412,154 @@ private:
     template class ReshapeNode<float>;
     template class ReshapeNode<double>;
 
+    // =======================================================================
+    // DiagonalNode -- extract diagonal elements of a matrix
+    // =======================================================================
+
+    template<class ElemType>
+    class DiagonalNode : public ComputationNode<ElemType>, public NumInputs<1>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Diagonal"; }
+    public:
+        DiagonalNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            Base::CopyTo(nodeP, newName, flags);
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                auto node = dynamic_pointer_cast<DiagonalNode<ElemType>>(nodeP);
+            }
+        }
+
+        virtual void SaveToFile(File& fstream) const
+        {
+            Base::SaveToFile(fstream);
+        }
+
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        {
+            Base::LoadFromFile(fstream, modelVersion);
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr singleInput)
+        {
+            m_children.resize(1);
+            m_children[0] = singleInput;
+        }
+
+        virtual void InferImageDimsFromInputs()
+        {
+            InferImageDimsFromInput(0, true);
+
+            m_outputImageLayout.width = 1;
+            m_outputImageLayout.channels = 1;
+
+            if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
+                fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
+        }
+
+        virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
+        {
+            fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
+
+            if (!IsLeaf())
+            {
+                fprintf(stderr, "(");
+                for (size_t i = 0; i < ChildrenSize(); i++)
+                {
+                    ComputationNodePtr child = Inputs(i);
+                    if (i > 0)
+                        fprintf(stderr, ", ");
+
+                    if (child == nullptr)
+                    {
+                        if (allowNulls)
+                        {
+                            fprintf(stderr, "NULL");
+                            continue;
+                        }
+                        throw runtime_error("One of the children is missing.");
+                    }
+
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                }
+
+                fprintf(stderr, ")");
+            }
+        }
+
+        virtual void Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+
+            if (m_children.size() != 1)
+                throw std::logic_error("Diagonal operation: Should have one input.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+                throw std::logic_error("Diagonal operation: The input node has 0 element.");
+
+            size_t cols = Inputs(0)->FunctionValues().GetNumCols();
+
+            FunctionValues().Resize(1, cols);
+            InferMBLayoutFromInputsForStandardCase();
+            InferImageDimsFromInputs();
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
+        }
+
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & /*frameRange*/)
+        {
+            NOT_IMPLEMENTED
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        {
+            functionValues.Resize(1, inputFunctionValues.GetNumCols());
+            inputFunctionValues.AssignDiagonalValuesTo(functionValues);
+#if NANCHECK
+            functionValues.HasNan("Diagonal");
+#endif
+        }
+
+        virtual void ComputeInputPartial(const size_t inputIndex)
+        {
+            if (inputIndex > 0)
+                throw std::invalid_argument("Diagonal operation only takes one input.");
+
+            ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
+        }
+
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & /*frameRange*/)
+        {
+            NOT_IMPLEMENTED
+        }
+
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        {
+            Matrix<ElemType> diag(gradientValues.GetNumRows(), gradientValues.GetNumCols(), gradientValues.GetDeviceId());
+            diag = gradientValues;
+            diag.Resize(gradientValues.GetNumCols(), 1);
+
+            inputGradientValues.SetValue(0);
+            inputGradientValues.SetDiagonalValue(diag);
+        }
+
+        virtual const Matrix<ElemType>& FunctionValues() const
+        {
+            return m_functionValues;
+        }
+    };
+
+    template class DiagonalNode<float>;
+    template class DiagonalNode<double>;
+
     // -----------------------------------------------------------------------
     // RowRepeatNode (input) -- duplicate row(s) of a matrix multiple times
     // -----------------------------------------------------------------------
@@ -1561,4 +1709,4 @@ private:
     template class RowRepeatNode<float>;
     template class RowRepeatNode<double>;
 
-}}}
+} } }

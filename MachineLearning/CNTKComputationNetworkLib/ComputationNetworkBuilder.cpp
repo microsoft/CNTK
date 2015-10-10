@@ -72,6 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(ReshapeNode))	            return New<ReshapeNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(RowElementTimesNode))	    return New<RowElementTimesNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(RowRepeatNode))	    return New<RowRepeatNode<ElemType>>(deviceId, name);
+        else if (nodeType == OperationNameOf(DiagonalNode))	    return New<DiagonalNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(RowSliceNode))	    return New<RowSliceNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(RowStackNode))	    return New<RowStackNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(ScaleNode))	            return New<ScaleNode<ElemType>>(deviceId, name);
@@ -505,6 +506,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<RowRepeatNode<ElemType>>(net.GetDeviceId(), nodeName, num_repeat), a);
+    }
+
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Diagonal(const ComputationNodePtr a, const std::wstring nodeName)
+    {
+        return net.AddNodeToNetAndAttachInputs(New<DiagonalNode<ElemType>>(net.GetDeviceId(), nodeName), a);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, const std::wstring nodeName)

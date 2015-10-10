@@ -9,6 +9,7 @@
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
+#include "DebugUtil.h"
 #include "BestGpu.h"    // for CPUONLY macro
 #include <string>
 #include <vector>
@@ -122,6 +123,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
         GPUMatrix<ElemType>& SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
+        GPUMatrix<ElemType> Diagonal() const;
+
         size_t BufferSize() const {return m_numRows*m_numCols*sizeof(ElemType);}
         ElemType* BufferPointer() const {return m_pArray;}
 
@@ -144,7 +147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);        
 
         void SetDiagonalValue(const ElemType v);
-        void SetDiagonalValue(GPUMatrix<ElemType>& vector);
+        void SetDiagonalValue(const GPUMatrix<ElemType>& vector);
         void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED);
         void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED);
         void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed=USE_TIME_BASED_SEED); 

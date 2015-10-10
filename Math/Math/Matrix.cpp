@@ -828,6 +828,71 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    Matrix<ElemType> Matrix<ElemType>::Diagonal() const
+    {
+        int devId = GetDeviceId();
+
+        Matrix<ElemType> diag(matrixFlagDontOwnBuffer, (DEVICEID_TYPE)devId);
+        diag.m_preferredDeviceId = m_preferredDeviceId;
+
+        AssignDiagonalValuesTo(diag);
+
+        return diag;
+    }
+
+    template<class ElemType>
+    Matrix<ElemType> Matrix<ElemType>::AssignDiagonalValuesTo(Matrix<ElemType>& diag) const
+    {
+        int devId = GetDeviceId();
+        DecideAndMoveToRightDevice(*this, diag);
+
+        if (GetMatrixType() == MatrixType::DENSE)
+        {
+            if (devId == CPUDEVICE)
+            {
+                if (diag.m_CPUMatrix != nullptr)
+                    diag.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUMatrix->Diagonal()));
+                else
+                    diag.m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(m_CPUMatrix->Diagonal()));
+                diag.SetDataLocation(CPU, DENSE);
+            }
+            else
+            {
+                if (diag.m_GPUMatrix != nullptr)
+                    diag.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->Diagonal()));
+                else
+                    diag.m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->Diagonal()));
+                diag.SetDataLocation(GPU, DENSE);
+            }
+        }
+        else if (GetMatrixType() == MatrixType::SPARSE)
+        {
+            // TODO: Implement optimized diagonal functions for sparse matrices. For now use the DiagonalToDense instead.
+            if (devId == CPUDEVICE)
+            {
+                if (diag.m_CPUMatrix != nullptr)
+                    diag.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->DiagonalToDense()));
+                else
+                    diag.m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->DiagonalToDense()));
+                diag.SetDataLocation(CPU, DENSE);
+            }
+            else
+            {
+                if (diag.m_GPUMatrix != nullptr)
+                    diag.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->DiagonalToDense()));
+                else
+                    diag.m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->DiagonalToDense()));
+                diag.SetDataLocation(GPU, DENSE);
+            }
+        }
+        else
+        {
+            throw std::runtime_error("Unknown matrix type");
+        }
+
+        return diag;
+    }
 
     //this function will change the matrix type between DENSE and SPARSE. 
     //WARNING: The correct implementation is to copy the matrix between DENSE and SPARSE
@@ -1179,7 +1244,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void Matrix<ElemType>::SetDiagonalValue(Matrix<ElemType>& vector)
+    void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
     {
         if (IsEmpty() || vector.IsEmpty())
             throw std::logic_error("SetDiagonalValue: Matrix is empty.");
@@ -4079,6 +4144,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     *c.m_GPUSparseMatrix = tmp + (*c.m_GPUSparseMatrix)*beta;  
                     c.SetDataLocation(GPU, SPARSE); 
                 }
+            }
+            else if (a.m_matrixType == b.m_matrixType && a.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE)
+            {
+                GPUMatrix<ElemType> tmp;
+                GPUSparseMatrix<ElemType> tmpSparse;
+                GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, beta, tmp);
+                tmpSparse.SetValue(tmp);
+                *c.m_GPUSparseMatrix = tmpSparse + (*c.m_GPUSparseMatrix)*beta;
+                c.SetDataLocation(GPU, SPARSE);
             }
             else
                 NOT_IMPLEMENTED;

@@ -17,6 +17,7 @@
 #include "Platform.h"
 #include "BestGpu.h"
 #include "commandArgUtil.h" // for ConfigParameters
+#include "DebugUtil.h"
 #ifndef CPUONLY
 #pragma comment (lib, "cudart.lib")
 #include <cuda_runtime.h>
@@ -270,7 +271,7 @@ void BestGpu::Init()
     {
         const char* errmsg = cudaGetErrorString(err);
         fprintf(stderr, "!!!!!!!!CUDA EXCEPTION: %s\n", errmsg);
-        throw std::runtime_error(errmsg);
+        RuntimeError(errmsg);
     }
 
 

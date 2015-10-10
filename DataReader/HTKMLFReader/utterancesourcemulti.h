@@ -9,6 +9,7 @@
 #pragma once
 
 #include "basetypes.h"                  // for attempt()
+#include "Basics.h"
 #include "htkfeatio.h"                  // for htkmlfreader
 #include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)
 #include "minibatchsourcehelpers.h"
@@ -16,6 +17,7 @@
 #include "unordered_set"
 
 namespace msra { namespace dbn {
+    using Microsoft::MSR::CNTK::LogicError;
 
 // ---------------------------------------------------------------------------
 // minibatchutterancesource -- feature source to provide randomized utterances

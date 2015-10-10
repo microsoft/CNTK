@@ -458,6 +458,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    CPUMatrix<ElemType> CPUMatrix<ElemType>::Diagonal() const
+    {
+        if (m_numRows != m_numCols)
+            LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", m_numRows, m_numCols);
+
+        CPUMatrix<ElemType> diag(1, m_numCols);
+
+        auto& us = *this;
+
+#pragma omp parallel for     
+        for (long i = 0; i < m_numRows; i++)
+        {
+            diag(0, (size_t)i) = us(i, i);
+        }
+
+        return diag;
+    }
+
     //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const CPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
@@ -868,7 +887,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void CPUMatrix<ElemType>::SetDiagonalValue(CPUMatrix<ElemType>& vector)
+    void CPUMatrix<ElemType>::SetDiagonalValue(const CPUMatrix<ElemType>& vector)
     {
         if (IsEmpty() || vector.IsEmpty())
             throw std::logic_error("SetDiagonalValue: Matrix is empty.");

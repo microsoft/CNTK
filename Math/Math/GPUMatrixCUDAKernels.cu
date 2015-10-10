@@ -380,6 +380,20 @@ __global__ void _addWithRowSliceValuesOf(ElemType * dest, ElemType * src, const 
 }
 
 template<class ElemType>
+__global__ void _assignToDiagonalValuesOf(ElemType * dest, ElemType * src, const CUDA_LONG N, const CUDA_LONG srcCols)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    CUDA_LONG col = id / srcCols;
+    CUDA_LONG row = id - (col * srcCols);
+
+    if (row == col)
+        dest[row] = src[id];
+}
+
+template<class ElemType>
 __global__ void _assignRowStackValuesOf(ElemType * dest, ElemType ** srces, size_t* startRowIndeces, const CUDA_LONG numSrces, const CUDA_LONG N, const CUDA_LONG destRows, const CUDA_LONG destCols)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
