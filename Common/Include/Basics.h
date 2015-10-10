@@ -7,9 +7,9 @@
 #ifndef _BASICS_H_
 #define _BASICS_H_
 
-#include "basetypes.h"  // TODO: gradually move over here all that's needed of basetypes.h, then remove basetypes.h.
 #include "Platform.h"
 #include "DebugUtil.h"
+#include <string>
 
 #define TWO_PI 6.283185307f // TODO: find the official standards-confirming definition of this and use it instead
 
@@ -22,9 +22,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // std::string version of 'less' function
         // return false for equivalent, true for different
-        bool operator()(const std::string& left, const std::string& right) { return _stricmp(left.c_str(), right.c_str()) < 0; }
+        bool operator()(const string& left, const string& right) { return _stricmp(left.c_str(), right.c_str()) < 0; }
         // std::wstring version of 'less' function, used in non-config classes
-        bool operator()(const std::wstring& left, const std::wstring& right) { return _wcsicmp(left.c_str(), right.c_str()) < 0; }
+        bool operator()(const wstring& left, const wstring& right) { return _wcsicmp(left.c_str(), right.c_str()) < 0; }
     };
 
     // if it receives a lonely std::string then throw that directly
@@ -71,6 +71,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 #pragma warning(pop)
     static inline void Warning(const string & message) { Warning("%s", message.c_str()); }
+}}}
+
+
+#include "basetypes.h"  // TODO: gradually move over here all that's needed of basetypes.h, then remove basetypes.h.
+
+namespace Microsoft { namespace MSR { namespace CNTK {
 
     // ----------------------------------------------------------------------------
     // random collection of stuff we needed at some place
