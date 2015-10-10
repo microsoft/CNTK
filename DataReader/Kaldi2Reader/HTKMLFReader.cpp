@@ -10,8 +10,6 @@
 #include "basetypes.h"
 
 #include "htkfeatio.h"                  // for reading HTK features
-#include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)
-#include "simplesenonehmm.h"            // for MMI scoring
 
 #include "rollingwindowsource.h"        // minibatch sources
 #include "utterancesourcemulti.h"
@@ -1107,16 +1105,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // We initialize the sentence boundary information before we process
             // the utterances.
-            m_sentenceBegin.Resize(m_numberOfuttsPerMinibatch, m_currentMBSize);
-            m_minibatchPackingFlag.resize(m_currentMBSize);
+            m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_currentMBSize, !m_framemode);
             for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
             {
                 for (size_t j = 0; j < m_currentMBSize; j++)
                 {
-                    m_sentenceBegin.SetValue(i, j, (ElemType) SEQUENCE_MIDDLE);
+                    m_pMBLayout->SetWithoutOr(i, j, MinibatchPackingFlags::None);
                 }
             }
-            std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
 
             // Iterates over utterances. m_numberOfuttsPerMinibatch = 1 is a
             // special case.
@@ -1135,8 +1131,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // Sets the utterance boundary.
                     if (startFrame == 0)
                     {
-                        m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
-                        m_minibatchPackingFlag[0] |= MinibatchPackingFlag::SequenceStart;
+                        m_pMBLayout->Set(i, 0, MinibatchPackingFlags::SequenceStart);
                     }
 
                     endFrame = startFrame + m_currentMBSize;
@@ -1163,13 +1158,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (startFrame == 0)
                         {
-                            m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
-                            m_minibatchPackingFlag[0] |= MinibatchPackingFlag::SequenceStart;
+                            m_pMBLayout->Set(i, 0, MinibatchPackingFlags::SequenceStart);
                         }
 
                         // We have to set the utterance end.
-                        m_sentenceBegin.SetValue(i, m_sentenceBegin.GetNumCols() - 1, (ElemType)SEQUENCE_END);
-                        m_minibatchPackingFlag[m_sentenceBegin.GetNumCols() - 1] |= MinibatchPackingFlag::SequenceEnd;
+                        m_pMBLayout->Set(i, m_pMBLayout->GetNumTimeSteps() - 1, MinibatchPackingFlags::SequenceEnd);
                     }
 
                     // Now puts the utterance into the minibatch, and loads the
@@ -1200,8 +1193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (size_t k = 0; k < m_currentMBSize; k++)
                         {
-                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_INPUT);
-                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoInput;
+                            m_pMBLayout->Set(i, k, MinibatchPackingFlags::NoInput);
 
                             // Populates <NO_INPUT> with real features, the
                             // following implementation is not efficient...
@@ -1226,14 +1218,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (startFrame == 0)
                         {
-                            m_sentenceBegin.SetValue(i, 0, (ElemType)SEQUENCE_START);
-                            m_minibatchPackingFlag[0] |= MinibatchPackingFlag::SequenceStart;
+                            m_pMBLayout->Set(i, 0, MinibatchPackingFlags::SequenceStart);
                         }
 
                         // We have to set the utterance end.
-                        assert(m_toProcess[i] - startFrame - 1 < m_sentenceBegin.GetNumCols());
-                        m_sentenceBegin.SetValue(i, m_toProcess[i] - startFrame - 1, (ElemType)SEQUENCE_END);
-                        m_minibatchPackingFlag[m_toProcess[i] - startFrame - 1] |= MinibatchPackingFlag::SequenceEnd;
+                        assert(m_toProcess[i] - startFrame - 1 < m_pMBLayout->GetNumTimeSteps());
+                        m_pMBLayout->Set(i, m_toProcess[i] - startFrame - 1, MinibatchPackingFlags::SequenceEnd);
                     }
                     endFrame = m_toProcess[i];
                     size_t currentMBFilled = endFrame - startFrame;
@@ -1251,11 +1241,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     while (reNewSucc && (currentMBFilled + m_toProcess[i] <= m_currentMBSize))
                     {
                         // Sets the utterance boundary.
-                        assert(currentMBFilled + m_toProcess[i] <= m_sentenceBegin.GetNumCols());
-                        m_sentenceBegin.SetValue(i, currentMBFilled, (ElemType)SEQUENCE_START);
-                        m_minibatchPackingFlag[currentMBFilled] |= MinibatchPackingFlag::SequenceStart;
-                        m_sentenceBegin.SetValue(i, currentMBFilled + m_toProcess[i] - 1, (ElemType)SEQUENCE_END);
-                        m_minibatchPackingFlag[currentMBFilled + m_toProcess[i] - 1] |= MinibatchPackingFlag::SequenceEnd;
+                        assert(currentMBFilled + m_toProcess[i] <= m_pMBLayout->GetNumTimeSteps());
+                        m_pMBLayout->Set(i, currentMBFilled, MinibatchPackingFlags::SequenceStart);
+                        m_pMBLayout->Set(i, currentMBFilled + m_toProcess[i] - 1, MinibatchPackingFlags::SequenceEnd);
                         populateSucc = PopulateUtteranceInMinibatch(matrices, i, 0, m_toProcess[i], m_currentMBSize, currentMBFilled);
                         if (m_doMinibatchBuffering && populateSucc)
                         {
@@ -1281,16 +1269,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         m_processedFrame[i] += m_currentMBSize - currentMBFilled;
                         if (currentMBFilled < m_currentMBSize)
                         {
-                            m_sentenceBegin.SetValue(i, currentMBFilled, (ElemType)SEQUENCE_START);
-                            m_minibatchPackingFlag[currentMBFilled] |= MinibatchPackingFlag::SequenceStart;
+                            m_pMBLayout->Set(i, currentMBFilled, MinibatchPackingFlags::SequenceStart);
                         }
                     }
                     else
                     {
                         for (size_t k = currentMBFilled; k < m_currentMBSize; k++)
                         {
-                            m_sentenceBegin.SetValue(i, k, (ElemType) NO_INPUT);
-                            m_minibatchPackingFlag[k] |= MinibatchPackingFlag::NoInput;
+                            m_pMBLayout->Set(i, k, MinibatchPackingFlags::NoInput);
 
                             // Populates <NO_INPUT> with real features, the
                             // following implementation is not efficient...
@@ -1355,15 +1341,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 (startIndex + currentMBSize <= originalMBSize) ?
                 currentMBSize : (originalMBSize - startIndex);
 
-            // Sets sentence boundary for the current minibatch.
-            currentMinibatch.sentenceBegin.SetValue(
-                m_sentenceBegin.ColumnSlice(startIndex, numFrames));
-
-            // Sets packing flag for the current minibatch.
-            currentMinibatch.minibatchPackingFlag.resize(numFrames);
-            currentMinibatch.minibatchPackingFlag.assign(
-                m_minibatchPackingFlag.begin() + startIndex,
-                m_minibatchPackingFlag.begin() + startIndex + numFrames);
+            // Sets MBLayout.
+            currentMinibatch.pMBLayout->CopyFromRange(m_pMBLayout, startIndex, numFrames);
 
             // Sets the minibatch size for the current minibatch.
             currentMinibatch.currentMBSize = numFrames;
@@ -1426,8 +1405,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(m_minibatchBuffer.size() > index);
 
         // Restores the variables related to the minibatch.
-        m_sentenceBegin.SetValue(m_minibatchBuffer[index].sentenceBegin);
-        m_minibatchPackingFlag = m_minibatchBuffer[index].minibatchPackingFlag;
+        m_pMBLayout->CopyFrom(m_minibatchBuffer[index].pMBLayout);
         m_currentMBSize = m_minibatchBuffer[index].currentMBSize;
         m_minibatchUttInfo = m_minibatchBuffer[index].minibatchUttInfo;
 
@@ -1472,9 +1450,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     else
                     {
-                        m_uttDerivBuffer->GetDerivative(
-                            m_minibatchUttInfo, m_sentenceBegin,
-                            m_minibatchPackingFlag, matrices[iter->first]);
+                        m_uttDerivBuffer->GetDerivative(m_minibatchUttInfo,
+                                                        m_pMBLayout,
+                                                        matrices[iter->first]);
                     }
                 }
                 else if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerObj)
@@ -1513,23 +1491,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
         {
             Matrix<ElemType>& data = *matrices[iter->first];
-            if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+            if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::real)
             {
-                size_t id = m_featureNameToIdMap[iter->first];
-                size_t dim = m_featureNameToDimMap[iter->first];
+                size_t id = m_featureNameToIdMap.at(iter->first);
+                size_t dim = m_featureNameToDimMap.at(iter->first);
                 assert(id < featureBuffer.size());
                 data.SetValue(dim, size, featureBuffer[id] , matrixFlagNormal);
             }
-            else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
+            else if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::category)
             {
-                size_t id = m_labelNameToIdMap[iter->first];
-                size_t dim = m_labelNameToDimMap[iter->first];
+                size_t id = m_labelNameToIdMap.at(iter->first);
+                size_t dim = m_labelNameToDimMap.at(iter->first);
                 assert(id < labelBuffer.size());
                 data.SetValue(dim, size, labelBuffer[id], matrixFlagNormal);
             }
             else if (m_doMinibatchBuffering)
             {
-                if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerDeriv)
+                if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::readerDeriv)
                 {
                     if (data.GetNumCols()
                         != m_currentMBSize * m_numberOfuttsPerMinibatch)
@@ -1539,7 +1517,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     data.SetValue(0);
                 }
-                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::readerObj)
+                else if (m_nameToTypeMap.at(iter->first) == InputOutputTypes::readerObj)
                 {
                     if (data.GetNumCols() != 1)
                     {
@@ -1663,15 +1641,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
                     if (first)
                     {
-                        m_sentenceBegin.Resize((size_t)1, (size_t)feat.cols());
-                        m_minibatchPackingFlag.resize(feat.cols());
-                        m_sentenceBegin.SetValue((ElemType) SEQUENCE_MIDDLE);
-                        m_sentenceBegin.SetValue(0, 0, (ElemType) SEQUENCE_START);
-                        m_sentenceBegin.SetValue(0, (size_t)feat.cols()-1, (ElemType) SEQUENCE_END);
-                                
-                        std::fill(m_minibatchPackingFlag.begin(), m_minibatchPackingFlag.end(), MinibatchPackingFlag::None);
-                        m_minibatchPackingFlag[0] = MinibatchPackingFlag::SequenceStart;
-                        m_minibatchPackingFlag[(size_t)feat.cols()-1] = MinibatchPackingFlag::SequenceEnd;
+                        m_pMBLayout->Init(1, feat.cols(), true);
+                        m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
+                        m_pMBLayout->SetWithoutOr(0, feat.cols() - 1, MinibatchPackingFlags::SequenceEnd);
                         first = false;
                     }
 
@@ -1768,7 +1740,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_noData = true;
                 }
                 fprintf(stderr, "WARNING: Utterance \"%S\" has length longer "
-                    "than the %d, skipping it.\n",
+                    "than the %zd, skipping it.\n",
                     m_uttInfo[i][0].first.c_str(), m_maxUtteranceLength);
                 return ReNewBufferForMultiIO(i);
             }
@@ -1946,8 +1918,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     bool HTKMLFReader<ElemType>::GetMinibatchCopy(
         std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         std::map<std::wstring, Matrix<ElemType>*>& matrices,
-        Matrix<ElemType>& sentenceBegin,
-        std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
+        MBLayoutPtr pMBLayout)
     {
         // We need to get a "copy" of the minibatch to do the forward
         // computation for sequence training.
@@ -1959,8 +1930,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_getMinibatchCopy = true;
                 if (GetMinibatchToTrainOrTest(matrices))
                 {
-                    sentenceBegin.SetValue(m_sentenceBegin);
-                    minibatchPackingFlag = m_minibatchPackingFlag;
+                    pMBLayout->CopyFrom(m_pMBLayout);
                     uttInfo = m_minibatchUttInfo;
                     m_getMinibatchCopy = false;
                     return true;
@@ -1976,8 +1946,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     bool HTKMLFReader<ElemType>::SetNetOutput(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& outputs,
-        const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag)
+        const MBLayoutPtr pMBLayout)
     {
         // Set the likelihoods for the utterance with which we can comput the
         // derivatives. Note that the minibatch may only contain partial output
@@ -1986,9 +1955,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_doMinibatchBuffering)
         {
             assert(m_framemode == false);
-            return m_uttDerivBuffer->SetLikelihood(uttInfo, outputs,
-                                                   sentenceBegin,
-                                                   minibatchPackingFlag);
+            return m_uttDerivBuffer->SetLikelihood(uttInfo, outputs, pMBLayout);
         }
         return false;
     }
@@ -2113,16 +2080,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t i = 0; i < m_switchFrame.size() ; i++)
         {
             sentenceEnd[i] = m_switchFrame[i];
-        }
-    }
-
-    template<class ElemType>
-    void HTKMLFReader<ElemType>::SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag)
-    {
-        if (!m_framemode)
-        {
-            sentenceBegin.SetValue(m_sentenceBegin);
-            minibatchPackingFlag = m_minibatchPackingFlag;
         }
     }
 

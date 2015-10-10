@@ -363,7 +363,7 @@ MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.58203322; EvalErr[0]PerSample = 0.26400000; TotalTime = 0.12134s; TotalTimePerSample = 0.48534ms; SamplesPerSecond = 2060
 MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.52373439; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.13107s; TotalTimePerSample = 0.52428ms; SamplesPerSecond = 1907
 MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.42024806; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.13125s; TotalTimePerSample = 0.52500ms; SamplesPerSecond = 1904
-MPI Rank 0: Finished Epoch[1]: [Training Set] TrainLossPerSample = 0.69029278; EvalErrPerSample = 0.45930001; Ave LearnRatePerSample = 0.01999999955; EpochTime=9.333597
+MPI Rank 0: Finished Epoch[ 1 of 10]: [Training Set] TrainLossPerSample = 0.69029278; EvalErrPerSample = 0.45930001; Ave LearnRatePerSample = 0.01999999955; EpochTime=9.333597
 MPI Rank 0: Starting Epoch 2: learning rate per sample = 0.008000  momentum = 0.900001 
 MPI Rank 0: starting epoch 1 at record count 10000, and file position 0
 MPI Rank 0: already there from last epoch
@@ -409,7 +409,7 @@ MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16641162; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.14890s; TotalTimePerSample = 0.59558ms; SamplesPerSecond = 1679
 MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20390332; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.12979s; TotalTimePerSample = 0.51916ms; SamplesPerSecond = 1926
 MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14610645; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.11907s; TotalTimePerSample = 0.47630ms; SamplesPerSecond = 2099
-MPI Rank 0: Finished Epoch[2]: [Training Set] TrainLossPerSample = 0.18345799; EvalErrPerSample = 0.078100003; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.054353
+MPI Rank 0: Finished Epoch[ 2 of 10]: [Training Set] TrainLossPerSample = 0.18345799; EvalErrPerSample = 0.078100003; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.054353
 MPI Rank 0: Starting Epoch 3: learning rate per sample = 0.008000  momentum = 0.900001 
 MPI Rank 0: starting epoch 2 at record count 20000, and file position 0
 MPI Rank 0: already there from last epoch
@@ -455,7 +455,7 @@ MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16647705; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.11851s; TotalTimePerSample = 0.47402ms; SamplesPerSecond = 2109
 MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20593017; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.13046s; TotalTimePerSample = 0.52184ms; SamplesPerSecond = 1916
 MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14622559; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12497s; TotalTimePerSample = 0.49988ms; SamplesPerSecond = 2000
-MPI Rank 0: Finished Epoch[3]: [Training Set] TrainLossPerSample = 0.15935922; EvalErrPerSample = 0.077; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.570444
+MPI Rank 0: Finished Epoch[ 3 of 10]: [Training Set] TrainLossPerSample = 0.15935922; EvalErrPerSample = 0.077; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.570444
 MPI Rank 0: Starting Epoch 4: learning rate per sample = 0.008000  momentum = 0.900001 
 MPI Rank 0: starting epoch 3 at record count 30000, and file position 0
 MPI Rank 0: already there from last epoch
@@ -501,7 +501,7 @@ MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16644482; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.11844s; TotalTimePerSample = 0.47374ms; SamplesPerSecond = 2110
 MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20619434; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.12883s; TotalTimePerSample = 0.51532ms; SamplesPerSecond = 1940
 MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14624365; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12283s; TotalTimePerSample = 0.49132ms; SamplesPerSecond = 2035
-MPI Rank 0: Finished Epoch[4]: [Training Set] TrainLossPerSample = 0.15907188; EvalErrPerSample = 0.077399999; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.887408
+MPI Rank 0: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0.15907188; EvalErrPerSample = 0.077399999; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.887408
 MPI Rank 0: COMPLETED
 MPI Rank 0: ~MPIWrapper
 MPI Rank 1: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20150825180808.217636\ParallelTraining\NoQuantization_SinglePrecision@debug_cpu/stderr_SimpleMultiGPU.logrank1
@@ -832,7 +832,7 @@ MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.58203322; EvalErr[0]PerSample = 0.26400000; TotalTime = 0.12823s; TotalTimePerSample = 0.51290ms; SamplesPerSecond = 1949
 MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.52373439; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.13126s; TotalTimePerSample = 0.52506ms; SamplesPerSecond = 1904
 MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.42024806; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.13127s; TotalTimePerSample = 0.52507ms; SamplesPerSecond = 1904
-MPI Rank 1: Finished Epoch[1]: [Training Set] TrainLossPerSample = 0.69029278; EvalErrPerSample = 0.45930001; Ave LearnRatePerSample = 0.01999999955; EpochTime=9.332512
+MPI Rank 1: Finished Epoch[ 1 of 10]: [Training Set] TrainLossPerSample = 0.69029278; EvalErrPerSample = 0.45930001; Ave LearnRatePerSample = 0.01999999955; EpochTime=9.332512
 MPI Rank 1: Starting Epoch 2: learning rate per sample = 0.008000  momentum = 0.900001 
 MPI Rank 1: starting epoch 1 at record count 10000, and file position 0
 MPI Rank 1: already there from last epoch
@@ -878,7 +878,7 @@ MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16641162; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.14912s; TotalTimePerSample = 0.59646ms; SamplesPerSecond = 1676
 MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20390332; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.12135s; TotalTimePerSample = 0.48542ms; SamplesPerSecond = 2060
 MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14610645; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12744s; TotalTimePerSample = 0.50975ms; SamplesPerSecond = 1961
-MPI Rank 1: Finished Epoch[2]: [Training Set] TrainLossPerSample = 0.18345799; EvalErrPerSample = 0.078100003; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.054291
+MPI Rank 1: Finished Epoch[ 2 of 10]: [Training Set] TrainLossPerSample = 0.18345799; EvalErrPerSample = 0.078100003; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.054291
 MPI Rank 1: Starting Epoch 3: learning rate per sample = 0.008000  momentum = 0.900001 
 MPI Rank 1: starting epoch 2 at record count 20000, and file position 0
 MPI Rank 1: already there from last epoch
@@ -924,7 +924,7 @@ MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16647705; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.11848s; TotalTimePerSample = 0.47392ms; SamplesPerSecond = 2110
 MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20593017; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.13046s; TotalTimePerSample = 0.52182ms; SamplesPerSecond = 1916
 MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14622559; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12502s; TotalTimePerSample = 0.50010ms; SamplesPerSecond = 1999
-MPI Rank 1: Finished Epoch[3]: [Training Set] TrainLossPerSample = 0.15935922; EvalErrPerSample = 0.077; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.570413
+MPI Rank 1: Finished Epoch[ 3 of 10]: [Training Set] TrainLossPerSample = 0.15935922; EvalErrPerSample = 0.077; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.570413
 MPI Rank 1: Starting Epoch 4: learning rate per sample = 0.008000  momentum = 0.900001 
 MPI Rank 1: starting epoch 3 at record count 30000, and file position 0
 MPI Rank 1: already there from last epoch
@@ -970,7 +970,7 @@ MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16644482; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.11846s; TotalTimePerSample = 0.47382ms; SamplesPerSecond = 2110
 MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20619434; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.12881s; TotalTimePerSample = 0.51526ms; SamplesPerSecond = 1940
 MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14624365; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12287s; TotalTimePerSample = 0.49148ms; SamplesPerSecond = 2034
-MPI Rank 1: Finished Epoch[4]: [Training Set] TrainLossPerSample = 0.15907188; EvalErrPerSample = 0.077399999; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.887381
+MPI Rank 1: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0.15907188; EvalErrPerSample = 0.077399999; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.887381
 MPI Rank 1: COMPLETED
 MPI Rank 1: ~MPIWrapper
 MPI Rank 2: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20150825180808.217636\ParallelTraining\NoQuantization_SinglePrecision@debug_cpu/stderr_SimpleMultiGPU.logrank2
@@ -1301,7 +1301,7 @@ MPI Rank 2:  Epoch[ 1 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 2:  Epoch[ 1 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.58203322; EvalErr[0]PerSample = 0.26400000; TotalTime = 0.12476s; TotalTimePerSample = 0.49906ms; SamplesPerSecond = 2003
 MPI Rank 2:  Epoch[ 1 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.52373439; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.13107s; TotalTimePerSample = 0.52427ms; SamplesPerSecond = 1907
 MPI Rank 2:  Epoch[ 1 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.42024806; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.13127s; TotalTimePerSample = 0.52506ms; SamplesPerSecond = 1904
-MPI Rank 2: Finished Epoch[1]: [Training Set] TrainLossPerSample = 0.69029278; EvalErrPerSample = 0.45930001; Ave LearnRatePerSample = 0.01999999955; EpochTime=9.333551
+MPI Rank 2: Finished Epoch[ 1 of 10]: [Training Set] TrainLossPerSample = 0.69029278; EvalErrPerSample = 0.45930001; Ave LearnRatePerSample = 0.01999999955; EpochTime=9.333551
 MPI Rank 2: Starting Epoch 2: learning rate per sample = 0.008000  momentum = 0.900001 
 MPI Rank 2: starting epoch 1 at record count 10000, and file position 0
 MPI Rank 2: already there from last epoch
@@ -1347,7 +1347,7 @@ MPI Rank 2:  Epoch[ 2 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 2:  Epoch[ 2 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16641162; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.14891s; TotalTimePerSample = 0.59566ms; SamplesPerSecond = 1678
 MPI Rank 2:  Epoch[ 2 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20390332; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.12529s; TotalTimePerSample = 0.50117ms; SamplesPerSecond = 1995
 MPI Rank 2:  Epoch[ 2 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14610645; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12337s; TotalTimePerSample = 0.49348ms; SamplesPerSecond = 2026
-MPI Rank 2: Finished Epoch[2]: [Training Set] TrainLossPerSample = 0.18345799; EvalErrPerSample = 0.078100003; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.05432
+MPI Rank 2: Finished Epoch[ 2 of 10]: [Training Set] TrainLossPerSample = 0.18345799; EvalErrPerSample = 0.078100003; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.05432
 MPI Rank 2: Starting Epoch 3: learning rate per sample = 0.008000  momentum = 0.900001 
 MPI Rank 2: starting epoch 2 at record count 20000, and file position 0
 MPI Rank 2: already there from last epoch
@@ -1393,7 +1393,7 @@ MPI Rank 2:  Epoch[ 3 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 2:  Epoch[ 3 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16647705; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.11859s; TotalTimePerSample = 0.47436ms; SamplesPerSecond = 2108
 MPI Rank 2:  Epoch[ 3 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20593017; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.13061s; TotalTimePerSample = 0.52242ms; SamplesPerSecond = 1914
 MPI Rank 2:  Epoch[ 3 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14622559; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12535s; TotalTimePerSample = 0.50141ms; SamplesPerSecond = 1994
-MPI Rank 2: Finished Epoch[3]: [Training Set] TrainLossPerSample = 0.15935922; EvalErrPerSample = 0.077; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.570405
+MPI Rank 2: Finished Epoch[ 3 of 10]: [Training Set] TrainLossPerSample = 0.15935922; EvalErrPerSample = 0.077; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.570405
 MPI Rank 2: Starting Epoch 4: learning rate per sample = 0.008000  momentum = 0.900001 
 MPI Rank 2: starting epoch 3 at record count 30000, and file position 0
 MPI Rank 2: already there from last epoch
@@ -1439,7 +1439,7 @@ MPI Rank 2:  Epoch[ 4 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 2:  Epoch[ 4 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16644482; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.11856s; TotalTimePerSample = 0.47423ms; SamplesPerSecond = 2108
 MPI Rank 2:  Epoch[ 4 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20619434; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.12898s; TotalTimePerSample = 0.51592ms; SamplesPerSecond = 1938
 MPI Rank 2:  Epoch[ 4 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14624365; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12295s; TotalTimePerSample = 0.49182ms; SamplesPerSecond = 2033
-MPI Rank 2: Finished Epoch[4]: [Training Set] TrainLossPerSample = 0.15907188; EvalErrPerSample = 0.077399999; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.887366
+MPI Rank 2: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0.15907188; EvalErrPerSample = 0.077399999; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.887366
 MPI Rank 2: COMPLETED
 MPI Rank 2: ~MPIWrapper
 MPI Rank 3: Redirecting stderr to file C:\cygwin64\tmp\cntk-test-20150825180808.217636\ParallelTraining\NoQuantization_SinglePrecision@debug_cpu/stderr_SimpleMultiGPU.logrank3
@@ -1770,7 +1770,7 @@ MPI Rank 3:  Epoch[ 1 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 3:  Epoch[ 1 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.58203322; EvalErr[0]PerSample = 0.26400000; TotalTime = 0.12915s; TotalTimePerSample = 0.51661ms; SamplesPerSecond = 1935
 MPI Rank 3:  Epoch[ 1 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.52373439; EvalErr[0]PerSample = 0.12400000; TotalTime = 0.13101s; TotalTimePerSample = 0.52403ms; SamplesPerSecond = 1908
 MPI Rank 3:  Epoch[ 1 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.42024806; EvalErr[0]PerSample = 0.08000000; TotalTime = 0.13127s; TotalTimePerSample = 0.52506ms; SamplesPerSecond = 1904
-MPI Rank 3: Finished Epoch[1]: [Training Set] TrainLossPerSample = 0.69029278; EvalErrPerSample = 0.45930001; Ave LearnRatePerSample = 0.01999999955; EpochTime=9.332503
+MPI Rank 3: Finished Epoch[ 1 of 10]: [Training Set] TrainLossPerSample = 0.69029278; EvalErrPerSample = 0.45930001; Ave LearnRatePerSample = 0.01999999955; EpochTime=9.332503
 MPI Rank 3: Starting Epoch 2: learning rate per sample = 0.008000  momentum = 0.900001 
 MPI Rank 3: starting epoch 1 at record count 10000, and file position 0
 MPI Rank 3: already there from last epoch
@@ -1816,7 +1816,7 @@ MPI Rank 3:  Epoch[ 2 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 3:  Epoch[ 2 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16641162; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.14911s; TotalTimePerSample = 0.59642ms; SamplesPerSecond = 1676
 MPI Rank 3:  Epoch[ 2 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20390332; EvalErr[0]PerSample = 0.11600000; TotalTime = 0.12582s; TotalTimePerSample = 0.50327ms; SamplesPerSecond = 1986
 MPI Rank 3:  Epoch[ 2 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14610645; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12296s; TotalTimePerSample = 0.49184ms; SamplesPerSecond = 2033
-MPI Rank 3: Finished Epoch[2]: [Training Set] TrainLossPerSample = 0.18345799; EvalErrPerSample = 0.078100003; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.05429
+MPI Rank 3: Finished Epoch[ 2 of 10]: [Training Set] TrainLossPerSample = 0.18345799; EvalErrPerSample = 0.078100003; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.05429
 MPI Rank 3: Starting Epoch 3: learning rate per sample = 0.008000  momentum = 0.900001 
 MPI Rank 3: starting epoch 2 at record count 20000, and file position 0
 MPI Rank 3: already there from last epoch
@@ -1862,7 +1862,7 @@ MPI Rank 3:  Epoch[ 3 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 3:  Epoch[ 3 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16647705; EvalErr[0]PerSample = 0.09200000; TotalTime = 0.11846s; TotalTimePerSample = 0.47384ms; SamplesPerSecond = 2110
 MPI Rank 3:  Epoch[ 3 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20593017; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.13038s; TotalTimePerSample = 0.52151ms; SamplesPerSecond = 1917
 MPI Rank 3:  Epoch[ 3 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14622559; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12532s; TotalTimePerSample = 0.50128ms; SamplesPerSecond = 1994
-MPI Rank 3: Finished Epoch[3]: [Training Set] TrainLossPerSample = 0.15935922; EvalErrPerSample = 0.077; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.570397
+MPI Rank 3: Finished Epoch[ 3 of 10]: [Training Set] TrainLossPerSample = 0.15935922; EvalErrPerSample = 0.077; Ave LearnRatePerSample = 0.00800000038; EpochTime=6.570397
 MPI Rank 3: Starting Epoch 4: learning rate per sample = 0.008000  momentum = 0.900001 
 MPI Rank 3: starting epoch 3 at record count 30000, and file position 0
 MPI Rank 3: already there from last epoch
@@ -1908,6 +1908,6 @@ MPI Rank 3:  Epoch[ 4 of 10]-Minibatch[ 361- 370 of -171798692]: SamplesSeen = 2
 MPI Rank 3:  Epoch[ 4 of 10]-Minibatch[ 371- 380 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.16644482; EvalErr[0]PerSample = 0.09600000; TotalTime = 0.11845s; TotalTimePerSample = 0.47380ms; SamplesPerSecond = 2110
 MPI Rank 3:  Epoch[ 4 of 10]-Minibatch[ 381- 390 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.20619434; EvalErr[0]PerSample = 0.11200000; TotalTime = 0.12882s; TotalTimePerSample = 0.51529ms; SamplesPerSecond = 1940
 MPI Rank 3:  Epoch[ 4 of 10]-Minibatch[ 391- 400 of -171798692]: SamplesSeen = 250; TrainLossPerSample =  0.14624365; EvalErr[0]PerSample = 0.06800000; TotalTime = 0.12279s; TotalTimePerSample = 0.49116ms; SamplesPerSecond = 2036
-MPI Rank 3: Finished Epoch[4]: [Training Set] TrainLossPerSample = 0.15907188; EvalErrPerSample = 0.077399999; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.887371
+MPI Rank 3: Finished Epoch[ 4 of 10]: [Training Set] TrainLossPerSample = 0.15907188; EvalErrPerSample = 0.077399999; Ave LearnRatePerSample = 0.00800000038; EpochTime=4.887371
 MPI Rank 3: COMPLETED
 MPI Rank 3: ~MPIWrapper

@@ -6,19 +6,20 @@
 //
 #pragma once
 
-#include <vector>
-#include <string>
-#include <stdexcept>
-#include <fstream>
-#include <queue>
 #include "Basics.h"
 #include "Helpers.h"    // for foreach_column() macro
 #include "fileutil.h"
 #include "DataReader.h"
 #include "DataWriter.h"
 #include "ComputationNetwork.h"
+#include "DataReaderHelpers.h"
 #include "TrainingCriterionNodes.h" // TODO: we should move the functions that depend on these to the .cpp
 #include "CompositeComputationNodes.h"
+#include <vector>
+#include <string>
+#include <stdexcept>
+#include <fstream>
+#include <queue>
 
 using namespace std;
 
@@ -87,7 +88,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (int i = 0; i < evalNodeNames.size(); i++)
                 {
                     const auto & node = m_net.GetNodeFromName(evalNodeNames[i]);
-                    m_net.BuildAndValidateNetwork(node);
+                    m_net.BuildAndValidateSubNetwork(node);
                     if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
                         throw std::logic_error("The nodes passed to SimpleEvaluator::Evaluate function must be either eval or training criterion nodes (which evalues to 1x1 value).");
                     evalNodes.push_back(node);
@@ -121,22 +122,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 evalResultsLastMBs.push_back((ElemType)0);
 
             dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+            m_net.StartEvaluateMinibatchLoop(evalNodes);
 
-            while (dataReader->GetMinibatch(inputMatrices))
+            while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-                actualMBSize = m_net.GetActualMBSize();
-                m_net.SetActualMiniBatchSize(actualMBSize);
-                m_net.SetActualNbrSlicesInEachRecIter(dataReader->NumberSlicesInEachRecurrentIter());
-                dataReader->SetSentenceSegBatch(m_net.SentenceBoundary(), m_net.MinibatchPackingFlags());
+                //actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
+                //dataReader->CopyMBLayoutTo(m_net.GetMBLayoutPtr());
+                //m_net.VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
 
                 //for now since we share the same label masking flag we call this on one node only
                 //Later, when we apply different labels on different nodes
                 //we need to add code to call this function multiple times, one for each criteria node
                 size_t numSamplesWithLabel = m_net.GetNumSamplesWithLabel(actualMBSize);
-                for (int i = 0; i<evalNodes.size(); i++)
+                for (int i = 0; i < evalNodes.size(); i++)
                 {
                     m_net.Evaluate(evalNodes[i]);
                     evalResults[i] += (double)evalNodes[i]->Get00Element(); //criterionNode should be a scalar
@@ -191,6 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //returns error rate
+        // TODO: What does this function do?
         double EvaluateUnroll(IDataReader<ElemType>* dataReader, const size_t mbSize, double &evalSetCrossEntropy, const wchar_t* output = nullptr, const size_t testSize = requestDataSize)
         {
             std::vector<ComputationNodeBasePtr> & featureNodes = m_net.FeatureNodes();
@@ -208,9 +210,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
             for (size_t i = 0; i < labelNodes.size(); i++)
                 inputMatrices[labelNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[i])->FunctionValues();
-            inputMatrices[L"numberobs"] = new Matrix<ElemType>(1, 1, m_net.GetDeviceID());
+            inputMatrices[L"numberobs"] = new Matrix<ElemType>(1, 1, m_net.GetDeviceId());
 
             dataReader->StartMinibatchLoop(mbSize, 0, testSize);
+            m_net.StartEvaluateMinibatchLoop(criterionNodes, evaluationNodes);
 
             double epochEvalError = 0;
             double epochCrossEntropy = 0;
@@ -237,6 +240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t actualMBSize = 0;
             while (dataReader->GetMinibatch(inputMatrices))
             {
+                // TODO: we should use GetMinibatchIntoNetwork(), but it seems tricky. What is this for?
                 size_t nbrSamples = (size_t)(*inputMatrices[L"numberobs"])(0, 0);
                 actualMBSize = nbrSamples;
 
@@ -414,9 +418,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             double evalResultsLastMBs = (double)0;
 
             for (auto ptr = dataReaders.begin(); ptr != dataReaders.end(); ptr++)
-            {
                 (*ptr)->StartMinibatchLoop(mbSize, 0, testSize);
-            }
+            // BUGBUG: Code below will fail because we now must call StartMinibatchLoop(), but I can't tell from below which nodes to call it for.
+            //for (auto & ptr : nets)
+            //    ptr->StartMinibatchLoop(xxx);
 
             bool bContinueDecoding = true;
             while (bContinueDecoding)
@@ -445,13 +450,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 auto preader = dataReaders.begin();
                 for (auto ptr = nets.begin(); ptr != nets.end(); ptr++, preader++)
                 {
-                    actualMBSize = (*ptr)->GetActualMBSize();
+                    actualMBSize = (*ptr)->SetActualMiniBatchSizeFromFeatures();
                     if (actualMBSize == 0)
                         LogicError("decoderTrainSetDataReader read data but encoderNet reports no data read");
-
-                    (*ptr)->SetActualMiniBatchSize(actualMBSize);
-                    (*ptr)->SetActualNbrSlicesInEachRecIter((*preader)->NumberSlicesInEachRecurrentIter());
-                    (*preader)->SetSentenceSegBatch((*ptr)->SentenceBoundary(), (*ptr)->MinibatchPackingFlags());
+                    (*preader)->CopyMBLayoutTo((*ptr)->GetMBLayoutPtr());
+                    (*ptr)->VerifyActualNumParallelSequences((*preader)->GetNumParallelSequences());
 
                     const auto & pairs = (*ptr)->PairNodes();
                     for (auto ptr2 = pairs.begin(); ptr2 != pairs.end(); ptr2++)
@@ -460,12 +463,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 decoderNet = nets[iNumNets - 1];
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                actualMBSize = decoderNet->GetActualMBSize();
-                decoderNet->SetActualMiniBatchSize(actualMBSize);
+                actualMBSize = decoderNet->SetActualMiniBatchSizeFromFeatures();
                 if (actualMBSize == 0)
                     LogicError("decoderTrainSetDataReader read data but decoderNet reports no data read");
-                decoderNet->SetActualNbrSlicesInEachRecIter(decoderDataReader->NumberSlicesInEachRecurrentIter());
-                decoderDataReader->SetSentenceSegBatch(decoderNet->SentenceBoundary(), decoderNet->MinibatchPackingFlags());
+                decoderDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
+                decoderNet->VerifyActualNumParallelSequences(decoderDataReader->GetNumParallelSequences());
 
                 size_t i = 0;
                 assert(decoderEvaluationNodes.size() == 1);
@@ -628,10 +630,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto ptr = readers.begin(); ptr != readers.end(); ptr++)
             {
                 (*ptr)->StartMinibatchLoop(mbSize, 0, testSize);
-                (*ptr)->SetNbrSlicesEachRecurrentIter(1);
+                (*ptr)->SetNumParallelSequences(1);
             }
 
-            Matrix<ElemType> historyMat(m_net.GetDeviceID());
+            Matrix<ElemType> historyMat(m_net.GetDeviceId());
 
             bool bDecoding = true;
             while (bDecoding)
@@ -657,31 +659,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     ComputationNetwork::UpdateEvalTimeStamps(featNodes);
                 }
 
-
                 auto ptrreader = readers.begin();
                 size_t mNutt = 0;
                 for (auto ptr = nets.begin(); ptr != nets.end() - 1; ptr++, ptrreader++)
                 {
                     /// evaluate on the encoder networks
-                    actualMBSize = (*ptr)->GetActualMBSize();
+                    actualMBSize = (*ptr)->SetActualMiniBatchSizeFromFeatures();
 
-                    (*ptr)->SetActualMiniBatchSize(actualMBSize);
-                    mNutt = (*ptrreader)->NumberSlicesInEachRecurrentIter();
-                    (*ptr)->SetActualNbrSlicesInEachRecIter(mNutt);
-                    (*ptrreader)->SetSentenceSegBatch((*ptr)->SentenceBoundary(), (*ptr)->MinibatchPackingFlags());
+                    mNutt = (*ptrreader)->GetNumParallelSequences();
+                    (*ptrreader)->CopyMBLayoutTo((*ptr)->GetMBLayoutPtr());
+                    (*ptr)->VerifyActualNumParallelSequences(mNutt);
 
                     const auto & pairs = (*ptr)->PairNodes();
                     for (auto ptr2 = pairs.begin(); ptr2 != pairs.end(); ptr2++)
                         (*ptr)->Evaluate(*ptr2);
                 }
 
-                vector<size_t> best_path;
-
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                decoderNet->SetActualMiniBatchSize(actualMBSize);
-                decoderNet->SetActualNbrSlicesInEachRecIter(mNutt);
-                encoderDataReader->SetSentenceSegBatch(decoderNet->SentenceBoundary(), decoderNet->MinibatchPackingFlags());
+                decoderNet->ResizeAllFeatureNodes(actualMBSize);
+                decoderNet->SetActualMiniBatchSizeFromFeatures();
+                encoderDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
+                decoderNet->VerifyActualNumParallelSequences(mNutt);
 
+                vector<size_t> best_path;
                 FindBestPathWithVariableLength(decoderNet, actualMBSize, decoderDataReader, dataWriter, outputNodes, writeNodes, decoderFeatureNodes, beam, &decoderInputMatrices, best_path);
 
                 totalEpochSamples += actualMBSize;
@@ -741,13 +741,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
-                node->EvaluateThisNode(FrameRange(atTime, node->GetNbrSlicesInEachRecurrentIteration()));
-                if (node->GetNumCols() != node->GetNbrSlicesInEachRecurrentIteration())
+                node->EvaluateThisNode(FrameRange(atTime));
+                if (node->GetNumCols() != node->GetNumParallelSequences())
                     RuntimeError("preComputeActivityAtTime: the function values has to be a single column matrix ");
             }
         }
 
-        //return true if precomputation is executed.
+        // (only called by FindBestPath...())
         void ResetPreCompute()
         {
             //mark false
@@ -759,7 +759,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         //return true if precomputation is executed.
-        bool PreCompute(ComputationNetwork& net,
+        bool EvaluateBatchModeNodes(ComputationNetwork& net,
                         const std::vector<ComputationNodeBasePtr>& featureNodes)
         {
             batchComputeNodes = net.GetNodesRequiringBatchMode();
@@ -771,12 +771,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
-            size_t actualMBSize = net.GetActualMBSize();
-            net.SetActualMiniBatchSize(actualMBSize);
+            net.StartEvaluateMinibatchLoop(batchComputeNodes);  // TODO: Is this correct? There is no StartMinibatchLoop() for a reader.
+
+            net.SetActualMiniBatchSizeFromFeatures();
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
-            {
                 net.Evaluate(*nodeIter);
-            }
 
             //mark done
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
@@ -837,17 +836,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t actualMBSize = 0;
 
             dataReader->StartMinibatchLoop(mbSize, 0, testSize);
-            dataReader->SetNbrSlicesEachRecurrentIter(1);
+            dataReader->SetNumParallelSequences(1);
 
             startReadMBTime = clock();
             size_t numMBsRun = 0;
             double ComputeTimeInMBs = 0;
-            while (dataReader->GetMinibatch(inputMatrices))
+            while (DataReaderHelpers::GetMinibatchIntoNetwork(*dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
+                // note: GetMinibatchIntoNetwork() will also fetch the MBLayout although we don't need ithere. This should not hurt.
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
-
-                actualMBSize = m_net.GetActualMBSize();
-                m_net.SetActualMiniBatchSize(actualMBSize);
+                //actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
 
                 vector<size_t> best_path;
 
@@ -903,15 +901,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             priority_queue<Token<ElemType>> from_queue, to_queue;
             vector<double> evalResults;
 
-            size_t mbSize;
-            mbSize = evalnet->GetActualMBSize();
-            size_t maxMbSize = 2 * mbSize;
 
             /// use reader to initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
-            evalnet->SetActualMiniBatchSize(mbSize);
-            evalnet->SetActualNbrSlicesInEachRecIter(dataReader->NumberSlicesInEachRecurrentIter());
-            dataReader->SetSentenceSegBatch(evalnet->SentenceBoundary(), evalnet->MinibatchPackingFlags());
+            size_t mbSize = evalnet->SetActualMiniBatchSizeFromFeatures();
+            dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
+            evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
+
+            size_t maxMbSize = 2 * mbSize;
 
             clock_t start, now;
             start = clock();
@@ -926,14 +923,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t maxSize = min(maxMbSize, mbSize);
 
             ResetPreCompute();
-            PreCompute(*evalnet, featureNodes);
+            EvaluateBatchModeNodes(*evalnet, featureNodes);
 
             /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
-            evalnet->SetActualMiniBatchSize(1, &featureNodes);
-            dataReader->SetSentenceSegBatch(evalnet->SentenceBoundary(), evalnet->MinibatchPackingFlags());
+            for (auto ptr = featureNodes.begin(); ptr != featureNodes.end(); ptr++)
+            {
+                size_t nr = (*ptr)->GetNumRows();
+                (*ptr)->Resize(nr, 1);
+            }
+            // TODO: ^^ this is the same as ResizeAllFeatureNodes() if featureNodes == evalnet.FeatureNodes(). Is it?
+            evalnet->SetActualMiniBatchSizeFromFeatures();
+
+            dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());  // TODO: should this be one column only?
             /// need to set the sentence begining segmentation info
-            evalnet->SentenceBoundary().SetValue(SEQUENCE_START);
+            evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::SequenceStart));
 
             for (itdx = 0; itdx < maxSize; itdx++)
             {
@@ -943,7 +947,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    evalnet->SentenceBoundary().SetValue(SEQUENCE_MIDDLE);
+                    evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::None));
                 }
 
                 PreComputeActivityAtTime(itdx);
@@ -1062,14 +1066,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<double> evalResults;
 
             size_t mbSize = inputLength;
+            /// use reader to initialize evalnet's sentence start information to let it know that this
+            /// is the beginning of sentence
+            evalnet->ResizeAllFeatureNodes(mbSize);
+            evalnet->SetActualMiniBatchSizeFromFeatures();
+            // TODO: not setting MBLayout?
+            evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
+            // TODO: This is UNTESTED; if it fails, change ^^ this back to SetActual...()
+
             size_t maxMbSize = 3 * mbSize;
 #ifdef DEBUG
             maxMbSize = 2;
 #endif
-            /// use reader to initialize evalnet's sentence start information to let it know that this
-            /// is the begining of sentence
-            evalnet->SetActualMiniBatchSize(mbSize);
-            evalnet->SetActualNbrSlicesInEachRecIter(dataReader->NumberSlicesInEachRecurrentIter());
 
             clock_t start, now;
             start = clock();
@@ -1086,16 +1094,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t itdx = 0;
 
             ResetPreCompute();
-            PreCompute(*evalnet, featureNodes);
+            EvaluateBatchModeNodes(*evalnet, featureNodes);
 
             /// need to set the minibatch size to 1, and initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
-            evalnet->SetActualMiniBatchSize(dataReader->NumberSlicesInEachRecurrentIter());
+            // BUGBUG: This is almost certainly wrong; slice != MB size
+            //evalnet->SetActualMiniBatchSize(dataReader->GetNumParallelSequences());
+            evalnet->ResizeAllFeatureNodes(1);
+            evalnet->SetActualMiniBatchSizeFromFeatures();
 
             double best_score = -numeric_limits<double>::infinity();
             double best_score_so_far = -numeric_limits<double>::infinity();
 
-            evalnet->SentenceBoundary().SetValue(SEQUENCE_START);
+            evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::SequenceStart));   // BUGBUG: huh? How can the entire batch be start frames?
 
             for (itdx = 0; itdx < maxMbSize; itdx++)
             {
@@ -1105,12 +1116,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (itdx > 0)
                 {
                     /// state need to be carried over from past time instance
-                    evalnet->SentenceBoundary().SetValue(SEQUENCE_MIDDLE);
+                    evalnet->GetMBLayoutPtr()->GetM().SetValue(((int) MinibatchPackingFlags::None));
                 }
 
                 PreComputeActivityAtTime(itdx);
 
-                while (!from_queue.empty()) {
+                while (!from_queue.empty())
+                {
                     const Token<ElemType> from_token = from_queue.top();
                     vector<size_t> history = from_token.sequence;
 

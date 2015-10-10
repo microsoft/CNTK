@@ -5,13 +5,14 @@
 //
 #pragma once
 
-#include "ComputationNetwork.h"
+#include "Basics.h"
 #include "DataReader.h"
+#include "ComputationNetwork.h"
+#include "DataReaderHelpers.h"
+#include "fileutil.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
-#include "Basics.h"
-#include "fileutil.h"
 #include <fstream>
 
 using namespace std;
@@ -60,22 +61,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //Matrix<ElemType> endOfFile =  Matrix<ElemType>((size_t)1,(size_t)1);
             //endOfFile(0,0)=0;
 
-            //evaluate with minibatches
+            // evaluate with minibatches
             dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
-            dataReader.SetNbrSlicesEachRecurrentIter(1);
+            dataReader.SetNumParallelSequences(1);
+
+            m_net.StartEvaluateMinibatchLoop(outputNodes);
 
             size_t totalEpochSamples = 0;
             std::map<std::wstring, void *, nocase_compare> outputMatrices;
 
-            while (dataReader.GetMinibatch(inputMatrices))
+            size_t actualMBSize;
+            while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
                 ComputationNetwork::UpdateEvalTimeStamps(labelNodes);
 
-                size_t actualMBSize = m_net.GetActualMBSize();
-                m_net.SetActualMiniBatchSize(actualMBSize);
-                m_net.SetActualNbrSlicesInEachRecIter(dataReader.NumberSlicesInEachRecurrentIter());
-                dataReader.SetSentenceSegBatch(m_net.SentenceBoundary(), m_net.MinibatchPackingFlags());
+                //size_t actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
+                //dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
+                //m_net.VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {
@@ -106,7 +109,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //clean up
             
         }
-        
 
         void WriteOutput(IDataReader<ElemType>& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples=requestDataSize)
         {
@@ -141,22 +143,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;
             for (size_t i=0; i<featureNodes.size(); i++)
                 inputMatrices[featureNodes[i]->NodeName()] = &dynamic_pointer_cast<ComputationNode<ElemType>>(featureNodes[i])->FunctionValues();
-                        
-            //evaluate with minibatches
+
+            // evaluate with minibatches
             dataReader.StartMinibatchLoop(mbSize, 0, numOutputSamples);
+
+            m_net.StartEvaluateMinibatchLoop(outputNodes);
 
             size_t totalEpochSamples = 0;
             size_t numMBsRun = 0;
             size_t tempArraySize = 0;
             ElemType* tempArray = nullptr;
 
-            while (dataReader.GetMinibatch(inputMatrices))
+            size_t actualMBSize;
+            while (DataReaderHelpers::GetMinibatchIntoNetwork(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize))
             {
                 ComputationNetwork::UpdateEvalTimeStamps(featureNodes);
 
-                size_t actualMBSize = m_net.GetActualMBSize();
-                m_net.SetActualMiniBatchSize(actualMBSize);
-                dataReader.SetSentenceSegBatch(m_net.SentenceBoundary(), m_net.MinibatchPackingFlags());
+                //size_t actualMBSize = m_net.SetActualMiniBatchSizeFromFeatures();
+                //dataReader.CopyMBLayoutTo(m_net.GetMBLayoutPtr());
+                //m_net.VerifyActualNumParallelSequences(dataReader.GetNumParallelSequences());  // TODO: This was added by my (fseide) but UNTESTED. If this fails, comment out and let me know.
 
                 for (int i=0; i<outputNodes.size(); i++)
                 {

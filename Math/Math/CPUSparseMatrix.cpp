@@ -304,11 +304,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
     {
-        if (numCols == 0)
-            throw std::logic_error("The slice cannot have 0 columns.");
+        //if (numCols == 0)
+        //    throw std::logic_error("The slice cannot have 0 columns.");
 
         if (startColumn + numCols > m_numCols)
-            throw std::logic_error("The slice is out of range of the source matrix.");
+            InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)m_numCols);
 
         if (m_format != MatrixFormat::matrixFormatSparseCSC)
             NOT_IMPLEMENTED;
@@ -730,6 +730,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // normal update for smoothed gradients c and current gradients (this)
+    // TODO: comment seems wrong; cf. SGD.cpp: smoothedGradient.NormalGrad(gradientValues, functionValues,...)
     template<class ElemType> 
     void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum)
     {

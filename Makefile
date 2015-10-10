@@ -50,12 +50,17 @@ endif
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 CXX = mpic++
 
-INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib BrainScript
+INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib MachineLearning/SequenceTraining BrainScript
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
-CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror
+CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
 LIBS:=
 LDFLAGS:=
+
+CXXVER_GE480:= $(shell expr `$(CXX) -dumpversion | sed -e 's/\.\([0-9][0-9]\)/\1/g' -e 's/\.\([0-9]\)/0\1/g' -e 's/^[0-9]\{3,4\}$$/&00/'` \>= 40800)
+ifeq ($(CXXVER_GE480),1)
+	CXXFLAGS += -Wno-error=literal-suffix
+endif
 
 SEPARATOR = "=-----------------------------------------------------------="
 ALL:=
@@ -126,14 +131,26 @@ GENCODE_SM20 := -gencode arch=compute_20,code=\"sm_20,compute_20\"
 GENCODE_SM30 := -gencode arch=compute_30,code=\"sm_30,compute_30\"
 GENCODE_SM35 := -gencode arch=compute_35,code=\"sm_35,compute_35\"
 GENCODE_SM50 := -gencode arch=compute_50,code=\"sm_50,compute_50\"
-GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50)
 
 ifeq ("$(BUILDTYPE)","debug")
+  ifdef CNTK_CUDA_CODEGEN_DEBUG
+    GENCODE_FLAGS := $(CNTK_CUDA_CODEGEN_DEBUG)
+  else
+    GENCODE_FLAGS := -gencode arch=compute_20,code=\"compute_20\"
+  endif
+
   CXXFLAGS += -g
-  CUFLAGS += -O0 -G -lineinfo -gencode arch=compute_20,code=\"compute_20\"
+  CPPFLAGS += -D_DEBUG
+  CUFLAGS += -O0 -G -lineinfo  $(GENCODE_FLAGS)
 endif
 
 ifeq ("$(BUILDTYPE)","release")
+  ifdef CNTK_CUDA_CODEGEN_RELEASE
+    GENCODE_FLAGS := $(CNTK_CUDA_CODEGEN_RELEASE)
+  else
+    GENCODE_FLAGS := $(GENCODE_SM20) $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50)
+  endif
+
   CXXFLAGS += -O4
   CUFLAGS += -O3 -use_fast_math -lineinfo $(GENCODE_FLAGS)
 endif
@@ -317,14 +334,14 @@ KALDIREADER:=$(LIBDIR)/KaldiReader.so
 ALL+=$(KALDIREADER)
 SRC+=$(KALDIREADER_SRC)
 
-$(KALDIREADER): $(KALDIREADER_OBJ)
+$(KALDIREADER): $(KALDIREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
 
 KALDIWRITER:=$(LIBDIR)/KaldiWriter.so
 ALL+=$(KALDIWRITER)
 
-$(KALDIWRITER): $(KALDIREADER_OBJ)
+$(KALDIWRITER): $(KALDIREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
@@ -343,7 +360,7 @@ KALDI2READER:=$(LIBDIR)/Kaldi2Reader.so
 ALL+=$(KALDI2READER)
 SRC+=$(KALDI2READER_SRC)
 
-$(KALDI2READER): $(KALDI2READER_OBJ)
+$(KALDI2READER): $(KALDI2READER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
 
@@ -366,13 +383,27 @@ CNTK_SRC =\
 	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
 	MachineLearning/CNTKSGDLib/Profiler.cpp \
 	MachineLearning/CNTKSGDLib/SGD.cpp \
-	MachineLearning/CNTKEval/CNTKEval.cpp \
+	MachineLearning/SequenceTraining/latticeforwardbackward.cpp \
+	MachineLearning/SequenceTraining/parallelforwardbackward.cpp \
 	BrainScript/BrainScriptEvaluator.cpp \
 	BrainScript/BrainScriptParser.cpp \
 	BrainScript/BrainScriptTest.cpp \
 	MachineLearning/CNTK/ExperimentalNetworkBuilder.cpp \
 
-CNTK_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTK_SRC))
+
+ifdef CUDA_PATH
+CNTK_SRC +=\
+	Math/Math/cudalatticeops.cu \
+	Math/Math/cudalattice.cpp \
+	Math/Math/cudalib.cpp \
+
+else
+CNTK_SRC +=\
+	MachineLearning/SequenceTraining/NoGPU.cpp \
+
+endif
+
+CNTK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTK_SRC)))
 
 CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)

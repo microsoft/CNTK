@@ -5,21 +5,10 @@
 
 #include "Basics.h"
 #include "ExperimentalNetworkBuilder.h"
+#include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
+#include "BrainScriptParser.h"
 
-//#include "ComputationNode.h"
-//#include "InputAndParamNodes.h"
-//#include "RecurrentNodes.h"
-//#include "NonlinearityNodes.h"
-//#include "LinearAlgebraNodes.h"
-//#include "ConvolutionalNodes.h"
-//
-//#include "ComputationNetwork.h"
-//#include "ComputationNetworkBuilder.h"
-//
-//#include <memory>
-//#include <deque>
-//#include <set>
 #include <string>
 
 #ifndef let
@@ -33,6 +22,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     wstring standardFunctions =
         L"Print(value, format='') = new PrintAction [ what = value /*; how = format*/ ] \n"
+        L"Debug(value, say = '', enabled = true) = new Debug [ /*macro arg values*/ ] \n"
         L"Format(value, format) = new StringFunction [ what = 'Format' ; arg = value ; how = format ] \n"
         L"Replace(s, from, to) = new StringFunction [ what = 'Replace' ; arg = s ; replacewhat = from ; withwhat = to ] \n"
         L"Substr(s, begin, num) = new StringFunction [ what = 'Substr' ; arg = s ; pos = begin ; chars = num ] \n"
@@ -74,7 +64,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         L"FutureValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input /*plus the function args*/ ]\n"
         L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
         L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
-        L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input /*plus the function args*/ ]\n"
+        L"RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]\n"
+        L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, needGradient = false, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input /*plus the function args*/ ]\n"
         L"ConvolutionNode(weightNode, inputValueNode, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode) /*plus the function args*/ ]\n"
         L"MaxPoolingNode(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = input /*plus the function args*/ ]\n"
         L"AveragePoolingNode(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, tag='') = new ComputationNode [ operation = 'AveragePoolingNode' ; inputs = input /*plus the function args*/ ]\n"
@@ -125,7 +116,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         BinaryStandardNode(Plus, leftMatrix, rightMatrix)
         UnaryStandardNode(RectifiedLinear, z)
         //BinaryStandardNode(RowElementTimesNode)
-        //BinaryStandardNode(RowStackNode)
         BinaryStandardNode(Scale, scalarScalingFactor, matrix)
         //BinaryStandardNode(SequenceDecoderNode)
         UnaryStandardNode(Sigmoid, z)

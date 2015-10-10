@@ -6,15 +6,16 @@
 
 #pragma once
 #include "Platform.h"
-#include <string>
-#include <vector>
-#include <ctime>
-#include <limits.h>     // for ULONG_MAX
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
 #include "DebugUtil.h"
 #include "BestGpu.h"    // for CPUONLY macro
+#include <string>
+#include <vector>
+#include <ctime>
+#include <limits.h>     // for ULONG_MAX
+#include <iostream>     // for cout/cerr
 
 // predeclare cublasHandle_t
 struct cublasContext;
@@ -105,13 +106,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& operator=(GPUMatrix<ElemType>&& moveFrom);  //move assignment operator, shallow copy
         ~GPUMatrix(void);       
 
-        static int GetBestGPUDeviceId();  
+        static DEVICEID_TYPE GetBestGPUDeviceId();  
         int GetComputeDeviceId() const;
         DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
         static cublasHandle_t GetCublasHandle(int computeDevice=-1);
         ElemType* CopyToArray() const; //allocated by the callee but need to be deleted by the caller
         size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;  //allocated by the callee but need to be deleted by the caller
+        void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const; 
 
         void ChangeDeviceTo(DEVICEID_TYPE to_id);
 
@@ -127,6 +129,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType* BufferPointer() const {return m_pArray;}
 
         ElemType Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
+        void FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul);
         ElemType RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
         void Reshape(const size_t numRows, const size_t numCols);
@@ -139,6 +142,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const ElemType v);
         void SetValue(const ElemType* d_v); //d_v is pointer to the the value in GPU memory
         void SetColumn(const ElemType* colPointer, size_t colInd);
+        void SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd);
         void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
         void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);        
 
@@ -212,6 +216,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
         GPUMatrix<ElemType>& AssignLogSoftmaxOf (const GPUMatrix<ElemType>& a, const bool isColWise);
+
+        //sequence training
+        GPUMatrix<ElemType>& DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType & threshhold);
+        GPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha);
 
         GPUMatrix<ElemType>& InplaceSqrt ();
         GPUMatrix<ElemType>& AssignSqrtOf (const GPUMatrix<ElemType>& a);
@@ -442,3 +450,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef GPUMatrix<float> GPUSingleMatrix;
 
 }}}
+
+// Error handling
+template<typename ERRTYPE> static const char * CudaErrString(ERRTYPE x);
+template<typename ERRTYPE> static void CudaCall(ERRTYPE retCode, const char * exprString, const char * libName, ERRTYPE successCode)
+{
+    if (retCode != successCode)
+    {
+        try
+        {
+            const char * hostname = getenv("COMPUTERNAME"); // TODO: This is the easy way for Windows; likely different on Linux.
+            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, CudaErrString(retCode), Microsoft::MSR::CNTK::GPUMatrix<float>::GetBestGPUDeviceId(), hostname ? hostname : "?", exprString);
+        }
+        catch (const std::exception & e)    // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
+        {
+            std::cerr << e.what() << std::endl;
+            throw;
+        }
+    }
+}
+#define CUDA_CALL(expr)     (CudaCall((expr), #expr, "CUDA", cudaSuccess))
+#define CUBLAS_CALL(expr)   (CudaCall((expr), #expr, "CUBLAS", CUBLAS_STATUS_SUCCESS))
+#define CUSPARSE_CALL(expr) (CudaCall((expr), #expr, "CUSPARSE", CUSPARSE_STATUS_SUCCESS))
+#define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND", CURAND_STATUS_SUCCESS))

@@ -16,6 +16,10 @@
 #include <vld.h> // leak detection
 #endif
 #include "BestGpu.h"
+#include "MPIWrapper.h"
+
+// TODO: Get rid of this global
+Microsoft::MSR::CNTK::MPIWrapper *g_mpi = nullptr;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -44,8 +48,8 @@ void CNTKEval<ElemType>::Init(const std::string& config)
         std::wstring path = m_config("modelPath");
         LoadModel(path);
     }
-    size_t nThread = m_config("numCPUThreads", "1");
-    CPUMatrix<ElemType>::SetNumThreads(nThread);    
+    size_t nThreads = m_config("numCPUThreads", "1");
+    CPUMatrix<ElemType>::SetNumThreads(nThreads);
 }
 
 // Destroy - cleanup and remove this class
@@ -104,7 +108,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
         }
     case nodeOutput:
         {
-                       const auto & nodes = outputNodes;
+        const auto & nodes = outputNodes;
         for (auto & node : nodes)
         {
             std::wstring name = node->NodeName();
@@ -123,6 +127,14 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
     }
 }
 
+// StartEvaluateMinibatchLoop - Prepare network for Evaluate() calls.
+// ouputNodeName - name of node that will be evaluated
+template<class ElemType>
+void CNTKEval<ElemType>::StartEvaluateMinibatchLoop(const std::wstring & outputNodeName)
+{
+    m_net->StartEvaluateMinibatchLoop(m_net->GetNodeFromName(outputNodeName));
+}
+
 // Evaluate - Evalute using the model with the given inputs and outputs
 // inputs - map from node name to input vector
 // outputs - map from node name to output vector, outputs vectors need to be preallocated by caller, sizing will happen during evaluation
@@ -134,7 +146,7 @@ void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>
     vector<wstring> outNodeNames;
 
     ConfigParameters config;
-    //config["deviceId"] = to_string(m_net->GetDeviceID());
+    //config["deviceId"] = to_string(m_net->GetDeviceId());
 
     // create the reader if necessary
     if (m_reader == nullptr)

@@ -393,7 +393,7 @@ public:
                     return current;
             }
             // or any other closing brace? That's an error.
-            else if (closingBraces.find(brace) != string::npos)
+            else if (brace != '"' && closingBraces.find(brace) != string::npos)
                 RuntimeError("unmatched bracket found in parameters");
             // found another opening brace, push it on the stack
             else
@@ -961,7 +961,7 @@ public:
         // ensure that this method was called on a single line (eg, no newline characters exist in 'configLine').
         if (configLine.find_first_of("\n") != std::string::npos)
         {
-            throw std::logic_error(
+            LogicError(
                 "\"ResolveVariablesInSingleLine\" shouldn't be called with a string containing a newline character");
         }
 
@@ -1008,7 +1008,7 @@ public:
 
             if (varValue.find_first_of("\n") != std::string::npos)
             {
-                throw std::logic_error(
+                LogicError(
                     "Newline character cannot be contained in the value of a variable which is resolved using $varName$ feature");
             }
 
@@ -1320,15 +1320,16 @@ class argvector: public std::vector<T>
     }
 
     // convert wstring toks2[0] to T val and check type
-    static void parse(const std::wstring& in, size_t& val)
+    template<typename INT>
+    static void parseint(const std::wstring& in, INT& val)
     {
-        float fval = (float) msra::strfun::todouble(in);
-        val = (size_t) fval;
-        if (val != fval)
-        {
+        double dval = msra::strfun::todouble(in);
+        val = (INT)dval;
+        if (val != dval)
             RuntimeError("argvector: invalid arg value");
-        }
     }
+    static void parse(const std::wstring& in, size_t& val) { parseint(in, val); }
+    static void parse(const std::wstring& in, int& val) { parseint(in, val); }
     static void parse(const std::wstring& in, std::wstring& val)
     {
         val = in;

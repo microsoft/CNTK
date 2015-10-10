@@ -107,7 +107,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
                 size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
 
-                nodePtr = builder.CreateInputNode(name, imageWidth, imageHeight, imageChannels, numImages);
+                nodePtr = builder.CreateInputNode(name, ImageLayout(imageWidth, imageHeight, imageChannels), numImages);
             }
         }
         else if (cnNodeType == L"SparseImageInput")
@@ -124,7 +124,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t imageChannels = ((NDLNode<ElemType>*)params[2])->GetScalar();
                 size_t numImages = parameter.size() > 3 ? ((NDLNode<ElemType>*)params[3])->GetScalar() : 1;
 
-                nodePtr = builder.CreateSparseInputNode(name, imageWidth, imageHeight, imageChannels, numImages);
+                nodePtr = builder.CreateSparseInputNode(name, ImageLayout(imageWidth, imageHeight, imageChannels), numImages);
             }
         }
         else if (OperationNameOf(LearnableParameter) == cnNodeType)
@@ -319,7 +319,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t img_channels = node->GetOptionalParameter("imageChannels", "0");
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
-                nodePtr = builder.Reshape(NULL, num_rows, img_width, img_height, img_channels, name);
+                nodePtr = builder.Reshape(NULL, num_rows, ImageLayout(img_width, img_height, img_channels), name);
                 nodePtr->NeedGradient() = needGradient;
             }
         }
@@ -341,7 +341,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t cols = parameter.size() > 2 ? ((NDLNode<ElemType>*)params[1])->GetScalar() : 1;
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
-                float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1");
+                float defaultHiddenActivity = node->GetOptionalParameter("defaultHiddenActivity", "0.1");   // TODO: parameter should be called 'defaultHiddenActivation'
 
                 //for backward compatibility we check timeStep first
                 size_t timeStep = node->GetOptionalParameter("timeStep", "1");

@@ -14,7 +14,7 @@
 #include <string>
 #include <regex>
 #include <set>
-#include <hash_map>
+#include <unordered_map>
 #include <stdint.h>
 #include <limits.h>
 #include <wchar.h>
@@ -735,7 +735,7 @@ private:
 public:
 
     // parse format with original HTK state align MLF format and state list
-    void parsewithstatelist (const vector<char*> & toks, const hash_map<std::string, size_t> & statelisthash, const double htkTimeToFrame)
+    void parsewithstatelist (const vector<char*> & toks, const std::unordered_map<std::string, size_t> & statelisthash, const double htkTimeToFrame)
     {
         size_t ts, te;
         parseframerange (toks, ts, te, htkTimeToFrame);
@@ -761,8 +761,9 @@ public:
 template<class ENTRY, class WORDSEQUENCE>
 class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
 {
+    using base_t = map<wstring,vector<ENTRY>>;
     wstring curpath;                                    // for error messages
-    hash_map<std::string, size_t> statelistmap;   // for state <=> index
+    std::unordered_map<std::string, size_t> statelistmap;   // for state <=> index
     map<wstring,WORDSEQUENCE> wordsequences;            // [key] word sequences (if we are building word entries as well, for MMI)
 
     void strtok (char * s, const char * delim, vector<char*> & toks)
@@ -869,8 +870,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
             {
                 if (toks.size() > 6/*word entry are in this column*/)
                 {
-                    const char * w = toks[6];       // the word name
-                    int wid = (*wordmap)[w];        // map to word id --may be -1 for unseen words in the transcript (word list typically comes from a test LM)
+                    int wid = wordmap->at(toks[6]);        // map word name to word id --may be -1 for unseen words in the transcript (word list typically comes from a test LM)
                     size_t wordindex = (wid == -1) ? WORDSEQUENCE::word::unknownwordindex : (size_t) wid;
                     wordseqbuffer.push_back (typename WORDSEQUENCE::word (wordindex, entries[i-s].firstframe, alignseqbuffer.size()));
                 }
@@ -898,11 +898,11 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
             // post-process silence
             //  - first !silence -> !sent_start
             //  - last !silence -> !sent_end
-            int silence = (*wordmap)["!silence"];
+            int silence = wordmap->at("!silence");
             if (silence >= 0)
             {
-                int sentstart = (*wordmap)["!sent_start"];   // these must have been created
-                int sentend = (*wordmap)["!sent_end"];
+                int sentstart = wordmap->at("!sent_start");   // these must have been created
+                int sentend = wordmap->at("!sent_end");
                 // map first and last !silence to !sent_start and !sent_end, respectively
                 if (sentstart >= 0 && wordseqbuffer.front().wordindex == (size_t) silence)
                     wordseqbuffer.front().wordindex = sentstart;
@@ -967,7 +967,7 @@ public:
     template<typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
     void read (const wstring & path, const set<wstring> & restricttokeys, const WORDSYMBOLTABLE * wordmap, const UNITSYMBOLTABLE * unitmap, const double htkTimeToFrame)
     {
-        if (!restricttokeys.empty() && size() >= restricttokeys.size()) // no need to even read the file if we are there (we support multiple files)
+        if (!restricttokeys.empty() && base_t::size() >= restricttokeys.size()) // no need to even read the file if we are there (we support multiple files)
             return;
 
         fprintf (stderr, "htkmlfreader: reading MLF file %S ...", path.c_str());
@@ -975,19 +975,19 @@ public:
 
         vector<char> buffer;    // buffer owns the characters--don't release until done
         vector<char*> lines = readlines (path, buffer);
-        vector<WORDSEQUENCE::word> wordsequencebuffer;
-        vector<WORDSEQUENCE::aligninfo> alignsequencebuffer;
+        vector<typename WORDSEQUENCE::word> wordsequencebuffer;
+        vector<typename WORDSEQUENCE::aligninfo> alignsequencebuffer;
 
         if (lines.empty() || strcmp (lines[0], "#!MLF!#")) malformed ("header missing");
 
         // parse entries
-        fprintf (stderr, "parse the line %d\n", lines.size());
+        fprintf (stderr, "parse the line %zd\n", lines.size());
         size_t line = 1;
-        while (line < lines.size() && (restricttokeys.empty() || size() < restricttokeys.size()))
+        while (line < lines.size() && (restricttokeys.empty() || base_t::size() < restricttokeys.size()))
             parseentry (lines, line, restricttokeys, wordmap, unitmap, wordsequencebuffer, alignsequencebuffer, htkTimeToFrame);
 
         curpath.clear();
-        fprintf (stderr, " total %lu entries\n", size());
+        fprintf (stderr, " total %zu entries\n", base_t::size());
     }
 
     // read state list, index is from 0

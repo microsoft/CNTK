@@ -56,6 +56,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType> Diagonal() const;
 
         ElemType Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
+        void FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul);
         ElemType RmsProp(CPUMatrix<ElemType>& gradients,
             ElemType RMS_GAMMA,
             ElemType RMS_WGT_INC,
@@ -69,6 +70,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
         ElemType* CopyToArray() const; //allocated by the callee but need to be deleted by the caller
         size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;  //allocated by the callee but need to be deleted by the caller
+        void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const; 
 
         inline ElemType& operator() (const size_t row, const size_t col) 
         {
@@ -162,6 +164,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
         CPUMatrix<ElemType>& AssignLogSoftmaxOf (const CPUMatrix<ElemType>& a, const bool isColWise);
         
+		//sequence training
+		CPUMatrix<ElemType>& DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType & threshhold);
+		CPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha);
         CPUMatrix<ElemType>& InplaceSqrt ();
         CPUMatrix<ElemType>& AssignSqrtOf (const CPUMatrix<ElemType>& a);
 
@@ -420,5 +425,3 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef CPUMatrix<double> CPUDoubleMatrix;
 
 }}}
-
-

@@ -394,6 +394,7 @@ private:
     size_t m_epochStartSample; // the starting sample for the epoch
     size_t m_totalSamples;  // number of samples in the dataset
     bool m_partialMinibatch;  // a partial minibatch is allowed
+    MBLayoutPtr m_pMBLayout;
 
     int m_traceLevel;
     vector<SectionFile*> m_secFiles;
@@ -414,15 +415,14 @@ private:
 public:
     virtual void Init(const ConfigParameters& config);
     virtual void Destroy();
-    BinaryReader() { }
+    BinaryReader() : m_pMBLayout(make_shared<MBLayout>()) { }
     virtual ~BinaryReader();
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    size_t NumberSlicesInEachRecurrentIter() { return 1 ;} 
-    void SetNbrSlicesEachRecurrentIter(const size_t) { };
-    void SetSentenceSegBatch(Matrix<float> &/*sentenceBegin*/, vector<MinibatchPackingFlag>& /*sentenceExistsBeginOrNoLabels*/) {};
-
+    size_t GetNumParallelSequences() { return 1 ;} 
+    void SetNumParallelSequences(const size_t) { };
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) { pMBLayout->CopyFrom(m_pMBLayout); NOT_IMPLEMENTED; }
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<typename BinaryReader<ElemType>::LabelIdType, typename BinaryReader<ElemType>::LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);

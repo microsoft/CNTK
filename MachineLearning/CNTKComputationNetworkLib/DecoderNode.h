@@ -15,14 +15,22 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    /**
-    * this node does sequence decoding only
-    * it corresponds to a decoder
-    */
+    // -----------------------------------------------------------------------
+    // SequenceDecoderNode (label, position_dependent_score, transition_score)
+    // this node does sequence decoding only
+    // it corresponds to a decoder
+    //  - label : output label vector of [0:T-1]
+    //  - position_dependent_score : score from position dependent node,
+    //    in the R-CRF case, it is the RNN output score before softmax
+    //  - transition score : score from the transition node, 
+    //    in the R-CRF case, it is the transition probability between labels
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class SequenceDecoderNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    class SequenceDecoderNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<3>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"SequenceDecoderNode"; }
     private:
         // TODO: member variables go to the end
         Matrix<ElemType> mAlpha;
@@ -32,15 +40,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int mEndLab;   // the ending output label, if avaliable
         ElemType  m_default_activity;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         SequenceDecoderNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeNonLooping<ElemType>(deviceId, name),
+            Base(deviceId, name),
             mAlpha(deviceId), mBacktrace(deviceId),
             mStartLab(-1), mEndLab(-1)
         { }
-
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"SequenceDecoderNode"; }
 
         static void DecideStartEndingOutputLab(const Matrix<ElemType>& lbls, int & stt, int & stp)
         {
@@ -67,19 +71,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of elements in the Matrix<ElemType>
         {
-            throw std::logic_error("SequenceDecoder is used for evaluation only.");
+            LogicError("SequenceDecoder is used for evaluation only.");
         }
 
         /// compute posterior probability of label y at position t
-        virtual void EvaluateThisNode()
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             DecideStartEndingOutputLab(Inputs(0)->FunctionValues(), mStartLab, mEndLab);
             EvaluateThisNodeS(mAlpha, mBacktrace, FunctionValues(), Inputs(1)->FunctionValues(),
-                Inputs(2)->FunctionValues(), mStartLab, mEndLab);
+                              Inputs(2)->FunctionValues(), mStartLab, mEndLab);
         }
 
-        /// compute forward backward algorithm
-        static void EvaluateThisNodeS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const size_t stt, const size_t stp)
+        // compute forward backward algorithm
+        void EvaluateThisNodeS(Matrix<ElemType>& alpha, Matrix<ElemType>& backtrace, Matrix<ElemType>& functionValues, const Matrix<ElemType>& pos_scores, const Matrix<ElemType>& pair_scores, const size_t stt, const size_t stp)
         {
             /// to-do, each slice is for one sentence
             /// to-do, number of slices correspond to number of frames 
@@ -164,23 +168,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         };
 
-        /// need to feed in quesudo label data, which tells the decoder what is the begining
+        /// need to feed in pseudo label data, which tells the decoder what is the beginning
         /// and ending output symbol. these symbols will constrain the search space
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            PrintSelfBeforeValidation();
+            Base::Validate(isFinalValidationPass);
 
-            if (m_children.size() != 3)
-                throw std::logic_error("SequenceDecoderNode requires three inputs.");
+            if (isFinalValidationPass)
+                if (!(Inputs(1)->GetNumRows() == Inputs(2)->GetNumRows() &&  // position dependent and pair scores have same number of labels
+                    Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
+                    Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
+                    Inputs(2)->GetNumCols() == Inputs(2)->GetNumRows()))
+                {
+                    LogicError("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
+                }
+            // BUGBUG: Not resizing FunctionValues?
 
-            if (!(Inputs(1)->FunctionValues().GetNumRows() == Inputs(2)->FunctionValues().GetNumRows() &&  // position dependent and pair scores have same number of labels
-                Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&
-                Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols() && // position dependent and pair scores have the same observation numbers
-                Inputs(2)->FunctionValues().GetNumCols() == Inputs(2)->FunctionValues().GetNumRows()))
-            {
-                throw std::logic_error("The Matrix<ElemType>  dimension in the SequenceDecoderNode operation does not match.");
-            }
-
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -188,24 +192,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;
-        }
-
-        /// label : output label vector of [0:T-1]
-        /// position_dependent_score : score from position dependent node,
-        /// in the R-CRF case, it is the RNN output score before softmax
-        /// transition score : score from the transition node, 
-        /// in the R-CRF case, it is the transition probability between labels
-        virtual void AttachInputs(const ComputationNodePtr label,
-            const ComputationNodePtr position_dependent_score,
-            const ComputationNodePtr transition_score)
-        {
-            m_children.resize(3);
-            m_children[0] = label;
-            m_children[1] = position_dependent_score;
-            m_children[2] = transition_score;
+            m_outputImageLayout = ImageLayout();
         }
     };
  
