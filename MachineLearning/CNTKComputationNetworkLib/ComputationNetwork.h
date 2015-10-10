@@ -1446,7 +1446,7 @@ public:
     // TODO: This is broken. Instead, we should pass this from the reader, or better, do batching inside here.
     //       The problem is that we cannot post-process. E.g. is the layout guaranteed to reflect the minibatch size, in the case of no recurrence??
     const MBLayoutPtr & GetMBLayoutPtr() { return m_pMBLayout; }
-
+    void ResetMBLayout() { m_pMBLayout->Init(1,0,false) ; }
 protected:
     // -----------------------------------------------------------------------
     // construction

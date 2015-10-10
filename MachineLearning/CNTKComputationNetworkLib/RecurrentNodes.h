@@ -85,7 +85,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t rows, cols;
             fstream >> rows >> cols;
-            Resize(rows, cols);
+
+            // Note: Do we need load cols for delay node? I just set to zero to see if there is any problem.
+            Resize(rows, 0);
             m_delayedActivation.Resize(rows, 0);    // Note: If we try to access history in first minibatch, we shall crash. It would be a consequence of a missing sentence-begin flag
 
             if (modelVersion >= CNTK_MODEL_VERSION_2)
