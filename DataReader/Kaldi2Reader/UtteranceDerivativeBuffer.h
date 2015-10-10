@@ -2,6 +2,7 @@
 
 #include "Matrix.h"
 #include "basetypes.h"
+#include "Sequences.h"
 #include "UtteranceDerivativeComputationInterface.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -47,8 +48,7 @@ private:
     //     uttID startFrameIndexInMinibatch numFrames
     void ProcessUttInfo(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
-        const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag,
+        const MBLayoutPtr pMBLayout,
         std::vector<std::vector<std::pair<
             wstring, std::pair<size_t, size_t>>>>* uttInfoInMinibatch) const;
 
@@ -71,14 +71,12 @@ public:
     bool SetLikelihood(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
         const Matrix<ElemType>& outputs,
-        const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag);
+        const MBLayoutPtr pMBLayout);
 
     // Gets the computed derivatives for given utterance.
     bool GetDerivative(
         const std::vector<std::vector<std::pair<wstring, size_t>>>& uttInfo,
-        const Matrix<ElemType>& sentenceBegin,
-        const std::vector<MinibatchPackingFlag>& minibatchPackingFlag,
+        const MBLayoutPtr pMBLayout,
         Matrix<ElemType>* derivativesOut);
 
     // Gets the computed objectives for given utterance.

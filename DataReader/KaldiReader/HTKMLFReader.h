@@ -115,7 +115,7 @@ public:
     /// 0 denotes such case is not in this frame
 
 
-	vector<MinibatchPackingFlag> m_minibatchPackingFlag;
+	vector<MinibatchPackingFlags> m_minibatchPackingFlags;
 
     /// by default it is false
     /// if true, reader will set to SEQUENCE_MIDDLE for time positions that are orignally correspond to SEQUENCE_START
@@ -134,11 +134,12 @@ public:
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
+    virtual size_t GetNumParallelSequences() { return m_numberOfuttsPerMinibatch; }
 
     virtual bool DataEnd(EndDataType endDataType);
     void SetSentenceEndInBatch(vector<size_t> &/*sentenceEnd*/);
     void SetSentenceEnd(int /*actualMbSize*/){};
-	void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlag>& sentenceExistsBeginOrNoLabels);
+	void SetSentenceSegBatch(Matrix<ElemType> &sentenceBegin, vector<MinibatchPackingFlags>& sentenceExistsBeginOrNoLabels);
 
 };
 

@@ -200,6 +200,7 @@ public:
             m_deviceId = Matrix<float>::GetBestGPUDeviceId();
         else
             m_deviceId = deviceId;
+        m_deviceId = EnforceOneGPUOnly(m_deviceId);      // see EnforceOneGPUOnly() for comment on what this is
     }
 
     DEVICEID_TYPE GetDeviceId() { return m_deviceId; }
@@ -788,9 +789,7 @@ public:
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
 #ifdef DISPLAY_DEBUG
-            fprintf(stderr, "Compute Gradient For Node: %s(%s) Against Children\n",
-                        (msra::strfun::utf8 ((*nodeIter)->OperationName())).c_str(),
-                        (msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
+            fprintf(stderr, "Compute Gradient For Node: %ls(%ls) Against Children\n", (*nodeIter)->OperationName().c_str(), (*nodeIter)->NodeName().c_str());
 #endif
             // --- first, perform recurrent loops if this node participates in one
 

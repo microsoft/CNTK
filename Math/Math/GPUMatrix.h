@@ -105,7 +105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& operator=(GPUMatrix<ElemType>&& moveFrom);  //move assignment operator, shallow copy
         ~GPUMatrix(void);       
 
-        static int GetBestGPUDeviceId();  
+        static DEVICEID_TYPE GetBestGPUDeviceId();  
         int GetComputeDeviceId() const;
         DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 

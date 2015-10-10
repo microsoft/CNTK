@@ -55,7 +55,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         m_computeDevice = (computeDevice == AUTOPLACEMATRIX) ? GPUMatrix<ElemType>::GetBestGPUDeviceId() : computeDevice; //current GPU device Id
-        m_numRows=0;  
+        m_computeDevice = EnforceOneGPUOnly(m_computeDevice);      // see EnforceOneGPUOnly() for comment on what this is
+        m_numRows=0;
         m_numCols=0;
         m_elemSizeAllocated = m_nz = 0; //Number of non-zero elements
         m_totalBufferSizeAllocated = 0;

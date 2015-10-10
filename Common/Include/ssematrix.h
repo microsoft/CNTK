@@ -1199,6 +1199,11 @@ public:
     }
 };
 
+// TODO: why does the VS compiler not accept 'noexcept' here? It definitely is a known keyword.
+#pragma push_macro("noexcept")
+#ifdef _MSC_VER
+#define noexcept throw()
+#endif
 
 // ===========================================================================
 // ssematrixfrombuffer -- an ssematrixbase allocated in a vector buffer
@@ -1219,7 +1224,10 @@ public:
 
     // we can assign it, but only by move
     void operator= (ssematrixfrombuffer && other) { move (other); }
-    ssematrixfrombuffer (ssematrixfrombuffer && other) { move (other); }
+
+    // Note: keyword "noexcept" was added so that stl vector first looks for
+    //       the move constructor instead of the private copy constructor.
+    ssematrixfrombuffer (ssematrixfrombuffer && other) noexcept { move (other); }
 };
 
 
@@ -1250,12 +1258,16 @@ public:
 
     // only assignment is by rvalue reference
     ssematrixstriperef & operator= (ssematrixstriperef && other) { move (other); }
-    ssematrixstriperef (ssematrixstriperef && other) { move (other); }
+
+    // Note: keyword "noexcept" was added so that stl vector first looks for
+    //       the move constructor instead of the private copy constructor.
+    ssematrixstriperef (ssematrixstriperef && other) noexcept { move (other); }
 
     // getting a one-column sub-view on this
     ssematrixstriperef col (size_t j) { return ssematrixstriperef (*this, j, 1); }
     const ssematrixstriperef col (size_t j) const { return ssematrixstriperef (*const_cast<ssematrixstriperef*> (this), j, 1); }
 };
+#pragma pop_macro("noexcept")
 
 // ===========================================================================
 // ssematrix -- main matrix type with allocation

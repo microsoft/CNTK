@@ -242,6 +242,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         // for LSTMNode ony, which is deprecated, only to make it compile easily:  also used in FindBestPathWithVariableLength() and FindBestPath() in a strange way
         Matrix<float> & GetM() { LazyAlloc(); return m_sentenceBoundaryFlags; }
+
+        // TODO: this function is only used in Kaldi2Reader for the moment, and
+        //       we plan to remove it in the future. It copies the current
+        //       MBLayout from an existing object but only copies <numTimeSteps>
+        //       steps starting from <startTimeStep>.
+        void CopyFromRange(const MBLayoutPtr & other, size_t startTimeStep, size_t numTimeSteps)
+        {
+            m_numParallelSequences = other->m_numParallelSequences;
+            m_numTimeSteps = numTimeSteps;
+            m_dataIsSequential = other->m_dataIsSequential;
+            m_sentenceBoundaryFlags.SetValue(other->m_sentenceBoundaryFlags.ColumnSlice(startTimeStep, numTimeSteps));
+            m_minibatchPackingFlags.resize(numTimeSteps);
+            m_minibatchPackingFlags.assign(
+                other->m_minibatchPackingFlags.begin() + startTimeStep,
+                other->m_minibatchPackingFlags.begin() + startTimeStep + numTimeSteps);
+        }
     };
     typedef MBLayout::MBLayoutPtr MBLayoutPtr;
 

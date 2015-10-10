@@ -401,8 +401,11 @@ protected:
                                       std::list<Matrix<ElemType>>& smoothedGradients,
                                       const size_t minMinibatchSize, const size_t maxMinibatchSize);
 
-    // Tries to compute derivatives for the whole utterances, which will be
-    // fed to the neural network as features.
+    // Attemps to compute the error signal for the whole utterance, which will
+    // be fed to the neural network as features. Currently it is a workaround
+    // for the two-forward-pass sequence and ctc training, which allows
+    // processing more utterances at the same time. Only used in Kaldi2Reader.
+    // TODO: move the two-forward-pass support out of the reader.
     void AttemptUtteranceDerivativeFeatures(ComputationNetwork& net,
                                             IDataReader<ElemType>* trainSetDataReader,
                                             const std::vector<ComputationNodeBasePtr> & featureNodes,

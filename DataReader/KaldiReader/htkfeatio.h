@@ -813,7 +813,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
 
     template<typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
     void parseentry (vector<char*> & lines, size_t & line, const set<wstring> & restricttokeys,
-                     const WORDSYMBOLTABLE * wordmap, const UNITSYMBOLTABLE * unitmap, vector<typename WORDSEQUENCE::word> & wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo_t> & alignseqbuffer,
+                     const WORDSYMBOLTABLE * wordmap, const UNITSYMBOLTABLE * unitmap, vector<typename WORDSEQUENCE::word> & wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo> & alignseqbuffer,
                      const double htkTimeToFrame)
     {
         assert (line < lines.size());
@@ -883,7 +883,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
                         if (iter == unitmap->end())
                             throw std::runtime_error (string ("parseentry: unknown unit ") + u + " in utterance " + strfun::utf8 (key));
                         const size_t uid = iter->second;
-                        alignseqbuffer.push_back (typename WORDSEQUENCE::aligninfo_t (uid, 0/*#frames--we accumulate*/));
+                        alignseqbuffer.push_back (typename WORDSEQUENCE::aligninfo (uid, 0/*#frames--we accumulate*/));
                     }
                     if (alignseqbuffer.empty())
                         throw std::runtime_error ("parseentry: lonely senone entry at start without phone/word entry found, for utterance " + strfun::utf8 (key));
@@ -976,7 +976,7 @@ public:
         vector<char> buffer;    // buffer owns the characters--don't release until done
         vector<char*> lines = readlines (path, buffer);
         vector<typename WORDSEQUENCE::word> wordsequencebuffer;
-        vector<typename WORDSEQUENCE::aligninfo_t> alignsequencebuffer;
+        vector<typename WORDSEQUENCE::aligninfo> alignsequencebuffer;
 
         if (lines.empty() || strcmp (lines[0], "#!MLF!#")) malformed ("header missing");
 
