@@ -9,6 +9,7 @@
 #pragma once
 
 #include "basetypes.h"
+#include "Basics.h"
 #include "fileutil.h"       // for opening/reading the ARPA file
 #include <vector>
 #include <string>
@@ -17,6 +18,7 @@
 #include <math.h>
 
 namespace msra { namespace lm {
+    using Microsoft::MSR::CNTK::RuntimeError;
 
 // ===========================================================================
 // core LM interface -- LM scores are accessed through this exclusively
