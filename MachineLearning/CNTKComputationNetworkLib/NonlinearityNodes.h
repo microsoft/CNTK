@@ -1417,13 +1417,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // =======================================================================
 
     template<class ElemType>
-    class DiagonalNode : public ComputationNode<ElemType>
+    class DiagonalNode : public ComputationNode<ElemType>, public NumInputs<1>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Diagonal"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         DiagonalNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name)
+            Base(deviceId, name)
         { }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1445,9 +1445,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::LoadFromFile(fstream, modelVersion);
         }
 
-        virtual const std::wstring OperationName() const { return TypeName(); }
-        static const std::wstring TypeName() { return L"Diagonal"; }
-
         virtual void AttachInputs(const ComputationNodePtr singleInput)
         {
             m_children.resize(1);
@@ -1458,10 +1455,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, true);
 
-            m_outputWidth = 1;
-            m_outputChannels = 1;
+            m_outputImageLayout.width = 1;
+            m_outputImageLayout.channels = 1;
 
-            if (m_inputWidth * m_inputChannels != 1)
+            if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
                 fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
         }
 
@@ -1495,9 +1492,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void Validate()
+        virtual void Validate(bool isFinalValidationPass) override
         {
-            PrintSelfBeforeValidation();
+            Base::Validate(isFinalValidationPass);
 
             if (m_children.size() != 1)
                 throw std::logic_error("Diagonal operation: Should have one input.");
@@ -1508,6 +1505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t cols = Inputs(0)->FunctionValues().GetNumCols();
 
             FunctionValues().Resize(1, cols);
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -1556,11 +1554,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual const Matrix<ElemType>& FunctionValues() const
         {
             return m_functionValues;
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-        {
-            ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
         }
     };
 
