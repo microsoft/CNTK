@@ -2,7 +2,7 @@
 //
 // F. Seide, V-hansu
 
-#include "basetypes.h"
+#include "Basics.h"
 #include "simple_checked_arrays.h"
 #include "latticearchive.h"
 #include "simplesenonehmm.h"    // the model

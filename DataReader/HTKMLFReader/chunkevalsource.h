@@ -7,7 +7,7 @@
 
 
 //#include <objbase.h>
-#include "basetypes.h"                  // for attempt()
+#include "Basics.h"                  // for attempt()
 #include "htkfeatio.h"                  // for reading HTK features
 #include "minibatchsourcehelpers.h"
 #ifndef __unix__

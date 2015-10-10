@@ -8,7 +8,7 @@
 #pragma once
 
 #include "stdafx.h"
-#include "basetypes.h"
+#include "Basics.h"
 #include "fileutil.h"
 #include "htkfeatio.h"  // for MLF reading for numer lattices
 #include "latticearchive.h"

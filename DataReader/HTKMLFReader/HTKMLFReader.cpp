@@ -10,7 +10,7 @@
 #ifdef _WIN32
 #include <objbase.h>
 #endif
-#include "basetypes.h"
+#include "Basics.h"
 
 #include "htkfeatio.h"                  // for reading HTK features
 #include "latticearchive.h"             // for reading HTK phoneme lattices (MMI training)

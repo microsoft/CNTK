@@ -15,7 +15,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#include "basetypes.h"
+#include "Basics.h"
 #include "latticestorage.h"
 #include "simple_checked_arrays.h"
 #include "fileutil.h"

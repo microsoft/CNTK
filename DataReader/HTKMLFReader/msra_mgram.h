@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "basetypes.h"
 #include "Basics.h"
 #include "fileutil.h"       // for opening/reading the ARPA file
 #include <vector>
