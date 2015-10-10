@@ -26,7 +26,7 @@
       <Filter>Network</Filter>
     </ClCompile>
     <ClCompile Include="NetworkBuilderFromConfig.cpp">
-      <Filter>Experimental</Filter>
+      <Filter>Scripting</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -102,6 +102,12 @@
     <ClInclude Include="MatrixPool.h">
       <Filter>Network</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\ScriptableObjects.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Math\Math\Matrix.h">
+      <Filter>from CNTKMath</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -119,11 +125,14 @@
     <Filter Include="GPU Interfacing">
       <UniqueIdentifier>{8d99b2cc-5209-40e4-8b4b-a7616973ae3b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Experimental">
-      <UniqueIdentifier>{fe2443a1-6323-449f-96be-cbd0f608f382}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Network">
       <UniqueIdentifier>{498bb2e9-53de-4955-970e-813e3f21025b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="from CNTKMath">
+      <UniqueIdentifier>{7d838fa4-b5a1-4b8a-b37d-823fb026055b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scripting">
+      <UniqueIdentifier>{fe2443a1-6323-449f-96be-cbd0f608f382}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

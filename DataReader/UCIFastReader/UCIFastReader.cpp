@@ -450,7 +450,7 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
                 found = true;
         }
         FindConfigNames(readerConfig, "wfile", names);
-        for (auto name : names)
+        for (const auto & name : names)
         {
             ConfigParameters config = readerConfig(name);
             filesList.push_back(config("wfile"));
@@ -475,7 +475,7 @@ void UCIFastReader<ElemType>::InitCache(const ConfigParameters& readerConfig)
             // now get the section names for map and category types
             std::map<std::wstring, SectionType, nocase_compare> sections;
             m_cachingWriter->GetSections(sections);
-            for (auto pair : sections)
+            for (const auto & pair : sections)
             {
                 if (pair.second == sectionTypeCategoryLabel)
                 {
@@ -630,7 +630,7 @@ size_t RoundUp(size_t value, size_t size)
 }
 
 template<class ElemType>
-void UCIFastReader<ElemType>::SetNbrSlicesEachRecurrentIter(const size_t sz) 
+void UCIFastReader<ElemType>::SetNumParallelSequences(const size_t sz) 
 {
     mBlgSize = sz; 
     if (mOneLinePerFile)
@@ -848,7 +848,11 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
                 }
             }
         }
-    } 
+    }
+
+    // create the respective MBLayout
+    // Every sample is returned as a sequence of 1 frame.
+    m_pMBLayout->Init(actualmbsize, 1, false/*means it is not sequential*/);
 
     // if we are writing out to the caching writer, do it now
     if (m_cachingWriter)

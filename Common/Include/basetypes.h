@@ -96,10 +96,20 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <unistd.h>
 #include <sys/stat.h>
 #include <dlfcn.h>
+#include <sys/time.h>
 typedef unsigned char byte;
 #endif
 
 using namespace std;
+
+#ifndef SIZE_MAX
+#include <limits>
+#ifdef __SIZE_MAX__
+#define SIZE_MAX __SIZE_MAX__
+#else
+#define SIZE_MAX std::numeric_limits<size_t>::max()
+#endif
+#endif
 
 // CRT error handling seems to not be included in wince headers
 // so we define our own imports
@@ -186,6 +196,45 @@ static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono:
 // ----------------------------------------------------------------------------
 
 namespace msra { namespace basetypes {
+
+	//sequence training
+    #ifdef __unix__
+    typedef timeval LARGE_INTEGER;
+    #endif
+    class auto_timer
+    {
+        LARGE_INTEGER freq, start;
+        auto_timer (const auto_timer &); void operator= (const auto_timer &);
+    public:
+        auto_timer()
+        {
+    #ifdef _WIN32
+            if (!QueryPerformanceFrequency (&freq)) // count ticks per second
+                throw std::runtime_error ("auto_timer: QueryPerformanceFrequency failure");
+            QueryPerformanceCounter (&start);
+    #endif
+    #ifdef __unix__
+            gettimeofday (&start, NULL);
+    #endif
+        }
+        operator double() const     // each read gives time elapsed since start, in seconds
+        {
+            LARGE_INTEGER end;
+    #ifdef _WIN32
+            QueryPerformanceCounter (&end);
+            return (end.QuadPart - start.QuadPart) / (double) freq.QuadPart;
+    #endif
+    #ifdef __unix__
+            gettimeofday (&end,NULL);
+            return (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec)/(1000*1000);
+    #endif
+        }
+        void show (const std::string & msg) const
+        {
+            double elapsed = *this;
+            fprintf(stderr, "%s: %.6f ms\n", msg.c_str(), elapsed * 1000.0/*to ms*/);
+        }
+    };
 
 // class ARRAY -- std::vector with array-bounds checking
 // VS 2008 and above do this, so there is no longer a need for this.
@@ -621,10 +670,10 @@ private:
 		return n;
 #endif
 	}
-    inline size_t _cprintf (const  char   * format, va_list args) 
+    inline size_t _cprintf(const  char   * format, va_list args)
 	{ 
 #ifdef __WINDOWS__
-		return vsprintf (nullptr, format, args);
+		return vsprintf_s(nullptr, 0, format, args);
 #elif defined(__UNIX__)
 		FILE *dummyf = fopen("/dev/null", "wb");
 		if (dummyf == NULL)
@@ -636,8 +685,16 @@ private:
 		return n;
 #endif
 	}
-    inline const wchar_t * _sprintf (wchar_t * buf, size_t bufsiz,  const wchar_t * format, va_list args) { vswprintf (buf, bufsiz, format, args); return buf; }
-    inline const  char   * _sprintf ( char   * buf, size_t /*bufsiz*/, const char * format, va_list args) { vsprintf  (buf, format, args); return buf; }
+    inline const wchar_t * _sprintf(wchar_t * buf, size_t bufsiz, const wchar_t * format, va_list args) { vswprintf(buf, bufsiz, format, args); return buf; }
+    inline const  char   * _sprintf ( char   * buf, size_t bufsiz, const char * format, va_list args) 
+    {
+#ifdef __WINDOWS__
+        vsprintf_s(buf, bufsiz, format, args);
+#else
+        vsprintf(buf, format, args);
+#endif
+        return buf;
+    }
 };
 typedef strfun::_strprintf<char>    strprintf;  // char version
 typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
@@ -808,15 +865,21 @@ class auto_file_ptr
     auto_file_ptr (auto_file_ptr &);
     // implicit close (destructor, assignment): we ignore error
     void close()  throw() { if (f) try { if (f != stdin && f != stdout && f != stderr) ::fclose (f); } catch (...) { } f = NULL; }
+#pragma warning(push)
+#pragma warning(disable : 4996)
     void openfailed (const std::string & path) { throw std::runtime_error ("auto_file_ptr: error opening file '" + path + "': " + strerror (errno)); }
+#pragma warning(pop)
 protected:
     friend int fclose (auto_file_ptr&); // explicit close (note: may fail)
     int fclose() { int rc = ::fclose (f); if (rc == 0) f = NULL; return rc; }
 public:
     auto_file_ptr() : f (NULL) { }
     ~auto_file_ptr() { close(); }
-    auto_file_ptr (const char * path, const char * mode) { f = fopen (path, mode); if (f == NULL) openfailed (path); }
+#pragma warning(push)
+#pragma warning(disable : 4996)
+    auto_file_ptr(const char * path, const char * mode) { f = fopen(path, mode); if (f == NULL) openfailed(path); }
     auto_file_ptr (const wchar_t * wpath, const char * mode) { f = _wfopen (wpath, msra::strfun::utf16 (mode).c_str()); if (f == NULL) openfailed (msra::strfun::utf8 (wpath)); }
+#pragma warning(pop)
     FILE * operator= (FILE * other) { close(); f = other; return f; }
     auto_file_ptr (FILE * other) : f (other) { }
     operator FILE * () const { return f; }
@@ -1052,43 +1115,33 @@ public:
 #define EPSILON 1e-5
 #define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
 
-// why are the following in basetypes.h?
-/**
-These macros are used for sentence segmentation information. 
-*/
-#define SEQUENCE_START ((int) MinibatchPackingFlag::SequenceStart)
-#define SEQUENCE_MIDDLE ((int) MinibatchPackingFlag::None)
-#define SEQUENCE_END ((int) MinibatchPackingFlag::SequenceEnd)
-#define NO_INPUT ((int) MinibatchPackingFlag::NoInput)
-#define NO_FEATURE ((int) MinibatchPackingFlag::NoFeature)
-#define NO_LABEL ((int) MinibatchPackingFlag::NoLabel)
-
-enum class MinibatchPackingFlag : unsigned char
+// why is this in basetypes.h?
+enum class MinibatchPackingFlags : char     // (note: not using unsigned char because these go into a matrix, and we use Matrix<char>, since we use it as a data holder)
 {
     None = 0,
-    SequenceStart = 1 << 0,   //binary 0001
-    SequenceEnd = 1 << 1,   //binary 0010
-    NoFeature = 1 << 2,      //binary 0100
-    NoLabel = 1 << 3,      //binary 1000
+    SequenceStart = 1 << 0,         // binary 0001  frame is first of an utterance
+    SequenceEnd = 1 << 1,           // binary 0010  frame is last of an utterance
+    NoFeature = 1 << 2,             // binary 0100  frame has no feature (e.g. a gap due to BPTT)
+    NoLabel = 1 << 3,               // binary 1000  frame has no label
 
-    NoInput = NoFeature | NoLabel, //when we refactorize reader, NoInput will no longer needed
+    NoInput = NoFeature | NoLabel,  // when we refactorize reader, NoInput will no longer needed
     SequenceStartOrNoFeature = SequenceStart | NoFeature,
     SequenceEndOrNoFeature = SequenceEnd | NoFeature,
     SequenceStartOrEndOrNoFeature = SequenceStart | SequenceEnd | NoFeature,
 };
 
-inline MinibatchPackingFlag operator| (MinibatchPackingFlag a, MinibatchPackingFlag b)
+inline MinibatchPackingFlags operator| (MinibatchPackingFlags a, MinibatchPackingFlags b)
 {
-    return static_cast<MinibatchPackingFlag>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
+    return static_cast<MinibatchPackingFlags>(static_cast<unsigned char>(a) | static_cast<unsigned char>(b));
 }
 
-inline MinibatchPackingFlag& operator|= (MinibatchPackingFlag& a, MinibatchPackingFlag b)
+inline MinibatchPackingFlags& operator|= (MinibatchPackingFlags& a, MinibatchPackingFlags b)
 {
     a = a | b;
     return a;
 }
 
-inline bool operator& (MinibatchPackingFlag a, MinibatchPackingFlag b)
+inline bool operator& (MinibatchPackingFlags a, MinibatchPackingFlags b)
 {
     return (static_cast<unsigned char>(a) & static_cast<unsigned char>(b)) != 0;
 }
@@ -1099,4 +1152,22 @@ static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
     return l.second > r.second;
 }
 
+#ifdef _WIN32
+//sequence training 
+// ----------------------------------------------------------------------------
+// frequently missing Win32 functions
+// ----------------------------------------------------------------------------
+
+// strerror() for Win32 error codes
+static inline std::wstring FormatWin32Error(DWORD error)
+{
+	wchar_t buf[1024] = { 0 };
+	::FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM, "", error, 0, buf, sizeof (buf) / sizeof (*buf) - 1, NULL);
+	std::wstring res(buf);
+	// eliminate newlines (and spaces) from the end
+	size_t last = res.find_last_not_of(L" \t\r\n");
+	if (last != std::string::npos) res.erase(last + 1, res.length());
+	return res;
+}
+#endif // _WIN32
 #endif    // _BASETYPES_

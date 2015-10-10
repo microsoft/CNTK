@@ -101,6 +101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // make sure to clear the caches so we pick up the new nodes
                 m_net->ClearCaches();
                 // validate the network
+                //m_net->SetFakeMBLayoutForValidation();  // fake an MB layout to match the initial values of Input
                 if (dumpFileName != L"")
                     m_net->DumpAllNodesToFile(false, dumpFileName, false);
                 m_net->ValidateNetwork(!fullValidate);
@@ -178,7 +179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CheckOutputNodes(script, "FeatureNodes", m_net->FeatureNodes());
             CheckOutputNodes(script, "LabelNodes", m_net->LabelNodes());
             CheckOutputNodes(script, "CriteriaNodes", m_net->FinalCriterionNodes());
-            CheckOutputNodes(script, "NodesReqMultiSeqHandling", m_net->NodesReqMultiSeqHandling());
+            CheckOutputNodes(script, "NodesReqMultiSeqHandling", m_net->RequestNodesMultiSeqHandling());
             CheckOutputNodes(script, "EvalNodes", m_net->EvaluationNodes());
             CheckOutputNodes(script, "OutputNodes", m_net->OutputNodes());
         }

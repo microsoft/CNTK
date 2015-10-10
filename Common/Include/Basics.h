@@ -27,45 +27,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool operator()(const std::wstring& left, const std::wstring& right) { return _wcsicmp(left.c_str(), right.c_str()) < 0; }
     };
 
+    // if it receives a lonely std::string then throw that directly
+    template<class E>
+    __declspec_noreturn static inline void ThrowFormatted(const string & message)
+    {
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        throw E(message);
+    }
+
+    // ThrowFormatted() - template function to throw a std::exception with a formatted error string
+#pragma warning(push)
+#pragma warning(disable : 4996)
+    template<class E>
+    __declspec_noreturn static inline void ThrowFormatted(const char * format, ...)
+    {
+        va_list args;
+        char buffer[1024];
+
+        va_start(args, format);
+        vsprintf(buffer, format, args);
+        ThrowFormatted<E>(std::string(buffer));
+    };
+#pragma warning(pop)
+
     // RuntimeError - throw a std::runtime_error with a formatted error string
-    __declspec_noreturn static inline void RuntimeError(const char * format, ...)
-    {
-        va_list args;
-        char buffer[1024];
-
-        va_start(args, format);
-        vsprintf(buffer, format, args);
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
-        throw std::runtime_error(buffer);
-    };
-    static inline void RuntimeError(const string & message) { RuntimeError("%s", message.c_str()); }
-
-    // LogicError - throw a std::logic_error with a formatted error string
-    __declspec_noreturn static inline void LogicError(const char * format, ...)
-    {
-        va_list args;
-        char buffer[1024];
-
-        va_start(args, format);
-        vsprintf(buffer, format, args);
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
-        throw std::logic_error(buffer);
-    };
-    static inline void LogicError(const string & message) { LogicError("%s", message.c_str()); }
-
-    // InvalidArgument - throw a std::logic_error with a formatted error string
-    __declspec_noreturn static inline void InvalidArgument(const char * format, ...)
-    {
-        va_list args;
-        char buffer[1024];
-
-        va_start(args, format);
-        vsprintf(buffer, format, args);
-        throw std::invalid_argument(buffer);
-    };
-    static inline void InvalidArgument(const string & message) { InvalidArgument("%s", message.c_str()); }
+    template<class... _Types>
+    __declspec_noreturn static inline void RuntimeError(_Types&&... _Args) { ThrowFormatted<std::runtime_error>(forward<_Types>(_Args)...); }
+    template<class... _Types>
+    __declspec_noreturn static inline void LogicError(_Types&&... _Args) { ThrowFormatted<std::logic_error>(forward<_Types>(_Args)...); }
+    template<class... _Types>
+    __declspec_noreturn static inline void InvalidArgument(_Types&&... _Args) { ThrowFormatted<std::invalid_argument>(forward<_Types>(_Args)...); }
 
     // Warning - warn with a formatted error string
+#pragma warning(push)
+#pragma warning(disable : 4996)
     static inline void Warning(const char * format, ...)
     {
         va_list args;
@@ -74,6 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         va_start(args, format);
         vsprintf(buffer, format, args);
     };
+#pragma warning(pop)
     static inline void Warning(const string & message) { Warning("%s", message.c_str()); }
 
     // ----------------------------------------------------------------------------

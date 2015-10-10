@@ -66,37 +66,9 @@ cudaStream_t MATH_API GetStream()
 }
 
 
-void CURAND_CALL(curandStatus x)
-{
-    if (x != CURAND_STATUS_SUCCESS)
-    {
-        std::cerr << "!!!!!!!!CURAND EXCEPTION: " << std::endl;
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
-        throw std::runtime_error("CURAND fail");
-    }
-}
-
-void CUBLAS_CALL(cublasStatus_t x)
-{
-    if(x!=CUBLAS_STATUS_SUCCESS) 
-    { 
-        std::cerr << "!!!!!!!!CUBLAS EXCEPTION: " << std::endl;
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
-        throw std::runtime_error("CUBLAS fail");
-    }
-}
-
-void CUDA_CALL(cudaError_t x) 
-{
-    if(x!=cudaSuccess) 
-    { 
-        const char* errmsg = cudaGetErrorString(x);
-        std::cerr << "!!!!!!!!CUDA EXCEPTION: " << errmsg << std::endl;
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
-        cudaDeviceSynchronize();
-        throw std::runtime_error(errmsg);
-    }    
-}
+static const char * CudaErrString(cudaError_t x)  { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
+static const char * CudaErrString(cublasStatus_t) { cudaDeviceSynchronize(); return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)"; }
+static const char * CudaErrString(curandStatus)   { cudaDeviceSynchronize(); return "(see curand.h & look for curandStatus or CURAND_STATUS_xxx)"; }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -165,9 +137,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // GetBestGPUDeviceId - Get the best GPU DeviceId, based on cuda information
+    // Returns -1 if no GPUs can be used.
     //  TODO: should be replaced by BestGpu class instead, it's much better
-    template<class ElemType>
-    DEVICEID_TYPE GPUMatrix<ElemType>::GetBestGPUDeviceId() //returns -1 if no GPUs can be used
+    static DEVICEID_TYPE SelectBestGPUDeviceId()        // this is an internal version that is wrapped by GPUMatrix<ElemType>::GetBestGPUDeviceId() below
     {      
         // currently there is little point in giving out different device IDs each time ask for a matrix, 
         // we really want them all on the same device eventually
@@ -224,6 +196,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 #endif
     }
+    template<class ElemType>
+    /*static*/ DEVICEID_TYPE GPUMatrix<ElemType>::GetBestGPUDeviceId() //returns -1 if no GPUs can be used
+    {
+        // route the result through EnforceOneGPUOnly() which only lets the first choice through (see comment there)
+        return EnforceOneGPUOnly(SelectBestGPUDeviceId());
+    }
 
     // PrepareDevice - Setup the correct cuda context for an operation
     // deviceId - the device on which the operation will take place
@@ -278,6 +256,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return numElements;
     }
 
+    template <typename ElemType>
+    void GPUMatrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const
+    {
+        CUBLAS_CALL(cublasGetMatrix((int)numRows, (int)numCols, sizeof(ElemType),
+            m_pArray, (int)GetNumRows(), dst, (int)colStride));
+    }
     template<class ElemType>
     void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
     {
@@ -302,7 +286,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDA_CALL(cudaDeviceCanAccessPeer(&canAccessPeer, to_id, m_computeDevice));
             if (canAccessPeer)
             {
-                CUDA_CALL(cudaDeviceEnablePeerAccess(m_computeDevice, 0));
+                cudaError_t cudaStatus = cudaDeviceEnablePeerAccess(m_computeDevice, 0);
+                if (cudaStatus != cudaErrorPeerAccessAlreadyEnabled)
+                {
+                    CUDA_CALL(cudaStatus);
+                }
                 CUDA_CALL(cudaMemcpyPeer(d_dst,to_id,m_pArray,m_computeDevice,sizeof(ElemType)*m_numRows*m_numCols));  
             }
             else
@@ -536,11 +524,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType> GPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
     {
-        if (numCols == 0)
-            throw std::logic_error("The slice cannot have 0 columns.");
+        //if (numCols == 0)
+        //    throw std::logic_error("The slice cannot have 0 columns.");
 
         if (startColumn + numCols > m_numCols)
-            throw std::logic_error("The slice is out of range of the source matrix.");
+            InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)m_numCols);
             
         GPUMatrix<ElemType> slice(m_numRows, numCols, m_pArray + startColumn * m_numRows, matrixFlagDontOwnBuffer, m_computeDevice);
 
@@ -554,7 +542,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             throw std::logic_error("The slice cannot have 0 columns.");
 
         if (startColumn + numCols > fromMatrix.m_numCols)
-            throw std::logic_error("The slice is out of range of the source matrix.");
+            InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)fromMatrix.m_numCols);
         
         Clear();
 
@@ -574,15 +562,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
     {
-        if (numCols == 0)
-            throw std::logic_error("The slice cannot have 0 columns.");
+        //if (numCols == 0)
+        //    throw std::logic_error("The slice cannot have 0 columns.");
         if (startColumn + numCols > m_numCols)
             throw std::logic_error("The slice is out of range of the destination matrix.");
         if (numCols > fromMatrix.GetNumCols())
-            throw std::logic_error("The slice is out of range of the source matrix.");
+            InvalidArgument("The slice (%d) is out of range of the source matrix (%d).", (int)numCols, (int)fromMatrix.GetNumCols());
         if (m_numRows != fromMatrix.m_numRows)
             throw std::logic_error("The number of rows in source and destination matrices do not match");
 
+        if (m_numRows*numCols > 0)  // TODO: remove if unnecessary
         CUDA_CALL(cudaMemcpy(m_pArray + LocateColumn(startColumn), fromMatrix.m_pArray, sizeof(ElemType)*m_numRows*numCols, cudaMemcpyDeviceToDevice));
         return *this;
     }
@@ -722,7 +711,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return diag;
     }
-
     //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
@@ -1041,6 +1029,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void GPUMatrix<ElemType>::SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd)
+    {
+        if (IsEmpty())
+            throw std::logic_error("SetColumn: Matrix is empty.");
+        if (valMat.GetNumCols() != 1)
+            throw std::logic_error("SetColumn: only support one column matrix now.");
+        CUDA_CALL(cudaMemcpy(m_pArray + LocateColumn(colInd), valMat.m_pArray, sizeof(ElemType)*m_numRows, cudaMemcpyDeviceToDevice));
+    }
+
+    template<class ElemType>
     void GPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& deepCopyFrom)
     {
         if (this == &deepCopyFrom)
@@ -1298,6 +1296,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUBLAS_CALL(cublasDasum(cuHandle, (CUDA_LONG)n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
             return (ElemType)aveMultiplier / n;
         }
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
+                                        GPUMatrix<ElemType>& functionValues, 
+                                        ElemType learnRatePerSample,
+                                        ElemType momentum,
+                                        ElemType adaWeight,
+                                        ElemType adaMul)
+    {
+        size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+        if (IsEmpty() || (GetNumCols() < numColsNeeded))
+        {
+            Resize(gradients.GetNumRows(), numColsNeeded);
+            SetValue(0.0);
+        }
+
+        assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+
+        size_t n = gradients.GetNumElements();
+        int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
+        _fsadagrad<ElemType><<<blocksPerGrid, threadsPerBlock>>>(n, gradients.m_pArray, m_pArray, m_pArray + n, functionValues.m_pArray,
+                                                                 learnRatePerSample, momentum, adaWeight, adaMul);
     }
 
     template<class ElemType>
@@ -3284,7 +3306,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 assert (m>0 && n>0 && len>0); //converting from size_t to int may cause overflow
                 assert ((int)c.GetNumRows() == m && (int)c.GetNumCols() == n);
                 if ((int)c.GetNumRows() != m || (int)c.GetNumCols() != n)
-                    throw std::invalid_argument("Dimention of matrix c does not match dimention of matrix a.");
+                    throw std::invalid_argument("dimension of matrix c does not match dimension of matrix a.");
 
                 cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
                 if (sizeof(ElemType) == sizeof(float))
@@ -3366,7 +3388,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
             else
-                throw std::invalid_argument("Dimention of matrix c does not match dimention of matrix a.");
+                throw std::invalid_argument("dimension of matrix c does not match dimension of matrix a.");
         }
     }
 
@@ -3797,8 +3819,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool bResult = false; 
         a.PrepareDevice();
         ElemType *res = new ElemType[2];
-        res[0] = 0;
-        res[1] = v;
+        res[0] = v;
+        res[1] = 0;
         ElemType *d_res = NULL;
         CUDA_CALL(cudaMalloc((void**)&d_res, sizeof(ElemType) * 2));
         CUDA_CALL(cudaMemcpy(d_res, res, sizeof(ElemType) * 2, cudaMemcpyHostToDevice));
@@ -4063,7 +4085,49 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		return *this;
 	}
 
+    //sequence training
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType & threshhold)
+    {
+        if (IsEmpty())
+            throw std::logic_error("DropFrame: Matrix is empty.");
 
+        PrepareDevice();
+
+        long N = (long)GetNumCols(); //one kernel per column
+        int blocksPerGrid = (int)ceil(N*1.0 / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _DropFrame << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, label.m_pArray, gamma.m_pArray, threshhold, (long)m_numCols, (long)m_numRows);
+
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label,
+        const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha)
+    {
+        if (IsEmpty())
+            throw std::logic_error("AssignSequenceError: Matrix is empty.");
+
+        PrepareDevice();
+
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        long N = (LONG64)label.GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        _AssignSequenceError << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(hsmoothingWeight, m_pArray, label.m_pArray, dnnoutput.m_pArray, gamma.m_pArray, alpha, N);
+
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+
+        return *this;
+    }
 
 #pragma endregion Static BLAS Functions
 
@@ -4188,7 +4252,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void GPUMatrix<char>::Resize(size_t, size_t, bool);
 
     template GPUMatrix<char>::~GPUMatrix();
-    template int GPUMatrix<char>::GetBestGPUDeviceId();
+    template DEVICEID_TYPE GPUMatrix<char>::GetBestGPUDeviceId();
     template GPUMatrix<char> GPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
     template GPUMatrix<char>& GPUMatrix<char>::operator=(GPUMatrix<char>&&);
     template GPUMatrix<char>::GPUMatrix(int);

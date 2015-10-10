@@ -255,7 +255,8 @@ public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     virtual bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
 
-    void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
+    //void SetSentenceSegBatch(std::vector<size_t> &/*sentenceEnd*/) {};
+    // TODO: ^^ should this be   void CopyMBLayoutTo(MBLayoutPtr pMBLayout);
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart=0);
@@ -353,13 +354,12 @@ private:
     bool   mSentenceEnd; 
     bool   mSentenceBegin; 
 
-    Matrix<float> mtSentenceBegin; 
-    vector<MinibatchPackingFlag> m_minibatchPackingFlag;
+    MBLayoutPtr m_pMBLayout;
 
 public:
     vector<bool> mProcessed; 
     LMBatchSequenceParser<ElemType, LabelType> m_parser;
-    BatchSequenceReader() : mtSentenceBegin(CPUDEVICE)
+    BatchSequenceReader() : m_pMBLayout(make_shared<MBLayout>())
     {
         mLastProcssedSentenceId  = 0;
         mBlgSize = 1;
@@ -393,13 +393,13 @@ public:
     void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples=requestDataSize);
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices);
     bool EnsureDataAvailable(size_t mbStartSample);
-    size_t NumberSlicesInEachRecurrentIter();
+    size_t GetNumParallelSequences();
 
     void SetSentenceSegBatch(std::vector<size_t> &sentenceEnd);
-    void SetSentenceSegBatch(Matrix<float>& sentenceBegin, vector<MinibatchPackingFlag>& minibatchPackingFlag);
+    void CopyMBLayoutTo(MBLayoutPtr);
+    bool RequireSentenceSeg() const override { return true; }
 
     int GetSentenceEndIdFromOutputLabel();
-
 };
 
 }}}

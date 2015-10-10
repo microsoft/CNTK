@@ -288,7 +288,7 @@ public:
             }
             else if (!_stricmp(value.c_str(), "multiseq"))
             {
-                SetOutputNode(m_net.NodesReqMultiSeqHandling(), compNode);
+                SetOutputNode(m_net.RequestNodesMultiSeqHandling(), compNode);
             }
             else if (!_strnicmp(value.c_str(), "eval", 4)) // only compare the first 4 characters
             {
@@ -381,13 +381,13 @@ protected:
     // Copy constructor, should never be called.
     SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/) 
     {         
-        throw std::logic_error("'SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
+        LogicError("'SynchronousExecutionEngine(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
     } 
 
     // Assignment operator, should never be called.
     SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& /*deepCopyFrom*/) 
     {            
-        throw std::logic_error("'SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
+        LogicError("'SynchronousExecutionEngine<ElemType>& operator=(const SynchronousExecutionEngine<ElemType>& deepCopyFrom)' should never be called.");
     } 
 };
 

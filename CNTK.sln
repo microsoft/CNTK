@@ -12,14 +12,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTK", "MachineLearning\CNT
 	ProjectSection(ProjectDependencies) = postProject
 		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
 		{33D2FD22-DEF2-4507-A58A-368F641AEBE5} = {33D2FD22-DEF2-4507-A58A-368F641AEBE5}
-		{D667AF32-028A-4A5D-BE19-F46776F0F6B2} = {D667AF32-028A-4A5D-BE19-F46776F0F6B2}
-		{9A2F2441-5972-4EA8-9215-4119FCE0FB68} = {9A2F2441-5972-4EA8-9215-4119FCE0FB68}
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
-		{014DA766-B37B-4581-BC26-963EA5507931} = {014DA766-B37B-4581-BC26-963EA5507931}
-		{62836DC1-DF77-4B98-BF2D-45C943B7DDC6} = {62836DC1-DF77-4B98-BF2D-45C943B7DDC6}
-		{1D5787D4-52E4-45DB-951B-82F220EE0C6A} = {1D5787D4-52E4-45DB-951B-82F220EE0C6A}
+		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
 		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937} = {DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}
-		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {E6646FFE-3588-4276-8A15-8D65C22711C1}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{D45DF403-6781-444E-B654-A96868C5BE68}"
@@ -56,6 +51,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKEvalDll", "MachineLearn
 	ProjectSection(ProjectDependencies) = postProject
 		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {928ABD1B-4D3B-4017-AEF1-0FA1B4467513}
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKEvalTest", "MachineLearning\CNTKEval\CNTKEvalTest\CNTKEvalTest.vcxproj", "{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}"
@@ -199,14 +195,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{5F733BBA-F
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LSTM", "LSTM", "{19EE975B-232D-49F0-94C7-6F1C6424FB53}"
 	ProjectSection(SolutionItems) = preProject
-		Tests\Speech\LSTM\baseline.cpu.txt = Tests\Speech\LSTM\baseline.cpu.txt
-		Tests\Speech\LSTM\baseline.gpu.txt = Tests\Speech\LSTM\baseline.gpu.txt
-		Tests\Speech\LSTM\baseline.windows.cpu.txt = Tests\Speech\LSTM\baseline.windows.cpu.txt
-		Tests\Speech\LSTM\baseline.windows.gpu.txt = Tests\Speech\LSTM\baseline.windows.gpu.txt
 		Tests\Speech\LSTM\cntk.config = Tests\Speech\LSTM\cntk.config
 		Tests\Speech\LSTM\lstmp-3layer_WithSelfStab.ndl = Tests\Speech\LSTM\lstmp-3layer_WithSelfStab.ndl
-		Tests\Speech\LSTM\run-test = Tests\Speech\LSTM\run-test
-		Tests\Speech\LSTM\testcases.yml = Tests\Speech\LSTM\testcases.yml
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ParseConfig", "MachineLearning\ParseConfig\ParseConfig.vcxproj", "{7C4E77C9-6B17-4B02-82C1-DB62EEE2635B}"
@@ -214,6 +204,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKComputationNetworkLib", "MachineLearning\CNTKComputationNetworkLib\CNTKComputationNetworkLib.vcxproj", "{928ABD1B-4D3B-4017-AEF1-0FA1B4467513}"
 	ProjectSection(ProjectDependencies) = postProject
 		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKSGDLib", "MachineLearning\CNTKSGDLib\CNTKSGDLib.vcxproj", "{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}"
@@ -252,6 +243,112 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DoublePrecision", "DoublePr
 		Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml = Tests\ParallelTraining\NoQuantization\DoublePrecision\testcases.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "KaldiReader", "KaldiReader", "{3E9C89B1-C045-4F42-92B2-F9FFFFC2DBD4}"
+	ProjectSection(SolutionItems) = preProject
+		DataReader\KaldiReader\basetypes.h = DataReader\KaldiReader\basetypes.h
+		DataReader\KaldiReader\basetypes.old.h = DataReader\KaldiReader\basetypes.old.h
+		DataReader\KaldiReader\biggrowablevectors.h = DataReader\KaldiReader\biggrowablevectors.h
+		DataReader\KaldiReader\chunkevalsource.h = DataReader\KaldiReader\chunkevalsource.h
+		DataReader\KaldiReader\DataReader.cpp = DataReader\KaldiReader\DataReader.cpp
+		DataReader\KaldiReader\DataWriter.cpp = DataReader\KaldiReader\DataWriter.cpp
+		DataReader\KaldiReader\dllmain.cpp = DataReader\KaldiReader\dllmain.cpp
+		DataReader\KaldiReader\fileutil.cpp = DataReader\KaldiReader\fileutil.cpp
+		DataReader\KaldiReader\fileutil.h = DataReader\KaldiReader\fileutil.h
+		DataReader\KaldiReader\fileutil.old.h = DataReader\KaldiReader\fileutil.old.h
+		DataReader\KaldiReader\htkfeatio.h = DataReader\KaldiReader\htkfeatio.h
+		DataReader\KaldiReader\HTKMLFReader.cpp = DataReader\KaldiReader\HTKMLFReader.cpp
+		DataReader\KaldiReader\HTKMLFReader.h = DataReader\KaldiReader\HTKMLFReader.h
+		DataReader\KaldiReader\HTKMLFWriter.cpp = DataReader\KaldiReader\HTKMLFWriter.cpp
+		DataReader\KaldiReader\HTKMLFWriter.h = DataReader\KaldiReader\HTKMLFWriter.h
+		DataReader\KaldiReader\latticearchive.cpp = DataReader\KaldiReader\latticearchive.cpp
+		DataReader\KaldiReader\latticearchive.h = DataReader\KaldiReader\latticearchive.h
+		DataReader\KaldiReader\latticestorage.h = DataReader\KaldiReader\latticestorage.h
+		DataReader\KaldiReader\minibatchiterator.h = DataReader\KaldiReader\minibatchiterator.h
+		DataReader\KaldiReader\minibatchsourcehelpers.h = DataReader\KaldiReader\minibatchsourcehelpers.h
+		DataReader\KaldiReader\msra_mgram.h = DataReader\KaldiReader\msra_mgram.h
+		DataReader\KaldiReader\numahelpers.h = DataReader\KaldiReader\numahelpers.h
+		DataReader\KaldiReader\pplhelpers.h = DataReader\KaldiReader\pplhelpers.h
+		DataReader\KaldiReader\readaheadsource.h = DataReader\KaldiReader\readaheadsource.h
+		DataReader\KaldiReader\rollingwindowsource.h = DataReader\KaldiReader\rollingwindowsource.h
+		DataReader\KaldiReader\simple_checked_arrays.h = DataReader\KaldiReader\simple_checked_arrays.h
+		DataReader\KaldiReader\simplesenonehmm.h = DataReader\KaldiReader\simplesenonehmm.h
+		DataReader\KaldiReader\simplethread.h = DataReader\KaldiReader\simplethread.h
+		DataReader\KaldiReader\ssefloat4.h = DataReader\KaldiReader\ssefloat4.h
+		DataReader\KaldiReader\ssematrix.h = DataReader\KaldiReader\ssematrix.h
+		DataReader\KaldiReader\stdafx.cpp = DataReader\KaldiReader\stdafx.cpp
+		DataReader\KaldiReader\stdafx.h = DataReader\KaldiReader\stdafx.h
+		DataReader\KaldiReader\targetver.h = DataReader\KaldiReader\targetver.h
+		DataReader\KaldiReader\utterancesource.h = DataReader\KaldiReader\utterancesource.h
+		DataReader\KaldiReader\utterancesourcemulti.h = DataReader\KaldiReader\utterancesourcemulti.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Kaldi2Reader", "Kaldi2Reader", "{C70E1572-20FF-496C-A0A9-10AA6755A07C}"
+	ProjectSection(SolutionItems) = preProject
+		DataReader\Kaldi2Reader\basetypes.h = DataReader\Kaldi2Reader\basetypes.h
+		DataReader\Kaldi2Reader\biggrowablevectors.h = DataReader\Kaldi2Reader\biggrowablevectors.h
+		DataReader\Kaldi2Reader\chunkevalsource.h = DataReader\Kaldi2Reader\chunkevalsource.h
+		DataReader\Kaldi2Reader\DataReader.cpp = DataReader\Kaldi2Reader\DataReader.cpp
+		DataReader\Kaldi2Reader\DataWriter.cpp = DataReader\Kaldi2Reader\DataWriter.cpp
+		DataReader\Kaldi2Reader\dllmain.cpp = DataReader\Kaldi2Reader\dllmain.cpp
+		DataReader\Kaldi2Reader\DOCUMENTATION.txt = DataReader\Kaldi2Reader\DOCUMENTATION.txt
+		DataReader\Kaldi2Reader\fileutil.cpp = DataReader\Kaldi2Reader\fileutil.cpp
+		DataReader\Kaldi2Reader\fileutil.h = DataReader\Kaldi2Reader\fileutil.h
+		DataReader\Kaldi2Reader\htkfeatio.h = DataReader\Kaldi2Reader\htkfeatio.h
+		DataReader\Kaldi2Reader\htkfeatio_utils.h = DataReader\Kaldi2Reader\htkfeatio_utils.h
+		DataReader\Kaldi2Reader\HTKMLFReader.cpp = DataReader\Kaldi2Reader\HTKMLFReader.cpp
+		DataReader\Kaldi2Reader\HTKMLFReader.h = DataReader\Kaldi2Reader\HTKMLFReader.h
+		DataReader\Kaldi2Reader\HTKMLFWriter.cpp = DataReader\Kaldi2Reader\HTKMLFWriter.cpp
+		DataReader\Kaldi2Reader\HTKMLFWriter.h = DataReader\Kaldi2Reader\HTKMLFWriter.h
+		DataReader\Kaldi2Reader\kaldi.h = DataReader\Kaldi2Reader\kaldi.h
+		DataReader\Kaldi2Reader\KaldiSequenceTrainingDerivative.cpp = DataReader\Kaldi2Reader\KaldiSequenceTrainingDerivative.cpp
+		DataReader\Kaldi2Reader\KaldiSequenceTrainingDerivative.h = DataReader\Kaldi2Reader\KaldiSequenceTrainingDerivative.h
+		DataReader\Kaldi2Reader\latticearchive.cpp = DataReader\Kaldi2Reader\latticearchive.cpp
+		DataReader\Kaldi2Reader\latticearchive.h = DataReader\Kaldi2Reader\latticearchive.h
+		DataReader\Kaldi2Reader\latticestorage.h = DataReader\Kaldi2Reader\latticestorage.h
+		DataReader\Kaldi2Reader\minibatchiterator.h = DataReader\Kaldi2Reader\minibatchiterator.h
+		DataReader\Kaldi2Reader\minibatchsourcehelpers.h = DataReader\Kaldi2Reader\minibatchsourcehelpers.h
+		DataReader\Kaldi2Reader\msra_mgram.h = DataReader\Kaldi2Reader\msra_mgram.h
+		DataReader\Kaldi2Reader\notes.txt = DataReader\Kaldi2Reader\notes.txt
+		DataReader\Kaldi2Reader\numahelpers.h = DataReader\Kaldi2Reader\numahelpers.h
+		DataReader\Kaldi2Reader\pplhelpers.h = DataReader\Kaldi2Reader\pplhelpers.h
+		DataReader\Kaldi2Reader\readaheadsource.h = DataReader\Kaldi2Reader\readaheadsource.h
+		DataReader\Kaldi2Reader\rollingwindowsource.h = DataReader\Kaldi2Reader\rollingwindowsource.h
+		DataReader\Kaldi2Reader\simple_checked_arrays.h = DataReader\Kaldi2Reader\simple_checked_arrays.h
+		DataReader\Kaldi2Reader\simplesenonehmm.h = DataReader\Kaldi2Reader\simplesenonehmm.h
+		DataReader\Kaldi2Reader\simplethread.h = DataReader\Kaldi2Reader\simplethread.h
+		DataReader\Kaldi2Reader\ssefloat4.h = DataReader\Kaldi2Reader\ssefloat4.h
+		DataReader\Kaldi2Reader\ssematrix.h = DataReader\Kaldi2Reader\ssematrix.h
+		DataReader\Kaldi2Reader\stdafx.cpp = DataReader\Kaldi2Reader\stdafx.cpp
+		DataReader\Kaldi2Reader\stdafx.h = DataReader\Kaldi2Reader\stdafx.h
+		DataReader\Kaldi2Reader\targetver.h = DataReader\Kaldi2Reader\targetver.h
+		DataReader\Kaldi2Reader\UtteranceDerivativeBuffer.cpp = DataReader\Kaldi2Reader\UtteranceDerivativeBuffer.cpp
+		DataReader\Kaldi2Reader\UtteranceDerivativeBuffer.h = DataReader\Kaldi2Reader\UtteranceDerivativeBuffer.h
+		DataReader\Kaldi2Reader\UtteranceDerivativeComputationInterface.h = DataReader\Kaldi2Reader\UtteranceDerivativeComputationInterface.h
+		DataReader\Kaldi2Reader\utterancesourcemulti.h = DataReader\Kaldi2Reader\utterancesourcemulti.h
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SequenceTraining", "MachineLearning\SequenceTraining\SequenceTraining.vcxproj", "{EAD17188-072C-4726-B840-A769C36DAD1B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Truncated", "Truncated", "{88F85A64-105D-4CDA-8199-B7A312FC8A27}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\LSTM\Truncated\baseline.cpu.txt = Tests\Speech\LSTM\Truncated\baseline.cpu.txt
+		Tests\Speech\LSTM\Truncated\baseline.gpu.txt = Tests\Speech\LSTM\Truncated\baseline.gpu.txt
+		Tests\Speech\LSTM\Truncated\baseline.windows.cpu.txt = Tests\Speech\LSTM\Truncated\baseline.windows.cpu.txt
+		Tests\Speech\LSTM\Truncated\baseline.windows.gpu.txt = Tests\Speech\LSTM\Truncated\baseline.windows.gpu.txt
+		Tests\Speech\LSTM\Truncated\run-test = Tests\Speech\LSTM\Truncated\run-test
+		Tests\Speech\LSTM\Truncated\testcases.yml = Tests\Speech\LSTM\Truncated\testcases.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FullUtterance", "FullUtterance", "{8241108A-7824-4FF2-BECA-7521A9D89DCF}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\Speech\LSTM\FullUtterance\baseline.cpu.txt = Tests\Speech\LSTM\FullUtterance\baseline.cpu.txt
+		Tests\Speech\LSTM\FullUtterance\baseline.gpu.txt = Tests\Speech\LSTM\FullUtterance\baseline.gpu.txt
+		Tests\Speech\LSTM\FullUtterance\baseline.windows.cpu.txt = Tests\Speech\LSTM\FullUtterance\baseline.windows.cpu.txt
+		Tests\Speech\LSTM\FullUtterance\baseline.windows.gpu.txt = Tests\Speech\LSTM\FullUtterance\baseline.windows.gpu.txt
+		Tests\Speech\LSTM\FullUtterance\run-test = Tests\Speech\LSTM\FullUtterance\run-test
+		Tests\Speech\LSTM\FullUtterance\testcases.yml = Tests\Speech\LSTM\FullUtterance\testcases.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -269,6 +366,7 @@ Global
 		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Debug|x64.ActiveCfg = Debug|x64
 		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Debug|x64.Build.0 = Debug|x64
 		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Release|x64.ActiveCfg = Release|x64
+		{6CEE834A-8104-46A8-8902-64C81BD7928F}.Release|x64.Build.0 = Release|x64
 		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|x64.ActiveCfg = Debug|x64
 		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Debug|x64.Build.0 = Debug|x64
 		{33D2FD22-DEF2-4507-A58A-368F641AEBE5}.Release|x64.ActiveCfg = Release|x64
@@ -295,6 +393,7 @@ Global
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Debug|x64.ActiveCfg = Debug|x64
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Debug|x64.Build.0 = Debug|x64
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|x64.ActiveCfg = Release|x64
+		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC}.Release|x64.Build.0 = Release|x64
 		{B3DD765E-694E-4494-BAD7-37BBF2942517}.Debug|x64.ActiveCfg = Debug|x64
 		{B3DD765E-694E-4494-BAD7-37BBF2942517}.Debug|x64.Build.0 = Debug|x64
 		{B3DD765E-694E-4494-BAD7-37BBF2942517}.Release|x64.ActiveCfg = Release|x64
@@ -329,6 +428,10 @@ Global
 		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}.Debug|x64.Build.0 = Debug|x64
 		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}.Release|x64.ActiveCfg = Release|x64
 		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}.Release|x64.Build.0 = Release|x64
+		{EAD17188-072C-4726-B840-A769C36DAD1B}.Debug|x64.ActiveCfg = Debug|x64
+		{EAD17188-072C-4726-B840-A769C36DAD1B}.Debug|x64.Build.0 = Debug|x64
+		{EAD17188-072C-4726-B840-A769C36DAD1B}.Release|x64.ActiveCfg = Release|x64
+		{EAD17188-072C-4726-B840-A769C36DAD1B}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -340,11 +443,13 @@ Global
 		{B3DD765E-694E-4494-BAD7-37BBF2942517} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{928ABD1B-4D3B-4017-AEF1-0FA1B4467513} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
+		{EAD17188-072C-4726-B840-A769C36DAD1B} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{6CEE834A-8104-46A8-8902-64C81BD7928F} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{668BEED5-AC07-4F35-B3AE-EE65A7F9C976} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{0F30EBCF-09F3-4EED-BF54-4214BCE53FEC} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{DBB3C106-B0B4-4059-8477-C89528CEC1B0} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8} = {D45DF403-6781-444E-B654-A96868C5BE68}
+		{7C4E77C9-6B17-4B02-82C1-DB62EEE2635B} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{5E666C53-2D82-49C9-9127-3FDDC321C741} = {D45DF403-6781-444E-B654-A96868C5BE68}
 		{E6646FFE-3588-4276-8A15-8D65C22711C1} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{1D5787D4-52E4-45DB-951B-82F220EE0C6A} = {33EBFE78-A1A8-4961-8938-92A271941F94}
@@ -356,6 +461,8 @@ Global
 		{CE429AA2-3778-4619-8FD1-49BA3B81197B} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 		{065AF55D-AF02-448B-BFCD-52619FDA4BD0} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
 		{3ED0465D-23E7-4855-9694-F788717B6533} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
+		{3E9C89B1-C045-4F42-92B2-F9FFFFC2DBD4} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
+		{C70E1572-20FF-496C-A0A9-10AA6755A07C} = {39E42C4B-A078-4CA4-9D92-B883D8129601}
 		{98D2C32B-0C1F-4E19-A626-65F7BA4600CF} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
 		{EA67F51F-1FE8-462D-9F3E-01161685AD59} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
 		{DE1A06BA-EC5C-4E0D-BCA8-3EA555310C58} = {065AF55D-AF02-448B-BFCD-52619FDA4BD0}
@@ -365,6 +472,8 @@ Global
 		{4BBF2950-3DBD-469A-AD57-6CACBEBAF541} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
 		{5F733BBA-FE83-4668-8F83-8B0E78A36619} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
 		{19EE975B-232D-49F0-94C7-6F1C6424FB53} = {C47CDAA5-6D6C-429E-BC89-7CA0F868FDC8}
+		{88F85A64-105D-4CDA-8199-B7A312FC8A27} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
+		{8241108A-7824-4FF2-BECA-7521A9D89DCF} = {19EE975B-232D-49F0-94C7-6F1C6424FB53}
 		{6D1353D6-F196-466F-B886-F16D48759B20} = {5E666C53-2D82-49C9-9127-3FDDC321C741}
 		{B6725C9F-A6D2-4269-9B74-7888A90F7884} = {5E666C53-2D82-49C9-9127-3FDDC321C741}
 		{B27DD434-EECD-4EE0-A03B-1150EB87258E} = {B6725C9F-A6D2-4269-9B74-7888A90F7884}

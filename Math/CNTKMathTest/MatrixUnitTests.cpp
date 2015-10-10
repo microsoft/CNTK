@@ -769,5 +769,57 @@ namespace CNTKMathTest
             C.AddColumnReshapeProductOf(A, B, true);
             Assert::IsTrue(C.IsEqualTo(D1, 0.0001f)); 
         }
+
+        TEST_METHOD(MatrixCopy)
+        {
+            const size_t crow = 3;
+            const size_t ccol = 2;
+            // Matrices are stored as column-major so below is 3x2 matrix.
+            float src[] = {
+                1.0f, 3.0f, 4.0f,
+                6.0f, 2.0f, 5.0f };
+            // REVIEW alexeyk: for now only GPU implementation is available.
+            int deviceId = 0;
+            Matrix<float> srcM(crow, ccol, src, matrixFlagNormal, deviceId);
+            // Test full copy.
+            CPUMatrix<float> actualM(crow, ccol);
+            srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.BufferPointer(), actualM.GetNumRows());
+
+            std::vector<float> expected = {
+                1.0f, 3.0f, 4.0f,
+                6.0f, 2.0f, 5.0f };
+            Assert::IsTrue(actualM.IsEqualTo(CPUMatrix<float>(actualM.GetNumRows(), actualM.GetNumCols(), expected.data(), matrixFlagNormal)));
+            
+            // Test tile copy.
+            actualM.Resize(crow - 1, ccol - 1);
+            actualM.SetValue(std::numeric_limits<float>::quiet_NaN());
+            srcM.CopySection(actualM.GetNumRows(), actualM.GetNumCols(), actualM.BufferPointer(), actualM.GetNumRows());
+
+            expected = { 1.0f, 3.0f };
+            Assert::IsTrue(actualM.IsEqualTo(CPUMatrix<float>(actualM.GetNumRows(), actualM.GetNumCols(), expected.data(), matrixFlagNormal)));
+        }
+
+        TEST_METHOD(MatrixHasElement)
+        {
+            for (int deviceId : { -1, 0 })
+            {
+                const size_t size = 3;
+                float src[size] = { 0.0f, 1.0f, 2.0f };
+                SingleMatrix m1(1, size, src, matrixFlagNormal, deviceId);
+                Assert::IsTrue(SingleMatrix::HasElement(m1, 1.0f));
+                Assert::IsFalse(SingleMatrix::HasElement(m1, -1.0f));
+
+                float qnan = std::numeric_limits<float>::quiet_NaN();
+                Assert::IsFalse(SingleMatrix::HasElement(m1, qnan));
+                float posInf = std::numeric_limits<float>::infinity();
+                Assert::IsFalse(SingleMatrix::HasElement(m1, posInf));
+
+                m1(0, 1) = qnan;
+                Assert::IsTrue(SingleMatrix::HasElement(m1, qnan));
+
+                m1(0, 1) = posInf;
+                Assert::IsTrue(SingleMatrix::HasElement(m1, posInf));
+            }
+        }
     };
 }

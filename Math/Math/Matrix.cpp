@@ -182,11 +182,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_matrixType = MatrixType::UNDETERMINED;
 
         int _devId = deviceId!=AUTOPLACEMATRIX ? deviceId : GetBestGPUDeviceId();
+        _devId = EnforceOneGPUOnly(_devId);      // see EnforceOneGPUOnly() for comment on what this is
         m_preferredDeviceId=_devId;
         m_numTimesDeviceChanged = 0;
         m_numTimesMatrixTypeChanged = 0;
         m_devicesTransferedTo[1] = m_devicesTransferedTo[0] = CPUDEVICE - 1;
-        }
+    }
 
     //this function is used to indicate where (CPUDense, CPUSparse, GPUDense, GPUSparse) the most updated results are in
     //after the actual matrix is updated.
@@ -368,6 +369,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 SetDataLocation(GPU, DENSE);
             }
         }
+
+        SetValue(0);
     }
 
     template<class ElemType>
@@ -717,6 +720,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void Matrix<ElemType>::CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const
+    {
+        DISPATCH_MATRIX_ON_FLAG(this,
+            nullptr,
+            m_CPUMatrix->CopySection(numRows, numCols, dst, colStride),
+            m_GPUMatrix->CopySection(numRows, numCols, dst, colStride),
+            NOT_IMPLEMENTED, 
+            NOT_IMPLEMENTED
+            );
+    }
+
+    // BUGBUG: Some code checks before calling here whether one of the dimensions is 0.
+    //         This function must handle that case properly, that is, preserving the non-zero dimension.
+    template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
     {            
         int devId = GetDeviceId();
@@ -879,8 +896,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     //this function will change the matrix type between DENSE and SPARSE. 
     //WARNING: The correct implementation is to copy the matrix between DENSE and SPARSE
-    //         However, the convertion functions are not implemented yet and so it will always create 
-    //         a new blank matrix and destroy all info in the original matrix if different matrix type is asked. 
+    //         However, the conversion functions are not implemented yet and so it will always create 
+    //         a new blank matrix and destroy all info in the original matrix if different matrix type is asked.
+    // In case of !keepValues, the matrix content will be undefined.
     template<class ElemType>
     void Matrix<ElemType>::SwitchToMatrixType(const MatrixType newMatrixType, const MatrixFormat newMatrixFormat, const bool keepValues)
     {
@@ -1070,8 +1088,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const ElemType v)
     {
-        if (IsEmpty())
-            throw std::logic_error("SetValue: Matrix is empty.");
+        if (IsEmpty())  // if empty then we are done
+            return;
+            //throw std::logic_error("SetValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1085,8 +1104,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const DeviceBoundNumber<ElemType>& db_number)
     {
-        if (IsEmpty())
-            throw std::logic_error("SetValue: Matrix is empty.");        
+        if (IsEmpty())  // if empty then we are done
+            return;
+            //throw std::logic_error("SetValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1098,6 +1118,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED
             );
     }
+
+    template<> /*static*/ float  Matrix<float>::MakeNan(size_t /*payload*/)  { return nanf(""); }
+    template<> /*static*/ double Matrix<double>::MakeNan(size_t /*payload*/) { return nan(""); }
+    template<> /*static*/ char   Matrix<char>::MakeNan(size_t)               { return 0; }   // (needed for completeness)
 
     template<class ElemType>
     void Matrix<ElemType>::SetColumn(const ElemType* colPointer, size_t colInd)
@@ -1120,7 +1144,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->SetColumn(val,colInd), 
-            NOT_IMPLEMENTED, 
+			NOT_IMPLEMENTED,
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED);
     }
@@ -1133,7 +1157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             this->m_CPUMatrix->SetColumn(*colMat.m_CPUMatrix,colInd), 
-            NOT_IMPLEMENTED, 
+            this->m_GPUMatrix->SetColumn(*colMat.m_GPUMatrix, colInd),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED);
     }
@@ -1360,6 +1384,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void Matrix<ElemType>::FSAdagrad(size_t mbSize, Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum)
+    {
+        // TODO: The values of 'adagradT' and 'targetadagradavdenom' are currently hardcoded constants taken from DBN (empirically determined). 
+        // These should be made configurable if needed
+        const size_t adagradT = 2 * 3600 * 100;
+        const ElemType targetadagradavdenom = 0.0025; // 1/400 magic constant
+        const ElemType adagradkeepweight = static_cast<ElemType>(exp(-1.0 * mbSize / adagradT));
+
+        static ElemType aggadagradsqrframes = 0;
+        aggadagradsqrframes = adagradkeepweight * aggadagradsqrframes + (1.0f - adagradkeepweight) * mbSize;
+        const ElemType targetadagradavdenom_x_sqrtadagradsqrframes = static_cast<ElemType>(targetadagradavdenom * sqrt(aggadagradsqrframes));
+
+        DISPATCH_MATRIX_ON_FLAG(&gradients,
+            &gradients,
+            m_CPUMatrix->FSAdagrad(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, learnRatePerSample, momentum, adagradkeepweight, targetadagradavdenom_x_sqrtadagradsqrframes); SetDataLocation(CPU),
+            m_GPUMatrix->FSAdagrad(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, learnRatePerSample, momentum, adagradkeepweight, targetadagradavdenom_x_sqrtadagradsqrframes); SetDataLocation(GPU),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
+
+    template<class ElemType>
     ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
         ElemType RMS_GAMMA,
         ElemType RMS_WGT_INC,
@@ -1399,9 +1445,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    // Note: Resize() will leave the matrix content undefined.
     template<class ElemType>
     void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve /*=0*/, bool growOnly /*=true*/)
     {
+        // TODO: should this function test whether the size is changing, and skip if it isn't? We have at least one explicit test for this code calling this (recurrent node)
         DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(this,
             this,
             m_CPUMatrix->Resize(numRows, numCols, growOnly),
@@ -1409,6 +1457,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_CPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false),
             m_GPUSparseMatrix->Resize(numRows, numCols, numNZElemToReserve, growOnly, false)
             );
+#ifdef _DEBUG
+        if (GetMatrixType() != MatrixType::SPARSE)
+            Invalidate();   // Fill the matrix with NaNs to detect using the content which is undefined. Unfortunately this won't work for sparse matrices.
+#endif
     }
 
     template<class ElemType>
@@ -1908,11 +1960,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignDifferenceOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
     {
-        if (this != &a)
+        // if first arg broadcasts, we swap first and the flip the sign
+        // This is because there is no equivalent to operator-=() that works the other way round.
+        // TODO: We need ternary ops where the output storage is separate.
+        if (a.GetNumRows() < b.GetNumRows() || a.GetNumCols() < b.GetNumCols())
         {
-            Resize(a.GetNumRows(), a.GetNumCols());
-            SetValue(a);
+            if (a.GetNumRows() > b.GetNumRows() || a.GetNumCols() > b.GetNumCols())
+                LogicError("AssignDifferenceOf: Invalid dimensions.");
+            AssignDifferenceOf(b, a);
+            *this *= -1;
+            return *this;
         }
+        if (this != &a)
+            SetValue(a);
         (*this) -= b;
         return *this;
     }
@@ -4135,7 +4195,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return Matrix<ElemType>::MultiplyAndWeightedAdd(1.0, a, false, b, false, 0.0, c);
     }
 
-
     /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + c</summary>
     /// if a is a column vector, add to all columns of c 
     /// if a is a row vector, add to all rows of c    
@@ -4143,7 +4202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// <param name="a">Input matrix</param>
     /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
     template<class ElemType>
-    void Matrix<ElemType>::ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
+    /*static*/void Matrix<ElemType>::ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
     {
         if (a.IsEmpty() || c.IsEmpty())
             throw std::logic_error("ScaleAndAdd:  one of the input matrices is empty."); 
@@ -4151,7 +4210,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DecideAndMoveToRightDevice(c, a);        
 
         if (a.GetMatrixType() == c.GetMatrixType())
-            {
+        {
             DISPATCH_MATRIX_ON_FLAG(&c,
                 &c,
                 CPUMatrix<ElemType>::ScaleAndAdd(alpha,*a.m_CPUMatrix,*c.m_CPUMatrix), 
@@ -4165,7 +4224,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DISPATCH_MATRIX_ON_FLAG(&c,
                 nullptr,
                 CPUSparseMatrix<ElemType>::ScaleAndAdd(alpha,*a.m_CPUSparseMatrix,*c.m_CPUMatrix); c.SetDataLocation(CPU),
-            if (a.m_GPUSparseMatrix->GetFormat() == MatrixFormat::matrixFormatSparseCSC) {
+                if (a.m_GPUSparseMatrix->GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+                {
                     GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha,*a.m_GPUSparseMatrix,1,*c.m_GPUMatrix,*c.m_GPUMatrix); 
                 }
                 else // new GPU sparse matrix code 
@@ -4173,11 +4233,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha,*a.m_GPUSparseMatrix,*c.m_GPUMatrix); 
                 }
                 c.SetDataLocation(GPU), 
-                NOT_IMPLEMENTED, 
-                c.m_GPUMatrix = new GPUMatrix<ElemType>(c.m_GPUSparseMatrix->CopyToDenseMatrix());
-                GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha,*a.m_GPUMatrix,1,*c.m_GPUSparseMatrix,*c.m_GPUMatrix);                
+                NOT_IMPLEMENTED,
+                {
+                    c.m_GPUMatrix = new GPUMatrix<ElemType>(c.m_GPUSparseMatrix->CopyToDenseMatrix());
+                    GPUSparseMatrix<ElemType>::ScaleAndAdd(alpha, *a.m_GPUMatrix, 1, *c.m_GPUSparseMatrix, *c.m_GPUMatrix);
                     delete c.m_GPUSparseMatrix; c.m_GPUSparseMatrix = NULL;
-                    c.SetDataLocation(GPU, DENSE)
+                    c.SetDataLocation(GPU, DENSE);
+                }
                 );                
         }       
     }
@@ -4482,7 +4544,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DecideAndMoveToRightDevice(a, b, *this);        
     
         if (a.GetMatrixType() == b.GetMatrixType())
-            {
+        {
             SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
             DISPATCH_MATRIX_ON_FLAG(&a,
@@ -4492,11 +4554,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 NOT_IMPLEMENTED, 
                 NOT_IMPLEMENTED
                 );                
-            }
-            else
-            {
-                NOT_IMPLEMENTED;                
-            }
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
         
         return *this;
     }
@@ -4562,8 +4624,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(&a,
             &a,
             return CPUMatrix<ElemType>::HasElement(*a.m_CPUMatrix, value),
-            NOT_IMPLEMENTED; return false,
             return GPUMatrix<ElemType>::HasElement(*a.m_GPUMatrix, value),
+            NOT_IMPLEMENTED; return false,
             NOT_IMPLEMENTED; return false
             );
     }
@@ -4573,13 +4635,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool Matrix<ElemType>::HasNan (const char * name) const
     {
+        // if GPU then first detect NaN there, will be faster
+        if (GetDeviceId() != CPUDEVICE)
+        {
+            Matrix<ElemType> sum;
+            sum.AssignSumOfElements(*this);
+            auto x = sum.Get00Element();
+            if (!std::isnan(x))
+                return false;
+        }
+
         // const auto & us = *this;
         const Matrix<ElemType> & us = *this;
 
         foreach_coord (i, j, us)
             if (std::isnan(us(i, j)))
             {
-                fprintf (stderr, "hasnan: NaN detected at %s (%ld,%ld)\n", name, i, j);
+                fprintf(stderr, "HasNan: NaN detected at %s (%ld,%ld) in (%d,%d) matrix\n", name, i, j, (int)GetNumRows(), (int)GetNumCols());
                 return true;
             }
             return false;
@@ -4606,9 +4678,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     DEVICEID_TYPE Matrix<ElemType>::GetBestGPUDeviceId()
     { 
-        return (DEVICEID_TYPE)GPUMatrix<ElemType>::GetBestGPUDeviceId();
+        return EnforceOneGPUOnly(GPUMatrix<ElemType>::GetBestGPUDeviceId());    // see EnforceOneGPUOnly() for comment on what this is
     }
 
+    // TODO: these are scalar operations--why are they in Matrix?
     template<class ElemType>
     ElemType Matrix<ElemType>::Exp10(ElemType num)
     {
@@ -4622,8 +4695,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (y <= 0)
             throw std::logic_error("y is smaller than zero");
 
-        ElemType r = x - y * floor(x / y);
-        return r; 
+        return x - y * floor(x / y);
     }
 
     template<class ElemType>
@@ -4631,8 +4703,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         ElemType temp, diff, z;
 
-        if (x < y) {
-            temp = x; x = y; y = temp;
+        if (x < y)
+        {
+            temp = x; x = y; y = temp;  // TODO: ::swap(x,y)?
         }
         diff = y - x;
         if (diff < MINLOGEXP)
@@ -4642,7 +4715,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             z = exp(diff);
-                        return (ElemType) (x + log(1.0 + z));
+            return (ElemType)(x + log(1.0 + z));
         }
     }
 
@@ -4650,11 +4723,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //[this]= (a right shift by n), padded with zeros
     // shift left, shift needs to be negative value
     // shift right, shift needs to be positive value
+    // BUGBUG: Leaves uninitialized values in the opened-up columns.
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, int shift)
     {
         if (a.IsEmpty())
             throw std::logic_error("Shift: Matrix is empty.");
+        else
+            LogicError("Shift: BUGBUG This function currently leaves uninitialized values. Fix the code or contact fseide@microsoft.com.");
 
         auto& us = *this;
         if (this != &a)
@@ -4869,7 +4945,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             );
     }
 
+	template<class ElemType>
+	Matrix<ElemType>& Matrix<ElemType>::DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold)
+	{
+		DecideAndMoveToRightDevice(*this, label, gamma);
 
+		if (label.GetNumCols() != gamma.GetNumCols() || label.GetNumRows() != gamma.GetNumRows())
+			throw std::logic_error("DropFrame: label matrix is not in the same size as gamm matrix.");
+		this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
+
+		DISPATCH_MATRIX_ON_FLAG(this,
+			this,
+			this->m_CPUMatrix->DropFrame(*label.m_CPUMatrix, *gamma.m_CPUMatrix, threshhold),
+			this->m_GPUMatrix->DropFrame(*label.m_GPUMatrix, *gamma.m_GPUMatrix, threshhold),
+			NOT_IMPLEMENTED,
+			NOT_IMPLEMENTED
+			);
+
+		return *this;
+	}
+
+	/// <summary> c = alpha * (a-b)</summary>
+	/// if a, b, c  must have same dim 
+	/// <param name="alpha">Scalar</param>
+	/// <param name="a">Input matrix</param>
+	/// <param name="b">Input matrix</param>
+	/// <param name="c">Resulting matrix, user is responsible for allocating this</param>
+	template<class ElemType>
+	Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label,
+		const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha)
+	{
+		DecideAndMoveToRightDevice(label, dnnoutput, gamma);
+
+		if (!(label.GetMatrixType() == gamma.GetMatrixType()))
+			NOT_IMPLEMENTED;
+
+		this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
+
+
+		DISPATCH_MATRIX_ON_FLAG(this,
+			this,
+			this->m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
+			this->m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
+			NOT_IMPLEMENTED,
+			NOT_IMPLEMENTED
+			);
+		return *this;
+	}
 #pragma endregion Static BLAS Functions
 
     template class Matrix<float>; 

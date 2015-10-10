@@ -5,6 +5,11 @@
 //
 #pragma once
 
+#include "Basics.h"
+#include "Matrix.h"
+#include "ComputationNode.h"
+#include "InputAndParamNodes.h"
+
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -18,65 +23,53 @@
 #include <sstream>
 #include <iostream>
 
-#include "Basics.h"
-#include "Matrix.h"
-#include "ComputationNode.h"
-#include "InputAndParamNodes.h"
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // convolution parameters structure, to make it easier to pass these around all these parameters
-    struct ConvolutionParams
-    {
-        size_t inputWidth, inputHeight, inputChannels;
-        size_t kernelWidth, kernelHeight;
-        size_t horizontalSubsample, verticalSubsample;
-        size_t outputWidth, outputHeight, outputChannels;
-        size_t maxTempMemSizeInSamples;
-        bool zeroPadding;
-    };
+    // -----------------------------------------------------------------------
+    // ConvolutionNode (convolutionWeights, inputFeature)
+    // -----------------------------------------------------------------------
 
-    //convolutional network 
-    //follow "high performance convolutional neural networks for document processing" by Kumar chellapilla, Sidde Puri, and Patrice Simard
-    //assume each column is an input sample. Each sample is stored in [channel, row, col]  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
+    // convolutional network 
+    // This follows "high performance convolutional neural networks for document processing" by Kumar Chellapilla, Sidde Puri, and Patrice Simard.
+    // Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
     template<class ElemType>
-    class ConvolutionNode : public ComputationNode<ElemType>
+    class ConvolutionNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Convolution"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_tempMatrix(deviceId),
             m_kernelWidth(SIZE_MAX), m_kernelHeight(SIZE_MAX),
             // initialize to dummy values so we catch missing initialization
             m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX),
-            m_zeroPadding(false), m_maxTempMemSizeInSamples(SIZE_MAX)
+            m_zeroPadding(false), m_maxTempMemSizeInSamples(SIZE_MAX)            
         {
-            m_outputChannels = 0;
+            m_outputImageLayout.channels = 0;
         }
         ConvolutionNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, const size_t horizontalSubsample, const size_t verticalSubsample, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0) :
-            ComputationNode<ElemType>(deviceId, name),
+            Base(deviceId, name),
             m_tempMatrix(deviceId),
             m_kernelWidth(kernelWidth), m_kernelHeight(kernelHeight),
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample),
             m_zeroPadding(zeroPadding), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
         {
-            m_outputChannels = outputChannels;
+            m_outputImageLayout.channels = outputChannels;
         }
 
-        virtual void SaveToFile(File& fstream) const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
             fstream <<  m_kernelWidth << m_kernelHeight << m_horizontalSubsample << m_verticalSubsample; 
-            fstream << m_outputChannels << m_zeroPadding << m_maxTempMemSizeInSamples; 
+            fstream << m_outputImageLayout.channels << m_zeroPadding << m_maxTempMemSizeInSamples; 
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
             fstream >> m_kernelWidth >> m_kernelHeight >> m_horizontalSubsample >> m_verticalSubsample; 
-            fstream >> m_outputChannels >> m_zeroPadding >> m_maxTempMemSizeInSamples; 
+            fstream >> m_outputImageLayout.channels >> m_zeroPadding >> m_maxTempMemSizeInSamples; 
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -99,207 +92,236 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"Convolution";} 
+        //virtual void ComputeInputPartial(const size_t inputIndex) 
+        //{
+        //    if (inputIndex > 1)
+        //        InvalidArgument("Convolution operation only takes two inputs.");
+        //
+        //    if (inputIndex == 0)  //derivative with regard to the weight matrix
+        //        ComputeInputPartialOverWeight(GradientValues(), Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_tempMatrix, true);
+        //    else  // derivative with regard to the input feature
+        //        ComputeInputPartialOverInputFeature(GradientValues(), Inputs(1)->GradientValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_tempMatrix);
+        //}
 
-        ConvolutionParams GetConvolutionParams() const
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override 
         {
-            ConvolutionParams convParam;
-            convParam.inputWidth = m_inputWidth;
-            convParam.inputHeight = m_inputHeight;
-            convParam.inputChannels = m_inputChannels;
-
-            convParam.kernelWidth = m_kernelWidth;
-            convParam.kernelHeight = m_kernelHeight;
-
-            convParam.horizontalSubsample = m_horizontalSubsample;
-            convParam.verticalSubsample = m_verticalSubsample;
-
-            convParam.outputWidth = m_outputWidth;
-            convParam.outputHeight = m_outputHeight;
-            convParam.outputChannels = m_outputChannels;
-
-            convParam.zeroPadding = m_zeroPadding;
-
-            convParam.maxTempMemSizeInSamples = m_maxTempMemSizeInSamples;
-            return convParam;
-        }
-
-        virtual void ComputeInputPartial(const size_t inputIndex) 
-        {
-            if (inputIndex > 1)
-                throw std::invalid_argument("Convolution operation only takes two inputs.");
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));   // BUGBUG: GetNumParallelSequences() must be from Inputs(1)
 
             if (inputIndex == 0)  //derivative with regard to the weight matrix
-            {
-                ComputeInputPartialOverWeight(this, GradientValues(), Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_tempMatrix, true);
-            }
+                ComputeInputPartialOverWeight(sliceOutputGrad, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix, !frameRange.IsAllFrames());
             else  // derivative with regard to the input feature
             {
-                ComputeInputPartialOverInputFeature(this, GradientValues(), Inputs(1)->GradientValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_tempMatrix);
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                ComputeInputPartialOverInputFeature(sliceOutputGrad, sliceInput1Grad, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) 
+    private:
+        void ComputeInputPartialOverWeight(Matrix<ElemType> &gradientValues,
+            Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix, const bool inLoop)
         {
-            if (inputIndex > 1)
-                throw std::invalid_argument("Convolution operation only takes two inputs.");
+            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputImageLayout.channels;
+            size_t packedInputColsPerSample = m_outputImageLayout.width * m_outputImageLayout.height;
+            size_t outputSizePerChannel = packedInputColsPerSample;
+            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
+            //size_t inputDim = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;  //size of each input sample
 
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
+            size_t batchSize = input1.GetNumCols(); //right child is the input sample
 
-            if (inputIndex == 0)  //derivative with regard to the weight matrix
+            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
+
+            //const Matrix<ElemType> & weightMatrix = input0;
+            //inputGradientValues.Resize(weightMatrix.GetNumRows(), weightMatrix.GetNumCols()); //should have been resized when preparing gradient computation
+
+            gradientValues.Reshape(m_outputImageLayout.channels, outputSizePerChannel * batchSize);  //reshape to match the longernal operation
+
+            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
+            size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
+
+            if (numSubBatches == 1 && !inLoop)  //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
+                Matrix<ElemType>::MultiplyAndAdd(gradientValues, false, tempMatrix, true, inputGradientValues);
+            else
             {
-                ComputeInputPartialOverWeight(this, sliceOutputGrad, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
+                for (size_t i = 0; i<numSubBatches; i++)
+                {
+                    size_t startSampleID = i*subBatchSize;
+                    size_t endSampleID = min(batchSize, startSampleID + subBatchSize);
+                    size_t smallBatchSize = endSampleID - startSampleID;
+
+                    tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                    Matrix<ElemType> inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
+                    tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
+                                                            m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
+                                                            m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels,
+                                                            m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample,
+                                                            m_zeroPadding);
+
+                    Matrix<ElemType> outputGradientSubBatch = gradientValues.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
+                    Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, tempMatrix, true, inputGradientValues);
+                }
             }
-            else  // derivative with regard to the input feature
+
+            gradientValues.Reshape(m_outputImageLayout.channels * outputSizePerChannel, batchSize);  //change back
+        }
+
+        //compute gradient over the packed input and then convert the result to the original input
+        void ComputeInputPartialOverInputFeature(Matrix<ElemType> &gradientValues, const Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix)
+        {
+            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputImageLayout.channels;
+            size_t packedInputColsPerSample = m_outputImageLayout.width * m_outputImageLayout.height;
+            size_t outputSizePerChannel = packedInputColsPerSample;
+            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
+            //size_t inputDim = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;  //size of each input sample
+
+            size_t batchSize = input1.GetNumCols(); //right child is the input sample
+
+            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
+
+            const Matrix<ElemType> & weightMatrix = input0;
+
+            gradientValues.Reshape(m_outputImageLayout.channels, outputSizePerChannel * batchSize);  //reshape to match the longernal operation
+
+            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
+            size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
+
+            for (size_t i = 0; i<numSubBatches; i++)
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-                ComputeInputPartialOverInputFeature(this, sliceOutputGrad, sliceInput1Grad, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
+                size_t startSampleID = i*subBatchSize;
+                size_t endSampleID = min(batchSize, startSampleID + subBatchSize);
+                size_t smallBatchSize = endSampleID - startSampleID;
+
+                tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                Matrix<ElemType> outputGradientSubBatch = gradientValues.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
+                Matrix<ElemType>::Multiply(weightMatrix, true, outputGradientSubBatch, false, tempMatrix);
+
+                Matrix<ElemType> inputGradientSubBatch = inputGradientValues.ColumnSlice(startSampleID, smallBatchSize);
+                tempMatrix.UnpackConvolutionInput(inputGradientSubBatch,
+                                                  m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
+                                                  m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels,
+                                                  m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample,
+                                                  m_zeroPadding);
             }
-        }
 
-        virtual void EvaluateThisNode()  
+            gradientValues.Reshape(m_outputImageLayout.channels * outputSizePerChannel, batchSize);  //change back
+        }
+    public:
+
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            EvaluateThisNodeS(this, FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_tempMatrix);
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) 
-        {
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            EvaluateThisNodeS(this, sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value, m_tempMatrix);
-        }
-
-        static void WINAPI EvaluateThisNodeS(const ConvolutionNode<ElemType>* pConv, Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0, 
-            const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix)
+    private:
+        void EvaluateThisNodeS(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0, 
+                               const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix)
         {
 #if NANCHECK
             input0.HasNan("Convolution-input0");
             input1.HasNan("Convolution-input1");
 #endif
-            ConvolutionParams convParam = pConv->GetConvolutionParams();
-
-            size_t packedInputRows = convParam.kernelWidth * convParam.kernelHeight * convParam.inputChannels;
-            size_t packedInputColsPerSample = convParam.outputWidth * convParam.outputHeight;
+            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputImageLayout.channels;
+            size_t packedInputColsPerSample = m_outputImageLayout.width * m_outputImageLayout.height;
             size_t outputSizePerChannel = packedInputColsPerSample;
             //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            //size_t inputDim = convParam.inputWidth * convParam.inputHeight * convParam.inputChannels;  //size of each input sample
+            //size_t inputDim = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;  //size of each input sample
 
-            long batchSize = (long)input1.GetNumCols();  //right child is the input sample
+            size_t batchSize = input1.GetNumCols();  //right child is the input sample
 
-            long maxTempMemSizeInSamples = (long)(convParam.maxTempMemSizeInSamples == 0? batchSize : convParam.maxTempMemSizeInSamples);
+            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0? batchSize : m_maxTempMemSizeInSamples);
 
             const Matrix<ElemType> & weightMatrix = input0;
-            assert(weightMatrix.GetNumCols() == packedInputRows && weightMatrix.GetNumRows() == convParam.outputChannels);
-            functionValues.Resize(convParam.outputChannels, outputSizePerChannel * batchSize);
+            assert(weightMatrix.GetNumCols() == packedInputRows && weightMatrix.GetNumRows() == m_outputImageLayout.channels);
+            functionValues.Resize(m_outputImageLayout.channels, outputSizePerChannel * batchSize);
 
-            long subBatchSize = (long)min(batchSize, maxTempMemSizeInSamples); 
-            long numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
+            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples); 
+            size_t numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
 
-            for (long i=0; i<numSubBatches; i++) 
+            for (size_t i=0; i<numSubBatches; i++) 
             {
-                long startSampleID = i*subBatchSize; 
-                long endSampleID = min(batchSize, startSampleID + subBatchSize); 
-                long smallBatchSize = endSampleID-startSampleID; 
+                size_t startSampleID = i*subBatchSize; 
+                size_t endSampleID = min(batchSize, startSampleID + subBatchSize); 
+                size_t smallBatchSize = endSampleID-startSampleID; 
 
                 tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
                 Matrix<ElemType>  inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
                 tempMatrix.AssignPackedConvolutionInput(inputSubBatch, 
-                                                                 convParam.inputWidth, convParam.inputHeight, convParam.inputChannels,
-                                                                 convParam.outputWidth, convParam.outputHeight, convParam.outputChannels,
-                                                                 convParam.kernelWidth, convParam.kernelHeight, convParam.horizontalSubsample, convParam.verticalSubsample, 
-                                                                 convParam.zeroPadding); 
+                                                        m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
+                                                        m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels,
+                                                        m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample, 
+                                                        m_zeroPadding); 
 
                 Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(outputSizePerChannel * startSampleID, outputSizePerChannel * smallBatchSize);
                 Matrix<ElemType>::Multiply(weightMatrix, false, tempMatrix, false, outputSubBatch);
             }
 
-            functionValues.Reshape(convParam.outputChannels * outputSizePerChannel, batchSize);  //each sample becomes a column
+            functionValues.Reshape(m_outputImageLayout.channels * outputSizePerChannel, batchSize);  //each sample becomes a column
 
 #if NANCHECK
             functionValues.HasNan("Convolution");
 #endif
         }
+    public:
 
         // note: this also infers dimensions from chilren
-        virtual void Validate()
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            PrintSelfBeforeValidation();
-
-            if (m_children.size() != 2) 
-                LogicError("ConvolutionNode requires two inputs.");
+            Base::Validate(isFinalValidationPass);
 
             //we may want to remove this check in the future if we want to support the case that the weight itself is result of some computation 
             //if (Inputs(0)->OperationName() != OperationNameOf(LearnableParameter))
-            //    throw std::logic_error("ConvolutionNode requires the first input to be LearnableParameter type.");
+            //    LogicError("ConvolutionNode requires the first input to be LearnableParameter type.");
 
             if (m_horizontalSubsample > m_kernelWidth || m_verticalSubsample > m_kernelHeight)
                 InvalidArgument("In ConvolutionNode horizontalSubsample must <= kernelWidth and verticalSubsample must <= kernelHeight.");
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
-            size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputChannels;
+            size_t weightCols = m_kernelWidth * m_kernelHeight * m_inputImageLayout.channels;
 
-            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().HasNoElements())
-            {
-                Inputs(0)->FunctionValues().Resize(m_outputChannels, weightCols);
-            }
+            if (Inputs(0)->FunctionValues().HasNoElements())
+                ValidateInferChildDims(0, m_outputImageLayout.channels, weightCols);
 
-            if (Inputs(0)->FunctionValues().GetNumCols() != weightCols || Inputs(0)->FunctionValues().GetNumRows() != m_outputChannels)
-            {
-                msra::strfun::strprintf msg("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", 
-                                            m_children[0]->NodeName().c_str(), m_outputChannels, weightCols);
-                LogicError(msg.c_str());
-            }
+            if (isFinalValidationPass && (Inputs(0)->GetNumCols() != weightCols || Inputs(0)->GetNumRows() != m_outputImageLayout.channels))
+                LogicError("convolutionWeight matrix %ls should have dimension [%d, %d] which is [outputChannels, kernelWidth * kernelHeight * inputChannels]", m_children[0]->NodeName().c_str(), m_outputImageLayout.channels, weightCols);
 
-            size_t inputDim = m_inputWidth * m_inputHeight * m_inputChannels;
-            if (Inputs(1)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(1)->FunctionValues().GetNumRows() == 0)
-            {
-                Inputs(1)->FunctionValues().Resize(inputDim, Inputs(1)->FunctionValues().GetNumCols());
-            }
+            size_t inputDim = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;
+            if (Inputs(1)->GetNumRows() == 0)
+                ValidateInferChildDims(1, inputDim, Inputs(1)->GetNumCols());
 
-            if (Inputs(1)->FunctionValues().GetNumRows() != inputDim)
-            {
-                msra::strfun::strprintf msg("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", 
-                                            NodeName().c_str(), inputDim);
-                LogicError(msg.c_str());
-            }
+            if (isFinalValidationPass && Inputs(1)->GetNumRows() != inputDim)
+                LogicError("each column of input to the convolution node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), inputDim);
 
-            if (Inputs(0)->FunctionValues().HasNoElements() || Inputs(1)->FunctionValues().HasNoElements() )
-                LogicError("Convolution operation: one of the operants has 0 element.");
+            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0 )
+            //    LogicError("Convolution operation: one of the operands has 0 elements.");
             
-            size_t outputDim = m_outputWidth * m_outputHeight * m_outputChannels;
-            FunctionValues().Resize(outputDim, Inputs(1)->FunctionValues().GetNumCols());
+            size_t outputDim = m_outputImageLayout.width * m_outputImageLayout.height * m_outputImageLayout.channels;
+            Resize(outputDim, Inputs(1)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(1, false);
 
-            if (m_inputWidth < m_kernelWidth || m_inputHeight < m_kernelHeight)
-                throw std::invalid_argument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");
+            if (m_inputImageLayout.width < m_kernelWidth || m_inputImageLayout.height < m_kernelHeight)
+                InvalidArgument("inputWidth must >= kernelWidth and inputHeight must >= kernelHeight.");
 
             if (m_zeroPadding)
             {
                 const int kernelWidthCenter = m_kernelWidth % 2;
                 const int kernelHeightCenter = m_kernelHeight % 2;
-                m_outputWidth = (m_inputWidth-kernelWidthCenter)/m_horizontalSubsample + 1;
-                m_outputHeight = (m_inputHeight-kernelHeightCenter)/m_verticalSubsample + 1;
+                m_outputImageLayout.width = (m_inputImageLayout.width-kernelWidthCenter)/m_horizontalSubsample + 1;
+                m_outputImageLayout.height = (m_inputImageLayout.height-kernelHeightCenter)/m_verticalSubsample + 1;
             }
             else
             {
-                m_outputWidth = (m_inputWidth-m_kernelWidth)/m_horizontalSubsample + 1;
-                m_outputHeight = (m_inputHeight-m_kernelHeight)/m_verticalSubsample + 1;
+                m_outputImageLayout.width = (m_inputImageLayout.width-m_kernelWidth)/m_horizontalSubsample + 1;
+                m_outputImageLayout.height = (m_inputImageLayout.height-m_kernelHeight)/m_verticalSubsample + 1;
             }    
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr convolutionWeight, const ComputationNodePtr inputFeature) 
-        {
-            m_children.resize(2);
-            m_children[0] = convolutionWeight;
-            m_children[1] = inputFeature;
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
@@ -308,16 +330,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_tempMatrix.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
-            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
+            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels);
             fstream << string(str);
             sprintf(str, "Kernel[Width:%lu, Height:%lu]  SubSample[Horizontal:%lu, Vertical:%lu]\n", m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample);
             fstream << string(str);
-            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_outputWidth, m_outputHeight, m_outputChannels);
+            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels);
             fstream << string(str);
             sprintf(str, "ZeroPadding=%ls  maxTempMemSizeInSamples=%lu\n", m_zeroPadding? L"true" : L"false", m_maxTempMemSizeInSamples);
             fstream << string(str);
@@ -327,102 +349,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
         }
-
-    private:
-        static void WINAPI ComputeInputPartialOverWeight(const ConvolutionNode<ElemType>* pConv, Matrix<ElemType> &gradientValues, 
-            Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix, const bool inLoop=false)
-        {
-            ConvolutionParams convParam = pConv->GetConvolutionParams();
-
-            size_t packedInputRows = convParam.kernelWidth * convParam.kernelHeight * convParam.inputChannels;
-            size_t packedInputColsPerSample = convParam.outputWidth * convParam.outputHeight;
-            size_t outputSizePerChannel = packedInputColsPerSample;
-            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            //size_t inputDim = convParam.inputWidth * convParam.inputHeight * convParam.inputChannels;  //size of each input sample
-
-            long batchSize = (long) input1.GetNumCols(); //right child is the input sample
-
-            long maxTempMemSizeInSamples = (long) (convParam.maxTempMemSizeInSamples == 0? batchSize : convParam.maxTempMemSizeInSamples);
-
-            //const Matrix<ElemType> & weightMatrix = input0;
-            //inputGradientValues.Resize(weightMatrix.GetNumRows(), weightMatrix.GetNumCols()); //should have been resized when preparing gradient computation
-
-            gradientValues.Reshape(convParam.outputChannels,  outputSizePerChannel * batchSize);  //reshape to match the longernal operation
-
-            long subBatchSize = min(batchSize, maxTempMemSizeInSamples); 
-            long numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
-
-            if (numSubBatches == 1 && !inLoop)  //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
-            {
-                Matrix<ElemType>::MultiplyAndAdd(gradientValues, false, tempMatrix, true, inputGradientValues);
-            }
-            else
-            {
-                for (long i=0; i<numSubBatches; i++) 
-                {
-                    long startSampleID = i*subBatchSize; 
-                    long endSampleID = min(batchSize, startSampleID + subBatchSize); 
-                    long smallBatchSize = endSampleID-startSampleID; 
-
-                    tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
-                    Matrix<ElemType> inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
-                    tempMatrix.AssignPackedConvolutionInput(inputSubBatch, 
-                                                                     convParam.inputWidth, convParam.inputHeight, convParam.inputChannels,
-                                                                     convParam.outputWidth, convParam.outputHeight, convParam.outputChannels,
-                                                                     convParam.kernelWidth, convParam.kernelHeight, convParam.horizontalSubsample, convParam.verticalSubsample, 
-                                                                     convParam.zeroPadding); 
-
-                    Matrix<ElemType> outputGradientSubBatch = gradientValues.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
-                    Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, tempMatrix, true, inputGradientValues);
-                }
-            }
-
-            gradientValues.Reshape(convParam.outputChannels * outputSizePerChannel, batchSize);  //change back
-        }
-
-        //compute gradient over the packed input and then convert the result to the original input
-        static void WINAPI ComputeInputPartialOverInputFeature(const ConvolutionNode<ElemType>* pConv, Matrix<ElemType> &gradientValues, const Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix)
-        {
-            
-            ConvolutionParams convParam = pConv->GetConvolutionParams();
-            size_t packedInputRows = convParam.kernelWidth * convParam.kernelHeight * convParam.inputChannels;
-            size_t packedInputColsPerSample = convParam.outputWidth * convParam.outputHeight;
-            size_t outputSizePerChannel = packedInputColsPerSample;
-            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            //size_t inputDim = convParam.inputWidth * convParam.inputHeight * convParam.inputChannels;  //size of each input sample
-
-            long batchSize = (long) input1.GetNumCols(); //right child is the input sample
-
-            long maxTempMemSizeInSamples = (long) (convParam.maxTempMemSizeInSamples == 0? batchSize : convParam.maxTempMemSizeInSamples);
-
-            const Matrix<ElemType> & weightMatrix = input0;
-
-            gradientValues.Reshape(convParam.outputChannels,  outputSizePerChannel * batchSize);  //reshape to match the longernal operation
-
-            long subBatchSize = min(batchSize, maxTempMemSizeInSamples); 
-            long numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
-
-            for (long i=0; i<numSubBatches; i++) 
-            {
-                long startSampleID = i*subBatchSize; 
-                long endSampleID = min(batchSize, startSampleID + subBatchSize); 
-                long smallBatchSize = endSampleID-startSampleID; 
-
-                tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
-                Matrix<ElemType> outputGradientSubBatch = gradientValues.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
-                Matrix<ElemType>::Multiply(weightMatrix, true, outputGradientSubBatch, false,  tempMatrix);
-
-                Matrix<ElemType> inputGradientSubBatch = inputGradientValues.ColumnSlice(startSampleID, smallBatchSize);
-                tempMatrix.UnpackConvolutionInput(inputGradientSubBatch, 
-                                                                 convParam.inputWidth, convParam.inputHeight, convParam.inputChannels,
-                                                                 convParam.outputWidth, convParam.outputHeight, convParam.outputChannels,
-                                                                 convParam.kernelWidth, convParam.kernelHeight, convParam.horizontalSubsample, convParam.verticalSubsample, 
-                                                                 convParam.zeroPadding); 
-            }
-
-            gradientValues.Reshape(convParam.outputChannels * outputSizePerChannel, batchSize);  //change back
-        }
-        
 
     private:
         size_t m_kernelWidth, m_kernelHeight;
@@ -436,44 +362,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ConvolutionNode<float>; 
     template class ConvolutionNode<double>;
 
-    struct PoolParams
-    {
-        size_t inputWidth, inputHeight, inputChannels;
-        size_t windowWidth, windowHeight;
-        size_t horizontalSubsample, verticalSubsample;
-        size_t outputWidth, outputHeight, outputChannels;
-        size_t inputSizePerSample, outputSizePerSample;
-    };
+    // -----------------------------------------------------------------------
+    // PoolingNodeBase (input)
+    // -----------------------------------------------------------------------
 
-    //Max Pooling: support multi channel
-    //assume each column is an input sample. Each sample is stored in  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
+    // Max/Average Pooling: support multi channel
+    // Each sample is stored as a column-major matrix (height, width) of float[numChannels] (r00, g00, b00, r10, g10, b10, r01, g01, b01, r11, g11, b11).
     template<class ElemType>
-    class MaxPoolingNode : public ComputationNode<ElemType>
+    class PoolingNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
+        PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name),
             m_windowWidth(SIZE_MAX), m_windowHeight(SIZE_MAX),
             m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX)
         { }
-        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
-            ComputationNode<ElemType>(deviceId, name),
+        PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
+            Base(deviceId, name),
             m_windowWidth(windowWidth), m_windowHeight(windowHeight),
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
         { }
 
-        virtual void SaveToFile(File& fstream) const
+        virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
-            fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample; 
+            fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample;
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
-            fstream >> m_windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample; 
+            fstream >> m_windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample;
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -481,10 +401,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                auto node = dynamic_pointer_cast<MaxPoolingNode<ElemType>>(nodeP);
-                node->m_inputWidth = m_inputWidth;
-                node->m_inputHeight = m_inputHeight;
-                node->m_inputChannels = m_inputChannels;
+                auto node = dynamic_pointer_cast<PoolingNodeBase<ElemType>>(nodeP);
 
                 node->m_windowWidth = m_windowWidth;
                 node->m_windowHeight = m_windowHeight;
@@ -492,382 +409,166 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_horizontalSubsample = m_horizontalSubsample;
                 node->m_verticalSubsample = m_verticalSubsample;
 
-                node->m_outputWidth = m_outputWidth;
-                node->m_outputHeight = m_outputHeight;
-                node->m_outputChannels = m_outputChannels;
-
                 node->m_inputSizePerSample = m_inputSizePerSample;
                 node->m_outputSizePerSample = m_outputSizePerSample;
             }
         }
 
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"MaxPooling";}
-
-        PoolParams GetPoolParams() const
-        {
-            PoolParams poolParams;
-            poolParams.inputWidth = m_inputWidth;
-            poolParams.inputHeight = m_inputHeight;
-            poolParams.inputChannels = m_inputChannels;
-
-            poolParams.windowWidth = m_windowWidth;
-            poolParams.windowHeight = m_windowHeight;
-
-            poolParams.horizontalSubsample = m_horizontalSubsample;
-            poolParams.verticalSubsample = m_verticalSubsample;
-
-            poolParams.outputWidth = m_outputWidth;
-            poolParams.outputHeight = m_outputHeight;
-            poolParams.outputChannels = m_outputChannels;
-
-            poolParams.inputSizePerSample = m_inputSizePerSample;
-            poolParams.outputSizePerSample = m_outputSizePerSample;
-            return poolParams;
-        }
-
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             if (inputIndex > 0)
-                throw std::invalid_argument("MaxPooling operation only takes one inputs.");
+                InvalidArgument("MaxPooling operation only takes one inputs.");
 
-            ComputeInputPartialS(this, GradientValues(), Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), FunctionValues());
+            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+
+            ComputeInputPartialV(sliceOutputGrad, sliceInput0Grad, sliceInput0Value, sliceOutputValue);
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) 
+        // this function must be overriden by Max or AveragePoolingNode
+        virtual void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) = 0;
+
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (inputIndex > 0)
-                throw std::invalid_argument("MaxPooling operation only takes one inputs.");
-
-            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            ComputeInputPartialS(this, sliceOutputGrad, sliceInput0Grad, sliceInput0Value, sliceOutputValue);
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            EvaluateThisNodeV(sliceOutputValue, sliceInput0Value);
         }
 
-        static void WINAPI ComputeInputPartialS(const MaxPoolingNode<ElemType>* ppool, const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues)
+        // this function must be overriden by Max or AveragePoolingNode
+        virtual void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) = 0;
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            PoolParams poolParams = ppool->GetPoolParams();
-
-            inputGradientValues.AddMaxPoolingGradient(gradientValues, input0, functionValues, poolParams.inputChannels,
-                                                    poolParams.inputWidth, poolParams.inputHeight, poolParams.inputSizePerSample, 
-                                                    poolParams.outputWidth, poolParams.outputHeight, poolParams.outputSizePerSample, 
-                                                    poolParams.windowWidth, poolParams.windowHeight, poolParams.horizontalSubsample, poolParams.verticalSubsample);
-        }
-
-        virtual void EvaluateThisNode()  
-        {
-#if NANCHECK
-            Inputs(0)->FunctionValues().HasNan("MaxPooling-input0");
-#endif
-            EvaluateThisNodeS(this, FunctionValues(), Inputs(0)->FunctionValues());
-#if NANCHECK
-            m_functionValues.HasNan("MaxPooling");
-#endif
-        }
-
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) 
-        {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            EvaluateThisNodeS(this, sliceOutputValue, sliceInput0Value);
-        }
-
-        static void WINAPI EvaluateThisNodeS(const MaxPoolingNode<ElemType>* ppool, Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0)
-        {
-            PoolParams poolParams = ppool->GetPoolParams();
-            functionValues.AssignMaxPoolingResult(input0, poolParams.inputChannels,
-                                                 poolParams.inputWidth, poolParams.inputHeight, poolParams.inputSizePerSample, 
-                                                 poolParams.outputWidth, poolParams.outputHeight, poolParams.outputSizePerSample, 
-                                                 poolParams.windowWidth, poolParams.windowHeight, poolParams.horizontalSubsample, poolParams.verticalSubsample);
-        }
-
-        virtual void Validate()
-        {
-            PrintSelfBeforeValidation();
-
-            if (m_children.size() != 1) 
-                throw std::logic_error("MaxPoolingNode requires one input.");
+            Base::Validate(isFinalValidationPass);
 
             if (m_horizontalSubsample > m_windowWidth || m_verticalSubsample > m_windowHeight)
-                throw std::invalid_argument("MaxPoolingNode: horizontalSubsample must <= windowWidth and verticalSubsample must <= windowHeight.");
+                InvalidArgument("PoolingNodeBase: horizontalSubsample must <= windowWidth and verticalSubsample must <= windowHeight.");
 
+            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
 
-            m_inputSizePerSample = m_inputWidth * m_inputHeight * m_inputChannels;
-            m_outputSizePerSample = m_outputWidth * m_outputHeight * m_outputChannels;
+            m_inputSizePerSample = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;
+            m_outputSizePerSample = m_outputImageLayout.width * m_outputImageLayout.height * m_outputImageLayout.channels;
 
-            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0)
-            {
-                Inputs(0)->FunctionValues().Resize(m_inputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
-            }
+            if (Inputs(0)->GetNumRows() == 0)
+                ValidateInferChildDims(0, m_inputSizePerSample, Inputs(0)->GetNumCols());
 
-            if (Inputs(0)->FunctionValues().GetNumRows() != m_inputSizePerSample)
-            {
-                msra::strfun::strprintf msg("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", 
-                    NodeName().c_str(), m_inputSizePerSample);
-                throw std::logic_error(msg.c_str());            
-            }
-            
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("MaxPoolingNode operation: the input node has 0 element.");
+            if (isFinalValidationPass && Inputs(0)->GetNumRows() != m_inputSizePerSample)
+                LogicError("each column of input to the MaxPooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", NodeName().c_str(), m_inputSizePerSample);
 
-            m_functionValues.Resize(m_outputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
+            m_functionValues.Resize(m_outputSizePerSample, Inputs(0)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
 
-            if (m_inputWidth < m_windowWidth || m_inputHeight < m_windowHeight)
-                throw std::invalid_argument("MaxPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
+            if (m_inputImageLayout.width < m_windowWidth || m_inputImageLayout.height < m_windowHeight)
+                InvalidArgument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
-            m_outputWidth = (m_inputWidth-m_windowWidth)/m_horizontalSubsample + 1;
-            m_outputHeight = (m_inputHeight-m_windowHeight)/m_verticalSubsample + 1;
-            m_outputChannels = m_inputChannels;
+            m_outputImageLayout.width = (m_inputImageLayout.width - m_windowWidth) / m_horizontalSubsample + 1;
+            m_outputImageLayout.height = (m_inputImageLayout.height - m_windowHeight) / m_verticalSubsample + 1;
+            m_outputImageLayout.channels = m_inputImageLayout.channels;
         }
 
-        virtual void AttachInputs(const ComputationNodePtr inputFeature) 
-        {
-            m_children.resize(1);
-            m_children[0] = inputFeature;
-        }
-
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
+        virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
 
             char str[4096];
-            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
+            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels);
             fstream << string(str);
             sprintf(str, "PoolingWindow[Width:%lu, Height:%lu]  SubSampling[Horizontal:%lu, Vertical:%lu]\n", m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
             fstream << string(str);
-            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_outputWidth, m_outputHeight, m_outputChannels);
+            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels);
             fstream << string(str);
             sprintf(str, "TotalSizePerSample[Input:%lu, Output:%lu]  \n", m_inputSizePerSample, m_outputSizePerSample);
             fstream << string(str);
         }
 
-    private:
+    protected:
         size_t m_windowWidth, m_windowHeight;
         size_t m_horizontalSubsample, m_verticalSubsample;
         size_t m_inputSizePerSample, m_outputSizePerSample;
     };
 
+    // add this at the start of each derived class, to get access to the members of ComputationNode
+    // See #define of 'UsingComputationNodeMembersBoilerplate' for more explanation.
+#define UsingPoolingNodeBaseMembers UsingComputationNodeMembersBoilerplate; \
+    protected:  \
+        using Base::m_windowWidth; using Base::m_windowHeight; using Base::m_horizontalSubsample; using Base::m_verticalSubsample; using Base::m_inputSizePerSample; using Base::m_outputSizePerSample; \
+    public:
+
+    // -----------------------------------------------------------------------
+    // MaxPoolingNode
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class MaxPoolingNode : public PoolingNodeBase<ElemType>
+    {
+        typedef PoolingNodeBase<ElemType> Base; UsingPoolingNodeBaseMembers;
+        static const std::wstring TypeName() { return L"MaxPooling"; }
+    public:
+        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
+        MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
+            Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
+        { }
+
+        /*implement*/ void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues)
+        {
+            inputGradientValues.AddMaxPoolingGradient(gradientValues, input0, functionValues, m_inputImageLayout.channels,
+                                                      m_inputImageLayout.width, m_inputImageLayout.height, m_inputSizePerSample, 
+                                                      m_outputImageLayout.width, m_outputImageLayout.height, m_outputSizePerSample, 
+                                                      m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
+        }
+
+        /*implement*/ void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0)
+        {
+            functionValues.AssignMaxPoolingResult(input0, m_inputImageLayout.channels,
+                                                  m_inputImageLayout.width, m_inputImageLayout.height, m_inputSizePerSample, 
+                                                  m_outputImageLayout.width, m_outputImageLayout.height, m_outputSizePerSample, 
+                                                  m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
+        }
+    };
+
     template class MaxPoolingNode<float>; 
     template class MaxPoolingNode<double>;    
 
-    //Average Pooling: support multi channel
-    //assume each column is an input sample. Each sample is stored in  (r00, g00, b00, r01, g01, b01, r10, g10, b10, r11, g11, b11)
+    // -----------------------------------------------------------------------
+    // AveragePoolingNode
+    // -----------------------------------------------------------------------
+
     template<class ElemType>
-    class AveragePoolingNode : public ComputationNode<ElemType>
+    class AveragePoolingNode : public PoolingNodeBase<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+        typedef PoolingNodeBase<ElemType> Base; UsingPoolingNodeBaseMembers;
+        static const std::wstring TypeName() { return L"AveragePooling"; }
     public:
-        virtual ComputationNode<ElemType> * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { return new typename std::remove_reference<decltype(*this)>::type(deviceId, name); }
-        AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNode<ElemType>(deviceId, name),
-            m_windowWidth(SIZE_MAX), m_windowHeight(SIZE_MAX),
-            m_horizontalSubsample(SIZE_MAX), m_verticalSubsample(SIZE_MAX)
-        { }
+        AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name) : Base(deviceId, name) { }
         AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring & name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample) :
-            ComputationNode<ElemType>(deviceId, name),
-            m_windowWidth(windowWidth), m_windowHeight(windowHeight),
-            m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
+            Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample)
         { }
 
-        virtual void SaveToFile(File& fstream) const
+        /*implement*/ void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/)
         {
-            Base::SaveToFile(fstream);
-            fstream << m_windowWidth << m_windowHeight << m_horizontalSubsample << m_verticalSubsample; 
+            inputGradientValues.AddAveragePoolingGradient(gradientValues, m_inputImageLayout.channels,
+                                                          m_inputImageLayout.width, m_inputImageLayout.height, m_inputSizePerSample, 
+                                                          m_outputImageLayout.width, m_outputImageLayout.height, m_outputSizePerSample, 
+                                                          m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         }
 
-        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        /*implement*/ void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0)
         {
-            Base::LoadFromFile(fstream, modelVersion);
-            fstream >> m_windowWidth >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample; 
+            functionValues.AssignAveragePoolingResult(input0, m_inputImageLayout.channels,
+                                                      m_inputImageLayout.width, m_inputImageLayout.height, m_inputSizePerSample, 
+                                                      m_outputImageLayout.width, m_outputImageLayout.height, m_outputSizePerSample, 
+                                                      m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            Base::CopyTo(nodeP, newName, flags);
-            if (flags & CopyNodeFlags::copyNodeValue)
-            {
-                auto node = dynamic_pointer_cast<AveragePoolingNode<ElemType>>(nodeP);
-                node->m_inputWidth = m_inputWidth;
-                node->m_inputHeight = m_inputHeight;
-                node->m_inputChannels = m_inputChannels;
-
-                node->m_windowWidth = m_windowWidth;
-                node->m_windowHeight = m_windowHeight;
-
-                node->m_horizontalSubsample = m_horizontalSubsample;
-                node->m_verticalSubsample = m_verticalSubsample;
-
-                node->m_outputWidth = m_outputWidth;
-                node->m_outputHeight = m_outputHeight;
-                node->m_outputChannels = m_outputChannels;
-
-                node->m_inputSizePerSample = m_inputSizePerSample;
-                node->m_outputSizePerSample = m_outputSizePerSample;
-            }
-        }
-
-        virtual const std::wstring OperationName() const {return TypeName();}
-        static const std::wstring TypeName() {return L"AveragePooling";}
-        PoolParams GetPoolParams() const
-        {
-            PoolParams poolParams;
-            poolParams.inputWidth = m_inputWidth;
-            poolParams.inputHeight = m_inputHeight;
-            poolParams.inputChannels = m_inputChannels;
-
-            poolParams.windowWidth = m_windowWidth;
-            poolParams.windowHeight = m_windowHeight;
-
-            poolParams.horizontalSubsample = m_horizontalSubsample;
-            poolParams.verticalSubsample = m_verticalSubsample;
-
-            poolParams.outputWidth = m_outputWidth;
-            poolParams.outputHeight = m_outputHeight;
-            poolParams.outputChannels = m_outputChannels;
-
-            poolParams.inputSizePerSample = m_inputSizePerSample;
-            poolParams.outputSizePerSample = m_outputSizePerSample;
-            return poolParams;
-        }
-
-        virtual void ComputeInputPartial(const size_t inputIndex)
-        {
-            if (inputIndex > 0)
-                throw std::invalid_argument("AveragePooling operation only takes one inputs.");
-
-            ComputeInputPartialS(this, GradientValues(), Inputs(0)->GradientValues());
-        }
-
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) 
-        {
-            if (inputIndex > 0)
-                throw std::invalid_argument("AveragePooling operation only takes one inputs.");
-
-            Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputGrad = GradientValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            ComputeInputPartialS(this, sliceOutputGrad, sliceInput0Grad);
-        }
-
-        static void WINAPI ComputeInputPartialS(const AveragePoolingNode<ElemType>* ppool, const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues)
-        {
-            PoolParams poolParams = ppool->GetPoolParams();
-
-            inputGradientValues.AddAveragePoolingGradient(gradientValues, poolParams.inputChannels,
-                                                    poolParams.inputWidth, poolParams.inputHeight, poolParams.inputSizePerSample, 
-                                                    poolParams.outputWidth, poolParams.outputHeight, poolParams.outputSizePerSample, 
-                                                    poolParams.windowWidth, poolParams.windowHeight, poolParams.horizontalSubsample, poolParams.verticalSubsample);
-        }
-
-        virtual void EvaluateThisNode()  
-        {
-#if NANCHECK
-            Inputs(0)->FunctionValues().HasNan("AveragePooling-input0");
-#endif
-            EvaluateThisNodeS(this, FunctionValues(), Inputs(0)->FunctionValues());
-#if NANCHECK
-            m_functionValues.HasNan("AveragePooling");
-#endif
-        }
-
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) 
-        {
-            Matrix<ElemType> sliceInput0Value = Inputs(0)->FunctionValues().FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-            Matrix<ElemType> sliceOutputValue = m_functionValues.FrameSlice(frameRange/*TODO: delete the next two parameters*/, frameRange.t() * m_samplesInRecurrentStep, m_samplesInRecurrentStep);
-
-            EvaluateThisNodeS(this, sliceOutputValue, sliceInput0Value);
-        }
-
-        static void WINAPI EvaluateThisNodeS(const AveragePoolingNode<ElemType>* ppool, Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0)
-        {
-            PoolParams poolParams = ppool->GetPoolParams();
-            
-            functionValues.AssignAveragePoolingResult(input0, poolParams.inputChannels,
-                                                 poolParams.inputWidth, poolParams.inputHeight, poolParams.inputSizePerSample, 
-                                                 poolParams.outputWidth, poolParams.outputHeight, poolParams.outputSizePerSample, 
-                                                 poolParams.windowWidth, poolParams.windowHeight, poolParams.horizontalSubsample, poolParams.verticalSubsample);
-        }
-
-        virtual void Validate()
-        {
-            PrintSelfBeforeValidation();
-
-            if (m_children.size() != 1) 
-                throw std::logic_error("AveragePoolingNode requires one input.");
-
-            if (m_horizontalSubsample > m_windowWidth || m_verticalSubsample > m_windowHeight)
-                throw std::invalid_argument("AveragePoolingNode: horizontalSubsample must <= windowWidth and verticalSubsample must <= windowHeight.");
-
-            InferImageDimsFromInputs();
-
-            m_inputSizePerSample = m_inputWidth * m_inputHeight * m_inputChannels;
-            m_outputSizePerSample = m_outputWidth * m_outputHeight * m_outputChannels;
-
-            if (Inputs(0)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(0)->FunctionValues().GetNumRows() == 0)
-            {
-                Inputs(0)->FunctionValues().Resize(m_inputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
-            }
-
-            if (Inputs(0)->FunctionValues().GetNumRows() != m_inputSizePerSample)
-            {
-                msra::strfun::strprintf msg("each column of input to the AveragePooling node %ls is a sample and should have dimension %d, which is inputWidth * inputHeight * inputChannels", 
-                    NodeName().c_str(), m_inputSizePerSample);
-                throw std::logic_error(msg.c_str());            
-            }
-                        
-            if (Inputs(0)->FunctionValues().HasNoElements())
-                throw std::logic_error("AveragePoolingNode operation: the input node has 0 element.");
-
-            FunctionValues().Resize(m_outputSizePerSample, Inputs(0)->FunctionValues().GetNumCols());
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false);
-
-            if (m_inputWidth < m_windowWidth || m_inputHeight < m_windowHeight)
-                throw std::invalid_argument("AveragePoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
-
-            m_outputWidth = (m_inputWidth-m_windowWidth)/m_horizontalSubsample + 1;
-            m_outputHeight = (m_inputHeight-m_windowHeight)/m_verticalSubsample + 1;
-            m_outputChannels = m_inputChannels;
-        }
-
-        virtual void AttachInputs(const ComputationNodePtr inputFeature) 
-        {
-            m_children.resize(1);
-            m_children[0] = inputFeature;
-        }
-
-        virtual void DumpNodeInfo(const bool printValues, File& fstream) const
-        {
-            Base::DumpNodeInfo(printValues, fstream);
-
-            char str[4096];
-            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", m_inputWidth, m_inputHeight, m_inputChannels);
-            fstream << string(str);
-            sprintf(str, "PoolingWindow[Width:%lu, Height:%lu]  SubSample[Horizontal:%lu, Vertical:%lu]\n", m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
-            fstream << string(str);
-            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_outputWidth, m_outputHeight, m_outputChannels);
-            fstream << string(str);
-            sprintf(str, "TotalSizePerSample[Input:%lu, Output:%lu]\n", m_inputSizePerSample, m_outputSizePerSample);
-            fstream << string(str);
-        }
-
-    private:
-        size_t m_windowWidth, m_windowHeight;
-        size_t m_horizontalSubsample, m_verticalSubsample;
-        size_t m_inputSizePerSample, m_outputSizePerSample;
     };
 
     template class AveragePoolingNode<float>; 
