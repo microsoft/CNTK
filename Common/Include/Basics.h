@@ -17,16 +17,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     using namespace std;
 
-    // string comparison class, so we do case insensitive compares
-    struct nocase_compare
-    {
-        // std::string version of 'less' function
-        // return false for equivalent, true for different
-        bool operator()(const string& left, const string& right) { return _stricmp(left.c_str(), right.c_str()) < 0; }
-        // std::wstring version of 'less' function, used in non-config classes
-        bool operator()(const wstring& left, const wstring& right) { return _wcsicmp(left.c_str(), right.c_str()) < 0; }
-    };
-
     // if it receives a lonely std::string then throw that directly
     template<class E>
     __declspec_noreturn static inline void ThrowFormatted(const string & message)
@@ -77,6 +67,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #include "basetypes.h"  // TODO: gradually move over here all that's needed of basetypes.h, then remove basetypes.h.
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+    // string comparison class, so we do case insensitive compares
+    struct nocase_compare
+    {
+        // std::string version of 'less' function
+        // return false for equivalent, true for different
+        bool operator()(const string& left, const string& right) { return _stricmp(left.c_str(), right.c_str()) < 0; }
+        // std::wstring version of 'less' function, used in non-config classes
+        bool operator()(const wstring& left, const wstring& right) { return _wcsicmp(left.c_str(), right.c_str()) < 0; }
+    };
 
     // ----------------------------------------------------------------------------
     // random collection of stuff we needed at some place
