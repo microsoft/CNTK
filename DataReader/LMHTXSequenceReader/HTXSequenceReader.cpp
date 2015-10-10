@@ -72,12 +72,6 @@ void BatchSequenceReader<ElemType>::ReadClassInfo(const wstring & vocfile, int& 
     std::vector<double> counts(idx4cnt.size());
     for (auto p : idx4cnt)
         counts[p.first] = (double)p.second;
-
-    /// check if unk is the same used in vocabulary file
-    if (word4idx.find(mUnk.c_str()) == word4idx.end())
-    {
-        LogicError("SequenceReader::ReadClassInfo unk symbol %s is not in vocabulary file", mUnk.c_str());
-    }
 }
 
 template<class ElemType>
@@ -99,7 +93,11 @@ bool BatchSequenceReader<ElemType>::refreshCacheSeq(int seq_id)
             else
                 return true;
         }
-        int word_id = word4idx[word];
+        int word_id;
+        if (word4idx.find(word) != word4idx.end()) //found in the given vocab
+            word_id = word4idx[word];
+        else
+            word_id = word4idx[mUnk];
         wordRead++;
         last_word_id = -1;
         if (sequence_cache[seq_id]->size() >= 1)
@@ -138,7 +136,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     }
     oneSentenceInMB = (int)readerConfig("oneSentenceInMB", "0");
     string outputLabelType_str;
-    outputLabelType_str = std::string(readerConfig("outputLabelType", "compressed"));
+    outputLabelType_str = std::string(readerConfig("outputLabelType", "onehot"));
     if (strcmp(outputLabelType_str.c_str(), "compressed") == 0)
         outputLabelType = LMSLabelType::compressed;
     else
@@ -154,7 +152,7 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
     if (debughtx == 1)
         fprintf(stderr, "debughtx set to one, will give a lot of debug output....\n");
 
-    if ((int)(readerConfig("randomize", "1")) == 1)
+    if (strcmp(readerConfig("randomize", "1"), "1") == 1)
         randomize = true;
     else
         randomize = false;
@@ -170,7 +168,12 @@ void BatchSequenceReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     sentenceEndId = word4idx["</s>"];
     fprintf(stderr, "debughtx sentenceEndId is %d\n", sentenceEndId);
-
+    /// check if unk is the same used in vocabulary file
+    if (word4idx.find(mUnk.c_str()) == word4idx.end())
+    {
+        LogicError("SequenceReader::ReadClassInfo unk symbol %s is not in vocabulary file", mUnk.c_str());
+    } else
+        fprintf(stderr, "debughtx unkId is %d\n", word4idx[mUnk.c_str()]);
     fprintf(stderr, "debughtx ---LMHTXSequenceReader end---\n");
 }
 
