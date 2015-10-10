@@ -182,6 +182,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_matrixType = MatrixType::UNDETERMINED;
 
         int _devId = deviceId!=AUTOPLACEMATRIX ? deviceId : GetBestGPUDeviceId();
+        _devId = EnforceOneGPUOnly(_devId);      // see EnforceOneGPUOnly() for comment on what this is
         m_preferredDeviceId=_devId;
         m_numTimesDeviceChanged = 0;
         m_numTimesMatrixTypeChanged = 0;
@@ -4603,7 +4604,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     DEVICEID_TYPE Matrix<ElemType>::GetBestGPUDeviceId()
     { 
-        return (DEVICEID_TYPE)GPUMatrix<ElemType>::GetBestGPUDeviceId();
+        return EnforceOneGPUOnly(GPUMatrix<ElemType>::GetBestGPUDeviceId());    // see EnforceOneGPUOnly() for comment on what this is
     }
 
     // TODO: these are scalar operations--why are they in Matrix?

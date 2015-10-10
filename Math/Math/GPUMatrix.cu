@@ -135,10 +135,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // GetBestGPUDeviceId - Get the best GPU DeviceId, based on cuda information
+    // Returns -1 if no GPUs can be used.
     //  TODO: should be replaced by BestGpu class instead, it's much better
-    template<class ElemType>
-    DEVICEID_TYPE GPUMatrix<ElemType>::GetBestGPUDeviceId() //returns -1 if no GPUs can be used
-    {      
+    static DEVICEID_TYPE SelectBestGPUDeviceId()        // this is an internal version that is wrapped by GPUMatrix<ElemType>::GetBestGPUDeviceId() below
+    {
         // currently there is little point in giving out different device IDs each time ask for a matrix, 
         // we really want them all on the same device eventually
         static int chosenDeviceId = AUTOPLACEMATRIX;
@@ -193,6 +193,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return -1; // CPU
         }
 #endif
+    }
+    template<class ElemType>
+    /*static*/ DEVICEID_TYPE GPUMatrix<ElemType>::GetBestGPUDeviceId() //returns -1 if no GPUs can be used
+    {
+        // route the result through EnforceOneGPUOnly() which only lets the first choice through (see comment there)
+        return EnforceOneGPUOnly(SelectBestGPUDeviceId());
     }
 
     // PrepareDevice - Setup the correct cuda context for an operation
@@ -4221,7 +4227,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void GPUMatrix<char>::Resize(size_t, size_t, bool);
 
     template GPUMatrix<char>::~GPUMatrix();
-    template int GPUMatrix<char>::GetBestGPUDeviceId();
+    template DEVICEID_TYPE GPUMatrix<char>::GetBestGPUDeviceId();
     template GPUMatrix<char> GPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
     template GPUMatrix<char>& GPUMatrix<char>::operator=(GPUMatrix<char>&&);
     template GPUMatrix<char>::GPUMatrix(int);

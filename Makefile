@@ -52,10 +52,15 @@ CXX = mpic++
 
 INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib MachineLearning/SequenceTraining BrainScript
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
-CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -Wno-error=literal-suffix
+CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
 LIBS:=
 LDFLAGS:=
+
+CXXVER_GE480:= $(shell expr `$(CXX) -dumpversion | sed -e 's/\.\([0-9][0-9]\)/\1/g' -e 's/\.\([0-9]\)/0\1/g' -e 's/^[0-9]\{3,4\}$$/&00/'` \>= 40800)
+ifeq ($(CXXVER_GE480),1)
+	CXXFLAGS += -Wno-error=literal-suffix
+endif
 
 SEPARATOR = "=-----------------------------------------------------------="
 ALL:=

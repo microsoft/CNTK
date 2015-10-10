@@ -8,9 +8,39 @@
 #include <string>
 #include <stdint.h>
 
-#define AUTOPLACEMATRIX 1000 // used in parameters only
-#define MANAGEDEXTERN -2 // managed externally (i.e. PTask)
-#define CPUDEVICE -1 // device is the CPU
+#define DEVICEID_TYPE int
+// and the following magic values
+#define CPUDEVICE                 (DEVICEID_TYPE)-1    // device is the CPU
+#define MANAGEDEXTERN             (DEVICEID_TYPE)-2    // managed externally (i.e. PTask)
+#define DEVICEID_NOTYETDETERMINED (DEVICEID_TYPE)-3    // not yet set
+#define AUTOPLACEMATRIX           (DEVICEID_TYPE)1000  // used in parameters only
+
+// EnforceOneGPUOnly - enforce that we only use one GPU (because we don't really support more than one at this point in time)
+// BUGBUG workaround.
+// Call this after every place a device is deviced.
+// We have multiple independent mechanisms to pick a device.
+// After selecting a device id, always run the result through this function, which will cache the first choice.
+// TODO: This is a stop-gap. It will be cleaned up once we also fix the GPU late-locking bug.
+//       The correct fix is to always route GPU selection through a single function in the first place.
+static inline DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId)
+{
+    if (requestedDeviceId < 0)      // only apply this to GPU ids
+        return requestedDeviceId;
+    static DEVICEID_TYPE theGPUId = DEVICEID_NOTYETDETERMINED;
+    if (theGPUId == DEVICEID_NOTYETDETERMINED)
+        theGPUId = requestedDeviceId;
+    else if (theGPUId != requestedDeviceId)
+    {
+        static bool shown = false;
+        if (!shown)
+        {
+            fprintf(stderr, "EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from %d now %d. This message will be shown only once.", theGPUId, requestedDeviceId);
+            shown = true;
+        }
+    }
+    return theGPUId;
+}
+
 #define EPS_IN_INVERSE 1e-30f  // 1e-37 is the only guaranteed precision
 #define EPS_IN_LOG 1e-37f  // 1e-37 is the only guaranteed precision
 #define LOG_OF_EPS_IN_LOG -85.1f // log(EPS_IN_LOG)
@@ -25,7 +55,6 @@
     throw std::logic_error("Not Implemented"); \
     }
 
-#define DEVICEID_TYPE int
 #define GPUSPARSE_INDEX_TYPE int  //cuSparse only supports int array indexes
 #define CPUSPARSE_INDEX_TYPE int  //to be consistent with cuSparse but limited the possible size of the matrix.
 
