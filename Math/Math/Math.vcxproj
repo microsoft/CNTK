@@ -159,6 +159,7 @@
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
+    <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="CPUMatrix.h" />
     <None Include="ClassDiagram.cd" />
@@ -203,6 +204,9 @@
     <ClCompile Include="QuantizedMatrix.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\DebugUtil.cpp">
+      <PrecompiledHeader></PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

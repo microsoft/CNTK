@@ -5,6 +5,7 @@
 //
 
 #include "BestGpu.h"
+#include "DebugUtil.h"
 
 #ifndef CPUONLY
 
@@ -29,6 +30,7 @@ extern __declspec (thread)
 static
 #endif
 cudaStream_t t_stream;
+
 
 // support for CudaCall() function template
 static const char * CudaErrString(cudaError_t x)    { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
@@ -56,7 +58,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_computeDevice = (computeDevice == AUTOPLACEMATRIX) ? GPUMatrix<ElemType>::GetBestGPUDeviceId() : computeDevice; //current GPU device Id
         m_computeDevice = EnforceOneGPUOnly(m_computeDevice);      // see EnforceOneGPUOnly() for comment on what this is
-        m_numRows=0;
+        m_numRows=0;  
         m_numCols=0;
         m_elemSizeAllocated = m_nz = 0; //Number of non-zero elements
         m_totalBufferSizeAllocated = 0;
@@ -315,7 +317,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         outMatrix.Resize(m_numRows, m_numCols, m_nz,newFormat, true, false);
         outMatrix.SetNzCount(m_nz);
 
-        if (oldFormat == matrixFormatSparseCSR && newFormat == matrixFormatSparseCSC)
+        if ((oldFormat == matrixFormatSparseCSR && newFormat == matrixFormatSparseCSC)
+            || (oldFormat == matrixFormatSparseCSC && newFormat == matrixFormatSparseCSR))
         {
             if (sizeof(ElemType) == sizeof(float))
             {
@@ -1478,7 +1481,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha,const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
     {
         if (a.m_format != matrixFormatSparseCSR || b.m_format != matrixFormatSparseCSR || c.m_format != matrixFormatSparseCSR)
+        {
             NOT_IMPLEMENTED;
+        }
 
         if (a.GetNumCols() != b.GetNumCols() || a.GetNumRows() != b.GetNumRows())
             throw std::runtime_error("Dimensions mismatch in ScaleAndAdd");
@@ -1989,6 +1994,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         slice.SetMatrixName(m_matrixName);
 
         return slice;
+    }
+
+    template<class ElemType>
+    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::DiagonalToDense() const
+    {
+        int m = (int)GetNumRows();
+        int n = (int)GetNumCols();
+
+        if (m != n)
+            LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", m, n);
+
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        GPUMatrix<ElemType> tmp(m, n, GetComputeDeviceId());
+
+        // TODO: Implement optimized diagonal functions for sparse matrices. For now copy to dense first.
+        CopyToDenseMatrix(tmp);
+
+        return tmp.Diagonal();
     }
 
     template<class ElemType>

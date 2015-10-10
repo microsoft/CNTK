@@ -40,7 +40,6 @@ static inline DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId)
     }
     return theGPUId;
 }
-
 #define EPS_IN_INVERSE 1e-30f  // 1e-37 is the only guaranteed precision
 #define EPS_IN_LOG 1e-37f  // 1e-37 is the only guaranteed precision
 #define LOG_OF_EPS_IN_LOG -85.1f // log(EPS_IN_LOG)
@@ -52,7 +51,7 @@ static inline DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId)
 #define NOT_IMPLEMENTED \
     {   \
     fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
-    throw std::logic_error("Not Implemented"); \
+    LogicError("Not Implemented"); \
     }
 
 #define GPUSPARSE_INDEX_TYPE int  //cuSparse only supports int array indexes
@@ -100,18 +99,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class BaseMatrix
     {
     public:
-        MatrixFormat GetFormat() const { return m_format; }
-        void SetFormat(MatrixFormat format) { m_format = format; }
-        size_t GetNumRows() const { return m_numRows; }
-        size_t GetNumCols() const { return m_numCols; }
-        size_t GetNumElements() const { return m_numRows * m_numCols; }
-        bool IsEmpty() const { return m_numRows  == 0 || m_numCols == 0; }
-        ElemType* GetArray() { return m_pArray; }
-        void SetArray(ElemType *parray) { m_pArray = parray; }
+        MatrixFormat GetFormat() const {return m_format;}
+        void SetFormat(MatrixFormat format) {m_format = format;}
+        size_t GetNumRows() const {return m_numRows;}
+        size_t GetNumCols() const {return m_numCols;}
+        size_t GetNumElements() const {return m_numRows * m_numCols;}
+        bool IsEmpty() const {return m_numRows  == 0 || m_numCols == 0; }
+        ElemType* GetArray() {return m_pArray;}
+        void SetArray(ElemType *parray) {m_pArray = parray;}
         virtual DEVICEID_TYPE GetComputeDeviceId() const {return m_computeDevice;}
-        void SetComputeDeviceId(const DEVICEID_TYPE computeId) const { m_computeDevice = computeId; }
+        void SetComputeDeviceId(const DEVICEID_TYPE computeId) const {m_computeDevice = computeId;}
         bool OwnBuffer() const {return !m_externalBuffer && m_computeDevice != MANAGEDEXTERN;}
-        void SetOwnBuffer(bool own) { m_externalBuffer = !own; }
+        void SetOwnBuffer(bool own) {m_externalBuffer = !own;}
         wchar_t* GetMatrixName() const { return m_matrixName; }
         size_t NzCount() const {return m_nz;}
         void SetNzCount(const size_t nz) { m_nz = nz; }

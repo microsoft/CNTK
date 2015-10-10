@@ -9,7 +9,6 @@
 //  - Resize() must be cheap if it does nothing  (I already did that for CPU, still to be done for GPU)
 //  - an overload for Resize() to match another matrix
 //  - need a way to grow a minibatch matrix without destroying its content, something like PushColumns()
-
 #pragma once
 
 #ifdef    _WIN32
@@ -155,6 +154,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
 
+
         // difference between AssignColumnSlice and SetColumnSlice 
         // AssignColumnSlice :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, startColumn: startColumn+numCols-1) 
         // SetColumnSlice    :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, 0: startColumn+numCols-1) 
@@ -164,6 +164,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
         Matrix<ElemType>& SetColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
+        Matrix<ElemType> Diagonal() const;
+        Matrix<ElemType> AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
         void ShiftBy(int numShift);
 
         // TODO: all these scalars should be passed as doubles and cast down inside
@@ -171,7 +173,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
         void FSAdagrad(size_t mbSize, Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
         ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
-
+       
         // TODO: should Reshape() return a new Matrix object that contains a reference to the original?
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
@@ -188,9 +190,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // similarl to the repmat operation in matlab or octave
         static Matrix<ElemType> RepMat(const Matrix<ElemType>& frmMat, const size_t rows, const size_t cols);
-
         size_t GetAllocatedSize() const;
-        void Reset(); // reset for sparse matrix
+        void Reset(); //reset for sparse matrix
 
         const ElemType operator() (const size_t row, const size_t col) const;
         ElemType& operator() (const size_t row, const size_t col);
@@ -211,7 +212,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetColumn(const Matrix<ElemType>& valMat, size_t colInd);
 
         void SetDiagonalValue(const ElemType v);
-        void SetDiagonalValue(Matrix<ElemType>& vector);
+        void SetDiagonalValue(const Matrix<ElemType>& vector);
         void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED);
         void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED);
         void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed=USE_TIME_BASED_SEED); 
@@ -269,7 +270,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& ColumnElementDivideBy(const Matrix<ElemType>& a);
         Matrix<ElemType>& RowElementDivideBy(const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& ElementInverse();
+        Matrix<ElemType>& ElementInverse ();
         Matrix<ElemType>& AssignElementInverseOf (const Matrix<ElemType>& a);
 
         Matrix<ElemType>& InplaceLinearRectifierDerivative();
@@ -278,10 +279,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& InplaceSigmoidDerivative();
         Matrix<ElemType>& AssignSigmoidDerivativeOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceSigmoid();
+        Matrix<ElemType>& InplaceSigmoid ();
         Matrix<ElemType>& AssignSigmoidOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceTanh();
+        Matrix<ElemType>& InplaceTanh ();
         Matrix<ElemType>& AssignTanhOf (const Matrix<ElemType>& a);
 
         Matrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
@@ -290,26 +291,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //sequence training 
         Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold);
         Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
-
-        Matrix<ElemType>& InplaceSqrt();
+        Matrix<ElemType>& InplaceSqrt ();
         Matrix<ElemType>& AssignSqrtOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceExp();
+        Matrix<ElemType>& InplaceExp ();
         Matrix<ElemType>& AssignExpOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceLog();
+        Matrix<ElemType>& InplaceLog ();
         Matrix<ElemType>& AssignLogOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceCosine();
+        Matrix<ElemType>& InplaceCosine ();
         Matrix<ElemType>& AssignCosineOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceNegativeSine();
+        Matrix<ElemType>& InplaceNegativeSine ();
         Matrix<ElemType>& AssignNegativeSineOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceLog10();
+        Matrix<ElemType>& InplaceLog10 ();
         Matrix<ElemType>& AssignLog10Of (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceAbs();
+        Matrix<ElemType>& InplaceAbs ();
         Matrix<ElemType>& AssignAbsOf (const Matrix<ElemType>& a);
 
         Matrix<ElemType>& InplaceTruncateBottom (const ElemType threshold);
@@ -322,8 +322,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 
         DeviceBoundNumber<ElemType> Sum_AsDeviceBoundNum() const;
-        ElemType SumOfAbsElements() const; //sum of all abs(elements)
-        ElemType SumOfElements() const; //sum of all elements
+        ElemType SumOfAbsElements () const; //sum of all abs(elements)
+        ElemType SumOfElements () const; //sum of all elements
         Matrix<ElemType>& AssignSumOfElements(const Matrix<ElemType>& a);
 
         ElemType LogAddSumOfElements() const;
@@ -491,5 +491,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     typedef Matrix<float> SingleMatrix;
     typedef Matrix<double> DoubleMatrix;
-
 }}}

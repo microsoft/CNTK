@@ -333,6 +333,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::DiagonalToDense() const
+    {
+        if (m_numRows != m_numCols)
+            throw std::logic_error("DiagonalToDense can be called only for square matrix.");
+
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        CPUMatrix<ElemType> diag(1, m_numCols);
+
+#pragma omp parallel for
+        for (long j = 0; j < m_numCols; j++)
+        {
+            long start = (long)m_compIndex[j];
+            long end = (long)m_compIndex[j + 1];
+
+            for (long p = start; p < end; p++)
+            {
+                size_t i = m_unCompIndex[p];
+
+                if (i == (size_t)j)
+                {
+                    diag(0, i) = m_pArray[(size_t)p];
+                }
+            }
+        }
+
+        return diag;
+    }
+
+    template<class ElemType>
     void CPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols)
     {

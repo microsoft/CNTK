@@ -235,6 +235,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowRepeatNode)))
         ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(DiagonalNode)))
+        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(MeanNode)))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(InvStdDevNode)))

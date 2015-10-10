@@ -283,6 +283,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 nodePtr->NeedGradient() = needGradient;
             }
         }
+        else if (cnNodeType == OperationNameOf(DiagonalNode))
+        {
+            if (parameter.size() != 1)
+                RuntimeError("Diagonal should have one parameter. Usage: Diagonal(origNodeName).");
+
+            nodeParamCount = 1;
+            nodeParamStart = 0;
+
+            if (pass == ndlPassInitial)
+            {
+                // evaluate only scalar parameters
+                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+
+                bool needGradient = node->GetOptionalParameter("needGradient", "false");
+                nodePtr = builder.Diagonal(NULL, name);
+                nodePtr->NeedGradient() = needGradient;
+            }
+        }
         else if (cnNodeType == OperationNameOf(ReshapeNode))
         {
             if (parameter.size() < 2 || parameter.size() > 5)

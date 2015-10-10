@@ -190,6 +190,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         GPUMatrix<ElemType> ColumnSliceToDense(size_t startColumn, size_t numCols) const;
 
+        GPUMatrix<ElemType> DiagonalToDense() const;
+
         GPUMatrix<ElemType> CopyToDenseMatrix() const;
         void CopyToDenseMatrix(GPUMatrix<ElemType> &denseMatrix) const;
         void CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType> &cpuSparseMatrix) const;
