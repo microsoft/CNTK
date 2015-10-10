@@ -271,8 +271,7 @@ void BestGpu::Init()
     {
         const char* errmsg = cudaGetErrorString(err);
         fprintf(stderr, "!!!!!!!!CUDA EXCEPTION: %s\n", errmsg);
-        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
-        throw std::runtime_error(errmsg);
+        RuntimeError(errmsg);
     }
 
 

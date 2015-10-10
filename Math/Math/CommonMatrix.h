@@ -51,8 +51,7 @@ static inline DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId)
 #define NOT_IMPLEMENTED \
     {   \
     fprintf(stderr, "Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__); \
-    Microsoft::MSR::CNTK::DebugUtil::PrintCallStack(); \
-    throw std::logic_error("Not Implemented"); \
+    LogicError("Not Implemented"); \
     }
 
 #define GPUSPARSE_INDEX_TYPE int  //cuSparse only supports int array indexes

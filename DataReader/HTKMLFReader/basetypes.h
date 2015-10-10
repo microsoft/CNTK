@@ -1220,30 +1220,6 @@ using namespace msra::basetypes;    // for compatibility
 
 #pragma warning (pop)
 
-// RuntimeError - throw a std::runtime_error with a formatted error string
-__declspec_noreturn
-static inline void RuntimeError(const char * format, ...)
-{
-    va_list args;
-    char buffer[1024];
-
-    va_start(args, format);
-    vsprintf(buffer, format, args);
-    throw std::runtime_error(buffer);
-};
-
-// LogicError - throw a std::logic_error with a formatted error string
-__declspec_noreturn
-static inline void LogicError(const char * format, ...)
-{
-    va_list args;
-    char buffer[1024];
-
-    va_start(args, format);
-    vsprintf(buffer, format, args);
-    throw std::logic_error(buffer);
-};
-
 // ----------------------------------------------------------------------------
 // dynamic loading of modules
 // ----------------------------------------------------------------------------
