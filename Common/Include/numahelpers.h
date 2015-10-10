@@ -13,7 +13,7 @@
 #endif
 #include <stdexcept>
 #include "simple_checked_arrays.h"
-#include "basetypes.h"  // for FormatWin32Error
+#include "Basics.h" // for FormatWin32Error
 
 namespace msra { namespace numa {
 

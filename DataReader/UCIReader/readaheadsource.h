@@ -9,7 +9,7 @@
 //
 #pragma once
 
-#include "basetypes.h"
+#include "Basics.h"
 #include "simplethread.h"
 #include "Matrix.h"
 #include "DataReader.h"

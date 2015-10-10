@@ -7,7 +7,7 @@
 
 // TODO: this cannot be instantiated as a whole (compile error), although some function is called from CNTK.cpp--should be fixed
 
-#include "basetypes.h"
+#include "Basics.h"
 #include "ComputationNetwork.h"
 #include "IComputationNetBuilder.h"
 #include "SimpleEvaluator.h"

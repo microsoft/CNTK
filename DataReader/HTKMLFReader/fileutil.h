@@ -12,7 +12,7 @@
 
 #include "Platform.h"
 #ifdef _WIN32
-#include "basetypes.h"
+#include "Basics.h"
 #endif
 #include <stdio.h>
 #ifdef __WINDOWS__
