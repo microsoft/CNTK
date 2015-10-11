@@ -56,7 +56,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class... _Types>
     __declspec_noreturn static inline void InvalidArgument(_Types&&... _Args) { ThrowFormatted<std::invalid_argument>(forward<_Types>(_Args)...); }
     template<class... _Types>
-    __declspec_noreturn static inline void BadExceptionError(_Types&&... _Args) { ThrowFormatted<std::bad_exception>(forward<_Types>(_Args)...); }
+    __declspec_noreturn static inline void BadExceptionError(_Types&&... _Args) 
+    {
+#ifdef _WIN32
+        ThrowFormatted<std::bad_exception>(forward<_Types>(_Args)...);   
+#else
+        ThrowFormatted<std::bad_exception>();
+#endif
+    }
 
     // Warning - warn with a formatted error string
 #pragma warning(push)
