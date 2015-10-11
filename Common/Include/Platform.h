@@ -10,7 +10,7 @@
 #endif
 
 // ===========================================================================
-// stuff to avoid compiler warnings
+// compiler differences
 // ===========================================================================
 
 #ifdef _MSC_VER
@@ -18,6 +18,7 @@
 #else
 #define __declspec_noreturn
 #endif
+// TODO: noexcept
 
 // ===========================================================================
 // emulation of some MSVC proprietary CRT

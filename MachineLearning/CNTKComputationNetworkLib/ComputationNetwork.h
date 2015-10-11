@@ -768,7 +768,7 @@ public:
         // TODO: feels out of place; can't we stick for ForwardProp()/BackwardProp()?
         Evaluate(rootNode);
 
-        // TODO: comment what the purpose of this is
+        // TODO: comment what the purpose/condition of this is
         if (bClearGradient)
             ClearGradientForAllNodes(rootNode);
 

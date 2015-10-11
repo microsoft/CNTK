@@ -930,7 +930,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
                     {
                         ComputationNodeBasePtr node = *nodeIter;
-                        if (node->NeedGradient())
+                        if (node->IsParameterUpdateRequired())
                         {
                             Matrix<ElemType>& smoothedGradient = (*smoothedGradientIter);
 

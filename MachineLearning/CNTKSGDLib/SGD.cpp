@@ -1896,7 +1896,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
                 {
                     ComputationNodeBasePtr node = *nodeIter;
-                    if (node->NeedGradient())
+                    if (node->IsParameterUpdateRequired())
                     {
                         Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
 #ifdef _DEBUG
@@ -2091,7 +2091,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                 {
                     ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                    if (node->NeedGradient())
+                    if (node->IsParameterUpdateRequired())
                     {
                         learnParamsGradients.push_back(&(node->GradientValues()));
                     }
@@ -2190,7 +2190,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto iter = learnableNodes.begin(); iter != learnableNodes.end(); iter++)
         {
             ComputationNodeBasePtr pNode = *iter; 
-            if (!pNode->NeedGradient())
+            if (!pNode->IsParameterUpdateRequired())
                 continue;
 
             Matrix<ElemType>& mat = dynamic_pointer_cast<ComputationNode<ElemType>>(pNode)->FunctionValues();
@@ -2318,10 +2318,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
         fprintf(stderr, "Update_%ls\n", node->NodeName().c_str());
 #endif
-        if (!node->NeedGradient())
-        {
-            LogicError("UpdateWeights() called for a learnable ComputationNode which has NeedGradient() == false!");
-        }
+        if (!node->IsParameterUpdateRequired())
+            LogicError("UpdateWeights() called for a learnable ComputationNode which has m_parameterUpdateRequired == false!");
 
         UpdateWeightsS(this, dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->GradientValues(),
                        smoothedGradient, learnRatePerSample, momentumPerSample,

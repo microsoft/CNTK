@@ -130,6 +130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         friend class ComputationNetwork;
 
         ComputationNetworkOwnedNodeState() :
+            m_needsGradient(false),
             m_loopId(-1),
             m_visitedOrder(-1),
             m_index(-1),
@@ -181,8 +182,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void CopyTo(ComputationNetworkOwnedNodeState & other) const
         {
+            // TODO: is that really all we copy? (this is a result of refactoring, so it seems yes indeed). Should we at least ClearCache()?
             other.m_evalTimeStamp = m_evalTimeStamp;
             other.m_hasloop = m_hasloop;
+            other.m_needsGradient = m_needsGradient;
         }
 
         int64_t UpdateEvalTimeStamp()
@@ -217,6 +220,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_hasloop;
         int m_loopId;           // index into recurrent info array (TODO: verify this)
 
+    protected:  // TODO: should be fully encapsulated here
+        bool m_needsGradient;   // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
+    private:
+
         // the order in reverse graph. 
         int m_visitedOrder;
         int m_index;
@@ -244,7 +251,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             m_deviceId(deviceId),
-            m_needGradient(false),
+            m_parameterUpdateRequired(false),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name)
         {
         }
@@ -261,7 +268,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (flags & CopyNodeFlags::copyNodeValue)
             {
                 node->m_deviceId = m_deviceId;
-                node->m_needGradient = m_needGradient;
+                node->m_parameterUpdateRequired = m_parameterUpdateRequired;
                 node->m_nodeName = newName;
 
                 node->m_inputImageLayout = m_inputImageLayout;
@@ -461,8 +468,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::wstring& NodeName() { return m_nodeName; }
 
         bool IsLeaf() const { return ChildrenSize() == 0; }
-        bool& NeedGradient() { return m_needGradient; }
-        const bool& NeedGradient() const { return m_needGradient; }
+
+        void SetParameterUpdateRequired(bool f) { m_parameterUpdateRequired = f; }
+        bool IsParameterUpdateRequired() const { return m_parameterUpdateRequired; }
 
         virtual void /*IComputationNode::*/InferImageDimsFromInputs()
         {
@@ -559,7 +567,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // If !forForwardProp then the order will be reversed, suitable for backprop.
         // The 'recurrent' version is only called from FormRecurrentLoops().
         // Side-effects (unbeknownst to the name of the function):
-        //  - m_needGradient flags, are propagated up from children
+        //  - m_needsGradient flags, are propagated up from children         --BUGBUG! This should only be computed in ValidateSubNetwork().
         //  - m_visitedOrder (only if 'recurrent' flag is set; otherwise leave untouched)
         std::list<ComputationNodeBasePtr> EnumerateNodes(bool forForwardProp/*else get order for backprop*/, bool recurrent)
         {
@@ -599,9 +607,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                // propagate needGradient flags upwards from leaves
+                // propagate m_needsGradient flags upwards from leaves
+                // TODO: This belongs into Validate().
                 if (!IsLeaf())
-                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
+                    m_needsGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
                 // now that all children are in list before us, put ourselves
                 result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
@@ -645,14 +654,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (m_children[i] == nullptr)
                     continue;
-                if (m_children[i]->NeedGradient())
+                if (m_children[i]->m_needsGradient)
                     return true;
             }
             return false;
         }
 
         // TODO: what does this do?
-        // As a side effect, it also propagates m_needGradient to intermediate nodes
+        // As a side effect, it also propagates m_needsGradient to intermediate nodes
         void ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult,
                                                      std::list<ComputationNodeBasePtr>& noRecurrentResult)
         {
@@ -665,7 +674,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 //children first for function evaluation
                 if (!IsLeaf())
-                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
+                    m_needsGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
                 if (GetLoopId() >= 0)
                     recurrentResult[GetLoopId()].push_back(shared_from_this());
@@ -673,30 +682,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     noRecurrentResult.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
             }
         }
-
-#if 0
-        // create list such that children are evaluated before their parents
-        // Unbeknownst to the name of the function, it also updates the m_needGradient flags (set if children are set).
-        // TODO: when is this called vs. the other?
-        virtual void EnumerateNodesForEval(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool recurrent)
-        {
-            if (visited.find(shared_from_this()) == visited.end())  //not visited
-            {
-                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
-
-                // first put children into list, before putting ourselves
-                for (int i = 0; i<m_children.size(); i++)
-                    m_children[i]->EnumerateNodesForEval(visited, result, recurrent);
-
-                // propagate needGradient flags upwards from leaves
-                if (!IsLeaf())
-                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
-
-                // now that all children are in list before us, put ourselves
-                result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
-            }
-        }
-#endif
 
     public:
 
@@ -811,7 +796,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         std::vector<ComputationNodeBasePtr> m_children;
 
-        bool m_needGradient;  //only used for leaf, i.e., learnable parameters, etc.        --TODO: rename to m_needsUpdate; and new m_needsGradient then means anywhere in the tree needs a gradient
+        bool m_parameterUpdateRequired;     // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
 
         ImageLayout m_inputImageLayout;     // how to interpret each column in the input as an image
         ImageLayout m_outputImageLayout;    // and the output
@@ -841,7 +826,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     protected:
         // TODO: this should be protected and only accessible to the New method; maybe just move it in here?
         // TODO: Once we switch to VS 2015, we shall use inheriting constructors, i.e. we can delete all those redundant constructor forwards in each ComputationNode derivate
-        // TODO: verify that we initialize all members (e.g. m_needGradient was missing before)
+        // TODO: verify that we initialize all members (e.g. m_parameterUpdateRequired was missing before)
         ComputationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeBase(deviceId, name),
             m_functionValues(deviceId),
@@ -956,12 +941,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (numCols == SIZE_MAX)        // SIZE_MAX means determine from layout
                 numCols = m_pMBLayout->GetNumCols();
             m_functionValues.ResizeColumns(numCols);
-            // BUGBUG: I have encountered a case where a MinusNode had m_needGradient false but a child had it set to true (Amit's Recipes2\3_seqRetrain_small)
-            //         We will change now m_needGradient is propagated (separate into a node request and a cached flag about subtrees). Then reenable this code.
-            //if (m_needGradient)
+            // BUGBUG: I have encountered a case where a MinusNode had m_parameterUpdateRequired false but a child had it set to true (Amit's Recipes2\3_seqRetrain_small)
+            //         We will change now m_parameterUpdateRequired is propagated (separate into a node request and a cached flag about subtrees). Then reenable this code.
+            if (m_needsGradient)    // TODO: This knowledge should be owned by Network
                 m_gradientValues.ResizeColumns(numCols);
-            //else
-            //    m_gradientValues.Resize(0,0);
+            else
+                m_gradientValues.Resize(0,0);
             return numCols;
         }
 
@@ -1270,6 +1255,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
         // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
+        // TODO: This logic belongs into Network
         /*implement*/void ComputeGradientForChildren() override
         {
             if (HasLoop())
@@ -1278,7 +1264,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i<m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
-                if (child->NeedGradient())
+                if (child->m_needsGradient)
                 {
 #ifdef DISPLAY_DEBUG
                     fprintf (stderr, "    [%lu]: %s(%s)\n", i, 
@@ -1310,7 +1296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i<m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
-                if (child->NeedGradient())
+                if (child->m_needsGradient)
                 {
 #ifdef DISPLAY_DEBUG
                     fprintf (stderr, "    [%lu]: %s(%s)\n", i, 
@@ -1332,7 +1318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i=0; i<m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
-                if (child->NeedGradient())
+                if (child->m_needsGradient)
                 {
                     if(child->GradientValues().GetMatrixType() == DENSE) 
                     {
@@ -1487,7 +1473,7 @@ protected: \
     using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; \
     using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputImageLayout; using Base::m_outputImageLayout; \
-    using Base::m_needGradient; using Base::m_nodeName; using Base::s_constOnes; \
+    using Base::m_parameterUpdateRequired; using Base::m_nodeName; using Base::s_constOnes; \
     using Base::shared_from_this; \
 public: \
     using Base::CreateUniqId; \
@@ -1500,7 +1486,7 @@ public: \
     using Base::EvaluateThisNode; using Base::FunctionValues; \
     using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
-    using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NeedGradient; using Base::NodeName; \
+    using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NodeName; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
     using Base::SaveToFile; using Base::UpdateFunctionAndGradientMBSize; using Base::SetInput; \

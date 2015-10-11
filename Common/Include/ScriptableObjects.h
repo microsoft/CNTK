@@ -216,22 +216,27 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         }
         // TODO: somehow the constructor overload from Thunk function fails to compile, so for now use MakeThunk instead
 
+#pragma push_macro("noexcept")  // VS 2013 does not accept 'noexcept'
+#ifdef _MSC_VER
+#define noexcept throw()
+#endif
         ConfigValuePtr(const ConfigValuePtr & other) { *this = other; }
-        ConfigValuePtr(ConfigValuePtr && other) { *this = move(other); }
+        ConfigValuePtr(ConfigValuePtr && other) noexcept { *this = move(other); }
         void operator=(const ConfigValuePtr & other)
         {
             if (other.GetThunk())       // unresolved ConfigValuePtrs are not copyable, only movable
-                Microsoft::MSR::CNTK::LogicError("ConfigValuePtr::operator=() on unresolved object; ConfigValuePtr is not assignable until resolved");
+                Microsoft::MSR::CNTK::LogicError("ConfigValuePtr::operator=() on unresolved object '%ls'; ConfigValuePtr is not assignable until resolved", expressionName.empty() ? L"(unassigned)" : expressionName.c_str());
             (shared_ptr<Object>&)*this = other;
             failfn = other.failfn;
             expressionName = other.expressionName;
         }
-        void operator=(ConfigValuePtr && other)
+        void operator=(ConfigValuePtr && other) noexcept
         {
             failfn = move(other.failfn);
             expressionName = move(other.expressionName);
             (shared_ptr<Object>&)*this = move(other);
         }
+#pragma pop_macro("noexcept")
         void Fail(const wstring & msg) const { failfn(msg); }
         const function<void(const wstring &)> & GetFailFn() const { return failfn; }    // if you need to pass on the fail function
 
