@@ -157,6 +157,7 @@ inline pid_t GetCurrentProcessId()
 }
 
 static inline int _wsystem(const wchar_t *command) { return system(wtocharpath(command).c_str()); }
+static inline int _wchdir(const wchar_t *path) { return chdir(wtocharpath(path).c_str()); }
 static inline FILE * _wpopen(const wchar_t * command, const wchar_t *mode) { return popen(wtocharpath(command).c_str(), wtocharpath(mode).c_str()); }
 static inline int _pclose(FILE *stream) { return pclose(stream); }
 
