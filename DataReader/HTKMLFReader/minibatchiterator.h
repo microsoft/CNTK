@@ -146,12 +146,12 @@ private:
             foreach_index (i, lattices)
                 totalframes += lattices[i]->getnumframes();
             if (totalframes != actualmbframes)
-                throw std::logic_error ("fillorclear: frames in lattices do not match minibatch size");
+                LogicError("fillorclear: frames in lattices do not match minibatch size");
         }
         timechecklattice = timerchecklattice;
     }
     bool hasdata() const { return mbstartframe < epochendframe; } // true if we can access and/or advance
-    void checkhasdata() const { if (!hasdata()) throw std::logic_error ("minibatchiterator: access beyond end of epoch"); }
+    void checkhasdata() const { if (!hasdata()) LogicError("minibatchiterator: access beyond end of epoch"); }
 public:
     // interface: for (minibatchiterator i (...), i, i++) { ... }
     minibatchiterator (msra::dbn::minibatchsource & source, size_t epoch, size_t epochframes, size_t requestedmbframes, size_t subsetnum, size_t numsubsets, size_t datapasses)

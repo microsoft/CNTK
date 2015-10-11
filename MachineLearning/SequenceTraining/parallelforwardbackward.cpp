@@ -373,7 +373,7 @@ namespace msra { namespace lattices {
             // only copy once
             // TODO: this can only be cached once --but there is no check whether a different model is passed
             if (lr3transPgpu->size() > 0)
-                throw std::logic_error ("cachehset: cannot bind to multiple model sets");
+                LogicError("cachehset: cannot bind to multiple model sets");
 
             auto_timer copyhmms;
             // transPs
@@ -424,18 +424,18 @@ namespace msra { namespace lattices {
             {
                 hmmscpuforgpu[i].numstates = (unsigned char) hmms[i].getnumstates();
                 if (hmmscpuforgpu[i].numstates != hmms[i].getnumstates())
-                    throw std::logic_error("parallelforwardbackwardalign : hmms.numstates is out of range of unsigned char");
+                    LogicError("parallelforwardbackwardalign : hmms.numstates is out of range of unsigned char");
 
                 for (size_t m = 0; m < hmmscpuforgpu[i].numstates; m++)
                 {
                     hmmscpuforgpu[i].senoneids[m] = (unsigned short) hmms[i].getsenoneid(m);
                     if (hmmscpuforgpu[i].senoneids[m] != hmms[i].getsenoneid(m))
-                        throw std::logic_error("parallelforwardbackwardalign : hmms.numstates is out of range of unsigned short");
+                        LogicError("parallelforwardbackwardalign : hmms.numstates is out of range of unsigned short");
                 }
 
                 hmmscpuforgpu[i].transPindex = (unsigned short) hmms[i].gettransPindex();
                 if (hmmscpuforgpu[i].transPindex != hmms[i].gettransPindex())
-                    throw std::logic_error("parallelforwardbackwardalign : hmms.transPindex is out of range of unsigned short");
+                    LogicError("parallelforwardbackwardalign : hmms.transPindex is out of range of unsigned short");
             }
             hmmsgpu->assign (hmmscpuforgpu, true/*sync*/);  // need to sync if we free the memory right after (and we won't buy much from async)
             copyhmms.show("copyhmms");      // 246.776281 ms  --note: forgot hmmsgpu
@@ -455,7 +455,7 @@ namespace msra { namespace lattices {
         void validatehset (const msra::asr::simplesenonehmm & hset)
         {
             if (hmmsgpu->size() != hset.hmms.size() || lr3transPgpu->size() != hset.transPs.size())
-                throw std::logic_error ("validatehset: not bound to hset or to wrong hset");
+                LogicError("validatehset: not bound to hset or to wrong hset");
         }
 
         // current lattice

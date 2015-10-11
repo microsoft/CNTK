@@ -296,7 +296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (cdphonetyingpaths.size() > 0 && statelistpaths.size() > 0 && transPspaths.size() > 0)
                 m_hset.loadfromfile(cdphonetyingpaths[0], statelistpaths[0], transPspaths[0]);
             if (iFeat!=scriptpaths.size() || iLabel!=mlfpathsmulti.size())
-                throw std::runtime_error(msra::strfun::strprintf ("# of inputs files vs. # of inputs or # of output files vs # of outputs inconsistent\n"));
+                RuntimeError(msra::strfun::strprintf ("# of inputs files vs. # of inputs or # of output files vs # of outputs inconsistent\n"));
 
             if (readerConfig.Exists("randomize"))
             {
@@ -357,7 +357,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     numFiles=n;
                 else
                     if (n!=numFiles)
-                        throw std::runtime_error (msra::strfun::strprintf ("number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
+                        RuntimeError(msra::strfun::strprintf ("number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
 
                 /* 
                    do "..." expansion if SCP uses relative path names
@@ -458,13 +458,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // verify path exists
                     DWORD attrib = GetFileAttributes(pageFilePath.c_str());
                     if (attrib==INVALID_FILE_ATTRIBUTES || !(attrib & FILE_ATTRIBUTE_DIRECTORY))
-                        throw std::runtime_error ("pageFilePath does not exist");                
+                        RuntimeError("pageFilePath does not exist");                
 #endif
 #ifdef __unix__
                 struct stat statbuf;
                 if (stat(pageFilePath.c_str(), &statbuf)==-1)
                 {
-                    throw std::runtime_error ("pageFilePath does not exist");
+                    RuntimeError("pageFilePath does not exist");
                 }
 
 #endif
@@ -483,11 +483,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifdef _WIN32
                 if (pageFilePath.size()>MAX_PATH-14) // max length of input to GetTempFileName is MAX_PATH-14
-                    throw std::runtime_error (msra::strfun::strprintf ("pageFilePath must be less than %d characters", MAX_PATH-14));
+                    RuntimeError(msra::strfun::strprintf ("pageFilePath must be less than %d characters", MAX_PATH-14));
 #endif
 #ifdef __unix__
             if (pageFilePath.size()>PATH_MAX-14) // max length of input to GetTempFileName is PATH_MAX-14
-                throw std::runtime_error (msra::strfun::strprintf ("pageFilePath must be less than %d characters", PATH_MAX-14));       
+                RuntimeError(msra::strfun::strprintf ("pageFilePath must be less than %d characters", PATH_MAX-14));       
 #endif
                 foreach_index(i, infilesmulti)
                 {
@@ -613,7 +613,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     numFiles=n;
                 else
                     if (n!=numFiles)
-                        throw std::runtime_error (msra::strfun::strprintf ("HTKMLFReader::InitEvalReader: number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
+                        RuntimeError(msra::strfun::strprintf ("HTKMLFReader::InitEvalReader: number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
 
                 m_inputFilesMultiIO.push_back(filelist);
             }
@@ -1338,14 +1338,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (matrices.find(iter->first)==matrices.end())
                     {
                         fprintf(stderr,"GetMinibatchToWrite: feature node %ls specified in reader not found in the network\n", iter->first.c_str());
-                        throw std::runtime_error("GetMinibatchToWrite: feature node specified in reader not found in the network.");
+                        RuntimeError("GetMinibatchToWrite: feature node specified in reader not found in the network.");
                     }
                 }
                 /*
                    for (auto iter=matrices.begin();iter!=matrices.end();iter++)
                    {
                    if (m_featureNameToIdMap.find(iter->first)==m_featureNameToIdMap.end())
-                   throw std::runtime_error(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
+                   RuntimeError(msra::strfun::strprintf("minibatch requested for input node %ws not found in reader - cannot generate input\n",iter->first.c_str()));
                    }
                    */
                 m_checkDictionaryKeys=false;
@@ -1502,7 +1502,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_toProcess[i] != actualmbsizeOri)
                     {
-                        throw std::runtime_error("The multi-IO features has inconsistent number of frames!");
+                        RuntimeError("The multi-IO features has inconsistent number of frames!");
                     }
                 }
                 assert (actualmbsizeOri == m_mbiter->currentmbframes());
@@ -1603,7 +1603,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t HTKMLFReader<ElemType>::ReadLabelToTargetMappingFile (const std::wstring& labelToTargetMappingFile, const std::wstring& labelListFile, std::vector<std::vector<ElemType>>& labelToTargetMap)
         {
             if (labelListFile==L"")
-                throw std::runtime_error("HTKMLFReader::ReadLabelToTargetMappingFile(): cannot read labelToTargetMappingFile without a labelMappingFile!");
+                RuntimeError("HTKMLFReader::ReadLabelToTargetMappingFile(): cannot read labelToTargetMappingFile without a labelMappingFile!");
 
             vector<std::wstring> labelList;
             size_t count, numLabels;
@@ -1665,7 +1665,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
         bool HTKMLFReader<ElemType>::GetData(const std::wstring& /*sectionName*/, size_t /*numRecords*/, void* /*data*/, size_t& /*dataBufferSize*/, size_t /*recordStart*/)
         {
-            throw std::runtime_error("GetData not supported in HTKMLFReader");
+            RuntimeError("GetData not supported in HTKMLFReader");
         }
 
 
@@ -1682,7 +1682,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 case endDataNull:
                 case endDataEpoch:
                 case endDataSet:
-                    throw std::logic_error("DataEnd: does not support endDataTypes: endDataNull, endDataEpoch and endDataSet");
+                    LogicError("DataEnd: does not support endDataTypes: endDataNull, endDataEpoch and endDataSet");
                     break;
                 case endDataSentence:
                     if (m_truncated)

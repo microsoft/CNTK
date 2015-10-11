@@ -54,7 +54,7 @@ protected:
         else                    // set already: check if consistent
         {
             if (featkind != kind || featdim != dim || featperiod != period)
-                throw std::runtime_error (msra::strfun::strprintf ("setkind: inconsistent feature kind for file '%S'", path.c_str()));
+                RuntimeError(msra::strfun::strprintf ("setkind: inconsistent feature kind for file '%S'", path.c_str()));
         }
     }
 
@@ -88,7 +88,7 @@ protected:
         {
             int magic = swapint(fgetint (f));
             if (magic != 2051)
-                throw std::runtime_error ("reading idx feature cache header: invalid magic");
+                RuntimeError("reading idx feature cache header: invalid magic");
             nsamples = swapint(fgetint(f));
             sampperiod = 0;
             sampkind = (short)9; //user type
@@ -145,7 +145,7 @@ public:
     {
         vector<string> params = msra::strfun::split (str, ";");
         if (params.empty())
-            throw std::runtime_error ("parsekind: invalid param kind string");
+            RuntimeError("parsekind: invalid param kind string");
         vector<string> parts = msra::strfun::split (params[0], "_");
         // map base kind
         short sampkind;
@@ -154,13 +154,13 @@ public:
         else if (basekind == "MFCC") sampkind = MFCC;
         else if (basekind == "FBANK") sampkind = FBANK;
         else if (basekind == "USER") sampkind = USER;
-        else throw std::runtime_error ("parsekind: unsupported param base kind");
+        else RuntimeError("parsekind: unsupported param base kind");
         // map qualifiers
         for (size_t i = 1; i < parts.size(); i++)
         {
             string opt = parts[i];
             if (opt.length() != 1)
-                throw std::runtime_error ("parsekind: invalid param kind string");
+                RuntimeError("parsekind: invalid param kind string");
             switch (opt[0])
             {
             case 'E': sampkind |= HASENERGY; break;
@@ -170,7 +170,7 @@ public:
             case 'T': sampkind |= HASTHIRD; break;
             case 'Z': sampkind |= HASZEROM; break;
             case '0': sampkind |= HASZEROC; break;
-            default: throw std::runtime_error ("parsekind: invalid qualifier in param kind string");
+            default: RuntimeError("parsekind: invalid qualifier in param kind string");
             }
         }
         return sampkind;
@@ -197,7 +197,7 @@ public:
     void write (const vector<float> & v)
     {
         if (v.size() != featdim)
-            throw std::logic_error ("htkfeatwriter: inconsistent feature dimension");
+            LogicError("htkfeatwriter: inconsistent feature dimension");
         if (needbyteswapping)
         {
             tmp.resize (v.size());
@@ -216,7 +216,7 @@ public:
     void close (size_t numframes)
     {
         if (curframe != numframes)
-            throw std::logic_error ("htkfeatwriter: inconsistent number of frames passed to close()");
+            LogicError("htkfeatwriter: inconsistent number of frames passed to close()");
         fflushOrDie (f);
         // now implant the length field; it's at offset 0
         int nSamplesFile = (int) numframes;
@@ -318,7 +318,7 @@ public:
         wstring logicalpath;    // virtual path that this file should be understood to belong to
         wstring archivepath;    // physical path of archive file
         size_t s, e;            // first and last frame inside the archive file; (0, INT_MAX) if not given
-        void malformed() const { throw std::runtime_error (msra::strfun::strprintf ("parsedpath: malformed path '%S'", xpath.c_str())); }
+        void malformed() const { RuntimeError(msra::strfun::strprintf ("parsedpath: malformed path '%S'", xpath.c_str())); }
 
         // consume and return up to 'delim'; remove from 'input' (we try to avoid C++0x here for VS 2008 compat)
         wstring consume (wstring & input, const wchar_t * delim)
@@ -378,7 +378,7 @@ public:
         size_t numframes() const
         {
             if (!isarchive)
-                throw runtime_error ("parsedpath: this mode requires an input script with start and end frames given");
+                RuntimeError("parsedpath: this mode requires an input script with start and end frames given");
             return e - s + 1;
         }
     };
@@ -416,7 +416,7 @@ private:
             case FBANK:    kind = "FBANK"; break;
             case USER:     kind = "USER";  break;
             case FESTREAM: kind = "USER";  break;    // we return this as USER type (with guid)
-            default: throw std::runtime_error ("htkfeatreader:unsupported feature kind");
+            default: RuntimeError("htkfeatreader:unsupported feature kind");
         }
         // add qualifiers
         if (H.sampkind & HASENERGY) kind += "_E";
@@ -428,7 +428,7 @@ private:
         bool hascrcc = (H.sampkind & HASCRCC) != 0;
         if (H.sampkind & HASZEROM) kind += "_Z";
         if (H.sampkind & HASZEROC) kind += "_0";
-        if (H.sampkind & HASVQ) throw std::runtime_error ("htkfeatreader:we do not support VQ");
+        if (H.sampkind & HASVQ) RuntimeError("htkfeatreader:we do not support VQ");
         // skip additional GUID in FESTREAM features
         if (H.sampkind == FESTREAM)
         {   // ... note: untested
@@ -442,7 +442,7 @@ private:
         // other checks
         size_t bytesPerValue = isidxformat ? 1 : (compressed ? sizeof (short) : sizeof (float));
 
-        if (H.sampsize % bytesPerValue != 0) throw std::runtime_error ("htkfeatreader:sample size not multiple of dimension");
+        if (H.sampsize % bytesPerValue != 0) RuntimeError("htkfeatreader:sample size not multiple of dimension");
         size_t dim = H.sampsize / bytesPerValue;
 
         // read the values for decompressing
@@ -495,9 +495,9 @@ public:
         if (ppath.isarchive)    // reading a sub-range from an archive
         {
             if (ppath.s > ppath.e)
-                throw std::runtime_error (msra::strfun::strprintf ("open: start frame > end frame in '%S'", ppath.e, physicalframes, ppath.xpath.c_str()));
+                RuntimeError(msra::strfun::strprintf ("open: start frame > end frame in '%S'", ppath.e, physicalframes, ppath.xpath.c_str()));
             if (ppath.e >= physicalframes)
-                throw std::runtime_error (msra::strfun::strprintf ("open: end frame exceeds archive's total number of frames %d in '%S'", physicalframes, ppath.xpath.c_str()));
+                RuntimeError(msra::strfun::strprintf ("open: end frame exceeds archive's total number of frames %d in '%S'", physicalframes, ppath.xpath.c_str()));
 
             int64_t dataoffset = physicaldatastart + ppath.s * vecbytesize;
             fsetpos (f, dataoffset);    // we assume fsetpos(), which is our own, is smart to not flush the read buffer
@@ -533,7 +533,7 @@ public:
     // read a vector from the open file
     void read (std::vector<float> & v)
     {
-        if (curframe >= numframes) throw std::runtime_error ("htkfeatreader:attempted to read beyond end");
+        if (curframe >= numframes) RuntimeError("htkfeatreader:attempted to read beyond end");
         if (!compressed && !isidxformat)        // not compressed--the easy one
         {
             freadOrDie (v, featdim, f);
@@ -590,9 +590,9 @@ public:
         // open the file and check dimensions
         size_t numframes = open (ppath);
         if (feat.cols() != numframes || feat.rows() != featdim)
-            throw std::logic_error ("read: stripe read called with wrong dimensions");
+            LogicError("read: stripe read called with wrong dimensions");
         if (kindstr != featkind || period != featperiod)
-            throw std::logic_error ("read: attempting to mixing different feature kinds");
+            LogicError("read: attempting to mixing different feature kinds");
 
         // read vectors from file and push to our target structure
         try { read (feat, 0, numframes); } catch (...) { close(); throw; }
@@ -620,20 +620,20 @@ struct htkmlfentry
     unsigned int numframes;
     //unsigned short classid;     // numeric state id
     unsigned int classid;     // numeric state id - mseltzer changed from ushort to uint for untied cd phones > 2^16
-	unsigned int phonestart;     // numeric phone start  time
+    unsigned int phonestart;     // numeric phone start  time
     
 private:
     // verify and save data
     void setdata (size_t ts, size_t te, size_t uid)
     {
-        if (te < ts) throw std::runtime_error ("htkmlfentry: end time below start time??");
+        if (te < ts) RuntimeError("htkmlfentry: end time below start time??");
         // save
         firstframe = (unsigned int) ts;
         numframes = (unsigned int) (te - ts);
         classid = (unsigned int) uid;
         // check for numeric overflow
         if (firstframe != ts || firstframe + numframes != te || classid != uid)
-            throw std::runtime_error ("htkmlfentry: not enough bits for one of the values");
+            RuntimeError("htkmlfentry: not enough bits for one of the values");
     }
 
     // parse the time range
@@ -662,28 +662,28 @@ public:
 
     // parse format with original HTK state align MLF format and state list
     void parsewithstatelist (const vector<char*> & toks, const unordered_map<std::string, size_t> & statelisthash, const double htkTimeToFrame,
-		std::unordered_map<std::string, size_t> & hmmnamehash)
+        std::unordered_map<std::string, size_t> & hmmnamehash)
     {
         size_t ts, te;
         parseframerange (toks, ts, te, htkTimeToFrame);
         auto iter = statelisthash.find (toks[2]);
         if (iter == statelisthash.end())
-            throw std::runtime_error (msra::strfun::strprintf ("htkmlfentry: state %s not found in statelist", toks[2]));
+            RuntimeError(msra::strfun::strprintf ("htkmlfentry: state %s not found in statelist", toks[2]));
         const size_t uid = iter->second;                    // get state index
         setdata (ts, te, uid);
-		//phone boundary
-		if (hmmnamehash.size() > 0)
-		{
-			if (toks.size() > 4)
-			{
-				auto hmmiter = hmmnamehash.find(toks[4]);
-				if (hmmiter == hmmnamehash.end())
-					throw std::runtime_error(msra::strfun::strprintf("htkmlfentry: hmm %s not found in hmmlist", toks[4]));
-				phonestart = (unsigned short)(hmmiter->second + 1);
-			}
-			else
-				phonestart = 0;
-		}
+        //phone boundary
+        if (hmmnamehash.size() > 0)
+        {
+            if (toks.size() > 4)
+            {
+                auto hmmiter = hmmnamehash.find(toks[4]);
+                if (hmmiter == hmmnamehash.end())
+                    RuntimeError(msra::strfun::strprintf("htkmlfentry: hmm %s not found in hmmlist", toks[4]));
+                phonestart = (unsigned short)(hmmiter->second + 1);
+            }
+            else
+                phonestart = 0;
+        }
 
     }
 
@@ -691,7 +691,7 @@ public:
     // add support so that it can handle conditions where time instead of frame numer is used.
     void parse (const vector<char*> & toks, const double htkTimeToFrame)
     {
-        if (toks.size() != 4) throw std::runtime_error ("htkmlfentry: currently we only support 4-column format");
+        if (toks.size() != 4) RuntimeError("htkmlfentry: currently we only support 4-column format");
         size_t ts, te;
         parseframerange (toks, ts, te, htkTimeToFrame);
         size_t uid = msra::strfun::toint (toks[3]);
@@ -705,7 +705,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
     wstring curpath;                                    // for error messages
     unordered_map<std::string, size_t> statelistmap;    // for state <=> index
     map<wstring,WORDSEQUENCE> wordsequences;            // [key] word sequences (if we are building word entries as well, for MMI)
-	std::unordered_map<std::string, size_t> symmap;
+    std::unordered_map<std::string, size_t> symmap;
 
     void strtok (char * s, const char * delim, vector<char*> & toks)
     {
@@ -716,7 +716,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
     }
     void malformed (string what)
     {
-        throw std::runtime_error (msra::strfun::strprintf ("htkmlfreader: %s in '%S'", what.c_str(), curpath.c_str()));
+        RuntimeError(msra::strfun::strprintf ("htkmlfreader: %s in '%S'", what.c_str(), curpath.c_str()));
     }
 
     vector<char*> readlines (const wstring & path, vector<char> & buffer)
@@ -821,12 +821,12 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
                         const char * u = toks[4];                   // the triphone name
                         auto iter = unitmap->find (u);              // map to unit id
                         if (iter == unitmap->end())
-                            throw std::runtime_error (string ("parseentry: unknown unit ") + u + " in utterance " + strfun::utf8 (key));
+                            RuntimeError(string ("parseentry: unknown unit ") + u + " in utterance " + strfun::utf8 (key));
                         const size_t uid = iter->second;
                         alignseqbuffer.push_back (typename WORDSEQUENCE::aligninfo (uid, 0/*#frames--we accumulate*/));
                     }
                     if (alignseqbuffer.empty())
-                        throw std::runtime_error ("parseentry: lonely senone entry at start without phone/word entry found, for utterance " + strfun::utf8 (key));
+                        RuntimeError("parseentry: lonely senone entry at start without phone/word entry found, for utterance " + strfun::utf8 (key));
                     alignseqbuffer.back().frames += entries[i-s].numframes; // (we do not have an overflow check here, but should...)
                 }
             }
@@ -834,7 +834,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
         if (wordmap)        // if reading word sequences as well (for MMI), then record it (in a separate map)
         {
             if (!entries.empty() && wordseqbuffer.empty())
-                throw std::runtime_error ("parseentry: got state alignment but no word-level info, although being requested, for utterance " + strfun::utf8 (key));
+                RuntimeError("parseentry: got state alignment but no word-level info, although being requested, for utterance " + strfun::utf8 (key));
             // post-process silence
             //  - first !silence -> !sent_start
             //  - last !silence -> !sent_end
@@ -850,7 +850,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
                     wordseqbuffer.back().wordindex = sentend;
             }
             //if (sentstart < 0 || sentend < 0 || silence < 0)
-            //    throw std::logic_error ("parseentry: word map must contain !silence, !sent_start, and !sent_end");
+            //    LogicError("parseentry: word map must contain !silence, !sent_start, and !sent_end");
             // implant
             auto & wordsequence = wordsequences[key];   // this creates the map entry
             wordsequence.words = wordseqbuffer;         // makes a copy
@@ -875,7 +875,7 @@ public:
         return issilstatetable[id];
     }
     
-    struct nullmap { int operator[] (const char * s) const { throw std::logic_error ("nullmap: should never be used"); } };  // to satisfy a template, never used... :(
+    struct nullmap { int operator[] (const char * s) const { LogicError("nullmap: should never be used"); } };  // to satisfy a template, never used... :(
 
     // constructor reads multiple MLF files
     htkmlfreader (const vector<wstring> & paths, const set<wstring> & restricttokeys, const wstring & stateListPath = L"", const double htkTimeToFrame = 100000.0)
@@ -903,17 +903,17 @@ public:
             read (paths[i], restricttokeys, wordmap, unitmap, htkTimeToFrame);
     }
 
-	//phone boundary
-	template<typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>	
-	htkmlfreader(const vector<wstring> & paths, const set<wstring> & restricttokeys, const wstring & stateListPath, const WORDSYMBOLTABLE * wordmap, const UNITSYMBOLTABLE * unitmap,
-		const double htkTimeToFrame, const msra::asr::simplesenonehmm & hset)
-	{
-		if (stateListPath != L"")
-			readstatelist(stateListPath);
-		symmap = hset.symmap;
-		foreach_index(i, paths)
-			read(paths[i], restricttokeys, wordmap, unitmap, htkTimeToFrame);
-	}
+    //phone boundary
+    template<typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>    
+    htkmlfreader(const vector<wstring> & paths, const set<wstring> & restricttokeys, const wstring & stateListPath, const WORDSYMBOLTABLE * wordmap, const UNITSYMBOLTABLE * unitmap,
+        const double htkTimeToFrame, const msra::asr::simplesenonehmm & hset)
+    {
+        if (stateListPath != L"")
+            readstatelist(stateListPath);
+        symmap = hset.symmap;
+        foreach_index(i, paths)
+            read(paths[i], restricttokeys, wordmap, unitmap, htkTimeToFrame);
+    }
 
     // note: this function is not designed to be pretty but to be fast
     template<typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
@@ -956,9 +956,9 @@ public:
                 issilstatetable.push_back (issilstate (lines[index]));
             }
             if (index != statelistmap.size())
-                throw std::runtime_error (msra::strfun::strprintf ("readstatelist: lines (%d) not equal to statelistmap size (%d)", index, statelistmap.size()));
+                RuntimeError(msra::strfun::strprintf ("readstatelist: lines (%d) not equal to statelistmap size (%d)", index, statelistmap.size()));
             if (statelistmap.size() != issilstatetable.size())
-                throw std::runtime_error (msra::strfun::strprintf ("readstatelist: size of statelookuparray (%d) not equal to statelistmap size (%d)", issilstatetable.size(), statelistmap.size()));
+                RuntimeError(msra::strfun::strprintf ("readstatelist: size of statelookuparray (%d) not equal to statelistmap size (%d)", issilstatetable.size(), statelistmap.size()));
             fprintf (stderr, "total %lu state names in state list %S\n", statelistmap.size(), stateListPath.c_str());
         }
     }

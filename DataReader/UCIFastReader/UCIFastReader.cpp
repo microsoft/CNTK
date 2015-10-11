@@ -946,7 +946,7 @@ void UCIFastReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*
 {
     if (m_cachingReader)
     {
-        throw runtime_error("Cannot set mapping table when the caching reader is being used");
+        RuntimeError("Cannot set mapping table when the caching reader is being used");
     }
     m_mapIdToLabel = labelMapping;
     m_mapLabelToId.clear();
@@ -971,7 +971,7 @@ bool UCIFastReader<ElemType>::GetData(const std::wstring& sectionName, size_t nu
     {
         return m_cachingReader->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
     }
-    throw runtime_error("GetData not supported in UCIFastReader");
+    RuntimeError("GetData not supported in UCIFastReader");
 }
 
 template<class ElemType>

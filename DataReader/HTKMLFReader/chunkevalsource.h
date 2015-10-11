@@ -93,7 +93,7 @@ namespace msra { namespace dbn {
         {
             // append to frames; also expand neighbor frames
             if (feat.cols() < 2)
-                throw std::runtime_error ("evaltofile: utterances < 2 frames not supported");
+                RuntimeError("evaltofile: utterances < 2 frames not supported");
             foreach_column (t, feat)
             {
                 std::vector<float> v (&feat(0,t), &feat(0,t) + feat.rows());
@@ -220,7 +220,7 @@ namespace msra { namespace dbn {
         {
             // append to frames; also expand neighbor frames
             if (feat.cols() < 2)
-                throw std::runtime_error ("evaltofile: utterances < 2 frames not supported");
+                RuntimeError("evaltofile: utterances < 2 frames not supported");
             foreach_column (t, feat)
             {
                 std::vector<float> v (&feat(0,t), &feat(0,t) + feat.rows());
@@ -318,7 +318,7 @@ namespace msra { namespace dbn {
         {
             // append to frames; also expand neighbor frames
             if (feat.cols() < 2)
-                throw std::runtime_error ("evaltofile: utterances < 2 frames not supported");
+                RuntimeError("evaltofile: utterances < 2 frames not supported");
             foreach_column (t, feat)
             {
                 std::vector<float> v (&feat(0,t), &feat(0,t) + feat.rows());

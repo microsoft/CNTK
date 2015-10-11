@@ -218,10 +218,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /* verify buffer allocation size
         if (msra::math::matrixquantizer::buffersize(bits, rows(), cols()) != gpubuffer.size())
-        throw std::logic_error("quantizestripe: dimension of patch to be quantized does not match allocated buffer size for quantized data");
+        LogicError("quantizestripe: dimension of patch to be quantized does not match allocated buffer size for quantized data");
         if (rows() != curresidual.rows() || cols() != curresidual.cols()
         || rows() != newresidual.rows() || cols() != newresidual.cols())
-        throw std::logic_error("quantizestripe: dimension of patch to be quantized does not match residual buffer");
+        LogicError("quantizestripe: dimension of patch to be quantized does not match residual buffer");
         if (gpubuffer.size() == 0)      // empty buffer: empty matrix, we are done (explicit test needed since launch will fail with 0 threads)
         return;*/
         // determine mean and variance -> value range (stored in quant package)   --for 1 bit, refine it in a second pass
@@ -283,13 +283,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // verify buffer allocation size
         /*if (msra::math::matrixquantizer::buffersize(bits, rows(), cols()) != gpubuffer.size())
-            throw std::logic_error("unquantizestripe: dimension of patch to be unquantized does not match size of quantized data");
+            LogicError("unquantizestripe: dimension of patch to be unquantized does not match size of quantized data");
         if (gpubuffer.size() == 0)      // empty buffer: empty matrix, we are done (explicit test needed since launch will fail with 0 threads)
             return;
         */
         size_t qSize = QuantizedColumn<ElemType>::QuantizedColumnSize(nBits, M)*N;
         if (qSize !=  gpuBufferSize)
-            throw std::logic_error("unquantizestripe: dimension of patch to be unquantized does not match size of quantized data");
+            LogicError("unquantizestripe: dimension of patch to be unquantized does not match size of quantized data");
         if (gpuBufferSize == 0)      // empty buffer: empty matrix, we are done (explicit test needed since launch will fail with 0 threads)
             return;
 

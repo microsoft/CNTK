@@ -1237,7 +1237,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             fprintf(stderr, "NULL");
                             continue;
                         }
-                        throw runtime_error("One of the children is missing.");
+                        RuntimeError("One of the children is missing.");
                     }
 
                     fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
@@ -1364,12 +1364,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_imageLayout.channels > 0)
                     {
                         if (m_imageLayout.GetNumElements() != m_numRows)
-                            throw runtime_error("Image dimensions do not match row size.");
+                            RuntimeError("Image dimensions do not match row size.");
                     }
                     else
                     {
                         if (m_numRows % (m_imageLayout.width * m_imageLayout.height) > 0)
-                            throw runtime_error("Image row size is not a multiple of specified image dimensions.");
+                            RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
                             m_imageLayout.channels = m_numRows / (m_imageLayout.width * m_imageLayout.height);
                     }
@@ -1379,13 +1379,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_imageLayout.channels > 0)
                     {
                         if (m_numRows % (m_imageLayout.width * m_imageLayout.channels) > 0)
-                            throw runtime_error("Image row size is not a multiple of specified image dimensions.");
+                            RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
                             m_imageLayout.height = m_numRows / (m_imageLayout.width * m_imageLayout.channels);
                     }
                     else
                     {
-                        throw runtime_error("At least two image dimensions must be specified.");
+                        RuntimeError("At least two image dimensions must be specified.");
                     }
                 }
             }
@@ -1396,15 +1396,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_imageLayout.channels > 0)
                     {
                         if (m_numRows % (m_imageLayout.height * m_imageLayout.channels) > 0)
-                            throw runtime_error("Image row size is not a multiple of specified image dimensions.");
+                            RuntimeError("Image row size is not a multiple of specified image dimensions.");
                         else
                             m_imageLayout.width = m_numRows / (m_imageLayout.height * m_imageLayout.channels);
                     }
                     else
-                        throw runtime_error("At least two image dimensions must be specified.");
+                        RuntimeError("At least two image dimensions must be specified.");
                 }
                 else if (m_imageLayout.channels > 0)
-                    throw runtime_error("At least two image dimensions must be specified.");
+                    RuntimeError("At least two image dimensions must be specified.");
             }
         }
     };
@@ -1482,7 +1482,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             fprintf(stderr, "NULL");
                             continue;
                         }
-                        throw runtime_error("One of the children is missing.");
+                        RuntimeError("One of the children is missing.");
                     }
 
                     fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
@@ -1497,10 +1497,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
 
             if (m_children.size() != 1)
-                throw std::logic_error("Diagonal operation: Should have one input.");
+                LogicError("Diagonal operation: Should have one input.");
 
             if (Inputs(0)->FunctionValues().GetNumElements() == 0)
-                throw std::logic_error("Diagonal operation: The input node has 0 element.");
+                LogicError("Diagonal operation: The input node has 0 element.");
 
             size_t cols = Inputs(0)->FunctionValues().GetNumCols();
 
@@ -1531,7 +1531,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
             if (inputIndex > 0)
-                throw std::invalid_argument("Diagonal operation only takes one input.");
+                InvalidArgument("Diagonal operation only takes one input.");
 
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
         }
@@ -1632,7 +1632,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             fprintf(stderr, "NULL");
                             continue;
                         }
-                        throw runtime_error("One of the children is missing.");
+                        RuntimeError("One of the children is missing.");
                     }
 
                     fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());

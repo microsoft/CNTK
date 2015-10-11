@@ -17,7 +17,6 @@
 #include <math.h>
 
 namespace msra { namespace lm {
-    using Microsoft::MSR::CNTK::RuntimeError;
 
 // ===========================================================================
 // core LM interface -- LM scores are accessed through this exclusively
@@ -131,11 +130,8 @@ public:
         // create
         const char * p = _strdup (key);
         if (!p)
-#ifdef _WIN32
-            throw std::bad_exception ("CSymbolSet:id string allocation failure");
-#else
-            throw std::bad_exception ();
-#endif
+            BadExceptionError("CSymbolSet:id string allocation failure");
+
         try
         {
             int id = (int) symbols.size();
@@ -241,7 +237,7 @@ public:
     typedef uint24_ref_t<const unsigned char *> const_uint24_ref;   // const version (only read)
     class uint24_ref : public uint24_ref_t<unsigned char *>         // non-const (read and assign)
     {
-        static void overflow() { throw runtime_error ("uint32_ref: attempting to store value > 24 bits"); }
+        static void overflow() { RuntimeError("uint32_ref: attempting to store value > 24 bits"); }
     protected:
         friend class int24_vector;  // only int24_vector may instantiate this
         __forceinline uint24_ref (unsigned char * p) : uint24_ref_t (p) {}
@@ -288,7 +284,7 @@ class mgram_map
     std::vector<int24_vector> ids;              // [M+1][i] ([0] = not used)
     bool level1nonsparse;                       // true: level[1] can be directly looked up
     std::vector<index_t> level1lookup;          // id->index for unigram level
-    static void fail (const char * msg) { throw runtime_error (string ("mgram_map::") + msg); }
+    static void fail (const char * msg) { RuntimeError(string ("mgram_map::") + msg); }
 
     // mapping from w -> i -- users pass 'w', internally we use our own 'ids'
     std::vector<int> w2id;  // w -> id
@@ -825,7 +821,7 @@ public:
 template<class DATATYPE> class mgram_data
 {
     std::vector<std::vector<DATATYPE>> data;
-    static void fail (const char * msg) { throw runtime_error (string ("mgram_data::") + msg); }
+    static void fail (const char * msg) { RuntimeError(string ("mgram_data::") + msg); }
 public:
     mgram_data(){}
     mgram_data (int M) { init (M); }
@@ -1014,7 +1010,7 @@ public:
     {
         if (M > this->M) M = this->M;       // clip; also covers default value
         if (M < 1 || map.size (1) == 0)
-            throw runtime_error ("write: attempting to write empty model");
+            RuntimeError("write: attempting to write empty model");
 
         // output header
         //  \data\
@@ -1510,7 +1506,7 @@ protected:
             const mgram_map::key boKey = key.pop_h();
             const mgram_map::foundcoord c = map[boKey];
             if (!c.valid_w())
-                throw runtime_error ("estimate: malformed data: back-off value not found"); // must exist
+                RuntimeError("estimate: malformed data: back-off value not found"); // must exist
             // look it up
             float Pc = P[c];
             backoffPSum[j] += islog ? exp (Pc) : Pc;
@@ -1605,7 +1601,7 @@ public:
     {
         msra::lm::mgram_map::foundcoord c = lm.map[msra::lm::mgram_map::key (mgram, m)];
         if (!c.valid_w())
-            throw std::logic_error ("locate: attempting to locate a non-existing history");
+            LogicError("locate: attempting to locate a non-existing history");
         return c;
     }
 };
@@ -1669,7 +1665,7 @@ public:
     // counts, rather than the sum of seen m-grams, to allow for count pruning.
     void push_back (const int * mgram, int m, unsigned int count)
     {
-        if (m > M) throw runtime_error ("push_back: called with m-gram longer than M");
+        if (m > M) RuntimeError("push_back: called with m-gram longer than M");
         // add to mgram_map & get location
         mgram_map::coord c = map.create (mgram_map::unmapped_key (mgram, m), mapCache);
         // save the count
@@ -1810,7 +1806,7 @@ public:
         // special call for reset
         if (data == NULL)
         {
-            if (m == 0) throw runtime_error ("adapt: must pass LM order");
+            if (m == 0) RuntimeError("adapt: must pass LM order");
             init ((int) m);     // clear out current LM
             adaptBuffer.clear();
             adaptBufferHead.clear();
@@ -1927,7 +1923,7 @@ public:
         int unkId   = constSymMap["<UNK>"]; // or -1 -- -1 is OK
 
         if (startId == -1 || endId == -1)   // if filtering, these must be given
-            throw runtime_error ("read: <s> and/or </s> missing in vocabulary");
+            RuntimeError("read: <s> and/or </s> missing in vocabulary");
 
         // if filtering but no <UNK>, we use (vocabsize) as the id, and have
         // estimate() prune it
@@ -2021,7 +2017,7 @@ public:
     void estimate (int startId, const std::vector<unsigned int> & minObs, vector<bool> dropWord)
     {
         if (!adaptBuffer.empty())
-            throw runtime_error ("estimate: adaptation buffer not empty, call adapt(*,0) to flush buffer first");
+            RuntimeError("estimate: adaptation buffer not empty, call adapt(*,0) to flush buffer first");
 
         // Establish w->id mapping -- mapping is identical (w=id) during estimation.
         std::vector<int> w2id (map.maxid() +1);
@@ -2067,12 +2063,12 @@ public:
                 const mgram_map::key key_w = key.pop_h();
                 const mgram_map::foundcoord c_w = map[key_w];
                 if (!c_w.valid_w())
-                    throw runtime_error ("estimate: invalid shortened KN m-gram");
+                    RuntimeError("estimate: invalid shortened KN m-gram");
                 KNCounts[c_w]++;              // (u,v,w) -> count (*,v,w)
                 const mgram_map::key key_h = key_w.pop_w();
                 mgram_map::foundcoord c_h = map[key_h];
                 if (!c_h.valid_w())
-                    throw runtime_error ("estimate: invalid shortened KN history");
+                    RuntimeError("estimate: invalid shortened KN history");
                 KNTotalCounts[c_h]++;         // (u,v,w) -> count (*,v,w)
             }
         }
@@ -2115,7 +2111,7 @@ public:
                     {
                         count = KNCounts[iter];
                         if (count == 0)  // must exist
-                            throw runtime_error ("estimate: malformed data: back-off value not found (numerator)");
+                            RuntimeError("estimate: malformed data: back-off value not found (numerator)");
                     }
                 }
 
@@ -2127,8 +2123,8 @@ public:
 
             for (int m = 1; m <= M; m++)
             {
-                if (n1[m] == 0) throw runtime_error (msra::strfun::strprintf ("estimate: error estimating discounting values: n1[%d] == 0", m));
-                if (n2[m] == 0) throw runtime_error (msra::strfun::strprintf ("estimate: error estimating discounting values: n2[%d] == 0", m));
+                if (n1[m] == 0) RuntimeError(msra::strfun::strprintf ("estimate: error estimating discounting values: n1[%d] == 0", m));
+                if (n2[m] == 0) RuntimeError(msra::strfun::strprintf ("estimate: error estimating discounting values: n2[%d] == 0", m));
                 //if (n3[m] == 0) RuntimeError ("estimate: error estimating discounting values: n3[%d] == 0", m);
                 double Y = n1[m] / (n1[m] + 2.0 * n2[m]);
                 if (n3[m] ==0 || n4[m] == 0)
@@ -2197,7 +2193,7 @@ public:
                 mgram_map::coord j = histCoord[m-1];    // parent
                 if (counts[j] == 0)
                     RuntimeError ("estimate: invalid pruning: a parent m-gram got pruned away");
-                    //throw runtime_error ("estimate: invalid pruning: a parent m-gram got pruned away");
+                    //RuntimeError("estimate: invalid pruning: a parent m-gram got pruned away");
                 numMGrams[m]++;
             }
         }
@@ -2282,7 +2278,7 @@ public:
                         const mgram_map::key key_h = key.pop_w();
                         mgram_map::foundcoord c_h = map[key_h];
                         if (!c_h.valid_w())
-                            throw runtime_error ("estimate: invalid shortened KN history");
+                            RuntimeError("estimate: invalid shortened KN history");
                         histCount = KNTotalCounts[c_h];     // (u,v,w) -> count (*,v,*)
                         if (histCount == 0)                 // must exist
                             RuntimeError ("estimate: malformed data: back-off value not found (denominator)");
@@ -2330,7 +2326,7 @@ public:
                 else if (count == 2) dcount -= d2[m];
                 else if (count == 1) dcount -= d1[m];
                 if (dcount < 0.0)   // 0.0 itself is caused by <s>
-                    throw runtime_error ("estimate: negative discounted count value");
+                    RuntimeError("estimate: negative discounted count value");
 
                 if (histCount == 0)
                     RuntimeError ("estimate: unexpected 0 denominator");
@@ -2535,10 +2531,10 @@ skipMGram:
         msra::basetypes::auto_file_ptr f(fopenOrDie (clonepath, L"rbS"));
         std::string line = fgetline (f);
         if (line != "#clone")
-            throw runtime_error ("read: invalid header line " + line);
+            RuntimeError("read: invalid header line " + line);
         std::string lmpath8 = fgetline (f); // only one item: the pathname
         if (lmpath8.empty())
-            throw runtime_error ("read: pathname missing");
+            RuntimeError("read: pathname missing");
         lmpath = msra::strfun::utf16 (lmpath8);
     }
 };

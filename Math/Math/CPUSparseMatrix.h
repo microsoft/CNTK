@@ -89,7 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (col >= m_numCols || row >= m_numRows)
             {
-                throw std::runtime_error("Position outside matrix dimensions");
+                RuntimeError("Position outside matrix dimensions");
             }
 
             if (m_format == MatrixFormat::matrixFormatSparseCSC)

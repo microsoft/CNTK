@@ -518,7 +518,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void InferImageDimsFromInput(const size_t index, const bool outputSameAsInput = true)
         {
             if (index >= ChildrenSize())
-                throw invalid_argument("InferImageDimsFromInput: output index");
+                InvalidArgument("InferImageDimsFromInput: output index");
 
             const auto & child = m_children[index];
             if (child != nullptr)

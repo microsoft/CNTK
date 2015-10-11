@@ -43,7 +43,7 @@ namespace msra { namespace cuda {
         {
     #ifdef _WIN32
             if (!QueryPerformanceFrequency (&freq)) // count ticks per second
-                throw std::runtime_error ("auto_timer: QueryPerformanceFrequency failure");
+                RuntimeError("auto_timer: QueryPerformanceFrequency failure");
             QueryPerformanceCounter (&start);
     #endif
     #ifdef __unix__
