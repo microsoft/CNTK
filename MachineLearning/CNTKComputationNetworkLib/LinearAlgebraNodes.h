@@ -1505,7 +1505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputeInputPartialLeft(child->FunctionValues(), child->GradientValues(), FunctionValues(), GradientValues(), ones); 
             }
             else  //right derivative
-        {
+            {
                 ComputeInputPartialRight(child->FunctionValues(), child->GradientValues(), FunctionValues(), GradientValues(), ones); 
             }
         }
