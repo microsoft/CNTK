@@ -490,10 +490,6 @@ public:
 
 };};    // namespace
 
-#ifdef __unix__
-extern int fileno(FILE*);   // somehow got deprecated in C++11
-#endif
-
 // ----------------------------------------------------------------------------
 // frequently missing string functions
 // ----------------------------------------------------------------------------
