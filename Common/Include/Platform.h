@@ -16,7 +16,7 @@
 #ifdef _MSC_VER
 #define __declspec_noreturn __declspec(noreturn)
 #else
-#define __declspec_noreturn
+#define __declspec_noreturn __attribute__((noreturn))
 #endif
 
 // ===========================================================================
