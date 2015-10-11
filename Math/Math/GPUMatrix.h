@@ -135,8 +135,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
 
-        ElemType& operator() (const size_t /*row*/, const size_t /*col*/) { throw std::logic_error("GPUMatrix doesn't support this"); }
-        const ElemType& operator() (const size_t /*row*/, const size_t /*col*/) const { throw std::logic_error("GPUMatrix doesn't support this"); }
+        ElemType& operator() (const size_t /*row*/, const size_t /*col*/) { LogicError("GPUMatrix doesn't support this"); }
+        const ElemType& operator() (const size_t /*row*/, const size_t /*col*/) const { LogicError("GPUMatrix doesn't support this"); }
         ElemType Get00Element() const;
 
         void SetValue(const ElemType v);
@@ -411,7 +411,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t elsize;
             stream>>elsize;
             if (sizeof(ElemType)!=elsize)
-                throw std::logic_error("Template argument size doesn't match those in file");
+                LogicError("Template argument size doesn't match those in file");
             std::wstring matrixName;
             size_t numRows, numCols;
             int format;

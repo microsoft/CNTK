@@ -52,7 +52,7 @@ static void writeunitmap (const wstring & symlistpath, const UNITMAP & unitmap)
     foreach_index (k, units)
     {
         if (units[k].empty())
-            throw std::logic_error ("build: unitmap has gaps");
+            LogicError("build: unitmap has gaps");
         fprintfOrDie (flist, "%s\n", units[k].c_str());
     }
     // write log-phys mappings
@@ -117,7 +117,7 @@ static size_t tryfind (const MAPTYPE & map, const KEYTYPE & key, VALTYPE deflt)
         key = regex_replace (key, wregex (L".*[\\\\/]"), wstring());                // delete path
         key = regex_replace (key, wregex (L"\\.[^\\.\\\\/:]*$"), wstring());        // delete extension (or not if none)
         if (!seenkeys.insert (key).second)
-            throw std::runtime_error (msra::strfun::strprintf ("build: duplicate key for lattice '%S'", inlatpath.c_str()));
+            RuntimeError(msra::strfun::strprintf ("build: duplicate key for lattice '%S'", inlatpath.c_str()));
 
         // we fail all the time due to totally broken HDecode/copy process, OK if not too many files are missing
         bool latticeread = false;
@@ -185,13 +185,13 @@ vector<lattice::nodecontext> lattice::determinenodecontexts (const msra::asr::si
         const size_t E = e.E;
         auto a = getaligninfo (j);
         if (a.size() == 0)  // !NULL edge
-            throw std::logic_error ("determinenodecontexts: !NULL edges not allowed in merging, should be removed before");
+            LogicError("determinenodecontexts: !NULL edges not allowed in merging, should be removed before");
         size_t A = a[0].unit;
         size_t Z = a[a.size()-1].unit;
         if (Z == spunit)
         {
             if (a.size() < 2)
-                throw std::runtime_error ("determinenodecontexts: context-free unit (/sp/) found as a single-phone word");
+                RuntimeError("determinenodecontexts: context-free unit (/sp/) found as a single-phone word");
             else
             {
                 Z = a[a.size()-2].unit;
@@ -204,7 +204,7 @@ vector<lattice::nodecontext> lattice::determinenodecontexts (const msra::asr::si
                             break;
                     // ends with n = position of furthest non-sp
                     if (n < 0)  // only sp?
-                        throw std::runtime_error ("determinenodecontexts: word consists only of /sp/");
+                        RuntimeError("determinenodecontexts: word consists only of /sp/");
                     fprintf (stderr, "determinenodecontexts: word with %lu /sp/ at the end found, edge %d\n", a.size() -1 - n, j);
                     multispseen++;
                     Z = a[n].unit;
@@ -220,7 +220,7 @@ vector<lattice::nodecontext> lattice::determinenodecontexts (const msra::asr::si
                 fprintf (stderr, "a[%d] = %d\n", kk, a[kk].unit);
             dump (stderr, [&] (size_t i) { return hset.gethmm (i).getname(); });
 #endif
-            throw std::runtime_error ("determinenodecontexts: context-free unit (/sp/) found as a start phone or second last phone");
+            RuntimeError("determinenodecontexts: context-free unit (/sp/) found as a start phone or second last phone");
         }
         const auto & Ahmm = hset.gethmm (A);
         const auto & Zhmm = hset.gethmm (Z);
@@ -239,11 +239,11 @@ vector<lattice::nodecontext> lattice::determinenodecontexts (const msra::asr::si
     {
         auto & nc = nodecontexts[i];
         if ((nc.left == nodecontext::unknown) ^ (nc.right == nodecontext::unknown))
-            throw std::runtime_error ("determinenodecontexts: invalid dead-end node in lattice");
+            RuntimeError("determinenodecontexts: invalid dead-end node in lattice");
         if (nc.left == nodecontext::ambiguous && nc.right != silid && nc.right != nodecontext::end)
-            throw std::runtime_error ("determinenodecontexts: invalid ambiguous left context (right context is not CI)");
+            RuntimeError("determinenodecontexts: invalid ambiguous left context (right context is not CI)");
         if (nc.right == nodecontext::ambiguous && nc.left != silid && nc.left != nodecontext::start)
-            throw std::runtime_error ("determinenodecontexts: invalid ambiguous right context (left context is not CI)");
+            RuntimeError("determinenodecontexts: invalid ambiguous right context (left context is not CI)");
         nc.t = nodes[i].t;
     }
     return nodecontexts;    // (will this use a move constructor??)
@@ -276,12 +276,12 @@ void lattice::removefinalnull()
     if (lastedge.firstalign < align.size()) // has alignment records --not !NULL
         return;
     if (lastedge.S != nodes.size() -2 || lastedge.E != nodes.size() -1)
-        throw std::runtime_error ("removefinalnull: malformed final !NULL edge");
+        RuntimeError("removefinalnull: malformed final !NULL edge");
     edges.resize (edges.size() -1); // remove it
     nodes.resize (nodes.size() -1); // its start node is now the new end node
     foreach_index (j, edges)
         if (edges[j].E >= nodes.size())
-            throw std::runtime_error ("removefinalnull: cannot have final !NULL edge and other edges connecting to end node at the same time");
+            RuntimeError("removefinalnull: cannot have final !NULL edge and other edges connecting to end node at the same time");
 }
 
 // merge a secondary lattice into the first
@@ -293,9 +293,9 @@ void lattice::removefinalnull()
 void lattice::merge (const lattice & other, const msra::asr::simplesenonehmm & hset)
 {
     if (!edges2.empty() || !other.edges2.empty())
-        throw std::logic_error ("merge: lattice(s) must be in non-uniq'ed format (V1)");
+        LogicError("merge: lattice(s) must be in non-uniq'ed format (V1)");
     if (!info.numframes || !other.info.numframes)
-        throw std::logic_error ("merge: lattice(s) must have identical number of frames");
+        LogicError("merge: lattice(s) must have identical number of frames");
 
     // establish node contexts
     auto contexts = determinenodecontexts (hset);
@@ -368,7 +368,7 @@ void lattice::merge (const lattice & other, const msra::asr::simplesenonehmm & h
 void lattice::dedup()
 {
     if (edges2.empty())
-        throw std::logic_error ("dedup: lattice must be in uniq'ed format (V2)");
+        LogicError("dedup: lattice must be in uniq'ed format (V2)");
 
     size_t k = 0;
     foreach_index (j, edges2)
@@ -376,7 +376,7 @@ void lattice::dedup()
         if (k > 0 && edges2[k-1].S == edges2[j].S && edges2[k-1].E == edges2[j].E && edges2[k-1].firstalign == edges2[j].firstalign)
         {
             if (edges2[k-1].implysp != edges2[j].implysp)
-                throw std::logic_error ("dedup: inconsistent 'implysp' flag for otherwise identical edges");
+                LogicError("dedup: inconsistent 'implysp' flag for otherwise identical edges");
             continue;
         }
         edges2[k++] = edges2[j];
@@ -447,7 +447,7 @@ void lattice::dedup()
         const char * line = toclines[i];
         const char * p = strchr (line, '=');
         if (p == NULL)
-            throw std::runtime_error ("open: invalid TOC line (no = sign): " + std::string (line));
+            RuntimeError("open: invalid TOC line (no = sign): " + std::string (line));
         const std::wstring key = msra::strfun::utf16 (std::string (line, p - line));
 
         fprintf (stderr, "convert: processing lattice '%S'\n", key.c_str());
@@ -531,7 +531,7 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
     vector<char> textbuffer;
     auto lines = msra::files::fgetfilelines (path, textbuffer);
     if (lines.empty())
-                throw std::runtime_error ("lattice: mal-formed lattice--empty input file (or all-zeroes)");
+                RuntimeError("lattice: mal-formed lattice--empty input file (or all-zeroes)");
     auto iter = lines.begin();
     // parse out LMF and WP
     char dummychar = 0;     // dummy for sscanf() end checking
@@ -539,7 +539,7 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
     {
         if (strncmp (*iter, "lmscale=", 8) == 0)    // note: HTK sometimes generates extra garbage space at the end of this line
             if (sscanf_s (*iter, "lmscale=%f wdpenalty=%f%c", &info.lmf, &info.wp, &dummychar, sizeof (dummychar)) != 2 && dummychar != ' ')
-                throw std::runtime_error ("lattice: mal-formed lmscale/wdpenalty line in lattice: " + string (*iter));
+                RuntimeError("lattice: mal-formed lmscale/wdpenalty line in lattice: " + string (*iter));
     }
     
     // parse N and L
@@ -547,13 +547,13 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
     {
         unsigned long N, L;
         if (sscanf_s (*iter, "N=%lu L=%lu %c", &N, &L, &dummychar, sizeof (dummychar)) != 2)
-            throw std::runtime_error ("lattice: mal-formed N=/L= line in lattice: " + string (*iter));
+            RuntimeError("lattice: mal-formed N=/L= line in lattice: " + string (*iter));
         info.numnodes = N;
         info.numedges = L;
         iter++;
     }
     else
-        throw std::runtime_error ("lattice: mal-formed before parse N=/L= line in lattice.");
+        RuntimeError("lattice: mal-formed before parse N=/L= line in lattice.");
     
     ASSERT(info.numnodes > 0);
     nodes.reserve (info.numnodes);
@@ -561,13 +561,13 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
     for (size_t i = 0; i < info.numnodes; i++, iter++)
     {
         if (iter == lines.end())
-            throw std::runtime_error ("lattice: not enough I lines in lattice");
+            RuntimeError("lattice: not enough I lines in lattice");
         unsigned long itest;
         float t;
         if (sscanf_s (*iter, "I=%lu t=%f%c", &itest, &t, &dummychar, sizeof (dummychar)) < 2)
-            throw std::runtime_error ("lattice: mal-formed node line in lattice: " + string (*iter));
+            RuntimeError("lattice: mal-formed node line in lattice: " + string (*iter));
         if (i != (size_t) itest)
-            throw std::runtime_error ("lattice: out-of-sequence node line in lattice: " + string (*iter));
+            RuntimeError("lattice: out-of-sequence node line in lattice: " + string (*iter));
         nodes.push_back (nodeinfo ((unsigned int) (t / info.frameduration + 0.5)));
         info.numframes = max (info.numframes, (size_t) nodes.back().t);
     }
@@ -579,7 +579,7 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
     for (size_t j = 0; j < info.numedges; j++, iter++)
     {
         if (iter == lines.end())
-            throw std::runtime_error ("lattice: not enough J lines in lattice");
+            RuntimeError("lattice: not enough J lines in lattice");
         unsigned long jtest;
         unsigned long S, E;
         float a, l;
@@ -590,37 +590,37 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
         if (nvals == 5 && j == info.numedges - 1)    // special case: last edge is a !NULL and thus may have the d= record missing
             strcpy (d, ":");
         else if (nvals != 6)
-            throw std::runtime_error ("lattice: mal-formed edge line in lattice: " + string (*iter));
+            RuntimeError("lattice: mal-formed edge line in lattice: " + string (*iter));
         if (j != (size_t) jtest)
-            throw std::runtime_error ("lattice: out-of-sequence edge line in lattice: " + string (*iter));
+            RuntimeError("lattice: out-of-sequence edge line in lattice: " + string (*iter));
         edges.push_back (edgeinfowithscores (S, E, a, l, align.size()));
         // build align array
         size_t edgeframes = 0;      // (for checking whether the alignment sums up right)
         const char * p = d;
         if (p[0] != ':' || (p[1] == 0 && j < info.numedges-1))    // last edge may be empty
-            throw std::runtime_error ("lattice: alignment info must start with a colon and must have at least one entry: " + string (*iter));
+            RuntimeError("lattice: alignment info must start with a colon and must have at least one entry: " + string (*iter));
         p++;
         while (*p)
         {
             // p points to an entry of the form TRIPHONE,DURATION
             const char * q = strchr (p, ',');
             if (q == NULL)
-                throw std::runtime_error ("lattice: alignment entry lacking a comma: " + string (*iter));
+                RuntimeError("lattice: alignment entry lacking a comma: " + string (*iter));
             if (q == p)
-                throw std::runtime_error ("lattice: alignment entry label empty: " + string (*iter));
+                RuntimeError("lattice: alignment entry label empty: " + string (*iter));
             label.assign (p, q-p);  // the triphone label
             q++;
             char * ep;
             double duration = strtod (q, &ep); // (weird--returns a non-const ptr in ep to a const object)
             p = ep;
             if (*p != ':')
-                throw std::runtime_error ("lattice: alignment entry not ending with a colon: " + string (*iter));
+                RuntimeError("lattice: alignment entry not ending with a colon: " + string (*iter));
             p++;
             // create the alignment entry
             const size_t frames = (unsigned int) (duration / info.frameduration + 0.5);
             auto it = unitmap.find (label);
             if (it == unitmap.end())
-                throw std::runtime_error ("lattice: unit in alignment that is not in model: " + label);
+                RuntimeError("lattice: unit in alignment that is not in model: " + label);
             const size_t unitid = it->second;
             //const size_t unitid = unitmap.insert (make_pair (label, unitmap.size())).first->second;  // may create a new entry with index = #entries
             align.push_back (aligninfo (unitid, frames));
@@ -630,11 +630,11 @@ void lattice::fromhtklattice (const wstring & path, const std::unordered_map<std
         {
             char msg[128];
             sprintf (msg, "\n-- where edgeframes=%d != (nodes[E].t - nodes[S].t=%d), the gap is %d.", edgeframes, nodes[E].t - (size_t) nodes[S].t, edgeframes + nodes[S].t - nodes[E].t);
-            throw std::runtime_error ("lattice: alignment info duration mismatches edge duration: " + string (*iter) + msg);
+            RuntimeError("lattice: alignment info duration mismatches edge duration: " + string (*iter) + msg);
         }
     }
     if (iter != lines.end())
-        throw std::runtime_error ("lattice: unexpected garbage at end of lattice: " + string (*iter));
+        RuntimeError("lattice: unexpected garbage at end of lattice: " + string (*iter));
     checklattice();
 
     // create more efficient storage for alignments
@@ -655,10 +655,10 @@ void lattice::frommlf (const wstring & key, const std::unordered_map<std::string
     // get the labels (state and word)
     auto iter = transcripts.find (key);
     if (iter == transcripts.end())
-        throw std::runtime_error ("frommlf: no reference word sequence in MLF for lattice with key " + strfun::utf8 (key));
+        RuntimeError("frommlf: no reference word sequence in MLF for lattice with key " + strfun::utf8 (key));
     const auto & transcript = iter->second;
     if (transcript.words.size() == 0)
-        throw std::runtime_error ("frommlf: empty reference word sequence for lattice with key " + strfun::utf8 (key));
+        RuntimeError("frommlf: empty reference word sequence for lattice with key " + strfun::utf8 (key));
 
     // determine unigram scores for all words
     vector<float> lmscores (transcript.words.size());
@@ -681,7 +681,7 @@ void lattice::frommlf (const wstring & key, const std::unordered_map<std::string
         e.S = j;
         e.E = j+1;
         if (e.E != j+1)
-            throw std::runtime_error (msra::strfun::strprintf ("frommlf: too many tokens to be represented as edgeinfo::E in label set: %S", key.c_str()));
+            RuntimeError(msra::strfun::strprintf ("frommlf: too many tokens to be represented as edgeinfo::E in label set: %S", key.c_str()));
         e.a = 0.0f; // no ac score
 
         // LM score
@@ -690,12 +690,12 @@ void lattice::frommlf (const wstring & key, const std::unordered_map<std::string
         if (wid == sentstart)
         {
             if (j != 0)
-                throw std::logic_error ("frommlf: found an !sent_start token not at the first position");
+                LogicError("frommlf: found an !sent_start token not at the first position");
         }
         else if (wid == sentend)
         {
             if (j != (int) transcript.words.size()-1)
-                throw std::logic_error ("frommlf: found an !sent_end token not at the end position");
+                LogicError("frommlf: found an !sent_end token not at the end position");
             wid = lmend;    // use </s> for score lookup
         }
         const int iwid = (int) wid;
@@ -711,7 +711,7 @@ void lattice::frommlf (const wstring & key, const std::unordered_map<std::string
     }
     nodes[transcript.words.size()].t = (unsigned short) numframes;
     if (nodes[transcript.words.size()].t != numframes)
-        throw std::runtime_error (msra::strfun::strprintf ("frommlf: too many frames to be represented as nodeinfo::t in label set: %S", key.c_str()));
+        RuntimeError(msra::strfun::strprintf ("frommlf: too many frames to be represented as nodeinfo::t in label set: %S", key.c_str()));
     info.lmf = -1.0f;       // indicates not set
     info.wp = 0.0f;         // not set indicated by lmf < 0
     info.numedges = edges.size();

@@ -39,7 +39,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             char message[256];
             sprintf_s(message, "Unable to Open/Create file %ls, error %x", fileName.c_str(), GetLastError());
-            throw runtime_error(message);
+            RuntimeError(message);
         }
 
         // code to detect type of file (network/local)
@@ -67,7 +67,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             char message[256];
             sprintf_s(message, "Unable to map file %ls, error 0x%x", fileName.c_str(), GetLastError());
-            throw runtime_error(message);
+            RuntimeError(message);
         }
         m_mappedSize = size;
 
@@ -104,7 +104,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             char message[128];
             sprintf_s(message, "Setting max position larger than mapped file size: %ld > %ld", m_filePositionMax, m_mappedSize);
-            throw runtime_error(message);
+            RuntimeError(message);
         }
     }
 
@@ -210,7 +210,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             char message[128];
             sprintf_s(message, "Unable to map file %ls @ %lld, error %x", m_name.c_str(), filePosition, GetLastError());
-            throw runtime_error(message);
+            RuntimeError(message);
         }
         m_views.push_back(ViewPosition(pBuf, filePosition, size));
 
@@ -346,7 +346,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             char message[128];
             sprintf_s(message, "Invalid File format for binary file %ls", fileName.c_str());
-            throw runtime_error(message);
+            RuntimeError(message);
         }
     }
 
@@ -452,7 +452,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // check for valid index
         if (m_sections.size() <= index)
         {
-            throw runtime_error("ReadSection:Invalid index");
+            RuntimeError("ReadSection:Invalid index");
         }
 
         // already loaded, so return
@@ -495,7 +495,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             char message[256];
             sprintf_s(message, "Invalid header in file %ls, in header %s\n", m_file->GetName(), section->GetName());
-            throw runtime_error(message);
+            RuntimeError(message);
         }
 
 
@@ -535,7 +535,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             char message[256];
             sprintf_s(message, "Element out of range, error accesing element %lld, size=%lld\n", element, bytesRequested);
-            throw runtime_error(message);
+            RuntimeError(message);
         }
 
         // make sure we have the buffer in the range to handle the request
@@ -558,7 +558,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             char message[256];
             sprintf_s(message, "Element out of range, error accesing element %lld, max element=%lld\n", element, GetElementCount());
-            throw runtime_error(message);
+            RuntimeError(message);
         }
 
         // section is mapped as a whole, so no separate mapping for element buffer
@@ -652,7 +652,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 int64_t offset = section->m_filePosition - filePosition;
                 if (offset < 0)
-                    throw runtime_error("RemapHeader:Invalid mapping, children must follow parent in mapping space");
+                    RuntimeError("RemapHeader:Invalid mapping, children must follow parent in mapping space");
 
                 // update our header location
                 SectionHeader* header = section->m_sectionHeader = (SectionHeader*)((char*)view + offset);
@@ -721,7 +721,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
             auto sectionOwner = SectionMappingOwner();
             if (filePosition < sectionOwner->GetFilePosition())
-                throw runtime_error("invalid fileposition, cannot be earlier in the file than mapping parent");
+                RuntimeError("invalid fileposition, cannot be earlier in the file than mapping parent");
             size_t offset = filePosition-sectionOwner->GetFilePosition();
             size_t totalSize = offset + max(size,sectionHeaderMin);
 
@@ -746,7 +746,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         case mappingFile:
             if (filePosition != 0)
-                throw runtime_error("invalid fileposition, file mapping sections must start at filePostion zero");
+                RuntimeError("invalid fileposition, file mapping sections must start at filePostion zero");
             // intentional fall-through - same case, just at beginning of file
         case mappingSectionAll:
             sectionHeader = m_file->GetSection(filePosition, size);
@@ -902,7 +902,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_mappingType = mappingType;
 
         if (size < sectionHeaderMin && file->Writing())
-            throw runtime_error("Insufficient size requested for section in write mode");
+            RuntimeError("Insufficient size requested for section in write mode");
 
         // clear out element window mapping variables
         m_elementView = NULL; // pointer to beginning of the valid view
@@ -946,7 +946,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SectionHeader* header = section->GetHeader();
             header->sectionFilePosition[header->dataSections++] = filePosition;
             if (header->dataSections && header->sectionFilePosition[header->dataSections-1] < filePosition)
-                throw runtime_error("invalid fileposition for section, subsection cannot start earlier in the file than parent section");
+                RuntimeError("invalid fileposition for section, subsection cannot start earlier in the file than parent section");
 
             // now update size for all pervious ancestor sections
             do
@@ -1004,7 +1004,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             // hum, is this allowable?
-            throw runtime_error("Invalid size in Binary Writer, variable sized data with no length");
+            RuntimeError("Invalid size in Binary Writer, variable sized data with no length");
         }
 
         char* data = section->EnsureElements(index, size);
@@ -1048,9 +1048,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         Section* section = this;
         if (labelMapping.size() != GetElementCount())
-            throw runtime_error("SetLabelMapping called with mapping table that doesn't match file defined element count");
+            RuntimeError("SetLabelMapping called with mapping table that doesn't match file defined element count");
         if (GetSectionType() != sectionTypeLabelMapping)
-            throw runtime_error("label type invalid");
+            RuntimeError("label type invalid");
 
         // free the old mapping tables
         m_mapLabelToId.clear();
@@ -1067,7 +1067,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 char message[256];
                 sprintf_s(message, "Mapping table doesn't contain an entry for label Id#%d\n", i);
-                throw runtime_error(message);
+                RuntimeError(message);
             }
 
             // add to reverse mapping table
@@ -1079,7 +1079,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 char message[256];
                 sprintf_s(message, "Not enough room in mapping buffer, %lld bytes insufficient for string %d - %s\n", originalSize, i, str.c_str());
-                throw runtime_error(message);
+                RuntimeError(message);
             }
             size_t len = str.length()+1; // don't forget the null
             size -= len;
@@ -1101,7 +1101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             char message[256];
             sprintf_s(message, "GetElement: invalid index, %lld requested when there are only %lld elements\n", index, GetElementCount());
-            throw runtime_error(message);
+            RuntimeError(message);
         }
 
         // now skip all the strings before the one that we want
@@ -1127,7 +1127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             char message[256];
             sprintf_s(message, "Element out of range, error accesing element %lld, size=%lld\n", element, bytesRequested);
-            throw runtime_error(message);
+            RuntimeError(message);
         }
 
         // make sure we have the buffer in the range to handle the request

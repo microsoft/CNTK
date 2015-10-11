@@ -84,7 +84,7 @@ class lattice
         //  - sortbyfinalsp = true: use in sorting (the longer edge with /sp/ will go FIRST so that it is the one to survive uniq-ing)
         //  - sortbyfinalsp = false: use in uniq-ing; the edges will just be reported as identical
         if (edges[j1].implysp || edges[j2].implysp)
-            throw std::logic_error ("comparealign: must not operate on edges with implysp flag set");
+            LogicError("comparealign: must not operate on edges with implysp flag set");
         const auto a1 = getaligninfo (j1);
         const auto a2 = getaligninfo (j2);
         // sort by unit sequence first
@@ -173,7 +173,7 @@ class lattice
     std::vector<edgeinfo> edges2;                   // TODO: rename these
     std::vector<aligninfo> uniquededgedatatokens;   // [-1]: LM score; [-2]: ac score; [0..]: actual aligninfo records
     float & uniqueedgelmscore (size_t firstalign) { return *(float*) &uniquededgedatatokens.data()[firstalign-1]; }
-    float & uniqueedgeacscore (size_t firstalign) { if (info.hasacscores) return *(float*) &uniquededgedatatokens.data()[firstalign-2]; else throw std::logic_error ("uniqueedgeacscore: no ac scores stored in this lattice"); }
+    float & uniqueedgeacscore (size_t firstalign) { if (info.hasacscores) return *(float*) &uniquededgedatatokens.data()[firstalign-2]; else LogicError("uniqueedgeacscore: no ac scores stored in this lattice"); }
 public: // TODO: make private again once 
     // construct from edges/align
     // This is also used for merging, where the edges[] array is not correctly sorted. So don't assume this here.
@@ -202,7 +202,7 @@ public: // TODO: make private again once
         foreach_index (j, edges)
         {
             if (edges[j].implysp)
-                throw std::logic_error ("builduniquealignments: original edges[] array must not have implied /sp/");
+                LogicError("builduniquealignments: original edges[] array must not have implied /sp/");
             edges2[j].S = edges[j].S;
             edges2[j].E = edges[j].E;
             edges2[j].unused = 0;
@@ -257,7 +257,7 @@ public: // TODO: make private again once
                 const auto ai = getaligninfo (j);
                 size_t nalign = ai.size();
                 if (nalign == 0 && (size_t) j2 != edges.size() -1)
-                    throw std::runtime_error ("builduniquealignments: !NULL edges forbidden except for the very last edge");
+                    RuntimeError("builduniquealignments: !NULL edges forbidden except for the very last edge");
                 // special optimization: we do not store the /sp/ unit at the end
                 if (nalign > 1/*be robust against 1-unit edges that consist of spunit*/ && ai[nalign-1].unit == spunit)
                 {
@@ -272,7 +272,7 @@ public: // TODO: make private again once
                 {
                     auto a = ai[k];
                     if (a.last)
-                        throw std::logic_error ("builduniquealignments: unexpected 'last' flag already set in input aligns (numeric overflow in old format?)");
+                        LogicError("builduniquealignments: unexpected 'last' flag already set in input aligns (numeric overflow in old format?)");
                     if (k == nalign -1)
                         a.last = 1;
                     uniquededgedatatokens.push_back (a);
@@ -355,7 +355,7 @@ public:
                         sile.a = LOGZERO;   // must not have this anyway
                         sile.firstalign = newalign.size(); // we create a new entry for this
                         if (sile.firstalign != newalign.size())
-                            throw std::runtime_error ("hackinsilencesubstitutionedges: numeric bit-field overflow of .firstalign");
+                            RuntimeError("hackinsilencesubstitutionedges: numeric bit-field overflow of .firstalign");
                         newedges.push_back (sile);
                         // create a new align entry
                         aligninfo asil (silunit, numframes);
@@ -365,7 +365,7 @@ public:
                             edgeinfowithscores spe = sile;
                             spe.firstalign = newalign.size();
                             if (spe.firstalign != newalign.size())
-                                throw std::runtime_error ("hackinsilencesubstitutionedges: numeric bit-field overflow of .firstalign");
+                                RuntimeError("hackinsilencesubstitutionedges: numeric bit-field overflow of .firstalign");
                             newedges.push_back (spe);
                             aligninfo asp (spunit, numframes);
                             newalign.push_back (asp);
@@ -382,7 +382,7 @@ public:
             // copy the edge
             e.firstalign = newalign.size();
             if (e.firstalign != newalign.size())
-                throw std::runtime_error ("hackinsilencesubstitutionedges: numeric bit-field overflow of .firstalign");
+                RuntimeError("hackinsilencesubstitutionedges: numeric bit-field overflow of .firstalign");
             newedges.push_back (e);
             // copy the align records
             auto a = getaligninfo (j);
@@ -443,31 +443,31 @@ public:
             const size_t edgedur = nodes[edges2[j].E].t - nodes[edges2[j].S].t; // for checking and back-filling the implied /sp/
             size_t aligndur = 0;
             if (firstalign == uniquededgedatatokens.size() && (size_t) j != edges.size() -1)
-                throw std::runtime_error ("rebuildedges: !NULL edges forbidden except for the last edge");
+                RuntimeError("rebuildedges: !NULL edges forbidden except for the last edge");
             for (size_t k = firstalign; k < uniquededgedatatokens.size(); k++)
             {
                 if (!isendworkaround.empty() && isendworkaround[k])       // secondary criterion to detect ends in broken lattices
                     break;
                 aligninfo ai = uniquededgedatatokens[k];
                 if (ai.unused != 0)
-                    throw std::runtime_error ("rebuildedges: mal-formed uniquededgedatatokens[] array: 'unused' field must be 0");
+                    RuntimeError("rebuildedges: mal-formed uniquededgedatatokens[] array: 'unused' field must be 0");
                 bool islast = ai.last != 0;
                 ai.last = 0;                // old format does not support this
                 align.push_back (ai);
                 aligndur += ai.frames;
                 if (aligndur > edgedur)
-                    throw std::runtime_error ("rebuildedges: mal-formed uniquededgedatatokens[] array: aligment longer than edge");
+                    RuntimeError("rebuildedges: mal-formed uniquededgedatatokens[] array: aligment longer than edge");
                 if (islast)
                     break;
                 if (k == uniquededgedatatokens.size() -1)
-                    throw std::runtime_error ("rebuildedges: mal-formed uniquededgedatatokens[] array: missing 'last' flag in last entry");
+                    RuntimeError("rebuildedges: mal-formed uniquededgedatatokens[] array: missing 'last' flag in last entry");
             }
             if (edges2[j].implysp)
             {
                 if (info.impliedspunitid == SIZE_MAX)
-                    throw std::runtime_error ("rebuildedges: edge requests implied /sp/ but none specified in lattice header");
+                    RuntimeError("rebuildedges: edge requests implied /sp/ but none specified in lattice header");
                 if (aligndur > edgedur)
-                    throw std::runtime_error ("rebuildedges: edge alignment longer than edge duration");
+                    RuntimeError("rebuildedges: edge alignment longer than edge duration");
                 aligninfo ai (info.impliedspunitid, edgedur - aligndur/*frames: remaining frames are /sp/ */);
                 align.push_back (ai);
             }
@@ -501,11 +501,11 @@ public:
                 firstframe = (unsigned int) ts;
                 firstalign = (unsigned int) as;
                 if (wordindex != wid)
-                    throw std::runtime_error ("htkmlfwordentry: vocabulary size too large for bit field 'wordindex'");
+                    RuntimeError("htkmlfwordentry: vocabulary size too large for bit field 'wordindex'");
                 if (firstframe != ts)
-                    throw std::runtime_error ("htkmlfwordentry: start frame too large for bit field 'firstframe'");
+                    RuntimeError("htkmlfwordentry: start frame too large for bit field 'firstframe'");
                 if (firstalign != as)
-                    throw std::runtime_error ("htkmlfwordentry: first-align index too large for bit field 'firstframe'");
+                    RuntimeError("htkmlfwordentry: first-align index too large for bit field 'firstframe'");
             }
         };
 
@@ -708,21 +708,21 @@ public:
         {
             const auto & e = edges[j];
             if (e.E <= e.S)
-                throw std::runtime_error ("checklattice: lattice is not topologically sorted");
+                RuntimeError("checklattice: lattice is not topologically sorted");
             if (nodes[e.E].t < nodes[e.S].t)
-                throw std::runtime_error ("checklattice: lattice edge has negative time range");
+                RuntimeError("checklattice: lattice edge has negative time range");
             if (nodes[e.E].t == nodes[e.S].t && j < info.numedges-1)
-                throw std::runtime_error ("checklattice: 0-frame edges forbidden except for very last edge");
+                RuntimeError("checklattice: 0-frame edges forbidden except for very last edge");
             if (j != (info.numedges - 1) && nodes[e.E].t == nodes[e.S].t)// last arc can be zero time range
-                throw std::runtime_error ("checklattice: lattice edge has zero time range");
+                RuntimeError("checklattice: lattice edge has zero time range");
             if (j > 0 && e.E < edges[j-1].E)
-                throw std::runtime_error ("checklattice: lattice is not sorted by end node");
+                RuntimeError("checklattice: lattice is not sorted by end node");
             if (j > 0 && e.E == edges[j-1].E && e.S < edges[j-1].S) // == also not allowed except for terminal edges
-                throw std::runtime_error ("checklattice: lattice is not sorted by start node within the same end node");
+                RuntimeError("checklattice: lattice is not sorted by start node within the same end node");
             if (j > 0 && e.E == edges[j-1].E && e.S == edges[j-1].S)
             {   // Note: same E means identical word on the edge, due to word id stored on node. Thus, the edge is redundant = forbidden.
                 if (e.E != info.numnodes-1)
-                    throw std::runtime_error ("checklattice: lattice has duplicate edges");
+                    RuntimeError("checklattice: lattice has duplicate edges");
                 else    // Exception: end of lattice, which happens rarely (2 examples found) and won't cause dramatic error, none in typical cases.
                     fprintf (stderr, "checklattice: WARNING: duplicate edge J=%d (S=%d -> E=%d) at end of lattice\n", (int) j, (int) e.S, (int) e.E);
             }
@@ -731,15 +731,15 @@ public:
         }
         // check nodes and in/out counts
         if (nodes[0].t != 0.0f)
-            throw std::runtime_error ("checklattice: lattice does not begin with time 0");
+            RuntimeError("checklattice: lattice does not begin with time 0");
         for (size_t i = 0; i < info.numnodes; i++)
         {
             if (i > 0 && nodes[i].t < nodes[i-1].t)
-                throw std::runtime_error ("checklattice: lattice nodes not sorted by time");
+                RuntimeError("checklattice: lattice nodes not sorted by time");
             if ((numin[i] > 0) ^ (i > 0))
-                throw std::runtime_error ("checklattice: found an orphaned start node");
+                RuntimeError("checklattice: found an orphaned start node");
             if ((numout[i] > 0) ^ (i < info.numnodes-1))
-                throw std::runtime_error ("checklattice: found an orphaned end node");
+                RuntimeError("checklattice: found an orphaned end node");
         }
     }
 
@@ -851,7 +851,7 @@ public:
     {
         const size_t sz = freadtag (f, tag);
         if (expectedsize != SIZE_MAX && sz != expectedsize)
-            throw std::runtime_error (std::string ("freadvector: malformed file, number of vector elements differs from head, for tag ") + tag);
+            RuntimeError(std::string ("freadvector: malformed file, number of vector elements differs from head, for tag ") + tag);
         freadOrDie (v, sz, f);
     }
 
@@ -870,7 +870,7 @@ public:
             freadOrDie (&info, sizeof (info), 1, f);
             freadvector (f, "NODE", nodes, info.numnodes);
             if (nodes.back().t != info.numframes)
-                throw std::runtime_error ("fread: mismatch between info.numframes and last node's time");
+                RuntimeError("fread: mismatch between info.numframes and last node's time");
             freadvector (f, "EDGE", edges, info.numedges);
             freadvector (f, "ALIG", align);
             fcheckTag (f, "END ");
@@ -889,7 +889,7 @@ public:
             freadOrDie (&info, sizeof (info), 1, f);
             freadvector (f, "NODS", nodes, info.numnodes);
             if (nodes.back().t != info.numframes)
-                throw std::runtime_error ("fread: mismatch between info.numframes and last node's time");
+                RuntimeError("fread: mismatch between info.numframes and last node's time");
             freadvector (f, "EDGS", edges2, info.numedges);       // uniqued edges
             freadvector (f, "ALNS", uniquededgedatatokens);   // uniqued alignments
             fcheckTag (f, "END ");
@@ -898,7 +898,7 @@ public:
             if (info.impliedspunitid != SIZE_MAX && info.impliedspunitid >= idmap.size())   // we have buggy lattices like that--what do they mean??
             {
                 fprintf (stderr, "fread: detected buggy spunit id %d which is out of range (%d entries in map)\n", (int)info.impliedspunitid, (int)idmap.size());
-                throw std::runtime_error ("fread: out of bounds spunitid");
+                RuntimeError("fread: out of bounds spunitid");
             }
 #endif
             // This is critical--we have a buggy lattice set that requires no mapping where mapping would fail
@@ -942,7 +942,7 @@ public:
                         // this is a regular token: update it in-place
                         auto & ai = uniquededgedatatokens[k];
                         if (ai.unit >= idmap.size())
-                            throw std::runtime_error ("fread: broken-file heuristics failed");
+                            RuntimeError("fread: broken-file heuristics failed");
                         ai.updateunit (idmap);      // updates itself
                         if (!ai.last)
                             continue;
@@ -957,13 +957,13 @@ public:
             {
                 // fprintf (stderr, "fread: inconsistent spunit id in file %d vs. expected %d; due to erroneous heuristic\n", info.impliedspunitid, spunit);    // [v-hansu] comment out becaues it takes up most of the log
                 // it's actually OK, we can live with this, since we only decompress and then move on without any assumptions
-                //throw std::runtime_error ("fread: mismatching /sp/ units");
+                //RuntimeError("fread: mismatching /sp/ units");
             }
             // reconstruct old lattice format from this   --TODO: remove once we change to new data representation
             rebuildedges (info.impliedspunitid != spunit/*to be able to read somewhat broken V2 lattice archives*/);
         }
         else
-            throw std::runtime_error ("fread: unsupported lattice format version");
+            RuntimeError("fread: unsupported lattice format version");
     }
 
     // parallel versions (defined in parallelforwardbackward.cpp)
@@ -1032,7 +1032,7 @@ class archive
     {
         auto iter = symmap.find (key);
         if (iter == symmap.end())
-            throw std::runtime_error (std::string ("getcachedidmap: symbol not found in user-supplied symbol map: ") + key);
+            RuntimeError(std::string ("getcachedidmap: symbol not found in user-supplied symbol map: ") + key);
         return iter->second;
     }
     template<class SYMMAP> const symbolidmapping & getcachedidmap (size_t archiveindex, const SYMMAP & symmap/*[string] -> numeric id*/) const
@@ -1062,12 +1062,12 @@ class archive
                     symstring = sym;        // (reusing existing object to avoid malloc)
                     tosymstring = tosym;
                     if (getid (symmap, symstring) != getid (symmap, tosymstring))
-                        throw std::runtime_error (std::string ("getcachedidmap: mismatching symbol id for ") + sym + " vs. " + tosym);
+                        RuntimeError(std::string ("getcachedidmap: mismatching symbol id for ") + sym + " vs. " + tosym);
                 }
                 else
                 {
                     if ((size_t) i != idmap.size())  // non-mappings must come first (this is to ensure compatibility with pre-mapping files)
-                        throw std::runtime_error ("getcachedidmap: mixed up symlist file");
+                        RuntimeError("getcachedidmap: mixed up symlist file");
                     symstring = sym;        // (reusing existing object to avoid malloc)
                     idmap.push_back ((unsigned int) getid (symmap, symstring));
                 }
@@ -1127,12 +1127,12 @@ public:
             const char * line = toclines[i];
             const char * p = strchr (line, '=');
             if (p == NULL)
-                throw std::runtime_error ("open: invalid TOC line (no = sign): " + std::string (line));
+                RuntimeError("open: invalid TOC line (no = sign): " + std::string (line));
             const std::wstring key = msra::strfun::utf16 (std::string (line, p - line));
             p++;
             const char * q = strchr (p, '[');
             if (q == NULL)
-                throw std::runtime_error ("open: invalid TOC line (no [): " + std::string (line));
+                RuntimeError("open: invalid TOC line (no [): " + std::string (line));
             if (q != p)
             {
                 const std::wstring archivepath = msra::strfun::utf16 (std::string (p, q - p));
@@ -1140,7 +1140,7 @@ public:
                 archiveindex = getarchiveindex (archivepath);
             }
             if (archiveindex == SIZE_MAX)
-                throw std::runtime_error ("open: invalid TOC line (empty archive pathname): " + std::string (line));
+                RuntimeError("open: invalid TOC line (empty archive pathname): " + std::string (line));
             char c;
             uint64_t offset;
 #ifdef _WIN32
@@ -1149,9 +1149,9 @@ public:
 
             if (sscanf (q, "[%" PRIu64 "]%c", &offset, &c) != 1)
 #endif
-                throw std::runtime_error ("open: invalid TOC line (bad [] expression): " + std::string (line));
+                RuntimeError("open: invalid TOC line (bad [] expression): " + std::string (line));
             if (!toc.insert (make_pair (key, latticeref (offset, archiveindex))).second)
-                throw std::runtime_error ("open: TOC entry leads to duplicate key: " + std::string (line));
+                RuntimeError("open: TOC entry leads to duplicate key: " + std::string (line));
         }
 
         // initialize symmaps  --alloc the array, but actually read the symmap on demand
@@ -1183,7 +1183,7 @@ public:
     {
         auto iter = toc.find (key);
         if (iter == toc.end())
-            throw std::logic_error ("getlattice: requested lattice for non-existent key; haslattice() should have been used to check availability");
+            LogicError("getlattice: requested lattice for non-existent key; haslattice() should have been used to check availability");
         // get the archive that the lattice lives in and its byte offset
         const size_t archiveindex = iter->second.archiveindex;
         const auto offset = iter->second.offset;
@@ -1193,7 +1193,7 @@ public:
 #if 1   // prep for fixing the pushing of /sp/ at the end  --we actually can just look it up! Duh
         const size_t spunit2 = getid (modelsymmap, "sp");
         if (spunit2 != spunit)
-            throw std::logic_error ("getlattice: huh? same lookup of /sp/ gives different result?");
+            LogicError("getlattice: huh? same lookup of /sp/ gives different result?");
 #endif
         // open archive file in case it is not the current one
         if (archiveindex != currentarchiveindex)
@@ -1221,7 +1221,7 @@ public:
         }
         // check if number of frames is as expected
         if (expectedframes != SIZE_MAX && L.getnumframes() != expectedframes)
-            throw std::logic_error ("getlattice: number of frames mismatch between numerator lattice and features");
+            LogicError("getlattice: number of frames mismatch between numerator lattice and features");
         // remember the latice key for diagnostics messages
         L.key = key;
     };

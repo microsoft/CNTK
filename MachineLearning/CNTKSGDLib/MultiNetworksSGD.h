@@ -139,7 +139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const bool makeMode)
         {
             if (validationSetDataReader.size() == 0)
-                throw std::invalid_argument("validation set reader should not be null.");
+                InvalidArgument("validation set reader should not be null.");
 
             int startEpoch = DetermineEncoderDecoderStartEpoch(makeMode);
             if (startEpoch == m_maxEpochs)
@@ -295,7 +295,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 learnRateInitialized = this->LoadCheckPointInfo(startEpoch - 1, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, m_prevChosenMinibatchSize);
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesParam.size() <= startEpoch)
-                throw std::invalid_argument("When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, or an explicit learning rate must be specified in config for the starting epoch.");
+                InvalidArgument("When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, or an explicit learning rate must be specified in config for the starting epoch.");
 
             ULONG dropOutSeed = 1;
             double prevDropoutRate = 0;
@@ -616,7 +616,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && !learnRateInitialized && m_learningRatesParam.size() <= startEpoch)
-                throw std::invalid_argument("When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, or an explicit learning rate must be specified in config for the starting epoch.");
+                InvalidArgument("When using \"AdjustAfterEpoch\", there must either exist a checkpoint file, or an explicit learning rate must be specified in config for the starting epoch.");
 
             ULONG dropOutSeed = 1;
             double prevDropoutRate = 0;
@@ -910,7 +910,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         criterionNodes,
                         localEpochCriterion, localEpochEvalErrors) == false)
                     {
-                        throw runtime_error("SGD::TrainOneEpochEncoderDecoderWithHiddenStates gradient check not passed!");
+                        RuntimeError("SGD::TrainOneEpochEncoderDecoderWithHiddenStates gradient check not passed!");
                     }
                     localEpochCriterion.SetValue(0);
                     localEpochEvalErrors.SetValue(0);

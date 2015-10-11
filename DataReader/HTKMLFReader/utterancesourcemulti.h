@@ -16,7 +16,6 @@
 #include "unordered_set"
 
 namespace msra { namespace dbn {
-    using Microsoft::MSR::CNTK::LogicError;
 
 // ---------------------------------------------------------------------------
 // minibatchutterancesource -- feature source to provide randomized utterances
@@ -80,7 +79,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         void push_back (utterancedesc &&/*destructive*/ utt)
         {
             if (isinram())
-                throw std::logic_error ("utterancechunkdata: frames already paged into RAM--too late to add data");
+                LogicError("utterancechunkdata: frames already paged into RAM--too late to add data");
             firstframes.push_back (totalframes);
             totalframes += utt.numframes();
             utteranceset.push_back (utt);
@@ -92,7 +91,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         msra::dbn::matrixstripe getutteranceframes (size_t i) const // return the frame set for a given utterance
         {
             if (!isinram())
-                throw std::logic_error ("getutteranceframes: called when data have not been paged in");
+                LogicError("getutteranceframes: called when data have not been paged in");
             const size_t ts = firstframes[i];
             const size_t n = numframes(i);
             return msra::dbn::matrixstripe (frames, ts, n);
@@ -100,7 +99,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         shared_ptr<const latticesource::latticepair> getutterancelattice (size_t i) const // return the frame set for a given utterance
         {
             if (!isinram())
-                throw std::logic_error ("getutteranceframes: called when data have not been paged in");
+                LogicError("getutteranceframes: called when data have not been paged in");
             return lattices[i];
         }
 
@@ -112,9 +111,9 @@ class minibatchutterancesourcemulti : public minibatchsource
         void requiredata (string & featkind, size_t & featdim, unsigned int & sampperiod, const latticesource & latticesource, int verbosity=0) const
         {
             if (numutterances() == 0)
-                throw std::logic_error ("requiredata: cannot page in virgin block");
+                LogicError("requiredata: cannot page in virgin block");
             if (isinram())
-                throw std::logic_error ("requiredata: called when data is already in memory");
+                LogicError("requiredata: called when data is already in memory");
             try             // this function supports retrying since we read from the unrealible network, i.e. do not return in a broken state
             {
                 msra::asr::htkfeatreader reader;    // feature reader (we reinstantiate it for each block, i.e. we reopen the file actually)
@@ -152,9 +151,9 @@ class minibatchutterancesourcemulti : public minibatchsource
         void releasedata() const
         {
             if (numutterances() == 0)
-                throw std::logic_error ("releasedata: cannot page out virgin block");
+                LogicError("releasedata: cannot page out virgin block");
             if (!isinram())
-                throw std::logic_error ("releasedata: called when data is not memory");
+                LogicError("releasedata: called when data is not memory");
             // release frames
             frames.resize (0, 0);
             // release lattice data
@@ -236,7 +235,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         {
             if (ci == chunkindex && ui == utteranceindex && fi == frameindex)
                 return;
-            throw std::logic_error ("frameref: bit fields too small");
+            LogicError("frameref: bit fields too small");
         }
         frameref() : chunkindex (0), utteranceindex (0), frameindex (0) {}
     };
@@ -249,7 +248,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         VECTOR & v;
         size_t first;
         size_t n;
-        void check (size_t i) const { if (i >= n) throw std::logic_error ("shiftedvector: index out of bounds"); }
+        void check (size_t i) const { if (i >= n) LogicError("shiftedvector: index out of bounds"); }
     public:
         shiftedvector (VECTOR & v, size_t first, size_t n) : v (v), first (first), n (n) { }
         // TODO: the following is not templated--do it if needed; also should return a const reference then
@@ -273,7 +272,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         foreach_index(i,classids)
         {
             if ((*classids[i])[classidsbegin + n] != (CLASSIDTYPE) -1)
-                throw std::logic_error ("getclassids: expected boundary marker not found, internal data structure screwed up");
+                LogicError("getclassids: expected boundary marker not found, internal data structure screwed up");
             allclassids.push_back(std::move(shiftedvector<biggrowablevector<CLASSIDTYPE>> ((*classids[i]), classidsbegin, n)));
         }
         return allclassids;   // nothing to return
@@ -296,7 +295,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         foreach_index(i, phoneboundaries)
         {
             if ((*phoneboundaries[i])[classidsbegin + n] != (CLASSIDTYPE)-1)
-                throw std::logic_error("getclassids: expected boundary marker not found, internal data structure screwed up");
+                LogicError("getclassids: expected boundary marker not found, internal data structure screwed up");
             allphoneboundaries.push_back(std::move(shiftedvector<biggrowablevector<CLASSIDTYPE>>((*phoneboundaries[i]), classidsbegin, n)));
         }
         return allphoneboundaries;   // nothing to return
@@ -361,14 +360,14 @@ public:
                 uttduration = std::vector<size_t>(numutts, 0);
             }
             else if (infiles[m].size()!=numutts)
-                throw std::runtime_error("minibatchutterancesourcemulti: all feature files must have same number of utterances");
+                RuntimeError("minibatchutterancesourcemulti: all feature files must have same number of utterances");
 
             foreach_index(i, infiles[m]){
                 utterancedesc utterance(msra::asr::htkfeatreader::parsedpath(infiles[m][i]), 0);  //mseltzer - is this foolproof for multiio? is classids always non-empty? 
                 const size_t uttframes = utterance.numframes(); // will throw if frame bounds not given --required to be given in this mode
                 // we need at least 2 frames for boundary markers to work
                 if (uttframes < 2)
-                    throw std::runtime_error("minibatchutterancesource: utterances < 2 frames not supported");
+                    RuntimeError("minibatchutterancesource: utterances < 2 frames not supported");
                 if (uttframes > frameref::maxframesperutterance)
                 {
                             fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S\n", i, (int)uttframes, (int)frameref::maxframesperutterance, key.c_str());
@@ -394,7 +393,7 @@ public:
                 invalidutts++;
         }
         if (invalidutts > uttisvalid.size() / 2)
-                    throw std::runtime_error("minibatchutterancesource: too many files with inconsistent durations, assuming broken configuration\n");
+                    RuntimeError("minibatchutterancesource: too many files with inconsistent durations, assuming broken configuration\n");
         else if (invalidutts>0)
                     fprintf(stderr, "Found inconsistent durations across feature streams in %d out of %d files\n", (int)invalidutts, (int)uttisvalid.size());
 
@@ -408,7 +407,7 @@ public:
                     //    numutts = infiles[m].size();
                     //else
                     //    if (infiles[m].size()!=numutts)
-                    //        throw std::runtime_error("minibatchutterancesourcemulti: all feature files must have same number of utterances\n");
+                    //        RuntimeError("minibatchutterancesourcemulti: all feature files must have same number of utterances\n");
             if (m==0)
                 classidsbegin.clear();
 
@@ -427,7 +426,7 @@ public:
                         // already performed these checks above
                         // we need at least 2 frames for boundary markers to work
                         //if (uttframes < 2)
-                        //    throw std::runtime_error ("minibatchutterancesource: utterances < 2 frames not supported");
+                        //    RuntimeError("minibatchutterancesource: utterances < 2 frames not supported");
                         //if (uttframes > frameref::maxframesperutterance)
                         //{
                         //    fprintf (stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S", i, uttframes, frameref::maxframesperutterance, key.c_str());
@@ -498,14 +497,14 @@ public:
                                         const auto & e = labseq[i];
                                         if ((i > 0 && labseq[i - 1].firstframe + labseq[i - 1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
                                         {
-                                            throw std::runtime_error(msra::strfun::strprintf("minibatchutterancesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
+                                            RuntimeError(msra::strfun::strprintf("minibatchutterancesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
                                         }
                                         if (e.classid >= udim[j])
                                         {
-                                            throw std::runtime_error(msra::strfun::strprintf("minibatchutterancesource: class id %d exceeds model output dimension %d in file %S", e.classid, udim[j], key.c_str()));
+                                            RuntimeError(msra::strfun::strprintf("minibatchutterancesource: class id %d exceeds model output dimension %d in file %S", e.classid, udim[j], key.c_str()));
                                         }
                                         if (e.classid != (CLASSIDTYPE) e.classid)
-                                            throw std::runtime_error ("CLASSIDTYPE has too few bits");
+                                            RuntimeError("CLASSIDTYPE has too few bits");
                                         for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                                     {
                                             classids[j]->push_back ((CLASSIDTYPE) e.classid);
@@ -523,7 +522,7 @@ public:
                                 phoneboundaries[j]->push_back((CLASSIDTYPE)-1); // append a boundary marker marker for checking
 
                                     if (!labels[j].empty() && classids[j]->size() != _totalframes + utteranceset.size())
-                                        throw std::logic_error (msra::strfun::strprintf ("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
+                                        LogicError(msra::strfun::strprintf ("minibatchutterancesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
                                     assert (labels[j].empty() || classids[j]->size() == _totalframes + utteranceset.size());
                                 }
                             }
@@ -557,7 +556,7 @@ public:
                         //printf("cid[index] = %d\n",cid[utteranceset[i].classidsbegin + utteranceset[i].numframes()]);
                         //printf("CLASSIDTYPE(-1) = %d\n",(CLASSIDTYPE) -1);
                         if (cid[utteranceset[i].classidsbegin + utteranceset[i].numframes()] != (CLASSIDTYPE) -1)
-                            throw std::logic_error ("minibatchutterancesource: classids[] out of sync");
+                            LogicError("minibatchutterancesource: classids[] out of sync");
                     }
                 }
             }
@@ -565,7 +564,7 @@ public:
             {
                 fprintf (stderr, "minibatchutterancesource: out of %d files, %d files not found in label set and %d have no lattice\n", (int)infiles[0].size(), (int)nomlf, (int)nolat);
                 if (nomlf + nolat > infiles[m].size() / 2)
-                    throw std::runtime_error ("minibatchutterancesource: too many files not found in label set--assuming broken configuration\n");
+                    RuntimeError("minibatchutterancesource: too many files not found in label set--assuming broken configuration\n");
             }
             if (m==0) {foreach_index(j, numclasses) { fprintf(stderr,"label set %d: %d classes\n", j, (int)numclasses[j]); } }
             // distribute them over chunks
@@ -607,7 +606,7 @@ private:
     template<typename VECTOR> static void randomshuffle (VECTOR & v, size_t randomseed)
     {
         if (v.size() > RAND_MAX * (size_t) RAND_MAX)
-            throw std::runtime_error ("randomshuffle: too large set: need to change to different random generator!");
+            RuntimeError("randomshuffle: too large set: need to change to different random generator!");
         srand ((unsigned int) randomseed);
         foreach_index (i, v)
         {
@@ -626,7 +625,7 @@ private:
         foreach_index(j, v)
         {
            if (v[j].size() > RAND_MAX * (size_t) RAND_MAX)
-            throw std::runtime_error ("randomshuffle: too large set: need to change to different random generator!");
+            RuntimeError("randomshuffle: too large set: need to change to different random generator!");
         }
         srand ((unsigned int) randomseed);
         
@@ -647,7 +646,7 @@ private:
     static void checkoverflow (size_t fieldval, size_t targetval, const char * fieldname)
     {
         if (fieldval != targetval)
-            throw std::runtime_error (msra::strfun::strprintf ("checkoverflow: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, targetval, fieldval));
+            RuntimeError(msra::strfun::strprintf ("checkoverflow: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, targetval, fieldval));
     }
 
     // helper for testing whether a swapped frame position is valid (w.r.t. beign in RAM when being at position 't')
@@ -852,7 +851,7 @@ private:
                 const auto & uttref = randomizedutterancerefs[i];
                 // check if it is valid for this position
                 if (uttref.chunkindex < positionchunkwindows[i].windowbegin() || uttref.chunkindex >= positionchunkwindows[i].windowend())
-                    throw std::logic_error ("lazyrandomization: randomization logic mangled!");
+                    LogicError("lazyrandomization: randomization logic mangled!");
             }
 
             // create lookup table for (globalts values -> pos) -> randomizedutteranceposmap[]
@@ -972,7 +971,7 @@ private:
                     {
                         const size_t randomizedchunkindex = randomizedframerefs[t].chunkindex;
                         if (randomizedchunkindex < poswindowbegin || randomizedchunkindex >= poswindowend)
-                            throw std::logic_error ("lazyrandomization: nope, you got frame randomization wrong, dude");
+                            LogicError("lazyrandomization: nope, you got frame randomization wrong, dude");
                         t++;
                     }
                 }
@@ -1017,7 +1016,7 @@ private:
         size_t numinram=0;
 
         if (chunkindex < windowbegin || chunkindex >= windowend)
-            throw std::logic_error ("requirerandomizedchunk: requested utterance outside in-memory chunk range");
+            LogicError("requirerandomizedchunk: requested utterance outside in-memory chunk range");
 
         foreach_index(m, randomizedchunks)
         {
@@ -1065,7 +1064,7 @@ private:
         auto iter = std::lower_bound (randomizedchunks[0].begin(), randomizedchunks[0].end(), t, [&] (const chunk & chunk, size_t t) { return chunk.globalte() <= t; });
         const size_t chunkindex = iter - randomizedchunks[0].begin();
         if (t < randomizedchunks[0][chunkindex].globalts || t >= randomizedchunks[0][chunkindex].globalte())
-            throw std::logic_error ("chunkforframepos: dude, learn STL!");
+            LogicError("chunkforframepos: dude, learn STL!");
         return chunkindex;
     }
 
@@ -1107,7 +1106,7 @@ public:
             // There must be a precise match; it is not possible to specify frames that are not on boundaries.
             auto positer = randomizedutteranceposmap.find (globalts);
             if (positer == randomizedutteranceposmap.end())
-                throw std::logic_error ("getbatch: invalid 'globalts' parameter; must match an existing utterance boundary");
+                LogicError("getbatch: invalid 'globalts' parameter; must match an existing utterance boundary");
             const size_t spos = positer->second;
 
             // determine how many utterances will fit into the requested minibatch size
@@ -1417,7 +1416,7 @@ public:
                    std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
     {
         // should never get here
-        throw runtime_error("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchutterancesource instead\n");
+        RuntimeError("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchutterancesource instead\n");
 
         // for single input/output set size to be 1 and run old getbatch
         //feat.resize(1);

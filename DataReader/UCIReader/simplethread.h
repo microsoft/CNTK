@@ -36,11 +36,11 @@ public:
     {
         h = ::CreateEvent (NULL, FALSE/*manual reset*/, initialstate ? TRUE : FALSE, NULL);
         if (h == NULL)
-            throw std::runtime_error ("signallingevent: CreateEvent() failed");
+            RuntimeError("signallingevent: CreateEvent() failed");
     }
     ~signallingevent() { ::CloseHandle (h); }
-    void wait() { if (::WaitForSingleObject (h, INFINITE) != WAIT_OBJECT_0) throw std::runtime_error ("wait: WaitForSingleObject() unexpectedly failed"); }
-    void flag() { if (::SetEvent (h) == 0) throw std::runtime_error ("flag: SetEvent() unexpectedly failed"); }
+    void wait() { if (::WaitForSingleObject (h, INFINITE) != WAIT_OBJECT_0) RuntimeError("wait: WaitForSingleObject() unexpectedly failed"); }
+    void flag() { if (::SetEvent (h) == 0) RuntimeError("flag: SetEvent() unexpectedly failed"); }
 };
 
 
@@ -82,16 +82,16 @@ public:
         unsigned int threadid;
         uintptr_t rc = _beginthreadex (NULL/*security*/, 0/*stack*/, staticthreadproc<FUNCTION>, this, CREATE_SUSPENDED, &threadid);
         if (rc == 0)
-            throw std::runtime_error ("simplethread: _beginthreadex() failed");
+            RuntimeError("simplethread: _beginthreadex() failed");
         threadhandle = OpenThread (THREAD_ALL_ACCESS, FALSE, threadid);
         if (threadhandle == NULL)
-            throw std::logic_error ("simplethread: _beginthreadex()  unexpectedly did not return valid thread id");   // BUGBUG: leaking something
+            LogicError("simplethread: _beginthreadex()  unexpectedly did not return valid thread id");   // BUGBUG: leaking something
         DWORD rc1 = ::ResumeThread (threadhandle);
         if (rc1 == (DWORD) -1)
         {
             ::TerminateThread (threadhandle, 0);
             ::CloseHandle (threadhandle);
-            throw std::logic_error ("simplethread: ResumeThread() failed unexpectedly");
+            LogicError("simplethread: ResumeThread() failed unexpectedly");
         }
         try
         {
@@ -118,7 +118,7 @@ public:
         else if (rc == WAIT_OBJECT_0)
             return true;
         else
-            throw std::runtime_error ("wait: WaitForSingleObject() failed unexpectedly");
+            RuntimeError("wait: WaitForSingleObject() failed unexpectedly");
     }
     //void join()
     //{

@@ -40,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (m_verbosity > 0)
                     fprintf (stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
                 if (m_net.OutputNodes().size() == 0)
-                    throw std::logic_error("There is no default output node specified in the network.");
+                    LogicError("There is no default output node specified in the network.");
 
                 outputNodes = m_net.OutputNodes();
             }
@@ -120,7 +120,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 fprintf (stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
                 if (m_net.OutputNodes().size() == 0)
-                    throw std::logic_error("There is no default output node specified in the network.");
+                    LogicError("There is no default output node specified in the network.");
 
                 outputNodes = m_net.OutputNodes();
             }

@@ -39,9 +39,9 @@ static size_t augmentationextent (size_t featdim/*augment from*/, size_t modeldi
     const size_t extent = windowframes / 2;           // extend each side by this
 
     if (modeldim % featdim != 0)
-        throw runtime_error ("augmentationextent: model vector size not multiple of input features");
+        RuntimeError("augmentationextent: model vector size not multiple of input features");
     if (windowframes % 2 == 0)
-        throw runtime_error (msra::strfun::strprintf ("augmentationextent: neighbor expansion of input features to %d not symmetrical", windowframes));
+        RuntimeError(msra::strfun::strprintf ("augmentationextent: neighbor expansion of input features to %d not symmetrical", windowframes));
 
     return extent;
 }
@@ -213,7 +213,7 @@ public:
         {
             // test for numeric overflow
             if (map.size()-1 != (INDEXTYPE) (map.size()-1))
-                throw std::runtime_error ("randomordering: INDEXTYPE has too few bits for this corpus");
+                RuntimeError("randomordering: INDEXTYPE has too few bits for this corpus");
             // 0, 1, 2...
             foreach_index (t, map) map[t] = (INDEXTYPE) t;
             // now randomize them
@@ -221,7 +221,7 @@ public:
             {
     #if 1       // change to 0 to disable randomizing
                 if (map.size() > RAND_MAX * (size_t) RAND_MAX)
-                    throw std::runtime_error ("randomordering: too large training set: need to change to different random generator!");
+                    RuntimeError("randomordering: too large training set: need to change to different random generator!");
                 srand ((unsigned int) seed);
                 size_t retries = 0;
                 foreach_index (t, map)
@@ -255,7 +255,7 @@ public:
                 foreach_index (t, map) if (!((size_t) t <= map[t] + randomizationrange/2 && map[t] < (size_t) t + randomizationrange/2))
                 {
                     fprintf (stderr, "randomordering: windowing condition violated %d -> %d\n", t, map[t]);
-                    throw std::logic_error ("randomordering: windowing condition violated");
+                    LogicError("randomordering: windowing condition violated");
                 }
     #endif
     #endif

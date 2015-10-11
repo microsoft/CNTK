@@ -122,7 +122,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             origNameToNormNameMap[nodeName] = normPtr;                            
                         }
                         else
-                            throw new runtime_error("for InputValue nodes, only mvNorm is supported 4th argument\n");
+                            RuntimeError("for InputValue nodes, only mvNorm is supported 4th argument\n");
                     }
                 }
                 else if (opName == L"Parameter" || opName == LearnableParameter<ElemType>::TypeName())
@@ -204,7 +204,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     nodePtr->AttachInputs(inputs[0], inputs[1], inputs[2]);
                     break;
                 default:
-                    throw std::logic_error("Invalid number of children.");
+                    LogicError("Invalid number of children.");
                 }
             }
 

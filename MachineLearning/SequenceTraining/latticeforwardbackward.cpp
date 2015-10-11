@@ -50,13 +50,13 @@ public:
         }
         auto & buffer = heap.back();
         if (elementsneeded > heap.back().size() - allocatedinlast)
-            throw std::logic_error ("newmatrix: allocation logic screwed up");
+            LogicError("newmatrix: allocation logic screwed up");
         // get our buffer into a handy vector-like thingy
         array_ref<float> vecbuffer (&buffer[allocatedinlast], elementsneeded);
         // allocate in the current heap location
         matrices.resize (matrices.size() + 1);
         if (matrices.size()+1 > matrices.capacity())
-            throw std::logic_error ("newmatrix: littlematrixheap cannot grow but was constructed with too small number of eements");
+            LogicError("newmatrix: littlematrixheap cannot grow but was constructed with too small number of eements");
         auto & matrix = matrices.back();
         matrix = matrixfrombuffer (vecbuffer, rows, cols);
         allocatedinlast += elementsneeded;
@@ -404,7 +404,7 @@ template<typename FLOAT> static bool islogzero (FLOAT v) { return v < LOGZERO/2;
             }
         }
         if (exitbackpointer == invalidbp)
-            throw std::logic_error ("exitbackpointer came up empty");
+            LogicError("exitbackpointer came up empty");
         fwscore = exitscore;                // score passed on to next unit
         fwbackpointer = exitbackpointer;    // and accompanying backpointer
         js = je;
@@ -433,7 +433,7 @@ template<typename FLOAT> static bool islogzero (FLOAT v) { return v < LOGZERO/2;
         for (size_t t = te -1; t + 1 > ts; t--)
         {
             if (j < (int) js || j >= (int) je)
-                throw std::logic_error ("invalid backpointer resulting in state index out of range");
+                LogicError("invalid backpointer resulting in state index out of range");
 
             int bp = (int) backpointers(j,t);   // save the backpointer before overwriting it (gammas and backpointers are aliases of each other)
             if (!returnsenoneids)               // return binary gammas (for MMI; this mode is compatible with softalignmode)
@@ -443,7 +443,7 @@ template<typename FLOAT> static bool islogzero (FLOAT v) { return v < LOGZERO/2;
                 thisedgealignmentsj[t] = (unsigned short) hmm.getsenoneid(j-js);
 
             if (bp == invalidbp)
-                throw std::logic_error ("deltabackpointer not initialized");
+                LogicError("deltabackpointer not initialized");
             j = bp; // trace back one step
         }
 
@@ -451,7 +451,7 @@ template<typename FLOAT> static bool islogzero (FLOAT v) { return v < LOGZERO/2;
         je = js;
     }
     if (j != -1)
-        throw std::logic_error ("invalid backpointer resulting in not reaching start of utterance when tracing back");
+        LogicError("invalid backpointer resulting in not reaching start of utterance when tracing back");
     assert (je == 0 && te == 0);
 
     // we return the full path score
@@ -806,7 +806,7 @@ void lattice::forwardbackwardalign (parallelstate & parallelstate,
             if (edgeframes == 0)    // dummy !NULL edge at end of lattice
             {
                 if ((size_t) j != edges.size() -1)
-                    throw std::runtime_error ("forwardbackwardalign: unxpected 0-frame edge (only allowed at very end)");
+                    RuntimeError("forwardbackwardalign: unxpected 0-frame edge (only allowed at very end)");
                 // note: abcs[j] is already initialized to be NULL in this case, which protects us from accidentally using it
             }
             else
@@ -846,7 +846,7 @@ void lattice::forwardbackwardalign (parallelstate & parallelstate,
     if (parallelstate.enabled() && !parallelsil)       // silence edge shall be process separately if not cuda and not PARALLEL_SIL
     {
         if (softalignstates)
-            throw std::logic_error ("forwardbackwardalign: parallelized version currently only handles hard alignments");
+            LogicError("forwardbackwardalign: parallelized version currently only handles hard alignments");
         if (minlogpp > LOGZERO)
             fprintf(stderr, "forwardbackwardalign: pruning not supported (we won't need it!) :)\n");
         edgeacscores.resize (edges.size());
@@ -1157,14 +1157,14 @@ void lattice::mmierrorsignal (parallelstate & parallelstate, double minlogpp, co
                                              const msra::math::ssematrixbase & logLLs, const msra::asr::simplesenonehmm & hset, const float lmf, const float wp, const float amf)
 {
     if (transcript[0].firstframe != 0)  // TODO: should we store the #frames instead? Then we can validate the total duration
-        throw std::logic_error ("scoregroundtruth: first transcript[] token does not start at frame 0");
+        LogicError("scoregroundtruth: first transcript[] token does not start at frame 0");
 
     // get the silence models, since they are treated specially
     const size_t numframes = logLLs.cols();
     const auto & sil = hset.gethmm (hset.gethmmid ("sil"));
     const auto & sp = hset.gethmm (hset.gethmmid ("sp"));
     if (sp.numstates != 1 || sil.numstates != 3)
-        throw std::runtime_error ("scoregroundtruth: only supports 1-state /sp/ and 3-state /sil/ tied to /sp/");
+        RuntimeError("scoregroundtruth: only supports 1-state /sp/ and 3-state /sil/ tied to /sp/");
     const size_t silst = sp.senoneids[0];
 
     // loop over words
@@ -1174,7 +1174,7 @@ void lattice::mmierrorsignal (parallelstate & parallelstate, double minlogpp, co
         size_t ts = transcript[i].firstframe;
         size_t te = ((size_t) i+1 < transcript.size()) ? transcript[i+1].firstframe : numframes;
         if (ts >= te)
-            throw std::logic_error ("scoregroundtruth: transcript[] tokens out of order");
+            LogicError("scoregroundtruth: transcript[] tokens out of order");
         // acoustic score: loop over frames
         const msra::asr::simplesenonehmm::transP * prevtransP = NULL;   // previous transP
         int prevs = -1;                                                 // previous state index
@@ -1202,7 +1202,7 @@ void lattice::mmierrorsignal (parallelstate & parallelstate, double minlogpp, co
                 int transPindex = hset.senonetransP (senoneid);
                 int sindex = hset.senonestate (senoneid);
                 if (transPindex == -1 || sindex == -1)
-                    throw std::runtime_error ("scoregroundtruth: failed to resolve ambiguous senone " + (string) hset.getsenonename (senoneid));
+                    RuntimeError("scoregroundtruth: failed to resolve ambiguous senone " + (string) hset.getsenonename (senoneid));
                 transP = &hset.transPs[transPindex];
                 s = sindex;
             }
@@ -1364,7 +1364,7 @@ double lattice::forwardbackward (parallelstate & parallelstate, const msra::math
     backpointers thisbackpointers (*this, hset);        // memory for forwardbackward
 
     if (info.numframes != logLLs.cols())
-        throw std::logic_error (msra::strfun::strprintf ("forwardbackward: #frames mismatch between lattice (%d) and LLs (%d)", (int) info.numframes, (int) logLLs.cols()));
+        LogicError(msra::strfun::strprintf ("forwardbackward: #frames mismatch between lattice (%d) and LLs (%d)", (int) info.numframes, (int) logLLs.cols()));
     // TODO: the following checks should throw, but I don't dare in case this will crash a critical job... if we never see this warning, then 
     if (info.numframes != uids.size())
         fprintf (stderr, "forwardbackward: #frames mismatch between lattice (%d) and uids (%d)\n", (int) info.numframes, (int) uids.size());

@@ -50,22 +50,22 @@ namespace Microsoft { namespace MSR { namespace BS {
     };
 
     // ---------------------------------------------------------------------------
-    // ConfigError -- all errors from processing the config files are reported as ConfigError
+    // ConfigException -- all errors from processing the config files are reported as ConfigException
     // ---------------------------------------------------------------------------
 
-    class ConfigError : public Microsoft::MSR::ScriptableObjects::ScriptingError
+    class ConfigException : public Microsoft::MSR::ScriptableObjects::ScriptingException
     {
         vector<TextLocation> locations;  // error location (front()) and evaluation parents (upper)
     public:
         // Note: All our Error objects use wide strings, which we round-trip through runtime_error as utf8.
-        ConfigError(const wstring & msg, TextLocation where) : Microsoft::MSR::ScriptableObjects::ScriptingError(msra::strfun::utf8(msg)) { locations.push_back(where); }
+        ConfigException(const wstring & msg, TextLocation where) : Microsoft::MSR::ScriptableObjects::ScriptingException(msra::strfun::utf8(msg)) { locations.push_back(where); }
 
         // these are used in pretty-printing
         TextLocation where() const { return locations.front(); }    // where the error happened
         virtual const wchar_t * kind() const = 0;                   // e.g. "warning" or "error"
 
         // pretty-print this as an error message
-        void /*ScriptingError::*/PrintError() const { TextLocation::PrintIssue(locations, L"error", kind(), msra::strfun::utf16(what()).c_str()); }
+        void /*ScriptingException::*/PrintError() const { TextLocation::PrintIssue(locations, L"error", kind(), msra::strfun::utf16(what()).c_str()); }
         void AddLocation(TextLocation where) { locations.push_back(where); }
     };
 
