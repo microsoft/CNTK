@@ -36,7 +36,6 @@
   <PropertyGroup>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\Common\Include;..\..\Math\Math</IncludePath>
   </PropertyGroup>
-
   <ItemDefinitionGroup>
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
@@ -49,7 +48,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -68,8 +66,11 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
-  
   <ItemGroup>
+    <ClInclude Include="..\..\Common\Include\simplesenonehmm.h" />
+    <ClInclude Include="..\..\Common\Include\simple_checked_arrays.h" />
+    <ClInclude Include="..\..\Common\Include\ssefloat4.h" />
+    <ClInclude Include="..\..\Common\Include\ssematrix.h" />
     <ClInclude Include="gammacalculation.h" />
   </ItemGroup>
   <ItemGroup>

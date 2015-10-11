@@ -2480,6 +2480,7 @@ private:
 
     // -----------------------------------------------------------------------
     /// StrideTimesNode (left, right, stride/*0=row, 1=col*/)
+    // TODO: why is 'stride' an Input and not just an initialization parameter?
     // -----------------------------------------------------------------------
 
     /**
@@ -2524,8 +2525,10 @@ private:
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex > 1)
-                InvalidArgument("StrideTimes operation only takes two inputs.");
+            if (inputIndex > 2)
+                InvalidArgument("StrideTimes operation only takes three inputs.");
+            else if (inputIndex == 2)
+                return;     // that's a constant
 
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
@@ -2769,8 +2772,8 @@ private:
             m_strideDim = (size_t) Inputs(2)->FunctionValues().Get00Element();
             if (m_strideDim != 0 && m_strideDim != 1)
                 RuntimeError("%ls %ls operation: Input(2) should be a single element matrix and have the value 0 (row) or 1 (col).", NodeName().c_str(), OperationName().c_str());
-            if (Inputs(2)->NeedGradient())
-                RuntimeError("StrideTimes: No gradient update should be on input(2).");
+            //if (Inputs(2)->m_needGradient)        // disabled because this is a flag that belongs to Network. Node should simply not propagate anything into it
+            //    RuntimeError("StrideTimes: No gradient update should be on input(2).");
 
             size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
             size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();

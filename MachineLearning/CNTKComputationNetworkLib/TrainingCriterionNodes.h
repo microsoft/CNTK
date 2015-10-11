@@ -1413,8 +1413,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (inputIndex == 2)
             {
-                Inputs(inputIndex)->NeedGradient() = false;
+#if 1           // no gradient flows to log LLs (but otherwise we leave it to user if, e.g., another node propagates a gradient into there)
+                ;   // gradient does not flow here
+#else
+                Inputs(inputIndex)->SetParameterUpdateRequired(false);
                 Inputs(inputIndex)->GradientValues().SetValue(0.0);
+#endif
             }
             else
                 RuntimeError("SequenceWithSoftmaxNode criterion only takes with respect to label, DNN output and log likelihood.");

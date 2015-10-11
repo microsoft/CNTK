@@ -568,10 +568,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         columnStride = builder.CreateLearnableParameter(L"columnStride", 1, 1);
                         columnStride->FunctionValues().SetValue(1);
-                        columnStride->NeedGradient() = false; 
+                        columnStride->SetParameterUpdateRequired(false); 
                         rowStride = builder.CreateLearnableParameter(L"rowStride", 1, 1);
                         rowStride->FunctionValues().SetValue(0);
-                        rowStride->NeedGradient() = false;
+                        rowStride->SetParameterUpdateRequired(false);
                         alignoutput = builder.StrideTimes(encoderOutput, builder.Softmax(builder.StrideTimes(builder.Times(builder.Transpose(encoderOutput), e), pastValue, rowStride)), columnStride);
 
                         //                alignoutput = builder.Times(encoderOutput, builder.Softmax(builder.Times(builder.Times(builder.Transpose(encoderOutput), e), pastValue)));
@@ -698,10 +698,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                         columnStride = builder.CreateLearnableParameter(L"columnStride", 1, 1);
                         columnStride->FunctionValues().SetValue(1);
-                        columnStride->NeedGradient() = false; 
+                        columnStride->SetParameterUpdateRequired(false); 
                         rowStride = builder.CreateLearnableParameter(L"rowStride", 1, 1);
                         rowStride->FunctionValues().SetValue(0);
-                        rowStride->NeedGradient() = false; 
+                        rowStride->SetParameterUpdateRequired(false); 
                         alignoutput = builder.StrideTimes(encoderOutput, builder.Softmax(builder.StrideTimes(builder.Times(builder.Transpose(encoderOutput), e), pastValue, rowStride)), columnStride);
 
                         //                alignoutput = builder.Times(encoderOutput, builder.Softmax(builder.Times(builder.Times(builder.Transpose(encoderOutput), e), pastValue)));
@@ -812,7 +812,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     pastValueXI = 
                         builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize, 
                         msra::strfun::wstrprintf(L"pastValue%d", ik)); 
-                    pastValueXI->NeedGradient() = false; 
+                    pastValueXI->SetParameterUpdateRequired(false); 
                     pastValueXI->AttachInputs(input);
                     static_pointer_cast<PastValueNode<ElemType>>(pastValueXI)->SetTimeStep(ik);
                     //TODO: to figure out sparse matrix size
@@ -961,10 +961,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     static_pointer_cast<PastValueNode<ElemType>>(pastValueXII)->SetTimeStep(2);
                     static_pointer_cast<PastValueNode<ElemType>>(pastValueXIII)->SetTimeStep(3);
                     static_pointer_cast<PastValueNode<ElemType>>(pastValueXIV)->SetTimeStep(4);
-                    pastValueXI->NeedGradient() = false;
-                    pastValueXII->NeedGradient() = false;
-                    pastValueXIII->NeedGradient() = false;
-                    pastValueXIV->NeedGradient() = false;
+                    pastValueXI->SetParameterUpdateRequired(false);
+                    pastValueXII->SetParameterUpdateRequired(false);
+                    pastValueXIII->SetParameterUpdateRequired(false);
+                    pastValueXIV->SetParameterUpdateRequired(false);
                     recur_idx++;
                 }
                 else
@@ -1120,7 +1120,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if(m_constInputGateValue)
         {
             //it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim, mbSize);
-            //it->NeedGradient() = false;
+            //it->SetParameterUpdateRequired(false);
             //it->FunctionValues().SetValue(m_constInputGateValue);
             it = nullptr;
         }
@@ -1313,7 +1313,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             trans = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"TransProb%d", numHiddenLayers), m_layerSizes[numHiddenLayers + 1], m_layerSizes[numHiddenLayers + 1]);
             trans->FunctionValues().SetValue((ElemType)1.0 / m_layerSizes[numHiddenLayers + 1]);
 //          m_net->InitLearnableParameters(trans, m_uniformInit, randomSeed++, m_initValueScale);
-            trans->NeedGradient() = true;
+            trans->SetParameterUpdateRequired(true);
             label = builder.CreateInputNode(L"labels", m_layerSizes[numHiddenLayers + 1], mbSize);
             AddTrainAndEvalCriterionNodes(output, label, nullptr, L"CRFTrainCriterion", L"CRFEvalCriterion", nullptr, trans);
 
@@ -1322,12 +1322,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_net->OutputNodes().push_back(output);
 
             output = builder.Softmax(input, L"PosteriorProb");
-
         }
 
         m_net->ResetEvalTimeStamp();
 
-                return m_net;
+        return m_net;
     }
 
     template<class ElemType>
@@ -1894,7 +1893,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_constInputGateValue)
         {
             //it = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"CONSTIT%d", iLayer), outputDim, mbSize);
-            //it->NeedGradient() = false;
+            //it->SetParameterUpdateRequired(false);
             //it->FunctionValues().SetValue(m_constInputGateValue);
             it = nullptr;
         }
@@ -2351,13 +2350,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 w = builder.Mean(input, L"MeanOfFeatures");
                 w->FunctionValues().SetValue(contextMean);
-                w->NeedGradient() = false;
+                w->SetParameterUpdateRequired(false);
                 pcNodePtr = static_pointer_cast<PreComputedNode<ElemType>>(w);
                 pcNodePtr->MarkComputed(true);
 
                 b = builder.InvStdDev(input, L"InvStdOfFeatures");
                 b->FunctionValues().SetValue(contextStdDev);
-                b->NeedGradient() = false;
+                b->SetParameterUpdateRequired(false);
                 pcNodePtr = static_pointer_cast<PreComputedNode<ElemType>>(b);
                 pcNodePtr->MarkComputed(true);
 
@@ -2419,7 +2418,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             w = builder.Mean(label, L"Prior");
             w->FunctionValues().SetValue(priorVals);
-            w->NeedGradient() = false;
+            w->SetParameterUpdateRequired(false);
             pcNodePtr = static_pointer_cast<PreComputedNode<ElemType>>(w);
             pcNodePtr->MarkComputed(true);
         }
@@ -2577,7 +2576,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             default:
                 LogicError("Unsupported training criterion.");
             }
-            output->NeedGradient() = false;
+            output->SetParameterUpdateRequired(false);
         }
 
         m_net->EvaluationNodes().push_back(output);

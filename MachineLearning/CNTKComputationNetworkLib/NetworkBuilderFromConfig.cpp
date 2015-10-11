@@ -190,7 +190,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
                     nodePtr = m_net.CreateLearnableParameter(name, rows, cols);
 
-                    nodePtr->NeedGradient() = needGradient;
+                    nodePtr->SetParameterUpdateRequired(needGradient);
                 }
                 else if (pass == ndlPassFinal)
                 {
@@ -238,7 +238,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
                     nodePtr = m_net.CreateSparseLearnableParameter(name, rows, cols);
 
-                    nodePtr->NeedGradient() = needGradient;
+                    nodePtr->SetParameterUpdateRequired(needGradient);
                 }
                 else if (pass == ndlPassFinal)
                 {
@@ -281,7 +281,8 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                     node = New<LearnableParameter<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"]);
                 else
                     node = New<SparseLearnableParameter<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"], 0/*size*/);    // TODO: what is size?
-                node->NeedGradient() = config[L"needGradient"];
+                // TODO: "needGradient" should be renamed to better match m_parameterUpdateRequired
+                node->SetParameterUpdateRequired(config[L"needGradient"]);
                 static int randomSeed = 1;
                 wstring initString = config[L"init"];
                 if (initString == L"fixedValue")
@@ -314,7 +315,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                     size_t cols = node->GetOptionalParameter("cols", "1");
 
                     nodePtr = m_net.CreateLearnableParameter(name, rows, cols);
-                    nodePtr->NeedGradient() = false;
+                    nodePtr->SetParameterUpdateRequired(false);
                 }
                 else if (pass == ndlPassFinal || nodePtr->FunctionValues().GetNumElements() != 0)
                 {
@@ -363,7 +364,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                         static_pointer_cast<FutureValueNode<ElemType>>(nodePtr)->SetTimeStep(timeStep);
                     }
 
-                    nodePtr->NeedGradient() = needGradient; // TODO: What for?
+                    nodePtr->SetParameterUpdateRequired(needGradient); // TODO: What for?
                 }
             }
 #endif
@@ -408,7 +409,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
                         bool needGradient = node->GetOptionalParameter("needGradient", "false");
                         nodePtr = m_net.RowSlice(NULL, start_index, num_rows, name);
-                        nodePtr->NeedGradient() = needGradient;
+                        nodePtr->SetParameterUpdateRequired(needGradient);
                     }
                 }
 #endif
@@ -416,7 +417,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 {
                     // startIndex, numRows, inputs /*one*/, needGradient=false
                     node = New<RowSliceNode<ElemType>>(deviceId, nodeName, (size_t)config[L"startIndex"], (size_t)config[L"numRows"]);
-                    node->NeedGradient() = config[L"needGradient"];
+                    node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
 #if 0
                 else if (cnNodeType == OperationNameOf(RowRepeatNode))
@@ -435,7 +436,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
                         bool needGradient = node->GetOptionalParameter("needGradient", "false");
                         nodePtr = m_net.RowRepeat(NULL, num_repeat, name);
-                        nodePtr->NeedGradient() = needGradient;
+                        nodePtr->SetParameterUpdateRequired(needGradient);
                     }
                 }
 #endif
@@ -443,13 +444,13 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 {
                     // inputs /*one*/, numRepeats, needGradient=false
                     node = New<RowRepeatNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRepeats"]);
-                    node->NeedGradient() = config[L"needGradient"];
+                    node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
                 else if (OpIs(DiagonalNode))
                 {
                     // inputs /*one*/, numRepeats, needGradient=false
                     node = New<DiagonalNode<ElemType>>(deviceId, nodeName);
-                    node->NeedGradient() = config[L"needGradient"];
+                    node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
 #if 0
                 else if (cnNodeType == OperationNameOf(ReshapeNode))
@@ -471,7 +472,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
                         bool needGradient = node->GetOptionalParameter("needGradient", "false");
                         nodePtr = m_net.Reshape(NULL, num_rows, img_width, img_height, img_channels, name);
-                        nodePtr->NeedGradient() = needGradient;
+                        nodePtr->SetParameterUpdateRequired(needGradient);
                     }
                 }
 #endif
@@ -479,7 +480,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 {
                     // inputs /*one*/, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0
                     node = New<ReshapeNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRows"], ImageLayout(config[L"imageWidth"], config[L"imageHeight"], config[L"imageChannels"]));
-                    node->NeedGradient() = config[L"needGradient"];
+                    node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
 #if 0
                 else if (cnNodeType == OperationNameOf(ConvolutionNode))
