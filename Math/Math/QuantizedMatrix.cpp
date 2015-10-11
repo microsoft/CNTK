@@ -11,7 +11,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_qColSize = QuantizedColumn<ElemType>::QuantizedColumnSize(m_numBits, m_numRows);
         if (((QWordNumBits / m_numBits) * m_numBits) != QWordNumBits)
         {
-            throw std::logic_error("Quantization: 'nbits' must be a divisor of 64");
+            LogicError("Quantization: 'nbits' must be a divisor of 64");
         }
         
         if (m_allocator == nullptr)
@@ -59,7 +59,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_qColSize = QuantizedColumn<ElemType>::QuantizedColumnSize(m_numBits, m_numRows);
         if (((QWordNumBits / m_numBits) * m_numBits) != QWordNumBits)
         {
-            throw std::logic_error("Quantization: 'nbits' must be a divisor of 64");
+            LogicError("Quantization: 'nbits' must be a divisor of 64");
         }
 
         // Make sure that the data matrix has enough space
@@ -113,12 +113,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if ((GetNumRows() == 0) || (GetNumCols() == 0))
         {
-            throw std::logic_error("Print: QuantizedMatrix is empty.");
+            LogicError("Print: QuantizedMatrix is empty.");
         }
 
         if (rowEnd >= GetNumRows() || colEnd >= GetNumCols())
         {
-            throw std::invalid_argument("Index out of range.");
+            InvalidArgument("Index out of range.");
         }
 
         DEVICEID_TYPE orgdevice = this->GetDeviceId();

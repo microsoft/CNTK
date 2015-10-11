@@ -471,7 +471,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
     CrossProcessMutex deviceAllocationLock("DBN.exe GPGPU querying lock");
     
     if (!deviceAllocationLock.Acquire((bestFlags & bestGpuExclusiveLock) != 0))  // failure  --this should not really happen
-        throw std::runtime_error("DeviceFromConfig: unexpected failure");
+        RuntimeError("DeviceFromConfig: unexpected failure");
     
     {
 	// even if user do not want to lock the GPU, we still need to check whether a particular GPU is locked or not, 

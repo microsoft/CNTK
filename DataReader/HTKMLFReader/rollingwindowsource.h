@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "basetypes.h"                  // for attempt()
+#include "Basics.h"                  // for attempt()
 #ifdef _WIN32
 #include "numahelpers.h"                // for NUMA allocation
 #endif
@@ -214,7 +214,7 @@ namespace msra { namespace dbn {
         const msra::dbn::matrixstripe operator[] (size_t t) const   // get a feature vector
         {
             if (t < inmembegin || t >= inmemend)
-                throw std::logic_error ("biggrowablevectorarray: attempt to access vector without requesting to page it in first");
+                LogicError("biggrowablevectorarray: attempt to access vector without requesting to page it in first");
             const size_t blockt = getblockt (t);
             /*const*/ msra::dbn::matrix & block = getblock (t);
             return msra::dbn::matrixstripe (block, blockt, 1);
@@ -262,7 +262,7 @@ namespace msra { namespace dbn {
             : vdim (vdim), sampperiod (0), featdim (0), numframes (0), frames (pagepath), timegetbatch (0), verbosity(2)
         {
             if (vdim == 0 && labels.empty())
-                throw runtime_error ("minibatchframesource: when running without features, labels are needed");
+                RuntimeError("minibatchframesource: when running without features, labels are needed");
             // at this stage, we simply page in the entire training set at once and work off RAM
             // We will benefit from feature archives indirectly through htkfeatio.
             // TODO:
@@ -312,7 +312,7 @@ namespace msra { namespace dbn {
                     if (featdim == 0)   // first time
                         featdim = feat.rows();
                     else if (featdim != feat.rows())
-                        throw std::runtime_error ("minibatchframesource: inconsistent feature dimension across files");
+                        RuntimeError("minibatchframesource: inconsistent feature dimension across files");
                     // HVite occasionally generates mismatching output --skip such files
                     if (!key.empty())   // (we have a key if supervised mode)
                     {
@@ -328,7 +328,7 @@ namespace msra { namespace dbn {
                     // append to cache
                     frame.resize (featdim);
                     if (feat.cols() < 2)    // (2 frames needed for boundary markers)
-                        throw std::runtime_error ("minibatchframesource: utterances < 2 frames not supported");
+                        RuntimeError("minibatchframesource: utterances < 2 frames not supported");
                     foreach_column (t, feat)
                     {
                         foreach_index (k, frame)
@@ -349,13 +349,13 @@ namespace msra { namespace dbn {
                     {
                         const auto & e = labseq[i];
                         if ((i > 0 && labseq[i-1].firstframe + labseq[i-1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
-                            throw std::runtime_error (msra::strfun::strprintf ("minibatchframesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
+                            RuntimeError(msra::strfun::strprintf ("minibatchframesource: labels not in consecutive order MLF in label set: %S", key.c_str()));
                         for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                         {
                             if (e.classid >= udim)
-                                throw std::runtime_error (msra::strfun::strprintf ("minibatchframesource: class id exceeds model dimension in file %S", key.c_str()));
+                                RuntimeError(msra::strfun::strprintf ("minibatchframesource: class id exceeds model dimension in file %S", key.c_str()));
                             if (e.classid != (CLASSIDTYPE) e.classid)
-                                throw std::runtime_error ("CLASSIDTYPE has too few bits");
+                                RuntimeError("CLASSIDTYPE has too few bits");
                             classids.push_back ((CLASSIDTYPE) e.classid);
                             numclasses = max (numclasses, (size_t)(1u + e.classid));
                         }
@@ -363,7 +363,7 @@ namespace msra { namespace dbn {
                     if (vdim == 0)
                         numframes = classids.size();
                     if (numframes != classids.size())   // TODO: remove this once we are confident
-                        throw std::runtime_error (msra::strfun::strprintf ("minibatchframesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
+                        RuntimeError(msra::strfun::strprintf ("minibatchframesource: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
                     assert (numframes == classids.size());
                 }
                 else
@@ -374,17 +374,17 @@ namespace msra { namespace dbn {
             assert (vdim == 0 || numframes == frames.size());
             assert (labels.empty() || numframes == classids.size());
             if ((vdim != 0 && numframes != frames.size()) || (!labels.empty() && numframes != classids.size()))
-                throw std::runtime_error ("minibatchframesource: numframes variable screwup");
+                RuntimeError("minibatchframesource: numframes variable screwup");
             fprintf (stderr, " %d frames read from %d utterances; %d classes\n", (int)numframes, (int)infiles.size(), (int)numclasses);
             if (notfound > 0)
             {
                 fprintf (stderr, "minibatchframesource: %d files out of %d not found in label set\n", (int)notfound, (int)infiles.size());
                 if (notfound > infiles.size() / 2)
-                    throw std::runtime_error ("minibatchframesource: too many files not found in label set--assuming broken configuration\n");
+                    RuntimeError("minibatchframesource: too many files not found in label set--assuming broken configuration\n");
             }
 
             if (numframes == 0 && !mayhavenoframe)
-                throw std::runtime_error ("minibatchframesource: no input features given!");
+                RuntimeError("minibatchframesource: no input features given!");
 
             // notify frames source to switch from population to consumption mode
             frames.no_more_push_back();
@@ -484,7 +484,7 @@ namespace msra { namespace dbn {
         // In frame mode, there is no constraint, i.e. it is 'globalts' itself.
         /*implement*/ size_t firstvalidglobalts (const size_t globalts) { return globalts; }
 
-        /*implement*/ const std::vector<size_t> & unitcounts() const { throw logic_error ("unitcounts: not implemented for this feature source"); static std::vector<size_t> x; return x;/*keep compiler happy*/ }
+        /*implement*/ const std::vector<size_t> & unitcounts() const { LogicError("unitcounts: not implemented for this feature source"); static std::vector<size_t> x; return x;/*keep compiler happy*/ }
     };
 
     // ---------------------------------------------------------------------------
@@ -520,7 +520,7 @@ namespace msra { namespace dbn {
         {
 
             if (vdim[0] == 0 && labels.empty())
-                throw runtime_error ("minibatchframesourcemulti: when running without features, labels are needed");
+                RuntimeError("minibatchframesourcemulti: when running without features, labels are needed");
             // at this stage, we simply page in the entire training set at once and work off RAM
             // We will benefit from feature archives indirectly through htkfeatio.
             // TODO:
@@ -536,7 +536,7 @@ namespace msra { namespace dbn {
             std::vector<size_t>framesaccum;
 
             if (infiles.size()==0)
-                throw runtime_error("minibatchframesourcemulti: need at least one network input specified with features");
+                RuntimeError("minibatchframesourcemulti: need at least one network input specified with features");
 
             if (labels.size()==0)
                 fprintf(stderr,"no MLF label files detected\n");
@@ -606,7 +606,7 @@ namespace msra { namespace dbn {
                         if (featdim == 0)   // first time
                             featdim = feat.rows();
                         else if (featdim != feat.rows())
-                            throw std::runtime_error ("minibatchframesourcemulti: inconsistent feature dimension across files");
+                            RuntimeError("minibatchframesourcemulti: inconsistent feature dimension across files");
                         // HVite occasionally generates mismatching output --skip such files
                         if (!key.empty())   // (we have a key if supervised mode)
                         {
@@ -622,7 +622,7 @@ namespace msra { namespace dbn {
                         // append to cache
                         frame.resize (featdim);
                         if (feat.cols() < 2)    // (2 frames needed for boundary markers)
-                            throw std::runtime_error ("minibatchframesourcemulti: utterances < 2 frames not supported");
+                            RuntimeError("minibatchframesourcemulti: utterances < 2 frames not supported");
                         foreach_column (t, feat)
                         {
                             foreach_index (k, frame)
@@ -656,13 +656,13 @@ namespace msra { namespace dbn {
                                 {
                                     const auto & e = labseq[i];
                                     if ((i > 0 && labseq[i-1].firstframe + labseq[i-1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
-                                        throw std::runtime_error (msra::strfun::strprintf ("minibatchframesourcemulti: labels not in consecutive order MLF in label set: %S", key.c_str()));
+                                        RuntimeError(msra::strfun::strprintf ("minibatchframesourcemulti: labels not in consecutive order MLF in label set: %S", key.c_str()));
                                     for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                                     {
                                         if (e.classid >= udim[j])
-                                            throw std::runtime_error (msra::strfun::strprintf ("minibatchframesourcemulti: class id exceeds model dimension in file %S", key.c_str()));
+                                            RuntimeError(msra::strfun::strprintf ("minibatchframesourcemulti: class id exceeds model dimension in file %S", key.c_str()));
                                         if (e.classid != (CLASSIDTYPE) e.classid)
-                                            throw std::runtime_error ("CLASSIDTYPE has too few bits");
+                                            RuntimeError("CLASSIDTYPE has too few bits");
                                         classids[j].push_back ((CLASSIDTYPE) e.classid);
                                         numclasses[j] = max (numclasses[j], (size_t)(1u + e.classid));
                                     }
@@ -670,7 +670,7 @@ namespace msra { namespace dbn {
                                 if (vdim[m] == 0)
                                     numframes = classids[j].size();
                                 if (numframes != classids[j].size())   // TODO: remove this once we are confident
-                                    throw std::runtime_error (msra::strfun::strprintf ("minibatchframesourcemulti: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
+                                    RuntimeError(msra::strfun::strprintf ("minibatchframesourcemulti: label duration inconsistent with feature file in MLF label set: %S", key.c_str()));
                                 assert (numframes == classids[j].size());
 
                             }
@@ -691,7 +691,7 @@ namespace msra { namespace dbn {
                     assert (labels[j].empty() || numframes == classids[j].size());
 
                 if (vdim[m] != 0 && numframes != pframes[m]->size()) // || (!labels.empty() && numframes != classids.size()))
-                    throw std::runtime_error ("\nminibatchframesource: numframes variable screwup");
+                    RuntimeError("\nminibatchframesource: numframes variable screwup");
                 if (m==0)
                 {
                     foreach_index (j, numclasses)
@@ -702,7 +702,7 @@ namespace msra { namespace dbn {
                 {
                     fprintf (stderr, "minibatchframesourcemulti: %d files out of %d not found in label set\n", (int)notfound, (int)infiles[m].size());
                     if (notfound > infiles[m].size() / 2)
-                        throw std::runtime_error ("minibatchframesourcemulti: too many files not found in label set--assuming broken configuration\n");
+                        RuntimeError("minibatchframesourcemulti: too many files not found in label set--assuming broken configuration\n");
                 }
                 // notify frames source to switch from population to consumption mode
                 pframes[m]->no_more_push_back();
@@ -710,7 +710,7 @@ namespace msra { namespace dbn {
             }
 
             if (numframes == 0 && !mayhavenoframe)
-                throw std::runtime_error ("minibatchframesource: no input features given!");
+                RuntimeError("minibatchframesource: no input features given!");
 
 
             // initialize randomizer
@@ -824,7 +824,7 @@ namespace msra { namespace dbn {
             std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
         {
             // should never get here
-            throw runtime_error("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchframesource instead\n");
+            RuntimeError("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchframesource instead\n");
         }
 
         double gettimegetbatch () { return timegetbatch;}
@@ -833,7 +833,7 @@ namespace msra { namespace dbn {
         // In frame mode, there is no constraint, i.e. it is 'globalts' itself.
         /*implement*/ size_t firstvalidglobalts (const size_t globalts) { return globalts; }
 
-        /*implement*/ const std::vector<size_t> & unitcounts() const { throw logic_error ("unitcounts: not implemented for this feature source"); }
+        /*implement*/ const std::vector<size_t> & unitcounts() const { LogicError("unitcounts: not implemented for this feature source"); }
 
     };
 };};

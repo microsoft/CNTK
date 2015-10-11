@@ -124,7 +124,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (format != MatrixFormat::matrixFormatSparseCSC && format != MatrixFormat::matrixFormatSparseCSR && format != MatrixFormat::matrixFormatSparseBlockCol && format != MatrixFormat::matrixFormatSparseBlockRow)
         {
-            throw std::logic_error("CPUSparseMatrix:  unsupported sparse matrix format");
+            LogicError("CPUSparseMatrix:  unsupported sparse matrix format");
         }
         m_format = format;
         ZeroInit();
@@ -210,7 +210,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if(m_format != MatrixFormat::matrixFormatSparseCSC && m_format != MatrixFormat::matrixFormatSparseCSR) 
         {
-            throw std::logic_error("CPUSparseMatrix:  unsupported SetValue() call.");
+            LogicError("CPUSparseMatrix:  unsupported SetValue() call.");
         }
 
         if(m_elemSizeAllocated < m_nz +1) //automatic resize
@@ -220,11 +220,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if(row < 0 || row >= m_numRows) 
         {
-            throw std::logic_error("CPUSparseMatrix: SetValue() invalid row id");
+            LogicError("CPUSparseMatrix: SetValue() invalid row id");
         }
 
         if(col < 0 || col >= m_numCols) {
-            throw std::logic_error("CPUSparseMatrix: SetValue() invalid column id");
+            LogicError("CPUSparseMatrix: SetValue() invalid column id");
         }
 
         size_t r = (m_format == matrixFormatSparseCSC) ? row: col;
@@ -238,7 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if(c == m_colIdx && r <= m_unCompIndex[m_nz-1]) 
             {
-                throw std::logic_error("CPUSparseMatrix:  SetValue is not called properly");
+                LogicError("CPUSparseMatrix:  SetValue is not called properly");
             }
         }
 
@@ -305,7 +305,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
     {
         //if (numCols == 0)
-        //    throw std::logic_error("The slice cannot have 0 columns.");
+        //    LogicError("The slice cannot have 0 columns.");
 
         if (startColumn + numCols > m_numCols)
             InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)m_numCols);
@@ -336,7 +336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::DiagonalToDense() const
     {
         if (m_numRows != m_numCols)
-            throw std::logic_error("DiagonalToDense can be called only for square matrix.");
+            LogicError("DiagonalToDense can be called only for square matrix.");
 
         if (m_format != MatrixFormat::matrixFormatSparseCSC)
             NOT_IMPLEMENTED;
@@ -439,7 +439,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t *blockIds = new size_t[newCompIndexSize];
 
                 if (keepExistingValues && (m_nz > numNZElemToReserve || m_compIndexSize > newCompIndexSize))
-                    throw std::logic_error("Resize: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
+                    LogicError("Resize: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
 
                 if (keepExistingValues && m_elemSizeAllocated > 0)
                 {
@@ -480,7 +480,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     {
         if (lhs.IsEmpty() || rhs.IsEmpty())
-            throw std::logic_error("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
+            LogicError("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
 
         int m = transposeA? (int)lhs.GetNumCols(): (int)lhs.GetNumRows();
         int k = transposeA? (int)lhs.GetNumRows(): (int)lhs.GetNumCols();
@@ -491,7 +491,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert (k == l);
         if (k != l) 
         {
-            throw std::invalid_argument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
+            InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
         }
 
         if (c.GetNumRows() != m || c.GetNumCols() != n) 
@@ -567,7 +567,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, CPUSparseMatrix<ElemType>& c)
     {
         if (lhs.IsEmpty() || rhs.IsEmpty())
-            throw std::logic_error("LeftMultiplyAndAdd:  one of the input matrix is empty.");
+            LogicError("LeftMultiplyAndAdd:  one of the input matrix is empty.");
 
         size_t m = transposeA? (int)lhs.GetNumCols(): (int)lhs.GetNumRows();
         size_t k = transposeA? (int)lhs.GetNumRows(): (int)lhs.GetNumCols();
@@ -578,7 +578,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert (k == l);
         if (k != l) 
         {
-            throw std::invalid_argument("CPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a and b must match.");
+            InvalidArgument("CPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a and b must match.");
         }
 
         c.Reset();
@@ -637,7 +637,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if(c.m_nz > c.GetSizeAllocated()) 
             {
-                throw std::logic_error("sparse matrix out of range.");
+                LogicError("sparse matrix out of range.");
             }
             //c.SetFormat(matrixFormatSparseBlockCol);
         }
@@ -656,12 +656,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (lhs.IsEmpty() || rhs.IsEmpty()) 
         {
-            throw std::logic_error("ScaleAndAdd:  one of the input matrix is empty.");
+            LogicError("ScaleAndAdd:  one of the input matrix is empty.");
         }
 
         if (lhs.GetNumRows() != rhs.GetNumRows() || lhs.GetNumCols() != rhs.GetNumCols()) 
         {
-            throw std::invalid_argument("CPUSparseMatrix::ScaleAndAdd: The dimensions of a and b must match.");
+            InvalidArgument("CPUSparseMatrix::ScaleAndAdd: The dimensions of a and b must match.");
         }
 
         if(lhs.GetFormat() == MatrixFormat::matrixFormatSparseCSC || lhs.GetFormat() == MatrixFormat::matrixFormatSparseCSR) 
@@ -700,7 +700,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } 
         else 
         {
-            throw std::runtime_error("CPUSparseMatrix:: ScaleAndAdd() Not implemented");
+            RuntimeError("CPUSparseMatrix:: ScaleAndAdd() Not implemented");
         }
     }
 
@@ -709,7 +709,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     bool CPUSparseMatrix<ElemType>::AreEqual(const CPUSparseMatrix<ElemType>& a, const CPUSparseMatrix<ElemType>& b, const ElemType threshold)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            throw std::logic_error("AreEqual: one of the input matrices is empty.");
+            LogicError("AreEqual: one of the input matrices is empty.");
 
         if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
             return false;
@@ -759,7 +759,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         } 
         else 
         {
-            throw std::runtime_error("CPUSparseMatrix:: NormalGrad() only support block sparse format");
+            RuntimeError("CPUSparseMatrix:: NormalGrad() only support block sparse format");
         }
     }
 
@@ -992,7 +992,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType CPUSparseMatrix<ElemType>::FrobeniusNorm() const
     {
         if (this->IsEmpty())
-            throw std::logic_error("FrobeniusNorm: Matrix is empty.");
+            LogicError("FrobeniusNorm: Matrix is empty.");
 
         ElemType v = 0;
 
@@ -1019,7 +1019,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType CPUSparseMatrix<ElemType>::SumOfAbsElements() const
     {
         if (this->IsEmpty())
-            throw std::logic_error("SumOfAbsElements: Matrix is empty.");
+            LogicError("SumOfAbsElements: Matrix is empty.");
 
         if (sizeof(ElemType) == sizeof(double))
         {
@@ -1046,7 +1046,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType CPUSparseMatrix<ElemType>::SumOfElements() const
     {
         if (this->IsEmpty())
-            throw std::logic_error("SumOfElements: Matrix is empty.");
+            LogicError("SumOfElements: Matrix is empty.");
 
         ElemType sum = 0;
 
@@ -1075,7 +1075,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t elsize;
         stream >> elsize;
         if (sizeof(ElemType) != elsize)
-            throw std::runtime_error("Template argument size doesn't match those in file");
+            RuntimeError("Template argument size doesn't match those in file");
         std::wstring matrixName;
 
         // now prepare this header to receive the data being read

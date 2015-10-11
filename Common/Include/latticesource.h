@@ -20,7 +20,7 @@ public:
     {
 #ifndef NONUMLATTICEMMI        // TODO:set NUM lattice to null so as to save memory
         if (numlattices.empty() ^ denlattices.empty())
-            throw std::runtime_error("latticesource: numerator and denominator lattices must be either both empty or both not empty");
+            RuntimeError("latticesource: numerator and denominator lattices must be either both empty or both not empty");
 #endif
         return denlattices.empty();
     }

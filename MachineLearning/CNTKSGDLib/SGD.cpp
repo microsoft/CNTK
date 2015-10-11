@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (s == L"kl" || s == L"klreg")
             return AdaptationRegType::KL;
         else
-            throw std::invalid_argument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (None | KL)");
+            InvalidArgument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (None | KL)");
         }
 
     static GradientsUpdateType ParseGradUpdateType(wstring s)
@@ -36,7 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (s == L"fsadagrad")
             return GradientsUpdateType::FSAdaGrad;
         else
-            throw std::invalid_argument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (None | AdaGrad | RmsProp | FSAdaGrad )");
+            InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (None | AdaGrad | RmsProp | FSAdaGrad )");
     }
 
     static ParallelizationMethod ParseParallelizationMethod(wstring s)
@@ -49,7 +49,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (s == L"modelaveragingsgd")
             return ParallelizationMethod::ModelAveragingSGD;
         else
-            throw std::invalid_argument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD | ModelAveragingSGD)");
+            InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD | ModelAveragingSGD)");
         }
 
     static LearningRateSearchAlgorithm ParseLearningRateSearchType(wstring s)
@@ -63,7 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (s == L"adjustafterepoch" || s == L"afterepoch" || s == L"after")
             return LearningRateSearchAlgorithm::AdjustAfterEpoch;
         else
-            throw std::invalid_argument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
+            InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
     }
 
     template<class ElemType>
@@ -263,7 +263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_zeroThresholdFor1Bit = configDataParallelSGD("useZeroThresholdFor1BitQuantization", "true");
                 if ((m_numGradientBits < 1) || (m_numGradientBits > (8 * sizeof(ElemType))))
                 {
-                    throw std::invalid_argument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
+                    InvalidArgument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
                 }
             }
 
@@ -393,21 +393,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
             {
-                throw std::invalid_argument("epoch size must be larger than mbsize.");
+                InvalidArgument("epoch size must be larger than mbsize.");
             }
         }
 
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None &&
             (learningRatesPerSample.size() == 0 && learningRatesPerMB.size() == 0))
         {
-            throw std::invalid_argument("If autoLearnRateSearchType is false "
+            InvalidArgument("If autoLearnRateSearchType is false "
                                         "you must specify the learningRatesPerSample "
                                         "or learningRatesPerMB parameter.");
         }
 
         if (learningRatesPerSample.size() > 0 && learningRatesPerMB.size() > 0)
         {
-            throw std::invalid_argument("You specified both learningRatesPerSample "
+            InvalidArgument("You specified both learningRatesPerSample "
                                         "and learningRatesPerMB. Please comment "
                                         "out one of them.");
         }
@@ -424,7 +424,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (momentumPerSample.size() > 0 && momentumPerMB.size() > 0)
         {
-            throw std::invalid_argument("You specified both momentumPerSample "
+            InvalidArgument("You specified both momentumPerSample "
                                         "and momentumPerMB. Please comment "
                                         "out one of them.");
         }
@@ -579,7 +579,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto & sequenceCriterionNodes = GetTrainCriterionNodes(*sequenceNet);
             if (origCriterionNodes.size() == 0 || sequenceCriterionNodes.size() == 0)
             {
-                throw std::runtime_error("Training criterion node does not exist.");
+                RuntimeError("Training criterion node does not exist.");
             }
             replacedCriterionNodes.push_back(origCriterionNodes[0]);
             origNet.ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), sequenceCriterionNodes[0]);

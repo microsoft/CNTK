@@ -6,10 +6,9 @@
 // latticestorage.h -- basic data structures for storing lattices
 
 
-#if 0       // [v-hansu]  separate code with history
-#endif
-
 #pragma once
+
+#include "Basics.h"
 #include <string>       // for the error message in checkoverflow() only
 #include <stdexcept>
 #include <stdint.h>
@@ -32,7 +31,7 @@ static void checkoverflow (size_t fieldval, size_t targetval, const char * field
         std::snprintf
 #endif
             (buf, sizeof(buf), "lattice: bit field %s too small for value 0x%x (cut from 0x%x)", fieldname, (unsigned int)targetval, (unsigned int)fieldval);
-        throw std::runtime_error (buf);
+        RuntimeError(buf);
     }
 }
 
