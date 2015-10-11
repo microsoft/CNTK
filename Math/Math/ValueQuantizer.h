@@ -2,6 +2,7 @@
 #ifndef __VALLUE_QUANTIZER_H__
 #define __VALLUE_QUANTIZER_H__
 
+#include "Basics.h"
 #include "BestGpu.h"    // for CPUONLY
 #ifndef CPUONLY
 #include <cuda.h>
