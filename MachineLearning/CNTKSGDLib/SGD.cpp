@@ -1899,7 +1899,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (node->NeedGradient())
                     {
                         Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
-
+#ifdef _DEBUG
+                        if (smoothedGradient.HasNan("TrainOneEpoch/UpdateWeights(): "))
+                            LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
+#endif
                         UpdateWeights(node, smoothedGradient, learnRatePerSample,
                                       GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, net.GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
                                       m_L2RegWeight, m_L1RegWeight,

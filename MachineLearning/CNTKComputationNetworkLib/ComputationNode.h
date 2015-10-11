@@ -1289,6 +1289,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     fprintf(stderr,"Backprop%d_%ls\n",i,NodeName().c_str());
 #endif
                     ComputeInputPartial(i); //this computes partial wrt to the child and sums the gradient value in the child
+#ifdef _DEBUG
+                    //MaskMissingGradientColumnsToZero();
+                    //if (child->GradientValues().HasNan("ComputeGradientForChildren(void): "))
+                    //    LogicError("%ls %ls operation has NaNs in gradient.", child->NodeName().c_str(), child->OperationName().c_str());
+                    MaskMissingColumnsTo(child->GradientValues(), child->m_pMBLayout, SIZE_MAX, SIZE_MAX, Matrix<ElemType>::MakeNan(__LINE__));
+#endif
                 }
 #ifdef DISPLAY_DEBUG
                 else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, 
