@@ -32,6 +32,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             wstring str = argv[i];
 
+            // allow to change current directory, for easier debugging
+            wstring cdDescriptor = L"currentDirectory=";
+            if (_wcsnicmp(cdDescriptor.c_str(), str.c_str(), cdDescriptor.length()) == 0)
+                _wchdir(str.substr(cdDescriptor.length()).c_str());
+
             // see if they are loading a config file
             wstring configDescriptor = L"configFile=";
             int compare = _wcsnicmp(configDescriptor.c_str(), str.c_str(), configDescriptor.length());

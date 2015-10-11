@@ -1028,7 +1028,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_loadBestModel)
                     {
                         fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
-                        net.ResetMBLayout();
                         net.LoadPersistableParametersFromFile(GetModelNameForEpoch(i - 1),
                                                               m_validateAfterModelReloading);
                         net.ResetEvalTimeStamp();

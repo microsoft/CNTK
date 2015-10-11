@@ -342,7 +342,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ValidateUnaryReduce(bool isFinalValidationPass);
         void ValidateInferBinaryChildrenDims();
         void ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples);
-        void ValidateBinaryCriterion(bool isFinalValidationPass);
+        void ValidateBinaryReduce(bool isFinalValidationPass);
     public:
 
         virtual bool UnitTest() { return true; }
@@ -956,10 +956,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (numCols == SIZE_MAX)        // SIZE_MAX means determine from layout
                 numCols = m_pMBLayout->GetNumCols();
             m_functionValues.ResizeColumns(numCols);
-            if (m_needGradient)
+            // BUGBUG: I have encountered a case where a MinusNode had m_needGradient false but a child had it set to true (Amit's Recipes2\3_seqRetrain_small)
+            //         We will change now m_needGradient is propagated (separate into a node request and a cached flag about subtrees). Then reenable this code.
+            //if (m_needGradient)
                 m_gradientValues.ResizeColumns(numCols);
-            else
-                m_gradientValues.Resize(0,0);
+            //else
+            //    m_gradientValues.Resize(0,0);
             return numCols;
         }
 
@@ -1496,7 +1498,7 @@ public: \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
     using Base::SaveToFile; using Base::UpdateFunctionAndGradientMBSize; using Base::SetInput; \
-    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryCriterion; using Base::ValidateInferBinaryChildrenDims; using Base::ValidateInferChildDims
+    using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildrenDims; using Base::ValidateInferChildDims
 
 #define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \

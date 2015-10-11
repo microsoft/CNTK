@@ -74,7 +74,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            ValidateBinaryCriterion(isFinalValidationPass);
+            ValidateBinaryReduce(isFinalValidationPass);
             m_leftMinusRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
         }
 
@@ -195,7 +195,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            ValidateBinaryCriterion(isFinalValidationPass);
+            ValidateBinaryReduce(isFinalValidationPass);
             m_logSoftmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             m_softmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
         }
@@ -301,7 +301,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            ValidateBinaryCriterion(isFinalValidationPass);
+            ValidateBinaryReduce(isFinalValidationPass);
             if (Inputs(0)->OperationName() != L"InputValue")    // TODO: but labels could be post-processed, e.g. sub-sampled. This test should not be here.
                 LogicError("CrossEntropyNode criterion requires the first input to be the label.");
             m_logOfRight.Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());

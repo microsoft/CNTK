@@ -197,7 +197,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SetActualMiniBatchSizeFromFeatures();   // TODO: this should go
 
         if (requireValidation)
+        {
+            // validation needs some layout to work with
+            m_pMBLayout->Init(1, 0, false);
             ValidateNetwork();
+        }
     }
 
     // -----------------------------------------------------------------------
