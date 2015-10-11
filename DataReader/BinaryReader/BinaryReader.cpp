@@ -98,7 +98,7 @@ void BinaryReader<ElemType>::Init(const ConfigParameters& readerConfig)
             else // otherwise we want to check to make sure it's the same
             {
                 if (records != m_totalSamples && !(flags&flagAuxilarySection))
-                    throw runtime_error("multiple files have different record counts, cannot be used together!");
+                    RuntimeError("multiple files have different record counts, cannot be used together!");
             }
 
             m_secFiles.push_back(secFile);
@@ -187,7 +187,7 @@ void BinaryReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, siz
     {
         // if they want the dataset size, get the first file, and return the dataset size
         if (m_totalSamples == 0)
-            throw runtime_error("no section files contain total samples, can't determine dataset size");
+            RuntimeError("no section files contain total samples, can't determine dataset size");
         requestedEpochSamples = m_totalSamples;
     }
     m_epochSize = requestedEpochSamples;
@@ -292,7 +292,7 @@ bool BinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType
                     }
                     if (!categoryLabelFound)
                     {
-                        throw runtime_error("Category Labels not saved in file, either save, or support creation in BinaryReader");
+                        RuntimeError("Category Labels not saved in file, either save, or support creation in BinaryReader");
                     }
                 }
             }
@@ -300,7 +300,7 @@ bool BinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType
             // make sure we are good now
             if (dataType != sectionDataFloat || dataSize != sizeof(ElemType)) 
             {
-                throw runtime_error("Category Labels not saved in file, either save, or support creation in BinaryReader");
+                RuntimeError("Category Labels not saved in file, either save, or support creation in BinaryReader");
             }
         }
         size_t size = rows*dataSize*actualmbsize;
@@ -349,12 +349,12 @@ const std::map<typename BinaryReader<ElemType>::LabelIdType, typename BinaryRead
     auto iter = m_sections.find(sectionName);
     if (iter == m_sections.end())
     {
-        throw runtime_error("GetLabelMapping: requested section name not found\n");
+        RuntimeError("GetLabelMapping: requested section name not found\n");
     }
     Section* section = iter->second;
     if (section->GetSectionType() != sectionTypeLabelMapping)
     {
-        throw runtime_error("section specified is not label mapping section.\n");
+        RuntimeError("section specified is not label mapping section.\n");
     }
 
     // get it from the correct section
@@ -368,7 +368,7 @@ const std::map<typename BinaryReader<ElemType>::LabelIdType, typename BinaryRead
 template<class ElemType>
 void BinaryReader<ElemType>::SetLabelMapping(const std::wstring& /*sectionName*/, const std::map<typename BinaryReader<ElemType>::LabelIdType, typename BinaryReader<ElemType>::LabelType>& /*labelMapping*/)
 {
-    throw runtime_error("Binary reader does not support setting the mapping table.\n");
+    RuntimeError("Binary reader does not support setting the mapping table.\n");
 }
 
 // GetData - Gets metadata from the specified section (into CPU memory) 
@@ -385,13 +385,13 @@ bool BinaryReader<ElemType>::GetData(const std::wstring& sectionName, size_t num
     auto iter = m_sections.find(sectionName);
     if (iter == m_sections.end())
     {
-        throw runtime_error("GetData: requested section name not found\n");
+        RuntimeError("GetData: requested section name not found\n");
     }
     Section* section = iter->second;
     size_t sizeData = section->GetElementsPerRecord()*section->GetElementSize();
     if ((numRecords+recordStart)*section->GetElementsPerRecord() > section->GetElementCount())
     {
-        throw runtime_error("GetData: requested invalid record number\n");
+        RuntimeError("GetData: requested invalid record number\n");
     }
     sizeData *= numRecords;
     // of buffer isn't large enough, or they didn't pass one

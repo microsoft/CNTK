@@ -13,7 +13,7 @@
 #endif
 #include <stdexcept>
 #include "simple_checked_arrays.h"
-#include "basetypes.h"  // for FormatWin32Error
+#include "Basics.h" // for FormatWin32Error
 
 namespace msra { namespace numa {
 
@@ -48,7 +48,7 @@ template <typename FUNCTION> void parallel_for_on_each_numa_node (bool multistep
     // now run on many threads, hoping to hit all NUMA nodes, until we are done
     hardcoded_array<LONG/*unsigned int*/,256> nextstepcounters;    // next block to run for a NUMA node
     if (nodes > nextstepcounters.size())
-        throw std::logic_error ("parallel_for_on_each_numa_node: nextstepcounters buffer too small, need to increase hard-coded size");
+        LogicError("parallel_for_on_each_numa_node: nextstepcounters buffer too small, need to increase hard-coded size");
     for (size_t k = 0; k < nodes; k++) nextstepcounters[k] = 0;
     overridenode();
     //unsigned int totalloops = 0;    // for debugging only, can be removed later
@@ -69,7 +69,7 @@ template <typename FUNCTION> void parallel_for_on_each_numa_node (bool multistep
             return; // done
         }
         // oops??
-        throw std::logic_error ("parallel_for_on_each_numa_node: no left-over block found--should not get here!!");
+        LogicError("parallel_for_on_each_numa_node: no left-over block found--should not get here!!");
     });
     //assert (totalloops == nodes * steps);
 }
@@ -100,7 +100,7 @@ static inline size_t getcurrentnode()
     UCHAR n;
     if (!GetNumaProcessorNode ((UCHAR) i, &n)) return 0;
     if (n == 0xff)
-        throw std::logic_error ("GetNumaProcessorNode() failed to determine NUMA node for GetCurrentProcessorNumber()??");
+        LogicError("GetNumaProcessorNode() failed to determine NUMA node for GetCurrentProcessorNumber()??");
     return n;
 }
 
@@ -135,7 +135,7 @@ static inline void * malloc (size_t n, size_t align)
     if (p == NULL)
         fprintf (stderr, "numa::malloc: failed allocating %d bytes with alignment %d\n", n, align);
     if (((size_t) p) % align != 0)
-        throw std::logic_error ("VirtualAllocExNuma() returned an address that does not match the alignment requirement");
+        LogicError("VirtualAllocExNuma() returned an address that does not match the alignment requirement");
     return p;
 }
 
@@ -144,7 +144,7 @@ static inline void free (void * p)
 {
     assert (p != NULL);
     if (!VirtualFree (p, 0, MEM_RELEASE))
-        throw std::logic_error ("VirtualFreeEx failure");
+        LogicError("VirtualFreeEx failure");
 }
 
 // dump memory allocation

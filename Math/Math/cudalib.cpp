@@ -5,6 +5,7 @@
 
 #define _CRT_SECURE_NO_WARNINGS 1    // so we can use getenv()...
 
+#include "Basics.h"
 #include <cuda_runtime_api.h>           // for CUDA API
 #include <cuda.h>                       // for device API
 #include "cudalib.h"
@@ -32,7 +33,7 @@ static void operator|| (cudaError_t rc, const char * msg)
     {
         char buf[1000];
         sprintf(buf, "%s: %s (cuda error %d)", msg, cudaGetErrorString (rc), rc);
-        throw std::runtime_error (buf);
+        RuntimeError(buf);
     }
 }
 

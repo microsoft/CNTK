@@ -429,7 +429,7 @@ void LibSVMBinaryReader<ElemType>::SetLabelMapping(const std::wstring& /*section
 {
     if (m_cachingReader)
     {
-        throw runtime_error("Cannot set mapping table when the caching reader is being used");
+        RuntimeError("Cannot set mapping table when the caching reader is being used");
     }
     m_mapIdToLabel = labelMapping;
     m_mapLabelToId.clear();
@@ -487,7 +487,7 @@ void LibSVM_BinaryInput<ElemType>::Init(wstring fileName, size_t dim)
     {
         char message[256];
         sprintf_s(message, "Unable to Open/Create file %ls, error %x", fileName.c_str(), GetLastError());
-        throw runtime_error(message);
+        RuntimeError(message);
     }
 
     m_filemap = CreateFileMapping(m_hndl, NULL, PAGE_READONLY, 0, 0, NULL);
@@ -718,7 +718,7 @@ bool LibSVMBinaryReader<ElemType>::GetData(const std::wstring& sectionName, size
     {
         return m_cachingReader->GetData(sectionName, numRecords, data, dataBufferSize, recordStart);
     }
-    throw runtime_error("GetData not supported in LibSVMBinaryReader");
+    RuntimeError("GetData not supported in LibSVMBinaryReader");
 }
 // instantiate all the combinations we expect to be used
 template class LibSVMBinaryReader<double>; 

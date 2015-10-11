@@ -25,7 +25,7 @@ template<> std::string GetEvalName(double) {std::string name = "GetEvalD"; retur
 template<class ElemType>
 void Eval<ElemType>::Init(const std::string& /*config*/)
 {
-    throw std::logic_error("Init shouldn't be called, use constructor");
+    LogicError("Init shouldn't be called, use constructor");
     // not implemented, calls the underlying class instead
 }
 

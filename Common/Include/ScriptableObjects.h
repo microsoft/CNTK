@@ -14,15 +14,15 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
     using namespace Microsoft::MSR::CNTK;   // for stuff from Basics.h
 
     // -----------------------------------------------------------------------
-    // ScriptingError -- base class for any errors thrown by scripting
+    // ScriptingException -- base class for any errors thrown by scripting
     // It's a runtime_error with an additional virtual function PrintError().
     // -----------------------------------------------------------------------
 
-    class ScriptingError : public runtime_error
+    class ScriptingException : public runtime_error
     {
     public:
         template<typename M>
-        ScriptingError(const M & msg) : runtime_error(msg) { }
+        ScriptingException(const M & msg) : runtime_error(msg) { }
         virtual void PrintError() const = 0;
     };
 

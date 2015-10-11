@@ -275,7 +275,7 @@ namespace msra { namespace basetypes {
         {
     #ifdef _WIN32
             if (!QueryPerformanceFrequency (&freq)) // count ticks per second
-                throw std::runtime_error ("auto_timer: QueryPerformanceFrequency failure");
+                RuntimeError("auto_timer: QueryPerformanceFrequency failure");
             QueryPerformanceCounter (&start);
     #endif
     #ifdef __unix__
@@ -581,7 +581,7 @@ struct utf8 : std::string { utf8 (const std::wstring & p)    // utf-16 to -8
     std::fill (buf.begin (), buf.end (), 0);
     int rc = WideCharToMultiByte (CP_UTF8, 0, p.c_str(), (int) len,
                                   &buf[0], (int) buf.size(), NULL, NULL);
-    if (rc == 0) throw std::runtime_error ("WideCharToMultiByte");
+    if (rc == 0) RuntimeError("WideCharToMultiByte");
     (*(std::string*)this) = &buf[0];
 }};
 struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
@@ -593,7 +593,7 @@ struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
     std::fill (buf.begin (), buf.end (), (wchar_t) 0);
     int rc = MultiByteToWideChar (CP_UTF8, 0, p.c_str(), (int) len,
                                   &buf[0], (int) buf.size());
-    if (rc == 0) throw std::runtime_error ("MultiByteToWideChar");
+    if (rc == 0) RuntimeError("MultiByteToWideChar");
     ASSERT (rc < buf.size ());
     (*(std::wstring*)this) = &buf[0];
 }};
@@ -681,7 +681,7 @@ static inline double todouble (const char * s)
     char * ep;          // will be set to point to first character that failed parsing
     double value = strtod (s, &ep);
     if (*s == 0 || *ep != 0)
-        throw std::runtime_error ("todouble: invalid input string");
+        RuntimeError("todouble: invalid input string");
     return value;
 }
 
@@ -697,7 +697,7 @@ static inline double todouble (const std::string & s)
 #if _MSC_VER > 1400 // VS 2010+
     size_t * idx = 0;
     value = std::stod (s, idx);
-    if (idx) throw std::runtime_error ("todouble: invalid input string");
+    if (idx) RuntimeError("todouble: invalid input string");
 #else
     char *ep = 0;   // will be updated by strtod to point to first character that failed parsing
     value = strtod (s.c_str(), &ep);
@@ -705,7 +705,7 @@ static inline double todouble (const std::string & s)
     // strtod documentation says ep points to first unconverted character OR 
     // return value will be +/- HUGE_VAL for overflow/underflow
     if (ep != s.c_str() + s.length() || value == HUGE_VAL || value == -HUGE_VAL)
-        throw std::runtime_error ("todouble: invalid input string");
+        RuntimeError("todouble: invalid input string");
 #endif
     
     return value;
@@ -715,7 +715,7 @@ static inline double todouble (const std::wstring & s)
 {
     wchar_t * endptr;
     double value = wcstod (s.c_str(), &endptr);
-    if (*endptr) throw std::runtime_error ("todouble: invalid input string");
+    if (*endptr) RuntimeError("todouble: invalid input string");
     return value;
 }
 
@@ -766,7 +766,7 @@ class auto_file_ptr
     void close()  throw() { if (f) try { if (f != stdin && f != stdout && f != stderr) ::fclose (f); } catch (...) { } f = NULL; }
 #pragma warning(push)
 #pragma warning(disable : 4996)
-    void openfailed (const std::string & path) { throw std::runtime_error ("auto_file_ptr: error opening file '" + path + "': " + strerror (errno)); }
+    void openfailed (const std::string & path) { RuntimeError("auto_file_ptr: error opening file '" + path + "': " + strerror (errno)); }
 #pragma warning(pop)
 protected:
     friend int fclose (auto_file_ptr&); // explicit close (note: may fail)
@@ -849,7 +849,7 @@ public:
     operator bool() const { return ch != EOF; } // true if still a line to read
     std::string getline()                       // get and consume the next line
     {
-        if (ch == EOF) throw std::logic_error ("textreader: attempted to read beyond EOF");
+        if (ch == EOF) LogicError("textreader: attempted to read beyond EOF");
         assert (buf.empty());
         // get all line's characters --we recognize UNIX (LF), DOS (CRLF), and Mac (CR) convention
         while (ch != EOF && ch != '\n' && ch != '\r') buf.push_back (getch());
