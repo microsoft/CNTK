@@ -498,7 +498,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int startEpoch = DetermineStartEpoch(makeMode);
         if (startEpoch == m_maxEpochs)
         {
-            fprintf(stderr, "Final model exists. No further training is necessary.\n");
+            fprintf(stderr, "No further training is necessary.\n");
             return;
         }
 
@@ -548,7 +548,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int startEpoch = DetermineStartEpoch(makeMode);
         if (startEpoch == m_maxEpochs)
         {
-            fprintf(stderr, "Final model exists. No further training is necessary.\n");
+            fprintf(stderr, "No further training is necessary.\n");
             return;
         }
 
@@ -623,7 +623,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int startEpoch = DetermineStartEpoch(makeMode);
         if (startEpoch == m_maxEpochs)
         {
-            fprintf(stderr, "Final model exists. No further training is necessary.\n");
+            fprintf(stderr, "No further training is necessary.\n");
             return;
         }
 
@@ -2485,7 +2485,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (msra::files::fuptodate(curEpochFile, prevEpochFile, false))
             {
-                firstEpoch = size_t(e) + 1;
+                firstEpoch = e + 1;
                 break;
             }
             else
@@ -2493,6 +2493,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 curEpochFile = prevEpochFile;
             }
         }
+        if (firstEpoch == m_maxEpochs)
+            fprintf(stderr, "Final model exists: %ls\n", GetModelNameForEpoch(firstEpoch - 1).c_str());
 
         return firstEpoch;
     }

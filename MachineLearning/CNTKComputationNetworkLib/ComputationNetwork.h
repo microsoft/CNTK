@@ -788,8 +788,23 @@ public:
         // process nodes in pre-determined order
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
+            auto node = *nodeIter;
 #ifdef DISPLAY_DEBUG
-            fprintf(stderr, "Compute Gradient For Node: %ls(%ls) Against Children\n", (*nodeIter)->OperationName().c_str(), (*nodeIter)->NodeName().c_str());
+            fprintf(stderr, "Compute Gradient For Node: %ls(%ls) Against Children\n", node->OperationName().c_str(), node->NodeName().c_str());
+#endif
+#ifdef _DEBUG   // TODO: this belongs into ComputeGradientForChildren(). Move it there after memshare merge and unification to one function. Or fix the bug that this masks straight -out.
+            // many gradients are reduction operations
+            // They touch both in-flowing gradients and function values, so we must set both to 0.
+            // BUGBUG: This masks an error that nodes should do that by themselves. E.g. TimesNode does, but MinusNode (in case of 1-column bias) does not.
+            if (node->m_needsGradient)
+            {
+                node->MaskMissingValuesColumnsToZero();
+                node->MaskMissingGradientColumnsToZero();
+                for (auto & child : node->GetChildren())
+                {
+                    child->MaskMissingValuesColumnsToZero();
+                }
+            }
 #endif
             // --- first, perform recurrent loops if this node participates in one
 
@@ -806,10 +821,10 @@ public:
                     {
                         for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                         {
-                            (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
+                            node->VerifyNumParallelSequences(GetNumParallelSequences());
                             if (IsNodeReqMultiSeqHandling(*nodeIter))
-                                (*nodeIter)->MaskMissingGradientColumnsToZero(t.t());   // TODO: should accept a FrameRange as well
-                            (*nodeIter)->ComputeGradientForChildren(t.t());             // TODO: should accept a FrameRange as well
+                                node->MaskMissingGradientColumnsToZero(t.t());   // TODO: should accept a FrameRange as well
+                            node->ComputeGradientForChildren(t.t());             // TODO: should accept a FrameRange as well
                         }
                     }
 #else
@@ -820,10 +835,10 @@ public:
                         {
                             for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                             {
-                                (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
-                                if (IsNodeReqMultiSeqHandling(*nodeIter))
-                                    (*nodeIter)->MaskMissingGradientColumnsToZero(t);
-                                (*nodeIter)->ComputeGradientForChildren(t);
+                                node->VerifyNumParallelSequences(GetNumParallelSequences());
+                                if (IsNodeReqMultiSeqHandlingnode)
+                                    node->MaskMissingGradientColumnsToZero(t);
+                                node->ComputeGradientForChildren(t);
                             }
                         }
                     }
@@ -833,10 +848,10 @@ public:
                         {
                             for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                             {
-                                (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
-                                if (IsNodeReqMultiSeqHandling(*nodeIter))
-                                    (*nodeIter)->MaskMissingGradientColumnsToZero(t);
-                                (*nodeIter)->ComputeGradientForChildren(t);
+                                node->VerifyNumParallelSequences(GetNumParallelSequences());
+                                if (IsNodeReqMultiSeqHandlingnode)
+                                    node->MaskMissingGradientColumnsToZero(t);
+                                node->ComputeGradientForChildren(t);
                             }
                         }
                     }
@@ -851,11 +866,11 @@ public:
             if (IsNodeReqMultiSeqHandling(*nodeIter))
             {
                 // batch is done only for feed-forward nodes
-                if ((*nodeIter)->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
+                if (node->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
                     LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
-                (*nodeIter)->MaskMissingGradientColumnsToZero();
+                node->MaskMissingGradientColumnsToZero();
             }
-            (*nodeIter)->ComputeGradientForChildren();
+            node->ComputeGradientForChildren();
         }
 
         //since we now allow sharing of the matrix for function value and gradient value. the function values are now destroyed

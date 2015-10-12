@@ -334,6 +334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, " -> [%lu, %s%lu]", node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
                 node->m_visited = true;
                 // also take the opportunity to propagate m_needsGradient
+                auto needsGradient = node->m_needsGradient;
                 for (auto & child : children)       // TODO: do we need a check that this is stable if isFinalValidationPass?
                     node->m_needsGradient |= child->m_needsGradient;
                 // check state --node will be valid if all nodes have been visited and node has not been updated
@@ -345,6 +346,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     newChildDims.push_back(child->GetDims());
                 unchanged &= (childDims == newChildDims);
                 unchanged &= (imageLayouts == node->GetImageLayouts());
+                unchanged &= (needsGradient == node->m_needsGradient);
                 if (isFinalValidationPass && !unchanged)
                     LogicError("ValidateSubNetwork: %ls %ls operation changed during final validation.", node->NodeName().c_str(), node->OperationName().c_str());
                 if (isFinalValidationPass && !allChildrenVisited)
