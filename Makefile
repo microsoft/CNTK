@@ -77,7 +77,12 @@ ifdef CUDA_PATH
   ifndef GDK_PATH
     $(info defaulting GDK_PATH to /usr)
     GDK_PATH=/usr
-endif
+  endif
+
+  ifndef CUB_PATH
+    $(info defaulting CUB_PATH to /usr/local/cub-1.4.1)
+    CUB_PATH=/usr/local/cub-1.4.1
+  endif
 
   DEVICE = gpu
 
@@ -85,6 +90,7 @@ endif
 
   # This is a suggested/default location for NVML
   INCLUDEPATH+=$(GDK_PATH)/include/nvidia/gdk
+  INCLUDEPATH+=$(CUB_PATH)
   NVMLPATH=$(GDK_PATH)/src/gdk/nvml/lib
 
 # Set up CUDA includes and libraries
