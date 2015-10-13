@@ -240,6 +240,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType> a;
         return a;
     }
+    template<class ElemType>
+    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::DiagonalToDense() const
+    {
+        GPUMatrix<ElemType> a;
+        return a;
+    }
 
     template<class ElemType> ElemType GPUSparseMatrix<ElemType>::SumOfAbsElements() const
     {
