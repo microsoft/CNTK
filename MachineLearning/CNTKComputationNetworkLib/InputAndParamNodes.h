@@ -47,9 +47,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_parameterUpdateRequired = true;
             m_outputImageLayout = ImageLayout(1, rows, 1);
+            CreateMatrixIfNull(m_functionValues);
             Resize(rows, cols);
             FunctionValues().SetValue(0);
-            CreateMatrixIfNull(m_functionValues);
         }
 
         virtual void SaveToFile(File& fstream) const override
