@@ -123,6 +123,7 @@
     <ClInclude Include="..\..\Common\Include\basetypes.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
+    <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="ColumnQuantizer.h" />
     <ClInclude Include="CommonMatrix.h" />
     <ClInclude Include="cudabasetypes.h" />
@@ -158,6 +159,9 @@
     <ClCompile Include="cudalib.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\DebugUtil.cpp">
+      <PrecompiledHeader></PrecompiledHeader>
     </ClCompile>
     <CudaCompile Include="MatrixQuantizerGPU.cu">
       <FileType>CppCode</FileType>

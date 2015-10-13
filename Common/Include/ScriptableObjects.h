@@ -14,15 +14,15 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
     using namespace Microsoft::MSR::CNTK;   // for stuff from Basics.h
 
     // -----------------------------------------------------------------------
-    // ScriptingError -- base class for any errors thrown by scripting
+    // ScriptingException -- base class for any errors thrown by scripting
     // It's a runtime_error with an additional virtual function PrintError().
     // -----------------------------------------------------------------------
 
-    class ScriptingError : public runtime_error
+    class ScriptingException : public runtime_error
     {
     public:
         template<typename M>
-        ScriptingError(const M & msg) : runtime_error(msg) { }
+        ScriptingException(const M & msg) : runtime_error(msg) { }
         virtual void PrintError() const = 0;
     };
 
@@ -216,22 +216,27 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         }
         // TODO: somehow the constructor overload from Thunk function fails to compile, so for now use MakeThunk instead
 
+#pragma push_macro("noexcept")  // VS 2013 does not accept 'noexcept'
+#ifdef _MSC_VER
+#define noexcept throw()
+#endif
         ConfigValuePtr(const ConfigValuePtr & other) { *this = other; }
-        ConfigValuePtr(ConfigValuePtr && other) { *this = move(other); }
+        ConfigValuePtr(ConfigValuePtr && other) noexcept { *this = move(other); }
         void operator=(const ConfigValuePtr & other)
         {
             if (other.GetThunk())       // unresolved ConfigValuePtrs are not copyable, only movable
-                Microsoft::MSR::CNTK::LogicError("ConfigValuePtr::operator=() on unresolved object; ConfigValuePtr is not assignable until resolved");
+                Microsoft::MSR::CNTK::LogicError("ConfigValuePtr::operator=() on unresolved object '%ls'; ConfigValuePtr is not assignable until resolved", expressionName.empty() ? L"(unassigned)" : expressionName.c_str());
             (shared_ptr<Object>&)*this = other;
             failfn = other.failfn;
             expressionName = other.expressionName;
         }
-        void operator=(ConfigValuePtr && other)
+        void operator=(ConfigValuePtr && other) noexcept
         {
             failfn = move(other.failfn);
             expressionName = move(other.expressionName);
             (shared_ptr<Object>&)*this = move(other);
         }
+#pragma pop_macro("noexcept")
         void Fail(const wstring & msg) const { failfn(msg); }
         const function<void(const wstring &)> & GetFailFn() const { return failfn; }    // if you need to pass on the fail function
 
@@ -242,7 +247,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         // access as a (const & to) value  --use this for primitive types (also works to get a const wstring & from a String)
         template<typename T> operator T() const { return AsRef<T>(); }
         // Linux gcc barfs on this ^^ for 'us = (double)((wstring)arg).size();' due to some ambiguity error (while it works fine with Visual Studio).
-        // If you encounter this, instead say 'us = (double)((wstring&)arg).size();' with a &
+        // If you encounter this, instead say 'us = (double)((const wstring&)arg).size();' with a &. Don't forget the const (I have seen broken typecasts without).
         operator double() const { return AsRef<Double>(); }
         operator float() const { return (float) AsRef<Double>(); }
         operator bool() const { return AsRef<Bool>(); }

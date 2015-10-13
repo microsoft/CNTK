@@ -168,6 +168,7 @@
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
+    <ClInclude Include="..\..\Common\Include\DebugUtil.h" />
     <ClInclude Include="..\..\Common\Include\hostname.h" />
     <ClInclude Include="..\..\Common\Include\minibatchsourcehelpers.h" />
     <ClInclude Include="..\..\Common\Include\Platform.h" />
@@ -222,6 +223,9 @@
     </ClCompile>
     <ClCompile Include="..\..\Common\fileutil.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\Common\DebugUtil.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
     <ClCompile Include="CNTK.cpp" />

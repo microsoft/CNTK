@@ -7,8 +7,10 @@
 #ifndef _BASICS_H_
 #define _BASICS_H_
 
-#include "basetypes.h"  // TODO: gradually move over here all that's needed of basetypes.h, then remove basetypes.h.
 #include "Platform.h"
+#include "DebugUtil.h"
+#include <string>
+#include <vector>
 
 #define TWO_PI 6.283185307f // TODO: find the official standards-confirming definition of this and use it instead
 
@@ -16,15 +18,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     using namespace std;
 
-    // string comparison class, so we do case insensitive compares
-    struct nocase_compare
+    template<class E>
+    __declspec_noreturn static inline void ThrowFormatted()
     {
-        // std::string version of 'less' function
-        // return false for equivalent, true for different
-        bool operator()(const std::string& left, const std::string& right) { return _stricmp(left.c_str(), right.c_str()) < 0; }
-        // std::wstring version of 'less' function, used in non-config classes
-        bool operator()(const std::wstring& left, const std::wstring& right) { return _wcsicmp(left.c_str(), right.c_str()) < 0; }
-    };
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        throw E();
+    }
+
+    template<class E>
+    __declspec_noreturn static inline void ThrowFormatted(const string & message)
+    {
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        throw E(message);
+    }
 
     // ThrowFormatted() - template function to throw a std::exception with a formatted error string
 #pragma warning(push)
@@ -34,15 +40,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         va_list args;
         char buffer[1024];
+
         va_start(args, format);
         vsprintf(buffer, format, args);
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
         throw E(buffer);
     };
 #pragma warning(pop)
-
-    // if it receives a lonely std::string then throw that directly
-    template<class E>
-    __declspec_noreturn static inline void ThrowFormatted(const string & message) { throw E(message); }
 
     // RuntimeError - throw a std::runtime_error with a formatted error string
     template<class... _Types>
@@ -51,6 +55,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     __declspec_noreturn static inline void LogicError(_Types&&... _Args) { ThrowFormatted<std::logic_error>(forward<_Types>(_Args)...); }
     template<class... _Types>
     __declspec_noreturn static inline void InvalidArgument(_Types&&... _Args) { ThrowFormatted<std::invalid_argument>(forward<_Types>(_Args)...); }
+    template<class... _Types>
+    __declspec_noreturn static inline void BadExceptionError(_Types&&... _Args) 
+    {
+#ifdef _WIN32
+        ThrowFormatted<std::bad_exception>(forward<_Types>(_Args)...);   
+#else
+        ThrowFormatted<std::bad_exception>();
+#endif
+    }
 
     // Warning - warn with a formatted error string
 #pragma warning(push)
@@ -59,11 +72,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         va_list args;
         char buffer[1024];
+
         va_start(args, format);
         vsprintf(buffer, format, args);
     };
 #pragma warning(pop)
     static inline void Warning(const string & message) { Warning("%s", message.c_str()); }
+}}}
+
+using Microsoft::MSR::CNTK::RuntimeError;
+using Microsoft::MSR::CNTK::LogicError;
+using Microsoft::MSR::CNTK::InvalidArgument;
+using Microsoft::MSR::CNTK::BadExceptionError;
+
+#include "basetypes.h"  // TODO: gradually move over here all that's needed of basetypes.h, then remove basetypes.h.
+
+namespace Microsoft { namespace MSR { namespace CNTK {
+
+    // string comparison class, so we do case insensitive compares
+    struct nocase_compare
+    {
+        // std::string version of 'less' function
+        // return false for equivalent, true for different
+        bool operator()(const string& left, const string& right) { return _stricmp(left.c_str(), right.c_str()) < 0; }
+        // std::wstring version of 'less' function, used in non-config classes
+        bool operator()(const wstring& left, const wstring& right) { return _wcsicmp(left.c_str(), right.c_str()) < 0; }
+    };
 
     // ----------------------------------------------------------------------------
     // random collection of stuff we needed at some place

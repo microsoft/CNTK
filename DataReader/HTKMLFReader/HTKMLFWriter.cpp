@@ -10,7 +10,7 @@
 #ifdef _WIN32
 #include <objbase.h>
 #endif
-#include "basetypes.h"
+#include "Basics.h"
 
 #include "htkfeatio.h"                  // for reading HTK features
 #include "ssematrix.h"
@@ -70,7 +70,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                throw std::runtime_error ("HTKMLFWriter::Init: output type for writer output expected to be Real");
+                RuntimeError("HTKMLFWriter::Init: output type for writer output expected to be Real");
             }
         }
 
@@ -93,7 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 numFiles=n;
             else
                 if (n!=numFiles)
-                    throw std::runtime_error (msra::strfun::strprintf ("HTKMLFWriter:Init: number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
+                    RuntimeError(msra::strfun::strprintf ("HTKMLFWriter:Init: number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
 
             outputFiles.push_back(filelist);
         }

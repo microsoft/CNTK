@@ -228,7 +228,7 @@ public:
             return inputs;
         }
         if (nodeParamStart + nodeParamCount > parameter.size())
-            throw logic_error("EvaluateParmeters: nodeParamters specified that do not exist");
+            LogicError("EvaluateParmeters: nodeParamters specified that do not exist");
         size_t numChildren = nodeParamCount;
         for (size_t i=0; i < numChildren;++i)
         {

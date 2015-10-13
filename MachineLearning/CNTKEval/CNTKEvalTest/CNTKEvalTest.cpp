@@ -91,11 +91,12 @@ int wmain(int argc, wchar_t* argv[])
         else if (type == "double")
             DoCommand<double>(config);
         else
-            throw runtime_error("invalid precision specified: " + type);
+            RuntimeError("invalid precision specified: " + type);
     }
     catch(std::exception &err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s", err.what());
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
 #ifdef _DEBUG
         DebugBreak();
 #endif
@@ -104,6 +105,7 @@ int wmain(int argc, wchar_t* argv[])
     catch(...)
     {
         fprintf(stderr, "Unknown ERROR occurred");
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
 #ifdef _DEBUG
         DebugBreak();
 #endif

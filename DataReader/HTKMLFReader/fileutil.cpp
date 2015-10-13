@@ -14,7 +14,7 @@
 #define _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES 1
 #endif
 
-#include "basetypes.h"
+#include "Basics.h"
 #include "fileutil.h"
 #include <stdio.h>
 #include <string.h>
@@ -1658,7 +1658,7 @@ static BOOL ExpandWildcards (wstring path, vector<wstring> & paths)
         return FALSE;                   // another error
     }
     size_t pos = path.find_last_of (L"\\");
-    if (pos == wstring::npos) throw std::logic_error ("unexpected missing \\ in path");
+    if (pos == wstring::npos) LogicError("unexpected missing \\ in path");
     wstring parent = path.substr (0, pos);
     do
     {

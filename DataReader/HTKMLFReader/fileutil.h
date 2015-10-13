@@ -12,7 +12,7 @@
 
 #include "Platform.h"
 #ifdef _WIN32
-#include "basetypes.h"
+#include "Basics.h"
 #endif
 #include <stdio.h>
 #ifdef __WINDOWS__
@@ -471,9 +471,9 @@ void fgetText(FILE * f, T& v)
 {
     int rc = ftrygetText(f, v);
     if (rc == 0)
-        throw std::runtime_error("error reading value from file (invalid format)");
+        RuntimeError("error reading value from file (invalid format)");
     else if (rc == EOF)
-        throw std::runtime_error(std::string("error reading from file: ") + strerror(errno));
+        RuntimeError(std::string("error reading from file: ") + strerror(errno));
     assert(rc == 1);
 }
 
@@ -504,9 +504,9 @@ void fputText(FILE * f, T v)
     const wchar_t* formatString = GetFormatString(v);
     int rc = fwprintf(f, formatString, v);
     if (rc == 0)
-        throw std::runtime_error("error writing value to file, no values written");
+        RuntimeError("error writing value to file, no values written");
     else if (rc < 0)
-        throw std::runtime_error(std::string("error writing to file: ") + strerror(errno));
+        RuntimeError(std::string("error writing to file: ") + strerror(errno));
 }
 
 // ----------------------------------------------------------------------------

@@ -9,6 +9,7 @@
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
+#include "DebugUtil.h"
 #include "BestGpu.h"    // for CPUONLY macro
 #include <string>
 #include <vector>
@@ -105,7 +106,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& operator=(GPUMatrix<ElemType>&& moveFrom);  //move assignment operator, shallow copy
         ~GPUMatrix(void);       
 
-        static int GetBestGPUDeviceId();  
+        static DEVICEID_TYPE GetBestGPUDeviceId();  
         int GetComputeDeviceId() const;
         DEVICEID_TYPE PrepareDevice(DEVICEID_TYPE deviceId = -1) const;
 
@@ -122,6 +123,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>& AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
         GPUMatrix<ElemType>& SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
+        GPUMatrix<ElemType> Diagonal() const;
+
         size_t BufferSize() const {return m_numRows*m_numCols*sizeof(ElemType);}
         ElemType* BufferPointer() const {return m_pArray;}
 
@@ -132,8 +135,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, bool growOnly = true);  //by default we only reallocate if need to grow
 
-        ElemType& operator() (const size_t /*row*/, const size_t /*col*/) { throw std::logic_error("GPUMatrix doesn't support this"); }
-        const ElemType& operator() (const size_t /*row*/, const size_t /*col*/) const { throw std::logic_error("GPUMatrix doesn't support this"); }
+        ElemType& operator() (const size_t /*row*/, const size_t /*col*/) { LogicError("GPUMatrix doesn't support this"); }
+        const ElemType& operator() (const size_t /*row*/, const size_t /*col*/) const { LogicError("GPUMatrix doesn't support this"); }
         ElemType Get00Element() const;
 
         void SetValue(const ElemType v);
@@ -144,7 +147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);        
 
         void SetDiagonalValue(const ElemType v);
-        void SetDiagonalValue(GPUMatrix<ElemType>& vector);
+        void SetDiagonalValue(const GPUMatrix<ElemType>& vector);
         void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED);
         void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED);
         void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed=USE_TIME_BASED_SEED); 
@@ -408,7 +411,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t elsize;
             stream>>elsize;
             if (sizeof(ElemType)!=elsize)
-                throw std::logic_error("Template argument size doesn't match those in file");
+                LogicError("Template argument size doesn't match those in file");
             std::wstring matrixName;
             size_t numRows, numCols;
             int format;

@@ -697,13 +697,13 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         int j = 0;
 
         if (mLastPosInSentence != 0)
-            throw std::runtime_error("LUSequenceReader : only support begining sentence at zero");
+            RuntimeError("LUSequenceReader : only support begining sentence at zero");
         if (mSentenceBeginAt.size() != mToProcess.size())
-            throw std::runtime_error("LUSequenceReader : need to preallocate mSentenceBegin");
+            RuntimeError("LUSequenceReader : need to preallocate mSentenceBegin");
         if (mSentenceEndAt.size() != mToProcess.size())
-            throw std::runtime_error("LUSequenceReader : need to preallocate mSentenceEnd");
+            RuntimeError("LUSequenceReader : need to preallocate mSentenceEnd");
         if (mMaxSentenceLength > m_mbSize)
-            throw std::runtime_error("LUSequenceReader : minibatch size needs to be large enough to accomodate the longest sentence");
+            RuntimeError("LUSequenceReader : minibatch size needs to be large enough to accomodate the longest sentence");
 
         /// reset sentence-end index to ((int) MinibatchPackingFlags::NoInput), which is negative
         mSentenceEndAt.assign(mSentenceEndAt.size(), ((int) MinibatchPackingFlags::NoInput));

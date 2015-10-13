@@ -617,8 +617,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("PerDimMeanVarNormalizationNode: Mean and InvStdDev should be a colum  vector.");
             }
 
-            Inputs(1)->NeedGradient() = false;
-            Inputs(2)->NeedGradient() = false;  //prevent learning
+            // TODO: Is this correct? Why not just skip propagating a gradient into these? We should not poke around in our children.
+            Inputs(1)->SetParameterUpdateRequired(false);
+            Inputs(2)->SetParameterUpdateRequired(false);  //prevent learning
             Resize(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
@@ -746,9 +747,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            Inputs(1)->NeedGradient() = false;
             //prevent learning
-            Inputs(2)->NeedGradient() = false;
+            // TODO: Is this correct? Why not just skip propagating a gradient into these?
+            Inputs(1)->SetParameterUpdateRequired(false);
+            Inputs(2)->SetParameterUpdateRequired(false);
 
             Resize(Inputs(0));
             InferMBLayoutFromInputsForStandardCase();

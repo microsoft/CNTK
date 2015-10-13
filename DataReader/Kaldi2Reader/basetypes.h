@@ -1081,8 +1081,8 @@ static inline void RuntimeError(const char * format, ...)
     va_list args;
     char buffer[1024];
 
-    va_start (args, format);
-    vsprintf (buffer, format, args);
+    va_start(args, format);
+    vsprintf(buffer, format, args);
     throw std::runtime_error(buffer);
 };
 

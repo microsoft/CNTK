@@ -120,7 +120,7 @@ void SparsePCReader<ElemType>::Init(const ConfigParameters& readerConfig)
     {
         char message[256];
         sprintf_s(message, "Unable to Open/Create file %ls, error %x", m_file.c_str(), GetLastError());
-        throw runtime_error(message);
+        RuntimeError(message);
     }
 
     GetFileSizeEx(m_hndl, (PLARGE_INTEGER)&m_filePositionMax);
@@ -236,7 +236,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
 
         if (verifCode != VERIFICATION_CODE)
         {
-            throw runtime_error("Verification code did not match - error in reading data");
+            RuntimeError("Verification code did not match - error in reading data");
             return false;
         }
 

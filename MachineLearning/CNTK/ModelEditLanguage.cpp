@@ -448,7 +448,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             {
                 case melPropComputeGradient:
                 {
-                    node->NeedGradient() = params[2];
+                    node->SetParameterUpdateRequired(params[2]);
                     break;
                 }
                 case melPropFeature:

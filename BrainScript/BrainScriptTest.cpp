@@ -208,7 +208,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                     break;
             }
         }
-        catch (const ConfigError & err)
+        catch (const ConfigException & err)
         {
             err.PrintError();
         }

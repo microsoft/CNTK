@@ -197,7 +197,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         SetActualMiniBatchSizeFromFeatures();   // TODO: this should go
 
         if (requireValidation)
+        {
+            // validation needs some layout to work with
+            m_pMBLayout->Init(1, 0, false);
             ValidateNetwork();
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -234,27 +238,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return pNode;
     }
 
-    void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode)
+    // sets m_parameterUpdateRequired in all LearnableParameters feeding into the passed rootNode
+    // Called from MEL  --TODO: correct?
+    void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr &rootNode)
     {
-        //find nodes from all available nodes
+        // find nodes from all available nodes
         if (rootNode == nullptr)
         {
             for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = nodeIter->second;
                 if (node->OperationName() == OperationNameOf(LearnableParameter))
-                    node->NeedGradient() = needGradient;
+                    node->SetParameterUpdateRequired(needGradient);
             }
         }
         else
         {
-            //for calculating a specific node
+            // for calculating a specific node
             std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = (*nodeIter);
                 if (node->OperationName() == OperationNameOf(LearnableParameter))
-                    node->NeedGradient() = needGradient;
+                    node->SetParameterUpdateRequired(needGradient);
             }
         }
     }
@@ -327,6 +333,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->Validate(isFinalValidationPass/*final*/);      // all nodes have been visited: do verification instead of just inference
                 fprintf(stderr, " -> [%lu, %s%lu]", node->GetNumRows(), node->HasMBLayout() ? "MBSize " : "", node->GetNumCols());
                 node->m_visited = true;
+                // also take the opportunity to propagate m_needsGradient
+                auto needsGradient = node->m_needsGradient;
+                for (auto & child : children)       // TODO: do we need a check that this is stable if isFinalValidationPass?
+                    node->m_needsGradient |= child->m_needsGradient;
                 // check state --node will be valid if all nodes have been visited and node has not been updated
                 bool unchanged = true;
                 unchanged &= (oldMBLayoutPtr == node->GetMBLayout());
@@ -336,6 +346,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     newChildDims.push_back(child->GetDims());
                 unchanged &= (childDims == newChildDims);
                 unchanged &= (imageLayouts == node->GetImageLayouts());
+                unchanged &= (needsGradient == node->m_needsGradient);
                 if (isFinalValidationPass && !unchanged)
                     LogicError("ValidateSubNetwork: %ls %ls operation changed during final validation.", node->NodeName().c_str(), node->OperationName().c_str());
                 if (isFinalValidationPass && !allChildrenVisited)
@@ -376,7 +387,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const auto & nodes = GetEvalOrder(rootNode, false);
 
         for (auto & node : nodes)
+        {
             node->m_visited = false;
+            node->m_needsGradient = node->IsParameterUpdateRequired();  // these get propagated upwards in the following
+        }
 
         // loop and validate until we are done
         // steps:
@@ -1000,8 +1014,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
-                if ((node->OperationName() == OperationNameOf(LearnableParameter) && node->NeedGradient()) ||
-                    (node->OperationName() == OperationNameOf(SparseLearnableParameter) && node->NeedGradient()))
+                if ((node->OperationName() == OperationNameOf(LearnableParameter) && node->IsParameterUpdateRequired()) ||
+                    (node->OperationName() == OperationNameOf(SparseLearnableParameter) && node->IsParameterUpdateRequired()))
                 {
                     learnableParameterNames.push_back(node->NodeName());
                 }

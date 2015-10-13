@@ -60,7 +60,7 @@ public:
     void fetch (elemtype * p, size_t nelem, bool synchronize) const
     {
         if (nelem != size())        // fetch() cannot resize the target; caller must do that
-            throw std::logic_error ("fetch: vector size mismatch");
+            LogicError("fetch: vector size mismatch");
         ondevice no (deviceid);     // switch to desired CUDA card
         if (nelem > 0)
             memcpy (p, this->get(), 0, nelem);

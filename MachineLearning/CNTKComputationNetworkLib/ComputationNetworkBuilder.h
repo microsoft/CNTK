@@ -119,6 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr Dropout(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr Reshape(const ComputationNodePtr a, const size_t num_rows, const ImageLayout & imageLayout, const std::wstring nodeName = L"");
         ComputationNodePtr RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName = L"");
+        ComputationNodePtr Diagonal(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, const std::wstring nodeName = L"");
         ComputationNodePtr FutureValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, const size_t col_size, const std::wstring nodeName = L"");
         ComputationNodePtr Parallel(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");

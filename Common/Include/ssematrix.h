@@ -67,7 +67,7 @@ protected:
         colstride = (n + 3) & ~3;               // pad to multiples of four floats (required SSE alignment)
         const size_t totalelem = colstride * m;
         if (totalelem + 3 > _countof (buffer))  // +3 for alignment, as buffer may live on the stack and would thus be unaligned
-            throw std::logic_error ("ssematrixbase from vector buffer: buffer too small");
+            LogicError("ssematrixbase from vector buffer: buffer too small");
         p = &buffer[0];
         // align to 4-float boundary (required for SSE)
         // x64 stack is aligned to 16 bytes, but x86 is not. Also, float[] would not be guaranteed.
@@ -82,11 +82,11 @@ protected:
         p = &buffer[0];
         size_t offelem = (((size_t)p) / sizeof (float)) % 4;
         if (offelem != 0)
-            throw std::logic_error ("ssematrixbase from vector buffer: must be SSE-aligned");
+            LogicError("ssematrixbase from vector buffer: must be SSE-aligned");
         colstride = (n + 3) & ~3;               // pad to multiples of four floats (required SSE alignment)
         const size_t totalelem = colstride * m;
         if (totalelem != buffer.size())
-            throw std::logic_error ("ssematrixbase from vector buffer: incorrect buffer size");
+            LogicError("ssematrixbase from vector buffer: incorrect buffer size");
         // align to 4-float boundary (required for SSE)
         // x64 stack is aligned to 16 bytes, but x86 is not. Also, float[] would not be guaranteed.
         numrows = n; numcols = m;
@@ -931,7 +931,7 @@ public:
         auto & us = *this;
         foreach_coord (ii, jj, us)
             if (us(ii,jj) != to(jj,ii))
-                throw std::logic_error ("parallel_transpose: post-condition check failed--you got it wrong, man!");
+                LogicError("parallel_transpose: post-condition check failed--you got it wrong, man!");
 #endif
     }
 #endif
@@ -1016,7 +1016,7 @@ public:
         for (size_t jj = 0; jj < j1; jj++)
             foreach_row (ii, us)
                 if (us(ii,jj) != to(jj,ii))
-                    throw std::logic_error ("transpose: post-condition check failed--you got it wrong, man!");
+                    LogicError("transpose: post-condition check failed--you got it wrong, man!");
 #endif
     }
 
@@ -1027,7 +1027,7 @@ public:
         assert (U.cols() == V.rows() && U.rows() == V.cols());
         foreach_coord (i, j, U)
             if (U(i,j) != V(j,i))
-                throw std::logic_error ("checktranspose: post-condition check failed--you got it wrong, man!");
+                LogicError("checktranspose: post-condition check failed--you got it wrong, man!");
     }
 #endif
 #else   // futile attempts to speed it up --the imul don't matter (is SSE so slow?)
@@ -1105,7 +1105,7 @@ public:
 #if 0   // double-check
         foreach_coord (ii, jj, us)
             if (us(ii,jj) != to(jj,ii))
-                throw std::logic_error ("transpose: post-condition check failed--you got it wrong, man!");
+                LogicError("transpose: post-condition check failed--you got it wrong, man!");
 #endif
     }
 #endif
@@ -1187,10 +1187,10 @@ public:
     {
         const auto & us = *this;
         if (us.cols() != other.cols() || us.rows() != other.rows())
-            throw std::logic_error ("checkequal: post-condition check failed (dim)--you got it wrong, man!");
+            LogicError("checkequal: post-condition check failed (dim)--you got it wrong, man!");
         foreach_coord (i, j, us)
             if (us(i,j) != other(i,j))
-                throw std::logic_error ("checkequal: post-condition check failed (values)--you got it wrong, man!");
+                LogicError("checkequal: post-condition check failed (values)--you got it wrong, man!");
     }
 
     void dump(char * name) const
@@ -1200,6 +1200,11 @@ public:
     }
 };
 
+// TODO: why does the VS compiler not accept 'noexcept' here? It definitely is a known keyword.
+#pragma push_macro("noexcept")
+#ifdef _MSC_VER
+#define noexcept throw()
+#endif
 
 // ===========================================================================
 // ssematrixfrombuffer -- an ssematrixbase allocated in a vector buffer
@@ -1245,7 +1250,7 @@ public:
     {
         assert (other.empty() || j0 + m <= other.cols());
         if (!other.empty() && j0 + m > other.cols())  // (runtime check to be sure--we use this all the time)
-            throw std::logic_error ("ssematrixstriperef: stripe outside original matrix' dimension");
+            LogicError("ssematrixstriperef: stripe outside original matrix' dimension");
         this->p = other.empty() ? NULL : &other(0,j0);
         this->numrows = other.rows();
         this->numcols = m;
@@ -1263,6 +1268,7 @@ public:
     ssematrixstriperef col (size_t j) { return ssematrixstriperef (*this, j, 1); }
     const ssematrixstriperef col (size_t j) const { return ssematrixstriperef (*const_cast<ssematrixstriperef*> (this), j, 1); }
 };
+#pragma pop_macro("noexcept")
 
 // ===========================================================================
 // ssematrix -- main matrix type with allocation
@@ -1271,12 +1277,7 @@ public:
 template<class ssematrixbase> class ssematrix : public ssematrixbase
 {
     // helpers for SSE-compatible memory allocation
-#ifdef _MSC_VER
-    static __declspec_noreturn void failed(size_t nbytes) { static/*not thread-safe--for diagnostics only*/ char buf[80] = { 0 }; sprintf_s(buf, "allocation of SSE vector failed (%d bytes)", nbytes); throw std::bad_exception(buf); }
-#endif
-#ifdef __unix__
-    static void failed (size_t nbytes) { static/*not thread-safe--for diagnostics only*/ char buf[80] = { 0 }; sprintf_s (buf, sizeof(buf), "allocation of SSE vector failed (%d bytes)", (int)nbytes); throw std::bad_exception (); }
-#endif
+    static __declspec_noreturn void failed(size_t nbytes) { BadExceptionError("allocation of SSE vector failed (%d bytes)", nbytes); }
 #ifdef _WIN32
     template<typename T> static T * new_sse (size_t nbytes) { T * pv = (T *) _aligned_malloc (nbytes * sizeof (T), 16); if (pv) return pv; failed (nbytes * sizeof (T)); }
     static void delete_sse (void * p) { if (p) _aligned_free (p); }
@@ -1364,7 +1365,7 @@ public:
         if (empty())
             resize (n, m);
         else if (n != numrows || m != numcols)
-            throw std::logic_error ("resizeonce: attempted to resize a second time to different dimensions");
+            LogicError("resizeonce: attempted to resize a second time to different dimensions");
 #endif
     }
 
@@ -1372,7 +1373,7 @@ public:
     void shrink(size_t newrows, size_t newcols)
     {
         if (newrows > this->numrows || newcols > this->numcols)
-            throw std::logic_error ("shrink: attempted to grow the matrix");
+            LogicError("shrink: attempted to grow the matrix");
         this->numrows = newrows;
         this->numcols = newcols;
     }
@@ -1415,7 +1416,7 @@ public:
         char namebuf[80];
         const char * nameread = fgetstring (f, namebuf);
         if (strcmp (name, nameread) != 0)
-            throw std::runtime_error (string ("unexpected matrix name tag '") + nameread + "', expected '" + name + "'");
+            RuntimeError(string ("unexpected matrix name tag '") + nameread + "', expected '" + name + "'");
         size_t n = fgetint (f);
         size_t m = fgetint (f);
         resize (n, m);
@@ -1434,7 +1435,7 @@ public:
         char namebuf[80];
         const char * nameread = fgetstring (f, namebuf);
         if (strcmp (name, nameread) != 0)
-            throw std::runtime_error (string ("unexpected matrix name tag '") + nameread + "', expected '" + name + "'");
+            RuntimeError(string ("unexpected matrix name tag '") + nameread + "', expected '" + name + "'");
         size_t n = fgetint (f);
         size_t m = fgetint (f);
         resize (n, m);

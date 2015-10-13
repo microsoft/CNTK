@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (s == L"kl" || s == L"klreg")
             return AdaptationRegType::KL;
         else
-            throw std::invalid_argument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (None | KL)");
+            InvalidArgument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (None | KL)");
         }
 
     static GradientsUpdateType ParseGradUpdateType(wstring s)
@@ -36,7 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (s == L"fsadagrad")
             return GradientsUpdateType::FSAdaGrad;
         else
-            throw std::invalid_argument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (None | AdaGrad | RmsProp | FSAdaGrad )");
+            InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (None | AdaGrad | RmsProp | FSAdaGrad )");
     }
 
     static ParallelizationMethod ParseParallelizationMethod(wstring s)
@@ -49,7 +49,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (s == L"modelaveragingsgd")
             return ParallelizationMethod::ModelAveragingSGD;
         else
-            throw std::invalid_argument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD | ModelAveragingSGD)");
+            InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (None | DataParallelSGD | ModelAveragingSGD)");
         }
 
     static LearningRateSearchAlgorithm ParseLearningRateSearchType(wstring s)
@@ -63,7 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (s == L"adjustafterepoch" || s == L"afterepoch" || s == L"after")
             return LearningRateSearchAlgorithm::AdjustAfterEpoch;
         else
-            throw std::invalid_argument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
+            InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (None | SearchBeforeEpoch | AdjustAfterEpoch)");
     }
 
     template<class ElemType>
@@ -263,7 +263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_zeroThresholdFor1Bit = configDataParallelSGD("useZeroThresholdFor1BitQuantization", "true");
                 if ((m_numGradientBits < 1) || (m_numGradientBits > (8 * sizeof(ElemType))))
                 {
-                    throw std::invalid_argument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
+                    InvalidArgument("gradientBits must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double!");
                 }
             }
 
@@ -393,21 +393,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
             {
-                throw std::invalid_argument("epoch size must be larger than mbsize.");
+                InvalidArgument("epoch size must be larger than mbsize.");
             }
         }
 
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None &&
             (learningRatesPerSample.size() == 0 && learningRatesPerMB.size() == 0))
         {
-            throw std::invalid_argument("If autoLearnRateSearchType is false "
+            InvalidArgument("If autoLearnRateSearchType is false "
                                         "you must specify the learningRatesPerSample "
                                         "or learningRatesPerMB parameter.");
         }
 
         if (learningRatesPerSample.size() > 0 && learningRatesPerMB.size() > 0)
         {
-            throw std::invalid_argument("You specified both learningRatesPerSample "
+            InvalidArgument("You specified both learningRatesPerSample "
                                         "and learningRatesPerMB. Please comment "
                                         "out one of them.");
         }
@@ -424,7 +424,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (momentumPerSample.size() > 0 && momentumPerMB.size() > 0)
         {
-            throw std::invalid_argument("You specified both momentumPerSample "
+            InvalidArgument("You specified both momentumPerSample "
                                         "and momentumPerMB. Please comment "
                                         "out one of them.");
         }
@@ -498,7 +498,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int startEpoch = DetermineStartEpoch(makeMode);
         if (startEpoch == m_maxEpochs)
         {
-            fprintf(stderr, "Final model exists. No further training is necessary.\n");
+            fprintf(stderr, "No further training is necessary.\n");
             return;
         }
 
@@ -548,7 +548,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int startEpoch = DetermineStartEpoch(makeMode);
         if (startEpoch == m_maxEpochs)
         {
-            fprintf(stderr, "Final model exists. No further training is necessary.\n");
+            fprintf(stderr, "No further training is necessary.\n");
             return;
         }
 
@@ -579,7 +579,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto & sequenceCriterionNodes = GetTrainCriterionNodes(*sequenceNet);
             if (origCriterionNodes.size() == 0 || sequenceCriterionNodes.size() == 0)
             {
-                throw std::runtime_error("Training criterion node does not exist.");
+                RuntimeError("Training criterion node does not exist.");
             }
             replacedCriterionNodes.push_back(origCriterionNodes[0]);
             origNet.ReplaceFinalCriterionNode(origCriterionNodes[0]->NodeName(), sequenceCriterionNodes[0]);
@@ -623,7 +623,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int startEpoch = DetermineStartEpoch(makeMode);
         if (startEpoch == m_maxEpochs)
         {
-            fprintf(stderr, "Final model exists. No further training is necessary.\n");
+            fprintf(stderr, "No further training is necessary.\n");
             return;
         }
 
@@ -1033,6 +1033,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (m_loadBestModel)
                     {
+                        fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
                         net.LoadPersistableParametersFromFile(GetModelNameForEpoch(i - 1),
                                                               m_validateAfterModelReloading);
                         net.ResetEvalTimeStamp();
@@ -1042,7 +1043,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                            smoothedGradients,
                                            /*out*/ prevCriterion,
                                            /*out*/ m_prevChosenMinibatchSize);
-                        fprintf(stderr, "Loaded the previous model which has better training criterion.\n");
                         loadedPrevModel = true;
                     }
                 }
@@ -1902,10 +1902,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
                 {
                     ComputationNodeBasePtr node = *nodeIter;
-                    if (node->NeedGradient())
+                    if (node->IsParameterUpdateRequired())
                     {
                         Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
-
+#ifdef _DEBUG
+                        if (smoothedGradient.HasNan("TrainOneEpoch/UpdateWeights(): "))
+                            LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
+#endif
                         UpdateWeights(node, smoothedGradient, learnRatePerSample,
                                       GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, net.GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
                                       m_L2RegWeight, m_L1RegWeight,
@@ -2094,7 +2097,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                 {
                     ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                    if (node->NeedGradient())
+                    if (node->IsParameterUpdateRequired())
                     {
                         learnParamsGradients.push_back(&(node->GradientValues()));
                     }
@@ -2193,7 +2196,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto iter = learnableNodes.begin(); iter != learnableNodes.end(); iter++)
         {
             ComputationNodeBasePtr pNode = *iter; 
-            if (!pNode->NeedGradient())
+            if (!pNode->IsParameterUpdateRequired())
                 continue;
 
             Matrix<ElemType>& mat = dynamic_pointer_cast<ComputationNode<ElemType>>(pNode)->FunctionValues();
@@ -2321,10 +2324,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
         fprintf(stderr, "Update_%ls\n", node->NodeName().c_str());
 #endif
-        if (!node->NeedGradient())
-        {
-            LogicError("UpdateWeights() called for a learnable ComputationNode which has NeedGradient() == false!");
-        }
+        if (!node->IsParameterUpdateRequired())
+            LogicError("UpdateWeights() called for a learnable ComputationNode which has m_parameterUpdateRequired == false!");
 
         UpdateWeightsS(this, dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues(), dynamic_pointer_cast<ComputationNode<ElemType>>(node)->GradientValues(),
                        smoothedGradient, learnRatePerSample, momentumPerSample,
@@ -2490,7 +2491,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (msra::files::fuptodate(curEpochFile, prevEpochFile, false))
             {
-                firstEpoch = size_t(e) + 1;
+                firstEpoch = e + 1;
                 break;
             }
             else
@@ -2498,6 +2499,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 curEpochFile = prevEpochFile;
             }
         }
+        if (firstEpoch == m_maxEpochs)
+            fprintf(stderr, "Final model exists: %ls\n", GetModelNameForEpoch(firstEpoch - 1).c_str());
 
         return firstEpoch;
     }

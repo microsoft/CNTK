@@ -176,6 +176,7 @@ COMMON_SRC =\
 	Common/ConfigFile.cpp \
 	Common/DataReader.cpp \
 	Common/DataWriter.cpp \
+	Common/DebugUtil.cpp \
 	Common/Eval.cpp \
 	Common/File.cpp \
 	Common/TimerUtility.cpp \
