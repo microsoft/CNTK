@@ -1247,10 +1247,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*IComputationNode::*/OnEvaluateEndIteration()               // called after last iteration step of EvaluateThisNode()
         {
             Base::OnEvaluateEndIteration();
-            //MaskMissingValuesColumnsToZero();
-            //if (m_functionValues.HasNan("OnEvaluateEndIteration"))
-            //    LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
-            MaskMissingValuesColumnsToNan();    // blast NaNs into columns that are gaps in a packed layout
+#if 0       // NaN check
+            MaskMissingValuesColumnsToZero();       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+            if (m_functionValues.HasNan("OnEvaluateEndIteration"))
+                LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
+#endif
+            MaskMissingValuesColumnsToNan();        // blast NaNs into columns that are gaps in a packed layout
         }
 #endif
 
@@ -1266,6 +1268,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNodePtr child = Inputs(i);
                 if (child->m_needsGradient)
                 {
+                    //fprintf(stderr, "ComputeGradientForChildren: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
+                    if (!m_needsGradient)
+                        LogicError("%ls %ls operation has m_needsGradient set to false but children require it.");
 #ifdef DISPLAY_DEBUG
                     fprintf (stderr, "    [%lu]: %s(%s)\n", i, 
                         (msra::strfun::utf8 (child->OperationName())).c_str(),
@@ -1274,11 +1279,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
                     fprintf(stderr,"Backprop%d_%ls\n",i,NodeName().c_str());
 #endif
+
                     ComputeInputPartial(i); //this computes partial wrt to the child and sums the gradient value in the child
 #ifdef _DEBUG
-                    //MaskMissingGradientColumnsToZero();
-                    //if (child->GradientValues().HasNan("ComputeGradientForChildren(void): "))
-                    //    LogicError("%ls %ls operation has NaNs in gradient.", child->NodeName().c_str(), child->OperationName().c_str());
+#if 0               // NaN check
+                    child->MaskMissingGradientColumnsToZero();  // hide NaNs in gaps (those are OK)
+                    if (child->GradientValues().HasNan("ComputeGradientForChildren(void): "))
+                        LogicError("%ls %ls operation has NaNs in gradient.", child->NodeName().c_str(), child->OperationName().c_str());
+#endif
                     MaskMissingColumnsTo(child->GradientValues(), child->m_pMBLayout, SIZE_MAX, SIZE_MAX, Matrix<ElemType>::MakeNan(__LINE__));
 #endif
                 }
@@ -1286,7 +1294,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, 
                         (msra::strfun::utf8 (child->OperationName())).c_str(),
                         (msra::strfun::utf8 (child->NodeName())).c_str());
-#endif              
+#endif
             }
         }
 
@@ -1302,14 +1310,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     fprintf (stderr, "    [%lu]: %s(%s)\n", i, 
                         (msra::strfun::utf8 (child->OperationName())).c_str(),
                         (msra::strfun::utf8 (child->NodeName())).c_str());
-#endif              
+#endif
+                    //fprintf(stderr, "ComputeGradientForChildren: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
                     ComputeInputPartial(i, FrameRange(timeIdxInSeq)); //this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
                 else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, 
                         (msra::strfun::utf8 (child->OperationName())).c_str(),
                         (msra::strfun::utf8 (child->NodeName())).c_str());
-#endif              
+#endif
             }
         }
 

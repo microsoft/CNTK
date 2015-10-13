@@ -28,7 +28,6 @@ COMMAND:     currentDirectory=$(SolutionDir)Tests\Speech\Data  configFile=$(Solu
 
 --- LSTM\FullUtterance:
 
-WORKING DIR: $(SolutionDir)Tests\Speech\Data
 COMMAND:     currentDirectory=$(SolutionDir)Tests\Speech\Data  configFile=$(SolutionDir)Tests\Speech\LSTM\cntk.config  stderr=$(SolutionDir)Tests\Speech\RunDir\LSTM\FullUtterance\models\cntkSpeech.dnn.log  RunDir=$(SolutionDir)Tests\Speech\RunDir\LSTM\FullUtterance  NdlDir=$(SolutionDir)Tests\Speech\LSTM  DataDir=.  DeviceId=Auto Truncated=false speechTrain=[reader=[nbruttsineachrecurrentiter=1]] speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]]  speechTrain=[SGD=[numMBsToShowResult=1]]
 
 --- MNIST:

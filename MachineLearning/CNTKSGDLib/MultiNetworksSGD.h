@@ -144,7 +144,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int startEpoch = DetermineEncoderDecoderStartEpoch(makeMode);
             if (startEpoch == m_maxEpochs)
             {
-                fprintf(stderr, "Final model exists. No further training is necessary.\n");
+                fprintf(stderr, "No further training is necessary.\n");
                 return;
             }
 
