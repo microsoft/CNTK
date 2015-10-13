@@ -37,6 +37,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <string>
+#include <stdexcept>
 // basic type conversion
 typedef int BOOL;
 typedef unsigned char BYTE;
