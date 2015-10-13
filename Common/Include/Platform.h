@@ -19,6 +19,12 @@
 #define __declspec_noreturn
 #endif
 
+#ifndef _MSC_VER
+#define NOEXCEPT noexcept
+#else
+#define NOEXCEPT
+#endif
+
 // ===========================================================================
 // emulation of some MSVC proprietary CRT
 // ===========================================================================

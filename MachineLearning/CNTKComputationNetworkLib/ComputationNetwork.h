@@ -808,7 +808,7 @@ public:
     {
         //comment out since the function value matrix is shared and may be resized by others
         //if (bResetToOne && (rootNode->GetNumRows() != 1 || rootNode->GetNumCols() != 1))
-        //    RuntimeError("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
+        //    RuntimeError("ComputeGradient: The root of the Gradient computation must evaluate to a scalar value.");
 
         //run forward pass first
         Evaluate(rootNode);
@@ -919,7 +919,7 @@ public:
             Evaluate(rootNode);
 
             if (bResetToOne && (rootNode->GetNumRows() != 1 || rootNode->GetNumCols() != 1))
-                RuntimeError("ComputeGradient: The root of the Gradient computation must evaluate to R1 value.");
+                RuntimeError("ComputeGradient: The root of the Gradient computation must evaluate to a scalar value.");
 
             // TODO: comment what the purpose of this is
             if (bClearGradient)
@@ -1334,8 +1334,6 @@ public:
     // -----------------------------------------------------------------------
     // evaluation
     // -----------------------------------------------------------------------
-
-private:
 
 public: // yak--used by NDLUtil. Will go away someday.
     // ValidateNetwork() - Validate the entire network
