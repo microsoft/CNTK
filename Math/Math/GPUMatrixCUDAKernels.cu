@@ -12,6 +12,7 @@
 #include <cuda_runtime.h>
 #include "CommonMatrix.h"
 #include "device_functions.h"
+#include <assert.h>
 
 // REVIEW alexeyk: disable warnings properly for GCC/clang
 #ifdef _MSC_VER
