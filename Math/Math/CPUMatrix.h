@@ -53,6 +53,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
         CPUMatrix<ElemType>& SetColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
+        CPUMatrix<ElemType> Diagonal() const;
+
         ElemType Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
         void FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul);
         ElemType RmsProp(CPUMatrix<ElemType>& gradients,
@@ -91,7 +93,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetColumn(const ElemType val, size_t j);
 
         void SetDiagonalValue(const ElemType v);
-        void SetDiagonalValue(CPUMatrix<ElemType>& vector);
+        void SetDiagonalValue(const CPUMatrix<ElemType>& vector);
         void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED); 
         void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED);
         void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed=USE_TIME_BASED_SEED); 

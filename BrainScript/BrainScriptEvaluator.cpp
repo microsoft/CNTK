@@ -347,7 +347,7 @@ namespace Microsoft { namespace MSR { namespace BS {
                 inputs.push_back(inputsArray->At(i, inputsArg.GetLocation()));
         }
         if (inputs.size() != expectedNumInputs)
-            throw EvaluationError(L"unexpected number of inputs to ComputationNode class " + classId, inputsArg.GetLocation());
+            EvaluationError(L"unexpected number of inputs to ComputationNode class " + classId, inputsArg.GetLocation());
         return inputs;
     }
     // factory function for ComputationNodes
@@ -390,7 +390,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         else if (classId == L"ErrorPrediction")
             return make_shared<ErrorPredictionNode>(GetInputs(config, 2, L"ErrorPrediction"), tag);
         else
-            throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
+            EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
     }
     // factory function for RecurrentComputationNodes
     // The difference to the above is that the children are not resolved immediately but later during network connection.
@@ -407,7 +407,7 @@ namespace Microsoft { namespace MSR { namespace BS {
         if (classId == L"Delay")
             return make_shared<DelayNode>([configp](){ return GetInputs(*configp, 1, L"Delay"); }, config[L"deltaT"], tag);
         else
-            throw EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
+            EvaluationError(L"unknown ComputationNode class " + classId, classIdParam.GetLocation());
     }
 
     // =======================================================================
@@ -678,14 +678,20 @@ namespace Microsoft { namespace MSR { namespace BS {
 
     // error object
 
-    class EvaluationError : public ConfigError
+    class EvaluationException : public ConfigException
     {
     public:
-        EvaluationError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
+        EvaluationException(const wstring & msg, TextLocation where) : ConfigException(msg, where) { }
         /*Configerror::*/ const wchar_t * kind() const { return L"evaluating"; }
     };
 
-    __declspec_noreturn static void Fail(const wstring & msg, TextLocation where) { throw EvaluationError(msg, where); }
+    __declspec_noreturn static inline void EvaluationError(const wstring & msg, TextLocation where) 
+    {
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        throw EvaluationException(msg, where);
+    }
+
+    __declspec_noreturn static void Fail(const wstring & msg, TextLocation where) { EvaluationError(msg, where); }
     __declspec_noreturn static void TypeExpected(const wstring & what, ExpressionPtr e) { Fail(L"expected expression of type '" + what + L"'", e->location); }
     __declspec_noreturn static void UnknownIdentifier(const wstring & id, TextLocation where) { Fail(L"unknown identifier '" + id + L"'", where); }
 
@@ -1338,7 +1344,7 @@ namespace Microsoft { namespace MSR { namespace BS {
             }
             //LogicError("should not get here");
         }
-        catch (ConfigError & err)
+        catch (ConfigException & err)
         {
             // in case of an error, we keep track of all parent locations in the parse as well, to make it easier for the user to spot the error
             err.AddLocation(e->location);

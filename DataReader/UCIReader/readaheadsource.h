@@ -9,7 +9,7 @@
 //
 #pragma once
 
-#include "basetypes.h"
+#include "Basics.h"
 #include "simplethread.h"
 #include "Matrix.h"
 #include "DataReader.h"
@@ -170,9 +170,9 @@ class minibatchreadaheadsource : public noncopyable/*assignment operator needed 
                         // Note: We may still get data beyond the end of the epoch, in utterance mode, since the epoch boundary likely falls within an utterance.
                         CAutoLock lock (*this);
                         if (!fifo.empty() && globalts != fifo.back().globalts + fifo.back().feat.GetNumCols())
-                            throw std::logic_error ("minibatchreadaheadsource: FIFO got out of order while pre-reading new batch");
+                            LogicError("minibatchreadaheadsource: FIFO got out of order while pre-reading new batch");
                         if (newglobalts != SIZE_MAX)
-                            throw std::logic_error ("minibatchreadaheadsource: main thread reset to new epoch while current epoch not yet finished");
+                            LogicError("minibatchreadaheadsource: main thread reset to new epoch while current epoch not yet finished");
                         globalts += batch.feat.GetNumCols();
                     }
                     else
@@ -237,7 +237,7 @@ public:
         fprintf (stderr, "minibatchreadaheadsource: signalling thread to enter new epoch\n");
         CAutoLock lock (*this);
         if (!fifo.empty())
-            throw std::logic_error ("getbatch: FIFO not cleared at end of epoch");
+            LogicError("getbatch: FIFO not cleared at end of epoch");
         newglobalts = globalts;
         currentepochreqframes = p_framesrequested;    // it is assumed that these won't change
         currentepochendframe = (epoch + 1) * epochframes;
@@ -269,7 +269,7 @@ public:
         }
 
         if (globalts + framesrequested < currentepochendframe && currentepochreqframes != framesrequested)
-            throw std::logic_error ("getbatch: cannot change minibatch size mid-epoch");
+            LogicError("getbatch: cannot change minibatch size mid-epoch");
         // loop
         for(;;) // wait for batch to appear
         {
@@ -284,7 +284,7 @@ public:
                     flagcallerchanged();
                     // it must be the correct one
                     if (front.globalts != globalts)
-                        throw std::logic_error ("getbatch: data in FIFO out of sequence");
+                        LogicError("getbatch: data in FIFO out of sequence");
 
                     // if we actually read anything put it in here
                     if (front.readRecords)

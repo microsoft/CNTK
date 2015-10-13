@@ -143,7 +143,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 nodePtr = builder.CreateLearnableParameter(name, rows, cols);
 
-                nodePtr->NeedGradient() = needGradient;
+                nodePtr->SetParameterUpdateRequired(needGradient);
             }
             else if (pass == ndlPassFinal)
             {
@@ -193,7 +193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 nodePtr = builder.CreateSparseLearnableParameter(name, rows, cols);
 
-                nodePtr->NeedGradient() = needGradient;
+                nodePtr->SetParameterUpdateRequired(needGradient);
             }
             else if (pass == ndlPassFinal)
             {
@@ -236,7 +236,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t cols = node->GetOptionalParameter("cols", "1");
 
                 nodePtr = builder.CreateLearnableParameter(name, rows, cols);
-                nodePtr->NeedGradient() = false;
+                nodePtr->SetParameterUpdateRequired(false);
             }
             else if (pass == ndlPassFinal || nodePtr->FunctionValues().GetNumElements() != 0)
             {
@@ -261,7 +261,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
                 nodePtr = builder.RowSlice(NULL, start_index, num_rows, name);
-                nodePtr->NeedGradient() = needGradient;
+                // BUGBUG: This was probably meant to cut updates at this point. However, this will overwritten in EnumerateNodes() with values propagated upwards.
+                nodePtr->SetParameterUpdateRequired(needGradient);
             }
         }
         else if (cnNodeType == OperationNameOf(RowRepeatNode))
@@ -280,7 +281,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
                 nodePtr = builder.RowRepeat(NULL, num_repeat, name);
-                nodePtr->NeedGradient() = needGradient;
+                nodePtr->SetParameterUpdateRequired(needGradient);
+            }
+        }
+        else if (cnNodeType == OperationNameOf(DiagonalNode))
+        {
+            if (parameter.size() != 1)
+                RuntimeError("Diagonal should have one parameter. Usage: Diagonal(origNodeName).");
+
+            nodeParamCount = 1;
+            nodeParamStart = 0;
+
+            if (pass == ndlPassInitial)
+            {
+                // evaluate only scalar parameters
+                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+
+                bool needGradient = node->GetOptionalParameter("needGradient", "false");
+                nodePtr = builder.Diagonal(NULL, name);
+                nodePtr->SetParameterUpdateRequired(needGradient);
             }
         }
         else if (cnNodeType == OperationNameOf(ReshapeNode))
@@ -302,7 +321,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 bool needGradient = node->GetOptionalParameter("needGradient", "false");
                 nodePtr = builder.Reshape(NULL, num_rows, ImageLayout(img_width, img_height, img_channels), name);
-                nodePtr->NeedGradient() = needGradient;
+                nodePtr->SetParameterUpdateRequired(needGradient);
             }
         }
         else if (cnNodeType == OperationNameOf(PastValueNode) || 
@@ -343,7 +362,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     static_pointer_cast<FutureValueNode<ElemType>>(nodePtr)->SetTimeStep(timeStep);
                 }
 
-                nodePtr->NeedGradient() = needGradient;    // TODO: what's this for?
+                nodePtr->SetParameterUpdateRequired(needGradient);    // TODO: what's this for?
             }
         }    
         else if (cnNodeType == OperationNameOf(ConvolutionNode))

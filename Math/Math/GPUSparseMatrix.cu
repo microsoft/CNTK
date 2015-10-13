@@ -5,6 +5,7 @@
 //
 
 #include "BestGpu.h"
+#include "DebugUtil.h"
 
 #ifndef CPUONLY
 
@@ -30,6 +31,7 @@ static
 #endif
 cudaStream_t t_stream;
 
+
 // support for CudaCall() function template
 static const char * CudaErrString(cudaError_t x)    { cudaDeviceSynchronize(); return cudaGetErrorString(x); }
 static const char * CudaErrString(cublasStatus_t)   { cudaDeviceSynchronize(); return "(see cublas_api.h & look for cublasStatus_t or CUBLAS_STATUS_xxx)"; }
@@ -51,10 +53,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (matrixFormat != MatrixFormat::matrixFormatSparseCSC && matrixFormat != MatrixFormat::matrixFormatSparseCSR &&
             matrixFormat != MatrixFormat::matrixFormatSparseBlockCol && matrixFormat != MatrixFormat::matrixFormatSparseBlockRow)
         {
-            throw std::logic_error("GPUSparseMatrix:  unsupported sparse matrix format");
+            LogicError("GPUSparseMatrix:  unsupported sparse matrix format");
         }
 
         m_computeDevice = (computeDevice == AUTOPLACEMATRIX) ? GPUMatrix<ElemType>::GetBestGPUDeviceId() : computeDevice; //current GPU device Id
+        m_computeDevice = EnforceOneGPUOnly(m_computeDevice);      // see EnforceOneGPUOnly() for comment on what this is
         m_numRows=0;  
         m_numCols=0;
         m_elemSizeAllocated = m_nz = 0; //Number of non-zero elements
@@ -314,7 +317,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         outMatrix.Resize(m_numRows, m_numCols, m_nz,newFormat, true, false);
         outMatrix.SetNzCount(m_nz);
 
-        if (oldFormat == matrixFormatSparseCSR && newFormat == matrixFormatSparseCSC)
+        if ((oldFormat == matrixFormatSparseCSR && newFormat == matrixFormatSparseCSC)
+            || (oldFormat == matrixFormatSparseCSC && newFormat == matrixFormatSparseCSR))
         {
             if (sizeof(ElemType) == sizeof(float))
             {
@@ -372,9 +376,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
     {
         if (!OwnBuffer())
-            throw std::logic_error("Cannot change device on Managed external matrix");
+            LogicError("Cannot change device on Managed external matrix");
         if (to_id == CPUDEVICE)
-            throw std::logic_error("to_id must be valid GPU");
+            LogicError("to_id must be valid GPU");
         if (m_computeDevice == to_id)
             return;
 
@@ -630,7 +634,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (reallocate)
         {
             if (!OwnBuffer())
-                throw logic_error("Cannot Resize since the buffer is managed externally.");
+                LogicError("Cannot Resize since the buffer is managed externally.");
 
             PrepareDevice();
 
@@ -693,7 +697,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
     {
         if (h_CSRRow == nullptr || h_Col == nullptr || h_Val == nullptr)
-            throw std::logic_error("SetMatrixFromCSRFormat: nullptr passed in.");
+            LogicError("SetMatrixFromCSRFormat: nullptr passed in.");
 
         SetComputeDeviceId(PrepareDevice(devId));
 
@@ -727,7 +731,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const
     {
         if (h_CSRRow != nullptr || h_Col != nullptr || h_Val != nullptr)
-            throw std::logic_error("GetMatrixFromCSRFormat: Passed pointers must be nullptr");
+            LogicError("GetMatrixFromCSRFormat: Passed pointers must be nullptr");
 
         nz = GetNumNZElements();
         numRows = GetNumRows();
@@ -768,7 +772,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
     {
         if (h_CSCCol == nullptr || h_Row == nullptr || h_Val == nullptr)
-            throw std::logic_error("SetMatrixFromCSCFormat: nullptr passed in.");
+            LogicError("SetMatrixFromCSCFormat: nullptr passed in.");
 
         SetComputeDeviceId(PrepareDevice(devId));
         m_format = matrixFormatSparseCSC;
@@ -801,7 +805,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(GPUSPARSE_INDEX_TYPE*& h_CSCCol, GPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const
     {
         if (h_CSCCol != nullptr || h_Row != nullptr || h_Val != nullptr)
-            throw std::logic_error("GetMatrixFromCSCFormat: Passed pointers must be nullptr");
+            LogicError("GetMatrixFromCSCFormat: Passed pointers must be nullptr");
 
         nz = GetNumNZElements();
         numRows = GetNumRows();
@@ -847,10 +851,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c)
     {
         if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
-            throw std::runtime_error("MultiplyAndWeightedAdd: All matrices must be on the same GPU");
+            RuntimeError("MultiplyAndWeightedAdd: All matrices must be on the same GPU");
 
         if (lhs.IsEmpty() || rhs.IsEmpty())
-            throw std::logic_error("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
+            LogicError("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
 
         int m = transposeA ? (int)lhs.GetNumCols() : (int)lhs.GetNumRows();
         int k = transposeA ? (int)lhs.GetNumRows() : (int)lhs.GetNumCols();
@@ -861,7 +865,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(k == l);
         if (k != l)
         {
-            throw std::invalid_argument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
+            InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
         }
 
         if (c.GetNumRows() != m || c.GetNumCols() != n)
@@ -946,7 +950,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, GPUSparseMatrix<ElemType>& c)
     {
         if (lhs.GetComputeDeviceId()!=rhs.GetComputeDeviceId())
-            throw std::runtime_error("GPUSparseMatrix::MultiplyAndAdd: All matrices must be on the same GPU");
+            RuntimeError("GPUSparseMatrix::MultiplyAndAdd: All matrices must be on the same GPU");
         
         int m = transposeA? (int)lhs.GetNumCols(): (int)lhs.GetNumRows();
         int k = transposeA? (int)lhs.GetNumRows(): (int)lhs.GetNumCols();
@@ -957,7 +961,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert (k == l);
         if (k != l) 
         {
-            throw std::invalid_argument("GPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a and b must match.");
+            InvalidArgument("GPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a and b must match.");
         }
                 
         if (!transposeA && !transposeB)
@@ -1091,10 +1095,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const GPUSparseMatrix<ElemType>& lhs, GPUMatrix<ElemType>& rhs)
     {
         if (lhs.GetNumRows() != rhs.GetNumRows() || lhs.GetNumCols() != rhs.GetNumCols())
-            throw std::logic_error("ScaleAndAdd: dimension mismatch");
+            LogicError("ScaleAndAdd: dimension mismatch");
 
         if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId())
-            throw std::runtime_error("GPUSparseMatrix::ScaleAndAdd: All matrices must be on the same GPU");
+            RuntimeError("GPUSparseMatrix::ScaleAndAdd: All matrices must be on the same GPU");
 
         if (lhs.m_format == matrixFormatSparseBlockCol || lhs.m_format == matrixFormatSparseBlockRow) 
         {
@@ -1265,7 +1269,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED;
 
         if (a.GetComputeDeviceId()!=b.GetComputeDeviceId()||(b.GetComputeDeviceId()!=a.GetComputeDeviceId()))
-            throw std::runtime_error("MultiplyAndWeightedAdd: All matrices must be on the same GPU");
+            RuntimeError("MultiplyAndWeightedAdd: All matrices must be on the same GPU");
 
         a.PrepareDevice();
         cusparseHandle_t cusparseHandle = 0;
@@ -1412,7 +1416,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED;
 
         if (S1.GetComputeDeviceId()!=S2.GetComputeDeviceId())
-            throw std::runtime_error("Sparse matrix multiply: both matrices must be on the same device");
+            RuntimeError("Sparse matrix multiply: both matrices must be on the same device");
 
         S1.PrepareDevice();
         cusparseHandle_t cusparseHandle = 0;
@@ -1429,7 +1433,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int k = int(transposeS1 ? S1.GetNumRows() : S1.GetNumCols());
         int l = int(transposeS2 ? S2.GetNumCols() : S2.GetNumRows());
         if (k!=l)
-            throw std::runtime_error("Sparse matrix multiply: dimensionality mismatch");
+            RuntimeError("Sparse matrix multiply: dimensionality mismatch");
 
         int nnzA = (int)S1.GetNumNZElements();
         int nnzB = (int)S2.GetNumNZElements();
@@ -1477,12 +1481,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha,const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
     {
         if (a.m_format != matrixFormatSparseCSR || b.m_format != matrixFormatSparseCSR || c.m_format != matrixFormatSparseCSR)
+        {
             NOT_IMPLEMENTED;
+        }
 
         if (a.GetNumCols() != b.GetNumCols() || a.GetNumRows() != b.GetNumRows())
-            throw std::runtime_error("Dimensions mismatch in ScaleAndAdd");
+            RuntimeError("Dimensions mismatch in ScaleAndAdd");
         if (a.GetComputeDeviceId()!=b.GetComputeDeviceId())
-            throw std::runtime_error("ScaleAndAdd: matrices must be on the same device");
+            RuntimeError("ScaleAndAdd: matrices must be on the same device");
 
         int m = (int)a.GetNumRows();
         int n = (int)a.GetNumCols();
@@ -1532,9 +1538,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED;
 
         if (a.GetNumRows() != b.GetNumRows() || a.GetNumRows() != c.GetNumRows() || a.GetNumCols() != b.GetNumCols() || a.GetNumCols() != c.GetNumCols())
-            throw std::logic_error("ScaleAndAdd: dimension mismatch");
+            LogicError("ScaleAndAdd: dimension mismatch");
         if (a.GetComputeDeviceId()!=b.GetComputeDeviceId()||a.GetComputeDeviceId()!=c.GetComputeDeviceId())
-            throw std::runtime_error("ScaleAndAdd: matrices must be on the same device");
+            RuntimeError("ScaleAndAdd: matrices must be on the same device");
         b.PrepareDevice();
         //copy b to c
         CUDA_CALL(cudaMemcpy(c.BufferPointer(),b.BufferPointer(),sizeof(ElemType)*b.GetNumElements(),cudaMemcpyDeviceToDevice));
@@ -1579,12 +1585,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (a.GetComputeDeviceId() != c.GetComputeDeviceId())
         {
-            throw std::invalid_argument("All matrices must be on the same GPU");
+            InvalidArgument("All matrices must be on the same GPU");
         }
         else 
         {
             if (a.IsEmpty())
-                throw std::logic_error("ElementWisePower:  The input matrix a is empty.");
+                LogicError("ElementWisePower:  The input matrix a is empty.");
 
             c.ResizeAsAndCopyIndexFrom(a);
 
@@ -1607,7 +1613,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED;
 
         if (a.GetComputeDeviceId()!=b.GetComputeDeviceId())
-            throw std::runtime_error("a and b must be on the same device");
+            RuntimeError("a and b must be on the same device");
 
         int m = (int)a.GetNumRows();
         int n = (int)a.GetNumCols();
@@ -1785,7 +1791,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED;
 
         if (a.GetNumRows()!=b.GetNumRows()||a.GetNumCols()!=b.GetNumCols())
-            throw std::logic_error("ElementProductOf: matrix dimensions mismatch");
+            LogicError("ElementProductOf: matrix dimensions mismatch");
 
         b.PrepareDevice();        
         GPUMatrix<ElemType> c(b.GetNumRows(),b.GetNumCols(),b.GetComputeDeviceId());
@@ -1925,10 +1931,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTransposeOf(const GPUSparseMatrix<ElemType>& a)
     {
         if (this == &a)
-            throw std::logic_error("AssignTransposeOf: a is the same as [this]. Does not support inplace transpose.");
+            LogicError("AssignTransposeOf: a is the same as [this]. Does not support inplace transpose.");
 
         if (a.IsEmpty())
-            throw std::logic_error("AssignTransposeOf: Matrix a is empty.");
+            LogicError("AssignTransposeOf: Matrix a is empty.");
 
         *this = a.Transpose();
         return *this;
@@ -1950,7 +1956,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int n = (int)GetNumCols();
 
         //if (numCols == 0)
-        //    throw std::logic_error("The slice cannot have 0 columns.");
+        //    LogicError("The slice cannot have 0 columns.");
 
         if (startColumn + numCols > n)
             InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)n);
@@ -1991,10 +1997,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::DiagonalToDense() const
+    {
+        int m = (int)GetNumRows();
+        int n = (int)GetNumCols();
+
+        if (m != n)
+            LogicError("Diagonal can be called only for square matrix. (rows=%d, cols=%d)", m, n);
+
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        GPUMatrix<ElemType> tmp(m, n, GetComputeDeviceId());
+
+        // TODO: Implement optimized diagonal functions for sparse matrices. For now copy to dense first.
+        CopyToDenseMatrix(tmp);
+
+        return tmp.Diagonal();
+    }
+
+    template<class ElemType>
     ElemType GPUSparseMatrix<ElemType>::SumOfAbsElements() const
     {
         if (IsEmpty())
-            throw std::logic_error("SumOfAbsElements: Matrix is empty");
+            LogicError("SumOfAbsElements: Matrix is empty");
 
         cublasHandle_t cuHandle = GPUMatrix<ElemType>::GetCublasHandle(GetComputeDeviceId());
         if (sizeof(ElemType)==sizeof(float))
@@ -2015,7 +2041,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType GPUSparseMatrix<ElemType>::SumOfElements() const
     {
         if (IsEmpty())
-            throw std::logic_error("SumOfElements: Matrix is empty");
+            LogicError("SumOfElements: Matrix is empty");
 
         PrepareDevice();
         ElemType* d_sum = nullptr;
@@ -2033,7 +2059,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType GPUSparseMatrix<ElemType>::FrobeniusNorm() const 
     {
         if (IsEmpty())
-            throw std::logic_error("FrobeniusNorm: Matrix is empty.");
+            LogicError("FrobeniusNorm: Matrix is empty.");
 
         ElemType* d_sum = nullptr;
         ElemType h_sum=0;
@@ -2052,7 +2078,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType GPUSparseMatrix<ElemType>::MatrixNormInf() const
     {
         if (IsEmpty())
-            throw std::logic_error("MatrixNorm1: Matrix is empty.");
+            LogicError("MatrixNorm1: Matrix is empty.");
 
         ElemType* d_maxAbs = nullptr;
         ElemType h_maxAbs=0;
@@ -2071,7 +2097,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType GPUSparseMatrix<ElemType>::MatrixNorm1() const
     {
         if (IsEmpty())
-            throw std::logic_error("MatrixNorm1: Matrix is empty.");
+            LogicError("MatrixNorm1: Matrix is empty.");
         return SumOfAbsElements();              
     }
 
@@ -2083,7 +2109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::ElementInverse ()
     {
         if (IsEmpty())
-            throw std::logic_error("ElementInverse: Matrix is empty.");
+            LogicError("ElementInverse: Matrix is empty.");
 
         CUDA_LONG N=(CUDA_LONG)GetNumNZElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
@@ -2212,7 +2238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateBottom (const ElemType threshold)
     {
         if (IsEmpty())
-            throw std::logic_error("InplaceTruncateBottom: Matrix is empty.");
+            LogicError("InplaceTruncateBottom: Matrix is empty.");
         CUDA_LONG N=(CUDA_LONG)GetNumNZElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
         cudaEvent_t done = nullptr;
@@ -2228,7 +2254,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateBottomOf (const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignTruncateBottomOf: Matrix a is empty.");
+            LogicError("AssignTruncateBottomOf: Matrix a is empty.");
 
         if (this!=&a)
         {
@@ -2250,7 +2276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateTop (const ElemType threshold)
     {
         if (IsEmpty())
-            throw std::logic_error("InplaceTruncateTop: Matrix is empty.");
+            LogicError("InplaceTruncateTop: Matrix is empty.");
         CUDA_LONG N=(CUDA_LONG)GetNumNZElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
         cudaEvent_t done = nullptr;
@@ -2266,7 +2292,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf (const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignTruncateTopOf: Matrix a is empty.");
+            LogicError("AssignTruncateTopOf: Matrix a is empty.");
 
         if (this!=&a)
         {
@@ -2288,7 +2314,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::SetToZeroIfAbsLessThan (const ElemType threshold)
     {
         if (IsEmpty())
-            throw std::logic_error("SetToZeroIfAbsLessThan: Matrix is empty.");
+            LogicError("SetToZeroIfAbsLessThan: Matrix is empty.");
         CUDA_LONG N=(CUDA_LONG)GetNumNZElements();
         int blocksPerGrid =(int)ceil(N*1.0/threadsPerBlock);                
         cudaEvent_t done = nullptr;
@@ -2401,7 +2427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t elsize;
         stream>>elsize;
         if (sizeof(ElemType)!=elsize)
-            throw std::runtime_error("Template argument size doesn't match those in file");
+            RuntimeError("Template argument size doesn't match those in file");
         std::wstring matrixName;
 
         // now prepare this header to receive the data being read

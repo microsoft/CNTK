@@ -1,7 +1,9 @@
 // 
 // basetypes.h - basic types that C++ lacks
 // 
+// <copyright file="basetypes.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
+// </copyright>
 // 
 #pragma once
 #ifndef _BASETYPES_
@@ -74,7 +76,7 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <errno.h>
 #include <string>
 #include <vector>
-#include <math.h>        // for HUGE_VAL // potential double isnan definition
+#include <cmath>        // for HUGE_VAL
 #include <assert.h>
 #include <stdarg.h>
 #include <map>
@@ -82,7 +84,10 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <locale>       // std::wstring_convert
 #include <string>
 #include <algorithm>    // for transform()
+#include <mutex>
 #include <unordered_map>
+#include <chrono>
+#include <thread>
 #ifdef _MSC_VER
 #include <codecvt>      // std::codecvt_utf8
 #endif
@@ -91,8 +96,6 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #endif
 #if __unix__
 #include <strings.h>
-#include <chrono>
-#include <thread>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <dlfcn.h>
@@ -100,16 +103,14 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 typedef unsigned char byte;
 #endif
 
-using namespace std;
+#ifdef _WIN32
+#pragma push_macro("STRSAFE_NO_DEPRECATE")
+#define STRSAFE_NO_DEPRECATE    // deprecation managed elsewhere, not by strsafe
+#include <strsafe.h>    // for strbcpy() etc templates
+#pragma pop_macro("STRSAFE_NO_DEPRECATE")
+#endif
 
-#ifndef SIZE_MAX
-#include <limits>
-#ifdef __SIZE_MAX__
-#define SIZE_MAX __SIZE_MAX__
-#else
-#define SIZE_MAX std::numeric_limits<size_t>::max()
-#endif
-#endif
+using namespace std;
 
 // CRT error handling seems to not be included in wince headers
 // so we define our own imports
@@ -120,6 +121,25 @@ using namespace std;
 
 // strerror(x) - x here is normally errno - TODO: make this return errno as a string
 #define strerror(x) "strerror error but can't report error number sorry!"
+#endif
+
+#ifdef _WIN32
+#ifndef __in // dummies for sal annotations if compiler does not support it
+#define __in
+#define __inout_z
+#define __in_count(x)
+#define __inout_cap(x)
+#define __inout_cap_c(x)
+#endif
+#ifndef __out_z_cap    // non-VS2005 annotations
+#define __out_cap(x)
+#define __out_z_cap(x)
+#define __out_cap_c(x)
+#endif
+
+#ifndef __override      // and some more non-std extensions required by Office
+#define __override virtual
+#endif
 #endif
 
 // disable warnings for which fixing would make code less readable
@@ -141,6 +161,50 @@ namespace msra { namespace strfun {
     typedef basic_cstring<wchar_t> wcstring;
 }}
 
+static inline wchar_t*GetWC(const char *c)
+{
+    const size_t cSize = strlen(c)+1;
+    wchar_t* wc = new wchar_t[cSize];
+#ifdef _WIN32
+    size_t retVal;
+    mbstowcs_s(&retVal, wc, cSize, c, cSize);
+#else
+    mbstowcs(wc, c, cSize);
+#endif // _WIN32
+
+    return wc;
+}
+struct MatchPathSeparator
+{
+    bool operator()( char ch ) const
+    {
+        return ch == '\\' || ch == '/';
+    }
+};
+static inline std::string basename( std::string const& pathname)
+{
+    return std::string (std::find_if(pathname.rbegin(), pathname.rend(),MatchPathSeparator()).base(), pathname.end()); 
+}
+
+static inline std::string removeExtension (std::string const& filename)
+{
+    //std::string::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
+    //return pivot == filename.rend() ? filename: std::string(filename.begin(), pivot.base()-1);
+    size_t lastindex = filename.find_last_of(".");
+    return filename.substr(0, lastindex);
+}
+static inline std::wstring basename( std::wstring const& pathname)
+{
+    return std::wstring (std::find_if(pathname.rbegin(), pathname.rend(),MatchPathSeparator()).base(), pathname.end()); 
+}
+
+static inline std::wstring removeExtension (std::wstring const& filename)
+{
+    //std::wstring::const_reverse_iterator pivot = std::find(filename.rbegin(), filename.rend(), '.');
+    //return pivot == filename.rend() ? filename: std::wstring(filename.begin(), pivot.base()-1);
+    size_t lastindex = filename.find_last_of(L".");
+    return filename.substr(0, lastindex);
+}
 
 // ----------------------------------------------------------------------------
 // some mappings for non-Windows builds
@@ -183,12 +247,14 @@ static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono:
 // basic macros   --TODO: do we need those? delete what we dont' need
 // ----------------------------------------------------------------------------
 
-//#define SAFE_DELETE(p)  { if(p) { delete (p); (p)=NULL; } }
-//#define SAFE_RELEASE(p) { if(p) { (p)->Release(); (p)=NULL; } }     // nasty! use CComPtr<>
 #ifndef ASSERT
+#ifdef _CHECKED // basetypes.h expects this function to be defined (it is in message.h)
+extern void _CHECKED_ASSERT_error(const char * file, int line, const char * exp);
+#define ASSERT(exp) ((exp)||(_CHECKED_ASSERT_error(__FILE__,__LINE__,#exp),0))
+#else
 #define ASSERT assert
 #endif
-
+#endif
 #define UNUSED(x) (void)(x)
 
 // ----------------------------------------------------------------------------
@@ -197,7 +263,6 @@ static inline void Sleep (size_t ms) { std::this_thread::sleep_for (std::chrono:
 
 namespace msra { namespace basetypes {
 
-	//sequence training
     #ifdef __unix__
     typedef timeval LARGE_INTEGER;
     #endif
@@ -210,7 +275,7 @@ namespace msra { namespace basetypes {
         {
     #ifdef _WIN32
             if (!QueryPerformanceFrequency (&freq)) // count ticks per second
-                throw std::runtime_error ("auto_timer: QueryPerformanceFrequency failure");
+                RuntimeError("auto_timer: QueryPerformanceFrequency failure");
             QueryPerformanceCounter (&start);
     #endif
     #ifdef __unix__
@@ -310,7 +375,13 @@ template<class _T> class fixed_vector
         UNUSED(index);
 #endif
     }
-    void check (size_t index) const { ASSERT (index < n); }
+    void check (size_t index) const 
+    {
+        ASSERT (index < n); 
+#ifdef NDEBUG
+        UNUSED(index);
+#endif
+    }
     // ... TODO: when I make this public, LinearTransform.h acts totally up but I cannot see where it comes from.
     //fixed_vector (const fixed_vector & other) : n (0), p (NULL) { *this = other; }
 public:
@@ -320,9 +391,9 @@ public:
     fixed_vector (int size) : n (size), p (size > 0 ? new _T[size] : NULL) { }
     fixed_vector (size_t size) : n ((int) size), p (size > 0 ? new _T[size] : NULL) { }
     ~fixed_vector() { delete[] p; }
-    inline int size() const { return (int) n; }
+    int size() const { return (int) n; }
     inline int capacity() const { return (int) n; }
-    inline bool empty() const { return n == 0; }
+    bool empty() const { return n == 0; }
     void clear() { delete[] p; p = NULL; n = 0; }
     _T *       begin()       { return p; }
     const _T * begin() const { return p; }
@@ -332,7 +403,7 @@ public:
     inline       _T & operator[] (size_t index)       { check (index); return p[index]; }  // writing
     inline const _T & operator[] (size_t index) const { check (index); return p[index]; }  // reading
     inline int indexof (const _T & elem) const { ASSERT (&elem >= p && &elem < p + n); return &elem - p; }
-    inline void swap (fixed_vector & other)  throw() { std::swap (other.p, p); std::swap (other.n, n); }
+    void swap (fixed_vector & other)  throw() { std::swap (other.p, p); std::swap (other.n, n); }
     template<class VECTOR> fixed_vector & operator= (const VECTOR & other)
     {
         int other_n = (int) other.size();
@@ -358,28 +429,29 @@ template<class _T> inline void swap (fixed_vector<_T> & L, fixed_vector<_T> & R)
 // class matrix - simple fixed-size 2-dimensional array, access elements as m(i,j)
 // stored as concatenation of rows
 
-//template<class T> class matrix : fixed_vector<T>
-//{
-//    size_t numcols;
-//    size_t locate (size_t i, size_t j) const { ASSERT (i < rows() && j < cols()); return i * cols() + j; }
-//public:
-//    typedef T elemtype;
-//    matrix() : numcols (0) {}
-//    matrix (size_t n, size_t m) { resize (n, m); }
-//    void resize (size_t n, size_t m) { numcols = m; fixed_vector::resize (n * m); }
-//    size_t cols() const { return numcols; }
-//    size_t rows() const { return empty() ? 0 : size() / cols(); }
-//    size_t size() const { return fixed_vector::size(); }    // use this for reading and writing... not nice!
-//    bool empty() const { return fixed_vector::empty(); }
-//    T &       operator() (size_t i, size_t j)       { return (*this)[locate(i,j)]; }
-//    const T & operator() (size_t i, size_t j) const { return (*this)[locate(i,j)]; }
-//    void swap (matrix & other)  throw() { std::swap (numcols, other.numcols); fixed_vector::swap (other); }
-//};
-//template<class _T> inline void swap (matrix<_T> & L, matrix<_T> & R)  throw() { L.swap (R); }
+template<class T> class matrix : fixed_vector<T>
+{
+    size_t numcols;
+    size_t locate(size_t i, size_t j) const { ASSERT(i < rows() && j < cols()); return i * cols() + j; }
+public:
+    typedef T elemtype;
+    matrix() : numcols(0) {}
+    matrix(size_t n, size_t m) { resize(n, m); }
+    void resize(size_t n, size_t m) { numcols = m; fixed_vector<T>::resize(n * m); }
+    size_t cols() const { return numcols; }
+    size_t rows() const { return empty() ? 0 : size() / cols(); }
+    size_t size() const { return fixed_vector<T>::size(); }    // use this for reading and writing... not nice!
+    bool empty() const { return fixed_vector<T>::empty(); }
+    T &       operator() (size_t i, size_t j)       { return (*this)[locate(i, j)]; }
+    const T & operator() (size_t i, size_t j) const { return (*this)[locate(i, j)]; }
+    void swap(matrix & other) throw() { std::swap(numcols, other.numcols); fixed_vector<T>::swap(other); }
+};
+template<class _T> inline void swap(matrix<_T> & L, matrix<_T> & R) throw() { L.swap(R); }
 
 // TODO: get rid of these
 typedef std::string STRING;
 typedef std::wstring WSTRING;
+typedef std::basic_string<TCHAR> TSTRING;    // wide/narrow character string
 
 // derive from this for noncopyable classes (will get you private unimplemented copy constructors)
 // ... TODO: change all of basetypes classes/structs to use this
@@ -391,23 +463,16 @@ public:
     noncopyable(){}
 };
 
-// class CCritSec and CAutoLock -- simple critical section handling
-#ifndef    _WIN32          // TODO: Currently only working under Windows; BROKEN otherwise, to be fixed
-typedef int CRITICAL_SECTION;
-static inline void InitializeCriticalSection(CRITICAL_SECTION *) {}
-static inline void DeleteCriticalSection(CRITICAL_SECTION *) {}
-static inline void EnterCriticalSection(CRITICAL_SECTION *) {}
-static inline void LeaveCriticalSection(CRITICAL_SECTION *) {}
-#endif
 class CCritSec
 {
-    CCritSec (const CCritSec &); CCritSec & operator= (const CCritSec &);
-    CRITICAL_SECTION m_CritSec;
+    CCritSec (const CCritSec &) = delete;
+    CCritSec & operator= (const CCritSec &) = delete;
+    std::mutex m_CritSec;
 public:
-    CCritSec() { InitializeCriticalSection(&m_CritSec); };
-    ~CCritSec() { DeleteCriticalSection(&m_CritSec); };
-    void Lock() { EnterCriticalSection(&m_CritSec); };
-    void Unlock() { LeaveCriticalSection(&m_CritSec); };
+    CCritSec() {};
+    ~CCritSec() {};
+    void Lock() { m_CritSec.lock(); };
+    void Unlock() { m_CritSec.unlock(); };
 };
 
 
@@ -422,201 +487,8 @@ public:
     ~CAutoLock() { m_rLock.Unlock(); };
 };
 
-#if 0
-// an efficient way to write COM code
-// usage examples:
-//  COM_function() || throw_hr ("message");
-//  while ((s->Read (p, n, &m) || throw_hr ("Read failure")) == S_OK) { ... }
-// is that cool or what?
-struct bad_hr : public std::runtime_error
-{
-    HRESULT hr;
-    bad_hr (HRESULT p_hr, const char * msg) : hr (p_hr), std::runtime_error (msg) { }
-    // (only for use in || expression  --deprecated:)
-    bad_hr() : std::runtime_error(NULL) { }
-    bad_hr(const char * msg) : std::runtime_error(msg) { }
-};
-struct throw_hr
-{
-    const char * msg;
-    inline throw_hr (const char * msg = NULL) : msg (msg) {}
-};
-inline static HRESULT operator|| (HRESULT hr, const throw_hr & e)
-{
-    if (SUCCEEDED (hr)) return hr;
-    throw bad_hr (hr, e.msg);
-}
-// (old deprecated version kept for compat:)
-inline static bool operator|| (HRESULT hr, const bad_hr & e) { if (SUCCEEDED (hr)) return true; throw bad_hr (hr, e.what()); }
-
-// back-mapping of exceptions to HRESULT codes
-// usage pattern: HRESULT COM_function (...) { try { exception-based function body } catch_hr_return; }
-#define catch_hr_return    \
-        catch (const bad_alloc &) { return E_OUTOFMEMORY; }         \
-        catch (const bad_hr & e) { return e.hr; }                   \
-        catch (const invalid_argument &) { return E_INVALIDARG; }   \
-        catch (const runtime_error &) { return E_FAIL; }            \
-        catch (const logic_error &) { return E_UNEXPECTED; }        \
-        catch (const exception &) { return E_FAIL; }                \
-        return S_OK;
-
-// CoInitializeEx() wrapper to ensure CoUnintialize()
-//struct auto_co_initialize : noncopyable
-//{
-//    auto_co_initialize() { ::CoInitializeEx (NULL, COINIT_MULTITHREADED) || bad_hr ("auto_co_initialize: CoInitializeEx failure"); }
-//    ~auto_co_initialize() { ::CoUninitialize(); }
-//};
-
-// auto pointer for ::CoTaskMemFree
-template<class T> class auto_co_ptr : noncopyable
-{
-    T * p;
-public:
-    auto_co_ptr() : p (NULL) { }
-    auto_co_ptr (T * p) : p (p) { }
-//    ~auto_co_ptr() { ::CoTaskMemFree (p); }
-    operator T * () const { return p; }
-    T * operator->() const { return p; }
-    T** operator& () { assert (p == NULL); return &p; }    // must be empty when taking address
-};
-
-// represents a thread-local-storage variable
-// Note: __declspec(thread) is broken on pre-Vista for PastValue loaded DLLs
-// [http://www.nynaeve.net/?p=187]
-// so instead, we need to wrap up the Win32 TLS functions ourselves.
-// Note: tls instances must be allocated as static to work correctly, e.g.:
-//   static tls myVal();
-//   myVal = (void *) 25;
-//   printf ("value is %d",(void *) myVal);
-
-class tls
-{
-private:
-    int tlsSlot;
-public:
-
-#ifdef UNDER_CE
-    // this is from standard windows headers - seems to be missing in WINCE
-    #define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
-#endif
-    tls() { tlsSlot = TlsAlloc(); if (tlsSlot == TLS_OUT_OF_INDEXES) throw std::runtime_error("tls: TlsAlloc failed, out of tls slots"); }
-    operator void * () { return TlsGetValue (tlsSlot); }
-    void *operator = (void *val) { if (!TlsSetValue (tlsSlot,val)) throw std::runtime_error ("tls: TlsSetValue failed"); return val; }
-};
-#endif
 
 };};    // namespace
-
-#if 0 //ndef BASETYPES_NO_UNSAFECRTOVERLOAD // if on, no unsafe CRT overload functions
-
-// ----------------------------------------------------------------------------
-// overloads for "unsafe" CRT functions used in our code base
-// ----------------------------------------------------------------------------
-
-// strlen/wcslen overloads for fixed-buffer size
-
-// Note: Careful while fixing bug related to these templates.
-// In all attempted experiments, in seems all 6 definitions are required 
-// below to get the correct behaviour.  Be very very careful 
-// not to delete something without testing that case 5&6 have "size" deduced.
-// 1. char *
-// 2. char * const
-// 3. const char *
-// 4. const char * const
-// 5. char (&) [size]
-// 6. const char (&) [size]
-// the following includes all headers that use strlen() and fail because of the mapping below
-// to find those, change #define strlen strlen_ to something invalid e.g. strlen::strlen_
-#if _MSC_VER >= 1600    // VS 2010  --TODO: fix this by correct include order instead
-#include <intrin.h>     // defines strlen() as an intrinsic in VS 2010
-#include <typeinfo>     // uses strlen()
-#include <xlocale>      // uses strlen()
-#endif
-#define strlen strlen_
-#ifndef    LINUX
-template<typename _T> inline __declspec(deprecated("Dummy general template, cannot be used directly")) 
-#else
-template<typename _T> inline 
-#endif    // LINUX
-size_t strlen_(_T &s) { return strnlen_s(static_cast<const char *>(s), SIZE_MAX); } // never be called but needed to keep compiler happy
-template<typename _T> inline size_t strlen_(const _T &s)     { return strnlen_s(static_cast<const char *>(s), SIZE_MAX); }
-template<> inline size_t strlen_(char * &s)                  { return strnlen_s(s, SIZE_MAX); }
-template<> inline size_t strlen_(const char * &s)            { return strnlen_s(s, SIZE_MAX); }
-template<size_t n> inline size_t strlen_(const char (&s)[n]) { return (strnlen_s(s, n)); }
-template<size_t n> inline size_t strlen_(char (&s)[n])       { return (strnlen_s(s, n)); }
-#define wcslen wcslen_
-template<typename _T> inline __declspec(deprecated("Dummy general template, cannot be used directly")) 
-size_t wcslen_(_T &s) { return wcsnlen_s(static_cast<const wchar_t *>(s), SIZE_MAX); } // never be called but needed to keep compiler happy
-template<typename _T> inline size_t __cdecl wcslen_(const _T &s)        { return wcsnlen_s(static_cast<const wchar_t *>(s), SIZE_MAX); }
-template<> inline size_t wcslen_(wchar_t * &s)                  { return wcsnlen_s(s, SIZE_MAX); }
-template<> inline size_t wcslen_(const wchar_t * &s)            { return wcsnlen_s(s, SIZE_MAX); }
-template<size_t n> inline size_t wcslen_(const wchar_t (&s)[n]) { return (wcsnlen_s(s, n)); }
-template<size_t n> inline size_t wcslen_(wchar_t (&s)[n])       { return (wcsnlen_s(s, n)); }
-
-// xscanf wrappers -- one overload for each actual use case in our code base
-static inline int sscanf  (const char * buf, const char * format, int * i1)                     { return sscanf_s (buf, format, i1); }
-static inline int sscanf  (const char * buf, const char * format, int * i1, int * i2)           { return sscanf_s (buf, format, i1, i2); }
-static inline int sscanf  (const char * buf, const char * format, int * i1, int * i2, int * i3) { return sscanf_s (buf, format, i1, i2, i3); }
-static inline int sscanf  (const char * buf, const char * format, double * f1)                  { return sscanf_s (buf, format, f1); }
-static inline int swscanf (const wchar_t * buf, const wchar_t * format, int * i1)               { return swscanf_s (buf, format, i1); }
-static inline int fscanf  (FILE * file, const char * format, float * f1)                        { return fscanf_s (file, format, f1); }
-
-// ...TODO: should we pass 'count' instead of SIZE_MAX? (need to review use cases)
-#define _vsnprintf _vsnprintf_
-static inline int _vsnprintf_(char *buffer, size_t count, const char *format, va_list argptr)
-{ return _vsnprintf_s (buffer, SIZE_MAX, count, format, argptr); }
-#define _vsnwprintf _vsnwprintf_
-static inline int _vsnwprintf_(wchar_t *buffer, size_t count, const wchar_t *format, va_list argptr)
-{ return _vsnwprintf_s (buffer, SIZE_MAX, count, format, argptr); }
-
-// wcsfcpy -- same as standard wcsncpy, use padded fixed-size buffer really needed
-static inline void wcsfcpy (wchar_t * dest, const wchar_t * source, size_t count)
-{
-    while (count && (*dest++ = *source++) != 0) count--;    // copy
-    if (count) while (--count) *dest++ = 0;                 // pad with zeroes
-}
-
-// cacpy -- fixed-size character array (same as original strncpy (dst, src, sizeof (dst)))
-// NOTE: THIS FUNCTION HAS NEVER BEEN TESTED. REMOVE THIS COMMENT ONCE IT HAS.
-template<class T, size_t n> static inline void cacpy (T (&dst)[n], const T * src)
-{ for (int i = 0; i < n; i++) { dst[i] = *src; if (*src) src++; } }
-// { return strncpy (dst, src, n); }   // using original C std lib function
-
-// mappings for "unsafe" functions that are not really unsafe
-#define strtok strtok_      // map to "safe" function (adds no value)
-static inline /*const*/ char * strtok_(char * s, const char * delim)
-{
-    static msra::basetypes::tls tls_context; // see note for tls class def
-    char *context = (char *) (void *) tls_context;
-    char *ret = strtok_s (s, delim, &context);
-    tls_context = context;
-    return ret;
-}
-
-#define wcstok wcstok_      // map to "safe" function (adds no value)
-static inline /*const*/ wchar_t * wcstok_(wchar_t * s, const wchar_t * delim) 
-{ 
-    static msra::basetypes::tls tls_context; // see note for tls class def
-    wchar_t *context = (wchar_t *) (void *) tls_context;
-    wchar_t *ret = wcstok_s (s, delim, &context);
-    tls_context = context;
-    return ret;
-}
-
-#define fopen fopen_        // map to _fsopen() (adds no value)
-static inline FILE * fopen_(const char * p, const char * m) { return _fsopen (p, m, _SH_DENYWR); }
-#define _wfopen _wfopen_    // map to _wfsopen() (adds no value)
-static inline FILE * _wfopen_(const wchar_t * p, const wchar_t * m) { return _wfsopen (p, m, _SH_DENYWR); }
-
-#define strerror(e) strerror_((e))      // map to "safe" function (adds no value)
-static inline const char *strerror_(int e)
-{   // keep a cache so we can return a pointer (to mimic the old interface)
-    static msra::basetypes::CCritSec cs; static std::map<int,std::string> msgs;
-    msra::basetypes::CAutoLock lock (cs);
-    if (msgs.find(e) == msgs.end()) { char msg[1024]; strerror_s (msg, e); msgs[e] = msg; }
-    return msgs[e].c_str();
-}
-#endif
 
 // ----------------------------------------------------------------------------
 // frequently missing string functions
@@ -626,11 +498,6 @@ namespace msra { namespace strfun {
 
 #ifndef BASETYPES_NO_STRPRINTF
 
-/*
-#ifdef __UNIX__
-static FILE *dummyf = fopen("tmp", "wb");
-#endif
-*/
 // [w]strprintf() -- like sprintf() but resulting in a C++ string
 template<class _T> struct _strprintf : public std::basic_string<_T>
 {   // works for both wchar_t* and char*
@@ -660,6 +527,7 @@ private:
 #ifdef __WINDOWS__
 		return vswprintf (nullptr, 0, format, args);
 #elif defined(__UNIX__)
+        // TODO: Really??? Write to file in order to know the length of a string?
 		FILE *dummyf = fopen("/dev/null", "w");
 		if (dummyf == NULL)
 			perror("The following error occurred in basetypes.h:cprintf");
@@ -675,6 +543,7 @@ private:
 #ifdef __WINDOWS__
 		return vsprintf_s(nullptr, 0, format, args);
 #elif defined(__UNIX__)
+        // TODO: Really??? Write to file in order to know the length of a string?
 		FILE *dummyf = fopen("/dev/null", "wb");
 		if (dummyf == NULL)
 			perror("The following error occurred in basetypes.h:cprintf");
@@ -701,10 +570,37 @@ typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
 
 #endif
 
+#ifdef _WIN32
 // string-encoding conversion functions
+struct utf8 : std::string { utf8 (const std::wstring & p)    // utf-16 to -8
+{
+    size_t len = p.length();
+    if (len == 0) { return;}    // empty string
+    msra::basetypes::fixed_vector<char> buf (3 * len + 1);   // max: 1 wchar => up to 3 mb chars
+    // ... TODO: this fill() should be unnecessary (a 0 is appended)--but verify
+    std::fill (buf.begin (), buf.end (), 0);
+    int rc = WideCharToMultiByte (CP_UTF8, 0, p.c_str(), (int) len,
+                                  &buf[0], (int) buf.size(), NULL, NULL);
+    if (rc == 0) RuntimeError("WideCharToMultiByte");
+    (*(std::string*)this) = &buf[0];
+}};
+struct utf16 : std::wstring { utf16 (const std::string & p)  // utf-8 to -16
+{
+    size_t len = p.length();
+    if (len == 0) { return;}    // empty string
+    msra::basetypes::fixed_vector<wchar_t> buf (len + 1);
+    // ... TODO: this fill() should be unnecessary (a 0 is appended)--but verify
+    std::fill (buf.begin (), buf.end (), (wchar_t) 0);
+    int rc = MultiByteToWideChar (CP_UTF8, 0, p.c_str(), (int) len,
+                                  &buf[0], (int) buf.size());
+    if (rc == 0) RuntimeError("MultiByteToWideChar");
+    ASSERT (rc < buf.size ());
+    (*(std::wstring*)this) = &buf[0];
+}};
+#endif
+
 // Note: generally, 8-bit strings in this codebase are UTF-8.
 // One exception are functions that take 8-bit pathnames. Those will be interpreted by the OS as MBS. Best use wstring pathnames for all file accesses.
-
 #pragma warning(push)
 #pragma warning(disable : 4996) // Reviewed by Yusheng Li, March 14, 2006. depr. fn (wcstombs, mbstowcs)
 static inline std::string wcstombs(const std::wstring & p)  // output: MBCS
@@ -768,8 +664,11 @@ template<class _T> static inline std::basic_string<_T> join (const std::vector<s
 // parsing strings to numbers
 static inline int toint (const wchar_t * s)
 {
+#ifdef _WIN32
+    return _wtoi (s);   // ... TODO: check it
+#else
     return (int)wcstol(s, 0, 10);
-    //return _wtoi (s);   // ... TODO: test this
+#endif
 }
 static inline int toint (const char * s)
 {
@@ -782,7 +681,7 @@ static inline double todouble (const char * s)
     char * ep;          // will be set to point to first character that failed parsing
     double value = strtod (s, &ep);
     if (*s == 0 || *ep != 0)
-        throw std::runtime_error ("todouble: invalid input string");
+        RuntimeError("todouble: invalid input string");
     return value;
 }
 
@@ -798,7 +697,7 @@ static inline double todouble (const std::string & s)
 #if _MSC_VER > 1400 // VS 2010+
     size_t * idx = 0;
     value = std::stod (s, idx);
-    if (idx) throw std::runtime_error ("todouble: invalid input string");
+    if (idx) RuntimeError("todouble: invalid input string");
 #else
     char *ep = 0;   // will be updated by strtod to point to first character that failed parsing
     value = strtod (s.c_str(), &ep);
@@ -806,7 +705,7 @@ static inline double todouble (const std::string & s)
     // strtod documentation says ep points to first unconverted character OR 
     // return value will be +/- HUGE_VAL for overflow/underflow
     if (ep != s.c_str() + s.length() || value == HUGE_VAL || value == -HUGE_VAL)
-        throw std::runtime_error ("todouble: invalid input string");
+        RuntimeError("todouble: invalid input string");
 #endif
     
     return value;
@@ -816,7 +715,7 @@ static inline double todouble (const std::wstring & s)
 {
     wchar_t * endptr;
     double value = wcstod (s.c_str(), &endptr);
-    if (*endptr) throw std::runtime_error ("todouble: invalid input string");
+    if (*endptr) RuntimeError("todouble: invalid input string");
     return value;
 }
 
@@ -836,7 +735,7 @@ public:
         resize (0);
 
         // strtok_s not available on all platforms - so backoff to strtok on those
-#if __STDC_WANT_SECURE_LIB__
+#ifdef _WIN32
         char * context; // for strtok_s()
         for (char * p = strtok_s (buf, delim, &context); p; p = strtok_s (NULL, delim, &context))
             push_back (p);
@@ -867,7 +766,7 @@ class auto_file_ptr
     void close()  throw() { if (f) try { if (f != stdin && f != stdout && f != stderr) ::fclose (f); } catch (...) { } f = NULL; }
 #pragma warning(push)
 #pragma warning(disable : 4996)
-    void openfailed (const std::string & path) { throw std::runtime_error ("auto_file_ptr: error opening file '" + path + "': " + strerror (errno)); }
+    void openfailed (const std::string & path) { RuntimeError("auto_file_ptr: error opening file '" + path + "': " + strerror (errno)); }
 #pragma warning(pop)
 protected:
     friend int fclose (auto_file_ptr&); // explicit close (note: may fail)
@@ -927,33 +826,6 @@ public:
     T detach () { T tmp = it; it = 0; return tmp; } // release ownership of object
 };
 
-#if 0
-// simple timer
-// auto_timer timer; run(); double seconds = timer; // now can abandon the object
-class auto_timer
-{
-    LARGE_INTEGER freq, start;
-    auto_timer (const auto_timer &); void operator= (const auto_timer &);
-public:
-    auto_timer()
-    {
-        if (!QueryPerformanceFrequency (&freq)) // count ticks per second
-            throw std::runtime_error ("auto_timer: QueryPerformanceFrequency failure");
-        QueryPerformanceCounter (&start);
-    }
-    operator double() const     // each read gives time elapsed since start, in seconds
-    {
-        LARGE_INTEGER end;
-        QueryPerformanceCounter (&end);
-        return (end.QuadPart - start.QuadPart) / (double) freq.QuadPart;
-    }
-    void show (const std::string & msg) const
-    {
-        double elapsed = *this;
-        fprintf (stderr, "%s: %.6f ms\n", msg.c_str(), elapsed * 1000.0/*to ms*/);
-    }
-};
-#endif
 
 };};
 
@@ -977,7 +849,7 @@ public:
     operator bool() const { return ch != EOF; } // true if still a line to read
     std::string getline()                       // get and consume the next line
     {
-        if (ch == EOF) throw std::logic_error ("textreader: attempted to read beyond EOF");
+        if (ch == EOF) LogicError("textreader: attempted to read beyond EOF");
         assert (buf.empty());
         // get all line's characters --we recognize UNIX (LF), DOS (CRLF), and Mac (CR) convention
         while (ch != EOF && ch != '\n' && ch != '\r') buf.push_back (getch());
@@ -998,8 +870,6 @@ public:
 #define foreach_index(_i,_dat) for (int _i = 0; _i < (int) (_dat).size(); _i++)
 #define map_array(_x,_expr,_y) { _y.resize (_x.size()); foreach_index(_i,_x) _y[_i]=_expr(_x[_i]); }
 #define reduce_array(_x,_expr,_y) { foreach_index(_i,_x) _y = (_i==0) ? _x[_i] : _expr(_y,_x[_i]); }
-//template<class _A,class _F>
-//static void fill_array(_A & a, _F v) { ::fill (a.begin(), a.end(), v); }
 
 // ----------------------------------------------------------------------------
 // frequently missing utility functions
@@ -1039,7 +909,6 @@ template<class V> static inline void byteswap (V & v)  throw()
         bytereverse (v[i]);
 }
 
-//#if 0
 // execute a block with retry
 // Block must be restartable.
 // Use this when writing small files to those unreliable Windows servers.
@@ -1063,7 +932,6 @@ template<typename FUNCTION> static void attempt (int retries, const FUNCTION & b
         }
     }
 }
-//#endif
 
 };};    // namespace
 
@@ -1078,39 +946,6 @@ template<class S> static inline void ZeroStruct (S & s) { memset (&s, 0, sizeof 
 using namespace msra::basetypes;    // for compatibility
 
 #pragma warning (pop)
-
-#if 0   // construction site
-// ----------------------------------------------------------------------------
-// class RegisterModule
-// TODO: move this elsewhere
-// ----------------------------------------------------------------------------
-#include<functional>
-template<typename MODULETYPE>
-class RegisterModule
-{
-    static std::map<std::wstring, std::function<MODULETYPE*()>> & GetFactoryMethodsHash()
-    {
-        static std::map<std::wstring, std::function<MODULETYPE*()>> FactoryMethods; // shared object
-        return FactoryMethods;
-    }
-public:
-    RegisterModule(const std::wstring & ModuleName, std::function<MODULETYPE*()> FactoryMethod)
-    {
-        auto & FactoryMethods = GetFactoryMethodsHash();
-        FactoryMethods[ModuleName] = FactoryMethod;
-        // TODO: check for dups, using map::insert()
-    }
-    static MODULETYPE* Create(const std::wstring & ModuleName)
-    {
-        auto & FactoryMethods = GetFactoryMethodsHash();
-        auto Entry = FactoryMethods.find(ModuleName);
-        if (Entry != FactoryMethods.end())
-            return Entry->second();
-        else
-            return nullptr;
-    }
-};
-#endif
 
 #define EPSILON 1e-5
 #define ISCLOSE(a, b, threshold) (abs(a - b) < threshold)?true:false
@@ -1153,7 +988,6 @@ static inline bool comparator(const pair<int, F>& l, const pair<int, F>& r)
 }
 
 #ifdef _WIN32
-//sequence training 
 // ----------------------------------------------------------------------------
 // frequently missing Win32 functions
 // ----------------------------------------------------------------------------

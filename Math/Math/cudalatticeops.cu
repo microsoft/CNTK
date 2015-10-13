@@ -3,6 +3,7 @@
 // F. Seide, V-hansu
 
 #include <stdexcept>
+#include "Basics.h"
 #include "BestGpu.h"
 
 #ifndef CPUONLY
@@ -18,7 +19,7 @@ namespace msra { namespace cuda {
         {
             char buf[1000];
             sprintf(buf, "%s: launch failure: %s (cuda error %d)", fn, cudaGetErrorString (rc), rc);
-            throw std::runtime_error (buf);
+            RuntimeError(buf);
         }
     }
 

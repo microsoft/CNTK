@@ -64,7 +64,7 @@
         } \
         else \
         { \
-            throw std::runtime_error("Matrices do not exist in either CPU or GPU."); \
+            RuntimeError("Matrices do not exist in either CPU or GPU."); \
         } \
     }
 
@@ -104,7 +104,7 @@
         } \
         else \
         { \
-            throw std::runtime_error("Matrices do not exist in either CPU or GPU."); \
+            RuntimeError("Matrices do not exist in either CPU or GPU."); \
         } \
     }
 
@@ -161,7 +161,7 @@
         } \
         else \
         { \
-            throw std::runtime_error("Matrices do not exist in either CPU or GPU."); \
+            RuntimeError("Matrices do not exist in either CPU or GPU."); \
         } \
     }
 
@@ -182,6 +182,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_matrixType = MatrixType::UNDETERMINED;
 
         int _devId = deviceId!=AUTOPLACEMATRIX ? deviceId : GetBestGPUDeviceId();
+        _devId = EnforceOneGPUOnly(_devId);      // see EnforceOneGPUOnly() for comment on what this is
         m_preferredDeviceId=_devId;
         m_numTimesDeviceChanged = 0;
         m_numTimesMatrixTypeChanged = 0;
@@ -295,7 +296,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>::Matrix(FILE* f, const char * matrixName, DEVICEID_TYPE deviceId, const MatrixType matrixType)
     {
         if (deviceId == MANAGEDEXTERN)
-            throw runtime_error("Externally Managed Matrix must use the basic constructor, then SetValue()\n");            
+            RuntimeError("Externally Managed Matrix must use the basic constructor, then SetValue()\n");            
 
         Init(deviceId);
 
@@ -333,7 +334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat)
     {
         if (deviceId == MANAGEDEXTERN)
-            throw runtime_error("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");            
+            RuntimeError("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");            
 
         Init(deviceId);
 
@@ -416,7 +417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId)
     {
         if (deviceId == MANAGEDEXTERN)
-            throw runtime_error("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");
+            RuntimeError("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");
 
         int origCopyFromDeviceId = deepCopyFrom.GetDeviceId();
 
@@ -661,7 +662,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else 
         {
-            throw std::runtime_error("Unknown matrix type");
+            RuntimeError("Unknown matrix type");
         }
     }
      
@@ -782,7 +783,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else 
         {
-            throw std::runtime_error("Unknown matrix type");
+            RuntimeError("Unknown matrix type");
         }
 
         return slice;
@@ -827,6 +828,71 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    Matrix<ElemType> Matrix<ElemType>::Diagonal() const
+    {
+        int devId = GetDeviceId();
+
+        Matrix<ElemType> diag(matrixFlagDontOwnBuffer, (DEVICEID_TYPE)devId);
+        diag.m_preferredDeviceId = m_preferredDeviceId;
+
+        AssignDiagonalValuesTo(diag);
+
+        return diag;
+    }
+
+    template<class ElemType>
+    Matrix<ElemType> Matrix<ElemType>::AssignDiagonalValuesTo(Matrix<ElemType>& diag) const
+    {
+        int devId = GetDeviceId();
+        DecideAndMoveToRightDevice(*this, diag);
+
+        if (GetMatrixType() == MatrixType::DENSE)
+        {
+            if (devId == CPUDEVICE)
+            {
+                if (diag.m_CPUMatrix != nullptr)
+                    diag.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUMatrix->Diagonal()));
+                else
+                    diag.m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(m_CPUMatrix->Diagonal()));
+                diag.SetDataLocation(CPU, DENSE);
+            }
+            else
+            {
+                if (diag.m_GPUMatrix != nullptr)
+                    diag.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->Diagonal()));
+                else
+                    diag.m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(m_GPUMatrix->Diagonal()));
+                diag.SetDataLocation(GPU, DENSE);
+            }
+        }
+        else if (GetMatrixType() == MatrixType::SPARSE)
+        {
+            // TODO: Implement optimized diagonal functions for sparse matrices. For now use the DiagonalToDense instead.
+            if (devId == CPUDEVICE)
+            {
+                if (diag.m_CPUMatrix != nullptr)
+                    diag.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->DiagonalToDense()));
+                else
+                    diag.m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->DiagonalToDense()));
+                diag.SetDataLocation(CPU, DENSE);
+            }
+            else
+            {
+                if (diag.m_GPUMatrix != nullptr)
+                    diag.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->DiagonalToDense()));
+                else
+                    diag.m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->DiagonalToDense()));
+                diag.SetDataLocation(GPU, DENSE);
+            }
+        }
+        else
+        {
+            RuntimeError("Unknown matrix type");
+        }
+
+        return diag;
+    }
 
     //this function will change the matrix type between DENSE and SPARSE. 
     //WARNING: The correct implementation is to copy the matrix between DENSE and SPARSE
@@ -995,7 +1061,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType> Matrix<ElemType>::Transpose()
     {
         if (IsEmpty())
-            throw std::logic_error("Transpose: Matrix is empty.");
+            LogicError("Transpose: Matrix is empty.");
 
         Matrix<ElemType> c(this->GetNumCols(), this->GetNumRows(), (DEVICEID_TYPE)this->GetDeviceId());
         c.AssignTransposeOf(*this);
@@ -1024,7 +1090,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (IsEmpty())  // if empty then we are done
             return;
-            //throw std::logic_error("SetValue: Matrix is empty.");
+            //LogicError("SetValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1040,13 +1106,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         if (IsEmpty())  // if empty then we are done
             return;
-            //throw std::logic_error("SetValue: Matrix is empty.");
+            //LogicError("SetValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->SetValue(*db_number.ExposePointer2Value()), 
             if (GetDeviceId()!=db_number.GetDeviceId())
-                throw std::runtime_error("Matrix and device bound number must be on the same device");
+                RuntimeError("Matrix and device bound number must be on the same device");
             m_GPUMatrix->SetValue(db_number.ExposePointer2Value()), 
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
@@ -1061,7 +1127,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::SetColumn(const ElemType* colPointer, size_t colInd)
     {
         if (colPointer == nullptr)
-            throw std::invalid_argument("SetColumn: colPointer is null.");    
+            InvalidArgument("SetColumn: colPointer is null.");    
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1122,7 +1188,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags, int deviceId)
     {
         if (pArray == nullptr)
-            throw std::invalid_argument("Invalid pArray.");
+            InvalidArgument("Invalid pArray.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1163,10 +1229,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::SetDiagonalValue(const ElemType v)
     {
         if (IsEmpty())
-            throw std::logic_error("SetDiagonalValue: Matrix is empty.");
+            LogicError("SetDiagonalValue: Matrix is empty.");
 
         if (GetNumRows() != GetNumCols())
-            throw std::logic_error("SetDiagonalValue: NumRows and NumCols do not agree.");
+            LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1178,16 +1244,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void Matrix<ElemType>::SetDiagonalValue(Matrix<ElemType>& vector)
+    void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
     {
         if (IsEmpty() || vector.IsEmpty())
-            throw std::logic_error("SetDiagonalValue: Matrix is empty.");
+            LogicError("SetDiagonalValue: Matrix is empty.");
 
         if (GetNumRows() != GetNumCols())
-            throw std::logic_error("SetDiagonalValue: NumRows and NumCols do not agree.");
+            LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
 
         if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
-            throw std::logic_error("SetDiagonalValue: input vector must be a vector.");
+            LogicError("SetDiagonalValue: input vector must be a vector.");
 
         DecideAndMoveToRightDevice(*this, vector);
 
@@ -1202,7 +1268,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 );
         }
         else if (vector.GetNumRows() != GetNumRows())
-            throw std::logic_error("SetDiagonalValue: input vector's dimension does not agree with [this].");
+            LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
         else
         {
             //WARNING: we use this pointer to decide which function to call. However, vector may be stored in a different matrix type (DENSE, SPARSE)
@@ -1220,7 +1286,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed)
     {
         if (IsEmpty())
-            throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
+            LogicError("SetUniformRandomValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1235,10 +1301,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
     {
         if (sigma <= 0) 
-            throw std::invalid_argument("SetUniformRandomValue: sigma must be a positive value.");
+            InvalidArgument("SetUniformRandomValue: sigma must be a positive value.");
 
         if (IsEmpty())
-            throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
+            LogicError("SetUniformRandomValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1253,10 +1319,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
     {
         if (sigma <= 0) 
-            throw std::invalid_argument("SetUniformRandomValue: sigma must be a positive value.");
+            InvalidArgument("SetUniformRandomValue: sigma must be a positive value.");
 
         if (IsEmpty())
-            throw std::logic_error("SetUniformRandomValue: Matrix is empty.");
+            LogicError("SetUniformRandomValue: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1273,7 +1339,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, unsigned long seed)
     {
         if (IsEmpty())
-            throw std::logic_error("SetUniformRandomMask: Matrix is empty.");
+            LogicError("SetUniformRandomMask: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -1482,7 +1548,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignSumOf(const ElemType alpha, const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignSumOf: Matrix a is empty.");        
+            LogicError("AssignSumOf: Matrix a is empty.");        
 
         DecideAndMoveToRightDevice(a, *this);
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -1726,7 +1792,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else
         {
-            throw std::runtime_error("Matrices do not exist in either CPU or GPU.");
+            RuntimeError("Matrices do not exist in either CPU or GPU.");
         }
 
         return *this;
@@ -1823,7 +1889,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignDifferenceOf(const ElemType alpha, const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignDifferenceOf: Matrix a is empty.");
+            LogicError("AssignDifferenceOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -1843,7 +1909,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignDifferenceOf(const Matrix<ElemType>& a, const ElemType alpha)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignDifferenceOf: Matrix a is empty.");
+            LogicError("AssignDifferenceOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -1866,7 +1932,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::operator-= (const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("Minus Operation: Matrix a is empty.");
+            LogicError("Minus Operation: Matrix a is empty.");
         DecideAndMoveToRightDevice(*this, a);
 
         DISPATCH_MATRIX_ON_FLAG(this,
@@ -2070,11 +2136,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOf (const Matrix<ElemType>& a, const Matrix<ElemType>& b)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            throw std::logic_error("AssignElementProductOf: Matrix is empty.");
+            LogicError("AssignElementProductOf: Matrix is empty.");
 
         assert (a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
         if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-            throw std::invalid_argument("The input matrix dimensions do not match.");
+            InvalidArgument("The input matrix dimensions do not match.");
 
         DecideAndMoveToRightDevice(a, b, *this);
         if (!(a.GetMatrixType() == b.GetMatrixType()))
@@ -2096,14 +2162,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AddElementProductOf (const Matrix<ElemType>& a, const Matrix<ElemType>& b)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            throw std::logic_error("AddElementProductOf: Matrix is empty.");
+            LogicError("AddElementProductOf: Matrix is empty.");
 
         assert (a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
         if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-            throw std::invalid_argument("The input matrix dimensions do not match.");
+            InvalidArgument("The input matrix dimensions do not match.");
 
         if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == GetNumCols()))
-            throw std::invalid_argument("The input matrix dimensions do not match [this].");
+            InvalidArgument("The input matrix dimensions do not match [this].");
 
         DecideAndMoveToRightDevice(*this, a, b);
 
@@ -2126,11 +2192,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignElementDivisionOf (const Matrix<ElemType>& a, const Matrix<ElemType>& b)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            throw std::logic_error("AssignElementDivisionOf: Matrix is empty.");
+            LogicError("AssignElementDivisionOf: Matrix is empty.");
 
         assert (a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
         if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-            throw std::invalid_argument("The input matrix dimensions do not match.");
+            InvalidArgument("The input matrix dimensions do not match.");
 
         DecideAndMoveToRightDevice(a, b, *this);
         //WARNING: a and b must have same type
@@ -2155,10 +2221,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::ColumnElementMultiplyWith(const Matrix<ElemType>& a)
     {
         if (a.IsEmpty() || IsEmpty())
-            throw std::logic_error("ColumnElementMultiplyWith: Matrix is empty.");
+            LogicError("ColumnElementMultiplyWith: Matrix is empty.");
 
         if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
-            throw std::invalid_argument("ColumnElementMultiplyWith: The input matrix should be a col vector and match [this]'s rows.");
+            InvalidArgument("ColumnElementMultiplyWith: The input matrix should be a col vector and match [this]'s rows.");
 
         DecideAndMoveToRightDevice(*this, a);
         //WARNING: a and this must have same type
@@ -2182,10 +2248,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::RowElementMultiplyWith(const Matrix<ElemType>& a)
     {
         if (a.IsEmpty() || IsEmpty())
-            throw std::logic_error("RowElementMultiplyWith: Matrix is empty.");
+            LogicError("RowElementMultiplyWith: Matrix is empty.");
 
         if (!(a.GetNumCols() == GetNumCols() && a.GetNumRows() == 1))
-            throw std::invalid_argument("RowElementMultiplyWith: The input matrix should be a row vector and match [this]'s columns.");
+            InvalidArgument("RowElementMultiplyWith: The input matrix should be a row vector and match [this]'s columns.");
 
         //WARNING: a and this must have same type
         if (! (GetMatrixType() == a.GetMatrixType()))
@@ -2208,10 +2274,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::RowElementDivideBy(const Matrix<ElemType>& a)
     {
         if (a.IsEmpty() || IsEmpty())
-            throw std::logic_error("RowElementDivideBy: Matrix is empty.");
+            LogicError("RowElementDivideBy: Matrix is empty.");
 
         if (!(a.GetNumCols() == GetNumCols() && a.GetNumRows() == 1))
-            throw std::invalid_argument("RowElementDivideBy: The input matrix should be a row vector and match [this]'s columns.");
+            InvalidArgument("RowElementDivideBy: The input matrix should be a row vector and match [this]'s columns.");
 
         //WARNING: a and this must have same type
         if (!(GetMatrixType() == a.GetMatrixType()))
@@ -2235,10 +2301,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::ColumnElementDivideBy(const Matrix<ElemType>& a)
     {
         if (a.IsEmpty() || IsEmpty())
-            throw std::logic_error("ColumnElementDivideBy: Matrix is empty.");
+            LogicError("ColumnElementDivideBy: Matrix is empty.");
 
         if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
-            throw std::invalid_argument("ColumnElementDivideBy: The input matrix should be a col vector and match [this]'s rows.");
+            InvalidArgument("ColumnElementDivideBy: The input matrix should be a col vector and match [this]'s rows.");
 
         DecideAndMoveToRightDevice(*this, a);
         //WARNING: a and this must have same type
@@ -2278,7 +2344,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignElementInverseOf (const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignElementInverseOf: Matrix a is empty.");
+            LogicError("AssignElementInverseOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
         this->SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -2460,7 +2526,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignLogSoftmaxOf (const Matrix<ElemType>& a, const bool isColWise)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignLogSoftmaxOf: Matrix a is empty.");
+            LogicError("AssignLogSoftmaxOf: Matrix a is empty.");
         DecideAndMoveToRightDevice(a, *this);        
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
 
@@ -2493,7 +2559,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignSqrtOf (const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignSqrtOf: Matrix a is empty.");
+            LogicError("AssignSqrtOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -2529,7 +2595,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignExpOf (const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignExpOf: Matrix a is empty.");
+            LogicError("AssignExpOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -2564,7 +2630,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignAbsOf (const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignAbsOf: Matrix a is empty.");
+            LogicError("AssignAbsOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -2614,7 +2680,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignLogOf (const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignLogOf: Matrix a is empty.");
+            LogicError("AssignLogOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -2634,7 +2700,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignLog10Of (const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignLogOf: Matrix a is empty.");
+            LogicError("AssignLogOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -2669,7 +2735,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignCosineOf (const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignCosineOf: Matrix a is empty.");
+            LogicError("AssignCosineOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -2704,7 +2770,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignNegativeSineOf (const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignNegativeSineOf: Matrix a is empty.");
+            LogicError("AssignNegativeSineOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);        
         SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -2724,7 +2790,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::InplaceTruncate(const ElemType threshold)
     {
         if (IsEmpty())
-            throw std::logic_error("InplaceTruncate: Matrix is empty.");
+            LogicError("InplaceTruncate: Matrix is empty.");
 
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -2754,7 +2820,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         assert(threshold >= 0);
 
         if (IsEmpty())
-            throw std::logic_error("InplaceSoftThreshold: Matrix is empty.");
+            LogicError("InplaceSoftThreshold: Matrix is empty.");
         
         if (threshold == 0)
             return *this;
@@ -2774,7 +2840,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::InplaceTruncateBottom (const ElemType threshold)
     {
         if (IsEmpty())
-            throw std::logic_error("InplaceTruncateBottom: Matrix is empty.");
+            LogicError("InplaceTruncateBottom: Matrix is empty.");
 
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -2803,7 +2869,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignTruncateBottomOf (const Matrix<ElemType>& a, const ElemType threshold)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignTruncateBottomOf: Matrix a is empty.");
+            LogicError("AssignTruncateBottomOf: Matrix a is empty.");
 
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -2841,7 +2907,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::InplaceTruncateTop (const ElemType threshold)
     {
         if (IsEmpty())
-            throw std::logic_error("InplaceTruncateTop: Matrix is empty.");
+            LogicError("InplaceTruncateTop: Matrix is empty.");
 
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -2869,7 +2935,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignTruncateTopOf (const Matrix<ElemType>& a, const ElemType threshold)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignTruncateTopOf: Matrix a is empty.");
+            LogicError("AssignTruncateTopOf: Matrix a is empty.");
 
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -2907,7 +2973,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::SetToZeroIfAbsLessThan (const ElemType threshold)
     {
         if (IsEmpty())
-            throw std::logic_error("SetToZeroIfAbsLessThan: Matrix is empty.");
+            LogicError("SetToZeroIfAbsLessThan: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
@@ -2925,7 +2991,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType Matrix<ElemType>::SumOfElements () const
     {
         if (IsEmpty())
-            throw std::logic_error("SumOfElements: Matrix is empty.");
+            LogicError("SumOfElements: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
@@ -2941,7 +3007,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignSumOfElements(const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignSumOfElements: Matrix a is empty.");        
+            LogicError("AssignSumOfElements: Matrix a is empty.");        
 
         //WARNING: a and this must have same type
         if (!(GetMatrixType() == a.GetMatrixType()))
@@ -2981,7 +3047,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType Matrix<ElemType>::SumOfAbsElements () const
     {
         if (IsEmpty())
-            throw std::logic_error("SumOfAbsElements: Matrix is empty.");
+            LogicError("SumOfAbsElements: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
@@ -2997,7 +3063,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType Matrix<ElemType>::LogAddSumOfElements() const
     {
         if (IsEmpty())
-            throw std::logic_error("LogAddSumOfElements: Matrix is empty.");
+            LogicError("LogAddSumOfElements: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
@@ -3034,7 +3100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::VectorNorm1(Matrix<ElemType>& c, const bool isColWise) const
     {
         if (IsEmpty())
-            throw std::logic_error("VectorNormInf: Matrix is empty.");
+            LogicError("VectorNormInf: Matrix is empty.");
 
         DecideAndMoveToRightDevice(*this, c);
         c.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
@@ -3059,7 +3125,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::VectorNorm2(Matrix<ElemType>& c, const bool isColWise) const
     {
         if (IsEmpty())
-            throw std::logic_error("VectorNorm2: Matrix is empty.");
+            LogicError("VectorNorm2: Matrix is empty.");
 
         DecideAndMoveToRightDevice(*this, c);
         c.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
@@ -3084,7 +3150,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::VectorNormInf(Matrix<ElemType>& c, const bool isColWise) const
     {
         if (IsEmpty())
-            throw std::logic_error("VectorNormInf: Matrix is empty.");
+            LogicError("VectorNormInf: Matrix is empty.");
 
         DecideAndMoveToRightDevice(*this, c);
         c.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
@@ -3117,11 +3183,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignKhatriRaoProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            throw std::logic_error("AssignKhatriRaoProductOf: Matrix is empty.");
+            LogicError("AssignKhatriRaoProductOf: Matrix is empty.");
 
         assert (a.GetNumCols() == b.GetNumCols());
         if (!(a.GetNumCols() == b.GetNumCols()))
-            throw std::invalid_argument("AssignKhatriRaoProductOf: The input matrix dimensions do not match.");
+            InvalidArgument("AssignKhatriRaoProductOf: The input matrix dimensions do not match.");
 
         DecideAndMoveToRightDevice(a, b, *this);
         //WARNING: a and b must have same type
@@ -3151,11 +3217,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AddColumnReshapeProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool transposeAColumn)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            throw std::logic_error("AddColumnReshapeProductOf: Matrix is empty.");
+            LogicError("AddColumnReshapeProductOf: Matrix is empty.");
 
         assert (a.GetNumCols() == b.GetNumCols());
         if (!(a.GetNumCols() == b.GetNumCols()))
-            throw std::invalid_argument("AddColumnReshapeProductOf: The input matrix dimensions do not match.");
+            InvalidArgument("AddColumnReshapeProductOf: The input matrix dimensions do not match.");
 
         DecideAndMoveToRightDevice(*this, a, b);
         //WARNING: a and b must have same type
@@ -3184,7 +3250,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType Matrix<ElemType>::FrobeniusNorm() const
     {
         if (IsEmpty())
-            throw std::logic_error("FrobeniusNorm: Matrix is empty.");
+            LogicError("FrobeniusNorm: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
@@ -3199,7 +3265,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignFrobeniusNormOf(const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignFrobeniusNormOf: Matrix a is empty.");
+            LogicError("AssignFrobeniusNormOf: Matrix a is empty.");
 
         this->Resize(1,1);
 
@@ -3224,7 +3290,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType Matrix<ElemType>::MatrixNormInf() const
     {
         if (IsEmpty())
-            throw std::logic_error("MatrixNormInf: Matrix is empty.");
+            LogicError("MatrixNormInf: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
@@ -3239,7 +3305,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType Matrix<ElemType>::MatrixNorm1() const
     {
         if (IsEmpty())
-            throw std::logic_error("MatrixNorm1: Matrix is empty.");
+            LogicError("MatrixNorm1: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
@@ -3255,7 +3321,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType Matrix<ElemType>::MatrixNorm0() const
     {
         if (IsEmpty())
-            throw std::logic_error("MatrixNorm0: Matrix is empty.");
+            LogicError("MatrixNorm0: Matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(this,
             nullptr,
@@ -3270,7 +3336,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignSignOf(const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AssignSignOf: Matrix a is empty.");
+            LogicError("AssignSignOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);
         //WARNING: a and this must have same type
@@ -3294,7 +3360,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AddSignOf(const Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("AddSignOf: Matrix a is empty.");
+            LogicError("AddSignOf: Matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, *this);
         if (!(GetMatrixType() == a.GetMatrixType()))
@@ -3316,7 +3382,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::VectorMax(Matrix<ElemType>& maxIndexes, Matrix<ElemType>& maxValues, const bool isColWise) const
     {
         if (IsEmpty())
-            throw std::logic_error("VectorMax: Matrix is empty.");
+            LogicError("VectorMax: Matrix is empty.");
 
         DecideAndMoveToRightDevice(*this, maxIndexes, maxValues);
         maxIndexes.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
@@ -3336,7 +3402,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::VectorMin(Matrix<ElemType>& minIndexes, Matrix<ElemType>& minValues, const bool isColWise) const
     {
         if (IsEmpty())
-            throw std::logic_error("VectorMin: Matrix is empty.");
+            LogicError("VectorMin: Matrix is empty.");
 
         DecideAndMoveToRightDevice(*this, minIndexes, minValues);
         minIndexes.SwitchToMatrixType(GetMatrixType(), GetFormat(), false);
@@ -3479,7 +3545,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (this->OwnBuffer())
             _transferFromDeviceToDevice(from_id,  to_id, ismoved, emptyTransfer);
         else
-            throw std::runtime_error("Cannot move externally owned matrices to the preferred device.");
+            RuntimeError("Cannot move externally owned matrices to the preferred device.");
     }
 
     template<class ElemType>
@@ -3497,7 +3563,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (from_id == to_id)
         {
             if (from_id != GetDeviceId())
-                throw std::runtime_error("Trying to transfer matrix from device to the same device while the matrix does not live in the from device.");
+                RuntimeError("Trying to transfer matrix from device to the same device while the matrix does not live in the from device.");
             
             return;
         }
@@ -3526,7 +3592,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (from_id == CPUDEVICE) //from CPU to GPU
             {
                 if (m_CPUSparseMatrix == NULL)
-                    throw std::logic_error("Can't move from CPU because I'm not there!");
+                    LogicError("Can't move from CPU because I'm not there!");
 
                 if (m_GPUSparseMatrix == NULL)
                     m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(m_CPUSparseMatrix->GetFormat(), to_id);
@@ -3552,7 +3618,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else //from GPU
             {
                 if (m_GPUSparseMatrix == NULL || m_GPUSparseMatrix->GetComputeDeviceId() != from_id)
-                    throw std::logic_error("This matrix isn't on this (or any?) GPU");
+                    LogicError("This matrix isn't on this (or any?) GPU");
 
                 if (to_id < 0) //to CPU
                 {
@@ -3587,7 +3653,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (from_id == CPUDEVICE) //from CPU to GPU
             {
                 if (m_CPUMatrix==NULL)
-                    throw std::logic_error("Can't move from CPU because I'm not there!");
+                    LogicError("Can't move from CPU because I'm not there!");
                 if (m_GPUMatrix!=NULL)
                     delete m_GPUMatrix;
                 if (m_CPUMatrix->GetNumElements() !=0 && !emptyTransfer)
@@ -3612,7 +3678,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else //from GPU
             {
                 if (m_GPUMatrix==NULL || m_GPUMatrix->GetComputeDeviceId()!=from_id)
-                    throw std::logic_error("This matrix isn't on this (or any?) GPU");
+                    LogicError("This matrix isn't on this (or any?) GPU");
 
                 if (to_id < 0) //to CPU
                 {
@@ -3673,7 +3739,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const
     {
         if (IsEmpty())
-            throw std::logic_error("Print: Matrix is empty.");
+            LogicError("Print: Matrix is empty.");
         DEVICEID_TYPE orgdevice = this->GetDeviceId();
 
         DISPATCH_MATRIX_ON_FLAG(this,
@@ -3865,7 +3931,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignNoiseContrastiveEstimation(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, const Matrix<ElemType>& bias, Matrix<ElemType>& tmp)
     {
         if (a.IsEmpty() || b.IsEmpty() || c.IsEmpty())
-            throw std::logic_error("AssignNoiseContrastiveEstimation: one of the input matrices is empty.");
+            LogicError("AssignNoiseContrastiveEstimation: one of the input matrices is empty.");
 
         if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != this->GetDeviceId())        
             NOT_IMPLEMENTED;
@@ -3893,7 +3959,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignNCEDerivative(const Matrix<ElemType>& tmp, const Matrix<ElemType>& a, const Matrix<ElemType>& b, const Matrix<ElemType>& c, size_t inputIndex)
     {
         if (a.IsEmpty() || b.IsEmpty() || c.IsEmpty())
-            throw std::logic_error("AssignNoiseContrastiveEstimation: one of the input matrices is empty.");
+            LogicError("AssignNoiseContrastiveEstimation: one of the input matrices is empty.");
 
         if (a.GetDeviceId() != b.GetDeviceId() || b.GetDeviceId() != c.GetDeviceId() || c.GetDeviceId() != this->GetDeviceId())
             NOT_IMPLEMENTED;
@@ -3948,7 +4014,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT, Matrix<ElemType>& W)
     {
         if (A.IsEmpty() )
-            throw std::logic_error("SVD:  the input matrix is empty.");        
+            LogicError("SVD:  the input matrix is empty.");        
 
         DecideAndMoveToRightDevice(A, SIGMA, U);    
         VT._transferToDevice(A.GetDeviceId());
@@ -3987,7 +4053,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType beta, Matrix<ElemType>& c)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            throw std::logic_error("MultiplyAndWeightedAdd:  one of the input matrix is empty.");        
+            LogicError("MultiplyAndWeightedAdd:  one of the input matrix is empty.");        
 
         DecideAndMoveToRightDevice(a,b,c);        
 
@@ -4079,6 +4145,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     c.SetDataLocation(GPU, SPARSE); 
                 }
             }
+            else if (a.m_matrixType == b.m_matrixType && a.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE)
+            {
+                GPUMatrix<ElemType> tmp;
+                GPUSparseMatrix<ElemType> tmpSparse;
+                GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, beta, tmp);
+                tmpSparse.SetValue(tmp);
+                *c.m_GPUSparseMatrix = tmpSparse + (*c.m_GPUSparseMatrix)*beta;
+                c.SetDataLocation(GPU, SPARSE);
+            }
             else
                 NOT_IMPLEMENTED;
         }
@@ -4130,7 +4205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /*static*/void Matrix<ElemType>::ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
     {
         if (a.IsEmpty() || c.IsEmpty())
-            throw std::logic_error("ScaleAndAdd:  one of the input matrices is empty."); 
+            LogicError("ScaleAndAdd:  one of the input matrices is empty."); 
 
         DecideAndMoveToRightDevice(c, a);        
 
@@ -4369,7 +4444,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::Scale(ElemType alpha, Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("Scale:  Input matrix a is empty.");
+            LogicError("Scale:  Input matrix a is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             &a,
@@ -4388,7 +4463,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::Scale(const Matrix<ElemType>& alpha, Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            throw std::logic_error("Scale:  Input matrix a is empty.");
+            LogicError("Scale:  Input matrix a is empty.");
 
         DecideAndMoveToRightDevice(a,alpha);
 
@@ -4409,7 +4484,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::InnerProduct (const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            throw std::logic_error("InnerProduct:  one of the input matrix is empty.");
+            LogicError("InnerProduct:  one of the input matrix is empty.");
 
         DecideAndMoveToRightDevice(a, b, c);
 
@@ -4432,7 +4507,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ElemType Matrix<ElemType>::InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            throw std::logic_error("InnerProductOfMatrices:  one of the input matrices is empty.");
+            LogicError("InnerProductOfMatrices:  one of the input matrices is empty.");
 
         DecideAndMoveToRightDevice(a,b);        
 
@@ -4462,7 +4537,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::AssignInnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            throw std::logic_error("InnerProductOfMatrices:  one of the input matrices is empty.");
+            LogicError("InnerProductOfMatrices:  one of the input matrices is empty.");
 
         this->Resize(1,1);       
 
@@ -4492,7 +4567,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::ElementWisePower (ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
     {
         if (a.IsEmpty())
-            throw std::logic_error("Scale:  The input matrix a is empty.");
+            LogicError("Scale:  The input matrix a is empty.");
 
         DecideAndMoveToRightDevice(a, c);        
         c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -4510,7 +4585,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     bool Matrix<ElemType>::AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold /*= 1e-8*/)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            throw std::logic_error("AreEqual: one of the input matrices is empty.");
+            LogicError("AreEqual: one of the input matrices is empty.");
 
         if (a.GetNumRows()  != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
             return false;
@@ -4544,7 +4619,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     bool Matrix<ElemType>::HasElement(const Matrix<ElemType>& a, const ElemType value)
     {
         if (a.IsEmpty())
-            throw std::logic_error("HasElement: input matrix is empty.");
+            LogicError("HasElement: input matrix is empty.");
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             &a,
@@ -4603,7 +4678,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     DEVICEID_TYPE Matrix<ElemType>::GetBestGPUDeviceId()
     { 
-        return (DEVICEID_TYPE)GPUMatrix<ElemType>::GetBestGPUDeviceId();
+        return EnforceOneGPUOnly(GPUMatrix<ElemType>::GetBestGPUDeviceId());    // see EnforceOneGPUOnly() for comment on what this is
     }
 
     // TODO: these are scalar operations--why are they in Matrix?
@@ -4618,7 +4693,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         assert(y > 0);
         if (y <= 0)
-            throw std::logic_error("y is smaller than zero");
+            LogicError("y is smaller than zero");
 
         return x - y * floor(x / y);
     }
@@ -4653,7 +4728,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     Matrix<ElemType>& Matrix<ElemType>::Shift(const Matrix<ElemType>& a, int shift)
     {
         if (a.IsEmpty())
-            throw std::logic_error("Shift: Matrix is empty.");
+            LogicError("Shift: Matrix is empty.");
         else
             LogicError("Shift: BUGBUG This function currently leaves uninitialized values. Fix the code or contact fseide@microsoft.com.");
 
@@ -4676,14 +4751,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift, size_t negnumber)
 	{
 		if (a.IsEmpty() || b.IsEmpty())
-			throw std::logic_error("AssignElementProductOfWithShiftNeg: Matrix is empty.");
+			LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
 
 		assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
 		if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-			throw std::invalid_argument("The input matrix dimensions do not match.");
+			InvalidArgument("The input matrix dimensions do not match.");
 
 		if (a.GetNumRows() != 1)
-			throw std::invalid_argument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
+			InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
 
 		DecideAndMoveToRightDevice(a, b, *this);
 		if (!(a.GetMatrixType() == b.GetMatrixType()))
@@ -4712,7 +4787,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	void Matrix<ElemType>::InnerProductWithShiftNeg(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise, size_t shift, size_t negnumber)
 	{
 		if (a.IsEmpty() || b.IsEmpty())
-			throw std::logic_error("InnerProduct:  one of the input matrix is empty.");
+			LogicError("InnerProduct:  one of the input matrix is empty.");
 
 		DecideAndMoveToRightDevice(a, b, c);
 
@@ -4736,7 +4811,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	Matrix<ElemType>& Matrix<ElemType>::GetARowByIndex(const Matrix<ElemType>& a, size_t index)
 	{
 		if (a.IsEmpty())
-			throw std::logic_error("GetARowByIndex: Matrix is empty.");
+			LogicError("GetARowByIndex: Matrix is empty.");
 
 
 		//WARNING: a and this must have same type
@@ -4761,7 +4836,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	void Matrix<ElemType>::ConductRowElementMultiplyWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, size_t shift, bool bFirstmatrixfixed)
 	{
 		if (a.IsEmpty() || b.IsEmpty())
-			throw std::logic_error("InnerProduct:  one of the input matrix is empty.");
+			LogicError("InnerProduct:  one of the input matrix is empty.");
 
 		DecideAndMoveToRightDevice(a, b, c);
 
@@ -4784,14 +4859,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOfWithShift(const Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t shift)
 	{
 		if (a.IsEmpty() || b.IsEmpty())
-			throw std::logic_error("AssignElementProductOfWithShift: Matrix is empty.");
+			LogicError("AssignElementProductOfWithShift: Matrix is empty.");
 
 		assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
 		if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
-			throw std::invalid_argument("The input matrix dimensions do not match.");
+			InvalidArgument("The input matrix dimensions do not match.");
 
 		if (a.GetNumRows() != 1)
-			throw std::invalid_argument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
+			InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix must be a row vector.");
 
 		DecideAndMoveToRightDevice(a, b, *this);
 		if (!(a.GetMatrixType() == b.GetMatrixType()))
@@ -4876,7 +4951,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 		DecideAndMoveToRightDevice(*this, label, gamma);
 
 		if (label.GetNumCols() != gamma.GetNumCols() || label.GetNumRows() != gamma.GetNumRows())
-			throw std::logic_error("DropFrame: label matrix is not in the same size as gamm matrix.");
+			LogicError("DropFrame: label matrix is not in the same size as gamm matrix.");
 		this->SwitchToMatrixType(label.GetMatrixType(), label.GetFormat(), false);
 
 		DISPATCH_MATRIX_ON_FLAG(this,

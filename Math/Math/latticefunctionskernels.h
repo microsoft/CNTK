@@ -238,6 +238,28 @@ struct latticefunctionskernels
         logaddratio (loga, logb - loga);
     }
 
+#if 1
+    static inline __device__ float  bitsasfloat (                   int b) { return       __int_as_float (b); }
+    static inline __device__ double bitsasfloat (unsigned long long int b) { return __longlong_as_double (b); }
+    static inline __device__                    int floatasbits (float  f) { return       __float_as_int (f); }
+    static inline __device__ unsigned long long int floatasbits (double f) { return __double_as_longlong (f); }
+
+    template<typename FLOAT>    // adapted from [http://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#ixzz32EuzZjxV]
+    static __device__ FLOAT atomicLogAdd (FLOAT * address, FLOAT val) // direct adaptation from NVidia source code
+    {
+        typedef decltype (floatasbits (val)) bitstype;
+        bitstype * address_as_ull = (bitstype *) address;
+        bitstype old = *address_as_ull, assumed;
+        do {
+            assumed = old;
+            FLOAT sum = bitsasfloat (assumed);
+            logaddseen (sum, val);
+            old = atomicCAS (address_as_ull, assumed, floatasbits (sum));
+        } while (assumed != old);
+        // note: critically, ^^ this comparison must copare the bits ('int') instead of the converted float values, since this will fail for NaNs (NaN != NaN is true always)
+        return bitsasfloat(old);
+    }
+#else   // this code does not work because (assumed != old) will not compare correctly in case of NaNs
     //same pattern as atomicAdd(), but performing the log-add operation instead 
     template<typename FLOAT> static __device__ FLOAT atomicLogAdd (FLOAT * address, FLOAT val)
     {
@@ -252,6 +274,7 @@ struct latticefunctionskernels
         } while (assumed != old);                           // if old == assumed, the *address is not changed in this loop, so this is safe
         return old;
     }
+#endif
 
     // [v-hansu] shuffling accessing order for a item in cubic(Ni, Nj, Nk) with index i, j, k according to shufflemode
     static inline __device__ size_t shuffle (size_t i, size_t Ni, size_t j, size_t Nj, size_t k, size_t Nk, size_t shufflemode)

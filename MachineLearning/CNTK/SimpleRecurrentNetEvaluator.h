@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 #include <stdexcept>
-#include "basetypes.h"
+#include "Basics.h"
 #include "fileutil.h"
 #include "commandArgUtil.h"
 #include <Windows.h>
@@ -39,19 +39,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             
             if (crossEntropyNodes.size()==0)
             {
-                throw new runtime_error("No CrossEntropyWithSoftmax node found\n");
+                RuntimeError("No CrossEntropyWithSoftmax node found\n");
             }
             if (evaluationNodes.size()==0)
             {
-                throw new runtime_error("No Evaluation node found\n");
+                RuntimeError("No Evaluation node found\n");
             }
             if (crossEntropyNodes.size()==0)
             {
-                throw new runtime_error("Evaluate() does not yet support reading multiple CrossEntropyWithSoftMax Nodes\n");
+                RuntimeError("Evaluate() does not yet support reading multiple CrossEntropyWithSoftMax Nodes\n");
             }
             if (evaluationNodes.size() == 0)
             {
-                throw new runtime_error("Evaluate() does not yet support reading multiple Evaluation Nodes\n");
+                RuntimeError("Evaluate() does not yet support reading multiple Evaluation Nodes\n");
             }
 
             std::map<std::wstring, Matrix<ElemType>*> inputMatrices;

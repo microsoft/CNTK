@@ -151,14 +151,18 @@ protected:
         CacheCurrentLine();             // re-cache current line
     }
 public:
-    class CodeSourceError : public ConfigError
+    class CodeSourceException : public ConfigException
     {
     public:
-        CodeSourceError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
-        /*ConfigError::*/ const wchar_t * kind() const { return L"reading source"; }
+        CodeSourceException(const wstring & msg, TextLocation where) : ConfigException(msg, where) { }
+        /*ConfigException::*/ const wchar_t * kind() const { return L"reading source"; }
     };
 
-    __declspec_noreturn static void Fail(wstring msg, TextLocation where) { throw CodeSourceError(msg, where); }
+    __declspec_noreturn static void Fail(wstring msg, TextLocation where) 
+    {
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        throw CodeSourceException(msg, where);
+    }
 
     // enter a source file, at start or as a result of an include statement
     void PushSourceFile(SourceFile && sourceFile)
@@ -293,15 +297,19 @@ public:
         }
     };
 
-    class LexerError : public ConfigError
+    class LexerException : public ConfigException
     {
     public:
-        LexerError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
-        /*ConfigError::*/ const wchar_t * kind() const { return L"tokenizing"; }
+        LexerException(const wstring & msg, TextLocation where) : ConfigException(msg, where) { }
+        /*ConfigException::*/ const wchar_t * kind() const { return L"tokenizing"; }
     };
 
 private:
-    __declspec_noreturn static void Fail(wstring msg, Token where) { throw LexerError(msg, where.beginLocation); }
+    __declspec_noreturn static void Fail(wstring msg, Token where) 
+    {
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        throw LexerException(msg, where.beginLocation);
+    }
 
     Token currentToken;
     // consume input characters to form a next token
@@ -472,14 +480,18 @@ void Expression::Dump(int indent) const
 class Parser : public Lexer
 {
     // errors
-    class ParseError : public ConfigError
+    class ParseException : public ConfigException
     {
     public:
-        ParseError(const wstring & msg, TextLocation where) : ConfigError(msg, where) { }
-        /*ConfigError::*/ const wchar_t * kind() const { return L"parsing"; }
+        ParseException(const wstring & msg, TextLocation where) : ConfigException(msg, where) { }
+        /*ConfigException::*/ const wchar_t * kind() const { return L"parsing"; }
     };
 
-    __declspec_noreturn static void Fail(const wstring & msg, Token where) { throw ParseError(msg, where.beginLocation); }
+    __declspec_noreturn static void Fail(const wstring & msg, Token where) 
+    {
+        Microsoft::MSR::CNTK::DebugUtil::PrintCallStack();
+        throw ParseException(msg, where.beginLocation);
+    }
 
     //void Expected(const wstring & what) { Fail(strprintf("%ls expected", what.c_str()), GotToken().beginLocation); }  // I don't know why this does not work
     void Expected(const wstring & what) { Fail(what + L" expected", GotToken().beginLocation); }

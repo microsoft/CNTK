@@ -46,7 +46,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: or does that only signal an issue, and we should still terminate ourselves?
             // BUGBUG: We'd also need to Abort through the other sub-set communicator
         }
-        throw std::runtime_error(what);
+        RuntimeError(what);
     }
 
     class MPIWrapper
@@ -86,7 +86,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             static bool initialized = false;
             if (initialized)
             {
-                throw std::logic_error("MPIWrapper: this is a singleton class that can only be instantiated once per process");
+                LogicError("MPIWrapper: this is a singleton class that can only be instantiated once per process");
             }
 
             initialized = true;

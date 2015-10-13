@@ -87,6 +87,7 @@
     <ClCompile Include="..\..\BrainScript\BrainScriptTest.cpp" />
     <ClCompile Include="..\..\Common\File.cpp" />
     <ClCompile Include="..\..\Common\fileutil.cpp" />
+    <ClCompile Include="..\..\Common\DebugUtil.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>

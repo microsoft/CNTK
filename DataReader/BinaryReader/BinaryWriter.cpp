@@ -110,7 +110,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
     if (records == 0)
     {
         std::string message = "Required config variable (wrecords) missing from " + config.ConfigPath();
-        throw runtime_error(message);
+        RuntimeError(message);
     }
 
     size_t dim=1; // default dimension (single item)
@@ -138,7 +138,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         if (foundType == sectionTypeNull)
         {
             std::string message = "Invalid type (sectionType) in " + config.ConfigPath();
-            throw runtime_error(message);
+            RuntimeError(message);
         }
         sectionType = foundType;
     }
@@ -181,7 +181,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         else if (sectionType != sectionTypeNull)
         {
             std::string message = "No filename (wfile) defined in " + config.ConfigPath();
-            throw runtime_error(message);
+            RuntimeError(message);
         }
     }
 
@@ -255,7 +255,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
         else
         {
             std::string message = "Invalid type (labelType) or missing in " + config.ConfigPath();
-            throw runtime_error(message);
+            RuntimeError(message);
         }
 
         // initialize the section header

@@ -17,6 +17,7 @@
 #include "Platform.h"
 #include "BestGpu.h"
 #include "commandArgUtil.h" // for ConfigParameters
+#include "DebugUtil.h"
 #ifndef CPUONLY
 #pragma comment (lib, "cudart.lib")
 #include <cuda_runtime.h>
@@ -111,7 +112,7 @@ public:
     static const int RequeryDevices = -2;  // Requery refreshing statistics and picking the same number as last query
     std::vector<int> GetDevices(int number = AllDevices, BestGpuFlags flags = bestGpuNormal ); // get multiple devices
 private:
-	bool LockDevice(int deviceID, bool trial=true);
+    bool LockDevice(int deviceID, bool trial = true);
 };
     
 // DeviceFromConfig - Parse 'deviceId' config parameter to determine what type of behavior is desired
@@ -121,18 +122,15 @@ private:
 // 0    - or some other single number, use a single GPU with CUDA ID same as the number
 // 0:2:3- an array of ids to use, (PTask will only use the specified IDs)
 // *3   - a count of GPUs to use (PTask)
-// All  - Use all the GPUs (PTask) 
-#ifdef MATH_EXPORTS
-__declspec(dllexport)
-#endif
-DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
+// All  - Use all the GPUs (PTask)
+static DEVICEID_TYPE SelectDeviceFromConfig(const ConfigParameters& config)  // internal version, wrapped by exported DeviceFromConfig() function
 {
     static BestGpu* g_bestGpu = NULL;
     static DEVICEID_TYPE deviceId = CPUDEVICE;
 
     ConfigValue val = config("deviceId", "auto");
-	ConfigValue bLockGPUstr = config("LockGPU", "true");
-	bool bLockGPU = bLockGPUstr;
+    ConfigValue bLockGPUstr = config("LockGPU", "true");
+    bool bLockGPU = bLockGPUstr;
 
     //recommend to use CPU. Adding -1 for backward compatability
     if (!_stricmp(val.c_str(), "CPU") || !_stricmp(val.c_str(), "-1"))
@@ -186,6 +184,14 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
         }
     }
     return deviceId;
+}
+#ifdef MATH_EXPORTS
+__declspec(dllexport)
+#endif
+DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
+{
+    // route the result through EnforceOneGPUOnly() which only lets the first choice through (see comment there)
+    return EnforceOneGPUOnly(SelectDeviceFromConfig(config));
 }
 
 // !!!!This is from helper_cuda.h which comes with CUDA samples!!!! Consider if it is beneficial to just include all helper_cuda.h
@@ -265,7 +271,7 @@ void BestGpu::Init()
     {
         const char* errmsg = cudaGetErrorString(err);
         fprintf(stderr, "!!!!!!!!CUDA EXCEPTION: %s\n", errmsg);
-        throw std::runtime_error(errmsg);
+        RuntimeError(errmsg);
     }
 
 
@@ -465,7 +471,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
     CrossProcessMutex deviceAllocationLock("DBN.exe GPGPU querying lock");
     
     if (!deviceAllocationLock.Acquire((bestFlags & bestGpuExclusiveLock) != 0))  // failure  --this should not really happen
-        throw std::runtime_error("DeviceFromConfig: unexpected failure");
+        RuntimeError("DeviceFromConfig: unexpected failure");
     
     {
 	// even if user do not want to lock the GPU, we still need to check whether a particular GPU is locked or not, 

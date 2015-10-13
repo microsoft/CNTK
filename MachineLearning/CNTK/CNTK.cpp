@@ -1568,7 +1568,7 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
 
         delete g_mpi;
     }
-    catch (const ScriptableObjects::ScriptingError &err)
+    catch (const ScriptableObjects::ScriptingException &err)
     {
         fprintf(stderr, "EXCEPTION occurred: %s\n", err.what());
         err.PrintError();

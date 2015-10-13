@@ -39,13 +39,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         {
-            m_needGradient = true;
+            m_parameterUpdateRequired = true;
             m_outputImageLayout = ImageLayout(1, SIZE_MAX, 1);
         }
         LearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
             Base(deviceId, name)
         {
-            m_needGradient = true;
+            m_parameterUpdateRequired = true;
             m_outputImageLayout = ImageLayout(1, rows, 1);
             Resize(rows, cols);
             FunctionValues().SetValue(0);
@@ -55,7 +55,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SaveToFile(File& fstream) const override
         {
             Base::SaveToFile(fstream);
-            fstream << m_needGradient;
+            fstream << m_parameterUpdateRequired;
             fstream << GetNumRows() << GetNumCols(); 
             fstream << FunctionValues();
         }
@@ -65,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::LoadFromFile(fstream, modelVersion);
 
             size_t rows, cols;
-            fstream >> m_needGradient;
+            fstream >> m_parameterUpdateRequired;
             fstream >> rows >> cols;
 
             //intentionally comment out to support automatic dimension inference
@@ -149,7 +149,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             char str[4096];
             sprintf(str, "[%lu,%lu]  ", GetNumRows(), GetNumCols());
             fstream << string(str);
-            sprintf(str, "NeedGradient=%s", NeedGradient()? "true" : "false");
+            sprintf(str, "NeedGradient=%s", m_parameterUpdateRequired ? "true" : "false");  // TODO: update NDL to accept a better matching name as well
             fstream << string(str);
 
             PrintNodeValuesToFile(printValues, fstream);
@@ -218,7 +218,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ConvertToSparseMatrix();
 
             Resize(rows, cols);
-            m_needGradient = false;
+            m_parameterUpdateRequired = false;
         }
     public:
         InputValue(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -282,7 +282,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             Resize(rows, cols);
             //m_functionValues.SetValue(0.0);         // (TODO: not sure why one would load InputValues)
-            m_needGradient = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
+            m_parameterUpdateRequired = false;                 // (noone should ever overwrite this for Inputs, but better be sure...)
         }
 
         // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type. This causes some unnecessary special-casing.
@@ -615,7 +615,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 //children first for function evaluation
                 if (!IsLeaf())
-                    m_needGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
+                    m_parameterUpdateRequired = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
 
                 result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
                 this->m_visitedOrder = result.size();

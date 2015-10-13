@@ -75,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 fprintf(stderr, "evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.\n");
                 if (m_net.EvaluationNodes().size() == 0 && m_net.FinalCriterionNodes().size() == 0)
-                    throw std::logic_error("There is no default evalnodes or training criterion node specified in the network.");
+                    LogicError("There is no default evalnodes or training criterion node specified in the network.");
 
                 for (int i = 0; i < m_net.EvaluationNodes().size(); i++)
                     evalNodes.push_back(m_net.EvaluationNodes()[i]);
@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     const auto & node = m_net.GetNodeFromName(evalNodeNames[i]);
                     m_net.BuildAndValidateSubNetwork(node);
                     if (node->GetNumRows() != 1 || node->GetNumCols() != 1)
-                        throw std::logic_error("The nodes passed to SimpleEvaluator::Evaluate function must be either eval or training criterion nodes (which evalues to 1x1 value).");
+                        LogicError("The nodes passed to SimpleEvaluator::Evaluate function must be either eval or training criterion nodes (which evalues to 1x1 value).");
                     evalNodes.push_back(node);
                 }
             }

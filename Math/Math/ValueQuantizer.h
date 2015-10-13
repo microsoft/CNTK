@@ -2,6 +2,7 @@
 #ifndef __VALLUE_QUANTIZER_H__
 #define __VALLUE_QUANTIZER_H__
 
+#include "Basics.h"
 #include "BestGpu.h"    // for CPUONLY
 #ifndef CPUONLY
 #include <cuda.h>
@@ -177,7 +178,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (v & 1) // not a power of two
             {
-                throw std::runtime_error("ld: 'bits' must be a power of two");
+                RuntimeError("ld: 'bits' must be a power of two");
             }
             else
             {

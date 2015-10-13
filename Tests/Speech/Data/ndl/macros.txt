@@ -1,0 +1,16 @@
+DNNLayer(inDim, outDim, x)
+{
+    W = Parameter(outDim, inDim); 
+    b = Parameter(outDim); 
+    t = Times(W, x);
+    z = Plus(t, b);
+    y = sigmoid(z);
+}
+
+DNNLastLayer(hiddenDim, LabelDim, x)
+{
+    W = Parameter(LabelDim, hiddenDim);
+    b = Parameter(LabelDim);
+    t = Times(W, x);
+    z = Plus(t, b);
+}
