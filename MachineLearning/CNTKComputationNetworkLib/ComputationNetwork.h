@@ -605,64 +605,29 @@ public:
                 auto pMBLayout = recurrentNodes[0]->GetMBLayout();
 
                 // tell all that loop is about to commence
-                for (auto & nodeIter : recurrentNodes)
-                    nodeIter->OnEvaluateBeginIteration();
-
-                for (auto & nodeIter : recurrentNodes)  // layout must be shared by all nodes in the loop
+                for (auto & nodeIter2 : recurrentNodes)
                 {
-                    if (!pMBLayout || nodeIter->GetMBLayout() != pMBLayout)
+                    if (!pMBLayout || nodeIter2->GetMBLayout() != pMBLayout)  // take the opportunity to check that layout is shared by all nodes in the loop
                         LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
-                                   nodeIter->NodeName().c_str(), recurrentNodes[0]->NodeName().c_str());
+                                   nodeIter2->NodeName().c_str(), recurrentNodes[0]->NodeName().c_str());
+
+                    nodeIter2->UpdateFunctionAndGradientMBSize(); // TODO: for sequence-to-sequence models we will need to be able to grow this step by step since size is unknown upfront
+                    nodeIter2->OnEvaluateBeginIteration();
                 }
 
                 // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
-#if 1
-                (*nodeIter)->UpdateFunctionAndGradientMBSize(); // TODO: for sequence-to-sequence models we will need to be able to grow this step by step since size is unknown upfront
                 FrameRangeIteration range(pMBLayout, recInfo->m_isForwardLoop ? -1 : +1);
                 for (auto t = range.begin(); t != range.end(); t++)
                 {
-                    for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+                    for (auto nodeIter2 = recurrentNodes.begin(); nodeIter2 != recurrentNodes.end(); nodeIter2++)
                     {
-                        (*nodeIter)->EvaluateThisNode(t);
-                        if (IsNodeReqMultiSeqHandling(*nodeIter))
-                            (*nodeIter)->MaskMissingValuesColumnsToZero(t.t());  // TODO: This should take a FrameRange as well
-                        (*nodeIter)->UpdateEvalTimeStamp();
+                        (*nodeIter2)->EvaluateThisNode(t);
+                        if (IsNodeReqMultiSeqHandling(*nodeIter2))
+                            (*nodeIter2)->MaskMissingValuesColumnsToZero(t.t());  // TODO: This should take a FrameRange as well
+                        (*nodeIter2)->UpdateEvalTimeStamp();
                     }
                 } 
-#else
-                if (recInfo->m_isForwardLoop)
-                {
-                    // note: the number of time steps may increase as we go along, e.g. for Decoder networks that decide the end based on network output
-                    // TODO: ^^ that's actually not yet implemented, but we can already be prepared for it
-                    // TODO: this loop should be controlled by an iterator, under control of the main Delay node in this loop.
-                    for (size_t t = 0; t < pMBLayout->GetNumTimeSteps(); t++)
-                    {
-                        for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
-                        {
-                            (*nodeIter)->UpdateFunctionAndGradientMBSize();
-                            (*nodeIter)->EvaluateThisNode(FrameRange(t));
-                            if (IsNodeReqMultiSeqHandling(*nodeIter))
-                                (*nodeIter)->MaskMissingValuesColumnsToZero(t);
-                            (*nodeIter)->UpdateEvalTimeStamp();
-                        }
-                    } 
-                }
-                else
-                {
-                    for (size_t t = pMBLayout->GetNumTimeSteps() - 1; t--> 0;)
-                    {
-                        for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
-                        {
-                            (*nodeIter)->UpdateFunctionAndGradientMBSize();
-                            (*nodeIter)->EvaluateThisNode(FrameRange(t));
-                            if (IsNodeReqMultiSeqHandling(*nodeIter))
-                                (*nodeIter)->MaskMissingValuesColumnsToZero(t);
-                            (*nodeIter)->UpdateEvalTimeStamp();
-                        }
-                    }
-                }
-#endif
-    
+
                 // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
                 for (auto & nodeIter : recurrentNodes)
                     nodeIter->OnEvaluateEndIteration();
@@ -788,8 +753,23 @@ public:
         // process nodes in pre-determined order
         for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
         {
+            auto node = *nodeIter;
 #ifdef DISPLAY_DEBUG
-            fprintf(stderr, "Compute Gradient For Node: %ls(%ls) Against Children\n", (*nodeIter)->OperationName().c_str(), (*nodeIter)->NodeName().c_str());
+            fprintf(stderr, "Compute Gradient For Node: %ls(%ls) Against Children\n", node->OperationName().c_str(), node->NodeName().c_str());
+#endif
+#ifdef _DEBUG   // TODO: this belongs into ComputeGradientForChildren(). Move it there after memshare merge and unification to one function. Or fix the bug that this masks straight -out.
+            // many gradients are reduction operations
+            // They touch both in-flowing gradients and function values, so we must set both to 0.
+            // BUGBUG: This masks an error that nodes should do that by themselves. E.g. TimesNode does, but MinusNode (in case of 1-column bias) does not.
+            if (node->m_needsGradient)
+            {
+                node->MaskMissingValuesColumnsToZero();
+                node->MaskMissingGradientColumnsToZero();
+                for (auto & child : node->GetChildren())
+                {
+                    child->MaskMissingValuesColumnsToZero();
+                }
+            }
 #endif
             // --- first, perform recurrent loops if this node participates in one
 
@@ -799,49 +779,18 @@ public:
                 if (recInfo->m_completedGradient == false)
                 {
                     const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
-#if 1
                     auto pMBLayout = recurrentNodes[0]->GetMBLayout();
                     FrameRangeIteration range(pMBLayout, recInfo->m_isForwardLoop ? -1 : +1);
                     for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iteration
                     {
-                        for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                        for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
                         {
-                            (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
-                            if (IsNodeReqMultiSeqHandling(*nodeIter))
-                                (*nodeIter)->MaskMissingGradientColumnsToZero(t.t());   // TODO: should accept a FrameRange as well
-                            (*nodeIter)->ComputeGradientForChildren(t.t());             // TODO: should accept a FrameRange as well
+                            (*nodeIter2)->VerifyNumParallelSequences(GetNumParallelSequences());
+                            if (IsNodeReqMultiSeqHandling(*nodeIter2))
+                                (*nodeIter2)->MaskMissingGradientColumnsToZero(t.t());   // TODO: should accept a FrameRange as well
+                            (*nodeIter2)->ComputeGradientForChildren(t.t());             // TODO: should accept a FrameRange as well
                         }
                     }
-#else
-                    size_t T = m_actualMBSize / GetNumParallelSequences();
-                    if (recInfo->m_isForwardLoop)
-                    {
-                        for (size_t t = T; t--> 0;)
-                        {
-                            for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
-                            {
-                                (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
-                                if (IsNodeReqMultiSeqHandling(*nodeIter))
-                                    (*nodeIter)->MaskMissingGradientColumnsToZero(t);
-                                (*nodeIter)->ComputeGradientForChildren(t);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for (size_t t = 0; t < T; t++)
-                        {
-                            for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
-                            {
-                                (*nodeIter)->VerifyNumParallelSequences(GetNumParallelSequences());
-                                if (IsNodeReqMultiSeqHandling(*nodeIter))
-                                    (*nodeIter)->MaskMissingGradientColumnsToZero(t);
-                                (*nodeIter)->ComputeGradientForChildren(t);
-                            }
-                        }
-                    }
-#endif
-
                     recInfo->m_completedGradient = true;
                 }
             }
@@ -851,11 +800,11 @@ public:
             if (IsNodeReqMultiSeqHandling(*nodeIter))
             {
                 // batch is done only for feed-forward nodes
-                if ((*nodeIter)->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
+                if (node->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
                     LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
-                (*nodeIter)->MaskMissingGradientColumnsToZero();
+                node->MaskMissingGradientColumnsToZero();
             }
-            (*nodeIter)->ComputeGradientForChildren();
+            node->ComputeGradientForChildren();
         }
 
         //since we now allow sharing of the matrix for function value and gradient value. the function values are now destroyed

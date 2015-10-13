@@ -630,7 +630,8 @@ minibatchiterator: epoch 0: frames [0..81920] (first utterance at frame 0), data
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
 Starting minibatch loop.
-EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from 0 now 1. This message will be shown only once. Epoch[ 1 of 2]-Minibatch[   1-  10 of 320]: SamplesSeen = 2560; TrainLossPerSample =  3.74183846; EvalErr[0]PerSample = 0.80195313; TotalTime = 0.30483s; TotalTimePerSample = 0.11907ms; SamplesPerSecond = 8398
+EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from 0 now 1. This message will be shown only once. 
+ Epoch[ 1 of 2]-Minibatch[   1-  10 of 320]: SamplesSeen = 2560; TrainLossPerSample =  3.74183846; EvalErr[0]PerSample = 0.80195313; TotalTime = 0.30483s; TotalTimePerSample = 0.11907ms; SamplesPerSecond = 8398
  Epoch[ 1 of 2]-Minibatch[  11-  20 of 320]: SamplesSeen = 2560; TrainLossPerSample =  2.91124763; EvalErr[0]PerSample = 0.70898438; TotalTime = 0.12917s; TotalTimePerSample = 0.05046ms; SamplesPerSecond = 19818
  Epoch[ 1 of 2]-Minibatch[  21-  30 of 320]: SamplesSeen = 2560; TrainLossPerSample =  2.58015976; EvalErr[0]PerSample = 0.66640625; TotalTime = 0.12870s; TotalTimePerSample = 0.05027ms; SamplesPerSecond = 19891
  Epoch[ 1 of 2]-Minibatch[  31-  40 of 320]: SamplesSeen = 2560; TrainLossPerSample =  2.27427139; EvalErr[0]PerSample = 0.58750000; TotalTime = 0.12889s; TotalTimePerSample = 0.05035ms; SamplesPerSecond = 19861
