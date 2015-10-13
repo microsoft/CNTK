@@ -28,6 +28,10 @@ have_gdk=no
 gdk_path=
 gdk_check=include/nvidia/gdk/nvml.h
 
+have_cub=no
+cub_path=
+cub_check=cub/cub.cuh
+
 mathlib=
 
 # List from best to worst choice
@@ -41,6 +45,7 @@ default_mkls=""
 default_cudas="cuda-7.5 cuda-7.0 cuda-6.5"
 default_kaldis="kaldi-trunk"
 default_gdks="."
+default_cubs="cub-1.4.1"
 
 function default_paths ()
 {
@@ -101,6 +106,11 @@ function find_gdk ()
     find_dir "$default_gdks" "$gdk_check"
 }
 
+function find_cub ()
+{
+    find_dir "$default_cubs" "$cub_check"
+}
+
 function is_hardlinked ()
 {
     r=no
@@ -142,6 +152,7 @@ function show_help ()
     echo "  --add directory add directory to library search path"
     echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
     echo "  --with-cuda[=directory] $(show_default $(find_cuda))"
+    echo "  --with-cub[=directory] $(show_default $(find_cub))"
     echo "  --with-gdk[=directory] $(show_default $(find_gdk))"
     echo "  --with-acml[=directory] $(show_default $(find_acml))"
     echo "  --with-mkl[=directory] $(show_default $(find_mkl))"
@@ -211,6 +222,28 @@ do
                     cuda_path=$optarg
                 else
                     echo "Invalid cuda directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
+        --with-cub*)
+            have_cub=yes
+            if test x$optarg = x
+            then
+                cub_path=$(find_cub)
+                if test x$cub_path = x
+                then
+                    echo "Cannot find NVIDIA CUB directory."
+                    echo "Please specify a value for --with-cub"
+                    echo "NVIDIA CUB can be downloaded from https://github.com/NVlabs/cub/archive/1.4.1.zip (extract the archive to /usr/local)"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $cub_check) = yes
+                then
+                    cub_path=$optarg
+                else
+                    echo "Invalid CUB directory $optarg"
                     exit 1
                 fi
             fi
@@ -372,6 +405,19 @@ then
     fi
 fi
 
+if test $enable_cuda = yes && test x$cub_path = x
+then
+    cub_path=$(find_cub)
+    if test x$cub_path = x ; then
+        echo Cannot locate NVIDIA CUB directory
+        echo GPU will be disabled
+        echo NVIDIA CUB can be downloaded from https://github.com/NVlabs/cub/archive/1.4.1.zip (extract the archive to /usr/local)
+        enable_cuda=no
+    else
+        echo Found CUB at $cub_path
+    fi
+fi
+
 config=$build_top/Config.make
 echo Generating $config
 echo "#Configuration file for cntk" > $config
@@ -388,6 +434,7 @@ esac
 if test $enable_cuda = yes ; then
     echo CUDA_PATH=$cuda_path >> $config
     echo GDK_PATH=$gdk_path >> $config
+    echo CUB_PATH=$cub_path >> $config
 fi
 if test x$kaldi_path != x ; then
     echo KALDI_PATH=$kaldi_path >> $config
