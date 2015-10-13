@@ -142,21 +142,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateInputNode(const std::wstring & inputName,
-        const size_t imageWidth,
-        const size_t imageHeight,
-        const size_t imageChannels,
-        const size_t numImages)
+                                                                                                                        const ImageLayout & imageLayout,
+                                                                                                                        const size_t numImages)
     {
-        return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, imageWidth, imageHeight, imageChannels, numImages));
+        return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout, numImages, false/*isSparse*/));
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateSparseInputNode(const std::wstring & inputName,
-        const size_t imageWidth,
-        const size_t imageHeight,
-        const size_t imageChannels,
-        const size_t numImages)
+                                                                                                                              const ImageLayout & imageLayout,
+                                                                                                                              const size_t numImages)
     {
-        return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, imageWidth, imageHeight, imageChannels, numImages, true));
+        return net.AddNodeToNetWithElemType(New<InputValue<ElemType>>(net.GetDeviceId(), inputName, imageLayout, numImages, true/*isSparse*/));
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreatePairNetworkNode(const std::wstring & inputName, const size_t rows, const size_t cols)
@@ -499,13 +495,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Reshape(const ComputationNodePtr a,
-        const size_t num_rows,
-        const size_t img_width,
-        const size_t img_height,
-        const size_t img_channels,
-        const std::wstring nodeName)
+                                                                                                                const size_t num_rows,
+                                                                                                                const ImageLayout & imageLayout,
+                                                                                                                const std::wstring nodeName)
     {
-        return net.AddNodeToNetAndAttachInputs(New<ReshapeNode<ElemType>>(net.GetDeviceId(), nodeName, num_rows, img_width, img_height, img_channels), a);
+        return net.AddNodeToNetAndAttachInputs(New<ReshapeNode<ElemType>>(net.GetDeviceId(), nodeName, num_rows, imageLayout), a);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName)

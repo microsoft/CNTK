@@ -801,11 +801,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 // entire minibatch is one utterance
                                 m_pMBLayout->Init(1, actualmbsize, !m_framemode);
-                                if (m_pMBLayout->RequireSentenceSeg())       // in framemode we leave the flags empty
-                                {
-                                    m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
-                                    m_pMBLayout->SetWithoutOr(0, actualmbsize - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
-                                }
+                                m_pMBLayout->Set(0, 0, MinibatchPackingFlags::SequenceStart);
+                                m_pMBLayout->SetWithoutOr(0, actualmbsize - 1, MinibatchPackingFlags::SequenceEnd);  // BUGBUG: using SetWithoutOr() because original code did; but that seems inconsistent
                                 first = false;
                             }
                             else

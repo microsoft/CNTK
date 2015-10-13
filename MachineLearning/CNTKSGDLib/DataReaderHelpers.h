@@ -14,6 +14,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     /*static*/ struct DataReaderHelpers
     {
+#if 0   // no longer needed since frame mode now uses N sequences with 1 frame each
         // decimate minibatch for parallelization--in frame mode
         // We sub-sample the individual frames (= matrix columns).
         template<class ElemType>
@@ -64,18 +65,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("DecimateMinibatch: Number of columns inconsistent with layout (%d vs. %d).", (int)nCols, (int)pMBLayout->GetNumTimeSteps());
             pMBLayout->Init(1, colEnd - colBegin, false);
         }
+#endif
 
         // decimate minibatch for parallelization--in utterance mode, also requires presence of parallel utterances
         // We sub-sample the utterances.
         template<class ElemType> 
-        static void DecimateMinibatchWithSentences(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb,  /* (input) matrix to be decimated */
+        static void DecimateMinibatchSequences(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb,  /* (input) matrix to be decimated */
                                                    int numprocs, int rank,                                    /* (input) rank info */
                                                    MBLayoutPtr pMBLayout)                                     // gets decimated as well
         {
             if (numprocs == 1)
                 return;
-
-            assert(pMBLayout->RequireSentenceSeg());
 
             // For RNN, a input Matrix is organized in the following way: 
             //   | x_t^1  x_t^2 ... x_t^N |  .... | x_{t+T-1}^1 ... x_{t+T-1}^N | 
@@ -91,18 +91,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t T = pMBLayout->GetNumTimeSteps();
 
             // decide new parallel utterances
-    #if 1
-            size_t sent_start = nOrigParallelUtts * rank / numprocs;
-            size_t sent_end = nOrigParallelUtts * (rank+1) / numprocs;
+#if 1
+            size_t sent_start = nOrigParallelUtts * (size_t)rank / numprocs;
+            size_t sent_end = nOrigParallelUtts * (size_t)(rank + 1) / numprocs;
             static bool warned = false;
             if (!warned)
             {
                 /* give a warning of potential bandwidth wasting */
-                fprintf(stderr, "WARNING: Number of parallel utterances %d not a multiple of number of GPUs %d, GPU usage will be suboptimal.\n",
+                fprintf(stderr, "DecimateMinibatchSequences: WARNING: Number of parallel utterances %d not a multiple of number of GPUs %d, GPU usage will be suboptimal.\n",
                         (int)nOrigParallelUtts, (int)numprocs);
                 warned = true;
             }
-    #else
+#else
             size_t nSlices = nOrigParallelUtts;
             static bool warned = false;
             size_t sent_start = 0;
@@ -137,7 +137,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 sent_end = (rank + 1)*nSlices;
                 if (sent_end > nOrigParallelUtts) sent_end = nOrigParallelUtts;
             }
-    #endif
+#endif
             size_t newNumParallelSequences = sent_end - sent_start;
 
             // decimate data
@@ -148,32 +148,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t nCols = mat.GetNumCols();
 
                 // assert the cols are even among nodes 
-                if (0 == rv)
+                if (rv == 0)
                     rv = nCols;
                 else if (rv != nCols)
-                    LogicError("Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)nCols);
+                    LogicError("DecimateMinibatchSequences: Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)nCols);
 
                 if (T != nCols / nOrigParallelUtts)
                     LogicError("ERROR: MBLayout borked, GetNumTimeSteps() mismatches minibatch number of columns\n");
                 if (T * nOrigParallelUtts != nCols) // (should really not happen)
                     LogicError("ERROR: minibatch size %d, but with %d parallel utterances --layout information borked\n", nCols, nOrigParallelUtts);
 
-                // for RNN, T happens to be the size of truncated BPTT
-                // TODO: ^^ but we don't care here, do we?
                 if (sent_end == sent_start)
                 {
                     // should never happen, print debug info
                     // BUGBUG: Yes, this can happen if we got less parallel sequences than GPUs. But users wouldn't want that, so we should fail.
-                    RuntimeError("ERROR: in DecimateMinibatch, col_st=col_en=%d, nCol=%d, nBlock=%d, nParaUtts=%d, nGPU=%d--This can happen if #parallel sequences < #GPUs (you'd be leaving a GPU unused)\n",
+                    // BUGBUG: This can also happen for a very small minibatch at the end of the epoch.
+                    fprintf(stderr, "DecimateMinibatchSequences: WARNING: col_st=col_en=%d, nCol=%d, nBlock=%d, nParaUtts=%d, nGPU=%d--This can happen if #parallel sequences < #GPUs (you'd be leaving a GPU unused)\n",
                         (int)sent_start, (int)nCols, (int)T, (int)nOrigParallelUtts, (int)numprocs);
                 }
 
                 // copy the respective columns
                 MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), newNumParallelSequences*T, mat.GetPreferredDeviceId(), mat.GetMatrixType());
                 for (size_t t = 0; t < T; t++)
-                    tmp.SetColumnSlice(mat.ColumnSlice(nOrigParallelUtts*t + sent_start, nOrigParallelUtts*t + sent_end), t*newNumParallelSequences, newNumParallelSequences);
+                    tmp.SetColumnSlice(mat.ColumnSlice(t*nOrigParallelUtts + sent_start, newNumParallelSequences), t*newNumParallelSequences, newNumParallelSequences);
                 mat.SetValue(tmp);      // update matrix in-place (new matrix has less parallel streams)
-                // TODO: ^^ If we cared, this could be done with a single RowSlice(Reshape(.))
+                // TODO: ^^ If had Matrix::RowSlice(), this would be simpler.
             }
             // decimate layout
             auto pNewMBLayout = make_shared<MBLayout>(newNumParallelSequences, T, true);
@@ -210,7 +209,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // verify some DataReader calls that are redundant since the MBLayout refactoring (keep verifying for a while for cosy feeling)
             net.VerifyActualNumParallelSequences(trainSetDataReader.GetNumParallelSequences()); // info already contained in MBLayout
-            assert(trainSetDataReader.RequireSentenceSeg() == pMBLayout->RequireSentenceSeg()); // this one is redundant, too
+            //assert(trainSetDataReader.RequireSentenceSeg() == pMBLayout->RequireSentenceSeg()); // this one is redundant, too
 
             if ((criterionNode != nullptr) && (criterionNode->OperationName() == L"SequenceWithSoftmax"))
             {
@@ -248,10 +247,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // decimate if needed. Decimation happens in-place.
             if (wasDataRead && !useDistributedMBReading && useParallelTrain)
             {
-                if (pMBLayout->RequireSentenceSeg())   // decimate in sequences
-                    DecimateMinibatchWithSentences(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
-                else        // frame mode: decimate in frames
-                    DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
+                //if (pMBLayout->RequireSentenceSeg())   // decimate in sequences
+                    DecimateMinibatchSequences(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
+                //else        // frame mode: decimate in frames
+                //    DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
+                // Note: we decimate parallel sequences now also in frame mode, where one frame is one sequence
             }
 
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices

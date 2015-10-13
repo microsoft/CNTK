@@ -149,6 +149,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ElemType* CopyToArray() const; //allocated by the callee but need to be deleted by the caller
         size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;  //allocated by the callee but need to be deleted by the caller
+        // colStride specifies leading dimension of dst.
+        // REVIEW alexeyk: GPU version copies from device to host only, implement all versions (device <-> host).
+        void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const; 
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
 
@@ -172,6 +175,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: should Reshape() return a new Matrix object that contains a reference to the original?
         void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
+        void VerifySize(size_t rows, size_t cols)
+        {
+            if (rows != GetNumRows() || cols != GetNumCols())
+                LogicError("VerifySize: expected m_functionValues size %d x %d, but it is %d x %d",
+                (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
+        }
 
         // update number of columns
         // TODO: a future version may want to enforce retaining the content, to allow dynamically growing layouts column by column (when size is not known upfront)
@@ -192,6 +201,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format=matrixFormatSparseCSR);
         void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);  // set matrix sparsely
+        static ElemType MakeNan(size_t payload);
+        void Invalidate() { SetValue(MakeNan(__LINE__)); }
         void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
             const size_t nz, const size_t numRows, const size_t numCols);
 
@@ -258,7 +269,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& ColumnElementDivideBy(const Matrix<ElemType>& a);
         Matrix<ElemType>& RowElementDivideBy(const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& ElementInverse ();
+        Matrix<ElemType>& ElementInverse();
         Matrix<ElemType>& AssignElementInverseOf (const Matrix<ElemType>& a);
 
         Matrix<ElemType>& InplaceLinearRectifierDerivative();
@@ -267,37 +278,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& InplaceSigmoidDerivative();
         Matrix<ElemType>& AssignSigmoidDerivativeOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceSigmoid ();
+        Matrix<ElemType>& InplaceSigmoid();
         Matrix<ElemType>& AssignSigmoidOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceTanh ();
+        Matrix<ElemType>& InplaceTanh();
         Matrix<ElemType>& AssignTanhOf (const Matrix<ElemType>& a);
 
         Matrix<ElemType>& InplaceLogSoftmax (const bool isColWise);
         Matrix<ElemType>& AssignLogSoftmaxOf (const Matrix<ElemType>& a, const bool isColWise);
 
-		//sequence training 
-		Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold);
-		Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
-        Matrix<ElemType>& InplaceSqrt ();
+        //sequence training 
+        Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType & threshhold);
+        Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
+
+        Matrix<ElemType>& InplaceSqrt();
         Matrix<ElemType>& AssignSqrtOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceExp ();
+        Matrix<ElemType>& InplaceExp();
         Matrix<ElemType>& AssignExpOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceLog ();
+        Matrix<ElemType>& InplaceLog();
         Matrix<ElemType>& AssignLogOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceCosine ();
+        Matrix<ElemType>& InplaceCosine();
         Matrix<ElemType>& AssignCosineOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceNegativeSine ();
+        Matrix<ElemType>& InplaceNegativeSine();
         Matrix<ElemType>& AssignNegativeSineOf (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceLog10 ();
+        Matrix<ElemType>& InplaceLog10();
         Matrix<ElemType>& AssignLog10Of (const Matrix<ElemType>& a);
 
-        Matrix<ElemType>& InplaceAbs ();
+        Matrix<ElemType>& InplaceAbs();
         Matrix<ElemType>& AssignAbsOf (const Matrix<ElemType>& a);
 
         Matrix<ElemType>& InplaceTruncateBottom (const ElemType threshold);
@@ -310,8 +322,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& SetToZeroIfAbsLessThan (const ElemType threshold);
 
         DeviceBoundNumber<ElemType> Sum_AsDeviceBoundNum() const;
-        ElemType SumOfAbsElements () const; //sum of all abs(elements)
-        ElemType SumOfElements () const; //sum of all elements
+        ElemType SumOfAbsElements() const; //sum of all abs(elements)
+        ElemType SumOfElements() const; //sum of all elements
         Matrix<ElemType>& AssignSumOfElements(const Matrix<ElemType>& a);
 
         ElemType LogAddSumOfElements() const;
@@ -397,6 +409,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                  const size_t outputWidth, const size_t outputHeight, const size_t outputSizePerSample, 
                                                  const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample);
     public:
+        // TODO: why are these not static? And why are they here?
         ElemType Exp10(ElemType num); 
         ElemType Mod(ElemType x , ElemType y);
         ElemType LogAdd(ElemType x, ElemType y);
@@ -478,243 +491,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     typedef Matrix<float> SingleMatrix;
     typedef Matrix<double> DoubleMatrix;
-
-    // MBLayout -- layout information of minibatch
-    // This stores:
-    //  - number of time steps and parallel sequences (their product is equal to the #columns in the minibatch)
-    //  - whether the data is sequential or not
-    //  - MinibatchPackingFlags for every (sequence, time step)
-    //  - a column-wise OR of those flags for fast testing entire time steps at once
-    // This object allocates its storage lazily, i.e. if there are no flags ever set, no memory is allocated. This is transparent to the caller.
-    // Note: With truncated BPTT, it is possible to have sequential data, yet not a single flag set in a minibatch (if all frames are sequence-internal ranges).
-    // Contract between ComputationNode, ComputationNetwork, and MBLayout:
-    //  - if a node has no MBLayout, m_{function,gradient}Values are not samples (they are not activations or input data), but e.g. model parameters
-    //  - ComputationNode::GetNumCols() == MBLayout::GetNumTimeSteps() * MBLayout::GetNumParallelSequences()
-    //  - ComputationNetwork ensures that m_{function,gradient}Values are allocated correctly before calling EvaluateThisNode() on a node
-    // TODO: move this to an appropriate place and name it properly. This class has no relationship with Matrix
-    // NOTE: This class represents an ongoing abstraction of an originally distributed/code-duped way of defining and accessing the MB layout.
-    //       Some code below represents the actual use cases I encountered. Not all are, I believe, needed to be as they are; this class could be simplified/streamlined much further.
-    //       Some wackiness below is explained by this.
-    // TODO: frame-randomized MBs are now represented as one stream of many frames. This is wrong; they should be one-frame utterances with many streams. Once we fully abstract out Data access, this can be changed easily.
-    struct MBLayout
-    {
-        typedef std::shared_ptr<MBLayout> MBLayoutPtr;
-
-        MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { Init(1, 0, false); }
-        MBLayout(size_t numParallelSequences, size_t numTimeSteps, bool dataIsSequential) : m_sentenceBoundaryFlags(CPUDEVICE) { Init(numParallelSequences, numTimeSteps, dataIsSequential); }
-
-        // copy the content of another MBLayoutPtr over
-        // Use this instead of actual assignment to make it super-obvious that this is not copying the pointer but actual content. The pointer is kept fixed.
-        void CopyFrom(const MBLayoutPtr & other) { *this = *other; }
-        void MoveFrom(MBLayoutPtr other) { *this = move(*other); other->Init(0, 0, false); }    // destructive copy that steals ownership if the content, like std::move()
-    private:
-        MBLayout & operator=(const MBLayout &) = default;   // make this private --use CopyFrom() instead, which makes it very clear that it's copying content, not copying the reference
-    public:
-
-        // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
-        void Init(size_t numParallelSequences, size_t numTimeSteps, bool dataIsSequential)
-        {
-            // remember the dimensions..
-            m_numParallelSequences = numParallelSequences;
-            m_numTimeSteps = numTimeSteps;
-            m_dataIsSequential = dataIsSequential;
-            // ...but don't actually allocate anything
-            m_sentenceBoundaryFlags.Resize(0, 0);
-            m_minibatchPackingFlags.clear();
-        }
-
-        size_t GetNumTimeSteps()         const { return m_numTimeSteps; }
-        size_t GetNumParallelSequences() const { return m_numParallelSequences; }   // note: if initialized as a dummy, m_numParallelSequences is set to 1
-
-        // how many columns the MB should be allocated for
-        size_t GetNumCols()              const { return GetNumTimeSteps() * GetNumParallelSequences(); }
-
-    private:
-        // test whether we have not allocated anything (will also return true if the minibatch is empty)
-        bool IsEmpty() const { return m_minibatchPackingFlags.empty(); }
-        // call this before ever writing anything--this will create the matrix/vector upon first use
-        void LazyAlloc() const
-        {
-            if (!IsEmpty() || m_numTimeSteps == 0)
-                return;
-            // this is where the actual allocation happens
-            m_sentenceBoundaryFlags.Resize(m_numParallelSequences, m_numTimeSteps);
-            m_sentenceBoundaryFlags.SetValue((float)((int)MinibatchPackingFlags::None));
-            m_minibatchPackingFlags.assign(m_sentenceBoundaryFlags.GetNumCols(), MinibatchPackingFlags::None);
-        }
-    public:
-
-        // compare whether two layouts are the same
-        bool operator==(const MBLayout & other) const
-        {
-            // for now just check the object identity
-            // TODO: in the future, we also need to compare the content; and we need to define "equal", e.g. w.r.t. missing features
-            return this == &other;
-        }
-
-        // get boundary flags
-        MinibatchPackingFlags Get(size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : m_minibatchPackingFlags[t]; }
-        MinibatchPackingFlags Get(size_t id, size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : (MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t); }
-
-        // test boundary flags for a specific condition
-        bool Is(size_t t, MinibatchPackingFlags f) const { return (Get(t) & f) != 0; }
-        bool Is(size_t id, size_t t, MinibatchPackingFlags f) const { return (Get(id, t) & f) != 0; }
-        // TODO: swap id and t for all of these functions; t is the more important parameter
-
-        // tests if Is() is false for every frame and sequence
-        // If this returns true, it means that boundary information need not be considered, just process the whole thing in one go.
-        // TODO: Can it ever happen that no flag is set, yet we have m_numParallelSequences != 1? Or does that simply not matter?
-        // This is currently the case for frame randomization.
-        bool IsAllNone() const { return IsEmpty(); }
-
-        // set a boundary flag (OR it on top of the existing layout)
-        void Set(size_t id, size_t t, MinibatchPackingFlags f)
-        {
-            if (f == MinibatchPackingFlags::None)   // actually not setting anything: skip allocation
-                return;
-            if ((f & (MinibatchPackingFlags::SequenceStart | MinibatchPackingFlags::SequenceEnd)) && !m_dataIsSequential)
-                LogicError("MBLayout::Set: attempted to set SequenceStart or -End in a layout with !m_dataIsSequential");
-            LazyAlloc();
-            m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) | f));
-            m_minibatchPackingFlags[t] |= f;
-        }
-
-        bool RequireSentenceSeg() const { return m_dataIsSequential; }        // this is the name of a function on DataReader which really belongs here
-
-    private:
-        size_t m_numTimeSteps;
-        size_t m_numParallelSequences;
-        bool m_dataIsSequential;
-        // TODO: ^^ is m_dataIsSequential necessary? Can it be derived from, say, m_numTimeSteps == 1 && IsAllNone()?
-
-        /// a matrix of n_stream x n_length
-        /// n_stream is the number of streams
-        /// n_length is the maximum lenght of each stream
-        /// for example, two sentences used in parallel in one minibatch would be
-        /// [2 x 5] if the max length of one of the sentences is 5
-        /// the elements of the matrix is 0, 1, or -1, defined as ((int) MinibatchPackingFlags::SequenceStart), ((int) MinibatchPackingFlags::None), ((int) MinibatchPackingFlags::NoInput) in cbasetype.h 
-        /// 0 1 1 0 1
-        /// 1 0 1 0 0 
-        /// for two parallel data streams. The first has two sentences, with 0 indicating begining of a sentence
-        /// the second data stream has two sentences, with 0 indicating begining of sentences
-        /// you may use 1 even if a sentence begins at that position, in this case, the trainer will carry over hidden states to the following
-        /// frame. 
-        mutable Matrix<float> m_sentenceBoundaryFlags;  // (t,stream)
-        // ^^ float -> MinibatchPackingFlags, right? Or unsigned char; or change that to 'char' because Matrix<char> already exists
-        // This matrix ^^ is always in CPU memory  --TODO: should rather be a matrix of some int
-        /// conditionally point to either a pointer to that provided by network, or point to 
-        /// an individual sentence boundary info, which happens if timeStep > 1 is required for PastValue node
-        /// a matrix of 1 x n_length
-        /// != 0 denotes the case that there exists sentence begin or no_labels case in this frame
-        /// == 0 denotes such case is not in this frame
-        mutable vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
-
-    public:
-        // specialized functions to replicate old behavior that shouldn't be there but I cannot test
-        // TODO: these should all go away one day
-
-        // get info for one frame; used in DelayedValueNode
-        // TODO: clean this up, we can do this more nicely. DelayedValueNode can just access individual elements, like everybody else.
-        pair<Matrix<float>, MinibatchPackingFlags> GetFrame(size_t t) const
-        {
-            LazyAlloc();
-            return make_pair(m_sentenceBoundaryFlags.ColumnSlice(t, 1), m_minibatchPackingFlags[t]);
-        }
-
-        // same as Set() but not ORing  --TODO: is this distinction needed?
-        void SetWithoutOr(size_t id, size_t t, MinibatchPackingFlags f)
-        {
-            if (f == MinibatchPackingFlags::None)
-                return;
-            LazyAlloc();
-            m_sentenceBoundaryFlags.SetValue(id, t, (float)(int)f); // no OR
-            m_minibatchPackingFlags[t] |= f;
-        }
-        // needed in DelayedValueNodeBase
-        // TODO: this is wicked in that the matrix keeps only the NoLabel flag, while the vector keeps all (just gets ORed into)
-        void Mask(size_t id, size_t t, MinibatchPackingFlags f)
-        {
-            if (IsEmpty())
-                return;
-            m_sentenceBoundaryFlags.SetValue(id, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(id, t)) & f));
-            //m_minibatchPackingFlags[t] &= f;
-        }
-        // for LSTMNode ony, which is deprecated, only to make it compile easily:  also used in FindBestPathWithVariableLength() and FindBestPath() in a strange way
-        Matrix<float> & GetM() { LazyAlloc(); return m_sentenceBoundaryFlags; }
-
-        // TODO: this function is only used in Kaldi2Reader for the moment, and
-        //       we plan to remove it in the future. It copies the current
-        //       MBLayout from an existing object but only copies <numTimeSteps>
-        //       steps starting from <startTimeStep>.
-        void CopyFromRange(const MBLayoutPtr & other, size_t startTimeStep, size_t numTimeSteps)
-        {
-            m_numParallelSequences = other->m_numParallelSequences;
-            m_numTimeSteps = numTimeSteps;
-            m_dataIsSequential = other->m_dataIsSequential;
-            m_sentenceBoundaryFlags.SetValue(other->m_sentenceBoundaryFlags.ColumnSlice(startTimeStep, numTimeSteps));
-            m_minibatchPackingFlags.resize(numTimeSteps);
-            m_minibatchPackingFlags.assign(
-                other->m_minibatchPackingFlags.begin() + startTimeStep,
-                other->m_minibatchPackingFlags.begin() + startTimeStep + numTimeSteps);
-        }
-    };
-    typedef MBLayout::MBLayoutPtr MBLayoutPtr;
-
-    // there is a version of ColumnSlice() in ComputationNode that abstracts the number of streams
-    // TODO: This may not belong here, but having it in ComputeNode would require syntax changes, while having it as a member here only requires a local find-replace. Let's make it work first, then decide how to refactor.
-    // the looping versions of EvaluateThisNode(FrameRange()) and ComputeInputPartial() take a frame range, through this structure
-    // It can cast from a size_t, i.e. those functions can be called passing a size_t in place of the FrameRange.
-    // TODO: GetNumParallelSequences() should be subsumed here & removed from nodes
-    // TODO: We should also have a FrameRange that selects a single sequence instead of all.
-    // TODO: Where this design currently breaks:
-    //  - BatchModeNodes must access GetNumParallelSequences(), yet operate on the whole sequence
-    //  - likewise, LSTMNode does its own iteration, hence needs access to GetNumParallelSequences() or NumCols() in the whole-batch iterator
-    //  - RecurrentNodes access frames with a time shift, where out-of-bounds ones access a different matrix' values
-    //  - RecurrentNodes iterate over individual slices--need a sub-setting constructor from a FrameRange to another?
-    //  - RecurrentNodes access boundary info with a similar pattern, but boundary info has a different #streams (namely, 1)
-    // TODO: This will in the future be able to hold sub-ranges for nested loops as well.
-    // BUGBUG: These are currently broken and will need to be fixed:
-    //  - ClassBasedCrossEntropyWithSoftmaxNode:
-    //      FrameRange frameRange(t, 1);
-    //    using a different #sequences. Solve by treating all frames as one sequence (in FrameRange)
-    //  - ReshapeNode:
-    //      Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep, m_pMBLayout));
-    //    using a differeren #sequences. Find out what this really means.
-    struct FrameRange
-    {
-        const size_t timeIdxInSeq;              // start frame
-
-        // can construct from a single size_t -> a single-frame range
-        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq){}
-
-        // or without arguments -> entire minibatch / no frame-range
-        FrameRange() : timeIdxInSeq(SIZE_MAX) {}
-
-        // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
-        // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).
-        size_t t() const { EnsureNotAllFrames(); return timeIdxInSeq; }
-        // multi-frame slice case: these two get startFrame and numFrames
-        //size_t StartColumn() const { EnsureNotAllFrames(); return timeIdxInSeq * samplesInRecurrentStep; }
-        //size_t NumCols() const { EnsureNotAllFrames(); return samplesInRecurrentStep; }
-        // TODO: remove these ^^ two in favor of these vv
-        size_t StartColumn(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); return timeIdxInSeq * pMBLayout->GetNumParallelSequences(); }
-        size_t NumCols(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); return pMBLayout->GetNumParallelSequences(); }
-        bool IsAllFrames() const { return timeIdxInSeq == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
-
-        const FrameRange & Check(size_t expectedStartColumn, size_t expectedNumCols, const shared_ptr<MBLayout> & pMBLayout) const
-        {
-            if (!IsAllFrames() && (expectedStartColumn != StartColumn(pMBLayout) || expectedNumCols != NumCols(pMBLayout)))
-                LogicError("FrameRange::Check: FrameRange object gives different range than original explicit code. Logic is borked.");
-            return *this;
-        }
-    private:
-        FrameRange(const FrameRange & other);
-        void operator=(const FrameRange &);
-        void EnsureNotAllFrames() const
-        {
-            if (IsAllFrames())
-                LogicError("FrameRange::t() called when frame range refers to whole minibatch");
-        }
-    };
 
 }}}

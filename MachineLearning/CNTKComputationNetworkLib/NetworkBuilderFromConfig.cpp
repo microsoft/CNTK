@@ -171,7 +171,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 if (!isImage)
                     node = New<InputValue<ElemType>>(deviceId, nodeName, (size_t)config[L"rows"], (size_t)config[L"cols"], isSparse);
                 else
-                    node = New<InputValue<ElemType>>(deviceId, nodeName, (size_t)config[L"imageWidth"], (size_t)config[L"imageHeight"], (size_t)config[L"imageChannels"], (size_t)config[L"numImages"], isSparse);
+                    node = New<InputValue<ElemType>>(deviceId, nodeName, ImageLayout(config[L"imageWidth"], config[L"imageHeight"], config[L"imageChannels"]), (size_t)config[L"numImages"], isSparse);
             }
 #if 0
             else if (OperationNameOf(LearnableParameter) == cnNodeType)
@@ -378,6 +378,9 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 {
                     node->AttachInputs(GetInputs(*configp));    // this is executed by network builder while iterating the nodes
                 };
+                // legacy: bad spelling. Warn users who may have converted.
+                if (config.Find(L"defaultHiddenActivity"))
+                    config[L"defaultHiddenActivity"].Fail(L"Past/FutureValueNode: Optional NDL parameter 'defaultHiddenActivity' should be spelled 'defaultHiddenActivation'. Please update your script.");
                 if (OpIs(PastValueNode))
                     node = New<LateAttachingNode<PastValueNode<ElemType>>>(deviceId, nodeName, completeAttachInputs, (ElemType)config[L"defaultHiddenActivation"], (size_t)config[L"rows"], (size_t)config[L"cols"], (size_t)config[L"timeStep"]);
                 else
@@ -469,7 +472,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 else if (OpIs(ReshapeNode)) // TODO: untested
                 {
                     // inputs /*one*/, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0
-                    node = New<ReshapeNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRows"], (size_t)config[L"imageWidth"], (size_t)config[L"imageHeight"], (size_t)config[L"imageChannels"]);
+                    node = New<ReshapeNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRows"], ImageLayout(config[L"imageWidth"], config[L"imageHeight"], config[L"imageChannels"]));
                     node->NeedGradient() = config[L"needGradient"];
                 }
 #if 0
@@ -639,7 +642,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         {
             let & value = config[id];
             if (value.Is<ComputationNodeBase>())
-                workList.push_back((ComputationNodeBasePtr&)value);
+                workList.push_back(/*auto typecast*/value);
         }
         // process work list
         // Also call FinalizeInit where we must.

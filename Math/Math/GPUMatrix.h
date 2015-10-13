@@ -6,14 +6,15 @@
 
 #pragma once
 #include "Platform.h"
-#include <string>
-#include <vector>
-#include <ctime>
-#include <limits.h>     // for ULONG_MAX
 #include "File.h"
 #include "Helpers.h"
 #include "CommonMatrix.h"
 #include "BestGpu.h"    // for CPUONLY macro
+#include <string>
+#include <vector>
+#include <ctime>
+#include <limits.h>     // for ULONG_MAX
+#include <iostream>     // for cout/cerr
 
 // predeclare cublasHandle_t
 struct cublasContext;
@@ -111,6 +112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static cublasHandle_t GetCublasHandle(int computeDevice=-1);
         ElemType* CopyToArray() const; //allocated by the callee but need to be deleted by the caller
         size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;  //allocated by the callee but need to be deleted by the caller
+        void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const; 
 
         void ChangeDeviceTo(DEVICEID_TYPE to_id);
 
@@ -445,3 +447,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef GPUMatrix<float> GPUSingleMatrix;
 
 }}}
+
+// Error handling
+template<typename ERRTYPE> static const char * CudaErrString(ERRTYPE x);
+template<typename ERRTYPE> static void CudaCall(ERRTYPE retCode, const char * exprString, const char * libName, ERRTYPE successCode)
+{
+    if (retCode != successCode)
+    {
+        try
+        {
+            const char * hostname = getenv("COMPUTERNAME"); // TODO: This is the easy way for Windows; likely different on Linux.
+            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, CudaErrString(retCode), Microsoft::MSR::CNTK::GPUMatrix<float>::GetBestGPUDeviceId(), hostname ? hostname : "?", exprString);
+        }
+        catch (const std::exception & e)    // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
+        {
+            std::cerr << e.what() << std::endl;
+            throw;
+        }
+    }
+}
+#define CUDA_CALL(expr)     (CudaCall((expr), #expr, "CUDA", cudaSuccess))
+#define CUBLAS_CALL(expr)   (CudaCall((expr), #expr, "CUBLAS", CUBLAS_STATUS_SUCCESS))
+#define CUSPARSE_CALL(expr) (CudaCall((expr), #expr, "CUSPARSE", CUSPARSE_STATUS_SUCCESS))
+#define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND", CURAND_STATUS_SUCCESS))

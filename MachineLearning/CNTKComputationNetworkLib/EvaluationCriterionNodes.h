@@ -64,20 +64,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::Validate(isFinalValidationPass);
 
             size_t index = 0;
-            // TODO: use dynamic_pointer_cast instead
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             index = 1;
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
                 size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                Inputs(index)->Resize(rows, cols);
+                ValidateInferChildDims(index, rows, cols);
             }
 
             //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
@@ -98,17 +95,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
 
-            m_outputChannels = 1;
-            m_outputWidth = 1;
-            m_outputHeight = 1;        
+            m_outputImageLayout = ImageLayout();
         }
-
-        //virtual void AttachInputs(const ComputationNodePtr leftNode, const ComputationNodePtr rightNode) 
-        //{
-        //    m_children.resize(2);
-        //    m_children[0] = leftNode;
-        //    m_children[1] = rightNode;
-        //}
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
