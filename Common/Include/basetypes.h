@@ -1049,4 +1049,16 @@ private:
     std::mutex m_locker;
 };
 
+// make_unique was added in GCC 4.9.0
+#if __GNUC__ >= 4 && __GNUC_MINOR__ < 9
+namespace std
+{
+    template<typename T, typename... Args>
+    std::unique_ptr<T> make_unique(Args&&... args)
+    {
+        return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+    }
+}
+#endif
+
 #endif    // _BASETYPES_
