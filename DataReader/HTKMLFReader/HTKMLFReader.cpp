@@ -1570,9 +1570,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_latticeBufferMultiUtt[i] = std::move(m_mbiter->lattice(0));
                 m_phoneboundaryIDBufferMultiUtt[i].clear();
                 m_phoneboundaryIDBufferMultiUtt[i] = m_mbiter->bounds();
+                m_labelsIDBufferMultiUtt[i].clear();
+                m_labelsIDBufferMultiUtt[i] = m_mbiter->labels();
             }
-            m_labelsIDBufferMultiUtt[i].clear();
-            m_labelsIDBufferMultiUtt[i] = m_mbiter->labels();
+
             m_processedFrame[i] = 0;
 
             (*m_mbiter)++;
