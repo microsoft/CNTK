@@ -1086,7 +1086,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
         /*implement*/void MaskMissingValuesColumnsToNan()
         {
-            MaskMissingColumnsTo(m_functionValues, m_pMBLayout, SIZE_MAX, SIZE_MAX, Matrix<ElemType>::MakeNan(__LINE__));
+            MaskMissingColumnsTo(*m_functionValues, m_pMBLayout, SIZE_MAX, SIZE_MAX, Matrix<ElemType>::MakeNan(__LINE__));
         }
 
         /*
