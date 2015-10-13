@@ -27,7 +27,6 @@ private:
     
     vector<bool> m_sentenceEnd;
     bool m_truncated;
-    bool m_fullutt;              //read full utterance every time
     bool m_framemode;
     vector<size_t> m_processedFrame;
     intargvector m_numberOfuttsPerMinibatchForAllEpochs;
@@ -103,11 +102,11 @@ private:
 
     bool ReNewBufferForMultiIO(size_t i);
 
-    size_t GetNumParallelSequences() { return m_numberOfuttsPerMinibatch; } 
+    size_t GetNumParallelSequences();
     void SetNumParallelSequences(const size_t) { };
 
-     void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels,
-         std::vector<std::wstring>& hmms, std::vector<std::wstring>& lattices);
+    void GetDataNamesFromConfig(const ConfigParameters& readerConfig, std::vector<std::wstring>& features, std::vector<std::wstring>& labels,
+                                std::vector<std::wstring>& hmms, std::vector<std::wstring>& lattices);
     
     size_t ReadLabelToTargetMappingFile (const std::wstring& labelToTargetMappingFile, const std::wstring& labelListFile, std::vector<std::vector<ElemType>>& labelToTargetMap);
     
@@ -121,41 +120,9 @@ private:
     };
 
 private:
-    unique_ptr<CUDAPageLockedMemAllocator>& GetCUDAAllocator(int deviceID)
-    {
-        if (m_cudaAllocator != nullptr)
-        {
-            if (m_cudaAllocator->GetDeviceId() != deviceID)
-            {
-                m_cudaAllocator.reset(nullptr);
-            }
-        }
-
-        if (m_cudaAllocator == nullptr)
-        {
-            m_cudaAllocator.reset(new CUDAPageLockedMemAllocator(deviceID));
-        }
-
-        return m_cudaAllocator;
-    }
-
-    std::shared_ptr<ElemType> AllocateIntermediateBuffer(int deviceID, size_t numElements)
-    {
-        if (deviceID >= 0)
-        {
-            // Use pinned memory for GPU devices for better copy performance
-            size_t totalSize = sizeof(ElemType) * numElements;
-            return std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
-                this->GetCUDAAllocator(deviceID)->Free((char*)p);
-            });
-        }
-        else
-        {
-            return std::shared_ptr<ElemType>(new ElemType[numElements], [](ElemType* p) {
-                delete[] p;
-            });
-        }
-    }
+    // Helper functions
+    unique_ptr<CUDAPageLockedMemAllocator>& GetCUDAAllocator(int deviceID);
+    std::shared_ptr<ElemType> AllocateIntermediateBuffer(int deviceID, size_t numElements);
 
 public:
     MBLayoutPtr m_pMBLayout;
@@ -171,8 +138,8 @@ public:
     {
     }
     virtual void Init(const ConfigParameters& config);
-    virtual void Destroy() {delete this;}
-    virtual ~HTKMLFReader();
+    virtual void Destroy() { delete this; }
+    virtual ~HTKMLFReader() { }
 
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
     {

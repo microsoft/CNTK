@@ -48,43 +48,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // single input that maps its input element-wise (e.g. Sigmoid)
     void ComputationNodeBase::ValidateUnaryMap(bool isFinalValidationPass)
     {
+        assert(m_children.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
-        //if (Inputs(0)->GetNumRows() == 0)
-        //    LogicError("Negate operation: the input node has 0 element.");
         Resize(m_children[0]->GetNumRows(), DetermineNumCols(m_children[0]));
         InferImageDimsFromInputs();
-    }
-    void ComputationNodeBase::ValidateInferBinaryChildren()
-    {
-        // limited inference of children dimensions
-        // if dimension not specified we assume two operands' dimensions should be the same
-        for (size_t index = 0; index < m_children.size(); index++)
-        {
-            if (Inputs(index)->OperationName() == OperationNameOf(LearnableParameter))
-            {
-                auto in = Inputs(index);
-                auto other = Inputs(1 - index);
-                // borrow any unset dimension on one input from the other input
-                size_t rows = in->GetNumRows() == 0 ? other->GetNumRows() : in->GetNumRows();
-                size_t cols = (!HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols() : in->GetNumCols();
-                in->Resize(rows, cols);
-            }
-        }
     }
     // binary zip operation, e.g. Plus
     // If allowScaling then one can be a sub-dimension of the other (if layout then only for rows, otherwise for cols, too).
     // This also helpfully resizes the children if not yet sized.
     void ComputationNodeBase::ValidateBinaryZip(bool isFinalValidationPass, bool allowMultiples)
     {
+        assert(m_children.size() == 2);
         ComputationNodeBase::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase();
 
-        ValidateInferBinaryChildren();
-
-        // TODO: I still don't understand why we need this test.
-        //if ((Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0) && isFinalValidationPass/*this->GetLoopId() < 0*/)
-        //    LogicError("Plus operation: one of the operands has 0 elements.");
+        ValidateInferBinaryChildrenDims();
 
         size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
         size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
@@ -104,6 +83,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // unary reduce-to-(1,1) operation, e.g. MatrixL1RegNode
     void ComputationNodeBase::ValidateUnaryReduce(bool isFinalValidationPass)
     {
+        assert(m_children.size() == 1);
         ComputationNodeBase::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;    // this node does not hold mini-batch data
         Resize(1, 1);
@@ -114,11 +94,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         ComputationNodeBase::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-        ValidateInferBinaryChildren();
+        ValidateInferBinaryChildrenDims();
         if (isFinalValidationPass && !(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         Resize(1, 1);
         InferImageDimsFromInputs();
+    }
+    // helper function for validation
+    // In bad cases of convolution, dimensions are quite complex to know.
+    // This is a feature that allows a node to help resizing its input node to the expected value.
+    // TODO: This is shaky by design.
+    void ComputationNodeBase::ValidateInferBinaryChildrenDims()
+    {
+        // limited inference of children dimensions
+        // if dimension not specified we assume two operands' dimensions should be the same
+        assert(m_children.size() == 2);
+        for (size_t index = 0; index < m_children.size(); index++)
+        {
+            auto in = Inputs(index);
+            auto other = Inputs(1 - index);
+            // borrow any unset dimension on one input from the other input
+            size_t rows =                        in->GetNumRows() == 0  ? other->GetNumRows()/*borrow from peer*/ : in->GetNumRows()/*keep as is*/;
+            size_t cols = (!in->HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols()/*borrow from peer*/ : in->GetNumCols()/*keep as is*/;
+            ValidateInferChildDims(index, rows, cols);
+        }
+    }
+    template<class ElemType>
+    void ComputationNode<ElemType>::ValidateInferChildDims(size_t i, size_t rows, size_t cols) //override final
+    {
+        if (Inputs(i)->OperationName() == OperationNameOf(LearnableParameter) && Inputs(i)->GetNumRows() == 0)
+        {
+            if (rows == 0 || cols == 0)
+                LogicError("ValidateInferChildDims: Inferred matrix must not be empty.");
+            Inputs(i)->Resize(rows, cols);
+            Inputs(i)->Validate(true);  // validate it properly
+            // big BUGBUG: This should do random initialization.
+            Inputs(i)->FunctionValues().SetValue(0);
+            fprintf(stderr, "ValidateInferChildDims: %ls %ls operation inferred, resized to (%d x %d), and (incorrectly) initialized to 0.\n", Inputs(i)->NodeName().c_str(), Inputs(i)->OperationName().c_str(), (int)rows, (int)cols);
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -157,7 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef Matrix<float> FloatMatrix;
     typedef Matrix<double> DoubleMatrix;
 
-    atomic_ullong ComputationNodeBase::s_timeStampCounter = ATOMIC_VAR_INIT(0);
+    atomic_ullong ComputationNetworkOwnedNodeState::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
     template<> std::map<size_t, std::map<size_t, FloatMatrix*>>  ComputationNode<float>::s_constOnes{};
     template<> std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};

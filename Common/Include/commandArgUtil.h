@@ -1320,15 +1320,16 @@ class argvector: public std::vector<T>
     }
 
     // convert wstring toks2[0] to T val and check type
-    static void parse(const std::wstring& in, size_t& val)
+    template<typename INT>
+    static void parseint(const std::wstring& in, INT& val)
     {
-        float fval = (float) msra::strfun::todouble(in);
-        val = (size_t) fval;
-        if (val != fval)
-        {
+        double dval = msra::strfun::todouble(in);
+        val = (INT)dval;
+        if (val != dval)
             RuntimeError("argvector: invalid arg value");
-        }
     }
+    static void parse(const std::wstring& in, size_t& val) { parseint(in, val); }
+    static void parse(const std::wstring& in, int& val) { parseint(in, val); }
     static void parse(const std::wstring& in, std::wstring& val)
     {
         val = in;

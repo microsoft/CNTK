@@ -205,6 +205,9 @@
     <ClInclude Include="..\CNTKSGDLib\SGD.h">
       <Filter>from CNTKSGDLib\SGD</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\Sequences.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">
