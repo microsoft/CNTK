@@ -200,7 +200,8 @@ public:
         std::stringstream ss{ config("interpolations", "") };
         for (std::string token = ""; std::getline(ss, token, ':');)
         {
-            std::transform(token.begin(), token.end(), token.begin(), std::tolower);
+            // Explicit cast required for GCC.
+            std::transform(token.begin(), token.end(), token.begin(), (int (*)(int))std::tolower);
             StrToIntMapT::const_iterator res = m_interpMap.find(token);
             if (res != m_interpMap.end())
                 m_interp.push_back((*res).second);
@@ -362,7 +363,7 @@ void ImageReader<ElemType>::Destroy()
 }
 
 template<class ElemType>
-void ImageReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples = requestDataSize)
+void ImageReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
     assert(mbSize > 0);
     assert(requestedEpochSamples > 0);
