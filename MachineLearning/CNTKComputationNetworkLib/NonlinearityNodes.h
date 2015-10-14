@@ -78,7 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
@@ -130,7 +130,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::ReleaseMatricesAfterGradientComp(matrixPool);
             ReleaseMatrixToPool(m_gradient, matrixPool);
         }
-
     protected:
         shared_ptr<Matrix<ElemType>> m_gradient;
     };
@@ -528,7 +527,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 *node->m_diff = *m_diff;
             }
         }
-
         //request matrices that are needed for gradient computation
         virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
         {
@@ -542,7 +540,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::ReleaseMatricesAfterGradientComp(matrixPool);
             ReleaseMatrixToPool(m_diff, matrixPool);
         }
-
     private:
         shared_ptr<Matrix<ElemType>> m_diff;
     };
@@ -560,7 +557,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
         static const std::wstring TypeName() { return L"LogSoftmax"; }
     public:
-
         LogSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             NonlinearityNode<ElemType>(deviceId, name)
         { }
@@ -624,7 +620,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 *node->m_softmax = *m_softmax;
             }
         }
-
         //request matrices that are needed for gradient computation
         virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
         {
@@ -659,7 +654,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GMMLogLikelihoodNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNode<ElemType>(deviceId, name)
         { }
-
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -848,7 +842,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //input0=unnormedPrior, input1=mean, input2=logstddev, input3=feature
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             size_t colsPrior = Inputs(0)->GetNumCols();
             size_t numSamples = Inputs(3)->GetNumCols();
 
@@ -1045,8 +1039,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReleaseMatrixToPool(m_posterior, matrixPool);
             ReleaseMatrixToPool(m_temp, matrixPool);
         }
-
-
     protected:
         shared_ptr<Matrix<ElemType>> m_prior;
         shared_ptr<Matrix<ElemType>>m_normedDeviation;
@@ -1119,7 +1111,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = Matrix <ElemType>();
 
@@ -1208,7 +1200,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_maskOfDropout = m_maskOfDropout;
             }
         }
-
         //request matrices needed to do node function value evaluation
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
         {
@@ -1222,7 +1213,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::ReleaseMatricesAfterGradientComp(matrixPool);
             ReleaseMatrixToPool(m_maskOfDropout, matrixPool);
         }
-
     private:
         double m_dropoutRate;
         unsigned long m_randomSeed;
@@ -1355,7 +1345,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             size_t rows = Inputs(0)->GetNumRows();
             if ((rows * GetNumParallelSequences()) % m_numRows > 0)
             {
@@ -1743,12 +1733,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (m_numRepeat > 1)
             {
-                if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-                Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-                EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_numRepeat);
-            }
+            EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_numRepeat);
+        }
         }
 
         /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRepeats)

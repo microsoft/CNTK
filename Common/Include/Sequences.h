@@ -330,6 +330,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         const FrameRange & Check_t(size_t expectedNumCols, const shared_ptr<MBLayout> & pMBLayout) const
         {
+#if 1       // temporary workaround
+            if (expectedNumCols == SIZE_MAX || !pMBLayout)
+                return *this;
+#endif
             if (!IsAllFrames())
                 Check(t() * expectedNumCols, expectedNumCols, pMBLayout);
             return *this;
