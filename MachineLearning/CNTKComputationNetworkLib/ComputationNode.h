@@ -397,6 +397,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // ...Slice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences()), m_pMBLayout)
         size_t GetNumParallelSequences() const
         {
+#if 1
+            if (!m_pMBLayout)       // TODO: temporary workaround to Check_t() calls which call this. TODO: Delete the first arg from Check_t() after memshare merge.
+                return SIZE_MAX;
+#endif
             return m_pMBLayout->GetNumParallelSequences();
         }
 

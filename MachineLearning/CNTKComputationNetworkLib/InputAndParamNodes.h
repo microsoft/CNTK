@@ -169,14 +169,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"SparseLearnableParameter"; }
     public:
-
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name) :
             LearnableParameter<ElemType>(deviceId, name)
         {
             CreateMatrixIfNull(m_gradientValues);
             m_gradientValues->SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
         }
-
         SparseLearnableParameter(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols, size_t size) :
             LearnableParameter<ElemType>(deviceId, name, rows, cols)
         {
@@ -192,9 +190,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_gradientValues->Resize(GetNumRows(), GetNumCols());
         }
     };
-    template class SparseLearnableParameter<float>;
-    template class SparseLearnableParameter<double>;
 
+    template class SparseLearnableParameter<float>; 
+    template class SparseLearnableParameter<double>;
 
     // -----------------------------------------------------------------------
     // InputValue (/*no input*/)
@@ -290,7 +288,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // TODO: This is bad. We should either serialize m_isSparse or define an explicit node type. This causes some unnecessary special-casing.
         virtual const std::wstring OperationName() const { return m_isSparse ? SparseTypeName() : TypeName(); }
- 
+
         // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.
         virtual size_t UpdateFunctionMBSize(size_t numCols)
         {
@@ -315,7 +313,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             sprintf(str, "[%lu,%lu]", GetNumRows(), GetNumCols());
             fstream << string(str);         // TODO: string(.) necessary?
         }
-
     private:
         bool m_isSparse = false;
         void ConvertToSparseMatrix()
@@ -426,7 +423,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
@@ -602,7 +599,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             Matrix<ElemType> mTmp = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             mTmp.SetValue(Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout)));
         }

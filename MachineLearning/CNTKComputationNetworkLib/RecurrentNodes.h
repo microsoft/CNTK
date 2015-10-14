@@ -378,7 +378,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     using Base::m_pShiftedMBLayout; using Base::m_isHistoryCarryOverManagedExternally;
 
     // =======================================================================
+    // -----------------------------------------------------------------------
     // PastValueNode (input) -- delay node
+    // TODO: Can this just be a typedef?
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -393,43 +395,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PastValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
             Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
         { }
-
-#if 0
-        virtual void ComputeInputPartial(const size_t inputIndex)
-        {
-            if (inputIndex > 0) // TODO: is this check necessary here? Can this be a generic check in the base class?
-                InvalidArgument("PastValue and FutureValue operations only take one input.");
-
-            int nbrSamples = GradientValues().GetNumCols() / GetNumParallelSequences();
-            // TODO: call the looping version below to avoid code dup
-            for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
-                ComputeInputPartialRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
-        }
-#endif
-
-#if 0
-        // TODO: why is this loop not in th underlying execution engine? This node should not have to know about this.
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
-        {
-            assert(m_timeStep > 0);
-
-            int nbrSamples = Inputs(0)->GetNumCols() / GetNumParallelSequences();
-            // TODO: call the looping version below to avoid code dup
-            for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
-                EvaluateThisNodeRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
-
-            //set the past activation to be used by next minibatch
-            m_delayedActivation = Inputs(0)->FunctionValues();
-        }
-#endif
-
-#if 0
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
-        {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            EvaluateThisNodeRP(frameRange, frameRange.t() == 0);
-        }
-#endif
     };
 
     template class PastValueNode<float>; 
@@ -453,42 +418,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         FutureValueNode(DEVICEID_TYPE deviceId, const wstring & name, ElemType initialActivationValue, size_t row_size, size_t col_size, size_t timeStep = 1) :
             Base(deviceId, name, initialActivationValue, row_size, col_size, timeStep)
         { }
-
-#if 0
-        virtual void ComputeInputPartial(const size_t inputIndex)
-        {
-            if (inputIndex > 0)
-                InvalidArgument("PastValue and FutureValue operations only take one input.");
-
-            int nbrSamples = GradientValues().GetNumCols() / GetNumParallelSequences();
-            // TODO: call the looping version below to avoid code dup
-            for (int timeIdxInSeq = 0; timeIdxInSeq < nbrSamples; timeIdxInSeq++)
-                ComputeInputPartialRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
-        }
-#endif
-
-#if 0
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
-        {
-            assert(m_timeStep > 0);
-
-            int nbrSamples = Inputs(0)->GetNumCols() / GetNumParallelSequences();
-            for (int timeIdxInSeq = nbrSamples - 1; timeIdxInSeq >= 0; timeIdxInSeq--)
-                EvaluateThisNodeRP(FrameRange(timeIdxInSeq, GetNumParallelSequences()));
-
-            //set the future activation to be used by next minibatch
-            m_delayedActivation = Inputs(0)->FunctionValues();
-        }
-#endif
-
-#if 0
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
-        {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            //EvaluateThisNodeRP(frameRange, frameRange.t() == Inputs(0)->GetNumCols() / GetNumParallelSequences() - 1);
-            EvaluateThisNodeRP(frameRange, frameRange.t() == Inputs(0)->GetNumTimeSteps() - 1);
-        }
-#endif
     };
 
     template class FutureValueNode<float>;

@@ -542,7 +542,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             //only feature (input0) and output needs to be sliced
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
@@ -664,7 +664,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             //only feature (input0) and output needs to be sliced
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
