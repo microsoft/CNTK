@@ -32,6 +32,10 @@ have_cub=no
 cub_path=
 cub_check=cub/cub.cuh
 
+have_opencv=no
+opencv_path=
+opencv_check=include/opencv2/opencv.hpp
+
 mathlib=
 
 # List from best to worst choice
@@ -46,6 +50,7 @@ default_cudas="cuda-7.5 cuda-7.0 cuda-6.5"
 default_kaldis="kaldi-trunk"
 default_gdks="."
 default_cubs="cub-1.4.1"
+default_opencvs="opencv-3.0.0"
 
 function default_paths ()
 {
@@ -111,6 +116,11 @@ function find_cub ()
     find_dir "$default_cubs" "$cub_check"
 }
 
+function find_opencv ()
+{
+    find_dir "$default_opencvs" "$opencv_check"
+}
+
 function is_hardlinked ()
 {
     r=no
@@ -158,6 +168,7 @@ function show_help ()
     echo "  --with-mkl[=directory] $(show_default $(find_mkl))"
     echo "  --with-buildtype=(debug|release) $(show_default $default_buildtype)"
     echo "  --with-kaldi[=directory] $(show_default $(find_kaldi))"
+    echo "  --with-opencv[=directory] $(show_default $(find_opencv))"
     echo "Libraries search path:"
     for head in $(default_paths)
     do
@@ -346,6 +357,28 @@ do
                 fi
             fi
             ;;
+        --with-opencv*)
+            have_opencv=yes
+            if test x$optarg = x
+            then
+                opencv_path=$(find_opencv)
+                if test x$opencv_path = x
+                then
+                    echo "Cannot find OpenCV directory."
+                    echo "Please specify a value for --with-opencv"
+                    echo "OpenCV can be downloaded from http://opencv.org/downloads.html, install instructions http://docs.opencv.org/doc/tutorials/introduction/linux_install/linux_install.html#linux-installation"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $opencv_check) = yes
+                then
+                    opencv_path=$optarg
+                else
+                    echo "Invalid OpenCV directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
         *)
             echo Invalid option $key
             show_help
@@ -438,6 +471,10 @@ if test $enable_cuda = yes ; then
 fi
 if test x$kaldi_path != x ; then
     echo KALDI_PATH=$kaldi_path >> $config
+fi
+if test x$opencv_path != x ; then
+    echo Found OpenCV at $opencv_path
+    echo OPENCV_PATH=$opencv_path >> $config
 fi
 
 # If we are not in the configure directory, generate a trampoline Makefile
