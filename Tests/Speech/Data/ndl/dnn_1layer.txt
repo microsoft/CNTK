@@ -19,9 +19,9 @@ DNN=[
     features=Input(featDim, tag=feature)
     labels=Input(LabelDim, tag=label)
 
-    GlobalMean=Parameter(featDim, init=fromFile, initFromFilePath=$GlobalMean$, computeGradient=false) 
+    GlobalMean=Parameter(featDim,   init=fromFile, initFromFilePath=$GlobalMean$,   computeGradient=false) 
     GlobalInvStd=Parameter(featDim, init=fromFile, initFromFilePath=$GlobalInvStd$, computeGradient=false)
-    GlobalPrior=Parameter(LabelDim, init=fromFile, initFromFilePath=$GlobalPrior$, computeGradient=false)
+    GlobalPrior=Parameter(LabelDim, init=fromFile, initFromFilePath=$GlobalPrior$,  computeGradient=false)
     logPrior=Log(GlobalPrior)
 
     # define network

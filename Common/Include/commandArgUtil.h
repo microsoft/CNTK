@@ -494,11 +494,18 @@ public:
                     // check for custom separator character
                     // If the opening brace is immediately followed by any of the customSeparators,
                     // change m_separator (inside seps) to that character.
-                    // TODO: document what this is for, where it is used [fseide]
+                    // The parser lets you change the default separator to something else. For example the default separator for an array is usually the ‘:’ (I think)
+                    // (12:45:23:46)
+                    // However if you are using strings, and one of those strings contains a ‘:’, you might want to change the separator to something else:
+                    // (;this;is;a;path:;c:\mydir\stuff)
+                    // 
+                    // This will fail for
+                    // (..\dirname,something else)
+                    // Hence there is an ugly fix for it below. This will go away when we replace all configuration parsing by BrainScript.
                     const static std::string customSeperators = "`~!@$%^&*_-+|:;,?.";
 
                     if (customSeperators.find(stringParse[tokenStart]) != npos
-                        && stringParse.substr(tokenStart).find("..") != 0 && stringParse.substr(tokenStart).find(".\\") != 0 && stringParse.substr(tokenStart).find("./") != 0         // [fseide] otherwise this will nuke leading . or .. in a pathname... Aargh! Can't wait for this hairball of code to die!
+                        && stringParse.substr(tokenStart).find("..") != 0 && stringParse.substr(tokenStart).find(".\\") != 0 && stringParse.substr(tokenStart).find("./") != 0         // [fseide] otherwise this will nuke leading . or .. in a pathname... Aargh!
                         )
                     {
                         char separator = stringParse[tokenStart];

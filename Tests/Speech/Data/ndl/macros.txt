@@ -1,7 +1,7 @@
 DNNLayer(inDim, outDim, x)
 {
-    W = Parameter(outDim, inDim); 
-    b = Parameter(outDim); 
+    W = Parameter(outDim, inDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1); # randomizing on CPU with fixed seed to get reproducable results across configurations
+    b = Parameter(outDim,        init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
     t = Times(W, x);
     z = Plus(t, b);
     y = sigmoid(z);
@@ -9,8 +9,8 @@ DNNLayer(inDim, outDim, x)
 
 DNNLastLayer(hiddenDim, LabelDim, x)
 {
-    W = Parameter(LabelDim, hiddenDim);
-    b = Parameter(LabelDim);
+    W = Parameter(LabelDim, hiddenDim, init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
+    b = Parameter(LabelDim,            init=uniform, initValueScale=1, initOnCPUOnly=true, randomSeed=1);
     t = Times(W, x);
     z = Plus(t, b);
 }

@@ -1,13 +1,6 @@
 How to run the Tests\Speech test
 ================================
 
-Full test
----------
-
-Install Cygwin with the python module.
-
-Execute 'Tests/Testdriver.py run' script. This will run the test in various Tests (recursively). Note that the first time you may get an error about the missing YAML python module that you will need to install. 
-
 Command lines for debugging
 ---------------------------
 
