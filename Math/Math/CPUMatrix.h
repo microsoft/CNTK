@@ -252,10 +252,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>&  AssignPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
         CPUMatrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const CPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
         
-        void VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<ElemType>& maxValues, const bool isColWise) const;
-        void VectorMin(CPUMatrix<ElemType>& mainndexes, CPUMatrix<ElemType>& minValues, const bool isColWise) const;
+        void VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<ElemType>& maxValues, const bool isColWise, int topK = 1) const;
+        void VectorMin(CPUMatrix<ElemType>& minIndexes, CPUMatrix<ElemType>& minValues, const bool isColWise) const;
 
-        CPUMatrix<ElemType>&  AssignNumOfDiff(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b); 
+        CPUMatrix<ElemType>&  AssignNumOfDiff(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, bool searchInCol = false);
 
         void Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const;
         void Print(const char* matrixName = nullptr) const; //print whole matrix. can be expensive
