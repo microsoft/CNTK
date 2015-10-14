@@ -1146,9 +1146,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         inline ComputationNodePtr Inputs(const size_t childIndex) const       // TODO: rename to Input
         {
-#ifdef DEBUG // profile shows this is range check very expensive in release mode, skip it  
+#ifdef _DEBUG // profile shows this is range check very expensive in release mode, skip it  
             if (childIndex >= m_children.size())
-                InvalidArgument ("childIndex is out of range.");
+                LogicError("Inputs: childIndex is out of range.");
 #endif
             return UpCast(m_children[childIndex]);
         }
