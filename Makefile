@@ -21,8 +21,12 @@
 #   defaults to acml
 # CUDA_PATH= Path to CUDA
 #   If not specified, GPU will not be enabled
+# CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
+#   defaults to /usr/local/cub-1.4.1
 # KALDI_PATH= Path to Kaldi
 #   If not specified, Kaldi plugins will not be built
+# OPENCV_PATH= path to OpenCV 3.0.0 installation, so $(OPENCV_PATH) exists
+#   defaults to /usr/local/opencv-3.0.0
 
 ifndef BUILD_TOP
 BUILD_TOP=.
@@ -77,7 +81,12 @@ ifdef CUDA_PATH
   ifndef GDK_PATH
     $(info defaulting GDK_PATH to /usr)
     GDK_PATH=/usr
-endif
+  endif
+
+  ifndef CUB_PATH
+    $(info defaulting CUB_PATH to /usr/local/cub-1.4.1)
+    CUB_PATH=/usr/local/cub-1.4.1
+  endif
 
   DEVICE = gpu
 
@@ -85,6 +94,7 @@ endif
 
   # This is a suggested/default location for NVML
   INCLUDEPATH+=$(GDK_PATH)/include/nvidia/gdk
+  INCLUDEPATH+=$(CUB_PATH)
   NVMLPATH=$(GDK_PATH)/src/gdk/nvml/lib
 
 # Set up CUDA includes and libraries
@@ -365,6 +375,26 @@ $(KALDI2READER): $(KALDI2READER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
 
+endif
+
+########################################
+# ImageReader plugin
+########################################
+
+ifdef OPENCV_PATH
+IMAGEREADER_SRC =\
+	DataReader/ImageReader/Exports.cpp \
+	DataReader/ImageReader/ImageReader.cpp \
+	
+IMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEREADER_SRC))
+
+IMAGEREADER:=$(LIBDIR)/ImageReader.so
+ALL += $(IMAGEREADER)
+SRC+=$(IMAGEREADER_SRC)
+
+$(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 endif
 
 ########################################

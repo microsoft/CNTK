@@ -485,6 +485,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUMatrix<ElemType>::~GPUMatrix(void)
     {
         Clear();
+        if (m_workspace != nullptr)
+            delete m_workspace;
     }
 
     template<class ElemType>
@@ -2908,32 +2910,140 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (IsEmpty())
             LogicError("VectorMax: Matrix is empty.");
 
-        const GPUMatrix<ElemType>& us=*this;
+        const GPUMatrix<ElemType>& us = *this;
         const CUDA_LONG m = (CUDA_LONG)GetNumRows();
         const CUDA_LONG n = (CUDA_LONG)GetNumCols();
-        assert (m>0 && n>0); //converting from size_t to int may cause overflow
+        assert(m > 0 && n > 0); //converting from size_t to int may cause overflow
+
         PrepareDevice();
         cudaEvent_t done = nullptr;
-        if (do_sync)     CUDA_CALL(cudaEventCreate(&done));                
+        if (do_sync)     CUDA_CALL(cudaEventCreate(&done));
         if (isColWise)
         {
             maxValues.Resize(1, n);
             maxIndexes.Resize(1, n);
 
             int blocksPerGrid = n; //we'll have 1 block processing 1 column
-            _vectorMaxMinReduce<ElemType, true><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,maxIndexes.m_pArray,maxValues.m_pArray,m,n);
+            _vectorMaxMinReduce<ElemType, true><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(us.m_pArray, maxIndexes.m_pArray, maxValues.m_pArray, m, n);
 
-            /*int blocksPerGrid=(int)ceil(1.0*n/threadsPerBlock);  
+            /*int blocksPerGrid=(int)ceil(1.0*n/threadsPerBlock);
             _vectorMax<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,maxIndexes.m_pArray,maxValues.m_pArray,m,n,isColWise);*/
         }
         else
         {
             maxValues.Resize(m, 1);
             maxIndexes.Resize(m, 1);
-            int blocksPerGrid=(int)ceil(1.0*m/threadsPerBlock);  
-            _vectorMax<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(us.m_pArray,maxIndexes.m_pArray,maxValues.m_pArray,m,n,isColWise);
+            int blocksPerGrid = (int)ceil(1.0*m / threadsPerBlock);
+            _vectorMax<ElemType><<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(us.m_pArray, maxIndexes.m_pArray, maxValues.m_pArray, m, n, isColWise);
         }
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+    }
+    
+    __global__ void _initIndicesForSort(uint64_t* indexes, CUDA_LONG crow, CUDA_LONG ccol)
+    {
+        CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+        if (id >= crow * ccol)
+            return;
+        uint32_t irow = id % crow;
+        uint32_t icol = id / crow;
+        indexes[id] = (static_cast<uint64_t>(irow) << 32) | icol;
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise, int topK) const
+    {
+        if (IsEmpty())
+            LogicError("VectorMax: Matrix is empty.");
+
+        if (topK == 1)
+        {
+            VectorMax(maxIndexes, maxValues, isColWise);
+            return;
+        }
+
+        if (!isColWise)
+            RuntimeError("Row-wise TopK max is not supported.");
+
+        const GPUMatrix<ElemType>& us = *this;
+        const CUDA_LONG m = (CUDA_LONG)GetNumRows();
+        const CUDA_LONG n = (CUDA_LONG)GetNumCols();
+        assert(topK <= m);
+        assert(m > 0 && n > 0); //converting from size_t to int may cause overflow
+
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)     CUDA_CALL(cudaEventCreate(&done));
+        maxValues.Resize(topK, n);
+        maxIndexes.Resize(topK, n);
+
+        cudaError_t err = cudaSuccess;
+        // To sort matrix columns we use 2-pass _stable_ sort algorithm:
+        // 1. Sort by values (descending) with corresponding row/col indexes.
+        // 2. Sort by col indices (ascending) with corresponding values/row indices.
+        // Indices are stored as 64-bit ints where low 32 bits represent column and high 32 bits - row index.
+        // On the second pass only first 32 bits of the index are used in sorting, so SortPairs has
+        // begin_bit and end_bit set accordingly.
+
+        CUDA_LONG celt = static_cast<CUDA_LONG>(GetNumElements());
+        ElemType* inVal = us.m_pArray;
+        ElemType* outVal1 = nullptr;
+        ElemType* outVal2 = nullptr;
+        uint64_t* inIdx = nullptr;
+        uint64_t* outIdx = nullptr;
+        // Determine temp buffer size needed for SortPairsDescending to sort values on the first pass.
+        size_t cbtemp = 0;
+        // If first param is nullptr then no actual work is done except writing result to cbtemp.
+        err = cub::DeviceRadixSort::SortPairsDescending(nullptr, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream);
+        assert(err == cudaSuccess);
+        size_t ctemp1 = (cbtemp + sizeof(ElemType) - 1) / sizeof(ElemType);
+        // Determine temp buffer size needed for SortPairs to sort indices on the second pass.
+        cbtemp = 0;
+        err = cub::DeviceRadixSort::SortPairs(nullptr, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream);
+        assert(err == cudaSuccess);
+        size_t ctemp2 = (cbtemp + sizeof(ElemType) - 1) / sizeof(ElemType);
+        size_t ctemp = std::max(ctemp1, ctemp2);
+        cbtemp = ctemp * sizeof(ElemType);
+        // ElemType count needed to store indices, accounting for natural alignment for uint64_t type.
+        size_t cidx = ((celt + 1) * sizeof(uint64_t) - 1 + sizeof(ElemType) - 1) / sizeof(ElemType);
+        // Prepare temp workspace.
+        auto deviceId = m_computeDevice;
+        assert(m_workspace != nullptr);
+        auto workspace = m_workspace->pop_or_create([deviceId]() { return std::make_unique<GPUMatrix<ElemType>>(deviceId); });
+        // Resize to store: output values for the 1st and 2nd passes, input indices, output indices, and temp storage.
+        workspace->Resize(m, 2 * n + (2 * cidx + ctemp + m - 1) / m);
+        outVal1 = workspace->m_pArray;
+        outVal2 = outVal1 + celt;
+        inIdx = reinterpret_cast<uint64_t*>(outVal2 + celt);
+        // Align indices pointer if needed.
+        size_t cbAlign = reinterpret_cast<size_t>(inIdx) % sizeof(uint64_t);
+        if (cbAlign != 0)
+            reinterpret_cast<uint8_t*&>(inIdx) += sizeof(uint64_t) - cbAlign;
+        outIdx = inIdx + celt;
+        void* ptmp = outIdx + celt;
+        assert(reinterpret_cast<ElemType*>(reinterpret_cast<uint8_t*>(ptmp) + cbtemp) <= workspace->m_pArray + workspace->GetNumElements());
+
+        // Initialize indices.
+        const int ThreadsPerBlock = 128;
+        int cblock = (celt + ThreadsPerBlock - 1) / ThreadsPerBlock;
+        _initIndicesForSort<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, m, n);
+        // Sort by values.
+        err = cub::DeviceRadixSort::SortPairsDescending(ptmp, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream);
+        assert(err == cudaSuccess);
+        // Sort by column indices. outIdx contains indices after the first pass so it's used as an input.
+        err = cub::DeviceRadixSort::SortPairs(ptmp, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream);
+        assert(err == cudaSuccess);
+        // Copy results.
+        cblock = (topK * n + ThreadsPerBlock - 1) / ThreadsPerBlock;
+        _copyTopKResults<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, outVal2, maxIndexes.m_pArray, maxValues.m_pArray, m, n, topK);
+
+        m_workspace->push(std::move(workspace));
+#ifndef _DEBUG
+        UNUSED(err);
+#endif
+
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
     }
@@ -2977,21 +3087,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignNumOfDiff(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
+    GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignNumOfDiff(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, bool searchInCol)
     {
-        if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
-            InvalidArgument("AssignNumOfDiff: a and b must have same dimension.");
+        if (a.GetNumCols() != b.GetNumCols())
+            InvalidArgument("AssignNumOfDiff: a and b must have the same number of columns.");
+        if (!searchInCol && a.GetNumRows() != b.GetNumRows())
+            InvalidArgument("AssignNumOfDiff: a and b must have the same number of rows.");
 
-        Resize(1,1); //result should be one element
+        Resize(1, 1); //result should be one element
 
         PrepareDevice();
         cudaEvent_t done = nullptr;
-        //int blocksPerGrid=(int)ceil(1.0*a.GetNumElements()/threadsPerBlock);  
-        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));        
-        //_assignNumOfDiff<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray, b.m_pArray, m_pArray, a.GetNumElements());
-        _assignNumOfDiff<ElemType><<<1,1024,0,t_stream>>>(a.m_pArray, b.m_pArray, m_pArray, (CUDA_LONG)a.GetNumElements());
-        if (do_sync)    CUDA_CALL(cudaEventRecord(done));        
-        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));  
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        if (!searchInCol)
+        {
+            //int blocksPerGrid=(int)ceil(1.0*a.GetNumElements()/threadsPerBlock);  
+            //_assignNumOfDiff<ElemType><<<blocksPerGrid,threadsPerBlock,0,t_stream>>>(a.m_pArray, b.m_pArray, m_pArray, a.GetNumElements());
+            _assignNumOfDiff<ElemType><<<1, 1024, 0, t_stream>>>(a.m_pArray, b.m_pArray, m_pArray, (CUDA_LONG)a.GetNumElements());
+        }
+        else
+        {
+            const int blockSize = 1024;
+            _assignNumOfDiffCol<blockSize><<<1, blockSize, 0, t_stream>>>(a.m_pArray, b.m_pArray, m_pArray, 
+                static_cast<CUDA_LONG>(b.GetNumRows()), static_cast<CUDA_LONG>(a.GetNumCols()));
+        }
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
         if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
         return *this;
     }
