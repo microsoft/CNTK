@@ -654,7 +654,8 @@ public:
                 // evaluate the node for all frames concurrently (map)
                 // we manage time stamp here so that derived classes don't need to worry about it
                 (*nodeIter)->UpdateFunctionMBSize();
-                (*nodeIter)->Validate(true);
+                if (!(*nodeIter)->IsLeaf() && !(*nodeIter)->RequiresPreCompute())
+                    (*nodeIter)->Validate(true);
                 (*nodeIter)->OnEvaluateBeginIteration();
                 (*nodeIter)->EvaluateThisNode(FrameRange());
                 if (IsNodeReqMultiSeqHandling(*nodeIter))
