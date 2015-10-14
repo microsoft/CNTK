@@ -491,7 +491,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         pair<ImageLayout, ImageLayout> GetImageLayouts() const { return make_pair(m_inputImageLayout, m_outputImageLayout); }
 
-        const size_t ChildrenSize() const { return m_children.size(); }
+        const size_t ChildrenSize() const { return m_children.size(); }     // TODO: rename to NumChildren() or NumInputs(); and inside here where we use m_children, use m_children.size() as well
 
         virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr node) = 0;
 
@@ -1222,20 +1222,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     return data.ColumnSlice(startColumn, numParallelSequences);
                 else
                     return data.ColumnSlice(startColumn + frameRange.seqIndex, 1);
-            }
-        }
-        enum ValueOrGradient { VALUE, GRADIENT };
-        Matrix<ElemType> DataSlice(ValueOrGradient valueOrGradient/*as it says*/,
-                                   const FrameRange & frameRange/*select frame or entire batch*/)
-        {
-            Matrix<ElemType> & data = (valueOrGradient == VALUE) ? FunctionValues() : GradientValues();
-            try
-            {
-                return DataSlice(data, frameRange);
-            }
-            catch (const logic_error & e)
-            {
-                LogicError("%s In %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());  // :( DataSlice is static and has no access; so we post-patch it into the error string here...
             }
         }
         Matrix<ElemType> ValueSlice(const FrameRange & frameRange/*select frame or entire batch*/)

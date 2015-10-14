@@ -711,6 +711,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return diag;
     }
+#if 0
     //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
@@ -767,6 +768,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return *this;
     }
+#endif
 
     /// c = c - 1.0 for a specific position
     template<class ElemType>

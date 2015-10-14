@@ -316,6 +316,7 @@ namespace CNTKMathTest
             GPUMatrix<float> M4(2, 3, fArray4, matrixFlagNormal);
             Assert::IsTrue(M2.IsEqualTo(M4, 0.0001));
 
+#if 0
             GPUMatrix<float>  M5, M6, M7, M8;
             M5.AssignRowSliceValuesOf(M0, 0, 2);
             M6.AssignRowSliceValuesOf(M0, 2, 1);
@@ -329,6 +330,7 @@ namespace CNTKMathTest
             M8.AssignRowStackValuesOf(inputMatrices, 0, 3);
 
             Assert::IsTrue(M8.IsEqualTo(M0, 0.0001));
+#endif
         }
 
         TEST_METHOD(GPUKhatriRaoProduct)

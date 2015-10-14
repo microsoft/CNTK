@@ -1737,6 +1737,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+#if 0   // no longer needed, and overkill anyway as it can be implemented as a bunch of calls to AssignRowSliceValuesOf()
     //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
     template<class ElemType>
     Matrix<ElemType>& Matrix<ElemType>::AssignRowStackValuesOf(const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
@@ -1797,7 +1798,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return *this;
     } 
-
+#endif
 
     template<class ElemType>
     Matrix<ElemType>&  Matrix<ElemType>::AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)

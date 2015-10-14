@@ -597,6 +597,7 @@ namespace CNTKMathTest
             M4(1, 0) = 8; M4(1, 1) = 18; M4(1, 2) = 28;
             Assert::IsTrue(M2.IsEqualTo(M4, 0.0001));
 
+#if 0
             Matrix M5, M6, M7, M8;
             M5.AssignRowSliceValuesOf(M0, 0, 2);
             M6.AssignRowSliceValuesOf(M0, 2, 1);
@@ -610,6 +611,7 @@ namespace CNTKMathTest
             M8.AssignRowStackValuesOf(inputMatrices, 0, 3);
             
             Assert::IsTrue(M8.IsEqualTo(M0, 0.0001));
+#endif
         }
 
         TEST_METHOD(CPUAssignRepeatOf)

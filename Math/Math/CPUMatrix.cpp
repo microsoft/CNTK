@@ -477,6 +477,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return diag;
     }
 
+#if 0
     //stack the columns in inputMatrices (starting from sliceStartCol for sliceNumCols columns) and assign it to [this] object.
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const CPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
@@ -518,6 +519,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return *this;
     }  
+#endif
 
     template<class ElemType>
     void CPUMatrix<ElemType>::MinusOneAt(CPUMatrix<ElemType>& c, const size_t position)

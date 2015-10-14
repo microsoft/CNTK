@@ -407,7 +407,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 node->m_children = m_children;
                 node->m_startRowIndices = m_startRowIndices;
-                node->m_inputMatrices = m_inputMatrices;
             }
         }
 
@@ -431,25 +430,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.AddWithRowSliceValuesOf(gradientValues, startIndex, numRows);
         }
 
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
-        {
-            EvaluateThisNodeS(m_functionValues, m_inputMatrices,  0, Inputs(0)->GetNumCols());
-        }
-
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+
+#if 1       // assign as row slices, as that allows us to use the ValueSlice() function
+            for (size_t i = 0; i < ChildrenSize(); i++)
+                ValueSlice(frameRange).AssignRowSliceValuesOf(Inputs(i)->ValueSlice(frameRange), m_startRowIndices[i], Inputs(i)->GetNumRows());
+#else
             Matrix<ElemType> sliceFunctionValues = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-            EvaluateThisNodeS(sliceFunctionValues, m_inputMatrices, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
-        }
-
-        // TODO: change to FrameRange
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
-        {
-            functionValues.AssignRowStackValuesOf(inputMatrices, sliceStartCol, sliceNumCols);
-#if NANCHECK
-            functionValues.HasNan("RowStack");
+            sliceFunctionValues.AssignRowStackValuesOf(m_inputMatrices, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
 #endif
         }
 
@@ -459,21 +448,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t numCols = Inputs(0)->GetNumCols();
             m_startRowIndices.resize(ChildrenSize()+1);
-            m_inputMatrices.resize(ChildrenSize());
 
             size_t totalRows = 0;
             m_startRowIndices[0] = 0;
 
+            // TODO: why do we need Inputs(xxx)->FunctionValues()]? Why not operate directly on Inputs(.)->FunctionValues()?
             for (int i = 0; i < ChildrenSize(); i++)
             {
-                Matrix<ElemType>& childMatrix = Inputs(i)->FunctionValues();
-                size_t numRows = childMatrix.GetNumRows();
+                size_t numRows = Inputs(i)->GetNumRows();
                 
-                if (isFinalValidationPass && childMatrix.GetNumCols() != numCols)
+                if (isFinalValidationPass && Inputs(i)->GetNumCols() != numCols)
                     LogicError("RowStack operation: the input node %ls has different number of columns.", Inputs(i)->NodeName().c_str());
 
                 totalRows += numRows;
-                m_inputMatrices[i] = &childMatrix;
                 m_startRowIndices[i + 1] = m_startRowIndices[i] + numRows;
             }
 
@@ -493,8 +480,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        std::vector<size_t> m_startRowIndices; //start row number in the stacked matrix of each input (child)
-        std::vector<const Matrix<ElemType>*> m_inputMatrices;
+        std::vector<size_t> m_startRowIndices;  // start row number in the stacked matrix of each input (child) (cumsum of matrix heights)
     };
 
     template class RowStackNode<float>;
