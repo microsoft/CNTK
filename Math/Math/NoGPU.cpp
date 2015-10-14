@@ -505,7 +505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //for each column of a, we add all rows of a to this starting from startIndex
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
-    template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols) { return *this; }
+    //template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols) { return *this; }
 
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRepeatOf(const GPUMatrix<ElemType>& /*a*/, const size_t numRowRepeats, const size_t numColRepeats) { return *this; }
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowRepeatValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t numRowRepeats) { return *this; }

@@ -242,7 +242,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>&  AssignRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         CPUMatrix<ElemType>&  AddToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         CPUMatrix<ElemType>&  AddWithRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
-        CPUMatrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const CPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
+        //CPUMatrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const CPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
 
         CPUMatrix<ElemType>& AssignToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
 
