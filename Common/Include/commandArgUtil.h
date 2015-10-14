@@ -497,7 +497,9 @@ public:
                     // TODO: document what this is for, where it is used [fseide]
                     const static std::string customSeperators = "`~!@$%^&*_-+|:;,?.";
 
-                    if (customSeperators.find(stringParse[tokenStart]) != npos)
+                    if (customSeperators.find(stringParse[tokenStart]) != npos
+                        && stringParse.substr(tokenStart).find("..") != 0 && stringParse.substr(tokenStart).find(".\\") != 0 && stringParse.substr(tokenStart).find("./") != 0         // [fseide] otherwise this will nuke leading . or .. in a pathname... Aargh! Can't wait for this hairball of code to die!
+                        )
                     {
                         char separator = stringParse[tokenStart];
                         // this was m_separator; on content level, we change it to a custom separator (it gets changed back when we exit content level)
