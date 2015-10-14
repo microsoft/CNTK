@@ -1131,6 +1131,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> opName >> nodeName;
 
             auto newNode = ComputationNetworkBuilder<ElemType>::NewNode(opName, m_deviceId, nodeName);
+
             if (!newNode)
             {
                 fprintf(stderr, "Unknown ComputationNode type %ls (node name %ls)\n", opName.c_str(), nodeName.c_str());

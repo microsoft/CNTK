@@ -40,7 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         ParallelNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
-        { }
+        {}
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
@@ -207,7 +207,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
             m_hasComputed(false)
-        { }
+        {}
 
         // interface through which this node is operated on are these two functions
 
@@ -234,7 +234,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void LoadFromFile(File& fstream, size_t modelVersion) override
         {
             Base::LoadFromFile(fstream, modelVersion);
+
             fstream >> m_hasComputed;
+            CreateMatrixIfNull(m_functionValues);
             fstream >> FunctionValues();
         }
 
