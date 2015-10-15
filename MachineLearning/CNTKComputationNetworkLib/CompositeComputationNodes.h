@@ -201,7 +201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class PreComputedNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
-        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers;
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
         PreComputedNode(DEVICEID_TYPE deviceId, const wstring & name) :
