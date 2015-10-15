@@ -32,8 +32,8 @@ public:
     bool GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices) override;
     bool DataEnd(EndDataType endDataType) override;
 
-    size_t GetNumParallelSequences() override { return 1; }
-    void CopyMBLayoutTo(MBLayoutPtr) override {};
+    size_t GetNumParallelSequences() override  { return m_pMBLayout->GetNumParallelSequences(); }
+    void CopyMBLayoutTo(MBLayoutPtr pMBLayout) override { pMBLayout->CopyFrom(m_pMBLayout); };
 
     void SetRandomSeed(unsigned int seed) override;
 
@@ -60,5 +60,9 @@ private:
     size_t m_mbStart;
     std::vector<ElemType> m_featBuf;
     std::vector<ElemType> m_labBuf;
+
+    bool m_imgListRand;
+
+    MBLayoutPtr m_pMBLayout;
 };
 }}}
