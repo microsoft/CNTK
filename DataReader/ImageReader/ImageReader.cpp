@@ -16,6 +16,11 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+static bool AreEqual(const std::string& s1, const std::string& s2)
+{
+    return std::equal(s1.begin(), s1.end(), s2.begin(), [](const char& a, const char& b) { return std::tolower(a) == std::tolower(b); });
+};
+
 //-------------------
 // Transforms
 
@@ -104,11 +109,6 @@ private:
         UniRatio = 1,
         UniLength = 2,
         UniArea = 3
-    };
-
-    bool AreEqual(const std::string& s1, const std::string& s2)
-    {
-        return std::equal(s1.begin(), s1.end(), s2.begin(), [](const char& a, const char& b) { return std::tolower(a) == std::tolower(b); });
     };
 
     CropType ParseCropType(const std::string& src)
@@ -295,7 +295,7 @@ private:
 // ImageReader
 
 template<class ElemType>
-ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed)
+ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed), m_imgListRand(true), m_pMBLayout(make_shared<MBLayout>())
 {
     m_transforms.push_back(std::make_unique<CropTransform>(m_seed));
     m_transforms.push_back(std::make_unique<ScaleTransform>(sizeof(ElemType) == 4 ? CV_32F : CV_64F, m_seed));
@@ -353,6 +353,12 @@ void ImageReader<ElemType>::Init(const ConfigParameters& config)
         files.push_back({ imgPath, std::stoi(clsId) });
     }
 
+    std::string rand = config("randomize", "auto");
+    if (AreEqual(rand, "none"))
+        m_imgListRand = false;
+    else if (!AreEqual(rand, "auto"))
+        RuntimeError("Only Auto and None are currently supported.");
+
     m_epochStart = 0;
     m_mbStart = 0;
 }
@@ -368,7 +374,8 @@ void ImageReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size
     assert(mbSize > 0);
     assert(requestedEpochSamples > 0);
 
-    std::shuffle(files.begin(), files.end(), m_rng);
+    if (m_imgListRand)
+        std::shuffle(files.begin(), files.end(), m_rng);
 
     m_epochSize = (requestedEpochSamples == requestDataSize ? files.size() : requestedEpochSamples);
     m_mbSize = mbSize;
@@ -422,6 +429,7 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
     size_t mbSize = mbLim - m_mbStart;
     features.SetValue(m_featDim, mbSize, m_featBuf.data(), matrixFlagNormal);
     labels.SetValue(m_labDim, mbSize, m_labBuf.data(), matrixFlagNormal);
+    m_pMBLayout->Init(mbSize, 1, false);
 
     m_mbStart = mbLim;
     return true;
