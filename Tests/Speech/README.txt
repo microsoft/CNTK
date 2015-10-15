@@ -23,7 +23,7 @@ COMMAND:     currentDirectory=$(SolutionDir)Tests\Speech\Data  configFile=$(Solu
 
 --- Speech\DiscriminativePreTraining:
 
-currentDirectory=$(SolutionDir)Tests\Speech\Data  configFile=..\DNN\DiscriminativePreTraining\cntk_dpt.config  stderr=..\RunDir\DNN\DiscriminativePreTraining\models\cntkSpeech.dnn.log  RunDir=..\RunDir\DNN\DiscriminativePreTraining  DataDir=.  DeviceId=Auto
+COMMAND:     currentDirectory=$(SolutionDir)Tests\Speech\Data  configFile=..\DNN\DiscriminativePreTraining\cntk_dpt.config  stderr=..\RunDir\DNN\DiscriminativePreTraining\models\cntkSpeech.dnn.log  RunDir=..\RunDir\DNN\DiscriminativePreTraining  DataDir=.  DeviceId=Auto
 
 --- MNIST:
 

@@ -1163,12 +1163,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed)
     {
         PrepareDevice();
+#if 0   // to change the seed, we must tear down the random generator
+        // This is not efficient, but for correctness, we must do it.
+        if (s_curandGenerator && (seed != USE_TIME_BASED_SEED))
+        {
+            fprintf(stderr, "SetUniformRandomValue (GPU): destroying curand object\n");
+            CURAND_CALL(curandDestroyGenerator(((curandGenerator_t*)s_curandGenerator)[0]));    // TODO: what is this typecast business??
+            delete s_curandGenerator;
+            s_curandGenerator = NULL;
+        }
+#endif
         if (s_curandGenerator==NULL)
-        {            
+        {
+            unsigned long long cudaSeed = (seed == USE_TIME_BASED_SEED) ? time(NULL) : seed;
+            fprintf(stderr, "SetUniformRandomValue (GPU): creating curand object with seed %llu\n", cudaSeed);
             s_curandGenerator = new curandGenerator_t;
-            /* Create pseudo-random number generator */        
-            CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*)s_curandGenerator)[0]),CURAND_RNG_PSEUDO_XORWOW));        
-            CURAND_CALL(curandSetPseudoRandomGeneratorSeed(((curandGenerator_t*)s_curandGenerator)[0], seed==USE_TIME_BASED_SEED ? time(NULL) : seed));       
+            /* Create pseudo-random number generator */
+            CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*)s_curandGenerator)[0]),CURAND_RNG_PSEUDO_XORWOW));
+            CURAND_CALL(curandSetPseudoRandomGeneratorSeed(((curandGenerator_t*)s_curandGenerator)[0], cudaSeed));
             CURAND_CALL(curandSetGeneratorOrdering(((curandGenerator_t*)s_curandGenerator)[0],CURAND_ORDERING_PSEUDO_SEEDED));
         }
 
@@ -1201,14 +1213,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
     {
         PrepareDevice();
-        if (s_curandGenerator==NULL)
-        {            
+#if 0   // to change the seed, we must tear down the random generator
+        // This is not efficient, but for correctness, we must do it.
+        if (s_curandGenerator && (seed != USE_TIME_BASED_SEED))
+        {
+            fprintf(stderr, "SetGaussianRandomValue (GPU): destroying curand object\n");
+            CURAND_CALL(curandDestroyGenerator(((curandGenerator_t*)s_curandGenerator)[0]));    // TODO: what is this typecast business??
+            delete s_curandGenerator;
+            s_curandGenerator = NULL;
+        }
+#endif
+        if (s_curandGenerator == NULL)
+        {
+            unsigned long long cudaSeed = (seed == USE_TIME_BASED_SEED) ? time(NULL) : seed;
+            fprintf(stderr, "SetGaussianRandomValue (GPU): creating curand object with seed %llu\n", cudaSeed);
             s_curandGenerator = new curandGenerator_t;
             /* Create pseudo-random number generator */        
-            CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*)s_curandGenerator)[0]),CURAND_RNG_PSEUDO_XORWOW));        
-            CURAND_CALL(curandSetPseudoRandomGeneratorSeed(((curandGenerator_t*)s_curandGenerator)[0], seed==USE_TIME_BASED_SEED ? time(NULL) : seed));       
+            CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*)s_curandGenerator)[0]),CURAND_RNG_PSEUDO_XORWOW)); 
+            CURAND_CALL(curandSetPseudoRandomGeneratorSeed(((curandGenerator_t*)s_curandGenerator)[0], cudaSeed));
             CURAND_CALL(curandSetGeneratorOrdering(((curandGenerator_t*)s_curandGenerator)[0],CURAND_ORDERING_PSEUDO_SEEDED));
         }
+        else
+            fprintf(stderr, "SetGaussianRandomValue (GPU): WARNING: ignoring seed %ul (This is a bug.)\n", seed);
 
         if (sizeof(ElemType)==sizeof(float))
         {
@@ -3041,6 +3067,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_workspace->push(std::move(workspace));
 #ifndef _DEBUG
         UNUSED(err);
+        // This ^^ does not work for CUDA Release builds, so this vv makes it work.
+        int x = (err == cudaSuccess) ? 1 : 0; x++;
 #endif
 
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
