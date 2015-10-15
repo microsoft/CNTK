@@ -27,5 +27,5 @@ testCases:
     patterns:
       - ^ Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}} of {{integer}}]
       - SamplesSeen = {{integer}}
-      - TrainLossPerSample = {{float,tolerance=5%}}
+      - TrainLossPerSample = {{float,tolerance=15%}}
 
