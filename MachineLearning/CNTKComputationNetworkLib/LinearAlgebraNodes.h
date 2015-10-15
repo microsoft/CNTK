@@ -426,7 +426,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             for (size_t i = 0; i < ChildrenSize(); i++)
-                ValueSlice(frameRange).AssignRowSliceValuesOf(Inputs(i)->ValueSlice(frameRange), m_startRowIndices[i], Inputs(i)->GetNumRows());
+                ValueSlice(frameRange).AssignToRowSliceValuesOf(Inputs(i)->ValueSlice(frameRange), m_startRowIndices[i], Inputs(i)->GetNumRows());
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
