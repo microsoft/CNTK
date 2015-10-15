@@ -1505,8 +1505,8 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
 
         //dump config info
         fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
-        fprintf(stderr, "command line options: \n");
-        for (int i = 1; i < argc; i++)
+        fprintf(stderr, "command line: \n");
+        for (int i = 0; i < argc; i++)
         {
             fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
         }
