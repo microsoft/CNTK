@@ -254,11 +254,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
+            if (!Inputs(0)->HasMBLayout())
+                InvalidArgument("%ls %ls operation requires its input to come in minibatches of samples.", NodeName().c_str(), OperationName().c_str());
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+
             if (!m_hasComputed) // this node retains state, and state gets destroyed by Resize(), so we must be careful
                 Resize(Inputs(0)->GetNumRows(), 1);
             else
                 VerifySize(Inputs(0)->GetNumRows(), 1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+
             InferImageDimsFromInputs();
         }
 
@@ -370,16 +374,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!IsAccumulating())
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
-            Matrix<ElemType> &samples = Inputs(0)->FunctionValues();
-            Matrix<ElemType> &avg = FunctionValues();
+            // set gaps to zero, since we are reducing in time
+            Inputs(0)->MaskMissingValuesColumnsToZero();
+
+            auto & samples = Inputs(0)->FunctionValues();
+            auto & avg = FunctionValues();
 
 #if 1//NANCHECK
             samples.HasNan("Mean-Samples");
 #endif
-            size_t numNewSamples = samples.GetNumCols();
-            Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + samples.GetNumCols()), samples, false,
-                                                        ConstOnes(numNewSamples, 1, samples.GetDeviceId()),
-                                                        false, (ElemType)m_numSamples / (m_numSamples + numNewSamples), avg);
+            size_t numNewSamples = Inputs(0)->GetMBLayout()->DetermineActualNumSamples();
+            size_t totalNumSamples = m_numSamples + numNewSamples;
+            if (totalNumSamples == 0) totalNumSamples = 1;  // 0/0=1 in this context
+            Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, samples, false,
+                                                     ConstOnes(samples.GetNumCols(), 1, samples.GetDeviceId()),
+                                                     false, (ElemType)m_numSamples / totalNumSamples, avg);
 #if 1//NANCHECK
             avg.HasNan("Mean-avg");
 #endif
@@ -450,15 +459,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!IsAccumulating())
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
-            Matrix<ElemType> &samples = Inputs(0)->FunctionValues();
+            // set gaps to zero, since we are reducing in time
+            Inputs(0)->MaskMissingValuesColumnsToZero();
+
+            auto & samples = Inputs(0)->FunctionValues();
 #if 1//NANCHECK
             samples.HasNan("InvStdDev-Samples");
 #endif
             m_temp.SetValue(m_mean);
-            size_t numNewSample = samples.GetNumCols();
-            Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + numNewSample), samples, false,
-                                                        ConstOnes(numNewSample, 1, samples.GetDeviceId()),
-                                                        false, (ElemType)m_numSamples / (m_numSamples + numNewSample), m_mean);
+            size_t numNewSamples = Inputs(0)->GetMBLayout()->DetermineActualNumSamples();
+            size_t totalNumSamples = m_numSamples + numNewSamples;
+            if (totalNumSamples == 0) totalNumSamples = 1;  // 0/0=1 in this context
+            Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, samples, false,
+                                                     ConstOnes(samples.GetNumCols(), 1, samples.GetDeviceId()),
+                                                     false, (ElemType)m_numSamples / totalNumSamples, m_mean);
 
             m_temp -= m_mean;
             m_temp.AssignElementPowerOf(m_temp, 2);
@@ -467,9 +481,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_temp.AssignDifferenceOf(samples, m_mean);
             m_temp.AssignElementPowerOf(m_temp, 2);
 
-            Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / (m_numSamples + numNewSample), m_temp, false,
-                                                        ConstOnes(numNewSample, 1, samples.GetDeviceId()),
-                                                        false, (ElemType)m_numSamples / (m_numSamples + numNewSample), m_var);
+            Matrix<ElemType>::MultiplyAndWeightedAdd(1.0f / totalNumSamples, m_temp, false,
+                                                     ConstOnes(samples.GetNumCols(), 1, samples.GetDeviceId()),
+                                                     false, (ElemType)m_numSamples / totalNumSamples, m_var);
 
 #if 1//NANCHECK
             m_var.HasNan("InvStdDev-m_var");
