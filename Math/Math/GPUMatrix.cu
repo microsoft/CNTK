@@ -2978,7 +2978,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         maxValues.Resize(topK, n);
         maxIndexes.Resize(topK, n);
 
-        cudaError_t err = cudaSuccess;
         // To sort matrix columns we use 2-pass _stable_ sort algorithm:
         // 1. Sort by values (descending) with corresponding row/col indexes.
         // 2. Sort by col indices (ascending) with corresponding values/row indices.
@@ -2995,13 +2994,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Determine temp buffer size needed for SortPairsDescending to sort values on the first pass.
         size_t cbtemp = 0;
         // If first param is nullptr then no actual work is done except writing result to cbtemp.
-        err = cub::DeviceRadixSort::SortPairsDescending(nullptr, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream);
-        assert(err == cudaSuccess);
+        CUDA_CALL(cub::DeviceRadixSort::SortPairsDescending(nullptr, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream));
         size_t ctemp1 = (cbtemp + sizeof(ElemType) - 1) / sizeof(ElemType);
         // Determine temp buffer size needed for SortPairs to sort indices on the second pass.
         cbtemp = 0;
-        err = cub::DeviceRadixSort::SortPairs(nullptr, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream);
-        assert(err == cudaSuccess);
+        CUDA_CALL(cub::DeviceRadixSort::SortPairs(nullptr, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream));
         size_t ctemp2 = (cbtemp + sizeof(ElemType) - 1) / sizeof(ElemType);
         size_t ctemp = std::max(ctemp1, ctemp2);
         cbtemp = ctemp * sizeof(ElemType);
@@ -3029,19 +3026,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int cblock = (celt + ThreadsPerBlock - 1) / ThreadsPerBlock;
         _initIndicesForSort<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, m, n);
         // Sort by values.
-        err = cub::DeviceRadixSort::SortPairsDescending(ptmp, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream);
-        assert(err == cudaSuccess);
+        CUDA_CALL(cub::DeviceRadixSort::SortPairsDescending(ptmp, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream));
         // Sort by column indices. outIdx contains indices after the first pass so it's used as an input.
-        err = cub::DeviceRadixSort::SortPairs(ptmp, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream);
-        assert(err == cudaSuccess);
+        CUDA_CALL(cub::DeviceRadixSort::SortPairs(ptmp, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream));
         // Copy results.
         cblock = (topK * n + ThreadsPerBlock - 1) / ThreadsPerBlock;
         _copyTopKResults<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, outVal2, maxIndexes.m_pArray, maxValues.m_pArray, m, n, topK);
 
         m_workspace->push(std::move(workspace));
-#ifndef _DEBUG
-        UNUSED(err);
-#endif
 
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
