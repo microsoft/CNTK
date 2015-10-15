@@ -87,7 +87,8 @@
       <CodeGeneration>$(CudaCodeGen)</CodeGeneration>
     </CudaCompile>
     <PostBuildEvent>
-      <Command>xcopy /D /I /Y "$(CudaPath)\bin\cudart64_*.dll" $(OutputPath)</Command>
+      <Command>xcopy /D /I /Y "$(CudaPath)\bin\cudart64_*.dll" $(OutputPath)
+xcopy /D /I /Y "$(CudaPath)\bin\cublas64_*.dll" $(OutputPath)</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
