@@ -1,1 +1,2 @@
 run-test text eol=lf
+run-test-common text eol=lf

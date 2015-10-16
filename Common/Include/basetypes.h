@@ -84,10 +84,12 @@ OACR_WARNING_DISABLE(POTENTIAL_ARGUMENT_TYPE_MISMATCH, "Not level1 or level2_sec
 #include <locale>       // std::wstring_convert
 #include <string>
 #include <algorithm>    // for transform()
-#include <mutex>
 #include <unordered_map>
 #include <chrono>
 #include <thread>
+#include <stack>
+#include <mutex>
+#include <memory>
 #ifdef _MSC_VER
 #include <codecvt>      // std::codecvt_utf8
 #endif
@@ -1004,4 +1006,59 @@ static inline std::wstring FormatWin32Error(DWORD error)
 	return res;
 }
 #endif // _WIN32
+
+// Very simple version of thread-safe stack. Add other functions as needed.
+template<typename T>
+class conc_stack
+{
+public:
+    typedef typename std::stack<T>::value_type value_type;
+
+    conc_stack() {}
+
+    value_type pop_or_create(std::function<value_type()> factory)
+    {
+        std::lock_guard<std::mutex> g(m_locker);
+        if (m_stack.size() == 0)
+            return factory();
+        auto res = std::move(m_stack.top());
+        m_stack.pop();
+        return res;
+    }
+
+    void push(const value_type& item)
+    {
+        std::lock_guard<std::mutex> g(m_locker);
+        m_stack.push(item);
+    }
+
+    void push(value_type&& item)
+    {
+        std::lock_guard<std::mutex> g(m_locker);
+        m_stack.push(std::forward<value_type>(item));
+    }
+
+public:
+    conc_stack(const conc_stack&) = delete;
+    conc_stack& operator=(const conc_stack&) = delete;
+    conc_stack(conc_stack&&) = delete;
+    conc_stack& operator=(conc_stack&&) = delete;
+
+private:
+    std::stack<value_type> m_stack;
+    std::mutex m_locker;
+};
+
+// make_unique was added in GCC 4.9.0
+#if __GNUC__ >= 4 && __GNUC_MINOR__ < 9
+namespace std
+{
+    template<typename T, typename... Args>
+    std::unique_ptr<T> make_unique(Args&&... args)
+    {
+        return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+    }
+}
+#endif
+
 #endif    // _BASETYPES_

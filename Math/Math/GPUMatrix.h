@@ -88,6 +88,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static cublasHandle_t s_cuHandle[MaxGpus];
         static void *s_curandGenerator;
 
+        // Have to use naked pointer to avoid issues with __declspec(dllexport) on Windows.
+        // REVIEW alexeyk: can be allocated lazily but the current footprint is small anyway.
+        mutable conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>* m_workspace = new conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>;
+
     private:
         void performInplaceFunction(int kind);
         size_t LocateElement (const size_t i, const size_t j) const;
@@ -286,7 +290,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>&  AssignRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
         GPUMatrix<ElemType>&  AddToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         GPUMatrix<ElemType>&  AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows);
-        GPUMatrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
+        //GPUMatrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
 
         GPUMatrix<ElemType>&  AssignRepeatOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
         GPUMatrix<ElemType>&  AddToRowRepeatValuesOf(const GPUMatrix<ElemType>& a, const size_t numRowRepeats);
@@ -295,9 +299,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUMatrix<ElemType>&  AddFoldedPositiveAndShiftedNegSample(const GPUMatrix<ElemType>& a, const size_t posNumber, const size_t negNumber, const size_t shiftNumber);
 
         void VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise) const;
-        void VectorMin(GPUMatrix<ElemType>& mainndexes, GPUMatrix<ElemType>& minValues, const bool isColWise) const;
+        void VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise, int topK) const;
+        void VectorMin(GPUMatrix<ElemType>& minIndexes, GPUMatrix<ElemType>& minValues, const bool isColWise) const;
 
-        GPUMatrix<ElemType>&   AssignNumOfDiff(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b); 
+        GPUMatrix<ElemType>&   AssignNumOfDiff(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, bool searchInCol = false); 
 
 
         GPUMatrix<ElemType>& AssignInnerProductOfMatrices(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b); 

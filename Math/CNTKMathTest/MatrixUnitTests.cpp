@@ -821,5 +821,60 @@ namespace CNTKMathTest
                 Assert::IsTrue(SingleMatrix::HasElement(m1, posInf));
             }
         }
+
+        TEST_METHOD(MatrixVectorMax)
+        {
+            // Matrices are stored as column-major so below is 3x2 matrix.
+            float src[] = { 
+                1.0f, 3.0f, 4.0f,
+                6.0f, 2.0f, 5.0f };
+
+            float expectedIdx[] = {
+                2.0f, 1.0f,
+                0.0f, 2.0f };
+
+            float expectedVal[] = {
+                4.0f, 3.0f,
+                6.0f, 5.0f };
+
+            for (int deviceId : { -1, AUTOPLACEMATRIX })
+            {
+                Matrix<float> expIdx(2, 2, expectedIdx, matrixFlagNormal, deviceId);
+                Matrix<float> expVal(2, 2, expectedVal, matrixFlagNormal, deviceId);
+
+                Matrix<float> actual(3, 2, src, matrixFlagNormal, deviceId);
+                Matrix<float> actualIdx(deviceId);
+                Matrix<float> actualVal(deviceId);
+
+                int topK = 2;
+                actual.VectorMax(actualIdx, actualVal, true, topK);
+                Assert::IsTrue(actualIdx.IsEqualTo(expIdx));
+                Assert::IsTrue(actualVal.IsEqualTo(expVal));
+            }
+        }
+
+        TEST_METHOD(MatrixAssignNumOfDiff)
+        {
+            float labels[] = { 1.0f, 2.0f, 3.0f };
+
+            // Matrices are stored as column-major so below is 2x3 matrix.
+            float topKResults[] = { 
+                1.0f, 3.0f, 
+                4.0f, 6.0f, 
+                2.0f, 3.0f };
+
+            for (int deviceId : { -1, AUTOPLACEMATRIX })
+            {
+                Matrix<float> lbl(1, 3, labels, matrixFlagNormal, deviceId);
+                Matrix<float> topKRes(2, 3, topKResults, matrixFlagNormal, deviceId);
+
+                Matrix<float> actual(deviceId);
+                actual.AssignNumOfDiff(lbl, topKRes, true);
+
+                float expectedDiff = 1.0;
+                Assert::AreEqual(expectedDiff, actual.Get00Element());
+            }
+        }
+
     };
 }
