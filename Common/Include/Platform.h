@@ -19,10 +19,10 @@
 #define __declspec_noreturn __attribute__((noreturn))
 #endif
 
-#ifndef _MSC_VER
-//#define noexcept throw()
-// TODO: This fails, forbidden to redefine keywords. For now, need to define this macro locally where it is used.
-// TODO: change this to only trigger up to VS 2013
+#if defined(_MSC_VER) && (_MSC_VER <= 1800/*VS2013*/)
+#include "xkeycheck.h"      // this header checks whether one attempted to redefine keywords incl. 'noexcept', so must include before redefining it
+#undef noexcept
+#define noexcept throw()    // noexcept not defined in VS2013, but needed for gcc to pick the correct overload for constructor/assignment from an rvalue ref
 #endif
 
 // ===========================================================================
