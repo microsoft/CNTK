@@ -1,0 +1,106 @@
+#!/bin/bash
+
+# Helper script containing common code used by run-test scripts of E2E tests
+
+BinaryPath=$TEST_CNTK_BINARY
+
+if [ "$TEST_DEVICE" == "cpu" ]; then
+  CNTKDeviceId=-1
+elif [ "$TEST_DEVICE" == "gpu" ]; then
+  CNTKDeviceId=0
+else
+  echo "Error: Unknown TEST_DEVICE specified!"
+  exit 3
+fi
+
+LogFileName=
+
+ConfigDir=$TEST_DIR
+RunDir=$TEST_RUN_DIR
+DataDir=$TEST_DATA_DIR
+
+MPIMode=0
+MPIArgs=
+
+DeleteExistingModels=1
+
+# Helper function to print and run a command
+run()
+{
+  cmd=$1
+  shift
+  if [ "$DRY_RUN" == "1" ]; then
+    workingDir=$PWD
+    if [ "$OS" == "Windows_NT" ]; then
+      workingDir=$(cygpath -aw $workingDir)
+      if [[ $MPIMode == 0 ]]; then
+        cmd=$(cygpath -aw $cmd)
+        TEST_ROOT_DIR_ESCAPED=`echo -n $(cygpath -aw $TEST_ROOT_DIR) | sed 's/\\\\/\\\\\\\\/g'`
+        workingDir=`echo "$workingDir" | sed "s/$TEST_ROOT_DIR_ESCAPED/\\$\\(SolutionDir\\)\\\\\\\\Tests/g"`
+      fi
+    fi
+    echo Working Directory: $workingDir
+    echo Full command: "$cmd" "$@"
+    if [ "$OS" == "Windows_NT" ]; then
+      if [[ $MPIMode == 0 ]]; then
+        echo VS debugging command args: "$@" | sed "s/$TEST_ROOT_DIR_ESCAPED/\\$\\(SolutionDir\\)\\\\Tests/g"
+      fi
+    fi
+    return 1
+  else
+    echo === Running "$cmd" "$@"
+    "$cmd" "$@"
+    return $?
+  fi
+}
+
+# Function for launching the CNTK executable
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun()
+{
+  configFileName=$1
+  additionalCNTKArgs=$2
+
+  if [ "$OS" == "Windows_NT" ]; then
+    # When running on cygwin translating /cygdrive/xxx paths to proper windows paths:
+    ConfigDir=$(cygpath -aw $ConfigDir)
+    RunDir=$(cygpath -aw $RunDir)
+    DataDir=$(cygpath -aw $DataDir)
+  fi
+
+  CNTKArgs="configFile=$ConfigDir/$configFileName RunDir=$RunDir DataDir=$DataDir DeviceId=$CNTKDeviceId $additionalCNTKArgs"
+  if [ "$LogFileName" != "" ]; then
+    CNTKArgs="$CNTKArgs stderr=$RunDir/$LogFileName"
+  fi
+
+  modelsDir=$TEST_RUN_DIR/models
+  if [[ $DeleteExistingModels == 1 ]]; then
+    [ -d $modelsDir ] && rm -rf $modelsDir
+  fi
+  mkdir -p $modelsDir || exit $?
+
+  if [[ $MPIMode == 0 ]]; then
+    run "$BinaryPath" $CNTKArgs
+  else
+    run "$MPI_BINARY" $MPIArgs $BinaryPath $CNTKArgs
+  fi
+
+  return $?
+}
+
+# Function for launching a parallel CNTK run with MPI
+# cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
+cntkmpirun()
+{
+  # Since we use the MS MPI program on Windows, the CNTK binary path argument
+  # passed to mpiexec must be in the windows format
+  if [ "$OS" == "Windows_NT" ]; then
+    BinaryPath=$(cygpath -aw $BinaryPath)
+  fi
+
+  MPIMode=1
+  MPIArgs=$1
+
+  cntkrun "$2" "$3"
+  return $?
+}

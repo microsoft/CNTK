@@ -159,9 +159,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // HAH! This function is only ever used for Decimate(). It can completely go away, as can methods of the same name in the readers!
         //bool RequireSentenceSeg() const { return m_dataIsSequential; }        // this is the name of a function on DataReader which really belongs here
 
-#if 0   // (I thought I need this, but don't. Keeping it anyway, maybe we need it again in the future.)
         // compute the number of actual samples in this layout (not counting NoLabel ones)
-        // This is only expensive for a weirdo configuration of multiple variable-length sequences that still normalizes the gradient over the total # seen samples.
+        // This is used by MeanNode and InvStdDevNode.
         size_t DetermineActualNumSamples() const
         {
             size_t n = GetNumTimeSteps() * GetNumParallelSequences();
@@ -178,7 +177,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             return n;
         }
-#endif
 
     private:
         size_t m_numTimeSteps;

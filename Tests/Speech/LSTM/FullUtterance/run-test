@@ -1,29 +1,8 @@
 #!/bin/bash
-if [ "$TEST_DEVICE" == "cpu" ]; then
-  CNTK_DEVICE_ID=-1
-elif [ "$TEST_DEVICE" == "gpu" ]; then
-  CNTK_DEVICE_ID=0
-else
-  echo "Error: Unknown TEST_DEVICE specified!"
-  exit 3
-fi
 
-configFile=$TEST_DIR/../cntk.config
-RunDir=$TEST_RUN_DIR
-DataDir=$TEST_DATA_DIR
-NDLDir=$TEST_DIR/..
+. $TEST_ROOT_DIR/run-test-common
 
-if [ "$OS" == "Windows_NT" ]; then
-  # When running on cygwin translating /cygdrive/xxx paths to proper windows paths:
-  configFile=$(cygpath -aw $configFile)
-  RunDir=$(cygpath -aw $RunDir)
-  DataDir=$(cygpath -aw $DataDir)
-  NDLDir=$(cygpath -aw $NDLDir)
-fi
+ConfigDir=$TEST_DIR/..
 
-CNTK_ARGS="configFile=$configFile RunDir=$RunDir DataDir=$DataDir DeviceId=$CNTK_DEVICE_ID NDLDir=$NDLDir Truncated=false speechTrain=[reader=[nbruttsineachrecurrentiter=1]] speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]] speechTrain=[SGD=[numMBsToShowResult=1]]"
-MODELS_DIR=$TEST_RUN_DIR/models
-[ -d $MODELS_DIR ] && rm -rf $MODELS_DIR
-mkdir -p $MODELS_DIR || exit $?
-echo === Running $TEST_CNTK_BINARY $CNTK_ARGS
-$TEST_CNTK_BINARY $CNTK_ARGS || exit $?
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun cntk.config 'Truncated=false speechTrain=[reader=[nbruttsineachrecurrentiter=1]] speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]] speechTrain=[SGD=[numMBsToShowResult=1]]' || exit $?

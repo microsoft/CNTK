@@ -75,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         mutable size_t m_numTimesDeviceChanged;
         mutable size_t m_numTimesMatrixTypeChanged;
-        mutable int m_devicesTransferedTo[2];
+        mutable int m_devicesTransferedTo[2];       // TODO: what is this for? Seems only diagnostics
             
         //Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
         void _transferFromDeviceToDevice(int id_from, int id_to, bool ismoved=true,bool emptyTransfer=false) const; 
@@ -332,7 +332,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>&  AssignRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
         Matrix<ElemType>&  AddToRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows); 
         Matrix<ElemType>&  AddWithRowSliceValuesOf(const Matrix<ElemType>& a, const size_t startIndex, const size_t numRows);
-        Matrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
+        //Matrix<ElemType>&  AssignRowStackValuesOf(const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols);
 
         Matrix<ElemType>&  AssignRepeatOf(const Matrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats);
         Matrix<ElemType>&  AddToRowRepeatValuesOf(const Matrix<ElemType>& a, const size_t numRepeats);
@@ -368,9 +368,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& AssignSignOf(const Matrix<ElemType>& a);
         Matrix<ElemType>& AddSignOf(const Matrix<ElemType>& a);
         void VectorMax(Matrix<ElemType>& maxIndexes, Matrix<ElemType>& maxValues, const bool isColWise) const;
-        void VectorMin(Matrix<ElemType>& mainndexes, Matrix<ElemType>& minValues, const bool isColWise) const;
+        void VectorMax(Matrix<ElemType>& maxIndexes, Matrix<ElemType>& maxValues, const bool isColWise, int topK) const;
+        void VectorMin(Matrix<ElemType>& minIndexes, Matrix<ElemType>& minValues, const bool isColWise) const;
 
-        Matrix<ElemType>&  AssignNumOfDiff(const Matrix<ElemType>& a, const Matrix<ElemType>& b); 
+        Matrix<ElemType>&  AssignNumOfDiff(const Matrix<ElemType>& a, const Matrix<ElemType>& b, bool searchInCol = false); 
 
         Matrix<ElemType>& AssignInnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b); //this method will resize(1,1) first
 

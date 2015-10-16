@@ -330,11 +330,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         // helper functions for common cases
-
-
     private:
         ComputationNodeBasePtr Inputs(size_t index) const { return m_children[index]; } // TODO: delete this; change to m_children
-       // determine number of columns from a child and/or layout
+        // determine number of columns from a child and/or layout
         size_t DetermineNumCols(const ComputationNodeBasePtr & child) const
         {
             size_t childCols = child->GetNumCols();     // this is what the child says
@@ -495,7 +493,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         pair<ImageLayout, ImageLayout> GetImageLayouts() const { return make_pair(m_inputImageLayout, m_outputImageLayout); }
 
-        const size_t ChildrenSize() const { return m_children.size(); }
+        const size_t ChildrenSize() const { return m_children.size(); }     // TODO: rename to NumChildren() or NumInputs(); and inside here where we use m_children, use m_children.size() as well
 
         virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr& node) = 0;
 
@@ -514,7 +512,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
         virtual void MaskMissingGradientColumnsToZero() = 0;
         virtual void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
-
 
         // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
         // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNetworkNode, LSTMNode)
@@ -844,7 +841,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         template<class C, class... _Types> static inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
         {
             auto p = make_shared<C>(deviceId, name, forward<_Types>(_Args)...);     // creates objects, esp. assigns deviceId to matrices, but otherwise does nothing
-
             //disable this line. Instead we should make sure matrices are allocated at the right device
             //p->MoveMatricesToDevice(deviceId);                                      // this is a virtual call, i.e. it will handle extra matrices an object might own
             return p;
@@ -931,7 +927,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ReleaseMatrixToPool(m_functionValues, matrixPool);
             }
         }
-
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const;
 
         // TODO: similar to DumpInfo; used by ExperimentalNetworkBuilder test implementation
@@ -1172,9 +1167,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         inline ComputationNodePtr Inputs(const size_t childIndex) const       // TODO: rename to Input
         {
-#ifdef DEBUG // profile shows this is range check very expensive in release mode, skip it  
+#ifdef _DEBUG // profile shows this is range check very expensive in release mode, skip it  
             if (childIndex >= m_children.size())
-                InvalidArgument ("childIndex is out of range.");
+                LogicError("Inputs: childIndex is out of range.");
 #endif
             return UpCast(m_children[childIndex]);
         }
@@ -1207,7 +1202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note: This returns an object, not a reference. That object is a column slice, i.e. a small object that just points into another object.
         // TODO: remove FrameRange::samplesInRecurrentStep from FrameRange, as it belongs into pMBLayout. Hence this function that binds both together.
         // Note: This is not used anywhere yet, only a sketch how we may further abstract timing.
-        Matrix<ElemType> DataSlice(Matrix<ElemType>& data,
+        Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
                                    const FrameRange & frameRange/*select frame or entire batch*/)
         {
             return DataSlice(data, frameRange, m_pMBLayout);
@@ -1250,7 +1245,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     return data.ColumnSlice(startColumn + frameRange.seqIndex, 1);
             }
         }
-
         enum ValueOrGradient { VALUE, GRADIENT };
         Matrix<ElemType> DataSlice(ValueOrGradient valueOrGradient/*as it says*/,
                                    const FrameRange & frameRange/*select frame or entire batch*/)
@@ -1351,7 +1345,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         child->ClearGradient(true);
                         child->MarkGradientInitialized(true);
                     }
-
                     ComputeInputPartial(i, FrameRange(timeIdxInSeq)); //this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
@@ -1364,16 +1357,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /*implement*/void ClearGradientForChildren()
         {
-            for (size_t i = 0; i<m_children.size(); i++)
+            for (size_t i=0; i<m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
                 child->MarkGradientInitialized(false);
             }
         }
         virtual void ClearGradient(const bool clearExistingGradientValue)
-        {
+                {
             if (NeedGradient())
-            {
+                    {
                 //ClearChildGradientComputationFlag();
 
                 if (clearExistingGradientValue)
@@ -1436,7 +1429,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
             }
         }
-
         //to be called by derived classed if that class needs to print node values
         void PrintNodeValuesToFile(const bool printValues, File& fstream) const
         {
@@ -1576,7 +1568,6 @@ public: \
     using Base::RequestMatricesBeforeEval; using Base::ReleaseMatricesAfterEval; \
     using Base::RequestMatricesBeforeGradientComp; using Base::ReleaseMatricesAfterGradientComp; \
     using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildrenDims; using Base::ValidateInferChildDims
-
 
 #define ComputationNodeBoilerplate \
 protected:    /* some boilerplate goes here */ \

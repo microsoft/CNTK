@@ -505,7 +505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //for each column of a, we add all rows of a to this starting from startIndex
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
-    template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols) { return *this; }
+    //template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignRowStackValuesOf(const std::vector<const GPUMatrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols) { return *this; }
 
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRepeatOf(const GPUMatrix<ElemType>& /*a*/, const size_t numRowRepeats, const size_t numColRepeats) { return *this; }
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowRepeatValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t numRowRepeats) { return *this; }
@@ -863,10 +863,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise) const
     {}
 
+    template<class ElemType> void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise, int topK, GPUMatrix<ElemType>& workspace) const
+    {}
+
     template<class ElemType> void GPUMatrix<ElemType>::VectorMin(GPUMatrix<ElemType>& minIndexes, GPUMatrix<ElemType>& minValues, const bool isColWise) const
     {}
 
-    template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignNumOfDiff(const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/) { return *this; }
+    template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignNumOfDiff(const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/, bool /*searchInCol = false*/) { return *this; }
 
 #pragma endregion Member BLAS Functions    
 

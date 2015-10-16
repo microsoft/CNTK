@@ -381,11 +381,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // stacks multiple inputs on top of each other
     // -----------------------------------------------------------------------
 
-    //this node is used to extract part of the input by rows as the output
-    // TODO: Really? RowStack indicates something different.
-    //it has to be continuous segments of rows since each column is treated as one sample
     template<class ElemType>
-    class RowStackNode : public ComputationNode<ElemType>   // note: not deriving from NumInputs<> like most other nodes since this one takes a variable number of inputs
+    class RowStackNode : public ComputationNode<ElemType>   // note: not deriving from NumInputs<> like most other nodes, because this one takes a variable number of inputs
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"RowStack"; }
@@ -397,21 +394,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             Base::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<RowStackNode<ElemType>>(nodeP);
 
             if (flags & CopyNodeFlags::copyNodeChildren)
             {
-                node->m_children = m_children;
+                auto node = dynamic_pointer_cast<RowStackNode<ElemType>>(nodeP);
                 node->m_startRowIndices = m_startRowIndices;
-                node->m_inputMatrices = m_inputMatrices;
             }
         }
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
-            if (inputIndex >= ChildrenSize())
-                InvalidArgument("RowStack-ComputeInputPartial: inputIndex out of range.");
-            ComputeInputPartialS(Inputs(inputIndex)->GradientValues(), GradientValues(), m_startRowIndices[inputIndex], m_startRowIndices[inputIndex + 1] - m_startRowIndices[inputIndex]);
+            ComputeInputPartialS(Inputs(inputIndex)->GradientValues(), GradientValues(), m_startRowIndices[inputIndex]);
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
@@ -419,62 +412,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInputGrad = Inputs(inputIndex)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-            ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_startRowIndices[inputIndex], m_startRowIndices[inputIndex+1] - m_startRowIndices[inputIndex]);
+            ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_startRowIndices[inputIndex]);
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t startIndex, const size_t numRows)
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t startIndex)
         {
-            inputGradientValues.AddWithRowSliceValuesOf(gradientValues, startIndex, numRows);
-        }
-
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
-        {
-            EvaluateThisNodeS(FunctionValues(), m_inputMatrices,  0, Inputs(0)->GetNumCols());
+            inputGradientValues.AddWithRowSliceValuesOf(gradientValues, startIndex, inputGradientValues.GetNumRows());
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            Matrix<ElemType> sliceFunctionValues = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-            EvaluateThisNodeS(sliceFunctionValues, m_inputMatrices, frameRange.t() * GetNumParallelSequences(), GetNumParallelSequences());
-        }
-
-        // TODO: change to FrameRange
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const std::vector<const Matrix<ElemType>*>& inputMatrices, const size_t sliceStartCol, const size_t sliceNumCols)
-        {
-            functionValues.AssignRowStackValuesOf(inputMatrices, sliceStartCol, sliceNumCols);
-#if NANCHECK
-            functionValues.HasNan("RowStack");
-#endif
+            for (size_t i = 0; i < ChildrenSize(); i++)
+                ValueSlice(frameRange).AssignToRowSliceValuesOf(Inputs(i)->ValueSlice(frameRange), m_startRowIndices[i], Inputs(i)->GetNumRows());
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
+            InferMBLayoutFromInputsForStandardCase();
 
             size_t numCols = Inputs(0)->GetNumCols();
-            m_startRowIndices.resize(ChildrenSize()+1);
-            m_inputMatrices.resize(ChildrenSize());
 
+            // count totalRows and form m_startRowIndices[] array, which is the cumulative sum of matrix heights
+            m_startRowIndices.resize(ChildrenSize());
             size_t totalRows = 0;
-            m_startRowIndices[0] = 0;
 
             for (int i = 0; i < ChildrenSize(); i++)
             {
-                Matrix<ElemType>& childMatrix = Inputs(i)->FunctionValues();
-                size_t numRows = childMatrix.GetNumRows();
-                
-                if (isFinalValidationPass && childMatrix.GetNumCols() != numCols)
+                if (isFinalValidationPass && Inputs(i)->GetNumCols() != numCols)
                     LogicError("RowStack operation: the input node %ls has different number of columns.", Inputs(i)->NodeName().c_str());
 
-                totalRows += numRows;
-                m_inputMatrices[i] = &childMatrix;
-                m_startRowIndices[i + 1] = m_startRowIndices[i] + numRows;
+                m_startRowIndices[i] = totalRows;
+                totalRows += Inputs(i)->GetNumRows();
             }
 
             Resize(totalRows, numCols);
-            InferMBLayoutFromInputsForStandardCase();
             InferImageDimsFromInputs();
         }
 
@@ -489,8 +461,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        std::vector<size_t> m_startRowIndices; //start row number in the stacked matrix of each input (child)
-        std::vector<const Matrix<ElemType>*> m_inputMatrices;
+        std::vector<size_t> m_startRowIndices;  // start row number in the stacked matrix of each input (child) (cumsum of matrix heights)
     };
 
     template class RowStackNode<float>;
@@ -1823,7 +1794,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 *node->m_rightGradient = *m_rightGradient;
             }
         }
-
         //request matrices that are needed for gradient computation
         virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
         {
@@ -1839,7 +1809,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ReleaseMatrixToPool(m_innerproduct, matrixPool);
             ReleaseMatrixToPool(m_rightGradient, matrixPool);
         }
-
 private:
         shared_ptr<Matrix<ElemType>> m_innerproduct;
         shared_ptr<Matrix<ElemType>> m_rightGradient;
@@ -2034,7 +2003,6 @@ private:
                 *node->m_temp = *m_temp;
             }
         }
-
         //request matrices needed to do node function value evaluation
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
         {
@@ -2062,7 +2030,6 @@ private:
             ReleaseMatrixToPool(m_rightTerm, matrixPool);
             ReleaseMatrixToPool(m_temp, matrixPool);
         }
-
 private:
         // invNorm nodes tranfer data between EvaluateThisNode and ComputeInputPartial
         shared_ptr<Matrix<ElemType>> m_invNorm0;
@@ -2437,7 +2404,6 @@ private:
                 *node->m_temp = *m_temp;
             }
         }
-
         //request matrices needed to do node function value evaluation
         virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
         {
@@ -2467,7 +2433,6 @@ private:
             ReleaseMatrixToPool(m_invNormSquare, matrixPool);
             ReleaseMatrixToPool(m_temp, matrixPool);
         }
-
 private:
         // invNorm nodes tranfer data between EvaluateThisNode and ComputeInputPartial
         shared_ptr<Matrix<ElemType>> m_invNorm0;
