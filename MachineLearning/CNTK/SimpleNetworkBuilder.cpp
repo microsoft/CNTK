@@ -61,7 +61,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (m_rnnType == ALIGNMENTSIMILARITYGFORWARDDECODER)
             net = BuildAlignmentForwardDecoderNetworkFromDescription(encoderNet, mbSize);
         else
-            LogicError("BuildNetworkFromDescription: invalid m_rnnType");
+            LogicError("BuildNetworkFromDescription: invalid m_rnnType %d", (int)m_rnnType);
 
         net->ValidateNetwork(false/*allowFragment*/, true/*bAllowNoCriterion*/);	// no criterion possible because  ...TODO: what's the reason?
         return net;
