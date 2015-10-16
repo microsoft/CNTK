@@ -56,6 +56,40 @@ using namespace std;
 using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK;
 
+// The following section is to explicitly disable some legacy usage to avoid implicit configuration errors 
+
+void DisableLegcyTruncationSettings(const ConfigParameters& TopLevelConfig, const ConfigParameters& commandConfig)
+{
+	if (TopLevelConfig.ExistsCurrent("Truncated"))
+	{
+		return; 
+	}
+
+	// if any of the action has set a reader/SGD section and has different Truncated value for reader and SGD section 
+	ConfigArray actions = commandConfig("action");
+	for (size_t i = 0; i < actions.size(); i++)
+	{
+		if (actions[i] == "train" || actions[i] == "trainRNN")
+		{
+			
+			ConfigParameters sgd = ConfigParameters(commandConfig("SGD"));
+			ConfigParameters reader = ConfigParameters(commandConfig("reader"));
+			// reader and SGD sections are two must-have sections in train/trainRNN 
+			if (reader.ExistsCurrent("Truncated") && !sgd.ExistsCurrent("Truncated"))
+			{
+				InvalidArgument("DisableLegacyUsage: setting Truncated only in reader section are not allowed. Please move Truncated=true/false to the top level section.");
+			}
+		}
+	}
+}
+void DisableLegacyUsage(const ConfigParameters& TopLevelConfig, const ConfigArray& commands)
+{
+	for (size_t i = 0; i < commands.size(); i++)
+	{
+		ConfigParameters cfgParameters(TopLevelConfig(commands[i]));
+		DisableLegcyTruncationSettings(TopLevelConfig, cfgParameters);
+	}
+}
 // internal test routine forward declaration
 template <typename ElemType>
 void TestCn(const ConfigParameters& config);
@@ -1288,6 +1322,8 @@ void DoCommand(const ConfigParameters& config)
     {
         std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
     }
+
+	DisableLegacyUsage(config, command);
 
     // summarize command info upfront in the log and stdout
     size_t fullTotalMaxEpochs = 0;
