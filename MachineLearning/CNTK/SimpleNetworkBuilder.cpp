@@ -29,38 +29,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t mbSize = 1;
         ComputationNetwork* net = nullptr;
 
-        if (m_rnnType == SIMPLERNN)
+        // TODO: this seems to call for a switch statement
+        if (m_rnnType == SIMPLENET)
+            net = BuildSimpleDNN();
+        else if (m_rnnType == SIMPLERNN)
             net = BuildSimpleRNN(mbSize);
-        if (m_rnnType == LSTM)
+        else if (m_rnnType == LSTM)
             net = BuildLSTMNetworkFromDescription(mbSize);
-        if (m_rnnType == CLASSLSTM)
+        else if (m_rnnType == CLASSLSTM)
             net = BuildCLASSLSTMNetworkFromDescription(mbSize);
-        if (m_rnnType == NCELSTM)
+        else if (m_rnnType == NCELSTM)
             net = BuildNCELSTMNetworkFromDescription(mbSize);
-        if (m_rnnType == CLASSLM)
+        else if (m_rnnType == CLASSLM)
             net = BuildClassEntropyNetwork(mbSize);
-        if (m_rnnType == LBLM)
+        else if (m_rnnType == LBLM)
             net = BuildLogBilinearNetworkFromDescription(mbSize);
-        if (m_rnnType == NPLM)
+        else if (m_rnnType == NPLM)
             net = BuildNeuralProbNetworkFromDescription(mbSize);
-        if (m_rnnType == CLSTM)
+        else if (m_rnnType == CLSTM)
             net = BuildConditionalLSTMNetworkFromDescription(mbSize);
-        if (m_rnnType == RCRF)
+        else if (m_rnnType == RCRF)
             net = BuildSeqTrnLSTMNetworkFromDescription(mbSize);
-        if (m_rnnType == LSTMENCODER)
+        else if (m_rnnType == LSTMENCODER)
             net = BuildLSTMEncoderNetworkFromDescription(mbSize);
-        if (m_rnnType == UNIDIRECTIONALLSTM)
+        else if (m_rnnType == UNIDIRECTIONALLSTM)
             net = BuildUnidirectionalLSTMNetworksFromDescription(mbSize);
-        if (m_rnnType == BIDIRECTIONALLSTM)
+        else if (m_rnnType == BIDIRECTIONALLSTM)
             net = BuildBiDirectionalLSTMNetworksFromDescription(mbSize);
-        if (m_rnnType == ALIGNMENTSIMILARITYGENERATOR)
+        else if (m_rnnType == ALIGNMENTSIMILARITYGENERATOR)
             net = BuildAlignmentDecoderNetworkFromDescription(encoderNet, mbSize);
-        if (m_rnnType == ALIGNMENTSIMILARITYGFORWARDDECODER)
+        else if (m_rnnType == ALIGNMENTSIMILARITYGFORWARDDECODER)
             net = BuildAlignmentForwardDecoderNetworkFromDescription(encoderNet, mbSize);
         else
-            net = BuildSimpleDNN();
+            LogicError("BuildNetworkFromDescription: invalid m_rnnType");
 
-        net->ValidateNetwork(false, true);
+        net->ValidateNetwork(false/*allowFragment*/, true/*bAllowNoCriterion*/);	// no criterion possible because  ...TODO: what's the reason?
         return net;
     }
 

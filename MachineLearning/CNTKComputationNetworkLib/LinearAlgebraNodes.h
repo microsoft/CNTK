@@ -245,16 +245,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_outputImageLayout = ImageLayout();
         }
-
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            Base::CopyTo(nodeP, newName, flags);
-            if (flags & CopyNodeFlags::copyNodeValue)
-            {
-                auto node = dynamic_pointer_cast<SumColumnElementsNode<ElemType>>(nodeP);
-            }
-        }
-
     };
 
     template class SumColumnElementsNode<float>;
@@ -283,7 +273,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numRows(numRows)
         { }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             auto node = dynamic_pointer_cast<RowSliceNode<ElemType>>(nodeP);
@@ -391,7 +381,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
 
@@ -1784,7 +1774,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_rightGradient->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -1990,7 +1980,7 @@ private:
             m_temp->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -2390,7 +2380,7 @@ private:
             m_temp->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)

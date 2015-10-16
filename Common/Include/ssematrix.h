@@ -1228,7 +1228,7 @@ public:
 
     // Note: keyword "noexcept" was added so that stl vector first looks for
     //       the move constructor instead of the private copy constructor.
-    ssematrixfrombuffer (ssematrixfrombuffer && other) { move (other); }
+    ssematrixfrombuffer(ssematrixfrombuffer && other) noexcept{ move(other); }
 };
 
 
@@ -1262,7 +1262,7 @@ public:
 
     // Note: keyword "noexcept" was added so that stl vector first looks for
     //       the move constructor instead of the private copy constructor.
-    ssematrixstriperef(ssematrixstriperef && other) NOEXCEPT{ move(other); }
+    ssematrixstriperef(ssematrixstriperef && other) noexcept { move(other); }
 
     // getting a one-column sub-view on this
     ssematrixstriperef col (size_t j) { return ssematrixstriperef (*this, j, 1); }

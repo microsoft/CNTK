@@ -126,7 +126,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_maxValues->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
