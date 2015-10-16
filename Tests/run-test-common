@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Helper script containing common code used by run-test scripts of E2E tests
+
 BinaryPath=$TEST_CNTK_BINARY
 
 if [ "$TEST_DEVICE" == "cpu" ]; then
@@ -30,14 +32,17 @@ run()
   if [ "$DRY_RUN" == "1" ]; then
     workingDir=$PWD
     if [ "$OS" == "Windows_NT" ]; then
-      cmd=$(cygpath -aw $cmd)
       workingDir=$(cygpath -aw $workingDir)
+      if [[ $MPIMode == 0 ]]; then
+        cmd=$(cygpath -aw $cmd)
+        TEST_ROOT_DIR_ESCAPED=`echo -n $(cygpath -aw $TEST_ROOT_DIR) | sed 's/\\\\/\\\\\\\\/g'`
+        workingDir=`echo "$workingDir" | sed "s/$TEST_ROOT_DIR_ESCAPED/\\$\\(SolutionDir\\)\\\\\\\\Tests/g"`
+      fi
     fi
     echo Working Directory: $workingDir
     echo Full command: "$cmd" "$@"
     if [ "$OS" == "Windows_NT" ]; then
       if [[ $MPIMode == 0 ]]; then
-        TEST_ROOT_DIR_ESCAPED=`echo -n $(cygpath -aw $TEST_ROOT_DIR) | sed 's/\\\\/\\\\\\\\/g'`
         echo VS debugging command args: "$@" | sed "s/$TEST_ROOT_DIR_ESCAPED/\\$\\(SolutionDir\\)\\\\Tests/g"
       fi
     fi
