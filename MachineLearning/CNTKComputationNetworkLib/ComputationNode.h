@@ -262,7 +262,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         virtual ~ComputationNodeBase(){}
 
-        virtual void /*IComputationNode::*/CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const
         {
             if (OperationName() != node->OperationName())
                 RuntimeError("Cannot copy from one node type to another node type");
