@@ -32,7 +32,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #define MAX_DEPTH 20
 
-    typedef enum tpRNNType {
+    enum RNNTYPE {
         SIMPLENET = 0, /// no recurrent connections
         SIMPLERNN = 1, LSTM = 2, DEEPRNN = 4, CLASSLM = 8,
         LBLM = 16,
@@ -43,8 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         BIDIRECTIONALLSTM = 20,
         ALIGNMENTSIMILARITYGENERATOR = 21,
         ALIGNMENTSIMILARITYGFORWARDDECODER =22
-    } RNNTYPE;
-
+    };
 
     enum class TrainingCriterion : int
     {
@@ -160,38 +159,42 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sparse_input = config("sparseinput", "false");
 
             stringargvector strType = str_rnnType;
-            if (std::find(strType.begin(), strType.end(), L"SIMPLERNN") != strType.end())
+            if (std::find(strType.begin(), strType.end(), L"SIMPLENET") != strType.end())
+                m_rnnType = SIMPLENET;
+            else if (std::find(strType.begin(), strType.end(), L"SIMPLERNN") != strType.end())
                 m_rnnType = SIMPLERNN;
-            if (std::find(strType.begin(), strType.end(), L"LSTM") != strType.end())
+            else if (std::find(strType.begin(), strType.end(), L"LSTM") != strType.end())
                 m_rnnType = LSTM;
-            if (std::find(strType.begin(), strType.end(), L"DEEPRNN") != strType.end())
+            else if (std::find(strType.begin(), strType.end(), L"DEEPRNN") != strType.end())
                 m_rnnType = DEEPRNN;
-            if (std::find(strType.begin(), strType.end(), L"CLASSLM") != strType.end())
+            else if (std::find(strType.begin(), strType.end(), L"CLASSLM") != strType.end())
                 m_rnnType = CLASSLM;
-            if (std::find(strType.begin(), strType.end(), L"LBLM") != strType.end())
+            else if (std::find(strType.begin(), strType.end(), L"LBLM") != strType.end())
                 m_rnnType = LBLM;
-            if (std::find(strType.begin(), strType.end(), L"NPLM") != strType.end())
+            else if (std::find(strType.begin(), strType.end(), L"NPLM") != strType.end())
                 m_rnnType = NPLM;
-            if (std::find(strType.begin(), strType.end(), L"CLASSLSTM") != strType.end())
+            else if (std::find(strType.begin(), strType.end(), L"CLASSLSTM") != strType.end())
                 m_rnnType = CLASSLSTM;
-            if (std::find(strType.begin(), strType.end(), L"NCELSTM") != strType.end())
+            else if (std::find(strType.begin(), strType.end(), L"NCELSTM") != strType.end())
                 m_rnnType = NCELSTM;
-            if (std::find(strType.begin(), strType.end(), L"CLSTM") != strType.end())
+            else if (std::find(strType.begin(), strType.end(), L"CLSTM") != strType.end())
                 m_rnnType = CLSTM;
-            if (std::find(strType.begin(), strType.end(), L"CRF") != strType.end())
+            else if (std::find(strType.begin(), strType.end(), L"CRF") != strType.end())
                 m_rnnType = RCRF;
-            if (std::find(strType.begin(), strType.end(), L"LSTMENCODER") != strType.end())
+            else if (std::find(strType.begin(), strType.end(), L"LSTMENCODER") != strType.end())
                 m_rnnType = LSTMENCODER;
-            if (std::find(strType.begin(), strType.end(), L"TRANSDUCER") != strType.end() ||
+            else if (std::find(strType.begin(), strType.end(), L"TRANSDUCER") != strType.end() ||
                 std::find(strType.begin(), strType.end(), L"UNIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
                 m_rnnType = UNIDIRECTIONALLSTM;
-            if (std::find(strType.begin(), strType.end(), L"JOINTCONDITIONALBILSTMSTREAMS") != strType.end() ||
+            else if (std::find(strType.begin(), strType.end(), L"JOINTCONDITIONALBILSTMSTREAMS") != strType.end() ||
                 std::find(strType.begin(), strType.end(), L"BIDIRECTIONALLSTMWITHPASTPREDICTION") != strType.end())
                 m_rnnType = BIDIRECTIONALLSTM;
-            if (std::find(strType.begin(), strType.end(), L"ALIGNMENTSIMILARITYGENERATOR") != strType.end())
+            else if (std::find(strType.begin(), strType.end(), L"ALIGNMENTSIMILARITYGENERATOR") != strType.end())
                 m_rnnType = ALIGNMENTSIMILARITYGENERATOR;
-            if (std::find(strType.begin(), strType.end(), L"ALIGNMENTSIMILARITYGFORWARDDECODER") != strType.end())
+            else if (std::find(strType.begin(), strType.end(), L"ALIGNMENTSIMILARITYGFORWARDDECODER") != strType.end())
                 m_rnnType = ALIGNMENTSIMILARITYGFORWARDDECODER;
+            else
+                InvalidArgument("InitRecurrentConfig: unknown value for rnnType parameter '%ls'", strType[0].c_str());
         }
 
         // Init - Builder Initialize for multiple data sets
