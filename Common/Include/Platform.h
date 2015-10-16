@@ -18,12 +18,11 @@
 #else
 #define __declspec_noreturn __attribute__((noreturn))
 #endif
-// TODO: noexcept
 
 #ifndef _MSC_VER
-#define NOEXCEPT noexcept
-#else
-#define NOEXCEPT
+//#define noexcept throw()
+// TODO: This fails, forbidden to redefine keywords. For now, need to define this macro locally where it is used.
+// TODO: change this to only trigger up to VS 2013
 #endif
 
 // ===========================================================================

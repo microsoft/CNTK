@@ -367,7 +367,7 @@ public:
             RuntimeError("RenameNode: Target name already exists.");
 
         //rename the node and update the mapping table
-        nodeToRename->NodeName() = nodeNameNew;
+        nodeToRename->SetNodeName(nodeNameNew);
         m_nameToNodeMap.erase(nodeNameOrig);
         m_nameToNodeMap[nodeNameNew] = nodeToRename;
     }
@@ -865,11 +865,11 @@ public:
     // network editing
     // -----------------------------------------------------------------------
 
-    void RenameNode(const ComputationNodeBasePtr& node, const std::wstring newNodeName)
+    void RenameNode(ComputationNodeBasePtr node, const std::wstring& newNodeName)
     {
         // TODO: check if new name exists
         m_nameToNodeMap.erase(node->NodeName());
-        node->NodeName() = newNodeName;
+        node->SetNodeName(newNodeName);
         AddNodeToNet(node);
     }
 
@@ -1147,6 +1147,7 @@ public: // yak--used by NDLUtil. Will go away someday.
         if (FeatureNodes().size() == 0 && !allowFragment)
             RuntimeError("No Feature nodes specified");
 
+        // TODO: allocation does not belong here. This is called e.g. after loading. Memory should be allocated only when actually evaluating.
         AllocateAllEvalMatrices(EvaluationNodes(), OutputNodes(), FinalCriterionNodes());
 
         // first give criteria nodes as root node
@@ -1228,7 +1229,7 @@ public:
                           std::vector<ComputationNodeBasePtr>& trainRootNodes)
     {
         //allocate memory for forward computation
-        fprintf(stderr, "\n\nAllocate matrices for forward computing\n");
+        fprintf(stderr, "\n\nAllocating matrices for forward computing\n");
         for (int i = 0; i < evalRootNodes.size(); i++)
             AllocateEvalMatrices(evalRootNodes[i]);
 

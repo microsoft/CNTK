@@ -103,12 +103,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs() = 0;
         virtual void SaveToFile(File& fstream) const = 0;
         virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/) = 0;
-        virtual void CopyTo(const ComputationNodeBasePtr & node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) = 0;
         virtual void PrintSelfBeforeValidation() const = 0;             // called in validation loop right before Validate()
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const = 0;
         virtual bool RequiresPreCompute() const = 0;                    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() = 0; // // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
+
+        // --- problem cases
+        
+        // These are overridden in their ComputationNode<ElemType> version, no with this prototype.
+        // We should list those functions somewhere as well.
+
+        //virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
 
         // --- left-overs from refactoring--keeping it here for a while for debugging
 
@@ -250,13 +256,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             m_deviceId(deviceId),
-            m_parameterUpdateRequired(false),
+            m_parameterUpdateRequired(false), m_gradientInitialized(false),
             m_nodeName(name == L"" ? CreateUniqNodeName() : name)
         {
         }
         virtual ~ComputationNodeBase(){}
 
-        virtual void /*IComputationNode::*/CopyTo(const ComputationNodeBasePtr& node, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void /*IComputationNode::*/CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             if (OperationName() != node->OperationName())
                 RuntimeError("Cannot copy from one node type to another node type");
@@ -469,7 +475,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         const std::wstring& NodeName() const { return m_nodeName; }
-        std::wstring& NodeName() { return m_nodeName; }
+        void SetNodeName(const std::wstring & nodeName) { m_nodeName = nodeName; }
 
         bool IsLeaf() const { return ChildrenSize() == 0; }
         bool& NeedGradient() { return m_needsGradient; }
@@ -967,11 +973,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return numCols;             // BUGBUG: what to return here?
             if (numCols == SIZE_MAX)        // SIZE_MAX means determine from layout
                 numCols = m_pMBLayout->GetNumCols();
-            if (m_functionValues->GetNumRows() > 0 && numCols > 0)  // TODO: why skip this for 0 samples? BUGBUG: I think the 0 test is a left-over and no longer applicable since we can validate with 0-cols inputs.
-            {
-                m_functionValues->ResizeColumns(numCols); 
-                //m_gradientValues->ResizeColumns(numCols);  //gradient matrix will be resized only when needed
-            }
+            m_functionValues->ResizeColumns(numCols);
+            //m_gradientValues->ResizeColumns(numCols);  //gradient matrix will be resized only when needed
             return numCols;
         }
 
@@ -1174,7 +1177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return UpCast(m_children[childIndex]);
         }
 
-        /*implement*/void SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode)
+        void /*ComputationNodeBase::*/SetInput(const size_t childIndex, const ComputationNodeBasePtr& inode) override
         {
             const ComputationNodePtr node = UpCast(inode);
 
@@ -1243,20 +1246,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     return data.ColumnSlice(startColumn, numParallelSequences);
                 else
                     return data.ColumnSlice(startColumn + frameRange.seqIndex, 1);
-            }
-        }
-        enum ValueOrGradient { VALUE, GRADIENT };
-        Matrix<ElemType> DataSlice(ValueOrGradient valueOrGradient/*as it says*/,
-                                   const FrameRange & frameRange/*select frame or entire batch*/)
-        {
-            Matrix<ElemType> & data = (valueOrGradient == VALUE) ? FunctionValues() : GradientValues();
-            try
-            {
-                return DataSlice(data, frameRange);
-            }
-            catch (const logic_error & e)
-            {
-                LogicError("%s In %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());  // :( DataSlice is static and has no access; so we post-patch it into the error string here...
             }
         }
         Matrix<ElemType> ValueSlice(const FrameRange & frameRange/*select frame or entire batch*/)
@@ -1449,7 +1438,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     public:
-        /*implement*/void CopyTo(const ComputationNodeBasePtr& node, const std::wstring& newName, const CopyNodeFlags flags) const
+        void /*ComputationNodeBase::*/CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             CopyTo(UpCast(node), newName, flags);
         }

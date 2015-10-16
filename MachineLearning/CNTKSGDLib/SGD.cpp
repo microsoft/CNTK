@@ -697,7 +697,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //allocate memory for backward computation
         //we intentionally separate it from above loop to make sure forward computing gets the right matrices
-        fprintf(stderr, "\n\nAllocate matrices for gradient computing\n");
+        fprintf(stderr, "\n\nAllocating matrices for gradient computing\n");
         for (int i = 0; i < criterionNodes.size(); i++)
             net.AllocateGradientMatrices(criterionNodes[i]);
 
@@ -1208,7 +1208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     double SGD<ElemType>::SearchForBestLearnRate(ComputationNetwork& net,
                                     ComputationNetwork& refNet,
                                     const ComputationNodeBasePtr& refNode, const int epochNumber,
-                                  const double curLearnRate,
+                                    const double curLearnRate,
                                     IDataReader<ElemType>* trainSetDataReader,
                                     const std::vector<ComputationNodeBasePtr> & featureNodes,
                                     const std::vector<ComputationNodeBasePtr> & labelNodes,
@@ -1218,7 +1218,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     const std::list<ComputationNodeBasePtr> & learnableNodes,
                                     std::list<Matrix<ElemType>>& smoothedGradients,
                                     const bool learnRateInitialized,
-                                  const double largestPrevLearnRatePerSample)
+                                    const double largestPrevLearnRatePerSample)
     {
         double epochCriterion = std::numeric_limits<double>::infinity();
         double prevCriterion = std::numeric_limits<double>::infinity();
