@@ -34,7 +34,7 @@ static inline DEVICEID_TYPE EnforceOneGPUOnly(DEVICEID_TYPE requestedDeviceId)
         static bool shown = false;
         if (!shown)
         {
-            fprintf(stderr, "EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from %d now %d. This message will be shown only once.", theGPUId, requestedDeviceId);
+            fprintf(stderr, "EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from %d now %d. This message will be shown only once.\n", theGPUId, requestedDeviceId);
             shown = true;
         }
     }
