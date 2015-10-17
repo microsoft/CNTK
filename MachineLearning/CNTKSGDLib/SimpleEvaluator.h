@@ -1075,7 +1075,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: This is UNTESTED; if it fails, change ^^ this back to SetActual...()
 
             size_t maxMbSize = 3 * mbSize;
-#ifdef DEBUG
+#ifdef _DEBUG
             maxMbSize = 2;
 #endif
 

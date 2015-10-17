@@ -240,7 +240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // sets m_parameterUpdateRequired in all LearnableParameters feeding into the passed rootNode
     // Called from MEL  --TODO: correct?
-    void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr &rootNode)
+    void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode)
     {
         // find nodes from all available nodes
         if (rootNode == nullptr)
@@ -579,7 +579,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 #endif
 
-    template<class N> void ComputationNetwork::GetNodesRequiringX(std::list<ComputationNodeBasePtr> & nodesRequiringX, const ComputationNodeBasePtr& rootNode, bool checkComputed)
+    template<class N> void ComputationNetwork::GetNodesRequiringX(std::list<ComputationNodeBasePtr>& nodesRequiringX, const ComputationNodeBasePtr& rootNode, bool checkComputed)
     {
         if (!rootNode)              // find nodes from all available nodes
         {
