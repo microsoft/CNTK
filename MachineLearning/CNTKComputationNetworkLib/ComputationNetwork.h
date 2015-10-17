@@ -898,14 +898,14 @@ public:
     // node-group access
     // -----------------------------------------------------------------------
 
-    std::list<ComputationNodeBasePtr> & InputNodes(const ComputationNodeBasePtr& rootNode, bool bNoBuild = false)
+    std::list<ComputationNodeBasePtr>& InputNodes(const ComputationNodeBasePtr& rootNode, bool bNoBuild = false)
     {
         if (bNoBuild == false)
             BuildAndValidateSubNetwork(rootNode);
         return m_inputs[rootNode];
     }
 
-    std::list<ComputationNodeBasePtr> & LearnableNodes(const ComputationNodeBasePtr& rootNode)
+    std::list<ComputationNodeBasePtr>& LearnableNodes(const ComputationNodeBasePtr& rootNode)
     {
         BuildAndValidateSubNetwork(rootNode);
         return m_learnableParameters[rootNode];
@@ -1157,7 +1157,7 @@ public: // yak--used by NDLUtil. Will go away someday.
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
-#ifdef DEBUG
+#ifdef _DEBUG
                 PrintComputationTree(node, false);
 #endif
                 SetActualMiniBatchSizeFromFeatures();
@@ -1225,8 +1225,8 @@ public:
     //TODO: find a simple topological order and allocateEvalMatrices on that order directly
     //without passing in eval, out, and train nodes.
     void AllocateAllEvalMatrices(std::vector<ComputationNodeBasePtr>& evalRootNodes, 
-                          std::vector<ComputationNodeBasePtr>& outValueRootNodes,
-                          std::vector<ComputationNodeBasePtr>& trainRootNodes)
+                                 std::vector<ComputationNodeBasePtr>& outValueRootNodes,
+                                 std::vector<ComputationNodeBasePtr>& trainRootNodes)
     {
         //allocate memory for forward computation
         fprintf(stderr, "\n\nAllocating matrices for forward computing\n");
@@ -1253,7 +1253,7 @@ public:
             for (int i = 0; i < n->ChildrenSize(); i++)
             {
                 ComputationNodeBasePtr pNode = n->GetChildren()[i];
-                parentCount[pNode] ++;
+                parentCount[pNode]++;
             }
         }
 
@@ -1264,7 +1264,7 @@ public:
         {
             if (nodeIter->HasLoop())
             {
-                RecurrentInfo * recInfo = FindInRecurrentLoops(nodeIter);
+                RecurrentInfo* recInfo = FindInRecurrentLoops(nodeIter);
                 assert(recInfo != nullptr);
                 if (recInfo->m_completedEvaluate == false)
                 {
@@ -1297,7 +1297,7 @@ public:
         for (int i = 0; i < n->ChildrenSize(); i++)
         {
             ComputationNodeBasePtr pNode = n->GetChildren()[i];
-            parentCount[pNode] --;
+            parentCount[pNode]--;
             if (parentCount[pNode] == 0)
                 pNode->ReleaseMatricesAfterEval(m_matrixPool);
         }
