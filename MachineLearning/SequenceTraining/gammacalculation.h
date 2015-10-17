@@ -7,6 +7,8 @@
 #include "ssematrix.h"
 #include "Matrix.h"
 
+#pragma warning (disable: 4127) // conditional expression is constant
+
 namespace msra { namespace lattices {
     template<class ElemType>
     class GammaCalculation
@@ -95,9 +97,7 @@ namespace msra { namespace lattices {
                     tempmatrix = loglikelihood.ColumnSlice(ts, numframes);
                     if (m_deviceid == CPUDEVICE)
                     {
-                        ElemType *datap = tempmatrix.CopyToArray();
-                        memcpy(&predstripe(0, 0), (float *)datap, sizeof(float)*numrows*numframes);
-                        delete datap;
+                        CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe);
                     }
                     else
                         parallellattice.setloglls(tempmatrix);
@@ -130,16 +130,14 @@ namespace msra { namespace lattices {
 
                     //if (doreferencealign || m_deviceid == CPUDEVICE)
                     {
-                        ElemType *datap = tempmatrix.CopyToArray();
-                        memcpy(&predstripe(0, 0), (float *)datap, sizeof(float)*numrows*numframes);
-                        delete datap;
+                        CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe);
                     }
+
                     if (m_deviceid != CPUDEVICE)
                     {                            
                         parallellattice.setloglls(tempmatrix);
                     }
                 }
-                    
                     
                 array_ref<size_t> uidsstripe(&uids[ts], numframes);
                     
@@ -174,10 +172,7 @@ namespace msra { namespace lattices {
                 //copy gamma to tempmatrix
                 if (m_deviceid == CPUDEVICE)
                 {
-                    ElemType * outp = new ElemType[numrows*numframes];
-                    memcpy((float *)outp, &dengammas(0, 0), sizeof(float)*numrows*numframes);                        
-                    tempmatrix.SetValue(numrows, numframes, outp, 0, gammafromlattice.GetDeviceId());
-                    delete outp;
+                    CopyFromSSEMatrixToCNTKMatrix(dengammas, numrows, numframes, tempmatrix, gammafromlattice.GetDeviceId());
                 }
                 else
                     parallellattice.getgamma(tempmatrix);
@@ -209,6 +204,65 @@ namespace msra { namespace lattices {
                 ts += numframes;
             }       
             functionValues.SetValue(objectValue);
+        }
+
+    private:
+        // Helper methods for copying between ssematrix objects and CNTK matrices
+
+        // Helper methods for copying to and from CNTK matrices
+        void CopyFromCNTKMatrixToSSEMatrix(const Microsoft::MSR::CNTK::Matrix<ElemType>& src, size_t numCols, msra::math::ssematrixbase& dest)
+        {
+            if (!std::is_same<ElemType, float>::value)
+            {
+                LogicError("Cannot copy between a SSE matrix and a non-float type CNTK Matrix object!");
+            }
+
+            size_t numRows = src.GetNumRows();
+
+            // TODO: Used piined memory for faster copies?
+            // TODO: Can we cache the scratch buffer and reuse across copies
+            ElemType* cpuSrcCopy = src.CopyToArray();
+            if ((dest.getcolstride() == dest.rows()) && (numRows == dest.rows()))
+            {
+                memcpy(&dest(0, 0), (float*)cpuSrcCopy, sizeof(ElemType) * numRows * numCols);
+            }
+            else
+            {
+                // We need to copy columnwise
+                for (size_t i = 0; i < numCols; ++i)
+                {
+                    memcpy(&dest(0, i), (float*)(cpuSrcCopy + (i * numRows)), sizeof(ElemType) * numRows);
+                }
+            }
+
+            delete[] cpuSrcCopy;
+        }
+
+        void CopyFromSSEMatrixToCNTKMatrix(const msra::math::ssematrixbase& src, size_t numRows, size_t numCols, Microsoft::MSR::CNTK::Matrix<ElemType>& dest, int deviceId)
+        {
+            if (!std::is_same<ElemType, float>::value)
+            {
+                LogicError("Cannot copy between a SSE matrix and a non-float type CNTK Matrix object!");
+            }
+
+            // TODO: Used piined memory for faster copies?
+            // TODO: Can we cache the scratch buffer and reuse across copies
+            ElemType* cpuDestCopy = new ElemType[numRows * numCols];
+            if ((src.getcolstride() == src.rows()) && (numRows == src.rows()))
+            {
+                memcpy((float*)cpuDestCopy, &src(0, 0), sizeof(float) * numRows * numCols);
+            }
+            else
+            {
+                // We need to copy columnwise
+                for (size_t i = 0; i < numCols; ++i)
+                {
+                    memcpy((float*)(cpuDestCopy + (i * numRows)), &src(0, i), sizeof(float) * numRows);
+                }
+            }
+
+            dest.SetValue(numRows, numCols, cpuDestCopy, 0, deviceId);
+            delete[] cpuDestCopy;
         }
             
     protected:
