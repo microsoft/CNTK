@@ -11,7 +11,6 @@
 #define DEVICEID_TYPE int
 // and the following magic values
 #define CPUDEVICE                 (DEVICEID_TYPE)-1    // device is the CPU
-#define MANAGEDEXTERN             (DEVICEID_TYPE)-2    // managed externally (i.e. PTask)
 #define DEVICEID_NOTYETDETERMINED (DEVICEID_TYPE)-3    // not yet set
 #define AUTOPLACEMATRIX           (DEVICEID_TYPE)1000  // used in parameters only
 
@@ -109,7 +108,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetArray(ElemType *parray) {m_pArray = parray;}
         virtual DEVICEID_TYPE GetComputeDeviceId() const {return m_computeDevice;}
         void SetComputeDeviceId(const DEVICEID_TYPE computeId) const {m_computeDevice = computeId;}
-        bool OwnBuffer() const {return !m_externalBuffer && m_computeDevice != MANAGEDEXTERN;}
+        bool OwnBuffer() const {return !m_externalBuffer;}
         void SetOwnBuffer(bool own) {m_externalBuffer = !own;}
         wchar_t* GetMatrixName() const { return m_matrixName; }
         size_t NzCount() const {return m_nz;}
@@ -157,7 +156,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MatrixFormat m_format;
         bool m_externalBuffer; // is the buffer used by this matrix, 
         ElemType *m_pArray;
-        mutable DEVICEID_TYPE m_computeDevice; //current GPU device Id, CPUDEVICE, or MANAGEDEXTERN 
+        mutable DEVICEID_TYPE m_computeDevice; //current GPU device Id or CPUDEVICE
         size_t m_nz; //Number of non-zero elements for sparse matrices (unused in other formats)
         wchar_t* m_matrixName;
     };

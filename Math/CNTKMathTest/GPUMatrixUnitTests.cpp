@@ -187,19 +187,19 @@ namespace CNTKMathTest
             M0.VectorNorm1(M3, false);
             M2.Resize(2,1);
             fArray[0] = 6; fArray[1] = 15;
-            M2.SetValue(2, 1, fArray, matrixFlagNormal);
+            M2.SetValue(2, 1, M2.GetComputeDeviceId(), fArray, matrixFlagNormal);
             Assert::IsTrue(M3.IsEqualTo(M2)); 
 
             M0.VectorNorm2(M3, true);
             M2.Resize(1, 3);
             fArray[0] = 4.1231f; fArray[1] = 5.3852f; fArray[2] = 6.7082f; 
-            M2.SetValue(1, 3, fArray, matrixFlagNormal);
+            M2.SetValue(1, 3, M2.GetComputeDeviceId(), fArray, matrixFlagNormal);
             Assert::IsTrue(M3.IsEqualTo(M2, 0.0005f)); 
 
             M0.VectorNorm2(M3, false);
             M2.Resize(2,1);
             fArray[0] =  3.7417f; fArray[1] = 8.7750f;
-            M2.SetValue(2, 1, fArray, matrixFlagNormal);
+            M2.SetValue(2, 1, M2.GetComputeDeviceId(), fArray, matrixFlagNormal);
             Assert::IsTrue(M3.IsEqualTo(M2, 0.0005f)); 
 
             fArray[0] = 1; fArray[2] = 2; fArray[4] = 3; 
@@ -210,30 +210,30 @@ namespace CNTKMathTest
             M00.VectorMax(M1, M3, true);
             M2.Resize(1, 3);
             fArray[0] = 4; fArray[1] = 5; fArray[2] = 6; 
-            M2.SetValue(1, 3, fArray, matrixFlagNormal);
+            M2.SetValue(1, 3, M2.GetComputeDeviceId(), fArray, matrixFlagNormal);
             Assert::IsTrue(M3.IsEqualTo(M2, 0.0001f)); 
 
             M00.VectorMax(M1, M3, false);
             M2.Resize(2,1);
             fArray[0] =  3.; fArray[1] = 6;
-            M2.SetValue(2, 1, fArray, matrixFlagNormal);
+            M2.SetValue(2, 1, M2.GetComputeDeviceId(), fArray, matrixFlagNormal);
             Assert::IsTrue(M3.IsEqualTo(M2, 0.0001f)); 
 
             M0.VectorNormInf(M3, true);
             M2.Resize(1, 3);
             fArray[0] = 4; fArray[1] = 5; fArray[2] = 6; 
-            M2.SetValue(1, 3, fArray, matrixFlagNormal);
+            M2.SetValue(1, 3, M2.GetComputeDeviceId(), fArray, matrixFlagNormal);
             Assert::IsTrue(M3.IsEqualTo(M2, 0.0001f)); 
 
             M0.VectorNormInf(M3, false);
             M2.Resize(2,1);
             fArray[0] =  3.; fArray[1] = 6;
-            M2.SetValue(2, 1, fArray, matrixFlagNormal);
+            M2.SetValue(2, 1, M2.GetComputeDeviceId(), fArray, matrixFlagNormal);
             Assert::IsTrue(M3.IsEqualTo(M2)); 
 
             fArray[0] = 1; fArray[2] = 2; fArray[4] = 3; 
             fArray[1] = 4; fArray[3] = 5; fArray[5] = 6; 
-            M00.SetValue(2, 3, fArray, matrixFlagNormal);
+            M00.SetValue(2, 3, M2.GetComputeDeviceId(), fArray, matrixFlagNormal);
             Assert::AreEqual<float>(6,M00.MatrixNormInf());
 
             Assert::IsTrue(abs(M0.FrobeniusNorm() - 9.5394) < 0.0001);

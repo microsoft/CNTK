@@ -2202,7 +2202,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // 3. inplace sum 
             g_mpi->AllReduce(px, nx);
-            mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), px);
+            mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
             // 4. clean up 
             delete []px; 
         }

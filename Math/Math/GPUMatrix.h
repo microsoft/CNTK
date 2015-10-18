@@ -148,7 +148,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetColumn(const ElemType* colPointer, size_t colInd);
         void SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd);
         void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
-        void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);        
+        void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, size_t matrixFlags = matrixFlagNormal);
 
         void SetDiagonalValue(const ElemType v);
         void SetDiagonalValue(const GPUMatrix<ElemType>& vector);
@@ -425,7 +425,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i=0;i<numRows*numCols;++i)
                 stream>>d_array[i];
             stream.GetMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
-            us.SetValue(numRows,numCols,d_array, matrixFlagNormal | format);
+            us.SetValue(numRows, numCols, us.GetComputeDeviceId(), d_array, matrixFlagNormal | format);
             delete[] d_array;
             us.m_matrixName = new wchar_t[matrixName.length()+1];
             wmemcpy(us.m_matrixName,matrixName.c_str(),matrixName.length()+1);

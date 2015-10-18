@@ -200,7 +200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const ElemType v);
         void SetValue(const DeviceBoundNumber<ElemType>& db_number);
         void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format=matrixFormatSparseCSR);
-        void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);
+        void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, const size_t matrixFlags = matrixFlagNormal);
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);  // set matrix sparsely
         static ElemType MakeNan(size_t payload);
         void Invalidate() { SetValue(MakeNan(__LINE__)); }

@@ -655,7 +655,7 @@ bool LibSVM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& features, Matrix
             m_labelsBuffer[j] = (ElemType)1;
         }
     }
-    labels.SetValue(1, actualmbsize, m_labelsBuffer, matrixFlagNormal);
+    labels.SetValue(1, actualmbsize, labels.GetDeviceId(), m_labelsBuffer, matrixFlagNormal);
     /**/
 
 
