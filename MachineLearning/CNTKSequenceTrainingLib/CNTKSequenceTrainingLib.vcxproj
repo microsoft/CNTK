@@ -13,7 +13,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{EAD17188-072C-4726-B840-A769C36DAD1B}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>SequenceTraining</RootNamespace>
+    <RootNamespace>CNTKSequenceTrainingLib</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">

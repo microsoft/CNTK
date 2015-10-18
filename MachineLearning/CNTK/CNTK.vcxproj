@@ -49,14 +49,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>..\SequenceTraining;..\CNTKSGDLib;..\CNTKComputationNetworkLib;..\..\Math\Math;..\..\Common\Include;..\..\BrainScript;..\..\DataReader\HTKMLFReader;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..\CNTKSequenceTrainingLib;..\CNTKSGDLib;..\CNTKComputationNetworkLib;..\..\Math\Math;..\..\Common\Include;..\..\BrainScript;..\..\DataReader\HTKMLFReader;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
     <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\SequenceTraining;..\CNTKSGDLib;..\CNTKComputationNetworkLib;..\..\Math\Math;..\..\Common\Include;..\..\BrainScript;..\..\DataReader\HTKMLFReader;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>..\CNTKSequenceTrainingLib;..\CNTKSGDLib;..\CNTKComputationNetworkLib;..\..\Math\Math;..\..\Common\Include;..\..\BrainScript;..\..\DataReader\HTKMLFReader;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;$(CUDA_PATH)\include;$(VCInstallDir)include;$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;$(SolutionDir)$(Platform)\$(Configuration);$(SolutionDir)..\Common\lib;$(VCInstallDir)lib\amd64;$(WindowsSDK_LibraryPath_x64);$(CUDA_PATH)\lib\$(Platform)</LibraryPath>
     <CustomBuildAfterTargets>Build</CustomBuildAfterTargets>
     <ExecutablePath>$(ExecutablePath)</ExecutablePath>
@@ -78,7 +78,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>CNTKSGDLib.lib; CNTKComputationNetworkLib.lib; CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTraining.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>CNTKSGDLib.lib; CNTKComputationNetworkLib.lib; CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib; CNTKSequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
       <DelayLoadDLLs>CNTKMath.dll; msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
@@ -120,7 +120,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>CNTKSGDLib.lib; CNTKComputationNetworkLib.lib; CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTraining.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>CNTKSGDLib.lib; CNTKComputationNetworkLib.lib; CNTKMath.lib; kernel32.lib; user32.lib; shell32.lib; CNTKSequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
       <DelayLoadDLLs>CNTKMath.dll; msmpi.dll; nvml.dll; cudart64_70.dll</DelayLoadDLLs>
       <AdditionalLibraryDirectories>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</AdditionalLibraryDirectories>
