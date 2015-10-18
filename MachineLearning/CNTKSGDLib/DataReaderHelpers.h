@@ -247,4 +247,137 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
+    // SubminibatchHelpers
+    // Helper for sub-minibatch implementation
+    // A sub-minibathc is a part of a minibatch which helps computing large minibatches that cannot load into GPU memory in one forward-backward computation 
+    // The usage would be : 
+    //        SubminibatchHelpers sbhelper;    
+    //        for (;;)
+    //        {
+    //            size_t nsb=sb.GetMinibatchIntoCache(...); 
+    //            for (size_t i=0; i<nsb; i++)
+    //            {
+    //                sbhelper.GetSubMinibatchToNet(i); 
+    //                net.Evaluate(criterionNodes[0]);
+    //                sbhelper.DoneWithCurrentSubMinibatch(); 
+    //            }
+    //            UpdateWeights(...);
+    //        }
+
+    template<class ElemType>
+    class SubminibatchHelpers
+    {
+    private: 
+        typedef            std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>         Lattice; 
+        typedef            std::vector<size_t>                                                          Uid; 
+        typedef            std::vector<size_t>                                                          ExtrauttMap;
+
+        typedef            std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>>*        LatticePtr;
+        typedef            std::vector<size_t>*                                                         UidPtr;
+        typedef            std::vector<size_t>*                                                         ExtrauttMapPtr;
+        typedef            std::map<std::wstring, Matrix<ElemType>*>                                    Matrices; 
+
+
+        // member variables served as caching space 
+        std::map<std::wstring, Matrix<ElemType>*>           m_inputMatricesCache; 
+        MBLayoutPtr                                         m_MBLayoutCache;
+        LatticePtr                                          m_LatticeCache; 
+        UidPtr                                              m_uidCache; 
+        ExtrauttMapPtr                                      m_extrauttmapCache;
+        // we also need to remember where to put into the net
+        MBLayoutPtr                                         m_NetMBLayoutPtr;
+        std::map<std::wstring, Matrix<ElemType>*>           m_NetInputMatrixPtr;
+        LatticePtr                                          m_NetLatticePtr; 
+        UidPtr                                              m_NetUidPtr;
+        ExtrauttMapPtr                                      m_NetExtrauttMapPtr;
+
+        size_t                                              m_numParallelSequences; // number of paralle sequence in the cached matrix and MBLayout 
+        size_t                                              m_numSubminibatches;    // how many subminibatches we are going to use ? 
+
+    public:
+        SubminibatchHelpers()
+            :m_MBLayoutCache(new MBLayout()), m_LatticeCache(nullptr), m_uidCache(nullptr), m_extrauttmapCache(nullptr)
+        {
+
+        };
+        ~SubminibatchHelpers()
+        {
+            // TODO: remove this by using shared_ptr 
+            delete m_LatticeCache; 
+            delete m_uidCache; 
+            delete m_extrauttmapCache;
+            
+            for (auto x : m_inputMatricesCache)
+            {
+                delete x.second; 
+            }
+        }
+        // This function will have the same interface as DataReader::GetMinibatchIntoNetwork, except
+        //        1) there is an extra input, which is the user expected number of subminibatches 
+        //        2) the output is the actual #sub-minibatches. 0 if wasDataRead=false
+        size_t  GetMinibatchIntoCache(   IDataReader<ElemType>& trainSetDataReader,
+                                        ComputationNetwork& net,
+                                        ComputationNodeBasePtr criterionNode,
+                                        bool useDistributedMBReading,
+                                        bool useParallelTrain,
+                                        std::map<std::wstring, Matrix<ElemType>*> & inputMatrices,
+                                        size_t & actualMBSize, size_t requestedSubminibatches)
+        {
+            // first, remember interface to the net 
+            m_NetMBLayoutPtr = net.GetMBLayoutPtr();
+            m_NetInputMatrixPtr = inputMatrices; 
+
+            // second, get data from reader, stored it in cache 
+            // 1. for each key, allocate the specific matrix on device 
+            for (auto pa : inputMatrices)
+            {
+                wstring name = pa.first; 
+                Matrix<ElemType>* = pa.second; 
+                m_inputMatricesCache[name] = new Matrix<ElemType>(pa->GetDeviceId(), pa->GetNumRows(), pa->GetNumCols()); 
+            }
+            // 2. Get it from Reader 
+            bool wasDataRead = trainSetDataReader.GetMinibatch(m_inputMatricesCache);
+            trainSetDataReader.CopyMBLayoutTo(m_MBLayoutCache);
+            size_t nParallelSequences = trainSetDataReader.GetNumParallelSequences();
+
+            if (criterionNode != nullptr && (criterionNode->OperationName == L"SequenceWithSoftmax"))
+            {
+                // auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(criterionNode);
+                NOT_IMPLEMENTED;
+                // TODO: implement this for Sequence training !!!
+            }
+            
+            // subminibatches are cutted at the parallel sequence level; 
+            // if #requested subminibatch is larger than #parallel sequence, 
+            // we cannot split further; instead, each subsequence become a subminibatch 
+            size_t actualnumSubminibatches = requestedSubminibatches > nParallelSequences ? nParallelSequences : requestedSubminibatches; 
+           
+
+            return actualnumSubminibatches; 
+        }
+        
+        void GetSubMinibatchToNet(size_t iSubminibatch)
+        {
+            Matrices decimatedMatrices; 
+            MBLayoutPtr decimatedLayout;
+            DataReaderHelpers::DecimateMinibatch(m_inputMatricesCache, decimatedMatrices, m_MBLayoutCache, decimatedLayout, m_numSubminibatches, iSubminibatch); 
+
+            m_NetInputMatrixPtr = decimatedMatrices; 
+            m_NetMBLayoutPtr = decimatedLayout; 
+            net.VerifyActualNumParallelSequences(m_NetMBLayoutPtr->GetNumParallelSequences());
+        }
+
+
+        // TODO: encapsulate it into a destructor !!! 
+        void DoneWithCurrentSubMinibatch()
+        {
+            for (auto x : m_NetInputMatrixPtr)
+            {
+                delete x.second; 
+                x.second = nullptr; 
+            }
+        }
+
+    };
+
 }}}
