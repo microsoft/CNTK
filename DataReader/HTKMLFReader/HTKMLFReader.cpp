@@ -104,6 +104,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigParameters& readerConfig)
         {
             vector<wstring> scriptpaths;
+			vector<wstring> RootPathInScripts; 
             vector<wstring> mlfpaths;
             vector<vector<wstring>>mlfpathsmulti;
             size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
@@ -179,7 +180,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 m_featureNameToIdMap[featureNames[i]]= iFeat;
                 scriptpaths.push_back(thisFeature("scpFile"));
-                m_featureNameToDimMap[featureNames[i]] = m_featDims[i];
+				RootPathInScripts.push_back(thisFeature("PrefixPathInSCP", ""));
+				m_featureNameToDimMap[featureNames[i]] = m_featDims[i];
 
                 m_featuresBufferMultiIO.push_back(nullptr);
                 m_featuresBufferAllocatedMultiIO.push_back(0);
@@ -359,24 +361,51 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (n!=numFiles)
                         RuntimeError(msra::strfun::strprintf ("number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
 
-                /* 
-                   do "..." expansion if SCP uses relative path names
-                   "..." in the SCP means full path is the same as the SCP file
-                   for example, if scp file is "//aaa/bbb/ccc/ddd.scp"
-                   and contains entry like 
-                   .../file1.feat
-                   .../file2.feat
-                   etc.
-                   the features will be read from
-                //aaa/bbb/ccc/file1.feat
-                //aaa/bbb/ccc/file2.feat
-                etc. 
-                This works well if you store the scp file with the features but 
-                do not want different scp files everytime you move or create new features
-                */
-                wstring scpdircached;
-                for (auto & entry : filelist)
-                    ExpandDotDotDot(entry, scriptpath, scpdircached);
+				// post processing file list : 
+				// 	if users specified PrefixPath, add the prefix to each of path in filelist 
+				//	else do the dotdotdot expansion if necessary 
+				wstring rootpath = RootPathInScripts[i]; 
+				if (!rootpath.empty()) // use has specified a path prefix for this  feature 
+				{
+					// first make slash consistent (sorry for linux users:this is not necessary for you)
+					std::replace(rootpath.begin(), rootpath.end(), L'\\', L'/'); 
+					// second, remove trailling slash if there is any 
+					std::wregex trailer(L"/+$");
+					rootpath=std::regex_replace(rootpath, trailer, wstring(L""));
+					// third, join the rootpath with each entry in filelist 
+					if (!rootpath.empty())
+					{
+						for (wstring & path : filelist)
+						{
+#ifdef WIN32				// sorry for windows users, we have to pay some cost here 
+							std::replace(path.begin(), path.end(), L'\\', L'/'); 
+#endif 
+							path = rootpath + L"/" + path;  
+						}
+					}
+				}
+				else 
+				{
+					/*
+					   do "..." expansion if SCP uses relative path names
+					   "..." in the SCP means full path is the same as the SCP file
+					   for example, if scp file is "//aaa/bbb/ccc/ddd.scp"
+					   and contains entry like
+					   .../file1.feat
+					   .../file2.feat
+					   etc.
+					   the features will be read from
+					   //aaa/bbb/ccc/file1.feat
+					   //aaa/bbb/ccc/file2.feat
+					   etc.
+					   This works well if you store the scp file with the features but
+					   do not want different scp files everytime you move or create new features
+					   */
+					wstring scpdircached;
+					for (auto & entry : filelist)
+						ExpandDotDotDot(entry, scriptpath, scpdircached);
+				}
+
 
                 infilesmulti.push_back(filelist);
             }
