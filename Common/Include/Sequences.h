@@ -205,6 +205,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
+		bool DecimateSequencesNotSelected(const vector<size_t> & selectedseq)
+		{
+			size_t maxseqid = *std::max_element(selectedseq.begin(), selectedseq.end()); 
+			if (maxseqid > m_numParallelSequences)
+			{
+				RuntimeError("DecimateSequencesNotSelected: there are %d parallel sequences, while you are asking for the %d-th sequence\n", m_numParallelSequences, maxseqid); 
+			}
+			
+			Matrix<float> newBoundaryFlags(selectedseq.size(), m_numTimeSteps, CPUDEVICE); 
+			for (size_t i = 0; i < selectedseq.size(); i++)
+			{
+				for (size_t j = 0; j < m_numTimeSteps; j++)
+				{
+					newBoundaryFlags(i, j) = m_sentenceBoundaryFlags(selectedseq[i], j); 
+				}
+			}			
+			m_sentenceBoundaryFlags = newBoundaryFlags; 
+			m_numParallelSequences = selectedseq.size();
+			return true; 
+		}
     private:
         size_t m_numTimeSteps;
         size_t m_numParallelSequences;

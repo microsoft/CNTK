@@ -458,5 +458,36 @@ namespace CNTKMathTest
 
             Assert::IsTrue(M0.IsEqualTo(M3, 0.0001));
         }
+		TEST_METHOD(GPUAssignMatrixByColumnSlice)
+		{
+			GPUMatrix<float> M0 = GPUMatrix<float>::RandomUniform(400, 50, 0 , -100, 100);
+			float* pArrBase0 = M0.CopyToArray();
+
+			vector<size_t> columnrange = { 0, 3, 5, 4 };
+			GPUMatrix<float> M1(0); 
+
+			M1.AssignMatrixByColumnSlice(M0, columnrange);
+			float* pArrBase1 = M1.CopyToArray();
+
+			for (size_t des = 0; des < columnrange.size(); des++)
+			{
+				size_t src = columnrange[des];
+				float* pArray0 = pArrBase0 + 400 * src; 
+				float* pArray1 = pArrBase1 + 400 * des; 
+
+				double err = 0;
+				for (size_t r = 0; r < 400; r++)
+				{
+					double diff = (pArray0[r]-pArray1[r]);
+					diff *= diff;
+					err += diff;
+				}
+				Assert::AreEqual(err, 0, 1e-7);
+			}
+
+			delete[]pArrBase0; 
+			delete[]pArrBase1; 
+
+		}
     };
 }

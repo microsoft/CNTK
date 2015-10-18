@@ -660,5 +660,41 @@ namespace CNTKMathTest
 
             Assert::IsTrue(M0.IsEqualTo(M3, 0.0001));
         }
+
+		TEST_METHOD(CPUAssignMatrixByColumnSlice)
+		{
+			printf("starts here\n");
+			Matrix M0 = Matrix::RandomUniform(400, 50, -100, 100); 
+
+
+			vector<size_t> columnrange = { 0, 3, 5, 4 };
+			Matrix M1; 
+			try
+			{
+				M1.AssignMatrixByColumnSlice(M0, columnrange);
+			}
+			catch (exception& e)
+			{
+				printf("%s\n", e.what()); 
+				Assert::Fail(); 
+			}
+		
+
+			for (size_t des = 0; des < columnrange.size(); des ++)
+			{
+				size_t src = columnrange[des]; 
+
+				double err = 0; 
+				for (size_t r = 0; r < 400; r++)
+				{
+					double diff = (M0(r, src) - M1(r, des)); 
+					diff *= diff; 
+					err += diff; 
+				}
+				Assert::AreEqual(err, 0, 1e-7);
+			}
+
+		}
+
     };
 }

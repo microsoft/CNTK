@@ -339,6 +339,35 @@ __global__ void _setValue(
     a[id]=d_v[0];
 };
 
+template<class ElemType> 
+__global__ void _assignToColumnSliceValuesOf(ElemType* dest, ElemType* src, const CUDA_LONG NRows, const CUDA_LONG NColStride, const size_t* columnIdx, size_t nCols)
+{
+	// each block (i) of threads is in charge of copying src(:, columnIdx[i]) to dest(:, columnIdx[i])
+	// each thread is in charge of src(rowId:nThreadInBlock:end, columnIdx[i])
+	size_t srcCol = blockIdx.x + blockIdx.y * gridDim.x + gridDim.x * gridDim.y * blockIdx.z;
+	// we are interested in this column in the src part 
+	size_t nThreadInBlock = blockDim.x * blockDim.y;  // num of threads working in one block (i.e., for each column)
+	size_t rowId = threadIdx.x + threadIdx.y * blockDim.x; // thread index, which is also the starting row indx 
+
+	if (rowId >= NRows)
+		return;
+	
+	if (srcCol >= nCols)
+		return; 
+
+	size_t desCol = columnIdx[srcCol]; // we are interested in this column in the destionation 
+
+	dest += NColStride * desCol; 
+	src += NColStride * srcCol; 
+
+	while (rowId < NRows)
+	{
+		dest[rowId] = src[rowId]; 
+		rowId += nThreadInBlock; 
+	}
+}
+
+
 template<class ElemType>
 __global__ void _copyColumnsStrided(ElemType * dest, ElemType * src, CUDA_LONG N, CUDA_LONG numRows, CUDA_LONG destNumColsStride, CUDA_LONG srcNumColsStride)
 {
