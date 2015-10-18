@@ -77,9 +77,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void PrepareDevice(DEVICEID_TYPE deviceId)
     {
         static DEVICEID_TYPE currentDevice = AUTOPLACEMATRIX; // set to anything valid
-        // externally managed matrices are guaranteed to be on the right device
-        if (deviceId == MANAGEDEXTERN)
-            return;
         // and if we last set the device to be this device we are good
         if (deviceId == currentDevice)
             return;
@@ -119,7 +116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 delete m_data;
                 m_data = NULL;
             }
-            else if (m_computeDevice != MANAGEDEXTERN)
+            else
                 CUDA_CALL(cudaFree(m_data));
         }
     }
@@ -379,27 +376,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType>::GPUMatrix(int deviceId) 
     {
-        if (deviceId == MANAGEDEXTERN)
-            LogicError("Basic constructor cannot be used with Managed Extern types");
-
         ZeroInit(deviceId);
     };
 
     //matrixName is used to verify that correct matrix is read.
     template<class ElemType>
-    GPUMatrix<ElemType>::GPUMatrix(FILE* f, const char * matrixName, int deviceId)
+    GPUMatrix<ElemType>::GPUMatrix(FILE* f, const char * matrixName, int /*deviceId*/)
     {
-        if (deviceId == MANAGEDEXTERN)
-            LogicError("File constructor cannot be used with Managed Extern types");
-
         ReadFromFile(f, matrixName);
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols,int deviceId)
     {
-        if (deviceId == MANAGEDEXTERN)
-            LogicError("constructor cannot be used with Managed Extern types");
         ZeroInit(deviceId);
         m_numRows = numRows;
         m_numCols = numCols;
@@ -417,7 +406,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, const size_t matrixFlags)
     {
         ZeroInit(deviceId);
-        SetValue(numRows, numCols, pArray, matrixFlags, deviceId);
+        SetValue(numRows, numCols, deviceId, pArray, matrixFlags);
     };               
 
     template<class ElemType>
@@ -511,14 +500,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     int GPUMatrix<ElemType>::GetComputeDeviceId() const 
     {
-        // for externally managed memory the CUDA context will have the current device
-        if (m_computeDevice == MANAGEDEXTERN)
-        {
-            int devId;
-            assert(m_externalBuffer);
-            CUDA_CALL(cudaGetDevice(&devId));
-            return devId;
-        }
         return m_computeDevice;
     }
 
@@ -1056,7 +1037,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>    
-    void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, size_t matrixFlags, int deviceId)
+    void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, size_t matrixFlags)
     {
         // handle externally managed case
         if (matrixFlags&matrixFlagDontOwnBuffer)

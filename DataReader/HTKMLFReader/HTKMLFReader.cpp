@@ -1008,13 +1008,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 id = m_featureNameToIdMap[iter->first];
                                 dim = m_featureNameToDimMap[iter->first];
-                                data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
+                                data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
                             }
                             else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
                             {
                                 id = m_labelNameToIdMap[iter->first];
                                 dim = m_labelNameToDimMap[iter->first];
-                                data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
+                                data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, data.GetDeviceId(), m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
                             }
                         }
                     }
@@ -1239,13 +1239,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             id = m_featureNameToIdMap[iter->first];
                             dim = m_featureNameToDimMap[iter->first];
-                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
+                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
                         }
                         else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
                         {
                             id = m_labelNameToIdMap[iter->first];
                             dim = m_labelNameToDimMap[iter->first];
-                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
+                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, data.GetDeviceId(), m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
                         }
                     }
                     skip = false;
@@ -1428,7 +1428,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 }
                             }
                         }
-                        data.SetValue(feat.rows(), feat.cols(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
+                        data.SetValue(feat.rows(), feat.cols(), data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
                     }
                 }
                 return true;

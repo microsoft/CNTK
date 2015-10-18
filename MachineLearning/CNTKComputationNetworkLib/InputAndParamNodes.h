@@ -108,7 +108,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numRows = 0;
             size_t numCols = 0;
             auto array = File::LoadMatrixFromTextFile<ElemType>(msra::strfun::utf8(initFromFilePath), numRows, numCols); // TODO: change pathname to wstring
-            FunctionValues().SetValue(numRows, numCols, array.data(), matrixFlagNormal, m_deviceId);
+            FunctionValues().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
         }
 
         void ReviseFromFile(const std::wstring & reviseFromFilePath)
@@ -125,7 +125,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_nodeName.c_str(), reviseFromFilePath.c_str(), nRows, nCols, numRows, numCols);
             }
 
-            FunctionValues().SetValue(numRows, numCols, array.data(), matrixFlagNormal, m_deviceId);
+            FunctionValues().SetValue(numRows, numCols, m_deviceId, array.data(), matrixFlagNormal);
             
         }
 
