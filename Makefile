@@ -54,7 +54,7 @@ endif
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 CXX = mpic++
 
-INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib MachineLearning/SequenceTraining BrainScript
+INCLUDEPATH:= Common/Include Math/Math MachineLearning/CNTK MachineLearning/CNTKComputationNetworkLib MachineLearning/CNTKSGDLib MachineLearning/CNTKSequenceTrainingLib BrainScript
 CPPFLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K
 CXXFLAGS:= -msse3 -std=c++0x -std=c++11 -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
@@ -414,8 +414,8 @@ CNTK_SRC =\
 	MachineLearning/CNTKComputationNetworkLib/NetworkBuilderFromConfig.cpp \
 	MachineLearning/CNTKSGDLib/Profiler.cpp \
 	MachineLearning/CNTKSGDLib/SGD.cpp \
-	MachineLearning/SequenceTraining/latticeforwardbackward.cpp \
-	MachineLearning/SequenceTraining/parallelforwardbackward.cpp \
+	MachineLearning/CNTKSequenceTrainingLib/latticeforwardbackward.cpp \
+	MachineLearning/CNTKSequenceTrainingLib/parallelforwardbackward.cpp \
 	BrainScript/BrainScriptEvaluator.cpp \
 	BrainScript/BrainScriptParser.cpp \
 	BrainScript/BrainScriptTest.cpp \
@@ -430,7 +430,7 @@ CNTK_SRC +=\
 
 else
 CNTK_SRC +=\
-	MachineLearning/SequenceTraining/NoGPU.cpp \
+	MachineLearning/CNTKSequenceTrainingLib/NoGPU.cpp \
 
 endif
 

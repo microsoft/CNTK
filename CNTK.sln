@@ -335,7 +335,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Kaldi2Reader", "Kaldi2Reade
 		DataReader\Kaldi2Reader\utterancesourcemulti.h = DataReader\Kaldi2Reader\utterancesourcemulti.h
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SequenceTraining", "MachineLearning\SequenceTraining\SequenceTraining.vcxproj", "{EAD17188-072C-4726-B840-A769C36DAD1B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKSequenceTrainingLib", "MachineLearning\CNTKSequenceTrainingLib\CNTKSequenceTrainingLib.vcxproj", "{EAD17188-072C-4726-B840-A769C36DAD1B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Truncated", "Truncated", "{88F85A64-105D-4CDA-8199-B7A312FC8A27}"
 	ProjectSection(SolutionItems) = preProject
