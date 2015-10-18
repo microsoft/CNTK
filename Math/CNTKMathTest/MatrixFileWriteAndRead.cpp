@@ -51,12 +51,12 @@ namespace CNTKMathTest
         TEST_METHOD(GPUMatrixFileWriteAndRead)
         {
             //Test GPUMatrix
-            GPUMatrix<float> MG = GPUMatrix<float>::RandomUniform(43, 10, -26.3f, 30.2f);
+            GPUMatrix<float> MG = GPUMatrix<float>::RandomUniform(43, 10, 0 /*deviceId*/, -26.3f, 30.2f);
             GPUMatrix<float> McopyG=MG;
             std::wstring filenameGPU(L"MGPU.txt");            
             File fileGPU(filenameGPU,fileOptionsText|fileOptionsReadWrite);            
             fileGPU<<MG;
-            GPUMatrix<float> M1G;
+            GPUMatrix<float> M1G(0 /*deviceId*/);
             fileGPU.SetPosition(0);
             fileGPU>>M1G;            
             Assert::IsTrue(McopyG.IsEqualTo(M1G,0.00001f));

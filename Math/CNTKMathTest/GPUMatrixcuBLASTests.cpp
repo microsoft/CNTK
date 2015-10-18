@@ -26,9 +26,9 @@ namespace CNTKMathTest
     TEST_METHOD(GPU_MultiplyAndWeightedAdd_NoExceptionOnly_Test)
     {        
         float alpha = 0.4;
-        GPUMatrix<float> M0_GPU(12,5);
-        GPUMatrix<float> M1_GPU(5,11);
-        GPUMatrix<float> M2_GPU(12,11);        
+        GPUMatrix<float> M0_GPU(12, 5, 0 /*deviceId*/);
+        GPUMatrix<float> M1_GPU(5, 11, 0 /*deviceId*/);
+        GPUMatrix<float> M2_GPU(12, 11, 0 /*deviceId*/);
         GPUMatrix<float>::MultiplyAndWeightedAdd(0.1,M0_GPU,false,M1_GPU,false,alpha,M2_GPU); 
     }
 
@@ -36,8 +36,8 @@ namespace CNTKMathTest
     TEST_METHOD(GPU_Scale_NoExceptionOnly_Test)
     {
         float scale = 0.5;
-        GPUMatrix<float> M0_GPU(12,53);
-        GPUMatrix<float> M1_GPU(12,53);
+        GPUMatrix<float> M0_GPU(12, 53, 0 /*deviceId*/);
+        GPUMatrix<float> M1_GPU(12, 53, 0 /*deviceId*/);
         GPUMatrix<float>::Scale(scale,M0_GPU);        
     }
     
@@ -45,9 +45,9 @@ namespace CNTKMathTest
     {        
         float *arr = new float[100];
         for (int i=0;i<100;i++) arr[i]=1;
-        GPUMatrix<float> AG(10,10,arr,matrixFlagNormal);
-        GPUMatrix<float> BG(10,10,arr,matrixFlagNormal);
-        GPUMatrix<float> CG(1,10,arr,matrixFlagNormal);        
+        GPUMatrix<float> AG(10, 10, 0 /*deviceId*/, arr, matrixFlagNormal);
+        GPUMatrix<float> BG(10, 10, 0 /*deviceId*/, arr, matrixFlagNormal);
+        GPUMatrix<float> CG(1, 10, 0 /*deviceId*/, arr, matrixFlagNormal);
         GPUMatrix<float>::InnerProduct(AG,BG,CG,true);        
     }
 

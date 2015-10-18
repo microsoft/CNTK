@@ -77,9 +77,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void PrepareDevice(DEVICEID_TYPE deviceId)
     {
         static DEVICEID_TYPE currentDevice = AUTOPLACEMATRIX; // set to anything valid
-        // externally managed matrices are guaranteed to be on the right device
-        if (deviceId == MANAGEDEXTERN)
-            return;
         // and if we last set the device to be this device we are good
         if (deviceId == currentDevice)
             return;
@@ -119,7 +116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 delete m_data;
                 m_data = NULL;
             }
-            else if (m_computeDevice != MANAGEDEXTERN)
+            else
                 CUDA_CALL(cudaFree(m_data));
         }
     }
@@ -379,27 +376,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType>::GPUMatrix(int deviceId) 
     {
-        if (deviceId == MANAGEDEXTERN)
-            LogicError("Basic constructor cannot be used with Managed Extern types");
-
         ZeroInit(deviceId);
     };
 
     //matrixName is used to verify that correct matrix is read.
     template<class ElemType>
-    GPUMatrix<ElemType>::GPUMatrix(FILE* f, const char * matrixName, int deviceId)
+    GPUMatrix<ElemType>::GPUMatrix(FILE* f, const char * matrixName, int /*deviceId*/)
     {
-        if (deviceId == MANAGEDEXTERN)
-            LogicError("File constructor cannot be used with Managed Extern types");
-
         ReadFromFile(f, matrixName);
     }
 
     template<class ElemType>
     GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols,int deviceId)
     {
-        if (deviceId == MANAGEDEXTERN)
-            LogicError("constructor cannot be used with Managed Extern types");
         ZeroInit(deviceId);
         m_numRows = numRows;
         m_numCols = numCols;
@@ -409,15 +398,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             PrepareDevice();        
             CUDA_CALL(cudaMalloc((void**)&m_pArray,sizeof(ElemType)*m_elemSizeAllocated));      
-        CUDA_CALL(cudaMemset(m_pArray,0,sizeof(ElemType)*m_elemSizeAllocated));  
+            CUDA_CALL(cudaMemset(m_pArray,0,sizeof(ElemType)*m_elemSizeAllocated));  
         }
     };
 
     template<class ElemType>
-    GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags, int deviceId)
+    GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, const size_t matrixFlags)
     {
         ZeroInit(deviceId);
-        SetValue(numRows, numCols, pArray, matrixFlags, deviceId);
+        SetValue(numRows, numCols, deviceId, pArray, matrixFlags);
     };               
 
     template<class ElemType>
@@ -511,14 +500,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     int GPUMatrix<ElemType>::GetComputeDeviceId() const 
     {
-        // for externally managed memory the CUDA context will have the current device
-        if (m_computeDevice == MANAGEDEXTERN)
-        {
-            int devId;
-            assert(m_externalBuffer);
-            CUDA_CALL(cudaGetDevice(&devId));
-            return devId;
-        }
         return m_computeDevice;
     }
 
@@ -532,7 +513,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (startColumn + numCols > m_numCols)
             InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)m_numCols);
             
-        GPUMatrix<ElemType> slice(m_numRows, numCols, m_pArray + startColumn * m_numRows, matrixFlagDontOwnBuffer, m_computeDevice);
+        GPUMatrix<ElemType> slice(m_numRows, numCols, m_computeDevice, m_pArray + startColumn * m_numRows, matrixFlagDontOwnBuffer);
 
         return slice;
     }
@@ -1056,7 +1037,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>    
-    void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, size_t matrixFlags, int deviceId)
+    void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, size_t matrixFlags)
     {
         // handle externally managed case
         if (matrixFlags&matrixFlagDontOwnBuffer)
@@ -1687,7 +1668,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType> GPUMatrix<ElemType>::operator* (ElemType alpha) const
     {
-        GPUMatrix<ElemType> c(GetNumRows(), GetNumCols());
+        GPUMatrix<ElemType> c(GetNumRows(), GetNumCols(), GetComputeDeviceId());
         Scale(alpha, *this, c);
         return c;
     }
@@ -1768,7 +1749,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType> GPUMatrix<ElemType>::operator^ (ElemType alpha) const
     {
-        GPUMatrix<ElemType> c(GetNumRows(), GetNumCols());
+        GPUMatrix<ElemType> c(GetNumRows(), GetNumCols(), GetComputeDeviceId());
         ElementWisePower(alpha, *this, c);
         return c;
     }
@@ -2721,8 +2702,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("VectorMax: Matrix is empty.");
 
         //this implementation is not efficient
-        GPUMatrix<ElemType> tmp;
-        GPUMatrix<ElemType> tmp1;
+        GPUMatrix<ElemType> tmp(GetComputeDeviceId());
+        GPUMatrix<ElemType> tmp1(GetComputeDeviceId());
         tmp.AssignAbsOf((*this));
         tmp.VectorMax(tmp1,c,isColWise);
     }
@@ -3978,41 +3959,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    GPUMatrix<ElemType>  GPUMatrix<ElemType>::Ones(const size_t rows, const size_t cols)
+    GPUMatrix<ElemType>  GPUMatrix<ElemType>::Ones(const size_t rows, const size_t cols, int deviceId)
     {
-        GPUMatrix<ElemType> c(rows, cols); //will initialize to 0
+        GPUMatrix<ElemType> c(rows, cols, deviceId); //will initialize to 0
         c.SetValue(1);
         return c;
     }
 
     template<class ElemType>
-    GPUMatrix<ElemType>  GPUMatrix<ElemType>::Zeros(const size_t rows, const size_t cols)
+    GPUMatrix<ElemType>  GPUMatrix<ElemType>::Zeros(const size_t rows, const size_t cols, int deviceId)
     {
-        GPUMatrix<ElemType> c(rows, cols); //will initialize to 0
+        GPUMatrix<ElemType> c(rows, cols, deviceId); //will initialize to 0
         //c.SetValue(0);
         return c;
     }
 
     template<class ElemType>
-    GPUMatrix<ElemType>  GPUMatrix<ElemType>::Eye(const size_t rows)
+    GPUMatrix<ElemType>  GPUMatrix<ElemType>::Eye(const size_t rows, int deviceId)
     {
-        GPUMatrix<ElemType> c(rows, rows); //will initialize to 0
+        GPUMatrix<ElemType> c(rows, rows, deviceId); //will initialize to 0
         c.SetDiagonalValue(1);
         return c;
     }
 
     template<class ElemType>
-    GPUMatrix<ElemType>  GPUMatrix<ElemType>::RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed)
+    GPUMatrix<ElemType>  GPUMatrix<ElemType>::RandomUniform(const size_t rows, const size_t cols, int deviceId, const ElemType low, const ElemType high, unsigned long seed)
     {
-        GPUMatrix<ElemType> c(rows, cols); //will initialize to 0
+        GPUMatrix<ElemType> c(rows, cols, deviceId); //will initialize to 0
         c.SetUniformRandomValue(low, high, seed);
         return c;
     }
 
     template<class ElemType>
-    GPUMatrix<ElemType> GPUMatrix<ElemType>::RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed)
+    GPUMatrix<ElemType> GPUMatrix<ElemType>::RandomGaussian(const size_t rows, const size_t cols, int deviceId, const ElemType mean, const ElemType sigma, unsigned long seed)
     {
-        GPUMatrix<ElemType> c(rows, cols); //will initialize to 0
+        GPUMatrix<ElemType> c(rows, cols, deviceId); //will initialize to 0
         c.SetGaussianRandomValue(mean, sigma, seed);
         return c;
     }
@@ -4384,7 +4365,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // We use Matrix<char> as the backing store for QuantizedMatrix
     // Let's explicitly instantiate the methods we need for that purpose
     template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
-    template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, char *pArray, const size_t matrixFlags, int deviceId);
+    template GPUMatrix<char>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, char *pArray, const size_t matrixFlags);
     template GPUMatrix<char>::GPUMatrix(const GPUMatrix<char>&);
     template char* GPUMatrix<char>::CopyToArray() const;
     template void GPUMatrix<char>::ChangeDeviceTo(int);

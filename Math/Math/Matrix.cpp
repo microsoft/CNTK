@@ -218,7 +218,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         Init(deviceID);
 
-        if (!(GetDeviceId() == MANAGEDEXTERN || (matrixFlags & matrixFlagDontOwnBuffer)))
+        if (!(matrixFlags & matrixFlagDontOwnBuffer))
             SwitchToMatrixType(matrixType, matrixFormat, false);
     }
 
@@ -229,7 +229,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {    
         Init(deviceID);
 
-        if (!(GetDeviceId() == MANAGEDEXTERN || (matrixFlags & matrixFlagDontOwnBuffer)))
+        if (!(matrixFlags & matrixFlagDontOwnBuffer))
             SwitchToMatrixType(matrixType, matrixType == MatrixType::DENSE? MatrixFormat::matrixFormatDense : MatrixFormat::matrixFormatSparseCSC, false);
     }
 
@@ -239,7 +239,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         Init(deviceID);
 
-        if (!(GetDeviceId() == MANAGEDEXTERN || (matrixFlags & matrixFlagDontOwnBuffer)))
+        if (!(matrixFlags & matrixFlagDontOwnBuffer))
             SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
     }
 
@@ -248,8 +248,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         Init(deviceID);
 
-        if (!(GetDeviceId() == MANAGEDEXTERN))
-            SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
+        SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
     }
 
     // constructor for Matrix class to wrap an externally managed BaseMatrix
@@ -295,9 +294,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType>::Matrix(FILE* f, const char * matrixName, DEVICEID_TYPE deviceId, const MatrixType matrixType)
     {
-        if (deviceId == MANAGEDEXTERN)
-            RuntimeError("Externally Managed Matrix must use the basic constructor, then SetValue()\n");            
-
         Init(deviceId);
 
         if (matrixType == MatrixType::SPARSE)
@@ -333,9 +329,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat)
     {
-        if (deviceId == MANAGEDEXTERN)
-            RuntimeError("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");            
-
         Init(deviceId);
 
         if (matrixType == MatrixType::SPARSE)
@@ -403,12 +396,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                m_GPUMatrix = new GPUMatrix<ElemType>(numRows,numCols,pArray,matrixFlags,m_preferredDeviceId);
+                m_GPUMatrix = new GPUMatrix<ElemType>(numRows, numCols, m_preferredDeviceId, pArray, matrixFlags);
                 SetDataLocation(GPU, DENSE);            
             }
         }
 
-        if (matrixFlagDontOwnBuffer & matrixFlags || m_preferredDeviceId == MANAGEDEXTERN)
+        if (matrixFlagDontOwnBuffer & matrixFlags)
             m_baseMatrix->SetOwnBuffer(false);
     }
 
@@ -416,9 +409,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     Matrix<ElemType>::Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId)
     {
-        if (deviceId == MANAGEDEXTERN)
-            RuntimeError("Externally Managed Matrix must use the basic constructor, then SetValue(), or the full constructor\n");
-
         int origCopyFromDeviceId = deepCopyFrom.GetDeviceId();
 
         if (deviceId == AUTOPLACEMATRIX)  //use copyFrom's device if we have choice
@@ -585,7 +575,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                if (M.m_GPUMatrix == NULL) M.m_GPUMatrix = new GPUMatrix<ElemType>();
+                if (M.m_GPUMatrix == NULL) M.m_GPUMatrix = new GPUMatrix<ElemType>(M.GetDeviceId());
                 stream >> (*M.m_GPUMatrix);
                 M.SetDataLocation(GPU, DENSE);
             }
@@ -905,11 +895,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (m_matrixType==newMatrixType)
             return;
 
-        if (GetDeviceId() == MANAGEDEXTERN)
-        {
-            return;
-        }
-
 #define NUM_MATRIXTYPE_CHANGED_WARN 20
         m_numTimesMatrixTypeChanged++;
      
@@ -1183,9 +1168,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
 
-    //WARNING: what's the exact meaning of MANAGEDEXTERN here? This is not handled currently
     template<class ElemType>
-    void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags, int deviceId)
+    void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, const size_t matrixFlags)
     {
         if (pArray == nullptr)
             InvalidArgument("Invalid pArray.");
@@ -1193,7 +1177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DISPATCH_MATRIX_ON_FLAG(this,
             this,
             m_CPUMatrix->SetValue(numRows,numCols,pArray,matrixFlags), 
-            m_GPUMatrix->SetValue(numRows,numCols,pArray,matrixFlags, deviceId), 
+            m_GPUMatrix->SetValue(numRows,numCols,deviceId,pArray, matrixFlags),
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
@@ -3571,10 +3555,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool ismoved,bool emptyTransfer) const
     {
-        // if it's externally managed assume it's in the proper location
-        if (from_id == MANAGEDEXTERN || to_id == MANAGEDEXTERN)
-            return;
-
         if (from_id < 0) 
             from_id = CPUDEVICE;
         if (to_id < 0)
@@ -3678,7 +3658,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     delete m_GPUMatrix;
                 if (m_CPUMatrix->GetNumElements() !=0 && !emptyTransfer)
                 {
-                    m_GPUMatrix = new GPUMatrix<ElemType>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), m_CPUMatrix->GetArray(), matrixFlagNormal,to_id);
+                    m_GPUMatrix = new GPUMatrix<ElemType>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id, m_CPUMatrix->GetArray(), matrixFlagNormal);
                 }
                 else
                 {
@@ -3739,7 +3719,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::TransferFromDeviceToDevice(int from_id, int to_id, bool ismoved, bool emptyTransfer, bool updatePreferredDevice) const
     {
         _transferFromDeviceToDevice(from_id,to_id,ismoved,emptyTransfer);
-        if (updatePreferredDevice && m_preferredDeviceId != MANAGEDEXTERN)
+        if (updatePreferredDevice)
             m_preferredDeviceId=GetDeviceId();
     }
     template<class ElemType>
@@ -4167,7 +4147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (a.m_matrixType == b.m_matrixType && a.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE)
             {
-                GPUMatrix<ElemType> tmp;
+                GPUMatrix<ElemType> tmp(a.m_GPUMatrix->GetComputeDeviceId());
                 GPUSparseMatrix<ElemType> tmpSparse;
                 GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, beta, tmp);
                 tmpSparse.SetValue(tmp);
