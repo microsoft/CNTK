@@ -403,7 +403,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                m_GPUMatrix = new GPUMatrix<ElemType>(numRows,numCols,pArray,matrixFlags,m_preferredDeviceId);
+                m_GPUMatrix = new GPUMatrix<ElemType>(numRows, numCols, m_preferredDeviceId, pArray, matrixFlags);
                 SetDataLocation(GPU, DENSE);            
             }
         }
@@ -585,7 +585,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                if (M.m_GPUMatrix == NULL) M.m_GPUMatrix = new GPUMatrix<ElemType>();
+                if (M.m_GPUMatrix == NULL) M.m_GPUMatrix = new GPUMatrix<ElemType>(M.GetDeviceId());
                 stream >> (*M.m_GPUMatrix);
                 M.SetDataLocation(GPU, DENSE);
             }
@@ -3678,7 +3678,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     delete m_GPUMatrix;
                 if (m_CPUMatrix->GetNumElements() !=0 && !emptyTransfer)
                 {
-                    m_GPUMatrix = new GPUMatrix<ElemType>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), m_CPUMatrix->GetArray(), matrixFlagNormal,to_id);
+                    m_GPUMatrix = new GPUMatrix<ElemType>(m_CPUMatrix->GetNumRows(), m_CPUMatrix->GetNumCols(), to_id, m_CPUMatrix->GetArray(), matrixFlagNormal);
                 }
                 else
                 {
@@ -4167,7 +4167,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (a.m_matrixType == b.m_matrixType && a.m_matrixType == MatrixType::DENSE && c.m_matrixType == MatrixType::SPARSE)
             {
-                GPUMatrix<ElemType> tmp;
+                GPUMatrix<ElemType> tmp(a.m_GPUMatrix->GetComputeDeviceId());
                 GPUSparseMatrix<ElemType> tmpSparse;
                 GPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_GPUMatrix, transposeA, *b.m_GPUMatrix, transposeB, beta, tmp);
                 tmpSparse.SetValue(tmp);

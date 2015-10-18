@@ -63,8 +63,8 @@ namespace CNTKMathTest
                 b[i]=rand();
             }
 
-            GPUMatrix<float> A_d(m,n,a,matrixFlagNormal);
-            GPUMatrix<float> B_d(m,n,b,matrixFlagNormal);
+            GPUMatrix<float> A_d(m, n, 0 /*deviceId*/, a, matrixFlagNormal);
+            GPUMatrix<float> B_d(m, n, 0 /*deviceId*/, b, matrixFlagNormal);
 
             GPUSparseMatrix<float> A;
             A.SetValue(A_d);
@@ -95,8 +95,8 @@ namespace CNTKMathTest
             int j[9] = {0,1,1,2,0,3,4,2,4};
             M.SetMatrixFromCSRFormat(i,j,v,9,4,5);
 
-            GPUMatrix<float> Bd = GPUMatrix<float>::RandomUniform(4,5,-2,45);
-            GPUMatrix<float> Cs(Bd.GetNumRows(),Bd.GetNumCols());            
+            GPUMatrix<float> Bd = GPUMatrix<float>::RandomUniform(4, 5, 0 /*deviceId*/, -2, 45);
+            GPUMatrix<float> Cs(Bd.GetNumRows(), Bd.GetNumCols(), 0 /*deviceId*/);
 
             float alpha = 0.53;
             float beta = 1;
@@ -115,10 +115,10 @@ namespace CNTKMathTest
             int j[9] = {0,1,1,2,0,3,4,2,4};
             M.SetMatrixFromCSRFormat(i,j,v,9,4,5);
 
-            GPUMatrix<float> Bd = GPUMatrix<float>::RandomUniform(4,5,-2,45);
+            GPUMatrix<float> Bd = GPUMatrix<float>::RandomUniform(4, 5, 0 /*deviceId*/, -2, 45);
 
             GPUMatrix<float> C1 = GPUSparseMatrix<float>::ElementProductOf(M,Bd);
-            GPUMatrix<float> C2;
+            GPUMatrix<float> C2(0 /*deviceId*/);
             C2.AssignElementProductOf(M.CopyToDenseMatrix(),Bd);
             Assert::IsTrue(C1.IsEqualTo(C2));
         }
@@ -135,8 +135,8 @@ namespace CNTKMathTest
             Assert::AreEqual<size_t>(5,A.GetNumCols());
             Assert::IsTrue(!A.IsEmpty());
 
-            GPUMatrix<float> B = GPUMatrix<float>::Eye(5);
-            GPUMatrix<float> C = GPUMatrix<float>::Ones(4,5);
+            GPUMatrix<float> B = GPUMatrix<float>::Eye(5, 0 /*deviceId*/);
+            GPUMatrix<float> C = GPUMatrix<float>::Ones(4, 5, 0 /*deviceId*/);
 
             GPUSparseMatrix<float>::MultiplyAndWeightedAdd(1,A,false,B,false,1,C);
 
@@ -168,27 +168,27 @@ namespace CNTKMathTest
             float* arrTd = ATd.CopyToArray(); arrTd;
 
             float arrA_times_AT[19] = {17,8,5,0,8,13,0,27,5,0,138,48,0,27,48,117}; 
-            GPUMatrix<float> Cet(4,4,arrA_times_AT,matrixFlagNormal);
-            GPUMatrix<float> Cres(4,4);
+            GPUMatrix<float> Cet(4, 4, 0 /*deviceId*/, arrA_times_AT, matrixFlagNormal);
+            GPUMatrix<float> Cres(4, 4, 0 /*deviceId*/);
             GPUSparseMatrix<float>::Multiply(A,ATd,Cres);  //Sparse times dense
             Assert::IsTrue(Cres.IsEqualTo(Cet));
 
             float arrAT_times_A[25] = {26,4,0,35,40,4,20,6,0,0,0,6,90,0,54,35,0,0,49,56,40,0,54,56,100};
-            GPUMatrix<float> Cet1(5,5,arrAT_times_A,matrixFlagNormal);
-            GPUMatrix<float> Cres1(5,5);
+            GPUMatrix<float> Cet1(5, 5, 0 /*deviceId*/, arrAT_times_A, matrixFlagNormal);
+            GPUMatrix<float> Cres1(5, 5, 0 /*deviceId*/);
             GPUSparseMatrix<float>::Multiply(ATd,A,Cres1);  //Dense times sparse
 
             float* arr = Cres1.CopyToArray(); arr;
 
             Assert::IsTrue(Cres1.IsEqualTo(Cet1));
 
-            GPUMatrix<float> B = GPUMatrix<float>::RandomUniform(9,4,-100,100,0);
-            GPUMatrix<float> C(9,5);
+            GPUMatrix<float> B = GPUMatrix<float>::RandomUniform(9, 4, 0 /*deviceId*/, -100, 100, 0);
+            GPUMatrix<float> C(9, 5, 0 /*deviceId*/);
             GPUSparseMatrix<float>::Multiply(B,A,C); //C=BA
 
             GPUMatrix<float> BT = B.Transpose();
             GPUSparseMatrix<float> AT = A.Transpose();
-            GPUMatrix<float> CT(5,9);
+            GPUMatrix<float> CT(5, 9, 0 /*deviceId*/);
             GPUSparseMatrix<float>::Multiply(AT,BT,CT); // CT=AT*BT  = (BA)T
             GPUMatrix<float> CCT = CT.Transpose(); //CCT = C;
 
@@ -319,7 +319,7 @@ namespace CNTKMathTest
             Assert::AreEqual<float>(8,B_cpu(2,4));
 
             float dV[10] = {0,1,0,1,0,0,0,0,3,0};
-            GPUMatrix<float> DenseVector(10,1,dV);
+            GPUMatrix<float> DenseVector(10, 1, 0 /*deviceId*/, dV);
             GPUSparseMatrix<float> SparseVector;
             SparseVector.SetValue(DenseVector);
             float *dVal=NULL;
@@ -329,7 +329,7 @@ namespace CNTKMathTest
             SparseVector.GetMatrixFromCSRFormat(Row,Col,dVal,nz,rowind,colnum);
 
             float a[9] = { 1, 0, 4, 0, 0, 5, 4, 0, 0};
-            GPUMatrix<float> A4(3,3,a,matrixFlagNormal);
+            GPUMatrix<float> A4(3, 3, 0 /*deviceId*/, a, matrixFlagNormal);
             GPUSparseMatrix<float> A4s(A4);
 
             delete[] dVal; dVal=NULL;
@@ -394,7 +394,7 @@ namespace CNTKMathTest
             int j[9] = {0,1,1,2,0,3,4,2,4};
             A.SetMatrixFromCSRFormat(i,j,v,9,4,5);
 
-            GPUMatrix<float> B = GPUMatrix<float>::RandomUniform(4,5,-3,4);
+            GPUMatrix<float> B(GPUMatrix<float>::RandomUniform(4, 5, 0 /*deviceId*/, -3, 4));
             float x = GPUSparseMatrix<float>::InnerProductOfMatrices(A,B);
             float y = GPUMatrix<float>::InnerProductOfMatrices(A.CopyToDenseMatrix(),B);
             Assert::IsTrue(fabsf(x-y)<0.00001);            
@@ -405,7 +405,7 @@ namespace CNTKMathTest
             float *fArray = new float[6];
             fArray[0] = 1; fArray[1] = 4; fArray[2] = 2;
             fArray[3] = 5; fArray[4] = 3; fArray[5] = 6;
-            GPUMatrix<float> M0(2, 3, fArray, matrixFlagNormal);
+            GPUMatrix<float> M0(2, 3, 0 /*deviceId*/, fArray, matrixFlagNormal);
             GPUSparseMatrix<float> SM0(MatrixFormat::matrixFormatSparseCSC);
             SM0.SetValue(M0);
 
