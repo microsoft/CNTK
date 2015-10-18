@@ -314,7 +314,7 @@ bool BinaryReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType
         {
             RuntimeError("GetMinibatch: Section %ls Auxilary section specified, and/or element size %lld mismatch", section->GetName().c_str(), section->GetElementSize());
         }
-        gpuData->SetValue(rows, actualmbsize, data);
+        gpuData->SetValue(rows, actualmbsize, gpuData->GetDeviceId(), data);
     }
 
     // advance to the next minibatch

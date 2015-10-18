@@ -261,7 +261,7 @@ namespace msra { namespace lattices {
                 }
             }
 
-            dest.SetValue(numRows, numCols, cpuDestCopy, 0, deviceId);
+            dest.SetValue(numRows, numCols, deviceId, cpuDestCopy, 0);
             delete[] cpuDestCopy;
         }
             

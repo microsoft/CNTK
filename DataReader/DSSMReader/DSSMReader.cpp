@@ -22,10 +22,10 @@ DWORD LODWORD(size_t size) {return size&0xFFFFFFFF;}
 
 std::string ws2s(const std::wstring& wstr)
 {
-	int size_needed = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), 0, 0, 0, 0);
-	std::string strTo(size_needed, 0);
-	WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), &strTo[0], size_needed, 0, 0);
-	return strTo;
+    int size_needed = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), 0, 0, 0, 0);
+    std::string strTo(size_needed, 0);
+    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), &strTo[0], size_needed, 0, 0);
+    return strTo;
 }
 
 template<class ElemType>
@@ -138,92 +138,92 @@ void DSSMReader<ElemType>::Destroy()
 template<class ElemType>
 void DSSMReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
-	std::vector<std::wstring> features;
-	std::vector<std::wstring> labels;
+    std::vector<std::wstring> features;
+    std::vector<std::wstring> labels;
 
-	// Determine the names of the features and lables sections in the config file.
-	// features - [in,out] a vector of feature name strings
-	// labels - [in,out] a vector of label name strings
-	// For DSSM dataset, we only need features. No label is necessary. The following "labels" just serves as a place holder
-	GetFileConfigNames(readerConfig, features, labels);
+    // Determine the names of the features and lables sections in the config file.
+    // features - [in,out] a vector of feature name strings
+    // labels - [in,out] a vector of label name strings
+    // For DSSM dataset, we only need features. No label is necessary. The following "labels" just serves as a place holder
+    GetFileConfigNames(readerConfig, features, labels);
 
-	// For DSSM dataset, it must have exactly two features
-	// In the config file, we must specify query features first, then document features. The sequence is different here. Pay attention
-	if (features.size() == 2 && labels.size() == 1)
-	{
-		m_featuresNameQuery = features[1];
-		m_featuresNameDoc = features[0];
-		m_labelsName = labels[0];
-	}
-	else
-	{
-		RuntimeError("DSSM requires exactly two features and one label. Their names should match those in NDL definition");
-		return;
-	}
-
-
-	m_mbStartSample = m_epoch = m_totalSamples = m_epochStartSample = 0;
-	m_labelIdMax = m_labelDim = 0;
-	m_partialMinibatch = m_endReached = false;
-	m_labelType = labelCategory;
-	m_readNextSample = 0;
-	m_traceLevel = readerConfig("traceLevel", "0");
-
-	if (readerConfig.Exists("randomize"))
-	{
-		string randomizeString = readerConfig("randomize");
-		if (randomizeString == "None")
-		{
-			m_randomizeRange = randomizeNone;
-		}
-		else if (randomizeString == "Auto")
-		{
-			m_randomizeRange = randomizeAuto;
-		}
-		else
-		{
-			m_randomizeRange = readerConfig("randomize");
-		}
-	}
-	else
-	{
-		m_randomizeRange = randomizeNone;
-	}
-
-	std::string minibatchMode(readerConfig("minibatchMode", "Partial"));
-	m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
+    // For DSSM dataset, it must have exactly two features
+    // In the config file, we must specify query features first, then document features. The sequence is different here. Pay attention
+    if (features.size() == 2 && labels.size() == 1)
+    {
+        m_featuresNameQuery = features[1];
+        m_featuresNameDoc = features[0];
+        m_labelsName = labels[0];
+    }
+    else
+    {
+        RuntimeError("DSSM requires exactly two features and one label. Their names should match those in NDL definition");
+        return;
+    }
 
 
-	// Get the config parameters for query feature and doc feature
-	ConfigParameters configFeaturesQuery = readerConfig(m_featuresNameQuery, "");
-	ConfigParameters configFeaturesDoc = readerConfig(m_featuresNameDoc, "");
+    m_mbStartSample = m_epoch = m_totalSamples = m_epochStartSample = 0;
+    m_labelIdMax = m_labelDim = 0;
+    m_partialMinibatch = m_endReached = false;
+    m_labelType = labelCategory;
+    m_readNextSample = 0;
+    m_traceLevel = readerConfig("traceLevel", "0");
 
-	if (configFeaturesQuery.size() == 0)
-		RuntimeError("features file not found, required in configuration: i.e. 'features=[file=c:\\myfile.txt;start=1;dim=123]'");
-	if (configFeaturesDoc.size() == 0)
-		RuntimeError("features file not found, required in configuration: i.e. 'features=[file=c:\\myfile.txt;start=1;dim=123]'");
+    if (readerConfig.Exists("randomize"))
+    {
+        string randomizeString = readerConfig("randomize");
+        if (randomizeString == "None")
+        {
+            m_randomizeRange = randomizeNone;
+        }
+        else if (randomizeString == "Auto")
+        {
+            m_randomizeRange = randomizeAuto;
+        }
+        else
+        {
+            m_randomizeRange = readerConfig("randomize");
+        }
+    }
+    else
+    {
+        m_randomizeRange = randomizeNone;
+    }
 
-	// Read in feature size information
-	// This information will be used to handle OOVs
-	m_featuresDimQuery = configFeaturesQuery(L"dim");
-	m_featuresDimDoc = configFeaturesDoc(L"dim");
+    std::string minibatchMode(readerConfig("minibatchMode", "Partial"));
+    m_partialMinibatch = !_stricmp(minibatchMode.c_str(), "Partial");
 
-	std::wstring fileQ = configFeaturesQuery("file");
-	std::wstring fileD = configFeaturesDoc("file");
 
-	dssm_queryInput.Init(fileQ, m_featuresDimQuery);
-	dssm_docInput.Init(fileD, m_featuresDimDoc);
+    // Get the config parameters for query feature and doc feature
+    ConfigParameters configFeaturesQuery = readerConfig(m_featuresNameQuery, "");
+    ConfigParameters configFeaturesDoc = readerConfig(m_featuresNameDoc, "");
 
-	m_totalSamples = dssm_queryInput.numRows;
-	if (read_order == NULL)
-	{
-		read_order = new int[m_totalSamples];
-		for (int c = 0; c < m_totalSamples; c++)
-		{
-			read_order[c] = c;
-		}
-	}
-	m_mbSize = 0;
+    if (configFeaturesQuery.size() == 0)
+        RuntimeError("features file not found, required in configuration: i.e. 'features=[file=c:\\myfile.txt;start=1;dim=123]'");
+    if (configFeaturesDoc.size() == 0)
+        RuntimeError("features file not found, required in configuration: i.e. 'features=[file=c:\\myfile.txt;start=1;dim=123]'");
+
+    // Read in feature size information
+    // This information will be used to handle OOVs
+    m_featuresDimQuery = configFeaturesQuery(L"dim");
+    m_featuresDimDoc = configFeaturesDoc(L"dim");
+
+    std::wstring fileQ = configFeaturesQuery("file");
+    std::wstring fileD = configFeaturesDoc("file");
+
+    dssm_queryInput.Init(fileQ, m_featuresDimQuery);
+    dssm_docInput.Init(fileD, m_featuresDimDoc);
+
+    m_totalSamples = dssm_queryInput.numRows;
+    if (read_order == NULL)
+    {
+        read_order = new int[m_totalSamples];
+        for (int c = 0; c < m_totalSamples; c++)
+        {
+            read_order[c] = c;
+        }
+    }
+    m_mbSize = 0;
 
 }
 // destructor - virtual so it gets called properly 
@@ -275,34 +275,34 @@ size_t RoundUp(size_t value, size_t size)
 template<class ElemType>
 void DSSMReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requestedEpochSamples)
 {
-	size_t mbStartSample = m_epoch * m_epochSize;
-	if (m_totalSamples == 0)
-	{
-		m_totalSamples = dssm_queryInput.numRows;
-	}
+    size_t mbStartSample = m_epoch * m_epochSize;
+    if (m_totalSamples == 0)
+    {
+        m_totalSamples = dssm_queryInput.numRows;
+    }
 
-	size_t fileRecord = m_totalSamples ? mbStartSample % m_totalSamples : 0;
-	fprintf(stderr, "starting epoch %lld at record count %lld, and file position %lld\n", m_epoch, mbStartSample, fileRecord);
+    size_t fileRecord = m_totalSamples ? mbStartSample % m_totalSamples : 0;
+    fprintf(stderr, "starting epoch %lld at record count %lld, and file position %lld\n", m_epoch, mbStartSample, fileRecord);
 
 
 
-	// reset the next read sample
-	m_readNextSample = 0;
-	m_epochStartSample = m_mbStartSample = mbStartSample;
-	m_mbSize = mbSize;
-	m_epochSize = requestedEpochSamples;
-	dssm_queryInput.SetupEpoch(mbSize);
-	dssm_docInput.SetupEpoch(mbSize);
-	if (m_epochSize > (size_t)dssm_queryInput.numRows)
-	{
-		m_epochSize = (size_t)dssm_queryInput.numRows;
-	}
-	if (Randomize())
-	{
-		random_shuffle(&read_order[0], &read_order[m_epochSize]);
-	}
-	m_epoch = epoch;
-	m_mbStartSample = epoch*m_epochSize;
+    // reset the next read sample
+    m_readNextSample = 0;
+    m_epochStartSample = m_mbStartSample = mbStartSample;
+    m_mbSize = mbSize;
+    m_epochSize = requestedEpochSamples;
+    dssm_queryInput.SetupEpoch(mbSize);
+    dssm_docInput.SetupEpoch(mbSize);
+    if (m_epochSize > (size_t)dssm_queryInput.numRows)
+    {
+        m_epochSize = (size_t)dssm_queryInput.numRows;
+    }
+    if (Randomize())
+    {
+        random_shuffle(&read_order[0], &read_order[m_epochSize]);
+    }
+    m_epoch = epoch;
+    m_mbStartSample = epoch*m_epochSize;
 
 }
 
@@ -321,97 +321,97 @@ void DSSMReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& lab
 template<class ElemType>
 bool DSSMReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
 {
-	if (m_readNextSample >= m_totalSamples)
-	{
-		return false;
-	}
-	// In my unit test example, the input matrices contain 5: N, S, fD, fQ and labels
-	// Both N and S serve as a pre-set constant values, no need to change them
-	// In this node, we only need to fill in these matrices: fD, fQ, labels
-	Matrix<ElemType>& featuresQ = *matrices[m_featuresNameQuery];
-	Matrix<ElemType>& featuresD = *matrices[m_featuresNameDoc];
-	Matrix<ElemType>& labels = *matrices[m_labelsName]; // will change this part later.
-	
-	size_t actualMBSize = ( m_readNextSample + m_mbSize > m_totalSamples ) ? m_totalSamples - m_readNextSample : m_mbSize;
+    if (m_readNextSample >= m_totalSamples)
+    {
+        return false;
+    }
+    // In my unit test example, the input matrices contain 5: N, S, fD, fQ and labels
+    // Both N and S serve as a pre-set constant values, no need to change them
+    // In this node, we only need to fill in these matrices: fD, fQ, labels
+    Matrix<ElemType>& featuresQ = *matrices[m_featuresNameQuery];
+    Matrix<ElemType>& featuresD = *matrices[m_featuresNameDoc];
+    Matrix<ElemType>& labels = *matrices[m_labelsName]; // will change this part later.
+    
+    size_t actualMBSize = ( m_readNextSample + m_mbSize > m_totalSamples ) ? m_totalSamples - m_readNextSample : m_mbSize;
 
 
-	featuresQ.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
-	featuresD.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
+    featuresQ.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
+    featuresD.SwitchToMatrixType(MatrixType::SPARSE, MatrixFormat::matrixFormatSparseCSC, false);
 
-	/*
-	featuresQ.Resize(dssm_queryInput.numRows, actualMBSize);
-	featuresD.Resize(dssm_docInput.numRows, actualMBSize);
-	*/
+    /*
+    featuresQ.Resize(dssm_queryInput.numRows, actualMBSize);
+    featuresD.Resize(dssm_docInput.numRows, actualMBSize);
+    */
 
-	//fprintf(stderr, "featuresQ\n");
-	dssm_queryInput.Next_Batch(featuresQ, m_readNextSample, actualMBSize, read_order);
-	//fprintf(stderr, "\n\n\nfeaturesD\n");
-	dssm_docInput.Next_Batch(featuresD, m_readNextSample, actualMBSize, read_order);
-	//fprintf(stderr, "\n\n\n\n\n");
-	m_readNextSample += actualMBSize;
-	/*
-				featuresQ.Print("featuresQ");
-				fprintf(stderr, "\n");
-				featuresD.Print("featuresD");
-				fprintf(stderr, "\n");
-				*/
+    //fprintf(stderr, "featuresQ\n");
+    dssm_queryInput.Next_Batch(featuresQ, m_readNextSample, actualMBSize, read_order);
+    //fprintf(stderr, "\n\n\nfeaturesD\n");
+    dssm_docInput.Next_Batch(featuresD, m_readNextSample, actualMBSize, read_order);
+    //fprintf(stderr, "\n\n\n\n\n");
+    m_readNextSample += actualMBSize;
+    /*
+                featuresQ.Print("featuresQ");
+                fprintf(stderr, "\n");
+                featuresD.Print("featuresD");
+                fprintf(stderr, "\n");
+                */
 
-	/*
-	GPUSPARSE_INDEX_TYPE* h_CSCCol;
-	GPUSPARSE_INDEX_TYPE* h_Row;
-	ElemType* h_val;
-	size_t nz;
-	size_t nrs;
-	size_t ncols;
-	featuresQ.GetMatrixFromCSCFormat(&h_CSCCol, &h_Row, &h_val, &nz, &nrs, &ncols);
+    /*
+    GPUSPARSE_INDEX_TYPE* h_CSCCol;
+    GPUSPARSE_INDEX_TYPE* h_Row;
+    ElemType* h_val;
+    size_t nz;
+    size_t nrs;
+    size_t ncols;
+    featuresQ.GetMatrixFromCSCFormat(&h_CSCCol, &h_Row, &h_val, &nz, &nrs, &ncols);
 
-	for (int j = 0, k=0; j < nz; j++)
-	{
-		if (h_CSCCol[k] >= j)
-		{
-			fprintf(stderr, "\n");
-			k++;
-		}
-		fprintf(stderr, "%d:%.f ", h_Row[j], h_val[j]);
+    for (int j = 0, k=0; j < nz; j++)
+    {
+        if (h_CSCCol[k] >= j)
+        {
+            fprintf(stderr, "\n");
+            k++;
+        }
+        fprintf(stderr, "%d:%.f ", h_Row[j], h_val[j]);
 
-	}
-	*/
+    }
+    */
 
-	/*
-	featuresQ.TransferFromDeviceToDevice(featuresQ.GetDeviceId(), -1);
-	featuresQ.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
-	featuresQ.Print("featuresQ");
-	
-	featuresD.TransferFromDeviceToDevice(featuresD.GetDeviceId(), -1);
-	featuresD.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
-	featuresD.Print("featuresD");
+    /*
+    featuresQ.TransferFromDeviceToDevice(featuresQ.GetDeviceId(), -1);
+    featuresQ.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
+    featuresQ.Print("featuresQ");
+    
+    featuresD.TransferFromDeviceToDevice(featuresD.GetDeviceId(), -1);
+    featuresD.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
+    featuresD.Print("featuresD");
 
-	exit(1);
-	*/
+    exit(1);
+    */
 
-	if (actualMBSize > m_mbSize || m_labelsBuffer == NULL) {
-		size_t rows = labels.GetNumRows();
-		m_labelsBuffer = new ElemType[rows * actualMBSize];
-		memset(m_labelsBuffer, 0, sizeof(ElemType)* rows * actualMBSize);
-		for (int i = 0; i < actualMBSize; i++)
-		{
-			m_labelsBuffer[i * rows] = 1;
-		}
-	}
-	if (actualMBSize != labels.GetNumCols()) 
-	{
-		size_t rows = labels.GetNumRows();
-		labels.Resize(rows, actualMBSize);
-		labels.SetValue(0.0);
-		labels.SetValue(rows, actualMBSize, m_labelsBuffer, 0, labels.GetDeviceId());
-	}
-	/*
-	featuresQ.Print("featuresQ");
-	featuresD.Print("featuresD");
-	labels.print("labels");
-	*/
+    if (actualMBSize > m_mbSize || m_labelsBuffer == NULL) {
+        size_t rows = labels.GetNumRows();
+        m_labelsBuffer = new ElemType[rows * actualMBSize];
+        memset(m_labelsBuffer, 0, sizeof(ElemType)* rows * actualMBSize);
+        for (int i = 0; i < actualMBSize; i++)
+        {
+            m_labelsBuffer[i * rows] = 1;
+        }
+    }
+    if (actualMBSize != labels.GetNumCols()) 
+    {
+        size_t rows = labels.GetNumRows();
+        labels.Resize(rows, actualMBSize);
+        labels.SetValue(0.0);
+        labels.SetValue(rows, actualMBSize, labels.GetDeviceId(), m_labelsBuffer, 0);
+    }
+    /*
+    featuresQ.Print("featuresQ");
+    featuresD.Print("featuresD");
+    labels.print("labels");
+    */
 
-	return true;
+    return true;
 }
 
 
@@ -456,10 +456,10 @@ bool DSSMReader<ElemType>::DataEnd(EndDataType endDataType)
         break;
     case endDataEpoch:
         //ret = (m_mbStartSample / m_epochSize < m_epoch);
-		ret = (m_readNextSample >= m_totalSamples);
+        ret = (m_readNextSample >= m_totalSamples);
         break;
     case endDataSet:
-		ret = (m_readNextSample >= m_totalSamples);
+        ret = (m_readNextSample >= m_totalSamples);
         break;
     case endDataSentence:  // for fast reader each minibatch is considered a "sentence", so always true
         ret = true;
@@ -467,204 +467,204 @@ bool DSSMReader<ElemType>::DataEnd(EndDataType endDataType)
     }
     return ret;
 }
-	
+    
 template<class ElemType>
 DSSM_BinaryInput<ElemType>::DSSM_BinaryInput(){
 }
 template<class ElemType>
 DSSM_BinaryInput<ElemType>::~DSSM_BinaryInput(){
-	Dispose();
+    Dispose();
 }
 template<class ElemType>
 void DSSM_BinaryInput<ElemType>::Init(wstring fileName, size_t dim){
 
-	m_dim = dim;
-	mbSize = 0;
-	/*
-	m_hndl = CreateFileA(fileName.c_str(), GENERIC_READ,
-		FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	*/
-	m_hndl = CreateFile(fileName.c_str(), GENERIC_READ,
-		FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (m_hndl == INVALID_HANDLE_VALUE)
-	{
-		char message[256];
-		sprintf_s(message, "Unable to Open/Create file %ls, error %x", fileName.c_str(), GetLastError());
-		RuntimeError(message);
-	}
+    m_dim = dim;
+    mbSize = 0;
+    /*
+    m_hndl = CreateFileA(fileName.c_str(), GENERIC_READ,
+        FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    */
+    m_hndl = CreateFile(fileName.c_str(), GENERIC_READ,
+        FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (m_hndl == INVALID_HANDLE_VALUE)
+    {
+        char message[256];
+        sprintf_s(message, "Unable to Open/Create file %ls, error %x", fileName.c_str(), GetLastError());
+        RuntimeError(message);
+    }
 
-	m_filemap = CreateFileMapping(m_hndl, NULL, PAGE_READONLY, 0, 0, NULL);
+    m_filemap = CreateFileMapping(m_hndl, NULL, PAGE_READONLY, 0, 0, NULL);
 
-	SYSTEM_INFO sysinfo;
-	GetSystemInfo(&sysinfo);
-	DWORD sysGran = sysinfo.dwAllocationGranularity;
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo(&sysinfo);
+    DWORD sysGran = sysinfo.dwAllocationGranularity;
 
-	header_buffer = MapViewOfFile(m_filemap,   // handle to map object
-		FILE_MAP_READ, // get correct permissions
-		HIDWORD(0),
-		LODWORD(0),
-		sizeof(int64_t)* 2 + sizeof(int32_t));
+    header_buffer = MapViewOfFile(m_filemap,   // handle to map object
+        FILE_MAP_READ, // get correct permissions
+        HIDWORD(0),
+        LODWORD(0),
+        sizeof(int64_t)* 2 + sizeof(int32_t));
 
-	//cout << "After mapviewoffile" << endl;
+    //cout << "After mapviewoffile" << endl;
 
-	memcpy(&numRows, header_buffer, sizeof(int64_t));
-	memcpy(&numCols, (char*)header_buffer + sizeof(int64_t), sizeof(int32_t));
-	memcpy(&totalNNz, (char*)header_buffer + sizeof(int64_t)+sizeof(int32_t), sizeof(int64_t));
+    memcpy(&numRows, header_buffer, sizeof(int64_t));
+    memcpy(&numCols, (char*)header_buffer + sizeof(int64_t), sizeof(int32_t));
+    memcpy(&totalNNz, (char*)header_buffer + sizeof(int64_t)+sizeof(int32_t), sizeof(int64_t));
 
-	//cout << "After gotvalues" << endl;
-	int64_t base_offset = sizeof(int64_t)* 2 + sizeof(int32_t);
+    //cout << "After gotvalues" << endl;
+    int64_t base_offset = sizeof(int64_t)* 2 + sizeof(int32_t);
 
-	int64_t offsets_padding = base_offset % sysGran;
-	base_offset -= offsets_padding;
+    int64_t offsets_padding = base_offset % sysGran;
+    base_offset -= offsets_padding;
 
-	int64_t header_size = numRows*sizeof(int64_t)+offsets_padding;
+    int64_t header_size = numRows*sizeof(int64_t)+offsets_padding;
 
-	void* offsets_orig = MapViewOfFile(m_filemap,   // handle to map object
-		FILE_MAP_READ, // get correct permissions
-		HIDWORD(base_offset),
-		LODWORD(base_offset),
-		header_size);
+    void* offsets_orig = MapViewOfFile(m_filemap,   // handle to map object
+        FILE_MAP_READ, // get correct permissions
+        HIDWORD(base_offset),
+        LODWORD(base_offset),
+        header_size);
 
-	offsets_buffer = (char*)offsets_orig + offsets_padding;
-	
-	if (offsets != NULL){
-		free(offsets);
-	}
-	offsets = (int64_t*)malloc(sizeof(int64_t)*numRows);
-	memcpy(offsets, offsets_buffer, numRows*sizeof(int64_t));
+    offsets_buffer = (char*)offsets_orig + offsets_padding;
+    
+    if (offsets != NULL){
+        free(offsets);
+    }
+    offsets = (int64_t*)malloc(sizeof(int64_t)*numRows);
+    memcpy(offsets, offsets_buffer, numRows*sizeof(int64_t));
 
 
-	int64_t header_offset = base_offset + offsets_padding + numRows * sizeof(int64_t);
+    int64_t header_offset = base_offset + offsets_padding + numRows * sizeof(int64_t);
 
-	int64_t data_padding = header_offset % sysGran;
-	header_offset -= data_padding;
+    int64_t data_padding = header_offset % sysGran;
+    header_offset -= data_padding;
 
-	void* data_orig = MapViewOfFile(m_filemap,   // handle to map object
-		FILE_MAP_READ, // get correct permissions
-		HIDWORD(header_offset),
-		LODWORD(header_offset),
-		0);
-	data_buffer = (char*)data_orig + data_padding;
+    void* data_orig = MapViewOfFile(m_filemap,   // handle to map object
+        FILE_MAP_READ, // get correct permissions
+        HIDWORD(header_offset),
+        LODWORD(header_offset),
+        0);
+    data_buffer = (char*)data_orig + data_padding;
 
 }
 template<class ElemType>
 bool DSSM_BinaryInput<ElemType>::SetupEpoch( size_t minibatchSize){
-	if (values == NULL || mbSize < minibatchSize)
-	{
-		if (values != NULL)
-		{
-			free(values);
-			free(colIndices);
-			free(rowIndices);
-		}
-		
-		values = (ElemType*)malloc(sizeof(ElemType)*MAX_BUFFER*minibatchSize);
-		colIndices = (int32_t*)malloc(sizeof(int32_t)*(minibatchSize+1));
-		rowIndices = (int32_t*)malloc(sizeof(int32_t)*MAX_BUFFER*minibatchSize);
-		//fprintf(stderr, "values  size: %d",sizeof(ElemType)*MAX_BUFFER*minibatchSize);
-		//fprintf(stderr, "colindi size: %d",sizeof(int32_t)*MAX_BUFFER*(1+minibatchSize));
-		//fprintf(stderr, "rowindi size: %d",sizeof(int32_t)*MAX_BUFFER*minibatchSize);
-	}
-	if (minibatchSize > mbSize)
-	{
-		mbSize = minibatchSize;
-	}
+    if (values == NULL || mbSize < minibatchSize)
+    {
+        if (values != NULL)
+        {
+            free(values);
+            free(colIndices);
+            free(rowIndices);
+        }
+        
+        values = (ElemType*)malloc(sizeof(ElemType)*MAX_BUFFER*minibatchSize);
+        colIndices = (int32_t*)malloc(sizeof(int32_t)*(minibatchSize+1));
+        rowIndices = (int32_t*)malloc(sizeof(int32_t)*MAX_BUFFER*minibatchSize);
+        //fprintf(stderr, "values  size: %d",sizeof(ElemType)*MAX_BUFFER*minibatchSize);
+        //fprintf(stderr, "colindi size: %d",sizeof(int32_t)*MAX_BUFFER*(1+minibatchSize));
+        //fprintf(stderr, "rowindi size: %d",sizeof(int32_t)*MAX_BUFFER*minibatchSize);
+    }
+    if (minibatchSize > mbSize)
+    {
+        mbSize = minibatchSize;
+    }
 
-	return true;
+    return true;
 }
 template<class ElemType>
 bool DSSM_BinaryInput<ElemType>::Next_Batch(Matrix<ElemType>& matrices, size_t cur, size_t numToRead, int* /*ordering*/){
-	/*
-	int devId = matrices.GetDeviceId();
-	matrices.TransferFromDeviceToDevice(devId, -1);
-	*/
+    /*
+    int devId = matrices.GetDeviceId();
+    matrices.TransferFromDeviceToDevice(devId, -1);
+    */
 
-	int32_t cur_index = 0;
+    int32_t cur_index = 0;
 
-	for (int c = 0; c < numToRead; c++,cur++)
-	{
-		//int64_t cur_offset = offsets[ordering[cur]];
-		int64_t cur_offset = offsets[cur];
-		//int64_t cur_offset = offsets[ordering[c]];
-		//int32_t nnz;
-		colIndices[c] = cur_index;
-		int32_t nnz = *(int32_t*)((char*)data_buffer + cur_offset);
-		//memcpy(&nnz, (char*)data_buffer + cur_offset, sizeof(int32_t));
-		memcpy(values+cur_index, (char*)data_buffer + cur_offset + sizeof(int32_t), sizeof(ElemType)*nnz);
-		memcpy(rowIndices+cur_index, (char*)data_buffer + cur_offset + sizeof(int32_t)+sizeof(ElemType)*nnz, sizeof(int32_t)*nnz);
-		/**
-		fprintf(stderr, "%4d (%3d, %6d): ", c, nnz, cur_index + nnz);
-		for (int i = 0; i < nnz; i++)
-		{
-			fprintf(stderr, "%d:%.f ", rowIndices[cur_index+i], values[cur_index+i]);
-			//matrices.SetValue(rowIndices[cur_index + i], c, values[cur_index + i]);
-		}
-		fprintf(stderr, "\n");
-		**/
-		
-		cur_index += nnz;
-	}
-	colIndices[numToRead] = cur_index;
-	/*
-	int col = 0;
-	for (int c = 0; c < cur_index; c++)
-	{
-		if (colIndices[col] == c)
-		{
-			fprintf(stderr, "\n%4d: ", col);
-			col++;
-		}
-		fprintf(stderr, "%d:%.f ", rowIndices[c], values[c]);
-	}
-	*/
-	/*
-	fprintf(stderr, "\nXXXX nnz: %d\n", cur_index);
-	fprintf(stderr, "XXXX max values read: %d vs %d\n", sizeof(ElemType)*cur_index, sizeof(ElemType)*MAX_BUFFER*numToRead);
-	fprintf(stderr, "XXXX max indices read: %d vs %d\n", sizeof(int32_t)*cur_index, sizeof(int32_t)*MAX_BUFFER*numToRead);
-	fprintf(stderr, "XXXX sizeof(int32_t) = %d, sizeof(int) = %d\n", sizeof(int32_t), sizeof(int));
-	*/
-	/*
-		values = (ElemType*)malloc(sizeof(ElemType)*MAX_BUFFER*minibatchSize);
-		colIndices = (int32_t*)malloc(sizeof(int32_t)*MAX_BUFFER*(minibatchSize+1));
-		rowIndices = (int32_t*)malloc(sizeof(int32_t)*MAX_BUFFER*minibatchSize);
-		*/
+    for (int c = 0; c < numToRead; c++,cur++)
+    {
+        //int64_t cur_offset = offsets[ordering[cur]];
+        int64_t cur_offset = offsets[cur];
+        //int64_t cur_offset = offsets[ordering[c]];
+        //int32_t nnz;
+        colIndices[c] = cur_index;
+        int32_t nnz = *(int32_t*)((char*)data_buffer + cur_offset);
+        //memcpy(&nnz, (char*)data_buffer + cur_offset, sizeof(int32_t));
+        memcpy(values+cur_index, (char*)data_buffer + cur_offset + sizeof(int32_t), sizeof(ElemType)*nnz);
+        memcpy(rowIndices+cur_index, (char*)data_buffer + cur_offset + sizeof(int32_t)+sizeof(ElemType)*nnz, sizeof(int32_t)*nnz);
+        /**
+        fprintf(stderr, "%4d (%3d, %6d): ", c, nnz, cur_index + nnz);
+        for (int i = 0; i < nnz; i++)
+        {
+            fprintf(stderr, "%d:%.f ", rowIndices[cur_index+i], values[cur_index+i]);
+            //matrices.SetValue(rowIndices[cur_index + i], c, values[cur_index + i]);
+        }
+        fprintf(stderr, "\n");
+        **/
+        
+        cur_index += nnz;
+    }
+    colIndices[numToRead] = cur_index;
+    /*
+    int col = 0;
+    for (int c = 0; c < cur_index; c++)
+    {
+        if (colIndices[col] == c)
+        {
+            fprintf(stderr, "\n%4d: ", col);
+            col++;
+        }
+        fprintf(stderr, "%d:%.f ", rowIndices[c], values[c]);
+    }
+    */
+    /*
+    fprintf(stderr, "\nXXXX nnz: %d\n", cur_index);
+    fprintf(stderr, "XXXX max values read: %d vs %d\n", sizeof(ElemType)*cur_index, sizeof(ElemType)*MAX_BUFFER*numToRead);
+    fprintf(stderr, "XXXX max indices read: %d vs %d\n", sizeof(int32_t)*cur_index, sizeof(int32_t)*MAX_BUFFER*numToRead);
+    fprintf(stderr, "XXXX sizeof(int32_t) = %d, sizeof(int) = %d\n", sizeof(int32_t), sizeof(int));
+    */
+    /*
+        values = (ElemType*)malloc(sizeof(ElemType)*MAX_BUFFER*minibatchSize);
+        colIndices = (int32_t*)malloc(sizeof(int32_t)*MAX_BUFFER*(minibatchSize+1));
+        rowIndices = (int32_t*)malloc(sizeof(int32_t)*MAX_BUFFER*minibatchSize);
+        */
 
-	matrices.SetMatrixFromCSCFormat(colIndices, rowIndices, values, cur_index, m_dim, numToRead);
-	//matrices.Print("actual values");
-	//exit(1);
-	/*
-	matrices.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
-	matrices.Print("featuresQ");
-	exit(1);
-	matrices.TransferFromDeviceToDevice(-1,devId);
-	*/
-	return true;
+    matrices.SetMatrixFromCSCFormat(colIndices, rowIndices, values, cur_index, m_dim, numToRead);
+    //matrices.Print("actual values");
+    //exit(1);
+    /*
+    matrices.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense);
+    matrices.Print("featuresQ");
+    exit(1);
+    matrices.TransferFromDeviceToDevice(-1,devId);
+    */
+    return true;
 }
 
 template<class ElemType>
 void DSSM_BinaryInput<ElemType>::Dispose(){
-	if (offsets_orig != NULL){
-		UnmapViewOfFile(offsets_orig);
-	}
-	if (data_orig != NULL)
-	{
-		UnmapViewOfFile(data_orig);
-	}
+    if (offsets_orig != NULL){
+        UnmapViewOfFile(offsets_orig);
+    }
+    if (data_orig != NULL)
+    {
+        UnmapViewOfFile(data_orig);
+    }
 
-	if (offsets!= NULL)
-	{
-		free(offsets);// = (ElemType*)malloc(sizeof(float)* 230 * 1024);
-	}
-	if (values != NULL)
-	{
-		free(values);// = (ElemType*)malloc(sizeof(float)* 230 * 1024);
-	}
-	if (rowIndices != NULL){
-		free(rowIndices);// = (int*)malloc(sizeof(float)* 230 * 1024);
-	}
-	if (colIndices != NULL){
-		free(colIndices);// = (int*)malloc(sizeof(float)* 230 * 1024);
-	}
+    if (offsets!= NULL)
+    {
+        free(offsets);// = (ElemType*)malloc(sizeof(float)* 230 * 1024);
+    }
+    if (values != NULL)
+    {
+        free(values);// = (ElemType*)malloc(sizeof(float)* 230 * 1024);
+    }
+    if (rowIndices != NULL){
+        free(rowIndices);// = (int*)malloc(sizeof(float)* 230 * 1024);
+    }
+    if (colIndices != NULL){
+        free(colIndices);// = (int*)malloc(sizeof(float)* 230 * 1024);
+    }
 }
 
 template<class ElemType>
