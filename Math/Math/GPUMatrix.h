@@ -71,19 +71,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray;   // without this, base members would require to use thi-> in GCC
     public:
         static const int MaxGpus = 8;  // support up to 8 GPUs
-		using BaseMatrix<ElemType>::m_computeDevice;
-		using BaseMatrix<ElemType>::m_elemSizeAllocated;
-		using BaseMatrix<ElemType>::m_matrixName;
-		using BaseMatrix<ElemType>::m_format;
-		using BaseMatrix<ElemType>::m_externalBuffer;
+        using BaseMatrix<ElemType>::m_computeDevice;
+        using BaseMatrix<ElemType>::m_elemSizeAllocated;
+        using BaseMatrix<ElemType>::m_matrixName;
+        using BaseMatrix<ElemType>::m_format;
+        using BaseMatrix<ElemType>::m_externalBuffer;
         using BaseMatrix<ElemType>::m_nz;
-		using BaseMatrix<ElemType>::OwnBuffer;
-		using BaseMatrix<ElemType>::GetNumElements;
-		using BaseMatrix<ElemType>::IsEmpty;
+        using BaseMatrix<ElemType>::OwnBuffer;
+        using BaseMatrix<ElemType>::GetNumElements;
+        using BaseMatrix<ElemType>::IsEmpty;
         using BaseMatrix<ElemType>::GetArray;
-		using BaseMatrix<ElemType>::GetNumRows;
-		using BaseMatrix<ElemType>::GetNumCols;
-		using BaseMatrix<ElemType>::SetMatrixName;
+        using BaseMatrix<ElemType>::GetNumRows;
+        using BaseMatrix<ElemType>::GetNumCols;
+        using BaseMatrix<ElemType>::SetMatrixName;
     private:
         static cublasHandle_t s_cuHandle[MaxGpus];
         static void *s_curandGenerator;
@@ -100,10 +100,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ZeroInit(int deviceId);
 
     public:
-        GPUMatrix(int deviceId=0);
-        GPUMatrix(FILE* f, const char * matrixName, int deviceId=0);
-        GPUMatrix(const size_t numRows, const size_t numCols, int deviceId=0);
-        GPUMatrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal,int deviceId=0);        
+        GPUMatrix(int deviceId);
+        GPUMatrix(FILE* f, const char * matrixName, int deviceId);
+        GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
+        GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, const size_t matrixFlags = matrixFlagNormal);
         GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom);    
         GPUMatrix<ElemType>& operator=(const GPUMatrix<ElemType>& deepCopyFrom);  //assignment operator, deep copy
         GPUMatrix(GPUMatrix<ElemType>&& moveFrom);
@@ -376,11 +376,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static bool AreEqual(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const ElemType threshold = 1e-8);
 
-        static GPUMatrix<ElemType> Ones(const size_t rows, const size_t cols);
-        static GPUMatrix<ElemType> Zeros(const size_t rows, const size_t cols);
-        static GPUMatrix<ElemType> Eye(const size_t rows);
-        static GPUMatrix<ElemType> RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed=USE_TIME_BASED_SEED);
-        static GPUMatrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed=USE_TIME_BASED_SEED);
+        static GPUMatrix<ElemType> Ones(const size_t rows, const size_t cols, int deviceId);
+        static GPUMatrix<ElemType> Zeros(const size_t rows, const size_t cols, int deviceId);
+        static GPUMatrix<ElemType> Eye(const size_t rows, int deviceId);
+        static GPUMatrix<ElemType> RandomUniform(const size_t rows, const size_t cols, int deviceId, const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
+        static GPUMatrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, int deviceId, const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
 
         static bool HasElement(const GPUMatrix<ElemType>& a, const ElemType v = 0.0);
 
