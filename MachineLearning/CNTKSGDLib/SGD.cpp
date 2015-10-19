@@ -1728,15 +1728,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     int SGD<ElemType>::SGDTrace(FILE *__restrict __stream, const char *__restrict __format, ...)
     {
+        int result = 0;
         if (m_traceLevel > 0)
         {
             va_list args;
             va_start(args, __format);
-            int result = vfprintf(__stream, __format, args);
+            result = vfprintf(__stream, __format, args);
             va_end(args);
-
-            return result;
         }
+        return result;
     }
 
     template<class ElemType>
