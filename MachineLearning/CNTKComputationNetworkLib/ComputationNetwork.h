@@ -585,16 +585,16 @@ public:
             m_recurrentInfo[i].m_completedEvaluate = false;
 
         // (left-over from refactoring: now we only verify that stuff is consistent)
-        for (auto node : allNodes)
+        for (const auto & node : allNodes)
             if (node->GetMBLayout())
                 node->VerifyNumParallelSequences(GetNumParallelSequences());
 
         // traverse all nodes in the pre-determined evaluation order
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+        for (auto & node : allNodes)
         {
             // --- first, evaluate all recurrence that hangs off this
 
-            RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);   // check if this node participates in a recurrent loop
+            RecurrentInfo * recInfo = FindInRecurrentLoops(node);   // check if this node participates in a recurrent loop
 
             if (recInfo && IsFuncValueOlderThanInputs(recInfo->m_recurrentNodesForForward) && !recInfo->m_completedEvaluate)
             {
@@ -605,32 +605,32 @@ public:
                 auto pMBLayout = recurrentNodes[0]->GetMBLayout();
 
                 // tell all that loop is about to commence
-                for (auto & nodeIter2 : recurrentNodes)
+                for (auto & node2 : recurrentNodes)
                 {
-                    if (!pMBLayout || nodeIter2->GetMBLayout() != pMBLayout)  // take the opportunity to check that layout is shared by all nodes in the loop
+                    if (!pMBLayout || node2->GetMBLayout() != pMBLayout)  // take the opportunity to check that layout is shared by all nodes in the loop
                         LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
-                                   nodeIter2->NodeName().c_str(), recurrentNodes[0]->NodeName().c_str());
-                    nodeIter2->UpdateFunctionMBSize(); // TODO: for sequence-to-sequence models we will need to be able to grow this step by step since size is unknown upfront
-                    nodeIter2->OnEvaluateBeginIteration();
+                                   node2->NodeName().c_str(), recurrentNodes[0]->NodeName().c_str());
+                    node2->UpdateFunctionMBSize(); // TODO: for sequence-to-sequence models we will need to be able to grow this step by step since size is unknown upfront
+                    node2->OnEvaluateBeginIteration();
                 }
 
                 //since we share memory we need to resize function value matrices correctly
                 for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
                 {
-                    (*nodeIter)->UpdateFunctionMBSize();
-                    (*nodeIter)->Validate(true);
+                    node->UpdateFunctionMBSize();
+                    node->Validate(true);
                 }
 
                 // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
                 FrameRangeIteration range(pMBLayout, recInfo->m_isForwardLoop ? -1 : +1);
                 for (auto t = range.begin(); t != range.end(); t++)
                 {
-                    for (auto nodeIter2 = recurrentNodes.begin(); nodeIter2 != recurrentNodes.end(); nodeIter2++)
+                    for (auto & node2 : recurrentNodes)
                     {
-                        (*nodeIter2)->EvaluateThisNode(t);
-                        if (IsNodeReqMultiSeqHandling(*nodeIter2))
-                            (*nodeIter2)->MaskMissingValuesColumnsToZero(t.t());  // TODO: This should take a FrameRange as well
-                        (*nodeIter2)->UpdateEvalTimeStamp();
+                        node2->EvaluateThisNode(t);
+                        if (IsNodeReqMultiSeqHandling(node2))
+                            node2->MaskMissingValuesColumnsToZero(t.t());  // TODO: This should take a FrameRange as well
+                        node2->UpdateEvalTimeStamp();
                     }
                 } 
 
@@ -643,28 +643,28 @@ public:
 
             // --- second, do the whole batch (unless it's already done)
 
-            else if (!recInfo && (*nodeIter)->IsFuncValueOlderThanInputs())
+            else if (!recInfo && node->IsFuncValueOlderThanInputs())
             {
 #ifdef DISPLAY_DEBUG
-                fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
+                fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 (node->NodeName())).c_str());
 #endif
 #if DUMPOUTPUT
-                fprintf(stderr,"Forward_%ls\n",(*nodeIter)->NodeName().c_str());
+                fprintf(stderr,"Forward_%ls\n",node->NodeName().c_str());
 #endif
                 // evaluate the node for all frames concurrently (map)
                 // we manage time stamp here so that derived classes don't need to worry about it
-                (*nodeIter)->UpdateFunctionMBSize();
-                if (!(*nodeIter)->IsLeaf() && !(*nodeIter)->RequiresPreCompute())
-                    (*nodeIter)->Validate(true);
-                (*nodeIter)->OnEvaluateBeginIteration();
-                (*nodeIter)->EvaluateThisNode(FrameRange());
-                if (IsNodeReqMultiSeqHandling(*nodeIter))
-                    (*nodeIter)->MaskMissingValuesColumnsToZero();
-                (*nodeIter)->OnEvaluateEndIteration();
-                (*nodeIter)->UpdateEvalTimeStamp();
+                node->UpdateFunctionMBSize();
+                if (!node->IsLeaf() && !node->RequiresPreCompute())
+                    node->Validate(true);
+                node->OnEvaluateBeginIteration();
+                node->EvaluateThisNode(FrameRange());
+                if (IsNodeReqMultiSeqHandling(node))
+                    node->MaskMissingValuesColumnsToZero();
+                node->OnEvaluateEndIteration();
+                node->UpdateEvalTimeStamp();
             }
             else
-                (*nodeIter)->OnEvaluateEndIteration();  // HACK to enforce NaN check
+                node->OnEvaluateEndIteration();  // HACK to enforce NaN check
         }
     }
     template<class NODESET>
@@ -757,9 +757,8 @@ public:
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
 
         // process nodes in pre-determined order
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
+        for (auto & node : allNodes)
         {
-            auto node = *nodeIter;
 #ifdef DISPLAY_DEBUG
             fprintf(stderr, "Compute Gradient For Node: %ls(%ls) Against Children\n", node->OperationName().c_str(), node->NodeName().c_str());
 #endif
@@ -779,7 +778,7 @@ public:
 #endif
             // --- first, perform recurrent loops if this node participates in one
 
-            RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);
+            RecurrentInfo * recInfo = FindInRecurrentLoops(node);
             if (recInfo)
             {
                 if (recInfo->m_completedGradient == false)
@@ -804,7 +803,7 @@ public:
             // --- second, do whole-batch operation if not recurrent
             else
             {
-                if (IsNodeReqMultiSeqHandling(*nodeIter))
+                if (IsNodeReqMultiSeqHandling(node))
                 {
                     // batch is done only for feed-forward nodes
                     if (node->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
