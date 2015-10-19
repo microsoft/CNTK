@@ -555,6 +555,55 @@ public:
 
     bool IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const;
 
+    // GetMaxMBSize - Get the maximum minibatch size that will be seen in a training run
+    // returns the result from PropagateActualMiniBatchSize(). Note DetermineActualMBSizeFromFeatures() also exists but returns a value derived from the inputs dimensions
+    size_t GetMaxMBSize() { return m_actualMBSize; }
+
+#if 0
+    // always called in this pattern:
+    evalnet->SetActualMiniBatchSizeFromFeatures();
+    dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
+    evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
+    // well... most of the time. Not in TrainOneEpoch().
+    void SetActualNumParallelSequencesInEachRecurentIteration(const size_t aSize)
+    {
+        m_nbrSlicesInEachRecurrentIteration() = aSize;   // TODO: this has to go
+    }
+#endif
+    size_t GetNumParallelSequences() const
+    {
+        return m_pMBLayout->GetNumParallelSequences();
+    }
+    // temporary function: Call this after CopyMBLayoutTo(evalnet->GetMBLayoutPtr()) to ensure everything is consistent as expected
+    // It is actually called after every CopyMBLayoutTo() in the entire system (except for multi-reader CopyMBLayoutTo() itself).
+    // Remove this function after a few weeks of not firing.
+    void VerifyActualNumParallelSequences(const size_t aSize)
+    {
+        if (GetNumParallelSequences() != aSize)
+            LogicError("VerifyActualNumParallelSequences: mismatching MB size in MBLayout");
+    }
+
+    // propagate the features' MB size to all nodes of the network
+    // TODO: This function should go. Resizing is now part of Validate() and EvaluateThisNode().
+    size_t SetActualMiniBatchSizeFromFeatures()
+    {
+        m_actualMBSize = DetermineActualMBSizeFromFeatures();
+
+        // assume that all nodes in recurrent loops need to be reset to aSize minibatch size, so need to reset the following
+        for (int i = 0; i < m_recurrentInfo.size(); i++)
+        {
+            m_recurrentInfo[i].m_completedEvaluate = false;
+            m_recurrentInfo[i].m_completedGradient = false;
+        }
+
+        // resize function values and gradients of everything in m_recurrentInfo
+        for (int i = 0; i < m_recurrentInfo.size(); i++)
+            for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
+                nodeIter->UpdateFunctionMBSize(m_actualMBSize);
+
+        return m_actualMBSize;
+    }
+
     // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
     // TODO: pass a set of nodes instead of only one
     // TODO: rename to ForwardProp()? To make it very clear?
@@ -674,86 +723,41 @@ public:
             Evaluate(node);
     }
 
-    // propagate the features' MB size to all nodes of the network
-    // TODO: This function should go. Resizing is now part of Validate() and EvaluateThisNode().
-    size_t SetActualMiniBatchSizeFromFeatures()
-    {
-        m_actualMBSize = DetermineActualMBSizeFromFeatures();
-
-        // assume that all nodes in recurrent loops need to be reset to aSize minibatch size, so need to reset the following
-        for (int i = 0; i < m_recurrentInfo.size(); i++)
-        {
-            m_recurrentInfo[i].m_completedEvaluate = false;
-            m_recurrentInfo[i].m_completedGradient = false;
-        }
-
-        // resize function values and gradients of everything in m_recurrentInfo
-        for (int i = 0; i < m_recurrentInfo.size(); i++)
-            for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
-                nodeIter->UpdateFunctionMBSize(m_actualMBSize);
-
-        return m_actualMBSize;
-    }
-
-    // GetMaxMBSize - Get the maximum minibatch size that will be seen in a training run
-    // returns the result from PropagateActualMiniBatchSize(). Note DetermineActualMBSizeFromFeatures() also exists but returns a value derived from the inputs dimensions
-    size_t GetMaxMBSize() { return m_actualMBSize; }
-
-#if 0
-    // always called in this pattern:
-    evalnet->SetActualMiniBatchSizeFromFeatures();
-    dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
-    evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
-    // well... most of the time. Not in TrainOneEpoch().
-    void SetActualNumParallelSequencesInEachRecurentIteration(const size_t aSize)
-    {
-        m_nbrSlicesInEachRecurrentIteration() = aSize;   // TODO: this has to go
-    }
-#endif
-    size_t GetNumParallelSequences() const
-    {
-        return m_pMBLayout->GetNumParallelSequences();
-    }
-    // temporary function: Call this after CopyMBLayoutTo(evalnet->GetMBLayoutPtr()) to ensure everything is consistent as expected
-    // It is actually called after every CopyMBLayoutTo() in the entire system (except for multi-reader CopyMBLayoutTo() itself).
-    // Remove this function after a few weeks of not firing.
-    void VerifyActualNumParallelSequences(const size_t aSize)
-    {
-        if (GetNumParallelSequences() != aSize)
-            LogicError("VerifyActualNumParallelSequences: mismatching MB size in MBLayout");
-    }
-
-
-
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
-    // TODO: pass a set of nodes instead of only one
+    // TODO: pass a set of nodes instead of only one?
+    // TODO: remove Evaluate() from here, instead call it at call site, and in here merely check whether everything is computed already
     template<class ElemType>
     void ComputeGradient(const ComputationNodeBasePtr rootNode,
-        bool bResetToOne = true,  /// true if reset the gradient of rootnode to 1.0
-        const Matrix<ElemType>* rootGradientInitValue = nullptr,
-        bool bClearGradient = true,
+        bool bResetToOne = true,                                    // true if reset the gradient of rootnode to 1.0
+        const Matrix<ElemType>* rootGradientInitValue = nullptr,    // if given then this is the starting gradient from the top
+        bool bClearGradient = true,                                 // if false then gradients are not cleared  --TODO: When does that happen?
         bool resetTimeStampAfterComputation = false
         )
     {
-        //run forward pass first
-        // TODO: feels out of place; can't we stick for ForwardProp()/BackwardProp()?
+        // run forward pass first
+        // The actual call pattern is
+        //  - Evaluate() for eval nodes
+        //  - ComputeGradient() for the training criterion
+        // I.e. we must call Evaluate() inside here as well, but it will typically only evaluate the training criterion bits because the eval nodes already require most of the network to be computed.
         Evaluate(rootNode);
 
         // TODO: comment what the purpose/condition of this is
         if (bClearGradient)
             ClearGradientForAllNodes(rootNode);
 
-        //run backward pass
+        // run backprop pass
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
         // TODO: do a runtime check for float vs. double. Also use the Is/AsPtr macros
+        // The normal case is with the top root with a scalar gradient value of 1.0. This assumes a single and closure network. 
+        // Allowing to not initialize to 1 allows network to be open to accept gradients from somewhere.
+        // TODO: aren't these two mechanisms mutually exclusive?
         if (bResetToOne)
         {
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().Resize(1, 1);   // TODO: make this a function of ComputationNode; but first need to get rid of Matrix<ElemType> here, or make it a local template parameter
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(1);
         }
-
-        if (rootGradientInitValue != nullptr)
+        if (rootGradientInitValue != nullptr)   // user-specified gradient to start with
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
 
         // process nodes in pre-determined order

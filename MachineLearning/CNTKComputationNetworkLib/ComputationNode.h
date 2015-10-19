@@ -42,7 +42,7 @@
 #define CNTK_MODEL_VERSION_2 2
 #define CURRENT_CNTK_MODEL_VERSION 2
 
-#undef TRACK_GAP_NANS  // if defined then initialize layout gaps to NaN and do NaN checks
+#define TRACK_GAP_NANS  // if defined then initialize layout gaps to NaN and do NaN checks
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -511,14 +511,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartial(inputIndex, FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
         }
         virtual void ComputeGradientForChildren(const FrameRange & frameRange) = 0;
+        virtual void ClearGradientForChildren() = 0;
 
         // masking
         // overridden by <ElemType> variant only
         // TODO: we need a section for those; and ComputationNode<> should mark those as 'final'
         virtual void MaskMissingValuesColumnsToZero() = 0;
         virtual void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
+        virtual void MaskMissingValuesColumnsToZero(const FrameRange &) = 0;
         virtual void MaskMissingGradientColumnsToZero() = 0;
         virtual void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
+        virtual void MaskMissingGradientColumnsToZero(const FrameRange &) = 0;
 
         // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
         // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNetworkNode, LSTMNode)
@@ -714,12 +717,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        //virtual void ClearGradientForChildren(const int /*iActMiniBatchSize*/) = 0;
-        virtual void ClearGradientForChildren() = 0;
-        //virtual void LazyZeroGradient() = 0;
-
-        void MarkGradientInitialized(const bool isInitialized)  { m_gradientInitialized = isInitialized; }
-        bool IsGradientInitialized() const { return m_gradientInitialized; }
 
         typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
         // [1/13/2015 erw] add to enumerate all the edges 
@@ -1025,6 +1022,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note that existing 'reduce' style operations--the criterion nodes and gradient computation--already call this.  --BUGBUG: They can't, wrong layout!
         // Warning: The layout used here must match the matrix. E.g. don't pass a child's matrix from a criterion node (use Inputs(x)->MaskMissing{Values,Gradient}ColumnsToZero() instead.
     private:
+        // TODO: change to FrameRange
         static bool MaskMissingColumnsTo(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, size_t timeIdxInSeq, size_t seqIndex, ElemType val)
         {
             bool foundLabelOrFeatureMissing = false;    // return value: set to true if either nolabel or feature missing is processed
@@ -1071,22 +1069,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return MaskMissingColumnsToZero(matrixToBeMasked, m_pMBLayout, timeIdxInSeq, seqIndex);
         }
 
-        /*implement*/void MaskMissingValuesColumnsToZero()
+        /*implement*/void MaskMissingValuesColumnsToZero() override final
         {
             MaskMissingColumnsToZero(*m_functionValues);
         }
-        /*implement*/void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) // TODO: change to FrameRange as well
+        /*implement*/void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) override final // TODO: change to FrameRange as well
         {
             MaskMissingColumnsToZero(*m_functionValues, timeIdxInSeq);
         }
-        /*implement*/void MaskMissingGradientColumnsToZero()
+        /*implement*/void MaskMissingValuesColumnsToZero(const FrameRange & frameRange) override final // TODO: change to FrameRange as well
+        {
+            // TODO: propagate FrameRange all the way down
+            if (frameRange.IsAllFrames()) MaskMissingValuesColumnsToZero();
+            else                          MaskMissingValuesColumnsToZero(frameRange.t());
+        }
+        /*implement*/void MaskMissingGradientColumnsToZero() override final
         {
             MaskMissingColumnsToZero(*m_gradientValues);
         }
         // TODO: use a FrameRange here as well, then unify with above
-        /*implement*/void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq)
+        /*implement*/void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq) override final
         {
             MaskMissingColumnsToZero(*m_gradientValues, timeIdxInSeq);
+        }
+        /*implement*/void MaskMissingGradientColumnsToZero(const FrameRange & frameRange) override final // TODO: change to FrameRange as well
+        {
+            // TODO: propagate FrameRange all the way down
+            if (frameRange.IsAllFrames()) MaskMissingGradientColumnsToZero();
+            else                          MaskMissingGradientColumnsToZero(frameRange.t());
         }
 
         // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
@@ -1354,9 +1364,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void /*ComputationNodeBase::*/ClearGradientForChildren() override   // TODO: bad naming--this just clears the lazy flags, whereas LazyZeroGradient() actually clears the values
         {
-            for (size_t i=0; i<m_children.size(); i++)
-                Inputs(i)->MarkGradientInitialized(false);
+            for (size_t i = 0; i < m_children.size(); i++)
+                Inputs(i)->m_gradientInitialized = false;
         }
+
         // lazy resetting of gradient
         // TODO: We can inline this once the Resize etc. below has been reduced to a single Matrix call
         void LazyZeroGradient()

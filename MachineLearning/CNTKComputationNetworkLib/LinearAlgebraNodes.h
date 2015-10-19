@@ -473,6 +473,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartial(const size_t inputIndex)
         {
+#if 1
+            ComputeInputPartial(inputIndex, FrameRange());
+#else
             if (inputIndex > 1)
                 InvalidArgument("ScaleNode operation only takes two inputs.");
 
@@ -485,30 +488,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
             }
+#endif
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (inputIndex > 1)
-                InvalidArgument("ScaleNode operation only takes two inputs.");
-
-            //left Node must be a scalar
-            if (inputIndex == 0)  //left derivative
+            // remember that left node is a scalar
+            if (inputIndex == 0)        // left derivative
             {
-                Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-                ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
+                MaskMissingGradientColumnsToZero(frameRange);           // neutralize gaps with zeroes for subsequent reduction operation
+                Inputs(1)->MaskMissingValuesColumnsToZero(frameRange);
+                Inputs(0)->GradientValues() += Matrix<ElemType>::InnerProductOfMatrices(GradientSlice(frameRange), Inputs(1)->ValueSlice(frameRange)); // element-wise product summed up over all
             }
-            else
+            else if (inputIndex == 1)   // right derivative
             {
-                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-                ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
+                Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange);
+                Matrix<ElemType>::ScaleAndAdd(Inputs(0)->FunctionValues().Get00Element(), GradientSlice(frameRange), sliceInput1Grad);
             }
         }
 
+#if 0
         /*TODO: merge with call site*/void ComputeInputPartialLeft(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
         {
             inputGradientValues += Matrix<ElemType>::InnerProductOfMatrices(gradientValues, inputFunctionValues);
@@ -518,26 +517,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Matrix<ElemType>::ScaleAndAdd(inputFunctionValues.Get00Element(), gradientValues, inputGradientValues);
         }
-
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
-        {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
-        }
+#endif
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-            EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
-        }
-
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)  
-        {
-            functionValues.AssignProductOf(input0.Get00Element(), input1);
+            ValueSlice(frameRange).AssignProductOf(Inputs(0)->FunctionValues().Get00Element(), Inputs(1)->ValueSlice(frameRange));
 #if NANCHECK
-            functionValues.HasNan("Scale");
+            ValueSlice(frameRange).HasNan("Scale");
 #endif
         }
 
