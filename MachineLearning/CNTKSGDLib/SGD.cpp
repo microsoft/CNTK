@@ -2047,7 +2047,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing && m_progressTracingTimer.ElapsedSeconds() > 10)
                     {
                         // this must go to stdout, not stderr
-                        float epochProg = ((100.0 * (float) (m_fullEpochsOffset + epochNumber)) / (float) m_fullTotalMaxEpochs);
+                        float epochProg = ((100.0f * (float) (m_fullEpochsOffset + epochNumber)) / (float) m_fullTotalMaxEpochs);
                         float mbProg = ((float) numMBsRun / ((float) m_maxComputedEpochSize / (float) tunedMBSize));
                         printf("PROGRESS: %.2f%%\n", epochProg + mbProg);
                         wasProgressPrinted = true;
@@ -2153,7 +2153,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // with parallelization, we have them in regular variables
             epochCriterion /= float(totalEpochSamples);
             for (size_t i = 0; i< epochEvalErrors.size(); i++)
+            {
                 epochEvalErrors[i] /= totalEpochSamples;
+            }
         }
         else
         {
@@ -2163,7 +2165,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             epochCriterion = localEpochCriterion.Get00Element();
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
+            {
                 epochEvalErrors[i] = localEpochEvalErrors(0, i);
+            }
         }
 
         // in case of model averaging, do one more final aggregation of criteria
@@ -2194,7 +2198,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(learnParamsGradients, numEvalNodes, m_numGradientBits, g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, traceLevel);
+                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(learnParamsGradients, numEvalNodes, m_numGradientBits, g_mpi,
+                                                                          m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, traceLevel);
             }
 
             if (m_gradHeader == nullptr)
@@ -2378,8 +2383,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (adpType == GradientsUpdateType::RmsProp)
         {
             double aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType)sgd->m_rpi.gamma,
-                                                              (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max,
-                                                              (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min, needAveMultiplier);
+                                                            (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max,
+                                                            (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min, needAveMultiplier);
             Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
         }
 
@@ -2673,8 +2678,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 double eGradNum = ((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));
                 double threshold = pow(10.0,
                                        max(0.0,
-                                                        ceil(log10(min(fabs(eGradErr),
-                                                    fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
+                                           ceil(log10(min(fabs(eGradErr),
+                                                          fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
                 double diff = fabs(eGradErr - eGradNum);
                 bool wrong = (std::isnan(diff) || diff > threshold);
                 if (wrong)
@@ -2689,7 +2694,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         return errMsgs.size() == 0;
-        }
+    }
 
 template class SGD<float>;
 template class SGD<double>;
