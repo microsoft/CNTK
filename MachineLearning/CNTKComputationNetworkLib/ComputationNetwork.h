@@ -615,10 +615,10 @@ public:
                 }
 
                 //since we share memory we need to resize function value matrices correctly
-                for (auto nodeIter = recurrentNodes.begin(); nodeIter != recurrentNodes.end(); nodeIter++)
+                for (auto & node2 : recurrentNodes)
                 {
-                    node->UpdateFunctionMBSize();
-                    node->Validate(true);
+                    node2->UpdateFunctionMBSize();
+                    node2->Validate(true);
                 }
 
                 // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
