@@ -57,18 +57,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), *m_leftMinusRight, shared_from_this());
-        }
-
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& leftMinusRight, ComputationNodePtr curNode)  
-        {
-            leftMinusRight.AssignDifferenceOf(inputFunctionValues0, inputFunctionValues1);
-            curNode->MaskMissingColumnsToZero(leftMinusRight, Inputs(0)->GetMBLayout());    // we are fine since it will only be called with full minibatch.
-            ElemType v = leftMinusRight.FrobeniusNorm();
+            m_leftMinusRight->AssignDifferenceOf(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+            MaskMissingColumnsToZero(*m_leftMinusRight, Inputs(0)->GetMBLayout());    // we are fine since it will only be called with full minibatch.
+            ElemType v = m_leftMinusRight->FrobeniusNorm();
             VerifySize(1,1);
-            functionValues.SetValue(v*v/2);
+            FunctionValues().SetValue(v*v / 2);
 #if NANCHECK
-            functionValues.HasNan("SquareError");
+            FunctionValues().HasNan("SquareError");
 #endif
         }
 
@@ -313,17 +308,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //-sum(left_i * log(right_i))
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), *m_logOfRight, shared_from_this());
-        }
-
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, 
-            Matrix<ElemType>& logOfRight, ComputationNodePtr curNode)
-        {
-            logOfRight.SetValue(inputFunctionValues1);
-            logOfRight.InplaceLog();
-            curNode->MaskMissingColumnsToZero(logOfRight, Inputs(1)->GetMBLayout());
-            functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logOfRight);
-            functionValues*=(-1);
+            m_logOfRight->SetValue(Inputs(1)->FunctionValues());
+            m_logOfRight->InplaceLog();
+            MaskMissingColumnsToZero(*m_logOfRight, Inputs(1)->GetMBLayout());
+            Inputs(0)->MaskMissingValuesColumnsToZero();
+            FunctionValues().AssignInnerProductOfMatrices(Inputs(0)->FunctionValues(), *m_logOfRight);
+            FunctionValues() *= -1;
 #if NANCHECK
             functionValues.HasNan("CrossEntropy");
 #endif
@@ -550,6 +540,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     /// NoiseContrastiveEstimationNode (labels, input, inputWeights, biasWeights)
+    // BUGBUG: This node has not been converted to memshare conventions.
     // -----------------------------------------------------------------------
 
     enum NCEEvalMode
@@ -615,6 +606,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(inputIndex)->GradientValues().AssignNCEDerivative(m_ncePrediction, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), inputIndex);
         }
 
+#if 0   // TODO: delete this. Seems copy-paste leftover?
         /*TODO: merge with call site*/void ComputeInputPartialRight(const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
             Matrix<ElemType>::MultiplyAndAdd(inputFunctionValues, false, gradientValues, true, inputGradientValues);
@@ -630,13 +622,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::MinusOneAt(inputGradientValues, y_t);
             Matrix<ElemType>::Scale(gradientValues, inputGradientValues);
         }
+#endif
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
         {
+            if (Inputs(0)->HasMBLayout() && Inputs(0)->GetMBLayout()->HasGaps())
+                LogicError("%ls %ls operation does not handle multiple parallel sequences with gaps correctly. Contact fseide@microsoft.com if you have a need and a test case.", NodeName().c_str(), OperationName().c_str());
+            //Inputs(0)->MaskMissingValuesColumnsToZero();
             int positive = 0, negative = 0;
             if (Inputs(0)->GetNumRows() == 1)
             {
-                for (int i = 0; i < Inputs(0)->GetNumCols(); i++)
+                for (int i = 0; i < Inputs(0)->GetNumCols(); i++)   // BUGBUG: Loops must be over frames, not columns. Columns may contain gaps.
                 {
                     if (Inputs(0)->FunctionValues()(0, i) > 0)
                         positive++;
@@ -651,14 +647,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_logSoftmax.AssignProductOf(Inputs(1)->FunctionValues(), true, Inputs(2)->FunctionValues(), false);
                 m_logSoftmax += Inputs(3)->FunctionValues();
                 m_logSoftmax.InplaceLogSoftmax(false);
+                MaskMissingColumnsToZero(m_logSoftmax, Inputs(1)->GetMBLayout());  // TODO: is this the right way to neutralize gaps?
                 FunctionValues().AssignSoftmaxSum(Inputs(0)->FunctionValues(), m_logSoftmax);
             }
             else if (m_evalMode == NCEEvalMode::Unnormalized || (Inputs(0)->GetNumRows() == 1 && negative > 0))
             {
+                // TODO: are we treating gaps correctly here?
                 FunctionValues().AssignNceUnnormalizedEval(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues());
             }
             else
             {
+                // TODO: are we treating gaps correctly here?
                 // training criterion uses NCE
                 //likelihood                                         samples+probs                        hidden                       embedding            bias
                 FunctionValues().AssignNoiseContrastiveEstimation(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(3)->FunctionValues(), m_ncePrediction);
@@ -1391,17 +1390,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
-        }
-
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0)  
-        {
-            if (inputFunctionValues0.GetNumRows() != 1 || inputFunctionValues0.GetNumCols() != 1)
-                LogicError("DummyCriterionNode expects first input has dimension (1, 1).\n");
-            functionValues.Resize(1, 1);
-            functionValues.SetValue(inputFunctionValues0.Get00Element());
+            if (Inputs(0)->GetNumRows() != 1 || Inputs(0)->GetNumCols() != 1 || Inputs(0)->HasMBLayout())
+                LogicError("%ls %ls operation expects first input to be a (1 x 1) matrix", NodeName().c_str(), OperationName().c_str());
+            FunctionValues().VerifySize(1, 1);
+            FunctionValues().SetValue(Inputs(0)->FunctionValues().Get00Element());
 #if NANCHECK
-            functionValues.HasNan("DummyCriterionNode");
+            FunctionValues().HasNan("DummyCriterionNode");
 #endif
         }
 
@@ -1446,9 +1440,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     /// SequenceWithSoftmaxNode (label, prediction, loglikelihood)
+    // word-lattice based sequence training criterion
+    // BUGBUG: Not yet converted to memshare conventions.
     // -----------------------------------------------------------------------
 
-    // discriminative sequence training criterion
     template<class ElemType>
     class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
     {
@@ -1457,7 +1452,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
-            m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_maskOfFramedrop(deviceId), m_gammaCalcInitialized(false)
+            m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_framesDroppedMask(deviceId), m_gammaCalcInitialized(false)
         {
         }
         
@@ -1473,7 +1468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (inputIndex == 1)
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_gammaFromLattice,
-                    m_hsmoothingWeight, m_frameDropThresh);
+                    m_fsSmoothingWeight, m_frameDropThreshold);
                 Inputs(inputIndex)->MaskMissingGradientColumnsToZero();
             }
             else if (inputIndex == 2)
@@ -1525,40 +1520,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -sum(left_i * log(softmax_i(right)))
         virtual void EvaluateThisNodeNonLooping()
         {
-            // Initialize m_GammaCal
+            // Initialize m_gammaCalculator
+            // TODO: Would this lend itself to a unique_ptr instead of the init flag?
             if (!m_gammaCalcInitialized)
             {
                 if (m_hmm.hmms.size() == 0)
                 {
                     LogicError("SequenceWithSoftmaxNode criterion evaluation requires HMM states to be set.");
                 }
-                m_GammaCal.init(m_hmm, m_deviceId);
+                m_gammaCalculator.init(m_hmm, m_deviceId);
                 m_gammaCalcInitialized = true;
             }
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), m_softmaxOfRight, m_logSoftmaxOfRight, m_gammaFromLattice, m_lattice, m_GammaCal,
-                m_uids, m_boundaries,  Inputs(0)->GetMBLayout(), m_extrauttmap, m_doreferencealign);
-        }
+            //softmax
+            m_logSoftmaxOfRight.AssignLogSoftmaxOf(Inputs(1)->FunctionValues()/*prediction*/, true);
+            m_softmaxOfRight.SetValue(m_logSoftmaxOfRight);
+            m_softmaxOfRight.InplaceExp();
 
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, Matrix<ElemType>& inputFunctionValues0, Matrix<ElemType>& inputFunctionValues1,
-            const Matrix<ElemType>& inputFunctionValues2, Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& gammafromlattice,
-            std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> &lattices, msra::lattices::GammaCalculation<ElemType> &GammaCal, std::vector<size_t> & uids,
-            std::vector<size_t> & boundaries,  MBLayoutPtr pMBLayout, std::vector<size_t> &extrauttmap, bool doReferenceAlign)
-        {
-            //softmax 
-            logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
-            softmaxOfRight.SetValue(logSoftmaxOfRight);
-            softmaxOfRight.InplaceExp();
-
-            size_t sequenceNum = Inputs(1)->GetNumParallelSequences();
-            gammafromlattice.SwitchToMatrixType(softmaxOfRight.GetMatrixType(), softmaxOfRight.GetFormat(), false);
-            gammafromlattice.Resize(softmaxOfRight.GetNumRows(), softmaxOfRight.GetNumCols());
-            GammaCal.calgammaformb(functionValues, lattices, inputFunctionValues2, inputFunctionValues0, gammafromlattice, uids, boundaries, sequenceNum, pMBLayout, extrauttmap, doReferenceAlign);
+            m_gammaFromLattice.SwitchToMatrixType(m_softmaxOfRight.GetMatrixType(), m_softmaxOfRight.GetFormat(), false);
+            m_gammaFromLattice.Resize(m_softmaxOfRight.GetNumRows(), m_softmaxOfRight.GetNumCols());
+            m_gammaCalculator.calgammaformb(FunctionValues(), m_lattices, Inputs(2)->FunctionValues()/*log LLs*/, Inputs(0)->FunctionValues()/*labels*/, m_gammaFromLattice, m_uids, m_boundaries, Inputs(1)->GetNumParallelSequences(), Inputs(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
             
 #if NANCHECK
-            functionValues.HasNan("SequenceWithSoftmaxNode");
+            FunctionValues().HasNan("SequenceWithSoftmaxNode");
 #endif
 #if DUMPOUTPUT
-            functionValues.Print("SequenceWithSoftmaxNode");
+            FunctionValues().Print("SequenceWithSoftmaxNode");
 #endif
         }
 
@@ -1585,7 +1571,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_logSoftmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             m_softmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             m_gammaFromLattice.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-            m_maskOfFramedrop.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_framesDroppedMask.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             m_gammatime = 0;
             m_partialtime = 0;
         }
@@ -1603,7 +1589,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_logSoftmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace( deviceId, true);
             m_softmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace( deviceId, true);
             m_gammaFromLattice.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_maskOfFramedrop.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);            
+            m_framesDroppedMask.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);            
         }
 
         virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1617,17 +1603,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_logSoftmaxOfRight = m_logSoftmaxOfRight;
                 node->m_softmaxOfRight = m_softmaxOfRight;
                 node->m_gammaFromLattice = m_gammaFromLattice;
-                node->m_maskOfFramedrop = m_maskOfFramedrop;
-                node->m_hsmoothingWeight = m_hsmoothingWeight;
-                node->m_frameDropThresh = m_frameDropThresh;
-                node->m_doreferencealign = m_doreferencealign;
+                node->m_framesDroppedMask = m_framesDroppedMask;
+                node->m_fsSmoothingWeight = m_fsSmoothingWeight;
+                node->m_frameDropThreshold = m_frameDropThreshold;
+                node->m_doReferenceAlignment = m_doReferenceAlignment;
             }
         }
 
         // TODO: method names should be CamelCase
         std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> * getLatticePtr()
         {
-            return &m_lattice;
+            return &m_lattices;
         }
 
         std::vector<size_t> * getuidprt()
@@ -1641,25 +1627,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         std::vector<size_t> * getextrauttmap()
         {
-            return &m_extrauttmap;
+            return &m_extraUttMap;
         }
         msra::asr::simplesenonehmm *gethmm()
         {
             return &m_hmm;
         }
 
-        void SetSmoothWeight(double hsmoothingWeight)
+        void SetSmoothWeight(double fsSmoothingWeight)
         {
-            m_hsmoothingWeight = hsmoothingWeight;
+            m_fsSmoothingWeight = fsSmoothingWeight;
         }
         void SetFrameDropThresh(double frameDropThresh)
         {
-            m_frameDropThresh = frameDropThresh;
+            m_frameDropThreshold = frameDropThresh;
         }
 
         void SetReferenceAlign(const bool doreferencealign)
         {
-            m_doreferencealign = doreferencealign;
+            m_doReferenceAlignment = doreferencealign;
         }
 
         void gettime(unsigned long long &gammatime, unsigned long long &partialtime)
@@ -1672,19 +1658,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType> m_logSoftmaxOfRight;
         Matrix<ElemType> m_softmaxOfRight;
         Matrix<ElemType> m_gammaFromLattice;
-        Matrix<ElemType> m_maskOfFramedrop;
-        double m_frameDropThresh;
-        double m_hsmoothingWeight;
-        bool m_doreferencealign;
-        std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> m_lattice;
+        Matrix<ElemType> m_framesDroppedMask;
+        double m_frameDropThreshold;
+        double m_fsSmoothingWeight;         // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
+        bool m_doReferenceAlignment;
+        std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> m_lattices;
         msra::asr::simplesenonehmm m_hmm;
-        msra::lattices::GammaCalculation<ElemType> m_GammaCal;
+        msra::lattices::GammaCalculation<ElemType> m_gammaCalculator;
         bool m_gammaCalcInitialized;
         std::vector<size_t> m_uids;
         std::vector<size_t> m_boundaries;
-        std::vector<size_t> m_extrauttmap;
+        std::vector<size_t> m_extraUttMap;
 
-        unsigned long long m_gammatime;
+        unsigned long long m_gammatime;     // TODO: what are these? Not even the context can be guessed from these names.
         unsigned long long m_partialtime;
     };
 

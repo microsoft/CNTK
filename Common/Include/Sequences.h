@@ -178,6 +178,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return n;
         }
 
+        // test function for those pieces of the code that cannot handle gaps
+        bool HasGaps() const
+        {
+            if (!IsAllNone())
+                for (size_t t = 0; t < GetNumTimeSteps(); t++)
+                    if (Is(t, MinibatchPackingFlags::NoInput))
+                        return true;
+            return false;
+        }
+
     private:
         size_t m_numTimeSteps;
         size_t m_numParallelSequences;
