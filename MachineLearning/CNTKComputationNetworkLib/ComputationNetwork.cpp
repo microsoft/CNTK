@@ -23,6 +23,19 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // MatrixPool methods
+    template<>
+    vector<shared_ptr<Matrix<float>>>& MatrixPool::GetReleasedMatrices<float>()
+    {
+        return m_releasedFloatMatrices;
+    }
+
+    template<>
+    vector<shared_ptr<Matrix<double>>>& MatrixPool::GetReleasedMatrices<double>()
+    {
+        return m_releasedDoubleMatrices;
+    }
+
     // -----------------------------------------------------------------------
     // construction
     // -----------------------------------------------------------------------
