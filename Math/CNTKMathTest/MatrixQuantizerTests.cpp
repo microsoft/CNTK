@@ -236,7 +236,7 @@ namespace CNTKMathTest
             short deviceId,
             bool zeroThresholdFor1Bit)
         {
-            auto verifyAllZerosFunc = [](Matrix<ElemType>& matrix) {
+            auto verifyAllZerosFunc = [](const Matrix<ElemType>& matrix) {
                 ElemType* cpuMatrix = matrix.CopyToArray();
                 size_t numMatrixElems = matrix.GetNumElements();
                 for (size_t i = 0; i < numMatrixElems; ++i)
@@ -254,7 +254,7 @@ namespace CNTKMathTest
             }
 
             Matrix<ElemType> inMatrix(numRows, numCols, deviceId);
-            auto quantizer = MatrixQuantizer<ElemType>::CreateMatrixQuantizer(inMatrix);
+            auto quantizer = MatrixQuantizer<ElemType>::CreateMatrixQuantizer(numRows, numCols, deviceId);
 
             // Verify that the initial residue is comprised of all zeros
             verifyAllZerosFunc(quantizer->GetResidualMatrix());
@@ -294,7 +294,7 @@ namespace CNTKMathTest
 #endif
 
                 QuantizedMatrix<ElemType> tempCPUQuantizationBuffer(numRows, numCols, numBits, CPUDEVICE, allocator);
-                quantizer->QuantizeAsync(tempCPUQuantizationBuffer, zeroThresholdFor1Bit);
+                quantizer->QuantizeAsync(inMatrix, tempCPUQuantizationBuffer, zeroThresholdFor1Bit);
                 quantizer->WaitQuantizeAsyncDone();
 
 #ifdef DEBUG_OUTPUT_PATH
