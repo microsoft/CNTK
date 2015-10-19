@@ -793,7 +793,7 @@ public:
                             (*nodeIter2)->VerifyNumParallelSequences(GetNumParallelSequences());
                             if (IsNodeReqMultiSeqHandling(*nodeIter2))
                                 (*nodeIter2)->MaskMissingGradientColumnsToZero(t.t());   // TODO: should accept a FrameRange as well
-                            (*nodeIter2)->ComputeGradientForChildren(t.t());             // TODO: should accept a FrameRange as well
+                            (*nodeIter2)->ComputeGradientForChildren(t);
                         }
                     }
                     recInfo->m_completedGradient = true;
@@ -810,7 +810,7 @@ public:
                         LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
                     node->MaskMissingGradientColumnsToZero();
                 }
-                node->ComputeGradientForChildren();
+                node->ComputeGradientForChildren(FrameRange());
             }
         }
 
