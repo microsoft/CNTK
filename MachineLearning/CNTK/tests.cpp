@@ -71,13 +71,13 @@ void TestBing(const ConfigParameters& config)
 #endif
 
 template <typename ElemType> void DoEval(const ConfigParameters& config);
-template <typename ElemType> void DoTrain(const ConfigParameters& config);
+template <typename ElemType> void DoTrain(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs);
 
 template <typename ElemType>
 void TestMNist(const ConfigParameters& configBase)
 {
     ConfigParameters config (configBase("mnistTrain"));
-    DoTrain<ElemType>(config);
+    DoTrain<ElemType>(config, 1, 1);
     ConfigParameters configTest (configBase("mnistTest"));
     DoEval<ElemType>(configTest);
 }
@@ -86,7 +86,7 @@ template <typename ElemType>
 void TestSpeech(const ConfigParameters& configBase)
 {
     ConfigParameters config (configBase("speechTrain"));
-    DoTrain<ElemType>(config);
+    DoTrain<ElemType>(config, 1, 1);
     ConfigParameters configTest (configBase("speechTest"));
     DoEval<ElemType>(configTest);
 }
