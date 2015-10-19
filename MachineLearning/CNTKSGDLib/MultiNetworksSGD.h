@@ -83,7 +83,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         list<pair<ComputationNodeBasePtr, ComputationNodeBasePtr>> m_lst_pair_encoder_decoder_nodes;
 
     public:
-        MultiNetworksSGD(const ConfigParameters& configSGD) : SGDBase(configSGD)
+        MultiNetworksSGD(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs) : SGDBase(configSGD, fullEpochsOffset, fullTotalMaxEpochs)
         {
         }
 
