@@ -24,18 +24,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         template<class ElemType>
         vector<shared_ptr<Matrix<ElemType>>>& GetReleasedMatrices();
 
-        template<>
-        vector<shared_ptr<Matrix<float>>>& GetReleasedMatrices<float>()
-        {
-            return m_releasedFloatMatrices;
-        }
-
-        template<>
-        vector<shared_ptr<Matrix<double>>>& GetReleasedMatrices<double>()
-        {
-            return m_releasedDoubleMatrices;
-        }
-
     public:
                 //release here means the matrix can be put back and shared by others
         template<class ElemType>
