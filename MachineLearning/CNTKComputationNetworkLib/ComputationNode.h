@@ -1263,7 +1263,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::OnEvaluateEndIteration();
 #if 0       // NaN check
             MaskMissingValuesColumnsToZero();       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-            if (m_functionValues.HasNan("OnEvaluateEndIteration"))
+            if (FunctionValues().HasNan("OnEvaluateEndIteration"))
                 LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
 #endif
             MaskMissingValuesColumnsToNan();        // blast NaNs into columns that are gaps in a packed layout
@@ -1292,7 +1292,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
                     fprintf(stderr,"Backprop%d_%ls\n",i,NodeName().c_str());
 #endif
-                    if (! child->IsGradientInitialized())
+                    if (!child->IsGradientInitialized())
                     {
                         child->ClearGradient(true);
                         child->MarkGradientInitialized(true);

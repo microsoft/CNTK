@@ -27,17 +27,17 @@ private:
     
     vector<bool> m_sentenceEnd;
     bool m_truncated;
-    bool m_framemode;
+    bool m_frameMode;
     vector<size_t> m_processedFrame;
-    intargvector m_numberOfuttsPerMinibatchForAllEpochs;
-    size_t m_numberOfuttsPerMinibatch;
-    size_t m_actualnumberOfuttsPerMinibatch;
-    size_t m_mbSize;
-    vector<size_t> m_toProcess;
-    vector<size_t> m_switchFrame;
-    vector<size_t> m_validFrame;       //valid frame number in each channel
-    vector<size_t> m_extraUttsPerMinibatch;
-    size_t m_extraUttNum;
+    intargvector m_numSeqsPerMBForAllEpochs;
+    size_t m_numSeqsPerMB;                  // requested number of parallel sequences
+    size_t m_actualNumSeqsPerMB;            // actual number of parallel sequences  --TODO: under which condition can it differ?
+    size_t m_mbNumCols;                     // number of columns to fill/filled
+    vector<size_t> m_numFramesToProcess;    // [seq index] number of frames available (left to return) in each parallel sequence
+    vector<size_t> m_switchFrame;           /// TODO: something like the position where a new sequence starts; still supported?
+    vector<size_t> m_numValidFrames;        // [seq index] valid #frames in each parallel sequence. Frames (s, t) with t >= m_numValidFrames[s] are NoInput.
+    vector<size_t> m_extraSeqsPerMB;
+    size_t m_extraNumSeqs;
     bool m_noData;
     bool m_trainOrTest; // if false, in file writing mode
     using LabelType = typename IDataReader<ElemType>::LabelType;
@@ -166,7 +166,7 @@ public:
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetRandomSeed(int){ NOT_IMPLEMENTED };
 
-    bool RequireSentenceSeg() const override { return !m_framemode; }; 
+    bool RequireSentenceSeg() const override { return !m_frameMode; }; 
 };
 
 }}}

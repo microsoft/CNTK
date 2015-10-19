@@ -188,23 +188,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), *m_softmaxOfRight, *m_logSoftmaxOfRight, shared_from_this());
-        }
-
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, 
-            Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& logSoftmaxOfRight, ComputationNodePtr curNode)
-        {
-            logSoftmaxOfRight.AssignLogSoftmaxOf(inputFunctionValues1, true);
-            softmaxOfRight.SetValue(logSoftmaxOfRight);
-            softmaxOfRight.InplaceExp();
-            curNode->MaskMissingColumnsToZero(logSoftmaxOfRight, Inputs(1)->GetMBLayout());     // we are fine here since it will be called only with full minibatch
-            functionValues.AssignInnerProductOfMatrices(inputFunctionValues0, logSoftmaxOfRight);
-            functionValues*=(-1);
+            // first compute the softmax (column-wise)
+            // Note that we need both log and non-log for gradient computation.
+            m_logSoftmaxOfRight->AssignLogSoftmaxOf(Inputs(1)->FunctionValues(), true);
+            m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            m_softmaxOfRight->InplaceExp();
+            // flatten all gaps to zero, such that gaps will contribute zero to the sum
+            MaskMissingColumnsToZero(*m_logSoftmaxOfRight, Inputs(1)->GetMBLayout());
+            Inputs(0)->MaskMissingValuesColumnsToZero();
+            // reduce over all frames
+            FunctionValues().AssignInnerProductOfMatrices(Inputs(0)->FunctionValues(), *m_logSoftmaxOfRight);
+            FunctionValues() *= -1;
 #if NANCHECK
-            functionValues.HasNan("CrossEntropyWithSoftmax");
+            FunctionValues().HasNan("CrossEntropyWithSoftmax");
 #endif
 #if DUMPOUTPUT
-            functionValues.Print("CrossEntropyWithSoftmaxNode");
+            FunctionValues().Print("CrossEntropyWithSoftmaxNode");
 #endif
         }
 

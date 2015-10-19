@@ -57,27 +57,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_convertLabelsToTargets = false;
 
             ConfigArray numberOfuttsPerMinibatchForAllEpochs = readerConfig("nbruttsineachrecurrentiter", "1");
-            m_numberOfuttsPerMinibatchForAllEpochs = numberOfuttsPerMinibatchForAllEpochs;
+            m_numSeqsPerMBForAllEpochs = numberOfuttsPerMinibatchForAllEpochs;
 
-            for (int i = 0; i < m_numberOfuttsPerMinibatchForAllEpochs.size(); i++)
+            for (int i = 0; i < m_numSeqsPerMBForAllEpochs.size(); i++)
             {
-                if (m_numberOfuttsPerMinibatchForAllEpochs[i] < 1)
+                if (m_numSeqsPerMBForAllEpochs[i] < 1)
                 {
                     LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.");
                 }
                 // this loop is weird because this gets overwritten below
-                //m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[i];
+                //m_numSeqsPerMB = m_numSeqsPerMBForAllEpochs[i];
             }
 
-            m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[0];
-            m_pMBLayout->Init(m_numberOfuttsPerMinibatch, 0, true); // (SGD will ask before entering actual reading --TODO: This is hacky.)
+            m_numSeqsPerMB = m_numSeqsPerMBForAllEpochs[0];
+            m_pMBLayout->Init(m_numSeqsPerMB, 0, true); // (SGD will ask before entering actual reading --TODO: This is hacky.)
 
-            m_actualnumberOfuttsPerMinibatch = m_numberOfuttsPerMinibatch;
-            m_sentenceEnd.assign(m_numberOfuttsPerMinibatch, true);
-            m_processedFrame.assign(m_numberOfuttsPerMinibatch, 0);
-            m_toProcess.assign(m_numberOfuttsPerMinibatch,0);
-            m_switchFrame.assign(m_numberOfuttsPerMinibatch,0);
-            m_validFrame.assign(m_numberOfuttsPerMinibatch, 0);
+            m_actualNumSeqsPerMB = m_numSeqsPerMB;
+            m_sentenceEnd.assign(m_numSeqsPerMB, true);
+            m_processedFrame.assign(m_numSeqsPerMB, 0);
+            m_numFramesToProcess.assign(m_numSeqsPerMB,0);
+            m_switchFrame.assign(m_numSeqsPerMB,0);
+            m_numValidFrames.assign(m_numSeqsPerMB, 0);
             m_noData = false;
 
             string command(readerConfig("action",L"")); //look up in the config for the master command to determine whether we're writing output (inputs only) or training/evaluating (inputs and outputs)
@@ -120,15 +120,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<size_t> numContextRight;
 
             // for the multi-utterance process
-            m_featuresBufferMultiUtt.assign(m_numberOfuttsPerMinibatch, nullptr);
-            m_featuresBufferAllocatedMultiUtt.assign(m_numberOfuttsPerMinibatch,0);
-            m_labelsBufferMultiUtt.assign(m_numberOfuttsPerMinibatch, nullptr);
-            m_labelsBufferAllocatedMultiUtt.assign(m_numberOfuttsPerMinibatch,0);
+            m_featuresBufferMultiUtt.assign(m_numSeqsPerMB, nullptr);
+            m_featuresBufferAllocatedMultiUtt.assign(m_numSeqsPerMB,0);
+            m_labelsBufferMultiUtt.assign(m_numSeqsPerMB, nullptr);
+            m_labelsBufferAllocatedMultiUtt.assign(m_numSeqsPerMB,0);
 
             // for the multi-utterance process for lattice and phone boundary
-            m_latticeBufferMultiUtt.assign(m_numberOfuttsPerMinibatch, nullptr);
-            m_labelsIDBufferMultiUtt.resize(m_numberOfuttsPerMinibatch);
-            m_phoneboundaryIDBufferMultiUtt.resize(m_numberOfuttsPerMinibatch);
+            m_latticeBufferMultiUtt.assign(m_numSeqsPerMB, nullptr);
+            m_labelsIDBufferMultiUtt.resize(m_numSeqsPerMB);
+            m_phoneboundaryIDBufferMultiUtt.resize(m_numSeqsPerMB);
             std::vector<std::wstring> featureNames;
             std::vector<std::wstring> labelNames;
             // for hmm and lattice 
@@ -315,8 +315,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            m_framemode = readerConfig("frameMode", "true");
-            if (m_framemode && (m_numberOfuttsPerMinibatch > 1))
+            m_frameMode = readerConfig("frameMode", "true");
+            if (m_frameMode && (m_numSeqsPerMB > 1))
             {
                 LogicError("nbrUttsInEachRecurrentIter cannot be more than 1 in frame mode reading.");
             }
@@ -437,7 +437,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_lattices.reset(new msra::dbn::latticesource(latticetocs, m_hset.getsymmap()));
 
                 // now get the frame source. This has better randomization and doesn't create temp files
-                m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_framemode));
+                m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_frameMode));
                 m_frameSource->setverbosity(verbosity);
             }
             else if (!_stricmp(readMethod.c_str(),"rollingWindow"))
@@ -647,7 +647,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i ++)
+            for (size_t i = 0; i < m_numSeqsPerMB; i ++)
             {
                 m_featuresBufferMultiUtt[i] = nullptr;
                 m_labelsBufferMultiUtt[i] = nullptr;
@@ -657,42 +657,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
     //StartMinibatchLoop - Startup a minibatch loop 
-    // mbSize - [in] size of the minibatch (number of frames, etc.)
+    // requestedMBSize - [in] size of the minibatch (number of frames, etc.)
     // epoch - [in] epoch number for this loop
     // requestedEpochSamples - [in] number of samples to randomize, defaults to requestDataSize which uses the number of samples there are in the dataset
     template<class ElemType>
-        void HTKMLFReader<ElemType>::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples /*= requestDataSize*/)
+        void HTKMLFReader<ElemType>::StartDistributedMinibatchLoop(size_t requestedMBSize, size_t epoch, size_t subsetNum, size_t numSubsets, size_t requestedEpochSamples /*= requestDataSize*/)
         {
             assert(subsetNum < numSubsets);
             assert(((subsetNum == 0) && (numSubsets == 1)) || this->SupportsDistributedMBRead());
 
-            m_mbSize = mbSize;
+            m_mbNumCols = requestedMBSize;       // note: ignored in frame mode and full-sequence mode
 
-            m_numberOfuttsPerMinibatch = m_numberOfuttsPerMinibatchForAllEpochs[epoch];
-            m_pMBLayout->Init(m_numberOfuttsPerMinibatch, 0, !m_framemode); // (SGD will ask before entering actual reading --TODO: This is hacky.)
+            m_numSeqsPerMB = m_numSeqsPerMBForAllEpochs[epoch];
+            m_pMBLayout->Init(m_numSeqsPerMB, 0, !m_frameMode); // (SGD will ask before entering actual reading --TODO: This is hacky.)
 
-            m_actualnumberOfuttsPerMinibatch = m_numberOfuttsPerMinibatch;
-            m_sentenceEnd.assign(m_numberOfuttsPerMinibatch, true);
-            m_processedFrame.assign(m_numberOfuttsPerMinibatch, 0);
-            m_toProcess.assign(m_numberOfuttsPerMinibatch, 0);
-            m_switchFrame.assign(m_numberOfuttsPerMinibatch, 0);
+            // resize the arrays
+            // These are sized to the requested number. If not all can be filled, it will still return this many, just with gaps.
+            // In frame mode, m_numSeqsPerMB must be 1. However, the returned layout has one 1-frame sequence per frame.
+            m_actualNumSeqsPerMB = m_numSeqsPerMB;
+            m_sentenceEnd.assign(m_numSeqsPerMB, true);
+            m_processedFrame.assign(m_numSeqsPerMB, 0);
+            m_numFramesToProcess.assign(m_numSeqsPerMB, 0);
+            m_switchFrame.assign(m_numSeqsPerMB, 0);
 
-            m_validFrame.assign(m_numberOfuttsPerMinibatch, 0);
+            m_numValidFrames.assign(m_numSeqsPerMB, 0);
             if (m_trainOrTest)
             {
                 // For distributed reading under utterance mode, we distribute the utterances per minibatch among all the subsets
-                if (!m_framemode)
+                if (!m_frameMode)
                 {
-                    if ((numSubsets > 1) && (m_numberOfuttsPerMinibatch < numSubsets))
+                    if ((numSubsets > 1) && (m_numSeqsPerMB < numSubsets))
                     {
-                        LogicError("Insufficient value of 'nbruttsineachrecurrentiter'=%d for distributed reading with %d subsets", m_numberOfuttsPerMinibatch, numSubsets);
+                        LogicError("Insufficient value of 'nbruttsineachrecurrentiter'=%d for distributed reading with %d subsets", m_numSeqsPerMB, numSubsets);
                     }
 
-                    m_numberOfuttsPerMinibatch = (m_numberOfuttsPerMinibatch / numSubsets) + ((subsetNum < (m_numberOfuttsPerMinibatch % numSubsets)) ? 1 : 0);
-                    m_pMBLayout->Init(m_numberOfuttsPerMinibatch, 0, true); // (SGD will ask before entering actual reading --TODO: This is hacky.)
+                    m_numSeqsPerMB = (m_numSeqsPerMB / numSubsets) + ((subsetNum < (m_numSeqsPerMB % numSubsets)) ? 1 : 0);
+                    m_pMBLayout->Init(m_numSeqsPerMB, 0, true); // (SGD will ask before entering actual reading --TODO: This is hacky.)
                 }
 
-                StartMinibatchLoopToTrainOrTest(mbSize, epoch, subsetNum, numSubsets, requestedEpochSamples);
+                // BUGBUG: in BPTT and sequence mode, we should pass 1 or 2 instead of requestedMBSize to ensure we only get one utterance back at a time
+                StartMinibatchLoopToTrainOrTest(requestedMBSize, epoch, subsetNum, numSubsets, requestedEpochSamples);
             }
             else
             {
@@ -701,9 +705,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     LogicError("Distributed reading of mini-batches is only supported for training or testing");
                 }
-                m_pMBLayout->Init(mbSize, 0, false); // (SGD will ask before entering actual reading --TODO: This is hacky.)
+                m_pMBLayout->Init(requestedMBSize, 0, false); // (SGD will ask before entering actual reading --TODO: This is hacky.)
 
-                StartMinibatchLoopToWrite(mbSize,epoch,requestedEpochSamples);    
+                StartMinibatchLoopToWrite(requestedMBSize,epoch,requestedEpochSamples);    
             }
             m_checkDictionaryKeys=true;
         }
@@ -752,7 +756,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                m_featuresStartIndexMultiUtt.assign(m_featuresBufferMultiIO.size()*m_numberOfuttsPerMinibatch, 0);
+                m_featuresStartIndexMultiUtt.assign(m_featuresBufferMultiIO.size()*m_numSeqsPerMB, 0);
 
             }
 
@@ -767,11 +771,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                m_labelsStartIndexMultiUtt.assign(m_labelsBufferMultiIO.size()*m_numberOfuttsPerMinibatch, 0);
+                m_labelsStartIndexMultiUtt.assign(m_labelsBufferMultiIO.size()*m_numSeqsPerMB, 0);
             }
 
             m_noData = false;
-            for (size_t u = 0; u < m_numberOfuttsPerMinibatch; u ++)
+            for (size_t u = 0; u < m_numSeqsPerMB; u ++)
             {
                 if (m_featuresBufferMultiUtt[u] != NULL)
                 {
@@ -832,14 +836,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             uids.clear();
             boundaries.clear();
             extrauttmap.clear();
-            for (size_t i = 0; i < m_extraUttsPerMinibatch.size(); i++)
+            for (size_t i = 0; i < m_extraSeqsPerMB.size(); i++)
             {
                 latticeinput.push_back(m_extraLatticeBufferMultiUtt[i]);
                 uids.insert(uids.end(), m_extraLabelsIDBufferMultiUtt[i].begin(), m_extraLabelsIDBufferMultiUtt[i].end());
                 boundaries.insert(boundaries.end(), m_extraPhoneboundaryIDBufferMultiUtt[i].begin(), m_extraPhoneboundaryIDBufferMultiUtt[i].end());
             }
                 
-            extrauttmap.insert(extrauttmap.end(), m_extraUttsPerMinibatch.begin(), m_extraUttsPerMinibatch.end());
+            extrauttmap.insert(extrauttmap.end(), m_extraSeqsPerMB.begin(), m_extraSeqsPerMB.end());
             return true;
         }
 
@@ -853,6 +857,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponing matrix, 
     //             [out] each matrix resized if necessary containing data. 
     // returns - true if there are more minibatches, false if no more minibatchs remain
+    // TODO: Why do we have two read functions? Is one not a superset of the other?
     template<class ElemType>
         bool HTKMLFReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>*>& matrices)
         {
@@ -893,8 +898,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_extraLatticeBufferMultiUtt.clear();
                     m_extraLabelsIDBufferMultiUtt.clear();
                     m_extraPhoneboundaryIDBufferMultiUtt.clear();
-                    m_extraUttsPerMinibatch.clear();
-                    if (m_noData && m_toProcess[0] == 0)    //no data left for the first channel of this minibatch, 
+                    m_extraSeqsPerMB.clear();
+                    if (m_noData && m_numFramesToProcess[0] == 0)    //no data left for the first channel of this minibatch, 
                     {
                         return false;
                     }
@@ -902,38 +907,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // BUGBUG: We should decide how many utterances we are going to take, until the desired number of frames has been filled.
                     //         Currently it seems to fill a fixed number of utterances, regardless of their length.
 
-                    // decide the m_mbSize
-                    // The MB size is determined by the longest utterance amongst the desired set.
-                    m_mbSize = m_toProcess[0];
-                    for (size_t i = 1; i < m_numberOfuttsPerMinibatch; i++)
+                    // decide the m_mbNumCols
+                    // The number of columns is determined by the longest utterance amongst the desired set.
+                    // I.e. whatever is user-specified as the MB size, will be ignored here (that value is, however, passed down to the underlying reader).  BUGBUG: That is even more wrong.
+                    // BUGBUG: We should honor the mbSize parameter and fill up to the requested number of samples, using the requested #parallel sequences.
+                    m_mbNumCols = m_numFramesToProcess[0];
+                    for (size_t i = 1; i < m_numSeqsPerMB; i++)
                     {
-                        if (m_mbSize < m_toProcess[i])
-                            m_mbSize = m_toProcess[i];
+                        if (m_mbNumCols < m_numFramesToProcess[i])
+                            m_mbNumCols = m_numFramesToProcess[i];
                     }
 
-                    if (m_framemode)
+                    if (m_frameMode)
                     {
-                        assert(m_numberOfuttsPerMinibatch == 1);
-                        m_pMBLayout->Init(m_mbSize, 1, false/*means not sequential*/);
+                        assert(m_numSeqsPerMB == 1);
+                        m_pMBLayout->Init(m_mbNumCols, 1, false/*means not sequential*/);
                     }
                     else
                     {
-                        m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_mbSize, true/*sequential*/);
+                        m_pMBLayout->Init(m_numSeqsPerMB, m_mbNumCols, true/*sequential*/);
                     }
 
                     // create a MB with the desired utterance
                     // Each utterance become a separate parallel sequence.
-                    skip = (m_framemode && !m_partialMinibatch && (m_mbiter->requestedframes() != m_mbSize) && (m_frameSource->totalframes() > m_mbSize));
-                    for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
+                    skip = (m_frameMode && !m_partialMinibatch && (m_mbiter->requestedframes() != m_mbNumCols) && (m_frameSource->totalframes() > m_mbNumCols));
+                    for (size_t i = 0; i < m_numSeqsPerMB; i++)
                     {
                         if (!skip)
                         {
-                            m_validFrame[i] = m_toProcess[i];
-                            if (!m_framemode)       // in framemode we leave the flags empty
-                                m_pMBLayout->SetAsSentence(i, 0, m_validFrame[i]);
+                            m_numValidFrames[i] = m_numFramesToProcess[i];
+                            if (!m_frameMode)       // in framemode we leave the flags empty
+                                m_pMBLayout->SetAsSentence(i, 0, m_numValidFrames[i]);
 
-                            m_extraUttsPerMinibatch.push_back(i);
-                            fillOneUttDataforParallelmode(matrices, 0, m_validFrame[i], i, i);
+                            m_extraSeqsPerMB.push_back(i);
+                            fillOneUttDataforParallelmode(matrices, 0, m_numValidFrames[i], i, i);
                             if (m_mbiter->haslattice())
                             {
                                 m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
@@ -950,20 +957,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         size_t nextMinibatchUttnum = 0;
                         bool inserted;
-                        m_extraUttNum = 0;
-                        for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
+                        m_extraNumSeqs = 0;
+                        for (size_t i = 0; i < m_numSeqsPerMB; i++)
                         {
                             while (nextMinibatchUttnum <= i)
                             {
-                                size_t framenum = m_toProcess[i];
+                                size_t framenum = m_numFramesToProcess[i];
                                 inserted = false;
                                 if (framenum > 0)
                                 {
-                                    for (size_t j = 0; j < m_numberOfuttsPerMinibatch; j++)
+                                    for (size_t j = 0; j < m_numSeqsPerMB; j++)
                                     {
-                                        if (framenum + m_validFrame[j] < m_mbSize)
+                                        if (framenum + m_numValidFrames[j] < m_mbNumCols)
                                         {
-                                            m_extraUttsPerMinibatch.push_back(j);
+                                            m_extraSeqsPerMB.push_back(j);
                                             if (m_mbiter->haslattice())
                                             {
 
@@ -971,13 +978,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                 m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
                                                 m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
                                             }
-                                            fillOneUttDataforParallelmode(matrices, m_validFrame[j], framenum, j, i);
-                                            assert(!m_framemode);
-                                            m_pMBLayout->SetAsSentence(j, m_validFrame[j], m_validFrame[j] + framenum);
+                                            fillOneUttDataforParallelmode(matrices, m_numValidFrames[j], framenum, j, i);
+                                            assert(!m_frameMode);
+                                            m_pMBLayout->SetAsSentence(j, m_numValidFrames[j], m_numValidFrames[j] + framenum);
 
                                             ReNewBufferForMultiIO(i);
-                                            m_validFrame[j] += framenum;
-                                            m_extraUttNum++;
+                                            m_numValidFrames[j] += framenum;
+                                            m_extraNumSeqs++;
                                             inserted = true;
                                             break;
                                         }
@@ -990,11 +997,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                         }
 
-                        if (!m_framemode)
+                        if (!m_frameMode)
                         {
-                            for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
+                            for (size_t i = 0; i < m_numSeqsPerMB; i++)
                             {
-                                m_pMBLayout->SetAsNoInput(i, m_validFrame[i], m_mbSize);
+                                m_pMBLayout->SetAsNoInput(i, m_numValidFrames[i], m_mbNumCols);
                             }
                         }
 
@@ -1008,13 +1015,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 id = m_featureNameToIdMap[iter->first];
                                 dim = m_featureNameToDimMap[iter->first];
-                                data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
+                                data.SetValue(dim, m_mbNumCols*m_numSeqsPerMB, data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
                             }
                             else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
                             {
                                 id = m_labelNameToIdMap[iter->first];
                                 dim = m_labelNameToDimMap[iter->first];
-                                data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, data.GetDeviceId(), m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
+                                data.SetValue(dim, m_mbNumCols*m_numSeqsPerMB, data.GetDeviceId(), m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
                             }
                         }
                     }
@@ -1027,9 +1034,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (m_noData)
                     {
                         bool endEpoch = true;
-                        for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
+                        for (size_t i = 0; i < m_numSeqsPerMB; i++)
                         {
-                            if (m_processedFrame[i] != m_toProcess[i])
+                            if (m_processedFrame[i] != m_numFramesToProcess[i])
                                 endEpoch = false;
                         }
                         if(endEpoch)
@@ -1038,19 +1045,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     size_t numOfFea = m_featuresBufferMultiIO.size();
                     size_t numOfLabel = m_labelsBufferMultiIO.size();
 
-                    m_pMBLayout->Init(m_numberOfuttsPerMinibatch, m_mbSize, true/*sequential*/);
+                    m_pMBLayout->Init(m_numSeqsPerMB, m_mbNumCols, true/*sequential*/);
 
-                    vector<size_t> actualmbsize(m_numberOfuttsPerMinibatch,0);
-                    for (size_t i = 0; i < m_numberOfuttsPerMinibatch; i++)
+                    vector<size_t> actualmbsize(m_numSeqsPerMB,0);
+                    for (size_t i = 0; i < m_numSeqsPerMB; i++)
                     {
                         size_t startFr = m_processedFrame[i];
                         size_t endFr = 0;
-                        if ((m_processedFrame[i] + m_mbSize) < m_toProcess[i])
+                        if ((m_processedFrame[i] + m_mbNumCols) < m_numFramesToProcess[i])
                         {
                             if (m_processedFrame[i] > 0)
                             {
                                 m_sentenceEnd[i] = false;
-                                m_switchFrame[i] = m_mbSize+1;
+                                m_switchFrame[i] = m_mbNumCols+1;
                                 if (m_processedFrame[i] == 1)
                                     m_pMBLayout->SetWithoutOr(i, 0, MinibatchPackingFlags::SequenceEnd);   // TODO: shouldn't both Start and End be set? TODO: can we just use Set()?
                             }
@@ -1060,7 +1067,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 m_switchFrame[i] = 0;
                                 m_pMBLayout->SetWithoutOr(i, 0, MinibatchPackingFlags::SequenceStart);
                             }
-                            actualmbsize[i] = m_mbSize;
+                            actualmbsize[i] = m_mbNumCols;
                             endFr = startFr + actualmbsize[i];
                             typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
                             for (iter = matrices.begin();iter!=matrices.end(); iter++)
@@ -1075,10 +1082,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     dim = m_featureNameToDimMap[iter->first];
 
                                     if ((m_featuresBufferMultiIO[id] == nullptr) ||
-                                        (m_featuresBufferAllocatedMultiIO[id] < (dim * m_mbSize * m_numberOfuttsPerMinibatch)) /*buffer size changed. can be partial minibatch*/)
+                                        (m_featuresBufferAllocatedMultiIO[id] < (dim * m_mbNumCols * m_numSeqsPerMB)) /*buffer size changed. can be partial minibatch*/)
                                     {
-                                        m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbSize * m_numberOfuttsPerMinibatch);
-                                        m_featuresBufferAllocatedMultiIO[id] = dim * m_mbSize * m_numberOfuttsPerMinibatch;
+                                        m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbNumCols * m_numSeqsPerMB);
+                                        m_featuresBufferAllocatedMultiIO[id] = dim * m_mbNumCols * m_numSeqsPerMB;
                                     }
 
                                     if (sizeof(ElemType) == sizeof(float))
@@ -1086,7 +1093,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j = startFr,k = 0; j < endFr; j++,k++) // column major, so iterate columns
                                         {
                                             // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[j * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
+                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k * m_numSeqsPerMB + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[j * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
                                         }
                                     }
                                     else
@@ -1094,7 +1101,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j=startFr,k=0; j < endFr; j++,k++) // column major, so iterate columns in outside loop
                                         {
                                             for (int d = 0; d < dim; d++)
-                                                m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[j * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
+                                                m_featuresBufferMultiIO[id].get()[(k * m_numSeqsPerMB + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[j * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
                                         }
                                     }
                                 }
@@ -1103,24 +1110,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     id = m_labelNameToIdMap[iter->first];
                                     dim = m_labelNameToDimMap[iter->first];
                                     if ((m_labelsBufferMultiIO[id] == nullptr) ||
-                                        (m_labelsBufferAllocatedMultiIO[id] < (dim * m_mbSize * m_numberOfuttsPerMinibatch)))
+                                        (m_labelsBufferAllocatedMultiIO[id] < (dim * m_mbNumCols * m_numSeqsPerMB)))
                                     {
-                                        m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbSize * m_numberOfuttsPerMinibatch);
-                                        m_labelsBufferAllocatedMultiIO[id] = dim * m_mbSize * m_numberOfuttsPerMinibatch;
+                                        m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbNumCols * m_numSeqsPerMB);
+                                        m_labelsBufferAllocatedMultiIO[id] = dim * m_mbNumCols * m_numSeqsPerMB;
                                     }
 
                                     for (size_t j = startFr,k=0; j < endFr; j++,k++)
                                     {
                                         for (int d = 0; d < dim; d++)
-                                            m_labelsBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[j * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
+                                            m_labelsBufferMultiIO[id].get()[(k * m_numSeqsPerMB + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[j * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
                                     }
                                 }
                             }
-                            m_processedFrame[i] += m_mbSize;
+                            m_processedFrame[i] += m_mbNumCols;
                         }
                         else
                         {
-                            actualmbsize[i] = m_toProcess[i] - m_processedFrame[i];
+                            actualmbsize[i] = m_numFramesToProcess[i] - m_processedFrame[i];
                             endFr = startFr + actualmbsize[i];
 
                             typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
@@ -1136,10 +1143,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     dim = m_featureNameToDimMap[iter->first];
 
                                     if ((m_featuresBufferMultiIO[id] == nullptr) ||
-                                        (m_featuresBufferAllocatedMultiIO[id] < (dim * m_mbSize * m_numberOfuttsPerMinibatch)) /*buffer size changed. can be partial minibatch*/)
+                                        (m_featuresBufferAllocatedMultiIO[id] < (dim * m_mbNumCols * m_numSeqsPerMB)) /*buffer size changed. can be partial minibatch*/)
                                     {
-                                        m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbSize * m_numberOfuttsPerMinibatch);
-                                        m_featuresBufferAllocatedMultiIO[id] = dim * m_mbSize * m_numberOfuttsPerMinibatch;
+                                        m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbNumCols * m_numSeqsPerMB);
+                                        m_featuresBufferAllocatedMultiIO[id] = dim * m_mbNumCols * m_numSeqsPerMB;
                                     }
 
                                     if (sizeof(ElemType) == sizeof(float))
@@ -1147,7 +1154,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j = startFr,k = 0; j < endFr; j++,k++) // column major, so iterate columns
                                         {
                                             // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[j * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
+                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k * m_numSeqsPerMB + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[j * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
                                         }
                                     }
                                     else
@@ -1156,7 +1163,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         {
                                             for (int d = 0; d < dim; d++)
                                             {
-                                                m_featuresBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[j * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
+                                                m_featuresBufferMultiIO[id].get()[(k * m_numSeqsPerMB + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[j * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
                                             }
                                         }
                                     }
@@ -1166,26 +1173,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     id = m_labelNameToIdMap[iter->first];
                                     dim = m_labelNameToDimMap[iter->first];
                                     if ((m_labelsBufferMultiIO[id] == nullptr) ||
-                                        (m_labelsBufferAllocatedMultiIO[id] < (dim * m_mbSize * m_numberOfuttsPerMinibatch)))
+                                        (m_labelsBufferAllocatedMultiIO[id] < (dim * m_mbNumCols * m_numSeqsPerMB)))
                                     {
-                                        m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbSize * m_numberOfuttsPerMinibatch);
-                                        m_labelsBufferAllocatedMultiIO[id] = dim * m_mbSize * m_numberOfuttsPerMinibatch;
+                                        m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim * m_mbNumCols * m_numSeqsPerMB);
+                                        m_labelsBufferAllocatedMultiIO[id] = dim * m_mbNumCols * m_numSeqsPerMB;
                                     }
                                     for (size_t j = startFr,k=0; j < endFr; j++,k++)
                                     {
                                         for (int d = 0; d < dim; d++)
-                                            m_labelsBufferMultiIO[id].get()[(k * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[j * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
+                                            m_labelsBufferMultiIO[id].get()[(k * m_numSeqsPerMB + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[j * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
                                     }
                                 }
                             }
                             m_processedFrame[i] += (endFr-startFr);
                             m_switchFrame[i] = actualmbsize[i];
-                            if (actualmbsize[i] < m_mbSize)
+                            if (actualmbsize[i] < m_mbNumCols)
                                 m_pMBLayout->Set(i, actualmbsize[i], MinibatchPackingFlags::SequenceStart); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
-                            if (actualmbsize[i] == m_mbSize)
+                            if (actualmbsize[i] == m_mbNumCols)
                                 m_pMBLayout->Set(i, actualmbsize[i] - 1, MinibatchPackingFlags::SequenceEnd); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
                             startFr = m_switchFrame[i];
-                            endFr = m_mbSize;
+                            endFr = m_mbNumCols;
                             bool reNewSucc = ReNewBufferForMultiIO(i);
                             for (iter = matrices.begin();iter!=matrices.end(); iter++)
                             {
@@ -1202,7 +1209,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j = startFr,k = 0; j < endFr; j++,k++) // column major, so iterate columns
                                         {
                                             // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[k * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
+                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[k * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
                                         }
                                     }
                                     else
@@ -1210,7 +1217,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         for (size_t j=startFr,k=0; j < endFr; j++,k++) // column major, so iterate columns in outside loop
                                         {
                                             for (int d = 0; d < dim; d++)
-                                                m_featuresBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[k * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
+                                                m_featuresBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[k * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
                                         }
                                     }
                                 }
@@ -1221,7 +1228,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     for (size_t j = startFr,k=0; j < endFr; j++,k++)
                                     {
                                         for (int d = 0; d < dim; d++)
-                                            m_labelsBufferMultiIO[id].get()[(j * m_numberOfuttsPerMinibatch + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[k * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
+                                            m_labelsBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[k * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
                                     }
                                 }
                             }
@@ -1239,13 +1246,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             id = m_featureNameToIdMap[iter->first];
                             dim = m_featureNameToDimMap[iter->first];
-                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
+                            data.SetValue(dim, m_mbNumCols*m_numSeqsPerMB, data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
                         }
                         else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
                         {
                             id = m_labelNameToIdMap[iter->first];
                             dim = m_labelNameToDimMap[iter->first];
-                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, data.GetDeviceId(), m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
+                            data.SetValue(dim, m_mbNumCols*m_numSeqsPerMB, data.GetDeviceId(), m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
                         }
                     }
                     skip = false;
@@ -1279,11 +1286,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     id = m_featureNameToIdMap[iter->first];
                     dim = m_featureNameToDimMap[iter->first];
 
-                    if (m_featuresBufferMultiIO[id] == nullptr || m_featuresBufferAllocatedMultiIO[id] < dim*m_mbSize*m_numberOfuttsPerMinibatch)
+                    if (m_featuresBufferMultiIO[id] == nullptr || m_featuresBufferAllocatedMultiIO[id] < dim*m_mbNumCols*m_numSeqsPerMB)
                     {
-                        m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim*m_mbSize*m_numberOfuttsPerMinibatch);
-                        memset(m_featuresBufferMultiIO[id].get(), 0, sizeof(ElemType)*dim*m_mbSize*m_numberOfuttsPerMinibatch);
-                        m_featuresBufferAllocatedMultiIO[id] = dim*m_mbSize*m_numberOfuttsPerMinibatch;
+                        m_featuresBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim*m_mbNumCols*m_numSeqsPerMB);
+                        memset(m_featuresBufferMultiIO[id].get(), 0, sizeof(ElemType)*dim*m_mbNumCols*m_numSeqsPerMB);
+                        m_featuresBufferAllocatedMultiIO[id] = dim*m_mbNumCols*m_numSeqsPerMB;
                     }
 
                     if (sizeof(ElemType) == sizeof(float))
@@ -1291,7 +1298,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         for (size_t j = 0, k = startFr; j < framenum; j++, k++) // column major, so iterate columns
                         {
                             // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + channelIndex)*dim], sizeof(ElemType)*dim, &m_featuresBufferMultiUtt[sourceChannelIndex].get()[j*dim + m_featuresStartIndexMultiUtt[id + sourceChannelIndex*numOfFea]], sizeof(ElemType)*dim);
+                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(k*m_numSeqsPerMB + channelIndex)*dim], sizeof(ElemType)*dim, &m_featuresBufferMultiUtt[sourceChannelIndex].get()[j*dim + m_featuresStartIndexMultiUtt[id + sourceChannelIndex*numOfFea]], sizeof(ElemType)*dim);
                         }
                     }
                     else
@@ -1300,7 +1307,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             for (int d = 0; d < dim; d++)
                             {
-                                m_featuresBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + channelIndex)*dim + d] = m_featuresBufferMultiUtt[sourceChannelIndex].get()[j*dim + d + m_featuresStartIndexMultiUtt[id + sourceChannelIndex*numOfFea]];
+                                m_featuresBufferMultiIO[id].get()[(k*m_numSeqsPerMB + channelIndex)*dim + d] = m_featuresBufferMultiUtt[sourceChannelIndex].get()[j*dim + d + m_featuresStartIndexMultiUtt[id + sourceChannelIndex*numOfFea]];
                             }
                         }
                     }
@@ -1309,18 +1316,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     id = m_labelNameToIdMap[iter->first];
                     dim = m_labelNameToDimMap[iter->first];
-                    if (m_labelsBufferMultiIO[id] == nullptr || m_labelsBufferAllocatedMultiIO[id] < dim*m_mbSize*m_numberOfuttsPerMinibatch)
+                    if (m_labelsBufferMultiIO[id] == nullptr || m_labelsBufferAllocatedMultiIO[id] < dim*m_mbNumCols*m_numSeqsPerMB)
                     {
-                        m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim*m_mbSize*m_numberOfuttsPerMinibatch);
-                        memset(m_labelsBufferMultiIO[id].get(), 0, sizeof(ElemType)*dim*m_mbSize*m_numberOfuttsPerMinibatch);
-                        m_labelsBufferAllocatedMultiIO[id] = dim*m_mbSize*m_numberOfuttsPerMinibatch;
+                        m_labelsBufferMultiIO[id] = AllocateIntermediateBuffer(data.GetDeviceId(), dim*m_mbNumCols*m_numSeqsPerMB);
+                        memset(m_labelsBufferMultiIO[id].get(), 0, sizeof(ElemType)*dim*m_mbNumCols*m_numSeqsPerMB);
+                        m_labelsBufferAllocatedMultiIO[id] = dim*m_mbNumCols*m_numSeqsPerMB;
                     }
 
                     for (size_t j = 0, k = startFr; j < framenum; j++, k++)
                     {
                         for (int d = 0; d < dim; d++)
                         {
-                            m_labelsBufferMultiIO[id].get()[(k*m_numberOfuttsPerMinibatch + channelIndex)*dim + d] = m_labelsBufferMultiUtt[sourceChannelIndex].get()[j*dim + d + m_labelsStartIndexMultiUtt[id + sourceChannelIndex*numOfLabel]];
+                            m_labelsBufferMultiIO[id].get()[(k*m_numSeqsPerMB + channelIndex)*dim + d] = m_labelsBufferMultiUtt[sourceChannelIndex].get()[j*dim + d + m_labelsStartIndexMultiUtt[id + sourceChannelIndex*numOfLabel]];
                         }
                     }
                 }
@@ -1446,7 +1453,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_noData)
             {
                 if ((i == 0) && !m_truncated)
-                    m_toProcess[i] = 0;
+                    m_numFramesToProcess[i] = 0;
                 return false;
             }
             size_t numOfFea = m_featuresBufferMultiIO.size();
@@ -1495,12 +1502,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 size_t fdim = featOri.rows();
                 if (first)
                 {
-                    m_toProcess[i] = actualmbsizeOri;
+                    m_numFramesToProcess[i] = actualmbsizeOri;
                     first = false;
                 } 
                 else
                 {
-                    if (m_toProcess[i] != actualmbsizeOri)
+                    if (m_numFramesToProcess[i] != actualmbsizeOri)
                     {
                         RuntimeError("The multi-IO features has inconsistent number of frames!");
                     }
@@ -1712,9 +1719,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
         size_t HTKMLFReader<ElemType>::GetNumParallelSequences()
         {
-            if (!m_framemode)
-                if (m_numberOfuttsPerMinibatch != m_pMBLayout->GetNumParallelSequences())
-                    LogicError("HTKMLFReader: Number of parallel sequences in m_pMBLayout did not get set to m_numberOfuttsPerMinibatch.");
+            if (!m_frameMode)
+                if (m_numSeqsPerMB != m_pMBLayout->GetNumParallelSequences())
+                    LogicError("HTKMLFReader: Number of parallel sequences in m_pMBLayout did not get set to m_numSeqsPerMB.");
             return m_pMBLayout->GetNumParallelSequences();  // (this function is only used for validation anyway)
         }
 
