@@ -1732,8 +1732,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             va_list args;
             va_start(args, __format);
-            vfprintf(__stream, __format, args);
+            int result = vfprintf(__stream, __format, args);
             va_end(args);
+
+            return result;
         }
     }
 
