@@ -18,7 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
         
-        virtual void AggregateGradients(DistGradHeader *headerCPU, int epochNumber) = 0;
+        virtual void AggregateGradients(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader *headerCPU, int nBits, int epochNumber) = 0;
 
         size_t NumProc()
         {

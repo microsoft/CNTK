@@ -11,27 +11,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     
     template<class ElemType>
     /*static*/ MatrixQuantizer<ElemType>*
-    MatrixQuantizer<ElemType>::CreateMatrixQuantizer(const Matrix<ElemType>& inMatrix)
+    MatrixQuantizer<ElemType>::CreateMatrixQuantizer(size_t numRows, size_t numCols, int deviceId)
     {
-        if (inMatrix.GetDeviceId() >= 0)
+        if (deviceId >= 0)
         {
 #ifndef CPUONLY
-            return new MatrixQuantizerGPU<ElemType>(inMatrix);
+            return new MatrixQuantizerGPU<ElemType>(numRows, numCols, deviceId);
 #else
             RuntimeError("CreateMatrixQuantizer: attempted to use GPU while compiled without GPU support");
 #endif
         }
         else
         {
-            return new MatrixQuantizerCPU<ElemType>(inMatrix);
+            return new MatrixQuantizerCPU<ElemType>(numRows, numCols);
         }
     }
 
     template<class ElemType>
-    MatrixQuantizer<ElemType>::MatrixQuantizer(const Matrix<ElemType>& inMatrix)
-    : m_inMatrix(inMatrix)
+    MatrixQuantizer<ElemType>::MatrixQuantizer(size_t numRows, size_t numCols, int deviceId)
     {
-        m_residual = new Matrix<ElemType>(inMatrix.GetNumRows(), inMatrix.GetNumCols(), inMatrix.GetDeviceId(), DENSE);
+        m_residual = new Matrix<ElemType>(numRows, numCols, deviceId, DENSE);
     }
 
     template<class ElemType>
@@ -43,6 +42,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_residual = nullptr;
         }    
     }
+
+    template<class ElemType>
+    void MatrixQuantizer<ElemType>::ResetResidue()
+    {
+        m_residual->SetValue(0.0);
+    }
+
 
     template class MatrixQuantizer<float>;
     template class MatrixQuantizer<double>;
