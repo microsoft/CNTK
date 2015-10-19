@@ -778,6 +778,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (int i = 0; i < m_numPrevLearnRates; i++)
              prevLearnRates[i] = -1.0;
 
+        if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
+        {
+            InitDistGradAgg(evaluationNodes.size(), m_traceLevel);
+        }
+
         //precompute mean and invStdDev nodes and save initial model
         if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || startEpoch == 0)
         {
@@ -1730,6 +1735,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         float  nSecondsOnMASync = 0; 
         float  nSecondsSinceLastMAPerfReport = 0;
 
+        std::vector<Matrix<ElemType>*> learnParamsGradients;
         if (useGradientAggregation)
         {
             epochCriterion = double(0.0);
@@ -1876,7 +1882,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 //distributed gradient aggregation
-                LazyInitDistGradAgg(learnableNodes, evaluationNodes.size(), m_traceLevel);
+                if (learnParamsGradients.size() == 0)
+                {
+                    learnParamsGradients.reserve(learnableNodes.size());
+                    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                    {
+                        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+                        if (node->IsParameterUpdateRequired())
+                        {
+                            learnParamsGradients.push_back(&(node->GradientValues()));
+                        }
+                    }
+                }
 
                 //prepare the header
                 m_gradHeader->numEvalNode = evaluationNodes.size();
@@ -1886,7 +1903,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (size_t i = 0; i < evaluationNodes.size(); i++)
                     m_gradHeader->evalErrors[i] = actualMBSize > 0 ? evaluationNodes[i]->Get00Element() : 0.0;
 
-                m_distGradAgg->AggregateGradients(m_gradHeader, epochNumber);
+                m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader, m_numGradientBits, epochNumber);
 
                 aggregateNumSamples = m_gradHeader->numSamples;
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
@@ -2086,24 +2103,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void SGD<ElemType>::LazyInitDistGradAgg(const std::list<ComputationNodeBasePtr>& learnableNodes, int numEvalNodes, int traceLevel)
+    void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int traceLevel)
     {
         if (m_parallelizationMethod == ParallelizationMethod::DataParallelSGD)
         {
             if (m_distGradAgg == nullptr)
             {
-                std::vector<Matrix<ElemType>*> learnParamsGradients;
-                learnParamsGradients.reserve(learnableNodes.size());
-                for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
-                {
-                    ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                    if (node->IsParameterUpdateRequired())
-                    {
-                        learnParamsGradients.push_back(&(node->GradientValues()));
-                    }
-                }
-
-                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(learnParamsGradients, numEvalNodes, m_numGradientBits, g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, traceLevel);
+                m_distGradAgg = new AllReduceDistGradAggregator<ElemType>(g_mpi, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, traceLevel);
             }
 
             if (m_gradHeader == nullptr)
@@ -2115,7 +2121,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     bool SGD<ElemType>::ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes, size_t& nProcessedFrames,
-                                  float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync)
+                                                 float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync)
     {
         //////////////////////////////////////////////////////////////////////////
         // the current strategy is that after each minibatch, we will sync between processors 

@@ -19,16 +19,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     
     //see dbn::matrix quantizer
     template<class ElemType>
-    class MATH_API MatrixQuantizerCPU final : public MatrixQuantizer<ElemType>
+    class MatrixQuantizerCPU final : public MatrixQuantizer<ElemType>
     {
     public:    
-        MatrixQuantizerCPU(const Matrix<ElemType>& inMatrix);
+        MatrixQuantizerCPU(size_t numRows, size_t numCols);
         
         // Disallow copy construction and assignment
         MatrixQuantizerCPU(const MatrixQuantizerCPU&) = delete;
         MatrixQuantizerCPU& operator=(const MatrixQuantizerCPU&) = delete;
 
-        void QuantizeAsync(QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit) override;
+        void QuantizeAsync(const Matrix<ElemType>& inMatrix, QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit) override;
         void WaitQuantizeAsyncDone() override;
 
         void UnquantizeAsync(QuantizedMatrix<ElemType>& inQMatrix, Matrix<ElemType>& outMatrix, bool add = false) override;
