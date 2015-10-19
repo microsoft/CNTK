@@ -42,6 +42,8 @@
 #define CNTK_MODEL_VERSION_2 2
 #define CURRENT_CNTK_MODEL_VERSION 2
 
+#undef TRACK_GAP_NANS  // if defined then initialize layout gaps to NaN and do NaN checks
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     enum CopyNodeFlags
@@ -508,8 +510,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             ComputeInputPartial(inputIndex, FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
         }
-        virtual void ComputeGradientForChildren() = 0;
-        virtual void ComputeGradientForChildren(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
+        virtual void ComputeGradientForChildren(const FrameRange & frameRange) = 0;
 
         // masking
         // overridden by <ElemType> variant only
@@ -526,11 +527,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*IComputationNode::*/OnEvaluateBeginIteration()             // called before first iteration step of EvaluateThisNode()
         {
-            //fprintf(stderr, "OnEvaluateBeginIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+#ifdef TRACK_GAP_NANS
+            fprintf(stderr, "OnEvaluateBeginIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+#endif
         }
         virtual void /*IComputationNode::*/OnEvaluateEndIteration()               // called after last iteration step of EvaluateThisNode()
         {
-            //fprintf(stderr, "OnEvaluateEndIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+#ifdef TRACK_GAP_NANS
+            fprintf(stderr, "OnEvaluateEndIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+#endif
         }
 
     protected:
@@ -711,10 +716,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         //virtual void ClearGradientForChildren(const int /*iActMiniBatchSize*/) = 0;
         virtual void ClearGradientForChildren() = 0;
-        virtual void ClearGradient(const bool clearExistingGradientValue) = 0;
+        //virtual void LazyZeroGradient() = 0;
 
         void MarkGradientInitialized(const bool isInitialized)  { m_gradientInitialized = isInitialized; }
-
         bool IsGradientInitialized() const { return m_gradientInitialized; }
 
         typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
@@ -1261,7 +1265,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*IComputationNode::*/OnEvaluateEndIteration()               // called after last iteration step of EvaluateThisNode()
         {
             Base::OnEvaluateEndIteration();
-#if 0       // NaN check
+#ifdef TRACK_GAP_NANS
             MaskMissingValuesColumnsToZero();       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
             if (FunctionValues().HasNan("OnEvaluateEndIteration"))
                 LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
@@ -1271,7 +1275,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
         // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
-        virtual void ComputeGradientForChildren() override
+#if 0
+        void ComputeGradientForChildrenMap()   // TODO: subsume in FrameRange version below
         {
             if (HasLoop())
                 return;
@@ -1292,15 +1297,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
                     fprintf(stderr,"Backprop%d_%ls\n",i,NodeName().c_str());
 #endif
-                    if (!child->IsGradientInitialized())
-                    {
-                        child->ClearGradient(true);
-                        child->MarkGradientInitialized(true);
-                    }
+                    child->LazyZeroGradient();
 
                     ComputeInputPartial(i); //this computes partial wrt to the child and sums the gradient value in the child
 #ifdef _DEBUG
-#if 0               // NaN check
+#ifdef TRACK_GAP_NANS
                     child->MaskMissingGradientColumnsToZero();  // hide NaNs in gaps (those are OK)
                     if (child->GradientValues().HasNan("ComputeGradientForChildren(void): "))
                         LogicError("%ls %ls operation has NaNs in gradient.", child->NodeName().c_str(), child->OperationName().c_str());
@@ -1315,62 +1316,65 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
             }
         }
+#endif
 
-        // TODO: use a FrameRange here as well, then unify with above
-        virtual void ComputeGradientForChildren(const size_t timeIdxInSeq) override
+        void ComputeGradientForChildren(const FrameRange & frameRange) override
         {
-            for (size_t i = 0; i<m_children.size(); i++)
+            //if (frameRange.IsAllFrames()) { ComputeGradientForChildrenMap(); return; } // TODO: get rid of this
+            if (frameRange.IsAllFrames() && HasLoop())
+                LogicError("%ls %ls operation: ComputeGradientForChildren called with whole-batch FrameRange on node that participates in a loop");
+
+            for (size_t i = 0; i < m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
                 if (child->m_needsGradient)
                 {
+                    //fprintf(stderr, "ComputeGradientForChildren: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
+                    if (!m_needsGradient)
+                        LogicError("%ls %ls operation has m_needsGradient set to false but children require it.", NodeName().c_str(), OperationName().c_str());
 #ifdef DISPLAY_DEBUG
-                    fprintf (stderr, "    [%lu]: %s(%s)\n", i, 
-                        (msra::strfun::utf8 (child->OperationName())).c_str(),
-                        (msra::strfun::utf8 (child->NodeName())).c_str());
+                    fprintf (stderr, "    [%lu]: %ls(%ls)\n", i, child->OperationName().c_str(), child->NodeName().c_str());
 #endif
-                    if (! child->IsGradientInitialized())
-                    {
-                        child->ClearGradient(true);
-                        child->MarkGradientInitialized(true);
-                    }
-                    ComputeInputPartial(i, FrameRange(timeIdxInSeq)); //this computes partial wrt to the child and sums the gradient value in the child
+#if DUMPOUTPUT
+                    fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
+#endif
+                    child->LazyZeroGradient();          // set gradient to 0 if this is the first time
+#if 1
+                    if (frameRange.IsAllFrames())       // TODO: remove this
+                        ComputeInputPartial(i);
+                    else
+#endif
+                    ComputeInputPartial(i, frameRange);     // this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
-                else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, 
-                        (msra::strfun::utf8 (child->OperationName())).c_str(),
-                        (msra::strfun::utf8 (child->NodeName())).c_str());
+                else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, child->OperationName().c_str(), child->NodeName().c_str());
 #endif
             }
         }
 
-        /*implement*/void ClearGradientForChildren()
+        void /*ComputationNodeBase::*/ClearGradientForChildren() override   // TODO: bad naming--this just clears the lazy flags, whereas LazyZeroGradient() actually clears the values
         {
             for (size_t i=0; i<m_children.size(); i++)
-            {
-                ComputationNodePtr child = Inputs(i);
-                child->MarkGradientInitialized(false);
-            }
+                Inputs(i)->MarkGradientInitialized(false);
         }
-        virtual void ClearGradient(const bool clearExistingGradientValue)
+        // lazy resetting of gradient
+        // TODO: We can inline this once the Resize etc. below has been reduced to a single Matrix call
+        void LazyZeroGradient()
         {
-            if (NeedGradient())
-             {
-                //ClearChildGradientComputationFlag();
+            if (!m_needsGradient)
+                LogicError("%ls %ls operation: LazyZeroGradient() called although this node needs no gradient.");
 
-                if (clearExistingGradientValue)
-                {
-                    GradientValues().Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
-                    if (GradientValues().GetMatrixType() == DENSE)
-                    {
-                        GradientValues().SetValue(0);
-                    }
-                    else
-                    {
-                        GradientValues().Reset();
-                    }
-                }
-            }
+            if (m_gradientInitialized)
+                return;
+
+            // TODO: we should move this pattern to class Matrix. We should not be concerned here with the storage format of the gradient.
+            GradientValues().Resize(FunctionValues().GetNumRows(), FunctionValues().GetNumCols());
+            if (GradientValues().GetMatrixType() == DENSE)
+                GradientValues().SetValue(0);
+            else
+                GradientValues().Reset();
+
+            m_gradientInitialized = true;
         }
 
         // NOTE: we should reimplement this to be thread-safe and use a larger than requested initialized memory block
@@ -1542,7 +1546,7 @@ protected: \
 public: \
     using Base::CreateUniqId; \
     using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifySize; \
-    /*using Base::ComputeGradientForChildren; using Base::ComputeInputPartial;*/ using Base::ConstOnes; \
+    using Base::ConstOnes; \
     using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
