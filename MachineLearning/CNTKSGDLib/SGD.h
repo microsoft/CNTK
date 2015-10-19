@@ -431,7 +431,7 @@ protected:
                          /*out*/ size_t& totalSamplesSeen,
                          std::string prefixMsg = "");
 
-    void LazyInitDistGradAgg(const std::list<ComputationNodeBasePtr>& learnableNodes, int numEvalNodes, int traceLevel);
+    void InitDistGradAgg(int numEvalNodes, int traceLevel);
 
     bool ModelAveragingProcessing(size_t nSamplesSinceLastSync, const std::list<ComputationNodeBasePtr>& learnableNodes, size_t& nProcessedFrames, 
                                   float& SecondsSinceLastSyncFinished, float& SecondsSpentOnSync);
