@@ -1369,7 +1369,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
-            else if (inputIndex == 0)
+            if (inputIndex == 0)
                 LogicError("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
             else if (inputIndex == 1)
                 LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");

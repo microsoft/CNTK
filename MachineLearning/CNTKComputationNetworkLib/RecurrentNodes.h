@@ -146,7 +146,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             assert(inputIndex == 0); inputIndex;
 
