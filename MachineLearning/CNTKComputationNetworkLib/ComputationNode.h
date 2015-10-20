@@ -1305,6 +1305,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::OnComputeGradientBeginIteration();
 
+#if 0       // BUGBUG: This does not work, for unknown reasons. For now, we must keep the LazyZeroGradient() call inside ComputeGradientForChildren
             // allocate gradients for ourselves and also our children that we propagate into
             if (m_needsGradient)
             {
@@ -1316,14 +1317,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         child->LazyZeroGradient();          // set gradient to 0 if this is the first time
                 }
             }
+#endif
 
             // many gradients are reduction operations
             // They touch both in-flowing gradients and function values, so we must set both to 0.
-            // BUGBUG: This masks an error that nodes should do that by themselves. E.g. TimesNode does, but MinusNode (in case of 1-column bias) does not.
+            // BUGBUG: This masks a bug: Nodes should do that by themselves, like in EvaluateThisNode(), but they currently don't.
             if (m_needsGradient)
             {
                 MaskMissingValuesColumnsToZero();
-                MaskMissingGradientColumnsToZero();
+                if (m_gradientInitialized)
+                    MaskMissingGradientColumnsToZero();
             }
             for (size_t i = 0; i < m_children.size(); i++)
             {
@@ -1372,6 +1375,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
                     fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
 #endif
+                    child->LazyZeroGradient();          // set gradient to 0 if this is the first time
 #if 1
                     if (frameRange.IsAllFrames())       // TODO: remove this
                         ComputeInputPartial(i);
