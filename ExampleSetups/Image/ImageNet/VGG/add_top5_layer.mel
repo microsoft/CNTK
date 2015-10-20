@@ -1,0 +1,6 @@
+m1=LoadModel($CurModel$, format=cntk)
+SetDefaultModel(m1)
+
+ErrTop5 = ErrorPrediction(labels, OutputNodes.z, Const(5), tag = Eval)
+
+SaveModel(m1, $NewModel$, format=cntk)
