@@ -207,13 +207,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     w = builder.CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[1]);
                     m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-                    pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize); 
+                    pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize, 1); 
                     /// unless there is a good algorithm to detect loops, use this explicit setup
                     output = ApplyNonlinearFunction(
                         builder.Plus(
                             builder.Times(u, input), builder.Times(w, pastValue)), 0);
                     pastValue->AttachInputs(output);
-                    static_pointer_cast<PastValueNode<ElemType>>(pastValue)->SetTimeStep(1);
                     recur_idx ++;
                 }
                 else
@@ -238,7 +237,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-                        pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize); 
+                        pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize, 1);
                         /// unless there is a good algorithm to detect loops, use this explicit setup
                         output = ApplyNonlinearFunction(
                             builder.Plus(
@@ -321,7 +320,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         w = builder.CreateLearnableParameter(L"W0", m_layerSizes[1], m_layerSizes[1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-                        pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize); 
+                        pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[1], mbSize, 1); 
                         /// unless there is a good algorithm to detect loops, use this explicit setup
                         output = ApplyNonlinearFunction(
                             builder.Plus(
@@ -350,7 +349,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             w = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
                             m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-                            pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize); 
+                            pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i+1], mbSize, 1); 
                             /// unless there is a good algorithm to detect loops, use this explicit setup
                             output = ApplyNonlinearFunction(
                                 builder.Plus(
@@ -569,7 +568,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", i), m_layerSizes[i], m_layerSizes[i]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-                        pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i], mbSize);
+                        pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i], mbSize, 1);
                         //                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                         //                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
 
@@ -699,7 +698,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf(L"W%d", i), m_layerSizes[i], m_layerSizes[i]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
 
-                        pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i], mbSize);
+                        pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, (size_t)m_layerSizes[i], mbSize, 1);
                         //                output = (ComputationNodePtr)BuildLSTMNodeComponent(randomSeed, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
                         //                output = (ComputationNodePtr)BuildLSTMComponent(randomSeed, mbSize, 0, m_layerSizes[offset] * (offset ? m_lookupTableOrder : 1), m_layerSizes[offset + 1], input);
 
@@ -824,11 +823,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 while (ik <= m_maOrder)
                 {
                     pastValueXI = 
-                        builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize, 
-                        msra::strfun::wstrprintf(L"pastValue%d", ik)); 
-                    pastValueXI->SetParameterUpdateRequired(false); 
+                        builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize, ik, msra::strfun::wstrprintf(L"pastValue%d", ik)); 
+                    pastValueXI->SetParameterUpdateRequired(false);
                     pastValueXI->AttachInputs(input);
-                    static_pointer_cast<PastValueNode<ElemType>>(pastValueXI)->SetTimeStep(ik);
                     //TODO: to figure out sparse matrix size
                     Wxi = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"DD%d", ik), m_layerSizes[0], m_layerSizes[0]);
                     m_net->InitLearnableParameters(Wxi, m_uniformInit, randomSeed++, m_initValueScale);
@@ -854,7 +851,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"R%d", i+1), m_layerSizes[i+1], m_layerSizes[i+1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
-                        pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
+                        pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize, 1);
                         output = builder.Plus(builder.Times(w, pastValue), input);
 
                         pastValue->AttachInputs(output);
@@ -928,10 +925,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 bi = builder.CreateLearnableParameter(L"bi0", m_layerSizes[1], 1);
 
-                pastValueXI = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize);
-                pastValueXII = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize);
-                pastValueXIII = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize);
-                pastValueXIV = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize);
+                pastValueXI = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize, 1);
+                pastValueXII = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize, 2);
+                pastValueXIII = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize, 3);
+                pastValueXIV = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[0], mbSize, 4);
                 pastValueXI->AttachInputs(input);
                 pastValueXII->AttachInputs(input);
                 pastValueXIII->AttachInputs(input);
@@ -972,9 +969,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         )),
                         bi);
                     output = it;
-                    static_pointer_cast<PastValueNode<ElemType>>(pastValueXII)->SetTimeStep(2);
-                    static_pointer_cast<PastValueNode<ElemType>>(pastValueXIII)->SetTimeStep(3);
-                    static_pointer_cast<PastValueNode<ElemType>>(pastValueXIV)->SetTimeStep(4);
                     pastValueXI->SetParameterUpdateRequired(false);
                     pastValueXII->SetParameterUpdateRequired(false);
                     pastValueXIII->SetParameterUpdateRequired(false);
@@ -1000,7 +994,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         w = builder.CreateLearnableParameter(msra::strfun::wstrprintf (L"W%d", i), m_layerSizes[i+1], m_layerSizes[i+1]);
                         m_net->InitLearnableParameters(w, m_uniformInit, randomSeed++, m_initValueScale);
                         std::list<ComputationNodeBasePtr> recurrent_loop;
-                        pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize);
+                        pastValue = builder.PastValue(NULL, m_defaultHiddenActivity, m_layerSizes[i+1], mbSize, 1);
                         output = SimpleNetworkBuilder<ElemType>::ApplyNonlinearFunction(builder.Plus(builder.Times(u, input), builder.Times(w, pastValue)), i);
                         pastValue->AttachInputs(output);
                         recur_idx++;
@@ -1123,13 +1117,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t layer1 = outputDim;
         
-        pastValueHI = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-        pastValueHF = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-        pastValueHO = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-        pastValueHC = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-        pastValueCI = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-        pastValueCF = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
-        pastValueCC = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize); 
+        pastValueHI = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
+        pastValueHF = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
+        pastValueHO = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
+        pastValueHC = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
+        pastValueCI = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
+        pastValueCF = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
+        pastValueCC = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
         
         if(m_constInputGateValue)
         {
@@ -1896,13 +1890,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t layer1 = outputDim;
 
-        pastValueHI = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
-        pastValueHF = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
-        pastValueHO = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
-        pastValueHC = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
-        pastValueCI = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
-        pastValueCF = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
-        pastValueCC = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize);
+        pastValueHI = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
+        pastValueHF = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
+        pastValueHO = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
+        pastValueHC = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
+        pastValueCI = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
+        pastValueCF = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
+        pastValueCC = builder.PastValue(NULL, m_defaultHiddenActivity, layer1, mbSize, 1);
 
         if (m_constInputGateValue)
         {

@@ -352,15 +352,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 if (cnNodeType == OperationNameOf(PastValueNode))
-                {
-                    nodePtr = builder.PastValue(NULL, defaultHiddenActivity, rows, cols, name);
-                    static_pointer_cast<PastValueNode<ElemType>>(nodePtr)->SetTimeStep(timeStep);
-                }
+                    nodePtr = builder.PastValue(NULL, defaultHiddenActivity, rows, cols, timeStep, name);
                 else
-                {
-                    nodePtr = builder.FutureValue(NULL, defaultHiddenActivity, rows, cols, name);
-                    static_pointer_cast<FutureValueNode<ElemType>>(nodePtr)->SetTimeStep(timeStep);
-                }
+                    nodePtr = builder.FutureValue(NULL, defaultHiddenActivity, rows, cols, timeStep, name);
 
                 nodePtr->SetParameterUpdateRequired(needGradient);    // TODO: what's this for?
             }
