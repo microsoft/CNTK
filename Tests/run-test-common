@@ -68,7 +68,7 @@ cntkrun()
     DataDir=$(cygpath -aw $DataDir)
   fi
 
-  CNTKArgs="configFile=$ConfigDir/$configFileName RunDir=$RunDir DataDir=$DataDir DeviceId=$CNTKDeviceId $additionalCNTKArgs"
+  CNTKArgs="configFile=$ConfigDir/$configFileName RunDir=$RunDir DataDir=$DataDir ConfigDir=$ConfigDir DeviceId=$CNTKDeviceId $additionalCNTKArgs"
   if [ "$LogFileName" != "" ]; then
     CNTKArgs="$CNTKArgs stderr=$RunDir/$LogFileName"
   fi
