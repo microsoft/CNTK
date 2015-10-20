@@ -1,0 +1,185 @@
+load=ndlMnistMacros
+run=DNN
+
+ndlMnistMacros = [
+    ImageW = 224
+    ImageH = 224
+    ImageC = 3
+    LabelDim = 1000
+
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature)
+    labels = Input(LabelDim, tag = label)
+    
+    conv1WScale = 0.03
+    conv1BValue = 0
+    conv2WScale = 0.03
+    conv2BValue = 0
+    conv3WScale = 0.03
+    conv3BValue = 0
+    conv4WScale = 0.03
+    conv4BValue = 0
+    conv5WScale = 0.03
+    conv5BValue = 0
+    conv6WScale = 0.03
+    conv6BValue = 0
+    conv7WScale = 0.03
+    conv7BValue = 0
+    conv8WScale = 0.03
+    conv8BValue = 0
+    fc1WScale = 0.03
+    fc1BValue = 0
+    fc2WScale = 0.03
+    fc2BValue = 0
+    fc3WScale = 0.03
+    fc3BValue = 0
+]
+
+DNN=[
+    # conv1
+    kW1 = 3
+    kH1 = 3
+    cMap1 = 64
+    hStride1 = 1
+    vStride1 = 1
+    # weight[cMap1, kW1 * kH1 * ImageC]
+    conv1W = Parameter(cMap1, 27, init = Gaussian, initValueScale = conv1WScale)
+    conv1 = Convolution(conv1W, features, kW1, kH1, cMap1, hStride1, vStride1, zeroPadding = true)
+    conv1bias = Parameter(cMap1, 1, init = fixedValue, value = conv1BValue)
+    conv1plusbias = Plus(conv1, conv1bias);
+    conv1_act = RectifiedLinear(conv1plusbias);
+
+    # pool1
+    pool1W = 2
+    pool1H = 2
+    pool1hStride = 2
+    pool1vStride = 2
+    pool1 = MaxPooling(conv1_act, pool1W, pool1H, pool1hStride, pool1vStride)
+
+    # conv2
+    kW2 = 3
+    kH2 = 3
+    cMap2 = 128
+    hStride2 = 1
+    vStride2 = 1
+    # weight[cMap2, kW2 * kH2 * cMap1]
+    conv2W = Parameter(cMap2, 576, init = Gaussian, initValueScale = conv2WScale)
+    conv2 = Convolution(conv2W, pool1, kW2, kH2, cMap2, hStride2, vStride2, zeroPadding = true)
+    conv2bias = Parameter(cMap2, 1, init = fixedValue, value = conv2BValue)
+    conv2plusbias = Plus(conv2, conv2bias);
+    conv2_act = RectifiedLinear(conv2plusbias);
+
+    # pool2
+    pool2W = 2
+    pool2H = 2
+    pool2hStride = 2
+    pool2vStride = 2
+    pool2 = MaxPooling(conv2_act, pool2W, pool2H, pool2hStride, pool2vStride)
+
+    # conv3
+    kW3 = 3
+    kH3 = 3
+    cMap3 = 256
+    hStride3 = 1
+    vStride3 = 1
+    # weight[cMap3, kW3 * kH3 * cMap2]
+    conv3W = Parameter(cMap3, 1152, init = Gaussian, initValueScale = conv3WScale)
+    conv3 = Convolution(conv3W, pool2, kW3, kH3, cMap3, hStride3, vStride3, zeroPadding = true)
+    conv3bias = Parameter(cMap3, 1, init = fixedValue, value = conv3BValue)
+    conv3plusbias = Plus(conv3, conv3bias);
+    conv3_act = RectifiedLinear(conv3plusbias);
+
+    # conv4
+    kW4 = 3
+    kH4 = 3
+    cMap4 = 256
+    hStride4 = 1
+    vStride4 = 1
+    # weight[cMap4, kW4 * kH4 * cMap3]
+    conv4W = Parameter(cMap4, 2304, init = Gaussian, initValueScale = conv4WScale)
+    conv4 = Convolution(conv4W, conv3_act, kW4, kH4, cMap4, hStride4, vStride4, zeroPadding = true)
+    conv4bias = Parameter(cMap4, 1, init = fixedValue, value = conv4BValue)
+    conv4plusbias = Plus(conv4, conv4bias);
+    conv4_act = RectifiedLinear(conv4plusbias);
+
+    # pool3
+    pool3W = 2
+    pool3H = 2
+    pool3hStride = 2
+    pool3vStride = 2
+    pool3 = MaxPooling(conv4_act, pool3W, pool3H, pool3hStride, pool3vStride)
+
+    # conv5
+    kW5 = 3
+    kH5 = 3
+    cMap5 = 512
+    hStride5 = 1
+    vStride5 = 1
+    # weight[cMap5, kW5 * kH5 * cMap4]
+    conv5W = Parameter(cMap5, 2304, init = Gaussian, initValueScale = conv5WScale)
+    conv5 = Convolution(conv5W, pool3, kW5, kH5, cMap5, hStride5, vStride5, zeroPadding = true)
+    conv5bias = Parameter(cMap5, 1, init = fixedValue, value = conv5BValue)
+    conv5plusbias = Plus(conv5, conv5bias);
+    conv5_act = RectifiedLinear(conv5plusbias);
+
+    # conv6
+    kW6 = 3
+    kH6 = 3
+    cMap6 = 512
+    hStride6 = 1
+    vStride6 = 1
+    # weight[cMap6, kW6 * kH6 * cMap5]
+    conv6W = Parameter(cMap6, 4608, init = Gaussian, initValueScale = conv6WScale)
+    conv6 = Convolution(conv6W, conv5_act, kW6, kH6, cMap6, hStride6, vStride6, zeroPadding = true)
+    conv6bias = Parameter(cMap6, 1, init = fixedValue, value = conv6BValue)
+    conv6plusbias = Plus(conv6, conv6bias);
+    conv6_act = RectifiedLinear(conv6plusbias);
+
+    # pool4
+    pool4W = 2
+    pool4H = 2
+    pool4hStride = 2
+    pool4vStride = 2
+    pool4 = MaxPooling(conv6_act, pool4W, pool4H, pool4hStride, pool4vStride)
+
+    # conv7
+    kW7 = 3
+    kH7 = 3
+    cMap7 = 512
+    hStride7 = 1
+    vStride7 = 1
+    # weight[cMap7, kW7 * kH7 * cMap6]
+    conv7W = Parameter(cMap7, 4608, init = Gaussian, initValueScale = conv7WScale)
+    conv7 = Convolution(conv7W, pool4, kW7, kH7, cMap7, hStride7, vStride7, zeroPadding = true)
+    conv7bias = Parameter(cMap7, 1, init = fixedValue, value = conv7BValue)
+    conv7plusbias = Plus(conv7, conv7bias);
+    conv7_act = RectifiedLinear(conv7plusbias);
+
+    # conv8
+    kW8 = 3
+    kH8 = 3
+    cMap8 = 512
+    hStride8 = 1
+    vStride8 = 1
+    # weight[cMap8, kW8 * kH8 * cMap7]
+    conv8W = Parameter(cMap8, 4608, init = Gaussian, initValueScale = conv8WScale)
+    conv8 = Convolution(conv8W, conv7_act, kW8, kH8, cMap8, hStride8, vStride8, zeroPadding = true)
+    conv8bias = Parameter(cMap8, 1, init = fixedValue, value = conv8BValue)
+    conv8plusbias = Plus(conv8, conv8bias);
+    conv8_act = RectifiedLinear(conv8plusbias);
+
+    # pool5
+    pool5W = 2
+    pool5H = 2
+    pool5hStride = 2
+    pool5vStride = 2
+    pool5 = MaxPooling(conv8_act, pool5W, pool5H, pool5hStride, pool5vStride)
+
+    hiddenDim = 4096
+    h1 = DNNReLULayer(25088, hiddenDim, pool5, fc1WScale, fc1BValue)
+    h2 = DNNReLULayer(hiddenDim, hiddenDim, h1, fc2WScale, fc2BValue)
+    ol = DNNLastLayer(hiddenDim, labelDim, h2, fc3WScale, fc3BValue)
+    
+    CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
+    Err = ErrorPrediction(labels, ol, tag = Eval)
+    OutputNodes = ol
+]
