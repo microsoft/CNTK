@@ -9,6 +9,7 @@
 #include "Matrix.h"
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
+#include "ConvolutionEngine.h"
 
 #include <unordered_set>
 #include <map>
@@ -24,149 +25,6 @@
 #include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-    // REVIEW alexeyk: this is a temp class until we have generic tensor suport in CNTK.
-    class ConvolutionTensor4D
-    {
-    public:
-        size_t w() const { return m_w; }
-        size_t h() const { return m_h; }
-        size_t c() const { return m_c; }
-        size_t n() const { return m_n; }
-        void setN(size_t n) { m_n = n; }
-    public:
-        ConvolutionTensor4D(size_t w = 1, size_t h = 1, size_t c = 1, size_t n = 1)
-        {
-            m_w = w;
-            m_h = h;
-            m_c = c;
-            m_n = n;
-        }
-        ConvolutionTensor4D(ImageLayout src)
-        {
-            m_w = src.width;
-            m_h = src.height;
-            m_c = src.channels;
-            m_n = 1;
-        }
-    private:
-        size_t m_w;
-        size_t m_h;
-        size_t m_c;
-        size_t m_n;
-    };
-
-    // ConvolutionOptions describes properties specific to convolution application.
-    // It is not part of the tensor class to avoid confusion between tensor-specific and convolution-specific terms having the same names.
-    // For example, the stride in ConvolutionOptions means step size between subsequent convolution applications and not stride in the tensor storage of a particular dimension.
-    // The class might be extended with other specific properties, like LRN constants etc.
-    class ConvolutionOptions
-    {
-    public:
-        // Horizontal stride (in w-dimension).
-        size_t wStride() const { return m_wStride; }
-        // Vertical stride (in h-dimension).
-        size_t hStride() const { return m_hStride; }
-        bool padding() const { return m_padding; }
-    public:
-        ConvolutionOptions(const ConvolutionTensor4D& inT, const ConvolutionTensor4D& filterT, 
-            size_t wStride = 1, size_t hStride = 1, bool padding = false)
-        {
-            UNUSED(inT);
-            UNUSED(filterT);
-            m_wStride = wStride;
-            m_hStride = hStride;
-            m_padding = padding;
-        }
-    private:
-        size_t m_wStride;
-        size_t m_hStride;
-        bool m_padding;
-    };
-
-    template<class ElemType>
-    class ConvolutionEngine
-    {
-    public:
-        using Tensor4D = ConvolutionTensor4D;
-        using Tensor4DPtr = std::unique_ptr<Tensor4D>;
-        using Mat = Matrix<ElemType>;
-
-        ConvolutionEngine() {}
-        virtual ~ConvolutionEngine() {}
-
-    public:
-        virtual void Forward(const Tensor4D& inT, const Mat& in, const Tensor4D& filterT, const Mat& filter, const ConvolutionOptions& convOpt,
-            const Tensor4D& outT, Mat& out) = 0;
-        //virtual void BackwardData() = 0;
-        //virtual void BackwardFilter() = 0;
-
-        //virtual Tensor4DPtr CreateTensor() = 0;
-        //virtual Tensor4DPtr CreateFilterTensor() = 0;
-        //virtual Tensor4DPtr CreatePoolingTensor() = 0;
-        //virtual Tensor4DPtr CreateLrnTensor() = 0;
-
-    public:
-        ConvolutionEngine(const ConvolutionEngine&) = delete;
-        ConvolutionEngine& operator=(const ConvolutionEngine&) = delete;
-        ConvolutionEngine(ConvolutionEngine&&) = delete;
-        ConvolutionEngine& operator=(ConvolutionEngine&&) = delete;
-    };
-
-    template<class ElemType>
-    class DefaultConvolutionEngine : public ConvolutionEngine<ElemType>
-    {
-    public:
-        DefaultConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
-            : m_tempMatrix(deviceId), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
-        {
-        }
-
-    public:
-        void Forward(const Tensor4D& inT, const Mat& in, const Tensor4D& filterT, const Mat& filter, const ConvolutionOptions& convOpt,
-            const Tensor4D& outT, Mat& out) override
-        {
-            size_t packedInputRows = filterT.w() * filterT.h() * inT.c();
-            size_t packedInputColsPerSample = outT.w() * outT.h();
-            size_t outputSizePerChannel = packedInputColsPerSample;
-
-            assert(inT.n() == in.GetNumCols());
-            assert(outT.n() == out.GetNumCols());
-
-            size_t batchSize = inT.n();
-            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
-
-            assert(filter.GetNumCols() == packedInputRows && filter.GetNumRows() == outT.c());
-            out.Resize(outT.c(), outputSizePerChannel * batchSize);
-
-            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
-            size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
-
-            for (size_t i = 0; i < numSubBatches; i++)
-            {
-                size_t startSampleId = i * subBatchSize;
-                size_t endSampleId = min(batchSize, startSampleId + subBatchSize);
-                size_t smallBatchSize = endSampleId - startSampleId;
-
-                m_tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
-                Mat inputSubBatch = in.ColumnSlice(startSampleId, smallBatchSize);
-                m_tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
-                    inT.w(), inT.h(), inT.c(),
-                    outT.w(), outT.h(), outT.c(),
-                    filterT.w(), filterT.h(), convOpt.wStride(), convOpt.hStride(),
-                    convOpt.padding());
-
-                Mat outputSubBatch = out.ColumnSlice(outputSizePerChannel * startSampleId, outputSizePerChannel * smallBatchSize);
-                Mat::Multiply(filter, false, m_tempMatrix, false, outputSubBatch);
-            }
-
-            out.Reshape(outT.c() * outputSizePerChannel, batchSize);  //each sample becomes a column
-        }
-
-    private:
-        size_t m_maxTempMemSizeInSamples;
-        Mat m_tempMatrix;
-    };
 
     // -----------------------------------------------------------------------
     // ConvolutionNode (convolutionWeights, inputFeature)
@@ -378,83 +236,84 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             input0.HasNan("Convolution-input0");
             input1.HasNan("Convolution-input1");
 #endif
+            // REVIEW alexeyk: setting batch size, can it be done elsewhere in a single place?
             size_t batchSize = m_pMBLayout->GetNumParallelSequences();
             m_inT->setN(batchSize);
             m_outT->setN(batchSize);
             assert(m_convEng != nullptr);
             m_convEng->Forward(*m_inT, input1, *m_filterT, input0, *m_convOpt, *m_outT, functionValues);
 
-            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputImageLayout.GetNumChannels();
-            size_t packedInputColsPerSample = m_imageLayout.GetWidth() * m_imageLayout.GetHeight();
-            size_t outputSizePerChannel = packedInputColsPerSample;
-            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            //size_t inputDim = m_inputImageLayout.GetWidth() * m_inputImageLayout.GetHeight() * m_inputImageLayout.GetNumChannels();  //size of each input sample
+            //size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputImageLayout.GetNumChannels();
+            //size_t packedInputColsPerSample = m_imageLayout.GetWidth() * m_imageLayout.GetHeight();
+            //size_t outputSizePerChannel = packedInputColsPerSample;
+            ////size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
+            ////size_t inputDim = m_inputImageLayout.GetWidth() * m_inputImageLayout.GetHeight() * m_inputImageLayout.GetNumChannels();  //size of each input sample
 
-            size_t batchSize = input1.GetNumCols();  //right child is the input sample
+            //size_t batchSize = input1.GetNumCols();  //right child is the input sample
 
-            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0? batchSize : m_maxTempMemSizeInSamples);
+            //size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0? batchSize : m_maxTempMemSizeInSamples);
 
-            const Matrix<ElemType> & weightMatrix = input0;
-            assert(weightMatrix.GetNumCols() == packedInputRows && weightMatrix.GetNumRows() == m_imageLayout.GetNumChannels());
+            //const Matrix<ElemType> & weightMatrix = input0;
+            //assert(weightMatrix.GetNumCols() == packedInputRows && weightMatrix.GetNumRows() == m_imageLayout.GetNumChannels());
 
             // GPU and 1-dimensional image
-            bool m_1DConvolutionOnGPUSparse = (m_inputImageLayout.GetHeight() == 1
-                && input1.GetCurrentMatrixLocation() == CurrentDataLocation::GPU
-                && input1.GetMatrixType() == MatrixType::SPARSE);
+            //bool m_1DConvolutionOnGPUSparse = (m_inputImageLayout.GetHeight() == 1
+            //    && input1.GetCurrentMatrixLocation() == CurrentDataLocation::GPU
+            //    && input1.GetMatrixType() == MatrixType::SPARSE);
 
-            functionValues.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
+            //functionValues.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, false);
 
             // Reshaping is only necessary if we are going to use the unpacking trick
-            if (!m_1DConvolutionOnGPUSparse)
-                functionValues.Reshape(m_imageLayout.GetNumChannels(), outputSizePerChannel * batchSize);
+            //if (!m_1DConvolutionOnGPUSparse)
+            //    functionValues.Reshape(m_imageLayout.GetNumChannels(), outputSizePerChannel * batchSize);
 
-            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples); 
-            size_t numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
+            //size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples); 
+            //size_t numSubBatches = (batchSize+subBatchSize-1)/subBatchSize; 
 
-            for (size_t i=0; i<numSubBatches; i++) 
-            {
-                size_t startSampleID = i*subBatchSize; 
-                size_t endSampleID = min(batchSize, startSampleID + subBatchSize); 
-                size_t smallBatchSize = endSampleID-startSampleID;
-                Matrix<ElemType>  inputSubBatch;
+            //for (size_t i=0; i<numSubBatches; i++) 
+            //{
+            //    size_t startSampleID = i*subBatchSize; 
+            //    size_t endSampleID = min(batchSize, startSampleID + subBatchSize); 
+            //    size_t smallBatchSize = endSampleID-startSampleID;
+            //    Matrix<ElemType>  inputSubBatch;
 
                 // We optimize for three different scenarios here by handling them slightly differently.
                 // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
                 // [Scenario 2] Sparse 1-D convolution on GPU: for text scenarios we have a specific kernel.
                 // [Scenario 3] Sparse all others: convert to dense. Temporary work-around - allocating/de-allocating memory is costly!
-                if (input1.GetMatrixType() == MatrixType::DENSE || m_1DConvolutionOnGPUSparse)
-                {
-                    inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
-                }
-                else
-                {
-                    inputSubBatch.SetValue(input1.ColumnSlice(startSampleID, smallBatchSize), input1.GetFormat());
-                    inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
-                }
+            //    if (input1.GetMatrixType() == MatrixType::DENSE || m_1DConvolutionOnGPUSparse)
+            //    {
+            //        inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
+            //    }
+            //    else
+            //    {
+            //        inputSubBatch.SetValue(input1.ColumnSlice(startSampleID, smallBatchSize), input1.GetFormat());
+            //        inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
+            //    }
 
-                if (m_1DConvolutionOnGPUSparse)
-                {
-                    if (m_kernelWidth * m_inputImageLayout.GetNumChannels() != weightMatrix.GetNumCols())
-                        LogicError("Kernel width and weight matrix dimensions don't match.");
+            //    if (m_1DConvolutionOnGPUSparse)
+            //    {
+            //        if (m_kernelWidth * m_inputImageLayout.GetNumChannels() != weightMatrix.GetNumCols())
+            //            LogicError("Kernel width and weight matrix dimensions don't match.");
 
-                    Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(startSampleID, smallBatchSize);
-                    Matrix<ElemType>::ConvolveAndWeightedAdd(1, weightMatrix, inputSubBatch, 0, outputSubBatch,
-                        m_horizontalSubsample * m_inputImageLayout.GetNumChannels(), m_zeroPadding);
-                }
-                else
-                {
-                    Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(outputSizePerChannel * startSampleID, outputSizePerChannel * smallBatchSize);
-                    tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
-                    tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
-                                                        m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputImageLayout.GetNumChannels(),
-                                                        m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels(),
-                                                        m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
+            //        Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(startSampleID, smallBatchSize);
+            //        Matrix<ElemType>::ConvolveAndWeightedAdd(1, weightMatrix, inputSubBatch, 0, outputSubBatch,
+            //            m_horizontalSubsample * m_inputImageLayout.GetNumChannels(), m_zeroPadding);
+            //    }
+            //    else
+            //    {
+            //        Matrix<ElemType>  outputSubBatch = functionValues.ColumnSlice(outputSizePerChannel * startSampleID, outputSizePerChannel * smallBatchSize);
+            //        tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+            //        tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
+            //                                            m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputImageLayout.GetNumChannels(),
+            //                                            m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_imageLayout.GetNumChannels(),
+            //                                            m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
 
-                    Matrix<ElemType>::Multiply(weightMatrix, false, tempMatrix, false, outputSubBatch);
-                }
-            }
+            //        Matrix<ElemType>::Multiply(weightMatrix, false, tempMatrix, false, outputSubBatch);
+            //    }
+            //}
 
-            functionValues.Reshape(m_imageLayout.GetNumChannels() * outputSizePerChannel, batchSize);  //each sample becomes a column
+            //functionValues.Reshape(m_imageLayout.GetNumChannels() * outputSizePerChannel, batchSize);  //each sample becomes a column
 
 #if NANCHECK
             functionValues.HasNan("Convolution");
@@ -519,20 +378,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }    
 
             if (m_inT == nullptr)
-                m_inT = std::make_unique<ConvolutionTensor4D>(m_inputImageLayout);
+                m_inT = std::make_unique<ConvolutionTensor4D>(m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels);
             if (m_filterT == nullptr)
                 m_filterT = std::make_unique<ConvolutionTensor4D>(m_kernelWidth, m_kernelHeight, m_inputImageLayout.channels);
             if (m_outT == nullptr)
-                m_outT = std::make_unique<ConvolutionTensor4D>(m_outputImageLayout);
+                m_outT = std::make_unique<ConvolutionTensor4D>(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels);
             if (m_convOpt == nullptr)
                 m_convOpt = std::make_unique<ConvolutionOptions>(*m_inT, *m_filterT, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
 
             // REVIEW alexeyk: does not seem like a good place to create engine, fine for now.
-#ifndef USE_CUDNN
             if (m_convEng == nullptr)
-                m_convEng = std::make_unique<DefaultConvolutionEngine<ElemType>>(m_deviceId, m_maxTempMemSizeInSamples);
-#else
-#endif
+                m_convEng = ConvolutionEngine<ElemType>::Create(m_deviceId, m_maxTempMemSizeInSamples);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
