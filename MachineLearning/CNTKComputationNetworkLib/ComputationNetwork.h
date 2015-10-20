@@ -678,14 +678,14 @@ public:
                     {
                         node2->EvaluateThisNode(t);
                         if (IsNodeReqMultiSeqHandling(node2))
-                            node2->MaskMissingValuesColumnsToZero(t.t());  // TODO: This should take a FrameRange as well
+                            node2->MaskMissingValuesColumnsToZero(t);
                         node2->UpdateEvalTimeStamp();
                     }
                 } 
 
                 // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
-                for (auto & nodeIter : recurrentNodes)
-                    nodeIter->OnEvaluateEndIteration();
+                for (auto & node2 : recurrentNodes)
+                    node2->OnEvaluateEndIteration();
 
                 recInfo->m_completedEvaluate = true;
             }
@@ -766,28 +766,36 @@ public:
 #ifdef DISPLAY_DEBUG
             fprintf(stderr, "Compute Gradient For Node: %ls(%ls) Against Children\n", node->OperationName().c_str(), node->NodeName().c_str());
 #endif
-            node->OnComputeGradientBeginIteration();  // (currently this only logs)
-
             // --- first, perform recurrent loops if this node participates in one
 
             RecurrentInfo * recInfo = FindInRecurrentLoops(node);
             if (recInfo)
             {
-                if (recInfo->m_completedGradient == false)
+                if (!recInfo->m_completedGradient)
                 {
                     const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+
+                    for (auto & node2 : recurrentNodes)
+                        node2->OnComputeGradientBeginIteration();
+
                     auto pMBLayout = recurrentNodes[0]->GetMBLayout();
                     FrameRangeIteration range(pMBLayout, recInfo->m_isForwardLoop ? -1 : +1);
+
                     for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iteration
                     {
                         for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
                         {
-                            (*nodeIter2)->VerifyNumParallelSequences(GetNumParallelSequences());
-                            if (IsNodeReqMultiSeqHandling(*nodeIter2))
-                                (*nodeIter2)->MaskMissingGradientColumnsToZero(t.t());   // TODO: should accept a FrameRange as well
-                            (*nodeIter2)->ComputeGradientForChildren(t);
+                            auto & node2 = *nodeIter2;
+                            node2->VerifyNumParallelSequences(GetNumParallelSequences());
+                            if (IsNodeReqMultiSeqHandling(node2))
+                                node2->MaskMissingGradientColumnsToZero(t);
+                            node2->ComputeGradientForChildren(t);
                         }
                     }
+
+                    for (auto & node2 : recurrentNodes)
+                        node2->OnComputeGradientEndIteration();
+
                     recInfo->m_completedGradient = true;
                 }
             }
@@ -796,17 +804,17 @@ public:
 
             else
             {
+                node->OnComputeGradientBeginIteration();
                 if (IsNodeReqMultiSeqHandling(node))
                 {
                     // batch is done only for feed-forward nodes
                     if (node->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
                         LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
-                    node->MaskMissingGradientColumnsToZero();
+                    node->MaskMissingGradientColumnsToZero(FrameRange());
                 }
                 node->ComputeGradientForChildren(FrameRange());
+                node->OnComputeGradientEndIteration();
             }
-
-            node->OnComputeGradientEndIteration();  // (currently this only logs)
         }
 
         //since we now allow sharing of the matrix for function value and gradient value. the function values are now destroyed
