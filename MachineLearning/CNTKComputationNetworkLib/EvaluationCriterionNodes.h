@@ -48,8 +48,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             inputFunctionValues0.VectorMax(maxIndexes0, maxValues, true);
             inputFunctionValues1.VectorMax(maxIndexes1, maxValues, true, topK);
-            curNode->MaskMissingColumnsToZero(maxIndexes0, Inputs(0)->GetMBLayout());   // we are fine since it will only be called with full minibatch
-            curNode->MaskMissingColumnsToZero(maxIndexes1, Inputs(1)->GetMBLayout());
+            curNode->MaskMissingColumnsToZero(maxIndexes0, Inputs(0)->GetMBLayout(), FrameRange());
+            curNode->MaskMissingColumnsToZero(maxIndexes1, Inputs(1)->GetMBLayout(), FrameRange());
             functionValues.AssignNumOfDiff(maxIndexes0, maxIndexes1, topK > 1);
         #if NANCHECK
             functionValues.HasNan("ErrorPrediction");

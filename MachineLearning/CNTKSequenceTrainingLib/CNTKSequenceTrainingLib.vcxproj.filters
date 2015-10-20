@@ -14,6 +14,12 @@
     <ClInclude Include="..\..\Common\Include\ssematrix.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\latticearchive.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Common\Include\latticestorage.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="latticeforwardbackward.cpp" />

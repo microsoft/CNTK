@@ -8,21 +8,22 @@
 
 // TODOs:
 //  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, it should already be covered by Node::UpdateFunctionMBSize() which is called from inside the Eval loop
-//  - everywhere complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial; also make the same change for ComputePartial()
 //  - need Matrix::RowSlice() (problem: currently has no 'lead' dimension separate from numRows)
-//  - revise constructors, merge by means of default parameters
-//  - add a runtime check that nodes deriving from ComputeNodeNonLooping may never participate in a loop
-//  - ClassbasedCrossEntropyWithSoftmax::EvaluateThisNodeS()'s calls to MaskMissingColumnsToZero() are likely wrong.
-//    Need to understand what this does, then implement it correctly w.r.t. MBLayout.
-//  - CRFNode::ComputeInputPartial() fails for >1 parallel seqeunce due to DataSlice() not being able to return whole sequences
-//  - BUGBUG: All frameRange.Check() expressions are wrong that operate on children, since the wrong layout pointer is passed in (for most nodes it is identical to the correct one though).
-//    This will get fixed as we remove these Check() expressions when absorbing EvaluateThisNodeS().
-//  - implement reading of MB Layout in Binary, DSSM, LivbSVM, and SparsePCReader
 //  - BUGBUG (in the future): Once we have > 1 layout in the system, all nodes must compare their actual layouts upon Evaluate().
 //    Example: TimeReverse must create a new layout. A second TimeReverse ideally would revert back, but can't know. Hence, all consumers of layouts must compare upon Evaluate().
-//  - more informative CUDA errors (show original error, machine name, and card id; maybe even a time stamp), to better be able to handle hardware issues
+//    -> solve by including a layout in the FrameRange directly; then DataSlice() can compare compatibility
 //  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
 //  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
+//  - code prettification:
+//     - sort all node implementations' methods into the same order; esp, EvaluateThisNode() comes before partial
+//     - sort important nodes first; move unused/experimental nodes into source files named accordingly
+//     - 
+//  - finish the job:
+//     - everywhere complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
+//     - revise node constructors, merge by means of default parameters
+//  - known issues that need actual test cases to be fixed:
+//     - CRFNode::ComputeInputPartial() fails for >1 parallel sequence due to DataSlice() not being able to return whole sequences
+//     - implement reading of MB Layout in Binary, DSSM, LivbSVM, and SparsePCReader
 
 // The basic idea of this implementation is learned from Brian Guenter <bguenter@microsoft.com>
 

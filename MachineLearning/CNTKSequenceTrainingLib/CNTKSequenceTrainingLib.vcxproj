@@ -67,6 +67,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\Common\Include\latticearchive.h" />
+    <ClInclude Include="..\..\Common\Include\latticestorage.h" />
     <ClInclude Include="..\..\Common\Include\simplesenonehmm.h" />
     <ClInclude Include="..\..\Common\Include\simple_checked_arrays.h" />
     <ClInclude Include="..\..\Common\Include\ssefloat4.h" />
