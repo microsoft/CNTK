@@ -22,7 +22,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // REVIEW alexeyk: this is a temp class until we have generic tensor suport in CNTK.
-    class MATH_API ConvolutionTensor4D
+    class ConvolutionTensor4D
     {
     public:
         size_t w() const { return m_w; }
@@ -58,7 +58,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // It is not part of the tensor class to avoid confusion between tensor-specific and convolution-specific terms having the same names.
     // For example, the stride in ConvolutionOptions means step size between subsequent convolution applications and not stride in the tensor storage of a particular dimension.
     // The class might be extended with other specific properties, like LRN constants etc.
-    class MATH_API ConvolutionOptions
+    class ConvolutionOptions
     {
     public:
         // Horizontal stride (in w-dimension).
@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     template<class ElemType>
-    class ConvolutionEngine
+    class MATH_API ConvolutionEngine
     {
     public:
         using Tensor4D = ConvolutionTensor4D;
