@@ -363,7 +363,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
             if (inputIndex > 1)
                 InvalidArgument("LookupTable operation only takes two inputs.");
 
@@ -582,7 +582,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
             assert(m_functionValues->GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues->GetNumRows() for loop dimension
             assert(m_pMBLayout);
 
