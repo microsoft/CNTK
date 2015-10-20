@@ -1930,6 +1930,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                       GetMomentumPerSample(epochNumber/*BUGBUG workaround:*/, net.GetMBLayoutPtr()->GetNumParallelSequences()), aggregateNumSamples,
                                       m_L2RegWeight, m_L1RegWeight,
                                       m_needAveMultiplier);
+#ifdef _DEBUG
+                        if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->FunctionValues().HasNan("TrainOneEpoch/UpdateWeights(): "))
+                            LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());
+#endif
                     }
                 }
             }

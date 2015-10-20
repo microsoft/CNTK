@@ -92,8 +92,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void OnEvaluateBeginIteration() = 0;
         virtual void EvaluateThisNode(const FrameRange &) = 0;  // forward prop for one minibatch
         virtual void OnEvaluateEndIteration() = 0;              // called after last iteration step of EvaluateThisNode()
+
+        virtual void OnComputeGradientBeginIteration() = 0;             // called before first iteration step of ComputeGradient()
         virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) = 0;
         virtual void ComputeInputPartial(const size_t inputIndex) = 0;   // TODO: this will be replaced by FrameRange version
+        virtual void OnComputeGradientEndIteration() = 0;             // called after last iteration step of ComputeGradient()
 
         // --- optional overrides
 
@@ -528,26 +531,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // The need for this seems an artifact of the old inconsistent layout architecture. In the future, this can probably just go away.
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return false; }
 
-        virtual void /*IComputationNode::*/OnEvaluateBeginIteration()             // called before first iteration step of EvaluateThisNode()
+        virtual void /*IComputationNode::*/OnEvaluateBeginIteration() override             // called before first iteration step of EvaluateThisNode()
         {
 #ifdef TRACK_GAP_NANS
             fprintf(stderr, "OnEvaluateBeginIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
 #endif
         }
-        virtual void /*IComputationNode::*/OnEvaluateEndIteration()               // called after last iteration step of EvaluateThisNode()
+        virtual void /*IComputationNode::*/OnEvaluateEndIteration() override               // called after last iteration step of EvaluateThisNode()
         {
 #ifdef TRACK_GAP_NANS
             fprintf(stderr, "OnEvaluateEndIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
 #endif
         }
         // TODO: the following two are not really utilized yet other than printing trace information
-        void /*IComputationNode::*/OnComputeGradientBeginIteration()             // called before first iteration step of EvaluateThisNode()
+        virtual void /*IComputationNode::*/OnComputeGradientBeginIteration() override             // called before first iteration step of ComputeGradient()
         {
 #ifdef TRACK_GAP_NANS
             fprintf(stderr, "OnComputeGradientBeginIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
 #endif
         }
-        void /*IComputationNode::*/OnComputeGradientEndIteration()               // called after last iteration step of EvaluateThisNode()
+        virtual void /*IComputationNode::*/OnComputeGradientEndIteration() override               // called after last iteration step of ComputeGradient()
         {
 #ifdef TRACK_GAP_NANS
             fprintf(stderr, "OnComputeGradientEndIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
@@ -1285,7 +1288,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
 #ifdef _DEBUG
-        virtual void /*IComputationNode::*/OnEvaluateEndIteration()               // called after last iteration step of EvaluateThisNode()
+        // NaN checks
+        virtual void /*IComputationNode::*/OnEvaluateEndIteration() override
         {
             Base::OnEvaluateEndIteration();
 #ifdef TRACK_GAP_NANS
@@ -1297,66 +1301,63 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 #endif
 
-        // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
-#if 0
-        void ComputeGradientForChildrenMap()   // TODO: subsume in FrameRange version below
+        virtual void /*IComputationNode::*/OnComputeGradientBeginIteration() override
         {
-            if (HasLoop())
-                return;
+            Base::OnComputeGradientBeginIteration();
 
-            for (size_t i = 0; i<m_children.size(); i++)
+            // allocate gradients for ourselves and also our children that we propagate into
+            if (m_needsGradient)
             {
-                ComputationNodePtr child = Inputs(i);
-                if (child->m_needsGradient)
+                LazyZeroGradient();          // set gradient to 0 if this is the first time
+                for (size_t i = 0; i < m_children.size(); i++)
                 {
-                    //fprintf(stderr, "ComputeGradientForChildren: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
-                    if (!m_needsGradient)
-                        LogicError("%ls %ls operation has m_needsGradient set to false but children require it.");
-#ifdef DISPLAY_DEBUG
-                    fprintf (stderr, "    [%lu]: %s(%s)\n", i, 
-                        (msra::strfun::utf8 (child->OperationName())).c_str(),
-                        (msra::strfun::utf8 (child->NodeName())).c_str());
-#endif              
-#if DUMPOUTPUT
-                    fprintf(stderr,"Backprop%d_%ls\n",i,NodeName().c_str());
-#endif
-                    child->LazyZeroGradient();
-
-                    ComputeInputPartial(i); //this computes partial wrt to the child and sums the gradient value in the child
-#ifdef _DEBUG
-#ifdef TRACK_GAP_NANS
-                    child->MaskMissingGradientColumnsToZero();  // hide NaNs in gaps (those are OK)
-                    if (child->GradientValues().HasNan("ComputeGradientForChildren(void): "))
-                        LogicError("%ls %ls operation has NaNs in gradient.", child->NodeName().c_str(), child->OperationName().c_str());
-#endif
-                    MaskMissingColumnsTo(child->GradientValues(), child->m_pMBLayout, SIZE_MAX, SIZE_MAX, Matrix<ElemType>::MakeNan(__LINE__));
-#endif
+                    ComputationNodePtr child = Inputs(i);
+                    if (child->m_needsGradient)
+                        child->LazyZeroGradient();          // set gradient to 0 if this is the first time
                 }
-#ifdef DISPLAY_DEBUG
-                else fprintf (stderr, "    [%lu]: %s(%s) (no gradient needed so don't compute for)\n", i, 
-                        (msra::strfun::utf8 (child->OperationName())).c_str(),
-                        (msra::strfun::utf8 (child->NodeName())).c_str());
-#endif
             }
-        }
-#endif
 
-        void ComputeGradientForChildren(const FrameRange & frameRange) override
-        {
-            //if (frameRange.IsAllFrames()) { ComputeGradientForChildrenMap(); return; } // TODO: get rid of this
-            if (frameRange.IsAllFrames() && HasLoop())
-                LogicError("%ls %ls operation: ComputeGradientForChildren called with whole-batch FrameRange on node that participates in a loop");
-
-#ifdef _DEBUG
             // many gradients are reduction operations
             // They touch both in-flowing gradients and function values, so we must set both to 0.
             // BUGBUG: This masks an error that nodes should do that by themselves. E.g. TimesNode does, but MinusNode (in case of 1-column bias) does not.
             if (m_needsGradient)
             {
-                MaskMissingValuesColumnsToZero(frameRange);
-                MaskMissingGradientColumnsToZero(frameRange);
+                MaskMissingValuesColumnsToZero();
+                MaskMissingGradientColumnsToZero();
+            }
+            for (size_t i = 0; i < m_children.size(); i++)
+            {
+                ComputationNodePtr child = Inputs(i);
+                if (child->m_needsGradient)
+                    child->MaskMissingValuesColumnsToZero();
+            }
+        }
+
+#ifdef _DEBUG
+        virtual void /*IComputationNode::*/OnComputeGradientEndIteration() override
+        {
+            Base::OnComputeGradientEndIteration();
+#ifdef TRACK_GAP_NANS
+            for (size_t i = 0; i < m_children.size(); i++)
+            {
+                ComputationNodePtr child = Inputs(i);
+                if (child->m_needsGradient)
+                {
+                    child->MaskMissingGradientColumnsToZero();       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+                    if (child->GradientValues().HasNan("OnComputeGradientEndIteration"))
+                        LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
+                }
             }
 #endif
+        }
+#endif
+
+        // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
+        void ComputeGradientForChildren(const FrameRange & frameRange) override
+        {
+            if (frameRange.IsAllFrames() && HasLoop())
+                LogicError("%ls %ls operation: ComputeGradientForChildren called with whole-batch FrameRange on node that participates in a loop");
+
             for (size_t i = 0; i < m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
@@ -1370,11 +1371,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 #if DUMPOUTPUT
                     fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
-#endif
-                    child->LazyZeroGradient();          // set gradient to 0 if this is the first time
-#ifdef _DEBUG
-                    // see comment above (BUGBUG: This masks an error...)
-                    child->MaskMissingValuesColumnsToZero(frameRange);
 #endif
 #if 1
                     if (frameRange.IsAllFrames())       // TODO: remove this
