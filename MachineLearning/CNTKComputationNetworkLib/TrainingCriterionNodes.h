@@ -34,11 +34,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
-            if (inputIndex > 1)
-                InvalidArgument("SquareError criteria only takes two inputs.");
-
             if (inputIndex == 0)  //left derivative
                 ComputeInputPartialLeft(Inputs(0)->GradientValues(), GradientValues(), *m_leftMinusRight);
             else
@@ -135,7 +132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
@@ -277,7 +274,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
@@ -402,7 +399,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
         {
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradientOfL1Norm, Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues());
@@ -493,7 +490,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartial(const size_t inputIndex) // scale by number of cols (or samples)
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
         {
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues(), FunctionValues());
@@ -593,7 +590,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
         */
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
             m_needRecomputeGradientToSoftmaxInput = false;
             //gradient computation@yinggongzhao
@@ -756,7 +753,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /**
         compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
         */
-        virtual void ComputeInputPartial(const size_t inputIndex) override
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
             // this should never be called for input[0], which is controlled through the needGradient flag
             if (inputIndex != 1 && inputIndex != 2 && inputIndex != 3)
@@ -1119,7 +1116,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
         {
             // inputIndex 0 should not get us here, it should be prevented by the needGradient flag of input[0]
             if (inputIndex != 1 && inputIndex != 2)
@@ -1370,15 +1367,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
           Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
-            if (inputIndex > 2)
-                InvalidArgument("DummyCriterionNode only takes three inputs.");
             else if (inputIndex == 0)
                 LogicError("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
             else if (inputIndex == 1)
                 LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
-            else
+            else if (inputIndex == 2)
                 ComputeInputPartialThree(Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
         }
 
@@ -1457,7 +1452,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         
         //compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
             //auto t_start_time = Timer::MilliSecondElapsed();
             //left Node must be a scalar

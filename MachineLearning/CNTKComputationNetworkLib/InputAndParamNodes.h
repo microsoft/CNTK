@@ -133,7 +133,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // computation functions don't do anything for parameter nodes
         virtual size_t UpdateFunctionMBSize(size_t /*numCols*/) override { return 0; }
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/) override { }
+
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) override { }
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override { }
 
@@ -300,10 +300,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return numCols;
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override {}
-
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/) {}
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) {}
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange &) override { }
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) { }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
@@ -343,7 +341,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             if (inputIndex > 1)
                 InvalidArgument("LookupTable operation only takes two inputs.");
@@ -363,8 +361,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Inputs(1)->FunctionValues().TransferFromDeviceToDevice(input0DeviceId, input1DeviceId);
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             if (inputIndex > 1)
                 InvalidArgument("LookupTable operation only takes two inputs.");
 
@@ -510,9 +509,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Inputs(i)->GradientValues().SetValue(0);
                 }
                 for (size_t i = 0; i < 2; i++)
-                    ComputeInputPartial(i);
+                    ComputeInputPartial(i, FrameRange());
 
-                /// check with expected values
+                // check with expected values
                 if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 2, EPSILON) /// bi
                     || !ISCLOSE(Inputs(1)->GradientValues()(0, 1), 2, EPSILON)  // Wxi
                     || !ISCLOSE(Inputs(1)->GradientValues()(1, 0), 2, EPSILON)  // Whi
@@ -573,7 +572,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         /// to-do: need to change to the new way of resetting state
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             if (inputIndex > 0)
                 InvalidArgument("PairNetwork operation only takes one input.");
@@ -581,10 +580,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::ScaleAndAdd(1.0, GradientValues(), Inputs(inputIndex)->GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
-            if (inputIndex > 0)
-                InvalidArgument("Delay operation only takes one input.");
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             assert(m_functionValues->GetNumRows() == GradientValues().GetNumRows()); // original used m_functionValues->GetNumRows() for loop dimension
             assert(m_pMBLayout);
 

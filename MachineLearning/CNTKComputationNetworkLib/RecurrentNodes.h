@@ -146,7 +146,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
             assert(inputIndex == 0); inputIndex;
 
@@ -498,7 +498,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
             if (inputIndex > 4)
                 InvalidArgument("LSTM operation only takes five inputs.");
@@ -1334,7 +1334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Inputs(i)->GradientValues().SetValue(0);
                 }
                 for (size_t i = 0; i < 5; i++)
-                    ComputeInputPartial(i);
+                    ComputeInputPartial(i, FrameRange());
 
                 // check with expected values
                 if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 0.07843818, EPSILON) // bi

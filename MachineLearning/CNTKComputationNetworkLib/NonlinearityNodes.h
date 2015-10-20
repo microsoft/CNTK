@@ -46,14 +46,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialV(*m_gradient, Inputs(0)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
             // TODO: this seems always the same pattern. This belongs into a base slice-extractor function.
@@ -192,14 +193,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
         // we should get rid of this code dup, need to unify the -V functions
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
@@ -246,14 +248,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
         // TODO: unify signature & get rid of code dup
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
@@ -302,14 +305,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
         // TODO: get rid of code dup
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
@@ -357,14 +361,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
         // TODO: get rid of code dup
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
@@ -411,14 +416,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
         // TODO: code dup
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
@@ -468,14 +474,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
         // TODO: code dup
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, *m_diff, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
@@ -562,14 +569,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
         // TODO: code dup
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradient, *m_softmax, Inputs(0)->GradientValues(), GradientValues(), FunctionValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
@@ -655,7 +663,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNode<ElemType>(deviceId, name)
         { }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             switch (inputIndex)
             {
@@ -676,8 +684,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             //get the right slice 
             const size_t colsPrior = Inputs(0)->GetNumCols();
 
@@ -1069,18 +1078,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_randomSeed = (unsigned long)CreateUniqId();
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             if (inputIndex > 0)
                 InvalidArgument("Dropout operation only takes one input.");
             ComputeInputPartialS(m_dropoutRate, Inputs(0)->GradientValues(), *m_maskOfDropout, GradientValues());
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
-            if (inputIndex > 0)
-                InvalidArgument("Dropout operation only takes one input.");
-
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
@@ -1377,7 +1384,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             if (inputIndex > 0)
                 InvalidArgument("Reshape operation only takes one input.");
@@ -1385,11 +1392,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_numRows);
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
-            if (inputIndex > 0)
-                InvalidArgument("Reshape operation only takes one input.");
-
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             size_t rows = Inputs(0)->GradientValues().GetNumRows();
             if ((rows * GetNumParallelSequences()) % m_numRows > 0)
             {
@@ -1598,7 +1603,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             if (inputIndex > 0)
                 InvalidArgument("Diagonal operation only takes one input.");
@@ -1608,6 +1613,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & /*frameRange*/)
         {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             NOT_IMPLEMENTED
         }
 
@@ -1749,14 +1755,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        void ComputeInputPartialMap(const size_t inputIndex)
         {
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_numRepeat);
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
 
             Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));

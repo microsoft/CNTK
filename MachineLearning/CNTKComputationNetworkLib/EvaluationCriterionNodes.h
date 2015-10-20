@@ -34,9 +34,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
 
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of elements in the Matrix<ElemType>
+        virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
         {
-            LogicError("ErrorPrediction is used for evaluation only.");
+            LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
         }
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
