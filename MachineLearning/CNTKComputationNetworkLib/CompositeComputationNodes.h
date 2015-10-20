@@ -42,7 +42,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
             if (inputIndex > 1)
                 InvalidArgument("Parallel operation only takes two input.");
@@ -170,8 +170,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             GradientValues()(3, 1) = 5;
             GradientValues()(3, 2) = 6;
 
-            ComputeInputPartial(0);
-            ComputeInputPartial(1);
+            ComputeInputPartial(0, FrameRange());
+            ComputeInputPartial(1, FrameRange());
 
             /// check with expected values
             if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 1, EPSILON)
@@ -321,7 +321,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/)
+        virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
         {
             LogicError("Mean operation should not be involved in the gradient calculation.");
         }
@@ -534,12 +534,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
-        {
-            InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");   // TODO: don't we have a base class for this?
-        }
+        //void ComputeInputPartialMap(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
+        //{
+        //    InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");   // TODO: don't we have a base class for this?
+        //}
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) override
         {
             InvalidArgument("PerDimMeanVarNormalizationNode should only be called in the evaluation stage.");
         }
@@ -656,12 +656,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
-        {
-            InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
-        }
+        //void ComputeInputPartialMap(const size_t /*inputIndex*/)  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
+        //{
+        //    InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
+        //}
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &)
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &) override
         {
             InvalidArgument("PerDimMeanVarDeNormalizationNode should only be called in the evaluation stage.");
         }
@@ -880,7 +880,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_memory.TransferToDeviceIfNotThere(deviceId, true, m_memory.HasNoElements());
         }
 
-        virtual void ComputeInputPartial(const size_t inputIndex)
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
             assert(inputIndex == 0); inputIndex;
 #if 1
@@ -1006,7 +1006,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             GradientValues()(0, 2) = 3;
             GradientValues().TransferToDeviceIfNotThere( m_deviceId, true);
 
-            ComputeInputPartial(0);
+            ComputeInputPartial(0, FrameRange());
 
             /// check with expected values
             if (!ISCLOSE(Inputs(0)->GradientValues()(0, 0), 4, EPSILON) ||

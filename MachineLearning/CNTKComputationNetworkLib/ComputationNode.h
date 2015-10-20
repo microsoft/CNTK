@@ -95,7 +95,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void OnComputeGradientBeginIteration() = 0;             // called before first iteration step of ComputeGradient()
         virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) = 0;
-        virtual void ComputeInputPartial(const size_t inputIndex) = 0;   // TODO: this will be replaced by FrameRange version
         virtual void OnComputeGradientEndIteration() = 0;             // called after last iteration step of ComputeGradient()
 
         // --- optional overrides
@@ -509,10 +508,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SetInput(const size_t childIndex, const ComputationNodeBasePtr& node) = 0;
 
         virtual void /*IComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange &) = 0;    // (redeclaring, as compiler gets confused otherwise--will go away with ComputeInputPartial(t))
-        virtual void ComputeInputPartial(const size_t inputIndex)   // TODO: this will be replaced by FrameRange version
-        {
-            ComputeInputPartial(inputIndex, FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
-        }
+        //void ComputeInputPartialMap(const size_t inputIndex)   // TODO: this will be replaced by FrameRange version
+        //{
+        //    ComputeInputPartial(inputIndex, FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
+        //}
         virtual void ComputeGradientForChildren(const FrameRange & frameRange) = 0;
         virtual void ClearGradientForChildren() = 0;
 
@@ -1376,7 +1375,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
 #endif
                     child->LazyZeroGradient();          // set gradient to 0 if this is the first time
-#if 1
+
+#if 0
                     if (frameRange.IsAllFrames())       // TODO: remove this
                         ComputeInputPartial(i);
                     else
@@ -1541,23 +1541,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        // TODO: check range here? Or just make a helper function with the test? Or use DataSlice()??
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange &)
-        {
-            LogicError("%s node should never be in a loop.", typeid(*this).name());
-        }
-        // non-looping node types instead implement this function...
-        virtual void EvaluateThisNodeNonLooping() = 0;
-        // ...which we call from our overload, but not before we checked that indeed the entire batch is passed
-        virtual void EvaluateThisNode(const FrameRange & frameRange)
+        // these two implement the ComputationNode<> interface
+        void EvaluateThisNode(const FrameRange & frameRange) override final
         {
             if (frameRange.IsAllFrames())
                 EvaluateThisNodeNonLooping();
             else
                 LogicError("%s node should never be in a loop.", typeid(*this).name());
         }
-        // classes that derive from this must implement the non-range version
-        virtual void ComputeInputPartial(const size_t inputIndex) = 0;
+        void ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override final
+        {
+            if (frameRange.IsAllFrames())
+                ComputeInputPartialNonLooping(inputIndex);
+            else
+                LogicError("%s node should never be in a loop.", typeid(*this).name());
+        }
+
+        // non-looping node types instead implement these functions
+        virtual void EvaluateThisNodeNonLooping() = 0;
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) = 0;
     };
 
     // helper macro to ease access to base members in presence of C++ two-phase name lookup

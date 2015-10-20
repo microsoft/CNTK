@@ -69,7 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             stp = lastLbl;
         };
 
-        virtual void ComputeInputPartial(const size_t /*inputIndex*/)  //scaled by 2*number of elements in the Matrix<ElemType>
+        virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override  //scaled by 2*number of elements in the Matrix<ElemType>
         {
             LogicError("SequenceDecoder is used for evaluation only.");
         }

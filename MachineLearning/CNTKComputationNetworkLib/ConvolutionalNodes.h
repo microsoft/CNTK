@@ -90,7 +90,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        //virtual void ComputeInputPartial(const size_t inputIndex) 
+        //void ComputeInputPartialMap(const size_t inputIndex) 
         //{
         //    if (inputIndex > 1)
         //        InvalidArgument("Convolution operation only takes two inputs.");
@@ -101,14 +101,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //        ComputeInputPartialOverInputFeature(GradientValues(), Inputs(1)->GradientValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_tempMatrix);
         //}
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override 
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
+            //if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));   // BUGBUG: GetNumParallelSequences() must be from Inputs(1)
+            Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(Inputs(1)->GetNumParallelSequences(), m_pMBLayout));
 
             if (inputIndex == 0)  //derivative with regard to the weight matrix
                 ComputeInputPartialOverWeight(sliceOutputGrad, Inputs(0)->GradientValues(), Inputs(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix, !frameRange.IsAllFrames());
-            else  // derivative with regard to the input feature
+            else if (inputIndex == 1)  // derivative with regard to the input feature
             {
                 Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
                 ComputeInputPartialOverInputFeature(sliceOutputGrad, sliceInput1Grad, Inputs(0)->FunctionValues(), sliceInput1Value, *m_tempMatrix);
@@ -426,11 +427,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override // HACKFRANK
         {
-            if (inputIndex > 0)
-                InvalidArgument("MaxPooling operation only takes one inputs.");
-
+            //if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); } // TODO: remove these one by one
             Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
