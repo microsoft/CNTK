@@ -42,7 +42,7 @@
 #define CNTK_MODEL_VERSION_2 2
 #define CURRENT_CNTK_MODEL_VERSION 2
 
-#define TRACK_GAP_NANS  // if defined then initialize layout gaps to NaN and do NaN checks
+// #define TRACK_GAP_NANS  // if defined then initialize layout gaps to NaN and do NaN checks
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
