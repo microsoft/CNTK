@@ -43,8 +43,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     long long Timer::ElapsedMicroseconds()
     {
-        assert(m_start != 0 && m_end != 0);
-        long long diff = m_end - m_start;
+        assert(m_start != 0);
+        long long diff = 0;
+
+        if (m_end != 0)
+        {
+            diff = m_end - m_start;
+        }
+        else
+        {
+            diff = GetStamp() - m_start;
+        }
 
         if (diff < 0)
         {
