@@ -375,7 +375,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
             // set gaps to zero, since we are reducing in time
-            Inputs(0)->MaskMissingValuesColumnsToZero();
+            Inputs(0)->MaskMissingValuesColumnsToZero(FrameRange());
 
             auto & samples = Inputs(0)->FunctionValues();
             auto & avg = FunctionValues();
@@ -460,7 +460,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
             // set gaps to zero, since we are reducing in time
-            Inputs(0)->MaskMissingValuesColumnsToZero();
+            Inputs(0)->MaskMissingValuesColumnsToZero(FrameRange());
 
             auto & samples = Inputs(0)->FunctionValues();
 #if 1//NANCHECK

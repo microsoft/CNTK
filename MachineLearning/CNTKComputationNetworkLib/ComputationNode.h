@@ -517,12 +517,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // masking
         // overridden by <ElemType> variant only
-        // TODO: we need a section for those; and ComputationNode<> should mark those as 'final'
-        virtual void MaskMissingValuesColumnsToZero() = 0;
-        virtual void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: change to FrameRange as well
         virtual void MaskMissingValuesColumnsToZero(const FrameRange &) = 0;
-        virtual void MaskMissingGradientColumnsToZero() = 0;
-        virtual void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq) = 0; // TODO: don't we need a FrameRange here, too?
         virtual void MaskMissingGradientColumnsToZero(const FrameRange &) = 0;
 
         // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
@@ -1036,9 +1031,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // It is indirectly guarded by the m_maskMissingColumnsToZero flag, which, if false, will install a layout with IsAllNone() to be true. TODO: we better always install the same layout, and instead test m_maskMissingColumnsToZero here.
         // Note that existing 'reduce' style operations--the criterion nodes and gradient computation--already call this.  --BUGBUG: They can't, wrong layout!
         // Warning: The layout used here must match the matrix. E.g. don't pass a child's matrix from a criterion node (use Inputs(x)->MaskMissing{Values,Gradient}ColumnsToZero() instead.
+        // TODO: move this where static DataSlice() goes in the future
     private:
-        // TODO: change to FrameRange
-        static bool MaskMissingColumnsTo(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, size_t timeIdxInSeq, size_t seqIndex, ElemType val)
+        static bool MaskMissingColumnsTo(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & frameRange, ElemType val)
         {
             bool foundLabelOrFeatureMissing = false;    // return value: set to true if either nolabel or feature missing is processed
 
@@ -1050,20 +1045,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (matrixToBeMasked.GetNumCols() != nT * nS)
                     LogicError("MaskMissingColumnsToZero: pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
 
-                size_t startT = (timeIdxInSeq == SIZE_MAX) ?  0 : timeIdxInSeq;
-                size_t endT   = (timeIdxInSeq == SIZE_MAX) ? nT : timeIdxInSeq + 1;
+                size_t startT = frameRange.IsAllFrames() ?  0 : frameRange.t();
+                size_t endT   = frameRange.IsAllFrames() ? nT : frameRange.t() + 1;
 
-                size_t startS = (seqIndex == SIZE_MAX) ?  0 : seqIndex;
-                size_t endS   = (seqIndex == SIZE_MAX) ? nS : seqIndex + 1;
+                size_t startS = (frameRange.seqIndex == SIZE_MAX) ?  0 : frameRange.seqIndex;
+                size_t endS   = (frameRange.seqIndex == SIZE_MAX) ? nS : frameRange.seqIndex + 1;
 
                 for (size_t t = startT; t < endT; t++)
                 {
                     FrameRange frameRange(t);
                     if (pMBLayout->Is(t, MinibatchPackingFlags::NoInput))
                     {
+                        // TODO: to support sparse inputs, if we set to NaN, we should only set one value per column for those. Should be encapsulated in class Matrix.
                         for (size_t s = startS; s < endS; s++)
                             if (pMBLayout->Is(s, t, MinibatchPackingFlags::NoInput))
-                                //matrixToBeMasked.ColumnSlice(t * nS  +  s, 1).SetValue(val);
                                 DataSlice(matrixToBeMasked, frameRange.Sequence(s), pMBLayout).SetValue(val);
                         foundLabelOrFeatureMissing = true;
                     }
@@ -1073,95 +1068,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return foundLabelOrFeatureMissing;
         }
     public:
-        static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX)
+        static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & frameRange)
         {
-            return MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, timeIdxInSeq, seqIndex, 0);
+            return MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, frameRange, 0);
         }
 
-        // call static MaskMissingColumnsToZero() above with m_{function,gradient}Values with matching layout
-        bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, size_t timeIdxInSeq = SIZE_MAX, size_t seqIndex = SIZE_MAX) const
+        void /*ComputationNodeBase::*/MaskMissingValuesColumnsToZero(const FrameRange & frameRange) override final
         {
-            return MaskMissingColumnsToZero(matrixToBeMasked, m_pMBLayout, timeIdxInSeq, seqIndex);
+            MaskMissingColumnsToZero(*m_functionValues, m_pMBLayout, frameRange);
         }
-
-        /*implement*/void MaskMissingValuesColumnsToZero() override final
+        void /*ComputationNodeBase::*/MaskMissingGradientColumnsToZero(const FrameRange & frameRange) override final
         {
-            MaskMissingColumnsToZero(*m_functionValues);
-        }
-        /*implement*/void MaskMissingValuesColumnsToZero(const size_t timeIdxInSeq) override final // TODO: change to FrameRange as well
-        {
-            MaskMissingColumnsToZero(*m_functionValues, timeIdxInSeq);
-        }
-        /*implement*/void MaskMissingValuesColumnsToZero(const FrameRange & frameRange) override final // TODO: change to FrameRange as well
-        {
-            // TODO: propagate FrameRange all the way down
-            if (frameRange.IsAllFrames()) MaskMissingValuesColumnsToZero();
-            else                          MaskMissingValuesColumnsToZero(frameRange.t());
-        }
-        /*implement*/void MaskMissingGradientColumnsToZero() override final
-        {
-            MaskMissingColumnsToZero(*m_gradientValues);
-        }
-        // TODO: use a FrameRange here as well, then unify with above
-        /*implement*/void MaskMissingGradientColumnsToZero(const size_t timeIdxInSeq) override final
-        {
-            MaskMissingColumnsToZero(*m_gradientValues, timeIdxInSeq);
-        }
-        /*implement*/void MaskMissingGradientColumnsToZero(const FrameRange & frameRange) override final // TODO: change to FrameRange as well
-        {
-            // TODO: propagate FrameRange all the way down
-            if (frameRange.IsAllFrames()) MaskMissingGradientColumnsToZero();
-            else                          MaskMissingGradientColumnsToZero(frameRange.t());
+            MaskMissingColumnsToZero(*m_gradientValues, m_pMBLayout, frameRange);
         }
 
         // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
-        /*implement*/void MaskMissingValuesColumnsToNan()
+        void MaskMissingValuesColumnsToNan()
         {
-            MaskMissingColumnsTo(*m_functionValues, m_pMBLayout, SIZE_MAX, SIZE_MAX, Matrix<ElemType>::MakeNan(__LINE__));
+            MaskMissingColumnsTo(*m_functionValues, m_pMBLayout, FrameRange(), Matrix<ElemType>::MakeNan(__LINE__));
         }
 
-        /*
-        virtual size_t GetNumSamplesWithLabel(const size_t numAllSamples)
-        {
-            if (m_mbLayout.m_sentenceBoundaryFlags != nullptr &&
-                m_mbLayout.m_minibatchPackingFlags != nullptr &&
-                !m_mbLayout.m_sentenceBoundaryFlags->IsEmpty() &&
-                !m_mbLayout.m_minibatchPackingFlags->size() == 0)
-            {
-                size_t numTimeSteps = m_mbLayout.m_sentenceBoundaryFlags->GetNumCols();
-                size_t numSequences = m_mbLayout.m_sentenceBoundaryFlags->GetNumRows();
-
-                if (m_mbLayout.m_minibatchPackingFlags->size() != numTimeSteps)
-                {
-                    LogicError("GetNumSamplesWithLabel(): m_mbLayout.m_minibatchPackingFlags should have one element for each timestep of all streams.Check feature reader. ");
-                }
-
-                size_t numSamplesWithoutLabel = 0;
-
-                for (size_t j = 0; j < numTimeSteps; j++)
-                {
-                    if (m_pMBLayout->m_minibatchPackingFlags[j] & MinibatchPackingFlags::NoLabel)
-                    {
-                        for (int i = 0; i < numSequences; i++)
-                        {
-                            if ((int)m_pMBLayout->m_sentenceBoundaryFlags(i, j) & ((int) MinibatchPackingFlags::NoLabel))
-                            {
-                                numSamplesWithoutLabel++;
-                            }
-                        }
-                    }
-                }
-
-                return numTimeSteps*numSequences - numSamplesWithoutLabel;
-            }
-            else
-            {
-                return numAllSamples;
-            }
-        }
-        */
-
-        // for debugging purpose
+        // for debugging purposes
         void /*ComputationNodeBase::*/PrintSelf(bool printMatrices = false) const
         {
             fprintf(stderr, "\n%ls[%lu, %lu] = %ls", NodeName().c_str(), GetNumRows(), GetNumCols(), OperationName().c_str());           
@@ -1292,7 +1219,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::OnEvaluateEndIteration();
 #ifdef TRACK_GAP_NANS
-            MaskMissingValuesColumnsToZero();       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+            MaskMissingValuesColumnsToZero(FrameRange());       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
             if (FunctionValues().HasNan("OnEvaluateEndIteration"))
                 LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
 #endif
@@ -1323,15 +1250,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // BUGBUG: This masks a bug: Nodes should do that by themselves, like in EvaluateThisNode(), but they currently don't.
             if (m_needsGradient)
             {
-                MaskMissingValuesColumnsToZero();
+                MaskMissingValuesColumnsToZero(FrameRange());
                 if (m_gradientInitialized)
-                    MaskMissingGradientColumnsToZero();
+                    MaskMissingGradientColumnsToZero(FrameRange());
             }
             for (size_t i = 0; i < m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
                 if (child->m_needsGradient)
-                    child->MaskMissingValuesColumnsToZero();
+                    child->MaskMissingValuesColumnsToZero(FrameRange());
             }
         }
 
@@ -1345,7 +1272,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNodePtr child = Inputs(i);
                 if (child->m_needsGradient)
                 {
-                    child->MaskMissingGradientColumnsToZero();       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+                    child->MaskMissingGradientColumnsToZero(FrameRange());       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
                     if (child->GradientValues().HasNan("OnComputeGradientEndIteration"))
                         LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
                 }

@@ -55,7 +55,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             m_leftMinusRight->AssignDifferenceOf(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
-            MaskMissingColumnsToZero(*m_leftMinusRight, Inputs(0)->GetMBLayout());    // we are fine since it will only be called with full minibatch.
+            MaskMissingColumnsToZero(*m_leftMinusRight, Inputs(0)->GetMBLayout(), FrameRange());    // we are fine since it will only be called with full minibatch.
             ElemType v = m_leftMinusRight->FrobeniusNorm();
             VerifySize(1,1);
             FunctionValues().SetValue(v*v / 2);
@@ -134,48 +134,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
-            //left Node must be a scalar
-            if (inputIndex == 0)  //left derivative
+            // left input is scalar
+            if (inputIndex == 0)  // left derivative
             {
-                ComputeInputPartialLeft(*m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
+#if DUMPOUTPUT
+                *m_logSoftmaxOfRight.Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
+                GradientValues().Print("CrossEntropyWithSoftmax Partial-gradientValues");
+                Inputs(0)->GradientValues().Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
+#endif
+
+                Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_logSoftmaxOfRight, Inputs(0)->GradientValues());
+#if DUMPOUTPUT
+                Inputs(0)->GradientValues().Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
+#endif
             }
-            else
+            else if (inputIndex == 1)  // right derivative
             {
-                ComputeInputPartialRight(*m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-                Inputs(inputIndex)->MaskMissingGradientColumnsToZero();
+#if DUMPOUTPUT
+                *m_softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
+                Inputs(0)->FunctionValues().Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
+                GradientValues().Print("CrossEntropyWithSoftmax Partial-gradientValues");
+                Inputs(1)->GradientValues().Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
+#endif
+
+                Matrix<ElemType>::AddScaledDifference(GradientValues(), *m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(1)->GradientValues());
+#if DUMPOUTPUT
+                Inputs(1)->GradientValues().Print("CrossEntropyWithSoftmaxNode Partial-Right");
+#endif
+                Inputs(1)->MaskMissingGradientColumnsToZero(FrameRange());  // TODO: This should not be necessary.
             }
-        }
-
-        /*TODO: merge with call site*/void ComputeInputPartialLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues, 
-            const Matrix<ElemType>& gradientValues)  
-        {
-#if DUMPOUTPUT
-            logSoftmaxOfRight.Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
-            gradientValues.Print("CrossEntropyWithSoftmax Partial-gradientValues");
-            inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
-#endif
-
-            Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
-#if DUMPOUTPUT
-            inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
-#endif
-
-        }
-
-        /*TODO: merge with call site*/void ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues, 
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
-        {
-#if DUMPOUTPUT
-            softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
-            inputFunctionValues.Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
-            gradientValues.Print("CrossEntropyWithSoftmax Partial-gradientValues");
-            inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
-#endif
-
-            Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, inputFunctionValues, inputGradientValues);
-#if DUMPOUTPUT
-            inputGradientValues.Print("CrossEntropyWithSoftmaxNode Partial-Right");
-#endif
         }
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
@@ -186,8 +173,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             m_softmaxOfRight->InplaceExp();
             // flatten all gaps to zero, such that gaps will contribute zero to the sum
-            MaskMissingColumnsToZero(*m_logSoftmaxOfRight, Inputs(1)->GetMBLayout());
-            Inputs(0)->MaskMissingValuesColumnsToZero();
+            MaskMissingColumnsToZero(*m_logSoftmaxOfRight, Inputs(1)->GetMBLayout(), FrameRange());
+            Inputs(0)->MaskMissingValuesColumnsToZero(FrameRange());
             // reduce over all frames
             FunctionValues().AssignInnerProductOfMatrices(Inputs(0)->FunctionValues(), *m_logSoftmaxOfRight);
             FunctionValues() *= -1;
@@ -209,7 +196,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
-
             m_outputImageLayout = ImageLayout();
         }
 
@@ -298,7 +284,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, ComputationNodePtr curNode)
         {
             leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
-            curNode->MaskMissingColumnsToZero(leftDivRight, Inputs(0)->GetMBLayout());
+            curNode->MaskMissingColumnsToZero(leftDivRight, Inputs(0)->GetMBLayout(), FrameRange());
             Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
         }
 
@@ -307,8 +293,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_logOfRight->SetValue(Inputs(1)->FunctionValues());
             m_logOfRight->InplaceLog();
-            MaskMissingColumnsToZero(*m_logOfRight, Inputs(1)->GetMBLayout());
-            Inputs(0)->MaskMissingValuesColumnsToZero();
+            MaskMissingColumnsToZero(*m_logOfRight, Inputs(1)->GetMBLayout(), FrameRange());
+            Inputs(0)->MaskMissingValuesColumnsToZero(FrameRange());
             FunctionValues().AssignInnerProductOfMatrices(Inputs(0)->FunctionValues(), *m_logOfRight);
             FunctionValues() *= -1;
 #if NANCHECK
@@ -414,7 +400,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
-            Inputs(0)->MaskMissingValuesColumnsToZero();
+            Inputs(0)->MaskMissingValuesColumnsToZero(FrameRange());
             VerifySize(1, 1);
             FunctionValues().SetValue(Inputs(0)->FunctionValues().MatrixNorm1());
 #if NANCHECK
@@ -504,7 +490,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
-            Inputs(0)->MaskMissingValuesColumnsToZero();
+            Inputs(0)->MaskMissingValuesColumnsToZero(FrameRange());
             VerifySize(1,1);
             FunctionValues().SetValue(Inputs(0)->FunctionValues().FrobeniusNorm());
 #if NANCHECK
@@ -625,7 +611,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (Inputs(0)->HasMBLayout() && Inputs(0)->GetMBLayout()->HasGaps())
                 LogicError("%ls %ls operation does not handle multiple parallel sequences with gaps correctly. Contact fseide@microsoft.com if you have a need and a test case.", NodeName().c_str(), OperationName().c_str());
-            //Inputs(0)->MaskMissingValuesColumnsToZero();
+            //Inputs(0)->MaskMissingValuesColumnsToZero(FrameRange());
             int positive = 0, negative = 0;
             if (Inputs(0)->GetNumRows() == 1)
             {
@@ -644,7 +630,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_logSoftmax.AssignProductOf(Inputs(1)->FunctionValues(), true, Inputs(2)->FunctionValues(), false);
                 m_logSoftmax += Inputs(3)->FunctionValues();
                 m_logSoftmax.InplaceLogSoftmax(false);
-                MaskMissingColumnsToZero(m_logSoftmax, Inputs(1)->GetMBLayout());  // TODO: is this the right way to neutralize gaps?
+                MaskMissingColumnsToZero(m_logSoftmax, Inputs(1)->GetMBLayout(), FrameRange());  // TODO: is this the right way to neutralize gaps?
                 FunctionValues().AssignSoftmaxSum(Inputs(0)->FunctionValues(), m_logSoftmax);
             }
             else if (m_evalMode == NCEEvalMode::Unnormalized || (Inputs(0)->GetNumRows() == 1 && negative > 0))
@@ -954,37 +940,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
             m_needRecomputeGradientToSoftmaxInput = true;
         }
-
-#if 0   // no longer needed, using Base::MaskMissingColumnsToZero() instead
-        /**
-        reset to error signals to 0 for any elements without labels
-        */
-        // BUGBUG: the layout should be that of matrixToBeMasked, not of 'this'
-        bool MaskOneMissingColumnToZero(Matrix<ElemType>& matrixToBeMasked, const size_t j) const
-        {
-            size_t nS = pMBLayout->GetNumParallelSequences();
-            size_t t = j / nS;  // this is the time stamp
-            size_t id = j % nS;  // this is the stream
-            return Base::MaskMissingColumnsToZero(matrixToBeMasked, t, id);
-#if 0       // old version prior to merging with Base version
-            bool foundLabelOrFeatureMissing = false; /// set to true if either nolabel or feature missing is processed 
-
-            if (!pMBLayout->IsAllNone())
-            {
-                if (pMBLayout->Is(t, MinibatchPackingFlags::NoLabel)) // TODO: this outer test is redundant here, no?
-                {
-                    if (pMBLayout->Is(id, t, MinibatchPackingFlags::NoLabel))
-                    {
-                        matrixToBeMasked.ColumnSlice(t * nS + id,1).SetValue(0);
-                        foundLabelOrFeatureMissing = true;
-                    }
-                }
-            }
-
-            return foundLabelOrFeatureMissing;
-#endif
-        }
-#endif
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
@@ -1437,6 +1392,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// SequenceWithSoftmaxNode (label, prediction, loglikelihood)
     // word-lattice based sequence training criterion
     // BUGBUG: Not yet converted to memshare conventions.
+    // BUGBUG: Likely not very useful since it uses an MS-proprietary lattice-archive format
+    //         that requires Frank's DBN.exe tool to create. The inner C++ code for conversion
+    //         is in this repo (latticearchive.h), but not the outer main program.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -1464,7 +1422,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_gammaFromLattice,
                     m_fsSmoothingWeight, m_frameDropThreshold);
-                Inputs(inputIndex)->MaskMissingGradientColumnsToZero();
+                Inputs(inputIndex)->MaskMissingGradientColumnsToZero(FrameRange());
             }
             else if (inputIndex == 2)
             {
