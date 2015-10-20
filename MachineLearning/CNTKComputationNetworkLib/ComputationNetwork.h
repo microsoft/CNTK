@@ -1346,14 +1346,17 @@ public:
 
                     for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                     {
-                        (*nodeIter)->ReleaseMatricesAfterGradientComp(m_matrixPool);
+                        if ((*nodeIter)->NeedGradient())
+                        {
+                            (*nodeIter)->ReleaseMatricesAfterGradientComp(m_matrixPool);
+                        }
                     }
                 }
             }
             else
             {
                 AllocateGradientMatricesForChildren(n);
-                if (n != rootNode)  //root node's informatioin will be used and should not be shared with others, also it's small (1x1)
+                if ((n != rootNode) && n->NeedGradient())  //root node's informatioin will be used and should not be shared with others, also it's small (1x1)
                     n->ReleaseMatricesAfterGradientComp(m_matrixPool);
             }
         }
