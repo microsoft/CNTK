@@ -1578,7 +1578,7 @@ protected: \
     using Base::Resize; using Base::GetNumRows; using Base::GetNumCols; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; \
-    using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; \
+    using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::ComputeInputPartial; \
     using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputImageLayout; using Base::m_outputImageLayout; \
     using Base::m_parameterUpdateRequired; using Base::m_nodeName; using Base::s_constOnes; \
