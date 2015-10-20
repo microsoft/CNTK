@@ -766,20 +766,8 @@ public:
 #ifdef DISPLAY_DEBUG
             fprintf(stderr, "Compute Gradient For Node: %ls(%ls) Against Children\n", node->OperationName().c_str(), node->NodeName().c_str());
 #endif
-#ifdef _DEBUG   // TODO: this belongs into ComputeGradientForChildren(). Move it there after memshare merge and unification to one function. Or fix the bug that this masks straight -out.
-            // many gradients are reduction operations
-            // They touch both in-flowing gradients and function values, so we must set both to 0.
-            // BUGBUG: This masks an error that nodes should do that by themselves. E.g. TimesNode does, but MinusNode (in case of 1-column bias) does not.
-            if (node->m_needsGradient)
-            {
-                node->MaskMissingValuesColumnsToZero();
-                node->MaskMissingGradientColumnsToZero();
-                for (auto & child : node->GetChildren())
-                {
-                    child->MaskMissingValuesColumnsToZero();
-                }
-            }
-#endif
+            node->OnComputeGradientBeginIteration();  // (currently this only logs)
+
             // --- first, perform recurrent loops if this node participates in one
 
             RecurrentInfo * recInfo = FindInRecurrentLoops(node);
@@ -805,6 +793,7 @@ public:
             }
 
             // --- second, do whole-batch operation if not recurrent
+
             else
             {
                 if (IsNodeReqMultiSeqHandling(node))
@@ -816,6 +805,8 @@ public:
                 }
                 node->ComputeGradientForChildren(FrameRange());
             }
+
+            node->OnComputeGradientEndIteration();  // (currently this only logs)
         }
 
         //since we now allow sharing of the matrix for function value and gradient value. the function values are now destroyed

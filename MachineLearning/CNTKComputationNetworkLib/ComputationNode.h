@@ -540,6 +540,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "OnEvaluateEndIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
 #endif
         }
+        // TODO: the following two are not really utilized yet other than printing trace information
+        void /*IComputationNode::*/OnComputeGradientBeginIteration()             // called before first iteration step of EvaluateThisNode()
+        {
+#ifdef TRACK_GAP_NANS
+            fprintf(stderr, "OnComputeGradientBeginIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+#endif
+        }
+        void /*IComputationNode::*/OnComputeGradientEndIteration()               // called after last iteration step of EvaluateThisNode()
+        {
+#ifdef TRACK_GAP_NANS
+            fprintf(stderr, "OnComputeGradientEndIteration: %ls %ls operation\n", NodeName().c_str(), OperationName().c_str());
+#endif
+        }
 
     protected:
 
@@ -1334,6 +1347,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.IsAllFrames() && HasLoop())
                 LogicError("%ls %ls operation: ComputeGradientForChildren called with whole-batch FrameRange on node that participates in a loop");
 
+#ifdef _DEBUG
+            // many gradients are reduction operations
+            // They touch both in-flowing gradients and function values, so we must set both to 0.
+            // BUGBUG: This masks an error that nodes should do that by themselves. E.g. TimesNode does, but MinusNode (in case of 1-column bias) does not.
+            if (m_needsGradient)
+            {
+                MaskMissingValuesColumnsToZero(frameRange);
+                MaskMissingGradientColumnsToZero(frameRange);
+            }
+#endif
             for (size_t i = 0; i < m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
@@ -1349,6 +1372,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
 #endif
                     child->LazyZeroGradient();          // set gradient to 0 if this is the first time
+#ifdef _DEBUG
+                    // see comment above (BUGBUG: This masks an error...)
+                    child->MaskMissingValuesColumnsToZero(frameRange);
+#endif
 #if 1
                     if (frameRange.IsAllFrames())       // TODO: remove this
                         ComputeInputPartial(i);
