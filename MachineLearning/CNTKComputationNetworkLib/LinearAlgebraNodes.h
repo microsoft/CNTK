@@ -1598,7 +1598,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t rows0 = inputFunctionValues0.GetNumRows(), cols0 = inputFunctionValues0.GetNumCols();
             size_t rows1 = inputFunctionValues1.GetNumRows(), cols1 = inputFunctionValues1.GetNumCols();
-            functionValues.Resize(max(rows0, rows1), max(cols0,cols1));
+            functionValues.Resize(max(rows0, rows1), max(cols0,cols1));         // TODO: should not be done here.
 
             if ((rows0 == rows1 && cols0 == cols1) || ((rows0 == 1 || rows1 == 1) && cols0 == cols1))
             {

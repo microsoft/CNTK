@@ -65,12 +65,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         // resize and reset all frames to None (note: this is an invalid state and must be fixed by caller afterwards)
-        void Init(size_t numParallelSequences, size_t numTimeSteps, bool dataIsSequential)
+        void Init(size_t numParallelSequences, size_t numTimeSteps, bool /*dataIsSequentialDummy*/ = true/*no longer needed*/)
         {
             // remember the dimensions..
             m_numParallelSequences = numParallelSequences;
             m_numTimeSteps = numTimeSteps;
-            m_dataIsSequential = dataIsSequential;
+            //m_dataIsSequential = dataIsSequential;
             // ...but don't actually allocate anything
             m_sentenceBoundaryFlags.Resize(0, 0);
             m_minibatchPackingFlags.clear();
@@ -125,8 +125,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (f == MinibatchPackingFlags::None)   // actually not setting anything: skip allocation
                 return;
-            if ((f & (MinibatchPackingFlags::SequenceStart | MinibatchPackingFlags::SequenceEnd)) && !m_dataIsSequential)
-                LogicError("MBLayout::Set: attempted to set SequenceStart or -End in a layout with !m_dataIsSequential");
+            //if ((f & (MinibatchPackingFlags::SequenceStart | MinibatchPackingFlags::SequenceEnd)) && !m_dataIsSequential)
+            //    LogicError("MBLayout::Set: attempted to set SequenceStart or -End in a layout with !m_dataIsSequential");
             LazyAlloc();
             m_sentenceBoundaryFlags.SetValue(s, t, (float)(((MinibatchPackingFlags)(int)m_sentenceBoundaryFlags(s, t)) | f));
             m_minibatchPackingFlags[t] |= f;
@@ -191,7 +191,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     private:
         size_t m_numTimeSteps;
         size_t m_numParallelSequences;
-        bool m_dataIsSequential;
+        //bool m_dataIsSequential;
         // TODO: ^^ is m_dataIsSequential necessary? Who ues it?
 
         // TODO: rename the following two variables, or even implement it with a very different structure
@@ -259,7 +259,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             m_numParallelSequences = other->m_numParallelSequences;
             m_numTimeSteps = numTimeSteps;
-            m_dataIsSequential = other->m_dataIsSequential;
+            //m_dataIsSequential = other->m_dataIsSequential;
             m_sentenceBoundaryFlags.SetValue(other->m_sentenceBoundaryFlags.ColumnSlice(startTimeStep, numTimeSteps));
             m_minibatchPackingFlags.resize(numTimeSteps);
             m_minibatchPackingFlags.assign(
@@ -318,6 +318,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ret.seqIndex = s;
             return ret;
         }
+
+        class SequenceRange    // range for range-based for over sequences
+        {
+            size_t m_seqIndex;
+        public:
+            SequenceRange(size_t seqIndex) : m_seqIndex(seqIndex) { }
+            size_t begin() const { return m_seqIndex == SIZE_MAX ?          0 : m_seqIndex; }
+            size_t end()   const { return m_seqIndex == SIZE_MAX ? m_seqIndex/*BUGBUG*/ : m_seqIndex+1; }
+        };
+        SequenceRange GetSequenceRange() const { return SequenceRange(seqIndex); }
 
         // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
         // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).

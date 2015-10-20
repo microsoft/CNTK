@@ -174,14 +174,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void FSAdagrad(size_t mbSize, Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
         ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
        
-        // TODO: should Reshape() return a new Matrix object that contains a reference to the original?
-        void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
         void VerifySize(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
                 LogicError("VerifySize: expected m_functionValues size %d x %d, but it is %d x %d",
                 (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
+        }
+        Matrix<ElemType> AsReference() { return ColumnSlice(0, GetNumCols()); } // get a reference (e.g. this is not resizable but can be reshaped)
+        void Reshape(const size_t numRows, const size_t numCols);               // note: reshapes in place. To get a reshaped reference, use Reshaped()
+        Matrix<ElemType> Reshaped(const size_t numRows, const size_t numCols)   // get a reshaped reference
+        {
+            Matrix<ElemType> result = AsReference();
+            result.Reshape(numRows, numCols);
+            return result;
         }
 
         // update number of columns
