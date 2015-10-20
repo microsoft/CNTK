@@ -708,7 +708,7 @@ public:
                 node->OnEvaluateBeginIteration();
                 node->EvaluateThisNode(FrameRange());
                 if (IsNodeReqMultiSeqHandling(node))
-                    node->MaskMissingValuesColumnsToZero();
+                    node->MaskMissingValuesColumnsToZero(FrameRange());
                 node->OnEvaluateEndIteration();
                 node->UpdateEvalTimeStamp();
             }
