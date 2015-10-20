@@ -2051,6 +2051,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         // this must go to stdout, not stderr
                         float epochProg = ((100.0f * (float) (m_fullEpochsOffset + epochNumber)) / (float) m_fullTotalMaxEpochs);
                         float mbProg = ((float) numMBsRun / ((float) m_maxComputedEpochSize / (float) tunedMBSize));
+                        mbProg = (mbProg * 100.0f) / (float) m_fullTotalMaxEpochs;
+
                         printf("PROGRESS: %.2f%%\n", epochProg + mbProg);
                         wasProgressPrinted = true;
                         m_progressTracingTimer.Restart();
