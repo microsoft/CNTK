@@ -32,6 +32,9 @@
       <Filter>GPU\SequenceTraining</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Common\DebugUtil.cpp" />
+    <ClCompile Include="CuDnnConvolutionEngine.cpp">
+      <Filter>GPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -79,6 +82,9 @@
     </ClInclude>
     <ClInclude Include="latticefunctionskernels.h">
       <Filter>GPU\SequenceTraining</Filter>
+    </ClInclude>
+    <ClInclude Include="CuDnnConvolutionEngine.h">
+      <Filter>GPU</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
