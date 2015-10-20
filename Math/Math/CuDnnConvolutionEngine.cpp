@@ -83,11 +83,18 @@ class CuDnnConvolutionEngineImpl
 {
 public:
     using Tensor4D = ConvolutionTensor4D;
+    using Tensor4DPtr = std::unique_ptr<Tensor4D>;
 
     CuDnnConvolutionEngineImpl(size_t) { }
 
 public:
     void Forward(const Tensor4D&, const void*, const Tensor4D&, const void*, const ConvolutionOptions&, const Tensor4D&, void*) {}
+    
+    Tensor4DPtr CreateConvTensor(size_t, size_t, size_t, size_t)
+    {
+        return std::make_unique<Tensor4D>();
+    }
+
 };
 
 #endif
