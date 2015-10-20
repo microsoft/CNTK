@@ -1169,6 +1169,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         // --- END OF MAIN EPOCH LOOP
 
+        // Synchronize all ranks before proceeding to ensure that 
+        // rank 0 has finished writing the model file
+        if (g_mpi != nullptr)
+        {
+            g_mpi->WaitAll();
+        }
+
         if (((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing)
         {
             m_progressTracingTimer.Stop();
