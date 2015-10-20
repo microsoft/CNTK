@@ -67,7 +67,7 @@ public:
         UNUSED(out);
     }
 
-    Tensor4DPtr CreateConvTensor(size_t w, size_t h, size_t c, size_t n)
+    Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n)
     {
         return std::make_unique<CuDnnTensor4D>(w, h, c, n);
     }
@@ -113,9 +113,9 @@ void CuDnnConvolutionEngine<ElemType>::Forward(const Tensor4D& inT, const Mat& i
 }
 
 template<class ElemType>
-typename CuDnnConvolutionEngine<ElemType>::Tensor4DPtr CuDnnConvolutionEngine<ElemType>::CreateConvTensor(size_t w, size_t h, size_t c, size_t n)
+typename CuDnnConvolutionEngine<ElemType>::Tensor4DPtr CuDnnConvolutionEngine<ElemType>::CreateTensor(size_t w, size_t h, size_t c, size_t n)
 {
-    return m_impl->CreateConvTensor(w, h, c, n);
+    return m_impl->CreateTensor(w, h, c, n);
 }
 
 template class CuDnnConvolutionEngine<float>;

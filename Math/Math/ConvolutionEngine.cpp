@@ -60,7 +60,7 @@ public:
         out.Reshape(outT.c() * outputSizePerChannel, batchSize);  //each sample becomes a column
     }
 
-    Tensor4DPtr CreateConvTensor(size_t w, size_t h, size_t c, size_t n) override
+    Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override
     {
         return std::make_unique<ConvolutionTensor4D>(w, h, c, n);
     }

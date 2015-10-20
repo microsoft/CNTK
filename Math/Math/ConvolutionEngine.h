@@ -108,7 +108,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //virtual void BackwardData() = 0;
         //virtual void BackwardFilter() = 0;
 
-        virtual Tensor4DPtr CreateConvTensor(size_t w = 1, size_t h = 1, size_t c = 1, size_t n = 1) = 0;
+        virtual Tensor4DPtr CreateTensor(size_t w = 1, size_t h = 1, size_t c = 1, size_t n = 1) = 0;
         //virtual Tensor4DPtr CreateFilterTensor() = 0;
         //virtual Tensor4DPtr CreatePoolingTensor() = 0;
         //virtual Tensor4DPtr CreateLrnTensor() = 0;

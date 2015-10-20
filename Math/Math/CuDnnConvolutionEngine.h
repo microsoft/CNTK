@@ -32,7 +32,7 @@ public:
     void Forward(const Tensor4D& inT, const Mat& in, const Tensor4D& filterT, const Mat& filter, const ConvolutionOptions& convOpt,
         const Tensor4D& outT, Mat& out) override;
 
-    Tensor4DPtr CreateConvTensor(size_t w, size_t h, size_t c, size_t n) override;
+    Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override;
 
     static bool IsSupported();
 private:

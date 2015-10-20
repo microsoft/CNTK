@@ -377,18 +377,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                      m_imageLayout.GetNumChannels());
             }    
 
+            // REVIEW alexeyk: is there a better place to create engine?
+            if (m_convEng == nullptr)
+                m_convEng = ConvolutionEngine<ElemType>::Create(m_deviceId, m_maxTempMemSizeInSamples);
             if (m_inT == nullptr)
-                m_inT = std::make_unique<ConvolutionTensor4D>(m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels);
+                m_inT = m_convEng->CreateTensor(m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels);
             if (m_filterT == nullptr)
                 m_filterT = std::make_unique<ConvolutionTensor4D>(m_kernelWidth, m_kernelHeight, m_inputImageLayout.channels);
             if (m_outT == nullptr)
-                m_outT = std::make_unique<ConvolutionTensor4D>(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels);
+                m_outT = m_convEng->CreateTensor(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels);
             if (m_convOpt == nullptr)
                 m_convOpt = std::make_unique<ConvolutionOptions>(*m_inT, *m_filterT, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
-
-            // REVIEW alexeyk: does not seem like a good place to create engine, fine for now.
-            if (m_convEng == nullptr)
-                m_convEng = ConvolutionEngine<ElemType>::Create(m_deviceId, m_maxTempMemSizeInSamples);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
