@@ -6,6 +6,7 @@
 #include "latticesource.h"
 #include "ssematrix.h"
 #include "Matrix.h"
+#include "CUDAPageLockedMemAllocator.h"
 
 #pragma warning (disable: 4127) // conditional expression is constant
 
@@ -202,8 +203,6 @@ namespace msra { namespace lattices {
 
     private:
         // Helper methods for copying between ssematrix objects and CNTK matrices
-
-        // Helper methods for copying to and from CNTK matrices
         void CopyFromCNTKMatrixToSSEMatrix(const Microsoft::MSR::CNTK::Matrix<ElemType>& src, size_t numCols, msra::math::ssematrixbase& dest)
         {
             if (!std::is_same<ElemType, float>::value)
@@ -212,24 +211,32 @@ namespace msra { namespace lattices {
             }
 
             size_t numRows = src.GetNumRows();
+            const Microsoft::MSR::CNTK::Matrix<ElemType> srcSlice = src.ColumnSlice(0, numCols);
+            if ((m_intermediateCUDACopyBuffer == nullptr) || (m_intermediateCUDACopyBufferSize < srcSlice.GetNumElements()))
+            {
+                m_intermediateCUDACopyBuffer = AllocateIntermediateBuffer(srcSlice.GetDeviceId(), srcSlice.GetNumElements());
+                m_intermediateCUDACopyBufferSize = srcSlice.GetNumElements();
+            }
 
-            // TODO: Used piined memory for faster copies?
-            // TODO: Can we cache the scratch buffer and reuse across copies
-            ElemType* cpuSrcCopy = src.CopyToArray();
+            ElemType* pBuf = m_intermediateCUDACopyBuffer.get();
+            srcSlice.CopyToArray(pBuf, m_intermediateCUDACopyBufferSize);
+            if (pBuf != m_intermediateCUDACopyBuffer.get())
+            {
+                LogicError("Unexpected re-allocation of destination CPU buffer in Matrix::CopyToArray!");
+            }
+            
             if ((dest.getcolstride() == dest.rows()) && (numRows == dest.rows()))
             {
-                memcpy(&dest(0, 0), (float*)cpuSrcCopy, sizeof(ElemType) * numRows * numCols);
+                memcpy(&dest(0, 0), (float*)pBuf, sizeof(ElemType) * numRows * numCols);
             }
             else
             {
                 // We need to copy columnwise
                 for (size_t i = 0; i < numCols; ++i)
                 {
-                    memcpy(&dest(0, i), (float*)(cpuSrcCopy + (i * numRows)), sizeof(ElemType) * numRows);
+                    memcpy(&dest(0, i), (float*)(pBuf + (i * numRows)), sizeof(ElemType) * numRows);
                 }
             }
-
-            delete[] cpuSrcCopy;
         }
 
         void CopyFromSSEMatrixToCNTKMatrix(const msra::math::ssematrixbase& src, size_t numRows, size_t numCols, Microsoft::MSR::CNTK::Matrix<ElemType>& dest, int deviceId)
@@ -239,24 +246,67 @@ namespace msra { namespace lattices {
                 LogicError("Cannot copy between a SSE matrix and a non-float type CNTK Matrix object!");
             }
 
-            // TODO: Used pinned memory for faster copies?
-            // TODO: Can we cache the scratch buffer and reuse across copies
-            ElemType* cpuDestCopy = new ElemType[numRows * numCols];
+            size_t numElements = numRows * numCols;
+            if ((m_intermediateCUDACopyBuffer == nullptr) || (m_intermediateCUDACopyBufferSize < numElements))
+            {
+                m_intermediateCUDACopyBuffer = AllocateIntermediateBuffer(deviceId, numElements);
+                m_intermediateCUDACopyBufferSize = numElements;
+            }
+
             if ((src.getcolstride() == src.rows()) && (numRows == src.rows()))
             {
-                memcpy((float*)cpuDestCopy, &src(0, 0), sizeof(float) * numRows * numCols);
+                memcpy((float*)m_intermediateCUDACopyBuffer.get(), &src(0, 0), sizeof(float) * numRows * numCols);
             }
             else
             {
                 // We need to copy columnwise
                 for (size_t i = 0; i < numCols; ++i)
                 {
-                    memcpy((float*)(cpuDestCopy + (i * numRows)), &src(0, i), sizeof(float) * numRows);
+                    memcpy((float*)(m_intermediateCUDACopyBuffer.get() + (i * numRows)), &src(0, i), sizeof(float) * numRows);
                 }
             }
 
-            dest.SetValue(numRows, numCols, deviceId, cpuDestCopy, 0);
-            delete[] cpuDestCopy;
+            dest.SetValue(numRows, numCols, deviceId, m_intermediateCUDACopyBuffer.get(), 0);
+        }
+
+        // TODO: This function is duplicate of the one in HTLMLFReader.
+        // This should be moved to a common utils library and removed from here as well as HTLMLFReader
+        unique_ptr<Microsoft::MSR::CNTK::CUDAPageLockedMemAllocator>& GetCUDAAllocator(int deviceID)
+        {
+            if (m_cudaAllocator != nullptr)
+            {
+                if (m_cudaAllocator->GetDeviceId() != deviceID)
+                {
+                    m_cudaAllocator.reset(nullptr);
+                }
+            }
+
+            if (m_cudaAllocator == nullptr)
+            {
+                m_cudaAllocator.reset(new Microsoft::MSR::CNTK::CUDAPageLockedMemAllocator(deviceID));
+            }
+
+            return m_cudaAllocator;
+        }
+
+        // TODO: This function is duplicate of the one in HTLMLFReader.
+        // This should be moved to a common utils library and removed from here as well as HTLMLFReader
+        std::shared_ptr<ElemType> AllocateIntermediateBuffer(int deviceID, size_t numElements)
+        {
+            if (deviceID >= 0)
+            {
+                // Use pinned memory for GPU devices for better copy performance
+                size_t totalSize = sizeof(ElemType) * numElements;
+                return std::shared_ptr<ElemType>((ElemType*)GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
+                    this->GetCUDAAllocator(deviceID)->Free((char*)p);
+                });
+            }
+            else
+            {
+                return std::shared_ptr<ElemType>(new ElemType[numElements], [](ElemType* p) {
+                    delete[] p;
+                });
+            }
         }
             
     protected:
@@ -275,5 +325,10 @@ namespace msra { namespace lattices {
         vector<size_t> boundary;
         float boostmmifactor;
         bool seqsMBRmode;
+
+    private:
+        std::unique_ptr<Microsoft::MSR::CNTK::CUDAPageLockedMemAllocator> m_cudaAllocator;
+        std::shared_ptr<ElemType> m_intermediateCUDACopyBuffer;
+        size_t m_intermediateCUDACopyBufferSize;
     };
 }}
