@@ -95,11 +95,12 @@ namespace msra { namespace lattices {
                 if (samplesInRecurrentStep == 1)  //one channel 
                 {
                     tempmatrix = loglikelihood.ColumnSlice(ts, numframes);
-                    if (m_deviceid == CPUDEVICE)
+                    //if (m_deviceid == CPUDEVICE)
                     {
                         CopyFromCNTKMatrixToSSEMatrix(tempmatrix, numframes, predstripe);
                     }
-                    else
+
+                    if (m_deviceid != CPUDEVICE)
                         parallellattice.setloglls(tempmatrix);
                 }
                 else                   //multi channel
@@ -114,14 +115,12 @@ namespace msra { namespace lattices {
                             mapframenum = j - validframes[mapi] + 1;
                             break;
                         }
-                    }                    
+                    }
 
-                        
                     assert(numframes == mapframenum);
 
                     if (numframes > tempmatrix.GetNumCols())
                         tempmatrix.Resize(numrows, numframes);
-
 
                     Microsoft::MSR::CNTK::Matrix<ElemType> loglikelihoodForCurrentParallelUtterance = loglikelihood.ColumnSlice(mapi + (validframes[mapi] * samplesInRecurrentStep), ((numframes - 1) * samplesInRecurrentStep) + 1);
                     tempmatrix.CopyColumnsStrided(loglikelihoodForCurrentParallelUtterance, numframes, samplesInRecurrentStep, 1);
@@ -240,7 +239,7 @@ namespace msra { namespace lattices {
                 LogicError("Cannot copy between a SSE matrix and a non-float type CNTK Matrix object!");
             }
 
-            // TODO: Used piined memory for faster copies?
+            // TODO: Used pinned memory for faster copies?
             // TODO: Can we cache the scratch buffer and reuse across copies
             ElemType* cpuDestCopy = new ElemType[numRows * numCols];
             if ((src.getcolstride() == src.rows()) && (numRows == src.rows()))
