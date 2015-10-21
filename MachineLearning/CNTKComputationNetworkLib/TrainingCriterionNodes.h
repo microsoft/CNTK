@@ -161,7 +161,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
                 Inputs(1)->GradientValues().Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
-                Inputs(1)->MaskMissingGradientColumnsToZero(FrameRange());  // TODO: This should not be necessary.
+#ifdef _DEBUG
+                Inputs(1)->InvalidateMissingGradientColumns(FrameRange());  // TODO: This should not be necessary.
+#endif
+                //Inputs(1)->MaskMissingGradientColumnsToZero(FrameRange());  // TODO: This should not be necessary.
             }
         }
 
@@ -1422,7 +1425,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_gammaFromLattice,
                     m_fsSmoothingWeight, m_frameDropThreshold);
-                Inputs(inputIndex)->MaskMissingGradientColumnsToZero(FrameRange());
+#ifdef _DEBUG
+                Inputs(inputIndex)->InvalidateMissingGradientColumns(FrameRange());
+#endif
+                //Inputs(inputIndex)->MaskMissingGradientColumnsToZero(FrameRange());
             }
             else if (inputIndex == 2)
             {
