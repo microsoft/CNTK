@@ -241,7 +241,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inT->setN(batchSize);
             m_outT->setN(batchSize);
             assert(m_convEng != nullptr);
-            m_convEng->Forward(*m_inT, input1, *m_filterT, input0, *m_convOpt, *m_outT, functionValues);
+            m_convEng->Forward(*m_inT, input1, *m_filterT, input0, *m_convDesc, *m_outT, functionValues);
 
             //size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputImageLayout.GetNumChannels();
             //size_t packedInputColsPerSample = m_imageLayout.GetWidth() * m_imageLayout.GetHeight();
@@ -381,13 +381,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_convEng == nullptr)
                 m_convEng = ConvolutionEngine<ElemType>::Create(m_deviceId, m_maxTempMemSizeInSamples);
             if (m_inT == nullptr)
-                m_inT = m_convEng->CreateTensor(m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels);
+                m_inT = m_convEng->CreateTensor(m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels, 1);
             if (m_filterT == nullptr)
-                m_filterT = std::make_unique<ConvolutionTensor4D>(m_kernelWidth, m_kernelHeight, m_inputImageLayout.channels);
+                m_filterT = m_convEng->CreateFilter(m_kernelWidth, m_kernelHeight, m_inputImageLayout.channels, m_outputImageLayout.channels);
             if (m_outT == nullptr)
-                m_outT = m_convEng->CreateTensor(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels);
-            if (m_convOpt == nullptr)
-                m_convOpt = std::make_unique<ConvolutionOptions>(*m_inT, *m_filterT, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
+                m_outT = m_convEng->CreateTensor(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels, 1);
+            if (m_convDesc == nullptr)
+                m_convDesc = m_convEng->CreateConvDescriptor(*m_inT, *m_filterT, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -428,9 +428,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
 
         std::unique_ptr<ConvolutionTensor4D> m_inT;
-        std::unique_ptr<ConvolutionTensor4D> m_filterT;
+        std::unique_ptr<ConvolutionFilter> m_filterT;
         std::unique_ptr<ConvolutionTensor4D> m_outT;
-        std::unique_ptr<ConvolutionOptions> m_convOpt;
+        std::unique_ptr<ConvolutionDescriptor> m_convDesc;
 
         size_t m_kernelWidth, m_kernelHeight;
         size_t m_horizontalSubsample, m_verticalSubsample;

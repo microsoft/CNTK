@@ -54,11 +54,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_n;
     };
 
-    // ConvolutionOptions describes properties specific to convolution application.
-    // It is not part of the tensor class to avoid confusion between tensor-specific and convolution-specific terms having the same names.
-    // For example, the stride in ConvolutionOptions means step size between subsequent convolution applications and not stride in the tensor storage of a particular dimension.
-    // The class might be extended with other specific properties, like LRN constants etc.
-    class ConvolutionOptions
+    class ConvolutionFilter
+    {
+    public:
+        size_t w() const { return m_w; }
+        size_t h() const { return m_h; }
+        size_t c() const { return m_c; }
+        size_t k() const { return m_k; }
+    public:
+        ConvolutionFilter(size_t w = 1, size_t h = 1, size_t c = 1, size_t k = 1)
+        {
+            m_w = w;
+            m_h = h;
+            m_c = c;
+            m_k = k;
+        }
+    public:
+        virtual ~ConvolutionFilter() = default;
+
+    private:
+        size_t m_w;
+        size_t m_h;
+        size_t m_c;
+        size_t m_k;
+    };
+
+    // ConvolutionDescriptor describes properties specific to convolution application.
+    class ConvolutionDescriptor
     {
     public:
         // Horizontal stride (in w-dimension).
@@ -67,7 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t hStride() const { return m_hStride; }
         bool padding() const { return m_padding; }
     public:
-        ConvolutionOptions(const ConvolutionTensor4D& inT, const ConvolutionTensor4D& filterT, 
+        ConvolutionDescriptor(const ConvolutionTensor4D& inT, const ConvolutionFilter& filterT, 
             size_t wStride = 1, size_t hStride = 1, bool padding = false)
         {
             UNUSED(inT);
@@ -78,10 +100,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     public:
-        virtual ~ConvolutionOptions() = default;
+        virtual ~ConvolutionDescriptor() = default;
         // Deleting copy ctor/assignment as derived objects may contain non-copyable state.
-        //ConvolutionOptions(const ConvolutionOptions&) = delete;
-        //ConvolutionOptions& operator=(const ConvolutionOptions&) = delete;
+        //ConvolutionDescriptor(const ConvolutionDescriptor&) = delete;
+        //ConvolutionDescriptor& operator=(const ConvolutionDescriptor&) = delete;
 
     private:
         size_t m_wStride;
@@ -95,6 +117,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         using Tensor4D = ConvolutionTensor4D;
         using Tensor4DPtr = std::unique_ptr<Tensor4D>;
+        using Filter = ConvolutionFilter;
+        using FilterPtr = std::unique_ptr<ConvolutionFilter>;
+        using ConvDesc = ConvolutionDescriptor;
+        using ConvDescPtr = std::unique_ptr<ConvolutionDescriptor>;
         using Mat = Matrix<ElemType>;
 
         ConvolutionEngine() {}
@@ -103,13 +129,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static std::unique_ptr<ConvolutionEngine<ElemType>> Create(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples);
 
     public:
-        virtual void Forward(const Tensor4D& inT, const Mat& in, const Tensor4D& filterT, const Mat& filter, const ConvolutionOptions& convOpt,
+        virtual void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
             const Tensor4D& outT, Mat& out) = 0;
         //virtual void BackwardData() = 0;
         //virtual void BackwardFilter() = 0;
 
-        virtual Tensor4DPtr CreateTensor(size_t w = 1, size_t h = 1, size_t c = 1, size_t n = 1) = 0;
-        //virtual Tensor4DPtr CreateFilterTensor() = 0;
+        virtual Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) = 0;
+        virtual FilterPtr CreateFilter(size_t w, size_t h, size_t c, size_t k) = 0;
+        virtual ConvDescPtr CreateConvDescriptor(const Tensor4D& inT, const Filter& filterT, 
+            size_t wStride, size_t hStride, bool padding) = 0;
         //virtual Tensor4DPtr CreatePoolingTensor() = 0;
         //virtual Tensor4DPtr CreateLrnTensor() = 0;
 
