@@ -121,24 +121,48 @@ public:
 
     //if node name is not found, dump all nodes
     //otherwise dump just that node
-    void DumpNodeInfoToFile(const std::wstring & nodeName, const bool printValues, const std::wstring outputFile)
+    void DumpNodeInfoToFile(const std::wstring & nodeName, const bool printValues, const std::wstring outputFile, const std::wstring& nodeNameInRegEx=L"")
     {
-        if (NodeNameExist(nodeName))
-        {
-            ValidateNetwork(true); //some internal values in the nodes are computed during validation
+		if (nodeNameInRegEx.empty())
+		{
+			if (NodeNameExist(nodeName))
+			{
+				ValidateNetwork(true); //some internal values in the nodes are computed during validation
 
-            File fstream(outputFile,
-                         FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
+				File fstream(outputFile,
+					FileOptions::fileOptionsText | FileOptions::fileOptionsWrite);
 
-            const ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
-            nodePtr->DumpNodeInfo(printValues, fstream);
-        }
-        else  //node name is not found, dump all nodes
-        {
-            fprintf(stderr, "Warning: node name %ls does not exist in the network. dumping all nodes.\n",
-                    nodeName.c_str());
-            DumpAllNodesToFile(printValues, outputFile);
-        }
+				const ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
+				nodePtr->DumpNodeInfo(printValues, fstream);
+			}
+			else  //node name is not found, dump all nodes
+			{
+				fprintf(stderr, "Warning: node name %ls does not exist in the network. dumping all nodes.\n",
+					nodeName.c_str());
+				DumpAllNodesToFile(printValues, outputFile);
+			}
+		}
+		else
+		{
+			std::wregex NameRegEx(nodeNameInRegEx); 
+			std::vector<ComputationNodeBasePtr> NodeList;
+			std::vector<wstring> NameList; 
+			for (auto m : m_nameToNodeMap)
+			{
+				if (regex_match(m.first, NameRegEx))
+				{
+					NodeList.push_back(m.second);
+					NameList.push_back(m.first);
+				}
+			}
+			fprintf(stderr, "DumpNodeInfo: %d nodes matching RegEx(%ls): \n", (int)NameList.size(), nodeNameInRegEx.c_str());
+			for (auto x : NameList)
+			{
+				fprintf(stderr, "\t%ls\n", x.c_str());
+			}
+			fprintf(stderr, "DumpNodeInfo: dumping node info (%s printing values) to %ls\n", printValues ? "with" : "without", outputFile.c_str());
+			DumpNodeInfoToFile(NodeList, printValues, outputFile);
+		}
     }
 
     //dump all nodes in the network to file
