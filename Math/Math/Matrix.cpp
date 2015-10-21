@@ -819,6 +819,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void Matrix<ElemType>::CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride)
+    {
+        ASSERT(m_CPUMatrix != nullptr || m_GPUMatrix != nullptr);
+
+        DISPATCH_MATRIX_ON_FLAG(&fromMatrix,
+            this,
+            m_CPUMatrix->CopyColumnsStrided(*fromMatrix.m_CPUMatrix, numCols, srcNumColsStride, destNumColsStride),
+            m_GPUMatrix->CopyColumnsStrided(*fromMatrix.m_GPUMatrix, numCols, srcNumColsStride, destNumColsStride),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
+
+    template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::Diagonal() const
     {
         int devId = GetDeviceId();

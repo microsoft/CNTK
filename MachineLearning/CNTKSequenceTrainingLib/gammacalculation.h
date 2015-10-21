@@ -179,12 +179,9 @@ namespace msra { namespace lattices {
 
                 // set gamma for multi channel
                 if (samplesInRecurrentStep > 1)
-                {                        
-                    for (size_t nframe = 0; nframe < numframes; nframe++)
-                    {
-                        Microsoft::MSR::CNTK::Matrix<ElemType> columndata = tempmatrix.ColumnSlice(nframe, 1);
-                        gammafromlattice.SetColumn(columndata, (nframe + validframes[mapi])*samplesInRecurrentStep + mapi);
-                    }
+                {
+                    Microsoft::MSR::CNTK::Matrix<ElemType> gammaFromLatticeForCurrentParallelUtterance = gammafromlattice.ColumnSlice(mapi + (validframes[mapi] * samplesInRecurrentStep), ((numframes - 1) * samplesInRecurrentStep) + 1);
+                    gammaFromLatticeForCurrentParallelUtterance.CopyColumnsStrided(tempmatrix, numframes, 1, samplesInRecurrentStep);
                 }
 
                 if (doreferencealign)
