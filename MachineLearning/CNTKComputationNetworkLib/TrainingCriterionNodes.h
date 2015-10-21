@@ -36,26 +36,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
-            if (inputIndex == 0)  //left derivative
-                ComputeInputPartialLeft(Inputs(0)->GradientValues(), GradientValues(), *m_leftMinusRight);
+            FrameRange frameRange;
+            if (inputIndex == 0)
+                Inputs(0)->GradientSlice(frameRange).AddWithScaleOf(GradientValues().Get00Element(), *m_leftMinusRight);
             else
-                ComputeInputPartialRight(Inputs(1)->GradientValues(), GradientValues(), *m_leftMinusRight);
-        }
-
-        /*TODO: merge with call site*/void ComputeInputPartialLeft(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& leftMinusRight)  
-        {
-            inputGradientValues.AddWithScaleOf(gradientValues.Get00Element(), leftMinusRight);
-        }
-
-        /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& leftMinusRight)  
-        {
-            inputGradientValues.AddWithScaleOf(-gradientValues.Get00Element(), leftMinusRight);
+                Inputs(1)->GradientSlice(frameRange).AddWithScaleOf(-GradientValues().Get00Element(), *m_leftMinusRight);
         }
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             FrameRange frameRange;
-            m_leftMinusRight->AssignDifferenceOf(Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues());
+            m_leftMinusRight->AssignDifferenceOf(Inputs(0)->ValueSlice(frameRange), Inputs(1)->ValueSlice(frameRange));
             MaskMissingColumnsToZero(*m_leftMinusRight, Inputs(0)->GetMBLayout(), frameRange);    // we are fine since it will only be called with full minibatch.
             ElemType v = m_leftMinusRight->FrobeniusNorm();
             VerifySize(1,1);
@@ -142,31 +133,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
                 *m_logSoftmaxOfRight.Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
                 GradientValues().Print("CrossEntropyWithSoftmax Partial-gradientValues");
-                Inputs(0)->GradientValues().Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
+                Inputs(0)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
 #endif
-
-                Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_logSoftmaxOfRight, Inputs(0)->GradientValues());
+                auto gradient = Inputs(0)->GradientSlice(frameRange);
+                Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_logSoftmaxOfRight, gradient);
+                // TODO: ^^ This routes the gradient value through the CPU. Necessary?
 #if DUMPOUTPUT
-                Inputs(0)->GradientValues().Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
+                Inputs(0)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
 #endif
             }
             else if (inputIndex == 1)  // right derivative
             {
 #if DUMPOUTPUT
                 *m_softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
-                Inputs(0)->FunctionValues().Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
+                Inputs(0)->ValueSlice(frameRange).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
                 GradientValues().Print("CrossEntropyWithSoftmax Partial-gradientValues");
-                Inputs(1)->GradientValues().Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
+                Inputs(1)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
 #endif
 
-                Matrix<ElemType>::AddScaledDifference(GradientValues(), *m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(1)->GradientValues());
+                auto gradient = Inputs(1)->GradientSlice(frameRange);
+                Matrix<ElemType>::AddScaledDifference(GradientValues(), *m_softmaxOfRight, Inputs(0)->ValueSlice(frameRange), gradient);
 #if DUMPOUTPUT
-                Inputs(1)->GradientValues().Print("CrossEntropyWithSoftmaxNode Partial-Right");
+                Inputs(1)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
 #ifdef _DEBUG
                 Inputs(1)->InvalidateMissingGradientColumns(frameRange);  // TODO: This should not be necessary.
 #endif
-                //Inputs(1)->MaskMissingGradientColumnsToZero(frameRange);  // TODO: This should not be necessary.
             }
         }
 
@@ -175,14 +167,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FrameRange frameRange;
             // first compute the softmax (column-wise)
             // Note that we need both log and non-log for gradient computation.
-            m_logSoftmaxOfRight->AssignLogSoftmaxOf(Inputs(1)->FunctionValues(), true);
+            m_logSoftmaxOfRight->AssignLogSoftmaxOf(Inputs(1)->ValueSlice(frameRange), true);
             m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             m_softmaxOfRight->InplaceExp();
             // flatten all gaps to zero, such that gaps will contribute zero to the sum
             MaskMissingColumnsToZero(*m_logSoftmaxOfRight, Inputs(1)->GetMBLayout(), frameRange);
-            Inputs(0)->MaskMissingValuesColumnsToZero(frameRange);
             // reduce over all frames
-            FunctionValues().AssignInnerProductOfMatrices(Inputs(0)->FunctionValues(), *m_logSoftmaxOfRight);
+            FunctionValues().AssignInnerProductOfMatrices(Inputs(0)->MaskedValueSlice(frameRange), *m_logSoftmaxOfRight);
             FunctionValues() *= -1;
 #if NANCHECK
             FunctionValues().HasNan("CrossEntropyWithSoftmax");
@@ -268,30 +259,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
+            FrameRange frameRange;
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
-                ComputeInputPartialLeft(*m_logOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
+                ComputeInputPartialLeft(*m_logOfRight, Inputs(0)->GradientSlice(frameRange), GradientValues());
             }
             else
             {
-                ComputeInputPartialRight(*m_leftDivRight, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), shared_from_this());
+                ComputeInputPartialRight(*m_leftDivRight, Inputs(0)->ValueSlice(frameRange), Inputs(1)->ValueSlice(frameRange), Inputs(1)->GradientSlice(frameRange), GradientValues());
             }
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialLeft(const Matrix<ElemType>& logOfRight, Matrix<ElemType>& inputGradientValues, 
+        /*TODO: merge with call site*/void ComputeInputPartialLeft(const Matrix<ElemType>& logOfRight, Matrix<ElemType> inputGradientValues, 
             const Matrix<ElemType>& gradientValues)  
         {
             Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logOfRight, inputGradientValues);
         }
 
         /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& leftDivRight, 
-            const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1,
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, ComputationNodePtr curNode)
+            const Matrix<ElemType> inputFunctionValues0, const Matrix<ElemType> inputFunctionValues1,
+            Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
             FrameRange frameRange;
             leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
-            curNode->MaskMissingColumnsToZero(leftDivRight, Inputs(0)->GetMBLayout(), frameRange);
+            MaskMissingColumnsToZero(leftDivRight, Inputs(0)->GetMBLayout(), frameRange);
             Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
         }
 
@@ -299,11 +291,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             FrameRange frameRange;
-            m_logOfRight->SetValue(Inputs(1)->FunctionValues());
+            m_logOfRight->SetValue(Inputs(1)->ValueSlice(frameRange));
             m_logOfRight->InplaceLog();
             MaskMissingColumnsToZero(*m_logOfRight, Inputs(1)->GetMBLayout(), frameRange);
-            Inputs(0)->MaskMissingValuesColumnsToZero(frameRange);
-            FunctionValues().AssignInnerProductOfMatrices(Inputs(0)->FunctionValues(), *m_logOfRight);
+            FunctionValues().AssignInnerProductOfMatrices(Inputs(0)->MaskedValueSlice(frameRange), *m_logOfRight);
             FunctionValues() *= -1;
 #if NANCHECK
             functionValues.HasNan("CrossEntropy");
@@ -395,12 +386,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
         {
+            FrameRange frameRange;
             assert(inputIndex == 0); inputIndex;
-            ComputeInputPartialS(*m_gradientOfL1Norm, Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues());
+            ComputeInputPartialS(*m_gradientOfL1Norm, Inputs(0)->GradientSlice(frameRange), GradientValues(), Inputs(0)->ValueSlice(frameRange));
         }
 
         /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& gradientOfL1Norm, 
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues)  
+            Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             gradientOfL1Norm.AssignSignOf(inputFunctionValues);
             inputGradientValues.AddWithScaleOf(gradientValues.Get00Element(), gradientOfL1Norm);
@@ -409,9 +401,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             FrameRange frameRange;
-            Inputs(0)->MaskMissingValuesColumnsToZero(frameRange);
             VerifySize(1, 1);
-            FunctionValues().SetValue(Inputs(0)->FunctionValues().MatrixNorm1());
+            FunctionValues().SetValue(Inputs(0)->MaskedValueSlice(frameRange).MatrixNorm1());
 #if NANCHECK
             FunctionValues().HasNan("MatrixL1Reg");
 #endif
@@ -487,11 +478,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
         {
+            FrameRange frameRange;
             assert(inputIndex == 0); inputIndex;
-            ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), Inputs(0)->FunctionValues(), FunctionValues());
+            ComputeInputPartialS(Inputs(0)->GradientSlice(frameRange), GradientValues(), Inputs(0)->ValueSlice(frameRange), FunctionValues());
         }
 
-        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& functionValues)  
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& functionValues)  
         {
             ElemType v = gradientValues.Get00Element() / (functionValues.Get00Element() + EPS_IN_INVERSE);
             inputGradientValues.AddWithScaleOf(v, inputFunctionValues);
@@ -500,9 +492,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             FrameRange frameRange;
-            Inputs(0)->MaskMissingValuesColumnsToZero(frameRange);
             VerifySize(1,1);
-            FunctionValues().SetValue(Inputs(0)->FunctionValues().FrobeniusNorm());
+            FunctionValues().SetValue(Inputs(0)->MaskedValueSlice(frameRange).FrobeniusNorm());
 #if NANCHECK
             FunctionValues().HasNan("MatrixL2Reg");
 #endif
@@ -588,6 +579,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         */
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
+            FrameRange frameRange;
             m_needRecomputeGradientToSoftmaxInput = false;
             //gradient computation@yinggongzhao
             //inputIndex should be 2 this time
@@ -596,7 +588,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputIndex == 0)
                 InvalidArgument("ComputeInput partial should not be called for label");
             //                                                                              samples+probs                   hidden                  embedding
-            Inputs(inputIndex)->GradientValues().AssignNCEDerivative(m_ncePrediction, Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(), inputIndex);
+            Inputs(inputIndex)->GradientSlice(frameRange).AssignNCEDerivative(m_ncePrediction, Inputs(0)->ValueSlice(frameRange), Inputs(1)->ValueSlice(frameRange), Inputs(2)->FunctionValues(), inputIndex);
         }
 
 #if 0   // TODO: delete this. Seems copy-paste leftover?
@@ -1091,20 +1083,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 InvalidArgument("CRFNode only takes with respect to input and weight.");
 
             if (inputIndex == 1)
-                ErrorSignalToPostitionDependentNode(GradientValues(), Inputs(0)->FunctionValues(), mPostProb, Inputs(inputIndex)->GradientValues());
+            {
+                auto gradient = Inputs(1)->GradientSlice(frameRange);
+                Matrix<ElemType>::AddScaledDifference(GradientValues(), mPostProb, Inputs(0)->ValueSlice(frameRange), gradient);
+            }
             else if (inputIndex == 2)
             {
-                assert(Inputs(inputIndex)->GradientValues().GetNumElements() > 0);
+                assert(Inputs(inputIndex)->GradientSlice(frameRange).GetNumElements() > 0);
                 size_t nS = Inputs(0)->GetNumParallelSequences();
                 for (size_t i = 0; i < nS; i++)         // process all sequences one by one
                 {
                     FrameRange sequenceRange = frameRange.Sequence(i);    // FrameRange to select one sequence
+                    auto gradient = Inputs(2)->GradientSlice(frameRange);
                     ErrorSignalToTransitionNode(
                         Inputs(0)->ValueSlice(sequenceRange),
                         DataSlice(mAlpha,     sequenceRange, Inputs(0)->GetMBLayout()),
                         DataSlice(mBeta,      sequenceRange, Inputs(0)->GetMBLayout()),
-                        Inputs(inputIndex)->FunctionValues(),
-                        Inputs(inputIndex)->GradientValues(),
+                        Inputs(2)->ValueSlice(frameRange),
+                        gradient,
                         mStartLbl, 1);
                 }
             }
@@ -1112,10 +1108,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
         }
 
-        static void ErrorSignalToPostitionDependentNode(const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& labls, const Matrix<ElemType>& postProb, Matrix<ElemType>& grd)
-        {
-            Matrix<ElemType>::AddScaledDifference(gradientValues, postProb, labls, grd);
-        }
+        //static void ErrorSignalToPostitionDependentNode(const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& labls, const Matrix<ElemType>& postProb, Matrix<ElemType> grd)
+        //{
+        //    Matrix<ElemType>::AddScaledDifference(gradientValues, postProb, labls, grd);
+        //}
 
         static void ErrorSignalToTransitionNode(
             const Matrix<ElemType>& labls, const Matrix<ElemType>& alpha, const Matrix<ElemType>& beta,
@@ -1337,18 +1333,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
+            FrameRange frameRange;
             if (inputIndex == 0)
                 LogicError("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
             else if (inputIndex == 1)
                 LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
             else if (inputIndex == 2)
-                ComputeInputPartialThree(Inputs(1)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues());
-        }
-
-        /*TODO: merge with call site*/void ComputeInputPartialThree(const Matrix<ElemType>& inputFunctionValues1,
-                                                    Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)  
-        {
-            Matrix<ElemType>::ScaleAndAdd(gradientValues.Get00Element(), inputFunctionValues1, inputGradientValues);
+            {
+                auto gradient = Inputs(2)->GradientSlice(frameRange);
+                Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Inputs(1)->ValueSlice(frameRange), gradient);
+            }
         }
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
@@ -1356,7 +1350,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(0)->GetNumRows() != 1 || Inputs(0)->GetNumCols() != 1 || Inputs(0)->HasMBLayout())
                 LogicError("%ls %ls operation expects first input to be a (1 x 1) matrix", NodeName().c_str(), OperationName().c_str());
             FunctionValues().VerifySize(1, 1);
-            FunctionValues().SetValue(Inputs(0)->FunctionValues().Get00Element());
+            FunctionValues().SetValue((ElemType)Inputs(0)->Get00Element());
 #if NANCHECK
             FunctionValues().HasNan("DummyCriterionNode");
 #endif
@@ -1425,7 +1419,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange;
             //auto t_start_time = Timer::MilliSecondElapsed();
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
@@ -1437,9 +1430,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_gammaFromLattice,
                     m_fsSmoothingWeight, m_frameDropThreshold);
 #ifdef _DEBUG
-                Inputs(inputIndex)->InvalidateMissingGradientColumns(frameRange);
+                Inputs(inputIndex)->InvalidateMissingGradientColumns(FrameRange());
 #endif
-                //Inputs(inputIndex)->MaskMissingGradientColumnsToZero(frameRange);
             }
             else if (inputIndex == 2)
             {
