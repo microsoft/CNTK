@@ -519,6 +519,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // overridden by <ElemType> variant only
         virtual void MaskMissingValuesColumnsToZero(const FrameRange &) = 0;
         virtual void MaskMissingGradientColumnsToZero(const FrameRange &) = 0;
+        virtual void InvalidateMissingValuesColumns(const FrameRange &) = 0;
+        virtual void InvalidateMissingGradientColumns(const FrameRange &) = 0;
 
         // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
         // overridden to return true by training/eval criteria (and the soon-to-be-deprecated PairNetworkNode, LSTMNode)
@@ -1083,9 +1085,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
-        void MaskMissingValuesColumnsToNan()
+        void InvalidateMissingValuesColumns(const FrameRange & frameRange) override final
         {
-            MaskMissingColumnsTo(*m_functionValues, m_pMBLayout, FrameRange(), Matrix<ElemType>::MakeNan(__LINE__));
+            MaskMissingColumnsTo(*m_functionValues, m_pMBLayout, frameRange, Matrix<ElemType>::MakeNan(__LINE__));
+        }
+        void InvalidateMissingGradientColumns(const FrameRange & frameRange) override final
+        {
+            MaskMissingColumnsTo(*m_gradientValues, m_pMBLayout, frameRange, Matrix<ElemType>::MakeNan(__LINE__));
         }
 
         // for debugging purposes
@@ -1212,6 +1218,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             return DataSlice(GradientValues(), frameRange);
         }
+        // use the following two versions if you assume the inputs may contain gaps that must be set to zero because you want to reduce over frames with a BLAS operation
+        Matrix<ElemType> MaskedValueSlice(const FrameRange & frameRange/*select frame or entire batch*/)
+        {
+            MaskMissingValuesColumnsToZero(frameRange);
+            return ValueSlice(frameRange);
+        }
+        Matrix<ElemType> MaskedGradientSlice(const FrameRange & frameRange/*select frame or entire batch*/)
+        {
+            MaskMissingGradientColumnsToZero(frameRange);
+            return GradientSlice(frameRange);
+        }
 
 #ifdef _DEBUG
         // NaN checks
@@ -1223,7 +1240,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (FunctionValues().HasNan("OnEvaluateEndIteration"))
                 LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
 #endif
-            MaskMissingValuesColumnsToNan();        // blast NaNs into columns that are gaps in a packed layout
+            InvalidateMissingValuesColumns(FrameRange());        // blast NaNs into columns that are gaps in a packed layout
         }
 #endif
 
@@ -1504,7 +1521,7 @@ protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  /*TODO: can we just use 'using?' */ \
     using Base::Resize; using Base::GetNumRows; using Base::GetNumCols; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
-    using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; \
+    using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValuesColumns; using Base::InvalidateMissingGradientColumns; \
     using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::ComputeInputPartial; \
     using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputImageLayout; using Base::m_outputImageLayout; \

@@ -570,40 +570,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        void ComputeInputPartialMap(const size_t inputIndex)
-        {
-            if (inputIndex > 1)
-                InvalidArgument("Times operation only takes two inputs.");
-
-            if (inputIndex == 0)  //left derivative
-            {
-                ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
-            }
-            else  //right derivative
-            {
-                ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
-            }
-        }
+        //void ComputeInputPartialMap(const size_t inputIndex)
+        //{
+        //    if (inputIndex > 1)
+        //        InvalidArgument("Times operation only takes two inputs.");
+        //
+        //    if (inputIndex == 0)  //left derivative
+        //    {
+        //        ComputeInputPartialLeft(Inputs(1)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
+        //    }
+        //    else  //right derivative
+        //    {
+        //        ComputeInputPartialRight(Inputs(0)->FunctionValues(), Inputs(1)->GradientValues(), GradientValues());
+        //    }
+        //}
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
-            if (inputIndex > 1)
-                InvalidArgument("Times operation only takes two inputs.");
+            //if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
 
-            if (inputIndex == 0)  //left derivative
+            if (inputIndex == 0)    // left derivative
             {
-                Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-                Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+                // this potentially computes inner products over time, so we use the Masked- variants
+                Matrix<ElemType> sliceOutputGrad = MaskedGradientSlice(frameRange);
+                Matrix<ElemType> sliceInput1Value = Inputs(1)->MaskedValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-                ComputeInputPartialLeft(sliceInput1Value, Inputs(0)->GradientValues(), sliceOutputGrad);
+                // currently we only support one combination when the input is sparse.
+                if (sliceInput1Value.GetMatrixType() == SPARSE && Inputs(0)->GradientValues().GetMatrixType() == DENSE && sliceOutputGrad.GetMatrixType() == DENSE)
+                    Inputs(0)->GradientValues().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+
+                Matrix<ElemType>::MultiplyAndAdd(sliceOutputGrad, false, sliceInput1Value, true, Inputs(0)->GradientValues());
             }
-            else  //right derivative
+            else                    // right derivative
             {
                 Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
                 Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-                ComputeInputPartialRight(Inputs(0)->FunctionValues(), sliceInput1Grad, sliceOutputGrad);
+                Matrix<ElemType>::MultiplyAndAdd(Inputs(0)->FunctionValues(), true, sliceOutputGrad, false, sliceInput1Grad);
             }
         }
 
@@ -619,7 +622,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (inputFunctionValues.GetMatrixType() == SPARSE && inputGradientValues.GetMatrixType() == DENSE && gradientValues.GetMatrixType() == DENSE)
                 inputGradientValues.SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
 
-                Matrix<ElemType>::MultiplyAndAdd(gradientValues, false, inputFunctionValues, true, inputGradientValues);
+            Matrix<ElemType>::MultiplyAndAdd(gradientValues, false, inputFunctionValues, true, inputGradientValues);
 #if DUMPOUTPUT
             inputGradientValues.Print("child Gradient-out");
 #endif
@@ -633,7 +636,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.Print("child Gradient-in/out");
             inputFunctionValues.Print("child Function values");
 #endif
-                Matrix<ElemType>::MultiplyAndAdd(inputFunctionValues, true, gradientValues, false, inputGradientValues);
+            Matrix<ElemType>::MultiplyAndAdd(inputFunctionValues, true, gradientValues, false, inputGradientValues);
 #if DUMPOUTPUT
             inputGradientValues.Print("child Gradient-out");
 #endif
@@ -645,23 +648,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
             VerifySize(rows0, cols1);
 
+            // right operand and output can have MB layout, while left operand cannot
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 
-            EvaluateThisNodeS(sliceOutputValue, Inputs(0)->FunctionValues(), sliceInput1Value);
-        }
-
-        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& input0, const Matrix<ElemType>& input1)  
-        {
 #if DUMPOUTPUT
-            input0.Print("TimesNode - Input0");
+            Inputs(0)->FunctionValues().Print("TimesNode - Input0");
 #endif
-            functionValues.AssignProductOf(input0, false, input1, false);
+            sliceOutputValue.AssignProductOf(Inputs(0)->FunctionValues(), false, sliceInput1Value, false);
 #if NANCHECK
-            functionValues.HasNan("Times");
+            sliceOutputValue.HasNan("Times");
 #endif
 #if DUMPOUTPUT
-            functionValues.Print("TimesNode");
+            sliceOutputValue.Print("TimesNode");
 #endif
         }
 
