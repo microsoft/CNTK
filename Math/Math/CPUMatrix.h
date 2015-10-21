@@ -53,6 +53,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CPUMatrix<ElemType>& AssignColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
         CPUMatrix<ElemType>& SetColumnSlice(const CPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
+        void CopyColumnsStrided(const CPUMatrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride);
+
         CPUMatrix<ElemType> Diagonal() const;
 
         ElemType Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
