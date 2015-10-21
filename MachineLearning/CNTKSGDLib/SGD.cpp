@@ -1177,6 +1177,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // --- END OF MAIN EPOCH LOOP
 
+        // Synchronize all ranks before proceeding to ensure that 
+        // rank 0 has finished writing the model file
+        if (g_mpi != nullptr)
+        {
+            g_mpi->WaitAll();
+        }
+
         if (((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing)
         {
             m_progressTracingTimer.Stop();
@@ -2072,6 +2079,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         // this must go to stdout, not stderr
                         float epochProg = ((100.0f * (float) (m_fullEpochsOffset + epochNumber)) / (float) m_fullTotalMaxEpochs);
                         float mbProg = ((float) numMBsRun / ((float) m_maxComputedEpochSize / (float) tunedMBSize));
+                        mbProg = (mbProg * 100.0f) / (float) m_fullTotalMaxEpochs;
+
                         printf("PROGRESS: %.2f%%\n", epochProg + mbProg);
                         wasProgressPrinted = true;
                         m_progressTracingTimer.Restart();

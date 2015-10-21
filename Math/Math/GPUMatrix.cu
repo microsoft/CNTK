@@ -559,6 +559,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride)
+    {
+        if ((((numCols - 1) * srcNumColsStride) + 1) > fromMatrix.m_numCols)
+            LogicError("The numCols to copy and srcNumColsStride specified is out of range of the source matrix.");
+        if ((((numCols - 1) * destNumColsStride) + 1) > m_numCols)
+            LogicError("The numCols to copy and srcNumColsStride specified is out of range of the destination matrix.");
+        if (m_numRows != fromMatrix.m_numRows)
+            LogicError("The number of rows in source and destination matrices do not match");
+
+        if ((m_numRows * numCols) > 0)
+        {
+            // Launch a kernel to do the strided copy
+            CUDA_LONG N = (CUDA_LONG)(m_numRows * numCols);
+            int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+            PrepareDevice();
+            cudaEvent_t done = nullptr;
+            if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+            _copyColumnsStrided<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, fromMatrix.m_pArray, N, (CUDA_LONG)m_numRows, (CUDA_LONG)destNumColsStride, (CUDA_LONG)srcNumColsStride);
+            if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+            if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+            if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+        }
+    }
 
     //for each column of a, we assign all rows of a to this starting from startIndex
     template<class ElemType>

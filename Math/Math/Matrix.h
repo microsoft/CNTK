@@ -164,6 +164,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
         Matrix<ElemType>& SetColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
+        void CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride);
+
         Matrix<ElemType> Diagonal() const;
         Matrix<ElemType> AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
         void ShiftBy(int numShift);

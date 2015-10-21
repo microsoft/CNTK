@@ -300,6 +300,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    void CPUMatrix<ElemType>::CopyColumnsStrided(const CPUMatrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride)
+    {
+        if ((((numCols - 1) * srcNumColsStride) + 1) > fromMatrix.m_numCols)
+            LogicError("The numCols to copy and srcNumColsStride specified is out of range of the source matrix.");
+        if ((((numCols - 1) * destNumColsStride) + 1) > m_numCols)
+            LogicError("The numCols to copy and srcNumColsStride specified is out of range of the destination matrix.");
+        if (m_numRows != fromMatrix.m_numRows)
+            LogicError("The number of rows in source and destination matrices do not match");
+
+        long n = (long)numCols, m = (long)m_numRows;
+
+        auto& us = *this;
+
+#pragma omp parallel for
+        for (long j = 0; j<n; j++)
+        {
+            //four-way unrolling
+            for (size_t i = 0; i<(m & ~3); i += 4)
+            {
+                us(i, j*destNumColsStride) = fromMatrix(i, j*srcNumColsStride);
+                us(i + 1, j*destNumColsStride) = fromMatrix(i + 1, j*srcNumColsStride);
+                us(i + 2, j*destNumColsStride) = fromMatrix(i + 2, j*srcNumColsStride);
+                us(i + 3, j*destNumColsStride) = fromMatrix(i + 3, j*srcNumColsStride);
+            }
+
+            //handle remaining
+            for (size_t i = m & ~3; i<m; i++)
+            {
+                us(i, j*destNumColsStride) = fromMatrix(i, j*srcNumColsStride);
+            }
+        }
+    }
+
     //for each column of a, we add all rows of a to this starting from startIndex
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
