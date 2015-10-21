@@ -340,6 +340,19 @@ __global__ void _setValue(
 };
 
 template<class ElemType>
+__global__ void _copyColumnsStrided(ElemType * dest, ElemType * src, CUDA_LONG N, CUDA_LONG numRows, CUDA_LONG destNumColsStride, CUDA_LONG srcNumColsStride)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    CUDA_LONG denseColIdx = id / numRows;
+    CUDA_LONG rowIdx = id - (denseColIdx * numRows);
+
+    dest[(denseColIdx*destNumColsStride*numRows) + rowIdx] = src[(denseColIdx*srcNumColsStride*numRows) + rowIdx];
+}
+
+template<class ElemType>
 __global__ void _assignToRowSliceValuesOf(ElemType * dest, ElemType * src, const CUDA_LONG N, const CUDA_LONG startIndex, const CUDA_LONG destRows, const CUDA_LONG srcRows)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
