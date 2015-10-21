@@ -41,21 +41,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), *m_maxIndexes0, *m_maxIndexes1, *m_maxValues, m_topK, shared_from_this());
-        }
-
-        void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues0, const Matrix<ElemType>& inputFunctionValues1, Matrix<ElemType>& maxIndexes0, Matrix<ElemType>& maxIndexes1, Matrix<ElemType>& maxValues, int topK, ComputationNodePtr curNode)
-        {
-            inputFunctionValues0.VectorMax(maxIndexes0, maxValues, true);
-            inputFunctionValues1.VectorMax(maxIndexes1, maxValues, true, topK);
-            curNode->MaskMissingColumnsToZero(maxIndexes0, Inputs(0)->GetMBLayout(), FrameRange());
-            curNode->MaskMissingColumnsToZero(maxIndexes1, Inputs(1)->GetMBLayout(), FrameRange());
-            functionValues.AssignNumOfDiff(maxIndexes0, maxIndexes1, topK > 1);
+            FrameRange frameRange;
+            Inputs(0)->FunctionValues().VectorMax(*m_maxIndexes0, *m_maxValues, true);
+            Inputs(1)->FunctionValues().VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
+            MaskMissingColumnsToZero(*m_maxIndexes0, Inputs(0)->GetMBLayout(), frameRange);
+            MaskMissingColumnsToZero(*m_maxIndexes1, Inputs(1)->GetMBLayout(), frameRange);
+            FunctionValues().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
         #if NANCHECK
-            functionValues.HasNan("ErrorPrediction");
+            FunctionValues().HasNan("ErrorPrediction");
         #endif
 #if DUMPOUTPUT
-            functionValues.Print("ErrorPredictionNode");
+            FunctionValues().Print("ErrorPredictionNode");
 #endif
         }
 
@@ -63,21 +59,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::Validate(isFinalValidationPass);
 
-            size_t index = 0;
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferChildDims(index, rows, cols);
-            }
-
-            index = 1;
-            {
-                size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferChildDims(index, rows, cols);
-            }
+            ValidateInferBinaryChildrenDims();
 
             m_topK = 1;
+            // TODO: Make topK a constructor parameter
             if (m_children.size() == 3)
             {
                 if (Inputs(2)->FunctionValues().GetNumRows() != 1 || Inputs(2)->FunctionValues().GetNumCols() != 1)
