@@ -20,24 +20,27 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-class CuDnnConvolutionEngineImpl;
+    class CuDnnConvolutionEngineImpl;
 
-template<class ElemType>
-class CuDnnConvolutionEngine : public ConvolutionEngine<ElemType>
-{
-public:
-    CuDnnConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples);
+    template<class ElemType>
+    class CuDnnConvolutionEngine : public ConvolutionEngine<ElemType>
+    {
+    public:
+        CuDnnConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples);
 
-public:
-    void Forward(const Tensor4D& inT, const Mat& in, const Tensor4D& filterT, const Mat& filter, const ConvolutionOptions& convOpt,
-        const Tensor4D& outT, Mat& out) override;
+    public:
+        void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvolutionDescriptor& convDesc,
+            const Tensor4D& outT, Mat& out) override;
 
-    Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override;
+        Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override;
+        FilterPtr CreateFilter(size_t w, size_t h, size_t c, size_t k) override;
+        ConvDescPtr CreateConvDescriptor(const Tensor4D& inT, const Filter& filterT, 
+            size_t wStride, size_t hStride, bool padding) override;
 
-    static bool IsSupported();
-private:
-    // Using pimpl to hide cuDNN objects. CuDnnConvolutionEngine.h is included in other projects not aware of cuDNN.
-    std::unique_ptr<CuDnnConvolutionEngineImpl> m_impl;
-};
+        static bool IsSupported();
+    private:
+        // Using pimpl to hide cuDNN objects. CuDnnConvolutionEngine.h is included in other projects that are not aware of cuDNN.
+        std::unique_ptr<CuDnnConvolutionEngineImpl> m_impl;
+    };
 
 }}}
