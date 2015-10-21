@@ -122,11 +122,9 @@ namespace msra { namespace lattices {
                     if (numframes > tempmatrix.GetNumCols())
                         tempmatrix.Resize(numrows, numframes);
 
-                    for (size_t nframe = 0; nframe < numframes; nframe++)
-                    {
-                        Microsoft::MSR::CNTK::Matrix<ElemType> columndata = loglikelihood.ColumnSlice((nframe + validframes[mapi])*samplesInRecurrentStep + mapi, 1);
-                        tempmatrix.SetColumn(columndata, nframe);
-                    }
+
+                    Microsoft::MSR::CNTK::Matrix<ElemType> loglikelihoodForCurrentParallelUtterance = loglikelihood.ColumnSlice(mapi + (validframes[mapi] * samplesInRecurrentStep), ((numframes - 1) * samplesInRecurrentStep) + 1);
+                    tempmatrix.CopyColumnsStrided(loglikelihoodForCurrentParallelUtterance, numframes, samplesInRecurrentStep, 1);
 
                     //if (doreferencealign || m_deviceid == CPUDEVICE)
                     {
