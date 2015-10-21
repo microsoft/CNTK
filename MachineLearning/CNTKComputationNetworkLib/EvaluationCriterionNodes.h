@@ -30,10 +30,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name)
         { }
 
-        void Reset()        // TODO: what is this??
-        {
-        }
-
         virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
         {
             LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
@@ -42,8 +38,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
             FrameRange frameRange;
-            Inputs(0)->FunctionValues().VectorMax(*m_maxIndexes0, *m_maxValues, true);
-            Inputs(1)->FunctionValues().VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
+            Inputs(0)->ValueSlice(frameRange).VectorMax(*m_maxIndexes0, *m_maxValues, true);
+            Inputs(1)->ValueSlice(frameRange).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
             MaskMissingColumnsToZero(*m_maxIndexes0, Inputs(0)->GetMBLayout(), frameRange);
             MaskMissingColumnsToZero(*m_maxIndexes1, Inputs(1)->GetMBLayout(), frameRange);
             FunctionValues().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
@@ -65,9 +61,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: Make topK a constructor parameter
             if (m_children.size() == 3)
             {
-                if (Inputs(2)->FunctionValues().GetNumRows() != 1 || Inputs(2)->FunctionValues().GetNumCols() != 1)
+                if (Inputs(2)->GetNumRows() != 1 || Inputs(2)->GetNumCols() != 1)
                     throw std::logic_error("TopK in ErrorPredictionNode must be a scalar value.");
-                m_topK = static_cast<int>(Inputs(2)->FunctionValues().Get00Element());
+                m_topK = static_cast<int>(Inputs(2)->Get00Element());
             }
             //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
             //    LogicError("ErrorPrediction operation: one of the operands has 0 elements.");
@@ -79,8 +75,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
                 }       
 
-                if (((!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&  //match size
-                    Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()))) && Inputs(0)->GetLoopId() < 0)
+                if (((!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match size
+                        Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))))
                 {
                     LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
                 }
