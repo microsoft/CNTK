@@ -74,6 +74,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // ...but don't actually allocate anything
             m_sentenceBoundaryFlags.Resize(0, 0);
             m_minibatchPackingFlags.clear();
+            m_sequences.clear();
         }
 
         size_t GetNumTimeSteps()         const { return m_numTimeSteps; }
@@ -146,6 +147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 assert(t == endTime-1 || !Is(s, t, MinibatchPackingFlags::SequenceEnd));
             }
 #endif
+            AddSequence(beginTime, endTime, true);
         }
 
         // mark a range of frames in a parallel sequence as invalid
@@ -153,6 +155,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (size_t t = beginTime; t < endTime; t++)
                 Set(s, t, MinibatchPackingFlags::NoInput);
+            AddSequence(beginTime, endTime, false);
         }
 
         // TODO: This can go away once frame mode returns multiple sequence sof one frame each; or we can test against cols==1
@@ -217,6 +220,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// != 0 denotes the case that there exists sentence begin or no_labels case in this frame
         /// == 0 denotes such case is not in this frame
         mutable vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
+
+        // explicit list of sequences
+        // Currently this is for diagnostics only, but in the future this will include utterance ids etc, meant for lining up inconsistent MB layouts.
+        struct SequenceDesc
+        {
+            size_t tBegin, tEnd;
+            bool hasData;           // false means it's a gap
+        };
+        mutable vector<SequenceDesc> m_sequences;
+        void AddSequence(size_t b, size_t e, bool d)
+        {
+            m_sequences.push_back(SequenceDesc{ b, e, d });
+        }
 
     public:
         // specialized functions to replicate old behavior that shouldn't be there but I cannot test

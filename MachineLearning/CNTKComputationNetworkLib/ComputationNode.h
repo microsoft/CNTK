@@ -1254,12 +1254,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (m_gradientInitialized)
                     MaskMissingGradientColumnsToZero(FrameRange());
             }
+            bool anyChildNeedsGradient = false;
             for (size_t i = 0; i < m_children.size(); i++)
-            {
-                ComputationNodePtr child = Inputs(i);
-                if (child->m_needsGradient)
-                    child->MaskMissingValuesColumnsToZero(FrameRange());
-            }
+                anyChildNeedsGradient |= Inputs(i)->m_needsGradient;
+            if (anyChildNeedsGradient)
+                for (size_t i = 0; i < m_children.size(); i++)
+                   Inputs(i)->MaskMissingValuesColumnsToZero(FrameRange());
         }
 
 #ifdef _DEBUG
