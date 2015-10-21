@@ -963,7 +963,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                             m_extraUttsPerMinibatch.push_back(i);
                             fillOneUttDataforParallelmode(matrices, 0, m_validFrame[i], i, i);
-                            if (m_mbiter->haslattice())
+                            if (m_latticeBufferMultiUtt[i] != nullptr)
                             {
                                 m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
                                 m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
@@ -993,9 +993,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         if (framenum + m_validFrame[j] < m_mbSize)
                                         {
                                             m_extraUttsPerMinibatch.push_back(j);
-                                            if (m_mbiter->haslattice())
+                                            if (m_latticeBufferMultiUtt[i] != nullptr)
                                             {
-
                                                 m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
                                                 m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
                                                 m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
