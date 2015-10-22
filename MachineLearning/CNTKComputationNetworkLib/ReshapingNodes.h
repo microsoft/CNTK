@@ -366,11 +366,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"RowSlice"; }
     public:
-        //RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name) :
-        //    Base(deviceId, name),
-        //    m_startIndex(0),
-        //    m_numRows(0)
-        //{ }
         RowSliceNode(DEVICEID_TYPE deviceId, const wstring & name, size_t startIndex = 0, size_t numRows = 0) :
             Base(deviceId, name),
             m_startIndex(startIndex),
