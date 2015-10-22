@@ -1185,7 +1185,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, const size_t matrixFlags)
     {
-        if (pArray == nullptr)
+        if (((numRows * numCols) > 0) && (pArray == nullptr))
             InvalidArgument("Invalid pArray.");
 
         DISPATCH_MATRIX_ON_FLAG(this,

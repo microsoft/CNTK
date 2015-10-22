@@ -958,16 +958,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (!skip)
                         {
                             m_validFrame[i] = m_toProcess[i];
-                            if (!m_framemode)       // in framemode we leave the flags empty
-                                m_pMBLayout->SetAsSentence(i, 0, m_validFrame[i]);
-
-                            m_extraUttsPerMinibatch.push_back(i);
-                            fillOneUttDataforParallelmode(matrices, 0, m_validFrame[i], i, i);
-                            if (m_latticeBufferMultiUtt[i] != nullptr)
+                            if (m_validFrame[i] > 0)
                             {
-                                m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
-                                m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
-                                m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
+                                if (!m_framemode)       // in framemode we leave the flags empty
+                                    m_pMBLayout->SetAsSentence(i, 0, m_validFrame[i]);
+
+                                m_extraUttsPerMinibatch.push_back(i);
+                                fillOneUttDataforParallelmode(matrices, 0, m_validFrame[i], i, i);
+                                if (m_latticeBufferMultiUtt[i] != nullptr)
+                                {
+                                    m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
+                                    m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
+                                    m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
+                                }
                             }
                         }
                         ReNewBufferForMultiIO(i);
