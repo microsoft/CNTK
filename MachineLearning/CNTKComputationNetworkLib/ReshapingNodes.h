@@ -286,16 +286,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // BUGBUG: This must also be tested for in Eval and Partial
-        virtual const Matrix<ElemType>& FunctionValues() const
-        {
-            if (Inputs(0)->GetNumRows() != m_numRows)
-                return *m_functionValues;
-            else
-                return Inputs(0)->FunctionValues();
-        }
+        // Premature optimization. If factor is 1, then just don't use this node. We can filter for that in the BrainScript macro instead of optimizing it here.
+        //virtual const Matrix<ElemType>& FunctionValues() const
+        //{
+        //    if (factor() == 1)
+        //        return *m_functionValues;
+        //    else
+        //        return Inputs(0)->FunctionValues();
+        //}
 
     private:
         size_t m_numRows;
+        bool weStack() const { return m_numRows > Inputs(0)->GetNumRows(); }        // do we stack (multiple frames into one)
+        size_t factor() const { return m_numRows > Inputs(0)->GetNumRows() ? m_numRows / Inputs(0)->GetNumRows() : Inputs(0)->GetNumRows() / m_numRows; }   // factor by which we stack or unstack
         ImageLayout m_imageLayout;
 
         void InferImageDimensions()

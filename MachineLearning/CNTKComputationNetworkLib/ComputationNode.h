@@ -1158,6 +1158,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // these are overridden by DropoutNode, ReshapeNode, and RowRepeatNode to optimize for the trivial case that those don't do anything
         // TODO: lots of nodes read out m_functionValues directly--was that a bug or intentional? They have now been changed to ValueSlice(), i.e. would pick it up
+        // BUGBUG: There is no matching virtual for GradientValues(). This should be symmetrical. Or better, replace this by optimizng for in-place operations.
         virtual const Matrix<ElemType>& FunctionValues() const { return *m_functionValues; }
         virtual Matrix<ElemType>& FunctionValues() { return *m_functionValues; }
 
@@ -1168,8 +1169,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note: This returns an object, not a reference. That object is a column slice, i.e. a small object that just points into another object.
         // TODO: remove FrameRange::samplesInRecurrentStep from FrameRange, as it belongs into pMBLayout. Hence this function that binds both together.
         // Note: This is not used anywhere yet, only a sketch how we may further abstract timing.
-        Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
-                                   const FrameRange & frameRange/*select frame or entire batch*/)
+        Matrix<ElemType> DataSlice(Matrix<ElemType> & data, const FrameRange & frameRange/*select frame or entire batch*/)
         {
             return DataSlice(data, frameRange, m_pMBLayout);
         }
