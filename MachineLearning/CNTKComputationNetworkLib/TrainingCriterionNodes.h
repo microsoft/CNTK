@@ -1012,6 +1012,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //    in the R-CRF case, it is the RNN output score before softmax
     //  - transition scores [?] : score from the transition node, 
     //    in the R-CRF case, it is the transition probability between labels
+    // BUGBUG: This node cannot operate with truncated BPTT, but does not detect it. It also does not handle gaps or test boundary flags.
     // -----------------------------------------------------------------------
 
     /**
@@ -1056,11 +1057,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             size_t nS = Inputs(0)->GetNumParallelSequences();
             if (nS != 1)
-                LogicError("CRFNode: >1 parallel sequences are curently not implemented correctly. To fix this, we need Matrix::RowSlice(), which is a major change");
-            for (size_t i = 0; i < nS; i++)     // process parallel sequences one by one
+                LogicError("CRFNode: >1 parallel sequences are curently not implemented correctly.");
+            for (size_t i = 0; i < nS; i++)     // process parallel sequences one by one  --BUGBUG: We should loop over individual sequences.
             {
                 FrameRange sequenceRange = frameRange.Sequence(i);    // FrameRange to select one sequence
-                // BUGBUG: This ^^ is currently not supported. To implement it, we'd need Matrix::RowSlice().
+                // BUGBUG: This ^^ is neither supported nor correct, since this code does not handle gaps or start/end flags
                 EvaluateThisNodeS(
                     DataSlice(mPostProb, sequenceRange, Inputs(0)->GetMBLayout()),
                     DataSlice(mAlpha,    sequenceRange, Inputs(0)->GetMBLayout()),
@@ -1095,10 +1096,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     FrameRange sequenceRange = frameRange.Sequence(i);    // FrameRange to select one sequence
                     auto gradient = Inputs(2)->GradientSlice(frameRange);
-                    ErrorSignalToTransitionNode(
-                        Inputs(0)->ValueSlice(sequenceRange),
-                        DataSlice(mAlpha,     sequenceRange, Inputs(0)->GetMBLayout()),
-                        DataSlice(mBeta,      sequenceRange, Inputs(0)->GetMBLayout()),
+                    TransGrdCompute(Inputs(0)->ValueSlice(sequenceRange),
+                        DataSlice(mAlpha, sequenceRange, Inputs(0)->GetMBLayout()),
+                        DataSlice(mBeta, sequenceRange, Inputs(0)->GetMBLayout()),
                         Inputs(2)->ValueSlice(frameRange),
                         gradient,
                         mStartLbl, 1);
@@ -1108,25 +1108,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 return;
         }
 
-        //static void ErrorSignalToPostitionDependentNode(const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& labls, const Matrix<ElemType>& postProb, Matrix<ElemType> grd)
-        //{
-        //    Matrix<ElemType>::AddScaledDifference(gradientValues, postProb, labls, grd);
-        //}
-
-        static void ErrorSignalToTransitionNode(
-            const Matrix<ElemType>& labls, const Matrix<ElemType>& alpha, const Matrix<ElemType>& beta,
-            const Matrix<ElemType>& pair_scores, Matrix<ElemType>& grd,
-            const int startLbl, const size_t shift = 1)
-        {
-            TransGrdCompute(labls,
-                alpha,
-                beta,
-                pair_scores,
-                grd,
-                startLbl, shift);
-        }
-
-        /// compute forward backward algorithm
+        // compute forward backward algorithm
         /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType> postprob, Matrix<ElemType> alpha, Matrix<ElemType> beta, Matrix<ElemType> & functionValues, const Matrix<ElemType> & lbls, const Matrix<ElemType> & pos_scores, const Matrix<ElemType> & pair_scores, int& firstLbl, int& lastLbl, const int iStep = 1)
         {
             /// to-do, each slice is for one sentence

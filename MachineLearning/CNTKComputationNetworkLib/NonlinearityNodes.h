@@ -1230,9 +1230,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class DropoutNode<float>;
     template class DropoutNode<double>;
 
-    // =======================================================================
+    // -----------------------------------------------------------------------
     // DiagonalNode -- extract diagonal elements of a matrix
-    // =======================================================================
+    // -----------------------------------------------------------------------
 
     template<class ElemType>
     class DiagonalNode : public ComputationNode<ElemType>, public NumInputs<1>
