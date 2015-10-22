@@ -1159,13 +1159,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>& localEpochEvalErrors
             )
         {
-            encoderNet->SetActualMiniBatchSizeFromFeatures();
+            //encoderNet->SetActualMiniBatchSizeFromFeatures();
             encoderTrainSetDataReader->CopyMBLayoutTo(encoderNet->GetMBLayoutPtr());
             encoderNet->VerifyActualNumParallelSequences(encoderTrainSetDataReader->GetNumParallelSequences());
 
             encoderNet->Evaluate(encoderEvaluationNodes[0]);
 
-            decoderNet->SetActualMiniBatchSizeFromFeatures();
+            //decoderNet->SetActualMiniBatchSizeFromFeatures();
             decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
             decoderNet->VerifyActualNumParallelSequences(decoderTrainSetDataReader->GetNumParallelSequences());
             /// not the sentence begining, because the initial hidden layer activity is from the encoder network

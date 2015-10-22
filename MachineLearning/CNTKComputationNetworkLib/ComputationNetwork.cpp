@@ -208,7 +208,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
 
-        SetActualMiniBatchSizeFromFeatures();   // TODO: this should go
+        //SetActualMiniBatchSizeFromFeatures();   // TODO: this should go
 
         if (requireValidation)
         {

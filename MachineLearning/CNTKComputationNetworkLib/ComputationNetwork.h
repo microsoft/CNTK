@@ -567,6 +567,7 @@ public:
             LogicError("VerifyActualNumParallelSequences: mismatching MB size in MBLayout");
     }
 
+#if 0
     // propagate the features' MB size to all nodes of the network
     // TODO: This function should go. Resizing is now part of Validate() and EvaluateThisNode().
     //       It is still used at many places though, to determine the MB size.
@@ -591,6 +592,7 @@ public:
 
         return m_actualMBSize;
     }
+#endif
 
     // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
     // TODO: pass a set of nodes instead of only one
@@ -1150,7 +1152,7 @@ public: // yak--used by NDLUtil. Will go away someday.
 #ifdef _DEBUG
                 PrintComputationTree(node, false);
 #endif
-                SetActualMiniBatchSizeFromFeatures();
+                //SetActualMiniBatchSizeFromFeatures();
                 ValidateSubNetwork(node);
             }
         }
@@ -1389,7 +1391,7 @@ public:
             {
                 if (!allowFragment)
                     FormRecurrentLoops(node);
-                this->SetActualMiniBatchSizeFromFeatures();
+                //this->SetActualMiniBatchSizeFromFeatures();
                 if (!UnitTest(node))
                     vErrors.push_back(node->NodeName().c_str());
             }
