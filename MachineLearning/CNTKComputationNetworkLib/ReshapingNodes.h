@@ -26,6 +26,22 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
+    // ReshapingNodeBase (input) -- base class for nodes that reshape
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class ReshapingNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+    public:
+        ReshapingNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+    };
+
+#define UsingReshapingNodeBaseMembers UsingComputationNodeMembersBoilerplate
+
+    // -----------------------------------------------------------------------
     // ReshapeNode (input) -- reshape input matrix
     //
     // If input has no layout, then this reshapes the input matrix
@@ -40,9 +56,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ReshapeNode : public ComputationNode<ElemType>, public NumInputs<1>
+    class ReshapeNode : public ReshapingNodeBase<ElemType>
     {
-        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        typedef ReshapingNodeBase<ElemType> Base; UsingReshapingNodeBaseMembers;
         static const std::wstring TypeName() { return L"Reshape"; }
     public:
         ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -269,6 +285,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
+        // BUGBUG: This must also be tested for in Eval and Partial
         virtual const Matrix<ElemType>& FunctionValues() const
         {
             if (Inputs(0)->GetNumRows() != m_numRows)
@@ -338,4 +355,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class ReshapeNode<float>;
     template class ReshapeNode<double>;
 
-} } }
+}}}
