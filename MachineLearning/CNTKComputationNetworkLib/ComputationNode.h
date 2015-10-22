@@ -980,6 +980,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - LearnableParameters
         //  - GMMLogLikelihoodNode (which allocates some internal temp memory).
         // Important: Unless overridden, this function is destructive. Nodes cannot carry over minibatch-size dependent state across minibatches through m_functionValues because of this.
+        // TODO: How is this function different from OnEvaluateBeginIteration()?
         virtual size_t UpdateFunctionMBSize(size_t numCols)
         {
             if (!m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize

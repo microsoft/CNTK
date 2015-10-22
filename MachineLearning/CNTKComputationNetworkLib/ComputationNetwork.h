@@ -17,7 +17,6 @@
 //  - code prettification:
 //     - sort all node implementations' methods into the same order; esp, EvaluateThisNode() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
-//     - 
 //  - finish the job:
 //     - everywhere complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
 //     - revise node constructors, merge by means of default parameters
