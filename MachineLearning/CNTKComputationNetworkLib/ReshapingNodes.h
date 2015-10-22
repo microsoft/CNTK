@@ -51,8 +51,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // from (rows x T time steps) to (newRows x (T / newRows * rows) time steps).
     // E.g. going from rows=20 to newRows=40 groups two consecutive time steps into one.
     // In this case, multiple parallel sequences are treated independently.
-    //
-    // TODO: Make a new header file with all sorts of reshaping/reinterpretation nodes.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -227,26 +225,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // process time step by time step
             assert(m_pMBLayout);
             auto r = frameRange.GetSequenceRange();         // TODO: use range-based loop; currently for (auto s:r) gives a compiler error
-            for (auto s = r.begin(); s != r.end(); s++)    // loop over all sequences
+            for (auto s = r.begin(); s != r.end(); s++)     // loop over all sequences
             {
-                if (m_numRows > rows)           // grouping  --we place a partial vector
+                if (weStack())                  // grouping  --we place a partial vector
                 {
-                    size_t factor = m_numRows / rows;
-                    size_t tOut = frameRange.t() / factor;
-                    size_t subVec = frameRange.t() % factor;
+                    size_t tOut = frameRange.t() / factor();
+                    size_t subVec = frameRange.t() % factor();
                     ValueSlice(FrameRange(tOut).Sequence(s)).AssignToRowSliceValuesOf(Inputs(0)->ValueSlice(frameRange.Sequence(s)), subVec * rows, rows);
                     // update layout flags
                     if (subVec != 0 && Inputs(0)->GetMBLayout()->Is(s, frameRange.t(), MinibatchPackingFlags::SequenceStart))
                         InvalidArgument("%ls %ls operation: found sentence start inside (not at start) of group being decimated", NodeName().c_str(), OperationName().c_str());
-                    if (subVec != factor-1 && Inputs(0)->GetMBLayout()->Is(s, frameRange.t(), MinibatchPackingFlags::SequenceEnd))
+                    if (subVec != factor()-1 && Inputs(0)->GetMBLayout()->Is(s, frameRange.t(), MinibatchPackingFlags::SequenceEnd))
                         InvalidArgument("%ls %ls operation: found sentence end inside (not at end) of group being decimated", NodeName().c_str(), OperationName().c_str());
                     m_pMBLayout->Set(s, tOut, Inputs(0)->GetMBLayout()->Get(s, frameRange.t()));       // BUGBUG: only first/last one may have start/end flag
                 }
                 else                            // splitting  --we place multiple target vectors
                 {
-                    size_t factor = rows / m_numRows;
-                    size_t tOut0 = frameRange.t() * factor;
-                    for (size_t subVec = 0; subVec < factor; subVec++)
+                    size_t tOut0 = frameRange.t() * factor();
+                    for (size_t subVec = 0; subVec < factor(); subVec++)
                     {
                         size_t tOut = tOut0 + subVec;
                         ValueSlice(FrameRange(tOut).Sequence(s)).AssignRowSliceValuesOf(Inputs(0)->ValueSlice(frameRange.Sequence(s)), subVec * m_numRows, m_numRows);
@@ -255,7 +251,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (Inputs(0)->GetMBLayout()->Is(s, frameRange.t(), MinibatchPackingFlags::SequenceStart))
                         m_pMBLayout->Set(s, tOut0, MinibatchPackingFlags::SequenceStart);
                     if (Inputs(0)->GetMBLayout()->Is(s, frameRange.t(), MinibatchPackingFlags::SequenceEnd))
-                        m_pMBLayout->Set(s, tOut0+factor-1, MinibatchPackingFlags::SequenceStart);
+                        m_pMBLayout->Set(s, tOut0+factor()-1, MinibatchPackingFlags::SequenceStart);
                 }
                 // TODO: need to check consistency of gaps
             }

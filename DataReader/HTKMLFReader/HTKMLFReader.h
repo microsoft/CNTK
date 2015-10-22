@@ -32,7 +32,7 @@ private:
     intargvector m_numSeqsPerMBForAllEpochs;
     size_t m_numSeqsPerMB;                  // requested number of parallel sequences
     size_t m_actualNumSeqsPerMB;            // actual number of parallel sequences  --TODO: under which condition can it differ?
-    size_t m_mbNumCols;                     // number of columns to fill/filled
+    size_t m_mbNumTimeSteps;                // number of time steps  to fill/filled (note: for frame randomization, this the #frames, and not 1 as later reported)
     vector<size_t> m_numFramesToProcess;    // [seq index] number of frames available (left to return) in each parallel sequence
     vector<size_t> m_switchFrame;           /// TODO: something like the position where a new sequence starts; still supported?
     vector<size_t> m_numValidFrames;        // [seq index] valid #frames in each parallel sequence. Frames (s, t) with t >= m_numValidFrames[s] are NoInput.
