@@ -535,29 +535,9 @@ public:
 
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
 
-    //void SetRequestNodesMultiSeqHandling();
-
     bool IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const;
 
-    // GetMaxMBSize - Get the maximum minibatch size that will be seen in a training run
-    // TODO: now that this has been reduced to nothing, replace calls to this directly
-    size_t GetMaxMBSize() { return DetermineActualMBSizeFromFeatures(); }
-
-#if 0
-    // always called in this pattern:
-    evalnet->SetActualMiniBatchSizeFromFeatures();
-    dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
-    evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
-    // well... most of the time. Not in TrainOneEpoch().
-    void SetActualNumParallelSequencesInEachRecurentIteration(const size_t aSize)
-    {
-        m_nbrSlicesInEachRecurrentIteration() = aSize;   // TODO: this has to go
-    }
-#endif
-    size_t GetNumParallelSequences() const
-    {
-        return m_pMBLayout->GetNumParallelSequences();
-    }
+    size_t GetNumParallelSequences() const { return m_pMBLayout->GetNumParallelSequences(); }
     // temporary function: Call this after CopyMBLayoutTo(evalnet->GetMBLayoutPtr()) to ensure everything is consistent as expected
     // It is actually called after every CopyMBLayoutTo() in the entire system (except for multi-reader CopyMBLayoutTo() itself).
     // Remove this function after a few weeks of not firing.

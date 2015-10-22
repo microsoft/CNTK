@@ -205,7 +205,7 @@ void DoEvalUnroll(const ConfigParameters& config)
     net.LoadFromFile<ElemType>(modelPath);
     net.ResetEvalTimeStamp();
 
-    SimpleEvaluator<ElemType> eval(net);
+    MultiNetworkEvaluator<ElemType> eval(net);
     double evalEntropy;
     eval.EvaluateUnroll(&testDataReader, mbSize[0], evalEntropy, path2EvalResults == L"" ? nullptr : path2EvalResults.c_str(), epochSize);
 }
@@ -1107,7 +1107,7 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     ConfigParameters writerConfig = config("writer");
     DataWriter<ElemType> testDataWriter(writerConfig);
 
-    SimpleEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
+    MultiNetworkEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
     eval.InitTrainEncoderDecoderWithHiddenStates(config);
 
     eval.EncodingEvaluateDecodingBeamSearch(nets, readers, 
@@ -1175,7 +1175,7 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
     ConfigParameters writerConfig = config("writer");
     DataWriter<ElemType> testDataWriter(writerConfig);
 
-    SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
+    MultiNetworkEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
     eval.BeamSearch(&reader, testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
 }
 

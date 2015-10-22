@@ -25,38 +25,11 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    template<class ElemType>
-    struct NN_state
-    {
-        map<wstring, Matrix<ElemType>> hidden_activity;
-    };
-
-    template<class ElemType>
-    struct Token
-    {
-        Token(const double score, const std::vector<size_t> &sequence, const NN_state<ElemType> & state) :
-            score(score), sequence(sequence), state(state)
-        { }
-        bool operator<(const Token<ElemType> &t) const
-        {
-            return score < t.score;
-        }
-        double score;
-        vector<size_t> sequence;
-        NN_state<ElemType> state;
-    };
-
     // TODO: get rid of dependency on ElemType
     template<class ElemType>
     class SimpleEvaluator
     {
     protected:
-        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
-        typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
-
-    protected:
-        /// used for backward directional nodes
-        std::list<ComputationNodeBasePtr> batchComputeNodes;
 
     public:
 
@@ -192,16 +165,84 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
+        void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs,
+            const vector<ComputationNodeBasePtr>& evalNodes,
+            const double evalResults, const double evalResultsLastMBs, bool displayConvertedValue = false)
+        {
+            vector<double> evaR;
+            evaR.push_back(evalResults);
+            vector<double> evaLast;
+            evaLast.push_back(evalResultsLastMBs);
+
+            DisplayEvalStatistics(startMBNum, endMBNum, numSamplesLastMBs, evalNodes, evaR, evaLast, displayConvertedValue);
+
+        }
+
+        void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, const vector<ComputationNodeBasePtr>& evalNodes,
+                                    const vector<double> & evalResults, const vector<double> & evalResultsLastMBs, bool displayConvertedValue = false)
+        {
+            fprintf(stderr, "Minibatch[%lu-%lu]: Samples Seen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
+
+            for (size_t i = 0; i < evalResults.size(); i++)
+            {
+                double eresult = (evalResults[i] - evalResultsLastMBs[i]) / numSamplesLastMBs;
+                fprintf(stderr, "%ls: %ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), evalNodes[i]->OperationName().c_str(), eresult);
+
+                if (displayConvertedValue)
+                {
+                    //display Perplexity as well for crossEntropy values
+                    if (evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
+                        evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyNode) ||
+                        evalNodes[i]->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
+                        evalNodes[i]->OperationName() == OperationNameOf(NoiseContrastiveEstimationNode))
+                        fprintf(stderr, "Perplexity = %.8g    ", std::exp(eresult));
+                }
+            }
+
+            fprintf(stderr, "\n");
+        }
+
+    protected:
         ComputationNetwork& m_net;
         size_t m_numMBsToShowResult;
         int m_traceLevel;
         void operator=(const SimpleEvaluator&); // (not assignable)
+    };
 
+    // ===================================================================
+    // TODO: EVERYTHING beyond this point is NOT simple evaluation. It must be moved elsewhere.
+    // ===================================================================
+
+    template<class ElemType>
+    struct NN_state
+    {
+        map<wstring, Matrix<ElemType>> hidden_activity;
+    };
+
+    template<class ElemType>
+    struct Token
+    {
+        Token(const double score, const std::vector<size_t> &sequence, const NN_state<ElemType> & state) :
+            score(score), sequence(sequence), state(state)
+        { }
+        bool operator<(const Token<ElemType> &t) const
+        {
+            return score < t.score;
+        }
+        double score;
+        vector<size_t> sequence;
+        NN_state<ElemType> state;
+    };
+
+    template<class ElemType>
+    class MultiNetworkEvaluator : public SimpleEvaluator<ElemType>
+    {
+        typedef SimpleEvaluator<ElemType> Base; using Base::m_net; using Base::m_numMBsToShowResult; using Base::m_traceLevel; using Base::DisplayEvalStatistics;
+        typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
+        typedef ClassBasedCrossEntropyWithSoftmaxNode<ElemType>* ClassBasedCrossEntropyWithSoftmaxNodePtr;
     public:
-        // ===================================================================
-        // TODO: EVERYTHING beyond this point is NOT simple evaluation. It must be moved elsewhere.
-        // ===================================================================
-
+        MultiNetworkEvaluator(ComputationNetwork& net, const size_t numMBsToShowResult = 100, const int traceLevel = 0) : Base(net, numMBsToShowResult, traceLevel) { }
+        
         //returns error rate
         // TODO: What does this function do?
         double EvaluateUnroll(IDataReader<ElemType>* dataReader, const size_t mbSize, double &evalSetCrossEntropy, const wchar_t* output = nullptr, const size_t testSize = requestDataSize)
@@ -324,44 +365,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             evalSetCrossEntropy = epochCrossEntropy;
             return epochEvalError;
-        }
-
-    protected:
-        void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs,
-            const vector<ComputationNodeBasePtr>& evalNodes,
-            const double evalResults, const double evalResultsLastMBs, bool displayConvertedValue = false)
-        {
-            vector<double> evaR;
-            evaR.push_back(evalResults);
-            vector<double> evaLast;
-            evaLast.push_back(evalResultsLastMBs);
-
-            DisplayEvalStatistics(startMBNum, endMBNum, numSamplesLastMBs, evalNodes, evaR, evaLast, displayConvertedValue);
-
-        }
-
-        void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastMBs, const vector<ComputationNodeBasePtr>& evalNodes,
-                                    const vector<double> & evalResults, const vector<double> & evalResultsLastMBs, bool displayConvertedValue = false)
-        {
-            fprintf(stderr, "Minibatch[%lu-%lu]: Samples Seen = %lu    ", startMBNum, endMBNum, numSamplesLastMBs);
-
-            for (size_t i = 0; i < evalResults.size(); i++)
-            {
-                double eresult = (evalResults[i] - evalResultsLastMBs[i]) / numSamplesLastMBs;
-                fprintf(stderr, "%ls: %ls/Sample = %.8g    ", evalNodes[i]->NodeName().c_str(), evalNodes[i]->OperationName().c_str(), eresult);
-
-                if (displayConvertedValue)
-                {
-                    //display Perplexity as well for crossEntropy values
-                    if (evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
-                        evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyNode) ||
-                        evalNodes[i]->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
-                        evalNodes[i]->OperationName() == OperationNameOf(NoiseContrastiveEstimationNode))
-                        fprintf(stderr, "Perplexity = %.8g    ", std::exp(eresult));
-                }
-            }
-
-            fprintf(stderr, "\n");
         }
 
     public:
@@ -1224,6 +1227,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             return best_score;
         }
+
+    protected:
+        /// used for backward directional nodes
+        std::list<ComputationNodeBasePtr> batchComputeNodes;
     };
 
 }}}

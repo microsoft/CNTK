@@ -697,7 +697,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (decoderValidationSetDataReader != decoderTrainSetDataReader && decoderValidationSetDataReader != nullptr)
                 {
-                    SimpleEvaluator<ElemType> evalforvalidation(*decoderNet);
+                    MultiNetworkEvaluator<ElemType> evalforvalidation(*decoderNet);
 
                     double vScore = evalforvalidation.EvaluateEncoderDecoderWithHiddenStates(
                         nets,
