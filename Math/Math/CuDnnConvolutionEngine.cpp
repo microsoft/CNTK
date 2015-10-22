@@ -18,6 +18,8 @@ template<> static const char* CudaErrString(cudnnStatus_t x)
 
 // REVIEW alexeyk: this is the format used originally by CNTK. Consider changing it to NCHW as NHWC currently does not support FFT-based convolutions.
 #define TENSOR_FORMAT CUDNN_TENSOR_NHWC
+// CNTK default implementation uses CHWN format which is converted during model loading to NCHW.
+#define FILTER_FORMAT CUDNN_TENSOR_NCHW
 #endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -68,8 +70,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             : ConvolutionFilter(w, h, c, k), m_filter(nullptr)
         {
             CUDNN_CALL(cudnnCreateFilterDescriptor(&m_filter));
-            // REVIEW alexeyk: use version with tensor format in the future.
-            CUDNN_CALL(cudnnSetFilter4dDescriptor(m_filter, dataType, 
+            CUDNN_CALL(cudnnSetFilter4dDescriptor_v4(m_filter, dataType, FILTER_FORMAT,
                 static_cast<int>(k), static_cast<int>(c), static_cast<int>(h), static_cast<int>(w)));
         }
     public:
@@ -264,8 +265,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void CuDnnConvolutionEngine<ElemType>::Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
         const Tensor4D& outT, Mat& out)
     {
+        const ElemType zero = static_cast<ElemType>(0);
         const ElemType one = static_cast<ElemType>(1);
-        m_impl->Forward(inT, &one, in.BufferPointer(), filterT, filter.BufferPointer(), convDesc, &one, outT, out.BufferPointer());
+        m_impl->Forward(inT, &one, in.BufferPointer(), filterT, filter.BufferPointer(), convDesc, &zero, outT, out.BufferPointer());
     }
 
     template<class ElemType>
