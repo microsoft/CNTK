@@ -184,6 +184,7 @@
     <ClInclude Include="..\CNTKComputationNetworkLib\EvaluationCriterionNodes.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\InputAndParamNodes.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\LinearAlgebraNodes.h" />
+    <ClInclude Include="MultiNetworksEvaluator.h" />
     <ClInclude Include="MultiNetworksSGD.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\NonlinearityNodes.h" />
     <ClInclude Include="..\CNTKComputationNetworkLib\RecurrentNodes.h" />

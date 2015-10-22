@@ -11,6 +11,7 @@
 #include "ComputationNetwork.h"
 #include "IComputationNetBuilder.h"
 #include "SimpleEvaluator.h"
+#include "MultiNetworksEvaluator.h"
 #include "DataReader.h"
 #include <vector>
 #include <string>
@@ -697,7 +698,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (decoderValidationSetDataReader != decoderTrainSetDataReader && decoderValidationSetDataReader != nullptr)
                 {
-                    MultiNetworkEvaluator<ElemType> evalforvalidation(*decoderNet);
+                    MultiNetworksEvaluator<ElemType> evalforvalidation(*decoderNet);
 
                     double vScore = evalforvalidation.EvaluateEncoderDecoderWithHiddenStates(
                         nets,
