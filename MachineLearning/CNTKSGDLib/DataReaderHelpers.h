@@ -204,7 +204,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // with the special twist that in presence of parallelization, there is some decimation involved.
 
             // TODO: how is !wasDataRead semantically different from inputMatrices having zero columns?
+            // TODO: The reader does not always resize the input matrices to zero when 
+            // no data is read. When it does, 'wasDataRead' can be removed
             bool wasDataRead = trainSetDataReader.GetMinibatch(inputMatrices);      // fill in the minibatch data into the Input nodes' buffers directly
+            size_t readMBSize = net.DetermineActualMBSizeFromFeatures();
+            if (readMBSize == 0)
+                wasDataRead = false;
+
             trainSetDataReader.CopyMBLayoutTo(pMBLayout);                           // and layout meta-data
 
             // verify some DataReader calls that are redundant since the MBLayout refactoring (keep verifying for a while for cosy feeling)

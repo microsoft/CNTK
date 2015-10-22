@@ -4481,6 +4481,8 @@ __global__ void _reductionLogAddSum(
 
 // set the value of certain columns to be zero
 // the column is decided by threshhold value
+// TODO: This kernel has very poor performace and needs to
+// be optimized
 template<class ElemType>
 __global__ void _DropFrame(
     ElemType *a,

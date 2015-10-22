@@ -71,6 +71,7 @@ protected:
             m_completedEvaluate = false;
             m_loopClosed = false;
         }
+
     };
 
 public:
@@ -105,7 +106,9 @@ public:
 
     //if node name is not found, dump all nodes
     //otherwise dump just that node
-    void DumpNodeInfoToFile(const std::wstring & nodeName, const bool printValues, const std::wstring outputFile)
+    void DumpNodeInfoToFile(const std::wstring & nodeName, const bool printValues, const std::wstring outputFile, const std::wstring& nodeNameInRegEx=L"")
+    {
+		if (nodeNameInRegEx.empty())
     {
         if (NodeNameExist(nodeName))
         {
@@ -122,6 +125,28 @@ public:
             fprintf(stderr, "Warning: node name %ls does not exist in the network. dumping all nodes.\n",
                     nodeName.c_str());
             DumpAllNodesToFile(printValues, outputFile);
+			}
+		}
+		else
+		{
+			std::wregex NameRegEx(nodeNameInRegEx); 
+			std::vector<ComputationNodeBasePtr> NodeList;
+			std::vector<wstring> NameList; 
+			for (auto m : m_nameToNodeMap)
+			{
+				if (regex_match(m.first, NameRegEx))
+				{
+					NodeList.push_back(m.second);
+					NameList.push_back(m.first);
+				}
+			}
+			fprintf(stderr, "DumpNodeInfo: %d nodes matching RegEx(%ls): \n", (int)NameList.size(), nodeNameInRegEx.c_str());
+			for (auto x : NameList)
+			{
+				fprintf(stderr, "\t%ls\n", x.c_str());
+			}
+			fprintf(stderr, "DumpNodeInfo: dumping node info (%s printing values) to %ls\n", printValues ? "with" : "without", outputFile.c_str());
+			DumpNodeInfoToFile(NodeList, printValues, outputFile);
         }
     }
 
@@ -361,12 +386,12 @@ public:
     // -----------------------------------------------------------------------
 
     template<typename N>
-    static shared_ptr<N> AsNodePtr(const ComputationNodeBasePtr&  inode)
+    static shared_ptr<N> AsNodePtr(const ComputationNodeBasePtr & inode)
     {
         return dynamic_pointer_cast<N>(inode);
     }
     template<typename N>
-    static bool IsNodePtr(const ComputationNodeBasePtr& inode)
+    static bool IsNodePtr(const ComputationNodeBasePtr & inode)
     {
         return AsNodePtr<N>(inode) != nullptr;
     }
@@ -535,6 +560,7 @@ public:
 
     bool IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr);
 
+
     bool IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const;
 
     size_t GetNumParallelSequences() const { return m_pMBLayout->GetNumParallelSequences(); }
@@ -573,7 +599,6 @@ public:
         return m_actualMBSize;
     }
 #endif
-
     // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
     // TODO: pass a set of nodes instead of only one
     // TODO: rename to ForwardProp()? To make it very clear?
@@ -693,18 +718,21 @@ public:
             Evaluate(node);
     }
 
+
+
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
     // TODO: pass a set of nodes instead of only one?
     // TODO: remove Evaluate() from here, instead call it at call site, and in here merely check whether everything is computed already
     template<class ElemType>
-    void ComputeGradient(const ComputationNodeBasePtr rootNode,
+    void ComputeGradient(const ComputationNodeBasePtr rootNode, 
         bool bResetToOne = true,                                    // true if reset the gradient of rootnode to 1.0
         const Matrix<ElemType>* rootGradientInitValue = nullptr,    // if given then this is the starting gradient from the top
         bool bClearGradient = true,                                 // if false then gradients are not cleared  --TODO: When does that happen?
-        bool resetTimeStampAfterComputation = false
-        )
+                         bool resetTimeStampAfterComputation = false
+                    )
     {
-        // run forward pass first
+
+        //run forward pass first
         // The actual call pattern is
         //  - Evaluate() for eval nodes
         //  - ComputeGradient() for the training criterion
@@ -727,6 +755,7 @@ public:
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().Resize(1, 1);   // TODO: make this a function of ComputationNode; but first need to get rid of Matrix<ElemType> here, or make it a local template parameter
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(1);
         }
+
         if (rootGradientInitValue != nullptr)   // user-specified gradient to start with
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
 
@@ -744,13 +773,10 @@ public:
                 if (!recInfo->m_completedGradient)
                 {
                     const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
-
                     for (auto & node2 : recurrentNodes)
                         node2->OnComputeGradientBeginIteration();
-
                     auto pMBLayout = recurrentNodes[0]->GetMBLayout();
                     FrameRangeIteration range(pMBLayout, recInfo->m_isForwardLoop ? -1 : +1);
-
                     for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iteration
                     {
                         for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
@@ -762,10 +788,8 @@ public:
                             node2->ComputeGradientForChildren(t);
                         }
                     }
-
                     for (auto & node2 : recurrentNodes)
                         node2->OnComputeGradientEndIteration();
-
                     recInfo->m_completedGradient = true;
                 }
             }
@@ -776,12 +800,12 @@ public:
             {
                 node->OnComputeGradientBeginIteration();
                 if (IsNodeReqMultiSeqHandling(node))
-                {
-                    // batch is done only for feed-forward nodes
-                    if (node->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
-                        LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
+            {
+                // batch is done only for feed-forward nodes
+                if (node->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
+                    LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
                     node->MaskMissingGradientColumnsToZero(FrameRange());
-                }
+            }
                 node->ComputeGradientForChildren(FrameRange());
                 node->OnComputeGradientEndIteration();
             }
@@ -793,7 +817,6 @@ public:
         if (resetTimeStampAfterComputation)
             ResetEvalTimeStamp();
     }
-
 
     //for debugging purpose
     void PrintComputationTree(const ComputationNodeBasePtr& rootNode,
@@ -1109,6 +1132,7 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
+
 public: // yak--used by NDLUtil. Will go away someday.
     // ValidateNetwork() - Validate the entire network
     // This calls ValidateNetowrk(Node) for all output nodes.
@@ -1121,7 +1145,6 @@ public: // yak--used by NDLUtil. Will go away someday.
 
         // TODO: allocation does not belong here. This is called e.g. after loading. Memory should be allocated only when actually evaluating.
         AllocateAllEvalMatrices(EvaluationNodes(), OutputNodes(), FinalCriterionNodes());
-
         // first give criteria nodes as root node
         if (FinalCriterionNodes().size() > 0)
         {
@@ -1207,9 +1230,9 @@ public:
 
         for (int i = 0; i < outValueRootNodes.size(); i++)
             AllocateEvalMatrices(outValueRootNodes[i]);
-
         for (int i = 0; i < trainRootNodes.size(); i++)
             AllocateEvalMatrices(trainRootNodes[i]);
+
     }
 
     void AllocateEvalMatrices(ComputationNodeBasePtr rootNode)
@@ -1226,14 +1249,14 @@ public:
             {
                 ComputationNodeBasePtr pNode = n->GetChildren()[i];
                 parentCount[pNode]++;
-            }
         }
+    }
 
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedEvaluate = false;
 
         for (auto &nodeIter : allNodes)
-        {
+    {
             if (nodeIter->HasLoop())
             {
                 RecurrentInfo* recInfo = FindInRecurrentLoops(nodeIter);
@@ -1249,7 +1272,7 @@ public:
                     recInfo->m_completedEvaluate = true;
 
                     for (auto &nodeLoopIter : recurrentNodes)
-                    {
+        {
                         ReleaseMatricesAfterEvalForChildren(nodeLoopIter, parentCount);
                     }
                 }
@@ -1262,7 +1285,7 @@ public:
                 ReleaseMatricesAfterEvalForChildren(nodeIter, parentCount);
             }
         }
-    }
+        }
 
     void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& parentCount)
     {
@@ -1280,7 +1303,6 @@ public:
         FormRecurrentLoops(rootNode);
 
         //PopulateParents(rootNode);
-
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
         //determine children size
@@ -1311,9 +1333,7 @@ public:
                     {
                         AllocateGradientMatricesForChildren(*nodeIter);
                     }
-                    
-                    recInfo->m_completedGradient = true;
-
+                recInfo->m_completedGradient = true;
                     for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                     {
                         if ((*nodeIter)->NeedGradient())
@@ -1592,8 +1612,6 @@ private:
     //            children[i]->AddParent(n);
     //    }
     //}
-
-
     static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
                                                            const bool forwardCompute, bool recurrent)

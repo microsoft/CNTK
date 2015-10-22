@@ -965,16 +965,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (!skip)
                         {
                             m_numValidFrames[i] = m_numFramesToProcess[i];
-                            if (!m_frameMode)       // in framemode we leave the flags empty
-                                m_pMBLayout->SetAsSentence(i, 0, m_numValidFrames[i]);
-
-                            m_extraSeqsPerMB.push_back(i);
-                            fillOneUttDataforParallelmode(matrices, 0, m_numValidFrames[i], i, i);
-                            if (m_mbiter->haslattice())
+                            if (m_numValidFrames[i] > 0)
                             {
-                                m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
-                                m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
-                                m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
+                                if (!m_frameMode)       // in framemode we leave the flags empty
+                                    m_pMBLayout->SetAsSentence(i, 0, m_numValidFrames[i]);
+
+                                m_extraSeqsPerMB.push_back(i);
+                                fillOneUttDataforParallelmode(matrices, 0, m_numValidFrames[i], i, i);
+                                if (m_latticeBufferMultiUtt[i] != nullptr)
+                                {
+                                    m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
+                                    m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
+                                    m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
+                                }
                             }
                         }
                         ReNewBufferForMultiIO(i);
@@ -1000,9 +1003,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         if (framenum + m_numValidFrames[j] < m_mbNumTimeSteps)
                                         {
                                             m_extraSeqsPerMB.push_back(j);
-                                            if (m_mbiter->haslattice())
+                                            if (m_latticeBufferMultiUtt[i] != nullptr)
                                             {
-
                                                 m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
                                                 m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
                                                 m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
