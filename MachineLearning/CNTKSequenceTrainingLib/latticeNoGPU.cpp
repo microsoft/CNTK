@@ -1,6 +1,6 @@
-#include "BestGpu.h"
-
 #ifdef CPUONLY
+
+#include "BestGpu.h"
 
 #include "cudalatticeops.h"
 #include "cudalattice.h"
