@@ -25,81 +25,42 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    // NonlinearityNode (input) -- abstract base class that holds what's shared between non-linearity nodes like Sigmoid
+    // NonlinearityNodeBase (input) -- abstract base class that holds what's shared between non-linearity nodes like Sigmoid
     // -----------------------------------------------------------------------
 
-    // NOTE:
-    // This represents a partially failed attempt to unify this.
-    // The idea is that the shared class manages everything, and the derived classes only implement two virtual functions,
-    // one for Eval and one for Partial.
-    // However, it turned out that all those functions have slightly different signatures. Grmpf.
-    // So we will either have to fix the virtual function to be the superset, or abstract on a different level.
-
     // shared base for all elemen-twise non-linearities
+    // What this adds over a ComputationNode<ElemType> is a member m_gradient for use by derived classes.
     template<class ElemType>
-    class NonlinearityNode : public ComputationNode<ElemType>, public NumInputs<1>
+    class NonlinearityNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
         //virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) = 0;
-        NonlinearityNode(DEVICEID_TYPE deviceId, const wstring & name) :
+        NonlinearityNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
 
-        void ComputeInputPartialMap(const size_t inputIndex)
-        {
-            assert(inputIndex == 0); inputIndex;
-            ComputeInputPartialV(*m_gradient, Inputs(0)->FunctionValues(), Inputs(0)->GradientValues(), GradientValues());
-        }
-
+        // TODO: with FrameRange, this code has now been reduced so much that there is no need to have these overrides here; they can just be implemented in the derived classes directly.
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
             assert(inputIndex == 0); inputIndex;
-
-            // TODO: this seems always the same pattern. This belongs into a base slice-extractor function.
-            //       We should also unify these two functions into one that decides 1 frame or all frames at runtime... through the slice-extractor function itself.
-            //       For now we could define ALL_SAMPLES e.g. as SIZE_MAX.
-            //       GetGradientSlice(), GetInputSlice() or something.
-            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            // why GradientValues() but m_functionValues below and not FunctionValues()?
-
-            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-            ComputeInputPartialV(*m_gradient, sliceInputValue, sliceInputGrad, sliceOutputGrad);
+            ComputeInputPartialV(*m_gradient, Inputs(0)->ValueSlice(frameRange), Inputs(0)->GradientSlice(frameRange), GradientSlice(frameRange));
         }
 
+        // derived class implement the actual non-linear operation
         virtual void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) = 0;
-
-        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)  
-        {
-            EvaluateThisNodeV(FunctionValues(), Inputs(0)->FunctionValues());   // actual work is done in derived class depending on what non-linearity it is
-        }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
-            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-
-            EvaluateThisNodeV(sliceOutputValue, sliceInputValue);
+            EvaluateThisNodeV(ValueSlice(frameRange), Inputs(0)->ValueSlice(frameRange));
         }
 
+        // derived class implement the actual non-linear operation
         virtual void EvaluateThisNodeV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) = 0;
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryMap(isFinalValidationPass);
-            //m_gradient->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-#if 0
-            //if (Inputs(0)->GetNumRows() == 0)
-            //    LogicError("Nonlinearity operation: the input node has 0 element.");
-
-            Resize(Inputs(0));
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs();
-#endif
         }
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
@@ -113,19 +74,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                auto node = dynamic_pointer_cast<NonlinearityNode<ElemType>>(nodeP);
+                auto node = dynamic_pointer_cast<NonlinearityNodeBase<ElemType>>(nodeP);
                 *node->m_gradient = *m_gradient;
             }
         }
 
-        //request matrices that are needed for gradient computation
+        // request matrices that are needed for gradient computation
         virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool)
         {
             Base::RequestMatricesBeforeGradientComp(matrixPool);
             RequestMatrixFromPool(m_gradient, matrixPool);
         }
 
-        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
         virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
         {
             Base::ReleaseMatricesAfterGradientComp(matrixPool);
@@ -142,13 +103,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class RectifiedLinearNode : public NonlinearityNode<ElemType>
+    class RectifiedLinearNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
         static const std::wstring TypeName() { return L"RectifiedLinear"; }
     public:
         RectifiedLinearNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNode<ElemType>(deviceId, name)
+            NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
         /*virtual*/ void ComputeInputPartialV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues) override
@@ -183,13 +144,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class SigmoidNode : public NonlinearityNode<ElemType>
+    class SigmoidNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
         static const std::wstring TypeName() { return L"Sigmoid"; }
     public:
         SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNode<ElemType>(deviceId, name)
+            NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
         // we should get rid of this code dup, need to unify the -V functions
@@ -238,13 +199,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class TanhNode : public NonlinearityNode<ElemType>
+    class TanhNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
         static const std::wstring TypeName() { return L"Tanh"; }
     public:
         TanhNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNode<ElemType>(deviceId, name)
+            NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
         // TODO: unify signature & get rid of code dup
@@ -295,13 +256,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class LogNode : public NonlinearityNode<ElemType>
+    class LogNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
         static const std::wstring TypeName() { return L"Log"; }
     public:
         LogNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNode<ElemType>(deviceId, name)
+            NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
         // TODO: get rid of code dup
@@ -351,13 +312,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ExpNode : public NonlinearityNode<ElemType>
+    class ExpNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
         static const std::wstring TypeName() { return L"Exp"; }
     public:
         ExpNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNode<ElemType>(deviceId, name)
+            NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
         // TODO: get rid of code dup
@@ -406,13 +367,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class CosineNode : public NonlinearityNode<ElemType>
+    class CosineNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
         static const std::wstring TypeName() { return L"Cosine"; }
     public:
         CosineNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNode<ElemType>(deviceId, name)
+            NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
         // TODO: code dup
@@ -464,13 +425,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //we assume it's  column-wise by default
     //the derivative will increase the Matrix<ElemType> size to the power of column size and should not be used.
     template<class ElemType>
-    class SoftmaxNode : public NonlinearityNode<ElemType>
+    class SoftmaxNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
         static const std::wstring TypeName() { return L"Softmax"; }
     public:
         SoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNode<ElemType>(deviceId, name)
+            NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
         // TODO: code dup
@@ -521,7 +482,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
         {
-            NonlinearityNode<ElemType>::MoveMatricesToDevice(deviceId);
+            NonlinearityNodeBase<ElemType>::MoveMatricesToDevice(deviceId);
             m_diff->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
@@ -559,13 +520,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class LogSoftmaxNode : public NonlinearityNode<ElemType>
+    class LogSoftmaxNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNode<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
         static const std::wstring TypeName() { return L"LogSoftmax"; }
     public:
         LogSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            NonlinearityNode<ElemType>(deviceId, name)
+            NonlinearityNodeBase<ElemType>(deviceId, name)
         { }
 
         // TODO: code dup
