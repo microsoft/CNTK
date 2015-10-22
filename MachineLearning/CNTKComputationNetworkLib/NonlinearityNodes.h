@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // shared base for all elemen-twise non-linearities
-    // What this adds over a ComputationNode<ElemType> is a member m_gradient for use by derived classes.
+    // What this adds over a ComputationNode<ElemType> is a member m_gradient for temp use by derived classes.
     template<class ElemType>
     class NonlinearityNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
@@ -44,7 +44,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             assert(inputIndex == 0); inputIndex;
-            ComputeInputPartialV(*m_gradient, Inputs(0)->ValueSlice(frameRange), Inputs(0)->GradientSlice(frameRange), GradientSlice(frameRange));
+            auto gradient = Inputs(0)->GradientSlice(frameRange);
+            ComputeInputPartialV(*m_gradient, Inputs(0)->ValueSlice(frameRange), gradient, GradientSlice(frameRange));
         }
 
         // derived class implement the actual non-linear operation
@@ -52,7 +53,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            EvaluateThisNodeV(ValueSlice(frameRange), Inputs(0)->ValueSlice(frameRange));
+            auto values = ValueSlice(frameRange);
+            EvaluateThisNodeV(values, Inputs(0)->ValueSlice(frameRange));
         }
 
         // derived class implement the actual non-linear operation
@@ -96,7 +98,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         shared_ptr<Matrix<ElemType>> m_gradient;
     };
 
-#define UsingNonlinearityNodeMembers UsingComputationNodeMembersBoilerplate; using Base::m_gradient
+#define UsingNonlinearityNodeBaseMembers UsingComputationNodeMembersBoilerplate; using Base::m_gradient
 
     // -----------------------------------------------------------------------
     // RectifiedLinearNode (input) -- ReLU non-linearity
@@ -105,7 +107,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class RectifiedLinearNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"RectifiedLinear"; }
     public:
         RectifiedLinearNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -146,7 +148,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SigmoidNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Sigmoid"; }
     public:
         SigmoidNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -201,7 +203,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class TanhNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Tanh"; }
     public:
         TanhNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -258,7 +260,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class LogNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Log"; }
     public:
         LogNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -314,7 +316,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class ExpNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Exp"; }
     public:
         ExpNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -369,7 +371,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class CosineNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Cosine"; }
     public:
         CosineNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -427,7 +429,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class SoftmaxNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"Softmax"; }
     public:
         SoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -522,7 +524,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     class LogSoftmaxNode : public NonlinearityNodeBase<ElemType>
     {
-        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeMembers;
+        typedef NonlinearityNodeBase<ElemType> Base; UsingNonlinearityNodeBaseMembers;
         static const std::wstring TypeName() { return L"LogSoftmax"; }
     public:
         LogSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
