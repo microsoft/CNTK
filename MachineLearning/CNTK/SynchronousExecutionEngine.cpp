@@ -12,6 +12,7 @@
 #include "RecurrentNodes.h"
 #include "ConvolutionalNodes.h"
 #include "NonlinearityNodes.h"
+#include "ReshapingNodes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
