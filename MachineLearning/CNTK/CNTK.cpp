@@ -129,13 +129,15 @@ void DumpNodeInfo(const ConfigParameters& config)
 {
     wstring modelPath = config("modelPath");
     wstring nodeName = config("nodeName", L"__AllNodes__");
+	wstring nodeNameRegexStr = config("nodeNameRegex", L"");
     wstring defOutFilePath = modelPath + L"." + nodeName + L".txt";
     wstring outputFile = config("outputFile", WCharToString(defOutFilePath.c_str()).c_str());
     bool printValues = config("printValues", "true");
+	
 
     ComputationNetwork net(-1);  //always use CPU
     net.LoadFromFile<ElemType>(modelPath);
-    net.DumpNodeInfoToFile(nodeName, printValues, outputFile);
+    net.DumpNodeInfoToFile(nodeName, printValues, outputFile, nodeNameRegexStr);
 }
 
 template <typename ElemType>

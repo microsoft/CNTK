@@ -138,7 +138,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool gradientClippingWithTruncation = configSGD("gradientClippingWithTruncation", "true");
         double clippingThresholdPerSample = configSGD("clippingThresholdPerSample", "1#INF");
 
-        //sequence training
+        // sequence training
         double hsmoothingWeight = configSGD("hsmoothingWeight", "0.95");
         double frameDropThresh = configSGD("frameDropThresh", "1e-10");
         bool doReferenceAlign = configSGD("doReferenceAlign", "false");
@@ -347,6 +347,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_fullTotalMaxEpochs = fullTotalMaxEpochs;
         m_fullEpochsOffset = fullEpochsOffset;
+
         // the number of samples in each epoch (0 means, use all the samples in each epoch).
         m_epochSize = epochSize;
         if (m_epochSize == 0)
@@ -369,6 +370,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_progressTracingTimer.Start();
         }
         m_lastFinishedEpochEvalErr = 0.0;
+
         m_loadBestModel = loadBestModel;
         m_increaseLearnRateIfImproveMoreThan = increaseLearnRateIfImproveMoreThan;
         m_learnRateIncreaseFactor = learnRateIncreaseFactor;
@@ -490,8 +492,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     SGD<ElemType>::SGD(SGDParams&& sgdParams)
         : SGDParams(move(sgdParams)), // TODO: somehow this move() has no effect
-        m_distGradAgg(nullptr),
-        m_gradHeader(nullptr)
+          m_distGradAgg(nullptr),
+          m_gradHeader(nullptr)
     {
         if (m_doGradientCheck && sizeof(ElemType) != sizeof(double))
             InvalidArgument("Gradient check needs to use precision = double");
@@ -872,7 +874,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNetwork::SetSeqParam<ElemType>(net, criterionNodes[0], m_hsmoothingWeight, m_frameDropThresh, m_doreferencealign);
 
         // --- MAIN EPOCH LOOP
-
         for (int i = startEpoch; i < (int)m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
         {
             // Synchronize all ranks before proceeding to ensure that 
@@ -1001,6 +1002,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr,
                     "Finished Epoch[%2d of %d]: [Training Set] TrainLossPerSample = %.8g; ",
                     i + 1, (int) m_maxEpochs, epochCriterion);
+
             if (epochEvalErrors.size() == 1)
             {
                 fprintf(stderr,
@@ -1137,7 +1139,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (std::isnan(avgCriterion))
                     RuntimeError("The training criterion is not a number (NAN). Stop\n");
-            }
+                }
 
             // not loading previous values then set them
             if (!loadedPrevModel && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
@@ -1172,7 +1174,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         learnRatePerSample);
             }
         }
-
         // --- END OF MAIN EPOCH LOOP
 
         // Synchronize all ranks before proceeding to ensure that 
@@ -1188,6 +1189,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             printf("PROGRESS: %.2f%%\n", (float) (100 * (m_fullEpochsOffset + m_maxEpochs)) / (float) m_fullTotalMaxEpochs);
             printf("EVALERR: %.2f%%\n", round(m_lastFinishedEpochEvalErr * 100.0));
         }
+
         // since we linked feature nodes. we need to remove it from the deletion
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
         {
@@ -1268,7 +1270,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     double SGD<ElemType>::SearchForBestLearnRate(ComputationNetwork& net,
                                     ComputationNetwork& refNet,
                                     const ComputationNodeBasePtr& refNode, const int epochNumber,
-                                  const double curLearnRate,
+                                    const double curLearnRate,
                                     IDataReader<ElemType>* trainSetDataReader,
                                     const std::vector<ComputationNodeBasePtr> & featureNodes,
                                     const std::vector<ComputationNodeBasePtr> & labelNodes,
@@ -1278,7 +1280,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     const std::list<ComputationNodeBasePtr> & learnableNodes,
                                     std::list<Matrix<ElemType>>& smoothedGradients,
                                     const bool learnRateInitialized,
-                                  const double largestPrevLearnRatePerSample)
+                                    const double largestPrevLearnRatePerSample)
     {
         double epochCriterion = std::numeric_limits<double>::infinity();
         double prevCriterion = std::numeric_limits<double>::infinity();
@@ -1828,6 +1830,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, m_epochSize);
         }
+
         net.StartEvaluateMinibatchLoop(evaluationNodes);
         net.StartEvaluateMinibatchLoop(criterionNodes);
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode)
@@ -1967,7 +1970,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
                         if (node->IsParameterUpdateRequired())
                         {
-                            learnParamsGradients.push_back(&(node->GradientValues()));
+                            Matrix<ElemType>* currParamsGradient = &(node->GradientValues());
+
+                            // Sometimes, in parallel training, the current node may not get any samples to process
+                            // In this case, the gradient matrix may not have been sized yet. If so, lets size it.
+                            if (currParamsGradient->GetNumCols() == 0)
+                            {
+                                Matrix<ElemType>* currParamsValues = &(node->FunctionValues());
+                                currParamsGradient->Resize(currParamsValues->GetNumRows(), currParamsValues->GetNumCols());
+                            }
+
+                            learnParamsGradients.push_back(currParamsGradient);
                         }
                     }
                 }
@@ -2048,31 +2061,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             timer.Stop();
             numMBsRun++;
-                totalTimeInMBs += timer.ElapsedSeconds();
-                numSamplesLastMBs += useModelAveraging ? int(actualMBSize) : int(aggregateNumSamplesWithLabel);
 
-                if (numMBsRun % m_numMBsToShowResult == 0)
+            totalTimeInMBs += timer.ElapsedSeconds();
+            numSamplesLastMBs += useModelAveraging ? int(actualMBSize) : int(aggregateNumSamplesWithLabel);
+
+            if (numMBsRun % m_numMBsToShowResult == 0)
+            {
+                // get the epoch Values updated
+                if (!useGradientAggregation)
                 {
-                    // get the epoch Values updated
-                    if (!useGradientAggregation)
+                    timer.Restart();
+                    epochCriterion = localEpochCriterion.Get00Element();
+                    for (size_t i = 0; i < epochEvalErrors.size(); i++)
                     {
-                        timer.Restart();
-                        epochCriterion = localEpochCriterion.Get00Element();
-                        for (size_t i = 0; i < epochEvalErrors.size(); i++)
-                    {
-                            epochEvalErrors[i] = localEpochEvalErrors(0, i);
+                        epochEvalErrors[i] = localEpochEvalErrors(0, i);
                     }
-                        timer.Stop();
+                    timer.Stop();
 
-                        // Add the last trailing compute
-                        totalTimeInMBs += timer.ElapsedSeconds();
-                    }
+                    // Add the last trailing compute
+                    totalTimeInMBs += timer.ElapsedSeconds();
+                }
 
-                    double trainLossPerSample = (epochCriterion - epochCriterionLastMBs) / numSamplesLastMBs;
+                double trainLossPerSample = (epochCriterion - epochCriterionLastMBs) / numSamplesLastMBs;
                 bool wasProgressPrinted = false;
 
-                    if (epochNumber > 0 || (int) epochSize > 0)
-                    {
+                if (epochNumber > 0 || (int) epochSize > 0)
+                {
                     if (((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing && m_progressTracingTimer.ElapsedSeconds() > 10)
                     {
                         // this must go to stdout, not stderr
@@ -2084,36 +2098,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         wasProgressPrinted = true;
                         m_progressTracingTimer.Restart();
                     }
-                       string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of %d]: SamplesSeen = %d; TrainLossPerSample = " +
-                                              GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
+
+                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of %d]: SamplesSeen = %d; TrainLossPerSample = " +
+                                         GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
                     SGDTrace(stderr, formatString.c_str(),
-                                prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
-                                numMBsRun, m_maxComputedEpochSize / tunedMBSize, numSamplesLastMBs, trainLossPerSample);
-                    }
-                    else
-                    {
-                        string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of -1]: SamplesSeen = %d; TrainLossPerSample = " +
-                                              GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
+                             prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
+                             numMBsRun, m_maxComputedEpochSize / tunedMBSize, numSamplesLastMBs, trainLossPerSample);
+                }
+                else
+                {
+                    string formatString = "%s Epoch[%2d of %d]-Minibatch[%4d-%4d of -1]: SamplesSeen = %d; TrainLossPerSample = " +
+                                          GeneratePaddedFloatOrExpFormat(11, 8, trainLossPerSample) + "; ";
                     SGDTrace(stderr, formatString.c_str(),
-                                prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
-                                numMBsRun, numSamplesLastMBs, trainLossPerSample);
-                        m_maxComputedEpochSize = numMBsRun * numSamplesLastMBs / m_numMBsToShowResult;
-                    }
+                             prefixMsg.c_str(), epochNumber + 1, m_maxEpochs, numMBsRun - m_numMBsToShowResult + 1,
+                             numMBsRun, numSamplesLastMBs, trainLossPerSample);
+                    m_maxComputedEpochSize = numMBsRun * numSamplesLastMBs / m_numMBsToShowResult;
+                }
 
                 double evalError = 0.0;
-                    for (size_t i = 0; i < epochEvalErrors.size(); i++)
-                    {
+                for (size_t i = 0; i < epochEvalErrors.size(); i++)
+                {
                     evalError = (epochEvalErrors[i] - epochEvalErrorsLastMBs[i]) / numSamplesLastMBs;
-                        string formatString = "EvalErr[%lu]PerSample = " + GeneratePaddedFloatOrExpFormat(0, 8, evalError) + "; ";
+                    string formatString = "EvalErr[%lu]PerSample = " + GeneratePaddedFloatOrExpFormat(0, 8, evalError) + "; ";
                     SGDTrace(stderr, formatString.c_str(), i, evalError);
-                    }
+                }
 
-                    double totalTimePerSample = (1000.0 * totalTimeInMBs) / numSamplesLastMBs;
-                    string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 5, totalTimeInMBs) + "s; TotalTimePerSample = " +
-                                   GeneratePaddedFloatOrExpFormat(0, 5, totalTimePerSample) + "ms; SamplesPerSecond = %d\n";
+                double totalTimePerSample = (1000.0 * totalTimeInMBs) / numSamplesLastMBs;
+                string formatString = "TotalTime = " + GeneratePaddedFloatOrExpFormat(0, 5, totalTimeInMBs) + "s; TotalTimePerSample = " +
+                                      GeneratePaddedFloatOrExpFormat(0, 5, totalTimePerSample) + "ms; SamplesPerSecond = %d\n";
                 SGDTrace(stderr, formatString.c_str(),
-                            totalTimeInMBs, totalTimePerSample,
-                            static_cast<int>(numSamplesLastMBs / totalTimeInMBs));
+                         totalTimeInMBs, totalTimePerSample,
+                         static_cast<int>(numSamplesLastMBs / totalTimeInMBs));
 
                 if (wasProgressPrinted && ((g_mpi == nullptr) || g_mpi->IsMainNode()) && m_progressTracing)
                 {
@@ -2125,19 +2140,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     fflush(stderr);
                 }
 
-                    // reset statistics
-                    totalTimeInMBs = 0;
-                    numSamplesLastMBs = 0;
+                // reset statistics
+                totalTimeInMBs = 0;
+                numSamplesLastMBs = 0;
 
-                    epochCriterionLastMBs = epochCriterion;
-                    for (size_t i = 0; i < epochEvalErrorsLastMBs.size(); i++)
+                epochCriterionLastMBs = epochCriterion;
+                for (size_t i = 0; i < epochEvalErrorsLastMBs.size(); i++)
                 {
-                        epochEvalErrorsLastMBs[i] = epochEvalErrors[i];
+                    epochEvalErrorsLastMBs[i] = epochEvalErrors[i];
                 }
 
-                    if (std::isnan(epochCriterion))
+                if (std::isnan(epochCriterion))
                 {
-                        RuntimeError("The training criterion is not a number (NAN). Stop\n");
+                    RuntimeError("The training criterion is not a number (NAN). Stop\n");
                 }
             }
 
@@ -2185,7 +2200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i< epochEvalErrors.size(); i++)
             {
                 epochEvalErrors[i] /= totalEpochSamples;
-        }
+            }
         }
         else
         {
@@ -2401,8 +2416,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (adpType == GradientsUpdateType::RmsProp)
         {
             double aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType)sgd->m_rpi.gamma,
-                                                              (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max,
-                                                              (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min, needAveMultiplier);
+                                                            (ElemType)sgd->m_rpi.inc, (ElemType)sgd->m_rpi.max,
+                                                            (ElemType)sgd->m_rpi.dec, (ElemType)sgd->m_rpi.min, needAveMultiplier);
             Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
         }
 
@@ -2696,8 +2711,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 double eGradNum = ((mbEvalCriPos - mbEvalCriNeg) / (ePos - eNeg));
                 double threshold = pow(10.0,
                                        max(0.0,
-                                                        ceil(log10(min(fabs(eGradErr),
-                                                    fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
+                                           ceil(log10(min(fabs(eGradErr),
+                                                          fabs(eGradNum))))) - (int)m_gradientCheckSigDigit);
                 double diff = fabs(eGradErr - eGradNum);
                 bool wrong = (std::isnan(diff) || diff > threshold);
                 if (wrong)
@@ -2716,5 +2731,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 template class SGD<float>;
 template class SGD<double>;
+
 
 }}}
