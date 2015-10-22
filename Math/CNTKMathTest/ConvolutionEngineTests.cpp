@@ -35,7 +35,7 @@ namespace CNTKMathTest
             int kH = 3;
             int sW = 2;
             int sH = 2;
-            int cmapOut = 1;
+            int cmapOut = 2;
             int outW = GetNumOut(inW, kW, sW, false);
             int outH = GetNumOut(inH, kH, sH, false);
 
@@ -47,28 +47,32 @@ namespace CNTKMathTest
             auto convT = eng->CreateConvDescriptor(*inT, *filtT, sW, sH, false);
 
             std::vector<float> buf(inW * inH * cmapIn * n);
-            float seed = 0;
+            int seed = 0;
+            // Create input, cmapIn feature maps, inW x inH each.
             std::generate(buf.begin(), buf.end(), [&seed]{ return seed++; });
             SingleMatrix in(inW * inH * cmapIn, n, buf.data(), matrixFlagNormal, deviceId);
+
             seed = 0;
             buf.resize(kW * kH * cmapIn * cmapOut);
-            std::generate(buf.begin(), buf.end(), [&seed]{ return seed++; });
+            // Create cmapOut filters, each kW x kH x cmapIn (NHWC format).
+            std::generate(buf.begin(), buf.end(), [&seed]{ return seed++ / 2; });
             SingleMatrix filt(cmapOut, kW * kH * cmapIn, buf.data(), matrixFlagNormal, deviceId);
+
             SingleMatrix out(outW * outH * cmapOut, n, deviceId);
 
             eng->Forward(*inT, in, *filtT, filt, *convT, *outT, out);
 
-            float expBuf[] = {7695.0f, 9801.0f, 18225.0f, 20331.0f};
+            // Output is in NHWC format.
+            float expBuf[] = {
+                7695.0f, 7695.0f,
+                9801.0f, 9801.0f,
+                18225.0f, 18225.0f,
+                20331.0f, 20331.0f
+            };
             SingleMatrix exp(outW * outH * cmapOut, n, expBuf, matrixFlagNormal, deviceId);
             Assert::IsTrue(out.IsEqualTo(exp));
         }
 
-        BEGIN_TEST_METHOD_ATTRIBUTE(SimpleConvolution2)
-            TEST_METHOD_ATTRIBUTE(L"Category", L"Convolution")
-        END_TEST_METHOD_ATTRIBUTE()
-        TEST_METHOD(SimpleConvolution2)
-        {
-        }
     private:
         int GetNumOut(int i, int k, int s, bool pad)
         {
