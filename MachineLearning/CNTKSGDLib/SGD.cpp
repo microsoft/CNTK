@@ -1136,9 +1136,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
             {
                 if (std::isnan(avgCriterion))
-                {
                     RuntimeError("The training criterion is not a number (NAN). Stop\n");
-            }
             }
 
             // not loading previous values then set them
@@ -2714,13 +2712,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         return errMsgs.size() == 0;
-        }
+    }
 
 template class SGD<float>;
 template class SGD<double>;
-
-// TODO: does not build--but part is used directly from CNTK.cpp
-//template class MultiNetworksSGD<float>;
-//template class MultiNetworksSGD<double>;
 
 }}}

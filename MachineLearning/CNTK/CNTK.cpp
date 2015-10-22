@@ -45,6 +45,7 @@
 #include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
+#include "MultiNetworksEvaluator.h"
 #include "BestGpu.h"
 #include "ScriptableObjects.h"
 #include <fileutil.h>
@@ -180,7 +181,10 @@ void DoEval(const ConfigParameters& config)
     DoEvalBase(config, testDataReader);
 }
 
-// TODO: what does this do?
+// Special early implementation of RNNs by emulating them as a DNN.
+// The code is very restricted to simple RNNs. 
+// The idea can be used for more complicated network but need to know which nodes are stateful or time-dependent so that unroll is done in a correct way to represent recurrent networks. 
+// TODO: can probably be removed.
 template <typename ElemType>
 void DoEvalUnroll(const ConfigParameters& config)
 {
@@ -205,7 +209,7 @@ void DoEvalUnroll(const ConfigParameters& config)
     net.LoadFromFile<ElemType>(modelPath);
     net.ResetEvalTimeStamp();
 
-    MultiNetworkEvaluator<ElemType> eval(net);
+    MultiNetworksEvaluator<ElemType> eval(net);
     double evalEntropy;
     eval.EvaluateUnroll(&testDataReader, mbSize[0], evalEntropy, path2EvalResults == L"" ? nullptr : path2EvalResults.c_str(), epochSize);
 }
@@ -1107,7 +1111,7 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     ConfigParameters writerConfig = config("writer");
     DataWriter<ElemType> testDataWriter(writerConfig);
 
-    MultiNetworkEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
+    MultiNetworksEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
     eval.InitTrainEncoderDecoderWithHiddenStates(config);
 
     eval.EncodingEvaluateDecodingBeamSearch(nets, readers, 
@@ -1175,7 +1179,7 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
     ConfigParameters writerConfig = config("writer");
     DataWriter<ElemType> testDataWriter(writerConfig);
 
-    MultiNetworkEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
+    MultiNetworksEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
     eval.BeamSearch(&reader, testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
 }
 

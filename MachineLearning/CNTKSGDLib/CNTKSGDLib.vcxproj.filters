@@ -123,9 +123,6 @@
     <ClInclude Include="..\CNTK\Profiler.h">
       <Filter>GPU Interfacing</Filter>
     </ClInclude>
-    <ClInclude Include="MultiNetworksSGD.h">
-      <Filter>SGD</Filter>
-    </ClInclude>
     <ClInclude Include="SGD.h">
       <Filter>SGD</Filter>
     </ClInclude>
@@ -155,6 +152,12 @@
     </ClInclude>
     <ClInclude Include="DataReaderHelpers.h">
       <Filter>Data Reading</Filter>
+    </ClInclude>
+    <ClInclude Include="MultiNetworksSGD.h">
+      <Filter>MultiNetworks</Filter>
+    </ClInclude>
+    <ClInclude Include="MultiNetworksEvaluator.h">
+      <Filter>MultiNetworks</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -193,6 +196,9 @@
     </Filter>
     <Filter Include="Data Reading">
       <UniqueIdentifier>{b866d513-7bd0-497c-98c2-f62dbcd4cde4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MultiNetworks">
+      <UniqueIdentifier>{ae1eea3c-d77f-46ec-bf4f-1cd093a295e8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
