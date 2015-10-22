@@ -77,7 +77,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="latticeforwardbackward.cpp" />
-    <ClCompile Include="NoGPU.cpp" />
+    <ClCompile Include="latticeNoGPU.cpp" />
     <ClCompile Include="parallelforwardbackward.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

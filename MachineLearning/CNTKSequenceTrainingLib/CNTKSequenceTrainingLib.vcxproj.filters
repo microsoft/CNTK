@@ -24,7 +24,7 @@
   <ItemGroup>
     <ClCompile Include="latticeforwardbackward.cpp" />
     <ClCompile Include="parallelforwardbackward.cpp" />
-    <ClCompile Include="NoGPU.cpp" />
+    <ClCompile Include="latticeNoGPU.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
