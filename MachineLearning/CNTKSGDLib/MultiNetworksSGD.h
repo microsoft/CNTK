@@ -1,3 +1,4 @@
+// MultiNetworksEvaluator/SGD -- This represents earlier efforts to use CNTK for sequence-to-sequence modeling. This is no longer the intended design.
 //
 // <copyright file="SGD.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
@@ -22,8 +23,6 @@
 #include <random>
 #include "TimerUtility.h"
 #include "SGD.h"
-
-
 
 using namespace std;
 
