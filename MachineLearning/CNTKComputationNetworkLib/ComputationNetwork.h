@@ -596,10 +596,12 @@ public:
             m_recurrentInfo[i].m_completedGradient = false;
         }
 
+#if 0
         // resize function values and gradients of everything in m_recurrentInfo
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
                 nodeIter->UpdateFunctionMBSize(m_actualMBSize);
+#endif
 
         return m_actualMBSize;
     }
@@ -641,7 +643,7 @@ public:
         // traverse all nodes in the pre-determined evaluation order
         for (auto & node : allNodes)
         {
-            // --- first, evaluate all recurrence that hangs off this
+            // --- if this node is part of a recurrence, evaluate all nodes that participate in this loop
 
             RecurrentInfo * recInfo = FindInRecurrentLoops(node);   // check if this node participates in a recurrent loop
 
@@ -666,7 +668,7 @@ public:
                 //since we share memory we need to resize function value matrices correctly
                 for (auto & node2 : recurrentNodes)
                 {
-                    node2->UpdateFunctionMBSize();
+                    //node2->UpdateFunctionMBSize();
                     node2->Validate(true);
                 }
 
@@ -690,7 +692,7 @@ public:
                 recInfo->m_completedEvaluate = true;
             }
 
-            // --- second, do the whole batch (unless it's already done)
+            // --- not recurrent: do the whole batch (unless it's already done, e.g. because the node participated in a recurren ttloop)
 
             else if (!recInfo && node->IsFuncValueOlderThanInputs())
             {
