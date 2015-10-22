@@ -180,6 +180,7 @@ void DoEval(const ConfigParameters& config)
     DoEvalBase(config, testDataReader);
 }
 
+// TODO: what does this do?
 template <typename ElemType>
 void DoEvalUnroll(const ConfigParameters& config)
 {
@@ -361,47 +362,43 @@ void DoWriteOutput(const ConfigParameters& config)
     //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize);
 }
 
-namespace Microsoft {
-    namespace MSR {
-        namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK {
 
-            TrainingCriterion ParseTrainingCriterionString(wstring s)
-            {
-                msra::strfun::tolower_ascii(s);
-                if (s == L"crossentropywithsoftmax")
-                    return TrainingCriterion::CrossEntropyWithSoftmax;
-				if (s == L"SequenceWithSoftmax")
-					return TrainingCriterion::SequenceWithSoftmax;
-                else if (s == L"squareerror")
-                    return TrainingCriterion::SquareError;
-                else if (s == L"noisecontrastiveestimationnode")
-                    return TrainingCriterion::NCECrossEntropyWithSoftmax;
-                else if (s != L"classcrossentropywithsoftmax")    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
-                    LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax| SequenceWithSoftmax)");
-                return TrainingCriterion::ClassCrossEntropyWithSoftmax;
-            }
-
-            EvalCriterion ParseEvalCriterionString(wstring s)
-            {
-                msra::strfun::tolower_ascii(s);
-                if (s == L"errorprediction")
-                    return EvalCriterion::ErrorPrediction;
-                else if (s == L"crossentropywithsoftmax")
-                    return EvalCriterion::CrossEntropyWithSoftmax;
-				else if (s == L"SequenceWithSoftmax")
-					return EvalCriterion::SequenceWithSoftmax;
-                else if (s == L"classcrossentropywithsoftmax")
-                    return EvalCriterion::ClassCrossEntropyWithSoftmax;
-                else if (s == L"noisecontrastiveestimationnode")
-                    return EvalCriterion::NCECrossEntropyWithSoftmax;
-                else if (s != L"squareerror")
-                    LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError | SequenceWithSoftmax)");
-                return EvalCriterion::SquareError;
-            }
-
-        }
+    TrainingCriterion ParseTrainingCriterionString(wstring s)
+    {
+        msra::strfun::tolower_ascii(s);
+        if (s == L"crossentropywithsoftmax")
+            return TrainingCriterion::CrossEntropyWithSoftmax;
+        if (s == L"SequenceWithSoftmax")
+            return TrainingCriterion::SequenceWithSoftmax;
+        else if (s == L"squareerror")
+            return TrainingCriterion::SquareError;
+        else if (s == L"noisecontrastiveestimationnode")
+            return TrainingCriterion::NCECrossEntropyWithSoftmax;
+        else if (s != L"classcrossentropywithsoftmax")    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
+            LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax| SequenceWithSoftmax)");
+        return TrainingCriterion::ClassCrossEntropyWithSoftmax;
     }
-};
+
+    EvalCriterion ParseEvalCriterionString(wstring s)
+    {
+        msra::strfun::tolower_ascii(s);
+        if (s == L"errorprediction")
+            return EvalCriterion::ErrorPrediction;
+        else if (s == L"crossentropywithsoftmax")
+            return EvalCriterion::CrossEntropyWithSoftmax;
+        else if (s == L"SequenceWithSoftmax")
+            return EvalCriterion::SequenceWithSoftmax;
+        else if (s == L"classcrossentropywithsoftmax")
+            return EvalCriterion::ClassCrossEntropyWithSoftmax;
+        else if (s == L"noisecontrastiveestimationnode")
+            return EvalCriterion::NCECrossEntropyWithSoftmax;
+        else if (s != L"squareerror")
+            LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError | SequenceWithSoftmax)");
+        return EvalCriterion::SquareError;
+    }
+
+}}};
 
 template <typename ElemType>
 void DoCreateLabelMap(const ConfigParameters& config)

@@ -259,8 +259,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: This should be called/callable outside if 'wasDataRead' (GetMinibatch() should fill matrices to empty)
             // TODO: This will go away, as we will do resizing inside EvaluateThisNode(FrameRange()).
             actualMBSize = 0;
-            if (wasDataRead)    // TODO: what if we call it always? Answer: Moot, since this function call will go away.
-                actualMBSize = net.SetActualMiniBatchSizeFromFeatures();
+            if (wasDataRead)    // TODO: what if we call it always?
+                actualMBSize = net.DetermineActualMBSizeFromFeatures(); // TODO: don't we know the size from reader? Should this be a check instead?
 
             return true;
         }

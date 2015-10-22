@@ -65,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
         }
 
-        //returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
+        // returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
         vector<double> Evaluate(IDataReader<ElemType>* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
         {
             //specify evaluation nodes
@@ -190,6 +190,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             return evalResults;
         }
+
+    protected:
+        ComputationNetwork& m_net;
+        size_t m_numMBsToShowResult;
+        int m_traceLevel;
+        void operator=(const SimpleEvaluator&); // (not assignable)
+
+    public:
+        // ===================================================================
+        // TODO: EVERYTHING beyond this point is NOT simple evaluation. It must be moved elsewhere.
+        // ===================================================================
 
         //returns error rate
         // TODO: What does this function do?
@@ -353,12 +364,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "\n");
         }
 
-    protected:
-        ComputationNetwork& m_net;
-        size_t m_numMBsToShowResult;
-        int m_traceLevel;
-        void operator=(const SimpleEvaluator&); // (not assignable)
-
     public:
         /// for encoder-decoder RNN
         list<pair<wstring, wstring>> m_lst_pair_encoder_decode_node_names;
@@ -450,7 +455,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 auto preader = dataReaders.begin();
                 for (auto ptr = nets.begin(); ptr != nets.end(); ptr++, preader++)
                 {
-                    actualMBSize = (*ptr)->SetActualMiniBatchSizeFromFeatures();
+                    actualMBSize = (*ptr)->DetermineActualMBSizeFromFeatures();
                     if (actualMBSize == 0)
                         LogicError("decoderTrainSetDataReader read data but encoderNet reports no data read");
                     (*preader)->CopyMBLayoutTo((*ptr)->GetMBLayoutPtr());
@@ -463,7 +468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 decoderNet = nets[iNumNets - 1];
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
-                actualMBSize = decoderNet->SetActualMiniBatchSizeFromFeatures();
+                actualMBSize = decoderNet->DetermineActualMBSizeFromFeatures();
                 if (actualMBSize == 0)
                     LogicError("decoderTrainSetDataReader read data but decoderNet reports no data read");
                 decoderDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
@@ -533,6 +538,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return evalResults;
         }
 
+        // TODO: This stuff must all be removed from SimpleEvaluator, as this is not simple at all!!
         void InitTrainEncoderDecoderWithHiddenStates(const ConfigParameters& readerConfig)
         {
             ConfigArray arrEncoderNodeNames = readerConfig("encoderNodes", "");
@@ -664,7 +670,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 for (auto ptr = nets.begin(); ptr != nets.end() - 1; ptr++, ptrreader++)
                 {
                     /// evaluate on the encoder networks
-                    actualMBSize = (*ptr)->SetActualMiniBatchSizeFromFeatures();
+                    actualMBSize = (*ptr)->DetermineActualMBSizeFromFeatures();
 
                     mNutt = (*ptrreader)->GetNumParallelSequences();
                     (*ptrreader)->CopyMBLayoutTo((*ptr)->GetMBLayoutPtr());
@@ -677,7 +683,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 /// not the sentence begining, because the initial hidden layer activity is from the encoder network
                 decoderNet->ResizeAllFeatureNodes(actualMBSize);
-                decoderNet->SetActualMiniBatchSizeFromFeatures();
+                //decoderNet->SetActualMiniBatchSizeFromFeatures();
                 encoderDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
                 decoderNet->VerifyActualNumParallelSequences(mNutt);
 
@@ -773,7 +779,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             net.StartEvaluateMinibatchLoop(batchComputeNodes);  // TODO: Is this correct? There is no StartMinibatchLoop() for a reader.
 
-            net.SetActualMiniBatchSizeFromFeatures();
+            //net.SetActualMiniBatchSizeFromFeatures();
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
                 net.Evaluate(*nodeIter);
 
@@ -904,7 +910,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             /// use reader to initialize evalnet's sentence start information to let it know that this
             /// is the begining of sentence
-            size_t mbSize = evalnet->SetActualMiniBatchSizeFromFeatures();
+            size_t mbSize = evalnet->DetermineActualMBSizeFromFeatures();
             dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());
             evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
 
@@ -933,7 +939,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 (*ptr)->Resize(nr, 1);
             }
             // TODO: ^^ this is the same as ResizeAllFeatureNodes() if featureNodes == evalnet.FeatureNodes(). Is it?
-            evalnet->SetActualMiniBatchSizeFromFeatures();
+            //evalnet->SetActualMiniBatchSizeFromFeatures();
 
             dataReader->CopyMBLayoutTo(evalnet->GetMBLayoutPtr());  // TODO: should this be one column only?
             /// need to set the sentence begining segmentation info
@@ -1069,7 +1075,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             /// use reader to initialize evalnet's sentence start information to let it know that this
             /// is the beginning of sentence
             evalnet->ResizeAllFeatureNodes(mbSize);
-            evalnet->SetActualMiniBatchSizeFromFeatures();
+            //evalnet->SetActualMiniBatchSizeFromFeatures();
             // TODO: not setting MBLayout?
             evalnet->VerifyActualNumParallelSequences(dataReader->GetNumParallelSequences());
             // TODO: This is UNTESTED; if it fails, change ^^ this back to SetActual...()
@@ -1101,7 +1107,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // BUGBUG: This is almost certainly wrong; slice != MB size
             //evalnet->SetActualMiniBatchSize(dataReader->GetNumParallelSequences());
             evalnet->ResizeAllFeatureNodes(1);
-            evalnet->SetActualMiniBatchSizeFromFeatures();
+            //evalnet->SetActualMiniBatchSizeFromFeatures();
 
             double best_score = -numeric_limits<double>::infinity();
             double best_score_so_far = -numeric_limits<double>::infinity();

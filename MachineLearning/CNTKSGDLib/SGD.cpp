@@ -1709,7 +1709,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (outputNodes.empty())
                 LogicError("no output node was found.");
 
-            net.SetActualMiniBatchSizeFromFeatures();
+            //net.SetActualMiniBatchSizeFromFeatures();
             trainSetDataReader->CopyMBLayoutTo(net.GetMBLayoutPtr());
             net.VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
             net.Evaluate(outputNodes[0]);   // Only evaluate the first output
@@ -1894,7 +1894,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if 0               // TODO: where does refNet get its features from?
                     refNet.ResizeAllFeatureNodes(actualMBSize);
 #endif
-                    size_t actualMBSize2 = refNet.SetActualMiniBatchSizeFromFeatures();
+                    //size_t actualMBSize2 = refNet.SetActualMiniBatchSizeFromFeatures();
+                    size_t actualMBSize2 = refNet.DetermineActualMBSizeFromFeatures();
                     refNet.GetMBLayoutPtr()->CopyFrom(net.GetMBLayoutPtr());       // TODO: This is UNTESTED (before this was missing, seemingly inconsistently)
                     refNet.VerifyActualNumParallelSequences(trainSetDataReader->GetNumParallelSequences());
 
