@@ -2205,7 +2205,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
                     if (node->IsParameterUpdateRequired())
                     {
-                        learnParamsGradients.push_back(&(node->GradientValues()));
+                        Matrix<ElemType>* currParamsGradient = &(node->GradientValues());
+
+                        // Sometimes, in parallel training, the current node may not get any samples to process
+                        // In this case, the gradient matrix may not have been sized yet. Lets size it if so.
+                        if (currParamsGradient->GetNumCols() == 0)
+                        {
+                            Matrix<ElemType>* currParamsValues = &(node->FunctionValues());
+                            currParamsGradient->Resize(currParamsValues->GetNumRows(), currParamsValues->GetNumCols());
+                        }
+
+                        learnParamsGradients.push_back(currParamsGradient);
                     }
                 }
 
