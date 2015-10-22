@@ -58,6 +58,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (colsc == colsp && rowsc == rowsp)                   // matching dimensions  --this may also trigger for column vector added to a frame, if frameRange denotes a single frame
             {
+                // BUGBUG: if we reduce from a frame of a MB into a one-column vector, then we must also mask gaps
                 inputGradientValues += gradientValues;
             }
             else if (colsc == 1 && rowsc == 1)                      // child is a scalar
@@ -69,9 +70,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 size_t colspExpand = rowsp*colsp/rowsc;
                 MaskMissingGradientColumnsToZero(frameRange);       // reducing over frames, so we must zero out the gaps
-                //gradientValues.Reshape(rowsc, colspExpand);
                 Matrix<ElemType>::MultiplyAndAdd(gradientValues.Reshaped(rowsc, colspExpand), false, ConstOnes(colspExpand, 1, functionValues.GetDeviceId()), false, inputGradientValues);
-                //gradientValues.Reshape(rowsp, colsp);
             }
             else if (rowsc == 1 && rowsp != 1)                      // child is a broadcasting row vector
             {
@@ -201,6 +200,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ElemType sign = inputIndex == 0 ? 1.0f : -1.0f;
             if (colsc == colsp && rowsc == rowsp)                   // matching dimensions
             {
+                // BUGBUG: if we reduce from a frame of a MB into a one-column vector, then we must also mask gaps
                 if (sign > 0)
                     childGradientValues += gradientValues;
                 else
