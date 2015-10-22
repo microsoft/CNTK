@@ -71,21 +71,6 @@ protected:
             m_completedEvaluate = false;
             m_loopClosed = false;
         }
-
-#if 0
-        // TODO: why is this not a copy constructor or assignment operator?
-        void Copy(const RecurrentInfo & src)
-        {
-            m_recurrentNodes = src.m_recurrentNodes;
-            m_recurrentNodesForForward = src.m_recurrentNodesForForward;
-            m_sourceNode = src.m_sourceNode;
-            m_loopId = src.m_loopId;
-            m_completedGradient = src.m_completedGradient;
-            m_completedEvaluate = src.m_completedEvaluate;
-            m_loopClosed = src.m_loopClosed;
-            // m_isForwardLoop??
-        }
-#endif
     };
 
 public:
@@ -98,7 +83,6 @@ public:
 
     ComputationNetwork(DEVICEID_TYPE deviceId = AUTOPLACEMATRIX) :
         m_randomSeedOffset(0),
-        m_actualMBSize(0),
         m_deviceId(deviceId), m_pMBLayout(make_shared<MBLayout>())
     {
         SetDeviceId(deviceId);
@@ -556,8 +540,8 @@ public:
     bool IsNodeReqMultiSeqHandling(const ComputationNodeBasePtr & node) const;
 
     // GetMaxMBSize - Get the maximum minibatch size that will be seen in a training run
-    // returns the result from PropagateActualMiniBatchSize(). Note DetermineActualMBSizeFromFeatures() also exists but returns a value derived from the inputs dimensions
-    size_t GetMaxMBSize() { return m_actualMBSize; }
+    // TODO: now that this has been reduced to nothing, replace calls to this directly
+    size_t GetMaxMBSize() { return DetermineActualMBSizeFromFeatures(); }
 
 #if 0
     // always called in this pattern:
@@ -585,9 +569,11 @@ public:
 
     // propagate the features' MB size to all nodes of the network
     // TODO: This function should go. Resizing is now part of Validate() and EvaluateThisNode().
+    //       It is still used at many places though, to determine the MB size.
+    //       And it resets m_completedEvaluate (which is also cleared in Evaluate() itself), and m_completedGradient (which is cleared conditioned on some flag of unknown semantics).
     size_t SetActualMiniBatchSizeFromFeatures()
     {
-        m_actualMBSize = DetermineActualMBSizeFromFeatures();
+        size_t m_actualMBSize = DetermineActualMBSizeFromFeatures();
 
         // assume that all nodes in recurrent loops need to be reset to aSize minibatch size, so need to reset the following
         for (int i = 0; i < m_recurrentInfo.size(); i++)
@@ -1579,28 +1565,12 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
-    //void ClearGradientForAllNodes(const ComputationNodeBasePtr& rootNode)
-    //{
-    //    std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
-
-    //    for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); nodeIter++)
-    //        (*nodeIter)->ClearGradientForChildren((int)m_actualMBSize);
-
-    //    //for (auto nodeIter = m_recurrentInfo.begin(); nodeIter != m_recurrentInfo.end(); nodeIter++)
-    //    //    (*nodeIter).m_completedGradient = false;
-
-    //    for (int i = 0; i < m_recurrentInfo.size(); i++)
-    //        m_recurrentInfo[i].m_completedGradient = false;
-    //}
-
     void ClearGradientForAllNodes(const ComputationNodeBasePtr& rootNode)
     {
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
         for (auto &node : allNodes)
             node->ClearGradientForChildren();
-
-//            node->MarkGradientInitialized(false);
 
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedGradient = false;
@@ -1719,9 +1689,6 @@ protected:
     // used for sentence boundary information passed from reader to reset RNN state 
     // specify how the minibatch is packed for each sample
     MBLayoutPtr m_pMBLayout;    // note that this must be installed before doing anything that needs it (default leaves a nullptr)
-    //MBLayoutPtr m_pMBNoLayout;  // this alternative one is passed when no layout is available/should be used
-
-    size_t m_actualMBSize;      // current MB size in columns --note: this is not #frames, if we have multiple parallel sequences, cf. MBLayout
 
     // main node holder
     std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> m_nameToNodeMap;   // [name] -> node; this is the main container that holds this networks' nodes
