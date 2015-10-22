@@ -108,6 +108,9 @@
     <ClInclude Include="..\..\Math\Math\Matrix.h">
       <Filter>from CNTKMath</Filter>
     </ClInclude>
+    <ClInclude Include="ReshapingNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
