@@ -378,6 +378,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static bool AreEqual(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const ElemType threshold = 1e-8);
 
+        static void TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
+
         static GPUMatrix<ElemType> Ones(const size_t rows, const size_t cols, int deviceId);
         static GPUMatrix<ElemType> Zeros(const size_t rows, const size_t cols, int deviceId);
         static GPUMatrix<ElemType> Eye(const size_t rows, int deviceId);
