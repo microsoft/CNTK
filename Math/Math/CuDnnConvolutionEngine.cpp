@@ -18,7 +18,7 @@ template<> static const char* CudaErrString(cudnnStatus_t x)
 
 // REVIEW alexeyk: this is the format used originally by CNTK. Consider changing it to NCHW as NHWC currently does not support FFT-based convolutions.
 #define TENSOR_FORMAT CUDNN_TENSOR_NHWC
-// CNTK default implementation uses CHWN format which is converted during model loading to NCHW.
+// CNTK default implementation uses CHWN format which is converted in runtime to NCHW.
 #define FILTER_FORMAT CUDNN_TENSOR_NCHW
 #endif
 
@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
     public:
         CuDnnTensor4D(size_t w, size_t h, size_t c, size_t n, cudnnDataType_t dataType)
-            : ConvolutionTensor4D(w, h, c, n), m_tensor(nullptr)
+            : ConvolutionTensor4D(w, h, c, n), m_dataType(dataType), m_tensor(nullptr)
         {
             CUDNN_CALL(cudnnCreateTensorDescriptor(&m_tensor));
             CUDNN_CALL(cudnnSetTensor4dDescriptor(m_tensor, TENSOR_FORMAT, dataType, 
@@ -58,8 +58,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_tensor = nullptr;
             }
         }
-        // REVIEW alexeyk: implement move ctor/assignment.
+
+        void setN(size_t newN) override
+        {
+            ConvolutionTensor4D::setN(newN);
+            CUDNN_CALL(cudnnSetTensor4dDescriptor(m_tensor, TENSOR_FORMAT, m_dataType,
+                static_cast<int>(n()), static_cast<int>(c()), static_cast<int>(h()), static_cast<int>(w())));
+        }
     private:
+        cudnnDataType_t m_dataType;
         cudnnTensorDescriptor_t m_tensor;
     };
 
@@ -67,14 +74,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
     public:
         CuDnnFilter(size_t w, size_t h, size_t c, size_t k, cudnnDataType_t dataType)
-            : ConvolutionFilter(w, h, c, k), m_filter(nullptr)
+            : ConvolutionFilter(w, h, c, k), m_filter(nullptr), m_inF(nullptr), m_outF(nullptr)
         {
             CUDNN_CALL(cudnnCreateFilterDescriptor(&m_filter));
             CUDNN_CALL(cudnnSetFilter4dDescriptor_v4(m_filter, dataType, FILTER_FORMAT,
                 static_cast<int>(k), static_cast<int>(c), static_cast<int>(h), static_cast<int>(w)));
+
+            // Create tensors needed to convert filter. Should be removed in future.
+            CUDNN_CALL(cudnnCreateTensorDescriptor(&m_inF));
+            CUDNN_CALL(cudnnCreateTensorDescriptor(&m_outF));
+            // CNTK legacy code uses filters in CHWN format. This format is not currently supported by cuDNN.
+            int dims[] = { static_cast<int>(c), static_cast<int>(h), static_cast<int>(w), static_cast<int>(k) };
+            int inStride[] =  { static_cast<int>(h * w * k), static_cast<int>(w * k), static_cast<int>(k), 1 };
+            CUDNN_CALL(cudnnSetTensorNdDescriptor(m_inF, dataType, 4, dims, inStride));
+            // Create output tensor which is a transpose of input tensor so the output becomes NCHW-format tensor supported by cuDNN.
+            // Note that only strides change, tensor dimensions must be the same.
+            int outStride[] =  { static_cast<int>(h * w), static_cast<int>(w), 1, static_cast<int>(c * h * w) };
+            CUDNN_CALL(cudnnSetTensorNdDescriptor(m_outF, dataType, 4, dims, outStride));
         }
     public:
         operator cudnnFilterDescriptor_t() const { return m_filter; }
+
+        cudnnTensorDescriptor_t InTensor() const { return m_inF; };
+        cudnnTensorDescriptor_t OutTensor() const { return m_outF; };
 
         ~CuDnnFilter()
         {
@@ -83,10 +105,39 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 cudnnDestroyFilterDescriptor(m_filter);
                 m_filter = nullptr;
             }
+            if (m_inF != nullptr)
+            {
+                cudnnDestroyTensorDescriptor(m_inF);
+                m_inF = nullptr;
+            }
+            if (m_outF != nullptr)
+            {
+                cudnnDestroyTensorDescriptor(m_outF);
+                m_outF = nullptr;
+            }
         }
-        // REVIEW alexeyk: implement move ctor/assignment.
+    private:
+        size_t GetDataTypeSizeInBytes(cudnnDataType_t dtype) 
+        {
+            switch (dtype)
+            {
+            case CUDNN_DATA_FLOAT:
+                return sizeof(float);
+            case CUDNN_DATA_DOUBLE:
+                return sizeof(float);
+            case CUDNN_DATA_HALF:
+                return 2;
+            default:
+                assert(false);
+            }
+            return 0;
+        }
+
     private:
         cudnnFilterDescriptor_t m_filter;
+        // REVIEW alexeyk: tensors and temp storage for filter conversion from CHWN to NCHW format, remove.
+        cudnnTensorDescriptor_t m_inF;
+        cudnnTensorDescriptor_t m_outF;
     };
 
     class CuDnnConvolutionDescriptor : public ConvolutionDescriptor
@@ -112,11 +163,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_conv = nullptr;
             }
         }
-        // REVIEW alexeyk: implement move ctor/assignment.
     private:
         cudnnConvolutionDescriptor_t m_conv;
     };
 
+    template <typename ElemType>
     class CuDnnConvolutionEngineImpl
     {
     public:
@@ -127,10 +178,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using ConvDesc = ConvolutionDescriptor;
         using ConvDescPtr = std::unique_ptr<ConvolutionDescriptor>;
 
-        CuDnnConvolutionEngineImpl(size_t maxTempMemSizeInSamples)
-            : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_cudnn(nullptr)
+        CuDnnConvolutionEngineImpl(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
+            : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_cudnn(nullptr), m_temp(deviceId)
         {
             CUDNN_CALL(cudnnCreate(&m_cudnn));
+            CUDNN_CALL(cudnnSetStream(m_cudnn, GetStream()));
         }
 
         ~CuDnnConvolutionEngineImpl()
@@ -142,11 +194,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     public:
-        void Forward(const Tensor4D& inT, const void* alpha, const void* in, const Filter& filterT, const void* filter, const ConvDesc& convDesc,
-            const void* beta, const Tensor4D& outT, void* out)
+        void Forward(const Tensor4D& inT, ElemType alpha, const ElemType* in, const Filter& filterT, const ElemType* filter, const ConvDesc& convDesc,
+            ElemType beta, const Tensor4D& outT, ElemType* out)
         {
-            CUDNN_CALL(cudnnConvolutionForward(m_cudnn, alpha, t(inT), in, f(filterT), filter, cd(convDesc), CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM,
-                nullptr, 0, beta, t(outT), out));
+            auto& filtT = As<const CuDnnFilter>(filterT);
+            // Convert filter to NCWH format.
+            m_temp.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w(), 1);
+            CUDNN_CALL(cudnnTransformTensor(m_cudnn, &One, filtT.InTensor(), filter, &Zero, filtT.OutTensor(), m_temp.BufferPointer()));
+            // Perform forward convolution operation.
+            CUDNN_CALL(cudnnConvolutionForward(m_cudnn, &alpha, t(inT), in, filtT, m_temp.BufferPointer(), cd(convDesc), CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM,
+                nullptr, 0, &beta, t(outT), out));
+        }
+
+        void BackwardData(const Tensor4D& srcGradT, ElemType alpha, const ElemType* srcGrad, const Filter& filterT, const ElemType* filter, const ConvDesc& convDesc,
+            ElemType beta, const Tensor4D& gradT, ElemType* grad)
+        {
+            UNUSED(srcGradT);
+            UNUSED(alpha);
+            UNUSED(srcGrad);
+            UNUSED(filterT);
+            UNUSED(filter);
+            UNUSED(convDesc);
+            UNUSED(beta);
+            UNUSED(gradT);
+            UNUSED(grad);
+            RuntimeError("Not implemented");
         }
 
         template <typename ElemType>
@@ -188,8 +260,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        template <typename CuDnnT, typename Out, typename In>
-        Out As(In& src)
+        template <typename CuDnnT, typename In>
+        CuDnnT& As(In& src)
         {
             // Do dynamic_cast only in debug builds and static_cast in release builds.
             assert(dynamic_cast<CuDnnT*>(&src) != nullptr);
@@ -197,28 +269,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         const cudnnTensorDescriptor_t t(const Tensor4D& src)
         {
-            return As<const CuDnnTensor4D, const cudnnTensorDescriptor_t>(src);
-        }
-        cudnnTensorDescriptor_t t(Tensor4D& src)
-        {
-            return As<const CuDnnTensor4D, const cudnnTensorDescriptor_t>(src);
+            return As<const CuDnnTensor4D>(src);
         }
         const cudnnFilterDescriptor_t f(const ConvolutionFilter& src)
         {
-            return As<const CuDnnFilter, const cudnnFilterDescriptor_t>(src);
+            return As<const CuDnnFilter>(src);
         }
         const cudnnConvolutionDescriptor_t cd(const ConvolutionDescriptor& src)
         {
-            return As<const CuDnnConvolutionDescriptor, const cudnnConvolutionDescriptor_t>(src);
+            return As<const CuDnnConvolutionDescriptor>(src);
         }
 
     private:
+        static const ElemType Zero;
+        static const ElemType One;
+
         size_t m_maxTempMemSizeInSamples;
         cudnnHandle_t m_cudnn;
+        GPUMatrix<ElemType> m_temp;
     };
+    template<> const float CuDnnConvolutionEngineImpl<float>::One = 1;
+    template<> const double CuDnnConvolutionEngineImpl<double>::One = 1;
+    template<> const float CuDnnConvolutionEngineImpl<float>::Zero = 0;
+    template<> const double CuDnnConvolutionEngineImpl<double>::Zero = 0;
 
 #else
 
+    template <typename ElemType>
     class CuDnnConvolutionEngineImpl
     {
     public:
@@ -229,13 +306,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using ConvDesc = ConvolutionDescriptor;
         using ConvDescPtr = std::unique_ptr<ConvolutionDescriptor>;
 
-        CuDnnConvolutionEngineImpl(size_t) { }
+        CuDnnConvolutionEngineImpl(DEVICEID_TYPE, size_t) { }
 
     public:
-        void Forward(const Tensor4D&, const void*, const Filter&, const void*, const ConvDesc&, const Tensor4D&, void*) {}
+        void Forward(const Tensor4D&, ElemType, const ElemType*, const Filter&, const ElemType*, const ConvDesc&,
+            ElemType, const Tensor4D&, ElemType*)
+        {
+            RuntimeError("The code is compiled without USE_CUDNN macro.");
+        }
 
         template <typename ElemType>
-        Tensor4DPtr CreateConvTensor(size_t, size_t, size_t, size_t)
+        Tensor4DPtr CreateTensor(size_t, size_t, size_t, size_t)
         {
             return std::make_unique<Tensor4D>();
         }
@@ -246,8 +327,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return std::make_unique<Filter>();
         }
 
-        ConvDescPtr CreateConvDescriptor(const Tensor4D& inT, const Filter& filterT, 
-            size_t, size_t, bool)
+        ConvDescPtr CreateConvDescriptor(const Tensor4D& inT, const Filter& filterT, size_t, size_t, bool)
         {
             return std::make_unique<ConvDesc>(inT, filterT);
         }
@@ -256,8 +336,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
     template<class ElemType>
-    CuDnnConvolutionEngine<ElemType>::CuDnnConvolutionEngine(DEVICEID_TYPE /*deviceId*/, size_t maxTempMemSizeInSamples)
-        : m_impl(std::make_unique<CuDnnConvolutionEngineImpl>(maxTempMemSizeInSamples))
+    CuDnnConvolutionEngine<ElemType>::CuDnnConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
+        : m_impl(std::make_unique<CuDnnConvolutionEngineImpl<ElemType>>(deviceId, maxTempMemSizeInSamples))
     {
     }
 
@@ -265,9 +345,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void CuDnnConvolutionEngine<ElemType>::Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
         const Tensor4D& outT, Mat& out)
     {
-        const ElemType zero = static_cast<ElemType>(0);
-        const ElemType one = static_cast<ElemType>(1);
-        m_impl->Forward(inT, &one, in.BufferPointer(), filterT, filter.BufferPointer(), convDesc, &zero, outT, out.BufferPointer());
+        m_impl->Forward(inT, 1, in.BufferPointer(), filterT, filter.BufferPointer(), convDesc, 0, outT, out.BufferPointer());
+    }
+
+    template<class ElemType>
+    void CuDnnConvolutionEngine<ElemType>::BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+        const Tensor4D& gradT, Mat& grad)
+    {
+        m_impl->BackwardData(srcGradT, 1, srcGrad.BufferPointer(), filterT, filter.BufferPointer(), convDesc, 0, gradT, grad.BufferPointer());
     }
 
     template<class ElemType>

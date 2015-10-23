@@ -30,6 +30,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
             size_t packedInputColsPerSample = outT.w() * outT.h();
             size_t outputSizePerChannel = packedInputColsPerSample;
+            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
+            //size_t inputDim = inT.w() * inT.h() * inT.c();  //size of each input sample
 
             size_t batchSize = inT.n();
             size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
@@ -61,6 +63,49 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             out.Reshape(outT.c() * outputSizePerChannel, batchSize);  //each sample becomes a column
 
             assert(outT.n() == out.GetNumCols());
+        }
+
+        void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+            const Tensor4D& gradT, Mat& grad) override
+        {
+            assert(gradT.c() == filterT.c());
+            assert(srcGradT.c() == filterT.k());
+            assert(srcGradT.n() == srcGrad.GetNumCols());
+
+            size_t packedInputRows = filterT.w() * filterT.h() * filterT.c();
+            size_t packedInputColsPerSample = srcGradT.w() * srcGradT.h();
+            size_t outputSizePerChannel = packedInputColsPerSample;
+            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
+            //size_t inputDim = gradT.w() * gradT.h() * gradT.c();  //size of each input sample
+
+            size_t batchSize = srcGradT.n();
+
+            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
+
+            grad.Reshape(srcGradT.c(), outputSizePerChannel * batchSize);  //reshape to match the longernal operation
+
+            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
+            size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
+
+            for (size_t i = 0; i < numSubBatches; i++)
+            {
+                size_t startSampleId = i * subBatchSize;
+                size_t endSampleId = min(batchSize, startSampleId + subBatchSize);
+                size_t smallBatchSize = endSampleId - startSampleId;
+
+                m_tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+                Matrix<ElemType> outputGradientSubBatch = grad.ColumnSlice(startSampleId * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
+                Matrix<ElemType>::Multiply(filter, true, outputGradientSubBatch, false, m_tempMatrix);
+
+                Matrix<ElemType> inputGradientSubBatch = srcGrad.ColumnSlice(startSampleId, smallBatchSize);
+                m_tempMatrix.UnpackConvolutionInput(inputGradientSubBatch,
+                    gradT.w(), gradT.h(), gradT.c(),
+                    srcGradT.w(), srcGradT.h(), srcGradT.c(),
+                    filterT.w(), filterT.h(), convDesc.wStride(), convDesc.hStride(),
+                    convDesc.padding());
+            }
+
+            grad.Reshape(srcGradT.c() * outputSizePerChannel, batchSize);  //change back
         }
 
         Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override
