@@ -39,7 +39,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         { }
 
         // stack K consecutive frames into a single frame that is K times taller
-        static void Stack(const FrameRange & frameRange, /*const*/ Base * from, Base * to, size_t K, bool addTo)
+        // FrameRange and MBLayout refer to the 'to' (reduced) timeline.
+        // BUGBUG: THIS IS UNTESTED!!
+        static void Stack(const FrameRange & frameRange, const shared_ptr<MBLayout> & pMBLayout, /*const*/ Matrix<ElemType> & from, Matrix<ElemType> & to, size_t K, bool addTo)
         {
             // example
             //  input: T=2, D=2, K=3, S=2 (abcdef and uvwxyz)
@@ -79,30 +81,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //     D = featDim
             //     M = 1, thrown in for generality of underlying Matrix function
 
-            // We operate on the target layout, frameRange refers to result, not the input.
+            // We operate on the 'to' layout, frameRange refers to result, not the input.
             // The input layout is different, but reshaping the input to output dimensions will allow us to pull out the right values anyway.
-            auto from0 = from->FunctionValues().Reshaped(to->GetNumRows(), to->GetNumCols());
-            auto fromSlice0 = from->DataSlice(from0, frameRange);   // we operate on target layout
-            auto toSlice0 = to->ValueSlice(frameRange);
+            auto from0      = from.Reshaped(to.GetNumRows(), to.GetNumCols());   // we operate on 'to' layout
+            auto fromSlice0 = DataSlice(from0, frameRange, pMBLayout);
+            auto   toSlice0 = DataSlice(to,    frameRange, pMBLayout);
             // now we got views on the right ranges of values, but with weird dimensions
 
             // reshape them into a unified view with D being the row dimension, and (S,M,K,T) the column dimension
-            size_t D = from->GetNumRows();
-            size_t SMKT = from->GetNumCols();
+            size_t    D = from.GetNumRows();
+            size_t SMKT = from.GetNumCols();
             auto fromSlice = fromSlice0.Reshaped(D, SMKT);
-            auto toSlice = toSlice0.Reshaped(D, SMKT);
+            auto   toSlice =   toSlice0.Reshaped(D, SMKT);
 
             // now to the shuffle dance
-            size_t S = to->GetNumParallelSequences();
-            size_t T = to->GetNumTimeSteps();
+            size_t S = pMBLayout->GetNumParallelSequences();
+            size_t T = pMBLayout->GetNumTimeSteps();
             size_t M = 1;
             Matrix<ElemType>::TensorShuffleScaleAndAdd(addTo ? 1.0f : 0, fromSlice, D, S, M, K, T, 1.0f, toSlice, toSlice);
         }
 
-        static void Unstack(const FrameRange & frameRange, const Base * from, Base * to, size_t K, bool addTo)
+        // split frames of D*K elements into K consecutive frames of dimension D.
+        // FrameRange and MBLayout refer to the 'from' (reduced) timeline.
+        // This function is the inverse of Stack(). See comments there and exchange from and to.
+        static void Unstack(const FrameRange & frameRange, const shared_ptr<MBLayout> & pMBLayout, /*const*/ Matrix<ElemType> & from, Matrix<ElemType> & to, size_t K, bool addTo)
         {
-            frameRange; from; to; K; addTo;
-            NOT_IMPLEMENTED
+            auto fromSlice0 = DataSlice(from, frameRange, pMBLayout);
+            auto   to0      = to.Reshaped(from.GetNumRows(), from.GetNumCols());
+            auto   toSlice0 = DataSlice(to0, frameRange, pMBLayout);
+
+            size_t    D = to.GetNumRows();
+            size_t SMKT = to.GetNumCols();
+            auto fromSlice = fromSlice0.Reshaped(D, SMKT);
+            auto   toSlice =   toSlice0.Reshaped(D, SMKT);
+
+            size_t S = pMBLayout->GetNumParallelSequences();
+            size_t T = pMBLayout->GetNumTimeSteps();
+            size_t M = 1;
+            Matrix<ElemType>::TensorShuffleScaleAndAdd(addTo ? 1.0f : 0, fromSlice, D, K, M, S, T, 1.0f, toSlice, toSlice);
         }
     };
 
@@ -118,6 +134,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // from (rows x T time steps) to (newRows x (T / newRows * rows) time steps).
     // E.g. going from rows=20 to newRows=40 groups two consecutive time steps into one.
     // In this case, multiple parallel sequences are treated independently.
+    //
+    // Unlike most other nodes, this node has intimate inside knowlegde of MBLayouts and frameRanges.
+    //
+    // BUGBUG: THIS IS UNTESTED for non-layout case!!  --TODO: remove these comments once tested
+    // BUGBUG: THIS IS UNTESTED for MBLayout case!!
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -126,12 +147,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ReshapingNodeBase<ElemType> Base; UsingReshapingNodeBaseMembers;
         static const std::wstring TypeName() { return L"Reshape"; }
     public:
-        ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
-            m_numRows(0),
-            m_imageLayout(0, 0, 0)
-        { }
-        ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows, const ImageLayout & imageLayout) :
+        ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows = 0, const ImageLayout & imageLayout = ImageLayout(0,0,0)) :
             Base(deviceId, name),
             m_numRows(numRows),
             m_imageLayout(imageLayout)
@@ -142,7 +158,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP); // TODO: change to Base for all
+                auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
                 node->m_numRows = m_numRows;
                 node->m_imageLayout = m_imageLayout;
             }
@@ -254,12 +270,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // create the derived layout
                 // BUGBUG: This assumes that the layout is complete at this point in time. RecurrentNodeBase makes the same assumption. Becomes invalid once we go sequence-to-sequence.
                 m_pMBLayout->Init(GetNumParallelSequences(), Inputs(0)->GetNumTimeSteps() * Inputs(0)->GetNumRows() / m_numRows);
+                LogicError("ReshapeNode::OnEvaluateBeginIteration() to be completed for MBLayout case.");
             }
         }
 
         // notes:
-        //  - input and output have different time base
-        //  - frameRange refers to *functionValues*
+        //  - input and output have different time base and different layouts
+        //  - frameRange refers to *functionValues*, not the inputs
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             if (isNoop())       // no change in dimension: FunctionValues() will return our input directly
@@ -271,108 +288,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             VerifySize(m_numRows, newCols);
 
             // no layout case: this is indeed just a reshape
-            // TODO: we could set up our functionValues to be a view into the input, to avoid the actual copy
+            // (We still need to copy the values since there is currently no way to point to an input function value while reshaping at the same time.)
             if (!m_pMBLayout)
+            {
                 FunctionValues().Reshaped(newCols * m_numRows, 1) = Inputs(0)->FunctionValues().Reshaped(cols * rows, 1);   // copy the values as one long vector
+            }
             // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
-            else if (weStack())
-                Base::Stack(frameRange, Inputs(0).get(), this, factor(), false/*addTo*/);
             else
-                Base::Unstack(frameRange, Inputs(0).get(), this, factor(), false/*addTo*/);
-
-#if 0
-            // for example, going from rows=1 to newRows=2 with 2 parallel sequences, we go from
-            //  t0s0 t0s1 t1s0 t1s1 t2s0 t2s1...
-            // to
-            //  t0s0 t1s0 t0s1 t1s1 t2s0 t3s0...
-            // In presence of multiple sequences, this can actually not be done implemented as a matrix reshape operation.
-
-            size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
-            size_t newCols = cols * rows / m_numRows;
-            assert(newCols * m_numRows == cols * rows); // follows from above check
-            VerifySize(m_numRows, newCols);
-
-#if 0       // TODO: finish this later, as it is merely an optimization of the below
-            // simple case: it's an actual reshape operation
-            if (!m_pMBLayout || (frameRange.IsAllFrames() && GetNumParallelSequences() == 1))
             {
-                // interpret both as long vectors, then assign them over
-                auto inputValuesAsVector = Inputs(0)->FunctionValues().Reshaped(cols * rows, 1);
-                auto functionValuesAsVector = FunctionValues().Reshaped(newCols * m_newRows, 1);
-                functionValuesAsVector = inputValuesAsVector;
-                // BUGBUG: layout
-                return;
+                bool untested = true;
+                if (untested)
+                    LogicError("%ls %ls operation not tested for layout case. Remove this error once you test it, or contact fseide@microsoft.com, I will help.", NodeName().c_str(), OperationName().c_str());
+                // TODO: It does not make sense to run ReshapeNode frame-by-frame inside a loop, because it changes the time base.
+                //       However, in the future, we should be able to run inside an outer loop.
+                if (!frameRange.IsAllFrames())
+                    InvalidArgument("%ls %ls operation cannot be run from inside a loop since it changes the time base.", NodeName().c_str(), OperationName().c_str());
+                if (weStack())
+                    Base::Stack(frameRange, m_pMBLayout, Inputs(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
+                else
+                    Base::Unstack(frameRange, Inputs(0)->GetMBLayout(), Inputs(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
             }
-#endif
-
-            // all frames but with multiple sequences -> take the easy way out--do it frame by frame
-            // TODO: We will need a dimension-swap operation in class Matrix. That's where all this code should go.
-            if (frameRange.IsAllFrames())
-            {
-                FrameRangeIteration range(m_pMBLayout, +1);
-                for (auto t = range.begin(); t != range.end(); t++)
-                    EvaluateThisNode(t);    // call ourselves with a sub-range
-                return;
-            }
-
-            // process time step by time step
-            // TODO: This has a lot to do with row slices.
-            assert(m_pMBLayout);
-            auto r = frameRange.GetSequenceRange(m_pMBLayout);          // TODO: use range-based loop; currently for (auto s:r) gives a compiler error
-            for (auto s = r.begin(); s != r.end(); s++)                 // loop over all sequences
-            //for (auto s : frameRange.GetSequenceRange(m_pMBLayout))   // compiler error
-            //for (auto s : r)                                          // compiler error
-            {
-                if (weStack())                  // grouping  --we place a partial vector
-                {
-                    size_t tOut = frameRange.t() / factor();
-                    size_t subVec = frameRange.t() % factor();
-                    ValueSlice(FrameRange(tOut).Sequence(s)).AssignToRowSliceValuesOf(Inputs(0)->ValueSlice(frameRange.Sequence(s)), subVec * rows, rows);
-                    // update layout flags
-                    if (subVec != 0 && Inputs(0)->GetMBLayout()->Is(s, frameRange.t(), MinibatchPackingFlags::SequenceStart))
-                        InvalidArgument("%ls %ls operation: found sentence start inside (not at start) of group being decimated", NodeName().c_str(), OperationName().c_str());
-                    if (subVec != factor()-1 && Inputs(0)->GetMBLayout()->Is(s, frameRange.t(), MinibatchPackingFlags::SequenceEnd))
-                        InvalidArgument("%ls %ls operation: found sentence end inside (not at end) of group being decimated", NodeName().c_str(), OperationName().c_str());
-                    m_pMBLayout->Set(s, tOut, Inputs(0)->GetMBLayout()->Get(s, frameRange.t()));       // BUGBUG: only first/last one may have start/end flag
-                }
-                else                            // splitting  --we place multiple target vectors
-                {
-                    size_t tOut0 = frameRange.t() * factor();
-                    for (size_t subVec = 0; subVec < factor(); subVec++)
-                    {
-                        size_t tOut = tOut0 + subVec;
-                        ValueSlice(FrameRange(tOut).Sequence(s)).AssignRowSliceValuesOf(Inputs(0)->ValueSlice(frameRange.Sequence(s)), subVec * m_numRows, m_numRows);
-                    }
-                    // update layout flags
-                    if (Inputs(0)->GetMBLayout()->Is(s, frameRange.t(), MinibatchPackingFlags::SequenceStart))
-                        m_pMBLayout->Set(s, tOut0, MinibatchPackingFlags::SequenceStart);
-                    if (Inputs(0)->GetMBLayout()->Is(s, frameRange.t(), MinibatchPackingFlags::SequenceEnd))
-                        m_pMBLayout->Set(s, tOut0+factor()-1, MinibatchPackingFlags::SequenceStart);
-                }
-                // TODO: need to check consistency of gaps
-            }
-#endif
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-#if 1
-            inputIndex; frameRange;
-            LogicError("ReshapeNode::ComputeInputPartial: to be completed");
-#else
-            size_t rows = Inputs(0)->GradientValues().GetNumRows();
+            size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
+            size_t newCols = cols * rows / m_numRows;
 
-            size_t outputSamplesInRecurrentStep = GetNumParallelSequences() * rows / m_numRows;
-
-            Matrix<ElemType> inputGradientValues = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            // BUGBUG: the following will fail since outputSamplesInRecurrentStep will not match m_pMBLayout. Need to find out what this means (currently layout is constant throughout the graph), and implement it correctly.
-            Matrix<ElemType> gradientValues = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep, m_pMBLayout));
-
-            size_t numRows = inputGradientValues.GetNumRows();
-            inputGradientValues.Reshape(gradientValues.GetNumRows(), gradientValues.GetNumCols());
-            inputGradientValues += gradientValues;
-            inputGradientValues.Reshape(numRows, inputGradientValues.GetNumElements() / numRows);
-#endif
+            // no layout case: this is indeed just a reshape
+            if (!m_pMBLayout || isNoop())
+            {
+                Inputs(0)->GradientValues().Reshaped(cols * rows, 1) += GradientValues().Reshaped(newCols * m_numRows, 1);   // treat the values as one long vector
+            }
+            // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
+            else
+            {
+                if (weStack())
+                    Base::Unstack(frameRange, m_pMBLayout, GradientValues(), Inputs(0)->GradientValues(), factor(), true/*addTo*/);
+                else
+                    Base::Stack(frameRange, Inputs(0)->GetMBLayout(), GradientValues(), Inputs(0)->GradientValues(), factor(), true/*addTo*/);
+            }
         }
 
         // BUGBUG: there is a const and a non-const version of this function
