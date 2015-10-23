@@ -335,15 +335,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return ret;
         }
 
-        class SequenceRange    // range for range-based for over sequences
+        class IndexIteration    // range for range-based for over sequences
         {
-            size_t m_seqIndex;
+            size_t m_beginIndex, m_endIndex;
         public:
-            SequenceRange(size_t seqIndex) : m_seqIndex(seqIndex) { }
-            size_t begin() const { return m_seqIndex == SIZE_MAX ?          0 : m_seqIndex; }
-            size_t end()   const { return m_seqIndex == SIZE_MAX ? m_seqIndex/*BUGBUG*/ : m_seqIndex+1; }
+            IndexIteration(size_t beginIndex, size_t endIndex) : m_beginIndex(beginIndex), m_endIndex(endIndex) { }
+            size_t begin() const { return m_beginIndex; }
+            size_t   end() const { return m_endIndex; }
         };
-        SequenceRange GetSequenceRange() const { return SequenceRange(seqIndex); }
+        IndexIteration GetSequenceRange(const shared_ptr<MBLayout> & pMBLayout) const { return IndexIteration(seqIndex == SIZE_MAX ? 0 : seqIndex, seqIndex == SIZE_MAX ? pMBLayout->GetNumParallelSequences() : seqIndex + 1); }
 
         // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
         // Some functions need just the time index, e.g. for looking up stuff in m_boundaryInfo. That's where an unscaled index is needed (as opposed to startColumn()).

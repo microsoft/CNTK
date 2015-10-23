@@ -4266,7 +4266,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /// <param name="beta">Scalar</param>
     /// <param name="c">Resulting matrix, caller is responsible for allocating this</param>
     template<class ElemType>
-    void Matrix<ElemType>::ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, ElemType beta, Matrix<ElemType>& c)
+    /*static*/ void Matrix<ElemType>::ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, ElemType beta, Matrix<ElemType>& c)
     {
         if (beta==1)
             ScaleAndAdd(alpha,a,c);
@@ -4279,6 +4279,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ScaleAndAdd(alpha/beta,a,c); // c1=alpha/beta * a + c
             Scale(beta,c); // c/beta * beta
         }
+    }
+
+    // tensor swapping and addition: c <- keepWeight * b + scaleFactor * swap_dimensions(a, S, K)
+    // where
+    //  - a is interpreted as a tensor of dimension (D x S x M x K x T)         // column-major, as usual
+    //  - b and c as a tensor of dimension          (D x K x M x S x T)   // note: K and S swapped
+    // The main point of this function is to reshuffle a tensor w.r.t. two dimensions that get swapped in memory,
+    // but for gradients, we will need to add, hence the keepWeight.
+    // Notes:
+    //  - c and b may be the same (in-place operation is expressly allowed).
+    //  - D, M, and/or T may be 1. For example, D == M == T == 1 implements a 2D matrix transpose from (S x K) to (K x S).
+    //  - If keepWeight == 0, then b will just get overwritten (straight assignment, b may be uninitialized or contain NaNs).
+    //  - The original matrix dimensions are ignored except that sizes must match (rows x cols == D x S x M x K x T).
+    //    For diagnostics purposes, this function also enforces the rows % D == 0 and cols % T == 0, but this is not a functional requirement and can be removed if that helps.
+    //  - Dense matrices only.
+    template<class ElemType>
+    /*static*/ void Matrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const Matrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const Matrix<ElemType>& b, Matrix<ElemType>& c)
+    {
+        if (a.GetNumElements() != c.GetNumElements() || b.GetNumElements() != c.GetNumElements())   // allocations must match (but not dimensions, since we reinterpret the dimensions anyway)
+            InvalidArgument("TensorShuffleScaleAndAdd: a, b, and c must have same number of elements.");
+        if (c.IsEmpty())    // operating on empty minibatch slices is perfectly cromulent
+            return;
+
+        // sanity checks for current use cases--these are not strictly necessary and can be deleted
+        if (a.GetNumRows() % D != 0 || b.GetNumRows() % D != 0 || c.GetNumRows() % D != 0)
+            InvalidArgument("TensorShuffleScaleAndAdd: a, b, and c are meant to have a row dimension that is a multiple of D.");
+        if (a.GetNumCols() % D != 0 || b.GetNumCols() % D != 0 || c.GetNumCols() % D != 0)
+            InvalidArgument("TensorShuffleScaleAndAdd: a, b, and c are meant to have a column dimension that is a multiple of T.");
+
+        DecideAndMoveToRightDevice(a, b, c);
+
+        DISPATCH_MATRIX_ON_FLAG(&c,
+            nullptr,
+            CPUMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_CPUMatrix, D, S, M, K, T, scaleFactor, *b.m_CPUMatrix, *c.m_CPUMatrix),
+            GPUMatrix<ElemType>::TensorShuffleScaleAndAdd(keepWeight, *a.m_GPUMatrix, D, S, M, K, T, scaleFactor, *b.m_GPUMatrix, *c.m_GPUMatrix),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
     }
 
     /// <summary>c += alpha * (a-b)</summary>

@@ -1015,9 +1015,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return ElemType(0);
     }
 
-
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignInnerProductOfMatrices(const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/) { return *this; }
-
 
     template<class ElemType> void GPUMatrix<ElemType>::ElementWisePower(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, GPUMatrix<ElemType>& c) { }
 
@@ -1025,6 +1023,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         return false;
     }
+
+    template<class ElemType> void GPUMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c) { }
 
     template<class ElemType> GPUMatrix<ElemType>  GPUMatrix<ElemType>::Ones(const size_t rows, const size_t cols)
     {
