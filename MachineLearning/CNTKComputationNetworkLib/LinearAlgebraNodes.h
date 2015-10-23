@@ -1312,6 +1312,225 @@ private:
     template class SumColumnElementsNode<double>;
 
     // -----------------------------------------------------------------------
+    // TransposeNode (input matrix)
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class TransposeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<1>
+    {
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Transpose"; }
+
+    public:
+        TransposeNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
+        {
+            Matrix<ElemType>& inputGradientValues = Inputs(0)->GradientValues();
+            const Matrix<ElemType>& gradientValues = GradientValues();
+#if DUMPOUTPUT
+            gradientValues.Print("Gradient-in");
+            inputGradientValues.Print("child Gradient-in/out");
+            inputFunctionValues.Print("child Function values");
+#endif
+            const Matrix<ElemType>& ones = ConstOnes(inputGradientValues.GetNumRows(), inputGradientValues.GetNumRows(), inputGradientValues.GetDeviceId());
+            Matrix<ElemType>::MultiplyAndAdd(ones, false, gradientValues, true, inputGradientValues);
+#if DUMPOUTPUT
+            inputGradientValues.Print("child Gradient-out");
+#endif
+        }
+
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        {
+#if DUMPOUTPUT
+            Inputs(0)->FunctionValues().Print("TransposeNode- Input0");
+#endif
+            FunctionValues().AssignTransposeOf(Inputs(0)->FunctionValues());
+#if NANCHECK
+            FunctionValues().HasNan("Transpose");
+#endif
+#if DUMPOUTPUT
+            FunctionValues().Print("TransposeNode");
+#endif
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+
+            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
+
+            Resize(cols0, rows0);
+            if (Inputs(0)->HasMBLayout())
+                InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+            InferImageDimsFromInputs();
+        }
+
+        virtual void InferImageDimsFromInputs()
+        {
+            InferImageDimsFromInput(0, false); // the second one is the input since it's column wize
+
+            // after transposition, the structure is lost
+            m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumCols(), 1);
+        }
+    };
+
+    template class TransposeNode<float>;
+    template class TransposeNode<double>;
+
+    // -----------------------------------------------------------------------
+    // DiagonalNode -- extract diagonal elements of a matrix
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class DiagonalNode : public ComputationNode<ElemType>, public NumInputs<1>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Diagonal"; }
+    public:
+        DiagonalNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        {
+            Base::CopyTo(nodeP, newName, flags);
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                auto node = dynamic_pointer_cast<DiagonalNode<ElemType>>(nodeP);
+            }
+        }
+
+        virtual void SaveToFile(File& fstream) const
+        {
+            Base::SaveToFile(fstream);
+        }
+
+        virtual void LoadFromFile(File& fstream, size_t modelVersion)
+        {
+            Base::LoadFromFile(fstream, modelVersion);
+        }
+
+        virtual void AttachInputs(const ComputationNodePtr singleInput)
+        {
+            m_children.resize(1);
+            m_children[0] = singleInput;
+        }
+
+        virtual void InferImageDimsFromInputs()
+        {
+            InferImageDimsFromInput(0, true);
+
+            m_outputImageLayout.width = 1;
+            m_outputImageLayout.channels = 1;
+
+            if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
+                fprintf(stderr, "WARNING: Diagonal operation cannot inherit image size information from its child. Image size info is lost.\n");
+        }
+
+        virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
+        {
+            fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
+
+            if (!IsLeaf())
+            {
+                fprintf(stderr, "(");
+                for (size_t i = 0; i < ChildrenSize(); i++)
+                {
+                    ComputationNodePtr child = Inputs(i);
+                    if (i > 0)
+                        fprintf(stderr, ", ");
+
+                    if (child == nullptr)
+                    {
+                        if (allowNulls)
+                        {
+                            fprintf(stderr, "NULL");
+                            continue;
+                        }
+                        RuntimeError("One of the children is missing.");
+                    }
+
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->FunctionValues().GetNumRows(), child->FunctionValues().GetNumCols());
+                }
+
+                fprintf(stderr, ")");
+            }
+        }
+
+        virtual void Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+
+            if (m_children.size() != 1)
+                LogicError("Diagonal operation: Should have one input.");
+
+            if (Inputs(0)->FunctionValues().GetNumElements() == 0)
+                LogicError("Diagonal operation: The input node has 0 element.");
+
+            size_t cols = Inputs(0)->FunctionValues().GetNumCols();
+
+            FunctionValues().Resize(1, cols);
+            InferMBLayoutFromInputsForStandardCase();
+            InferImageDimsFromInputs();
+        }
+
+        virtual void EvaluateThisNode()
+        {
+            EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues());
+        }
+
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & /*frameRange*/)
+        {
+            NOT_IMPLEMENTED
+        }
+
+        static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues)
+        {
+            functionValues.Resize(1, inputFunctionValues.GetNumCols());
+            inputFunctionValues.AssignDiagonalValuesTo(functionValues);
+#if NANCHECK
+            functionValues.HasNan("Diagonal");
+#endif
+        }
+
+        void ComputeInputPartialMap(const size_t inputIndex)
+        {
+            if (inputIndex > 0)
+                InvalidArgument("Diagonal operation only takes one input.");
+
+            ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues());
+        }
+
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
+            NOT_IMPLEMENTED
+        }
+
+        static void WINAPI ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
+        {
+            Matrix<ElemType> diag(gradientValues.GetNumRows(), gradientValues.GetNumCols(), gradientValues.GetDeviceId());
+            diag = gradientValues;
+            diag.Resize(gradientValues.GetNumCols(), 1);
+
+            inputGradientValues.SetValue(0);
+            inputGradientValues.SetDiagonalValue(diag);
+        }
+
+        virtual const Matrix<ElemType>& FunctionValues() const
+        {
+            return *m_functionValues;
+        }
+    };
+
+    template class DiagonalNode<float>;
+    template class DiagonalNode<double>;
+
+    // -----------------------------------------------------------------------
     // CosDistanceNode (left, right)
     // -----------------------------------------------------------------------
 
@@ -1910,76 +2129,6 @@ private:
 
     template class CosDistanceWithNegativeSamplesNode<float>;
     template class CosDistanceWithNegativeSamplesNode<double>;
-
-    // -----------------------------------------------------------------------
-    // TransposeNode (input matrix)
-    // -----------------------------------------------------------------------
-
-    template<class ElemType>
-    class TransposeNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<1>
-    {
-        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-        static const std::wstring TypeName() { return L"Transpose"; }
-
-    public:
-        TransposeNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name)
-        { }
-
-        virtual void ComputeInputPartialNonLooping(size_t /*inputIndex*/) override
-        {
-            Matrix<ElemType>& inputGradientValues = Inputs(0)->GradientValues();
-            const Matrix<ElemType>& gradientValues = GradientValues();
-#if DUMPOUTPUT
-            gradientValues.Print("Gradient-in");
-            inputGradientValues.Print("child Gradient-in/out");
-            inputFunctionValues.Print("child Function values");
-#endif
-            const Matrix<ElemType>& ones = ConstOnes(inputGradientValues.GetNumRows(), inputGradientValues.GetNumRows(), inputGradientValues.GetDeviceId());
-            Matrix<ElemType>::MultiplyAndAdd(ones, false, gradientValues, true, inputGradientValues);
-#if DUMPOUTPUT
-            inputGradientValues.Print("child Gradient-out");
-#endif
-        }
-
-        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
-        {
-#if DUMPOUTPUT
-            Inputs(0)->FunctionValues().Print("TransposeNode- Input0");
-#endif
-            FunctionValues().AssignTransposeOf(Inputs(0)->FunctionValues());
-#if NANCHECK
-            FunctionValues().HasNan("Transpose");
-#endif
-#if DUMPOUTPUT
-            FunctionValues().Print("TransposeNode");
-#endif
-        }
-
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
-        {
-            Base::Validate(isFinalValidationPass);
-
-            size_t rows0 = Inputs(0)->GetNumRows(), cols0 = Inputs(0)->GetNumCols();
-
-            Resize(cols0, rows0);
-            if (Inputs(0)->HasMBLayout())
-                InvalidArgument("%ls %ls operation cannot operate on minibatch data (which have a layout)", NodeName().c_str(), OperationName().c_str());
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs();
-        }
-
-        virtual void InferImageDimsFromInputs()
-        {
-            InferImageDimsFromInput(0, false); // the second one is the input since it's column wize
-
-            // after transposition, the structure is lost
-            m_outputImageLayout = ImageLayout(1, Inputs(0)->GetNumCols(), 1);
-        }
-    };
-
-    template class TransposeNode<float>;
-    template class TransposeNode<double>;
 
     // -----------------------------------------------------------------------
     // StrideTimesNode (left, right, stride/*0=row, 1=col*/)
