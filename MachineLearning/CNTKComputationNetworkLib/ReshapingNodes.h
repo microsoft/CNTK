@@ -558,4 +558,168 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template class RowStackNode<float>;
     template class RowStackNode<double>;
 
+    // -----------------------------------------------------------------------
+    // RowRepeatNode (input) -- duplicate row(s) of a matrix multiple times
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class RowRepeatNode : public ComputationNode<ElemType>, public NumInputs<1>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowRepeat"; }
+    public:
+        RowRepeatNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name),
+            m_numRepeat(1)
+        { }
+        RowRepeatNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRepeats) :
+            Base(deviceId, name),
+            m_numRepeat(numRepeats)
+        { }
+        // ^^ TODO: merge those two above using optional args
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        {
+            Base::CopyTo(nodeP, newName, flags);
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                auto node = dynamic_pointer_cast<RowRepeatNode<ElemType>>(nodeP);
+                node->m_numRepeat = m_numRepeat;
+            }
+        }
+
+        virtual void SaveToFile(File& fstream) const override
+        {
+            Base::SaveToFile(fstream);
+            fstream << m_numRepeat;
+        }
+
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        {
+            Base::LoadFromFile(fstream, modelVersion);
+            fstream >> m_numRepeat;
+        }
+
+        virtual void InferImageDimsFromInputs()
+        {
+            InferImageDimsFromInput(0, true);
+            m_outputImageLayout.height = m_inputImageLayout.height * m_numRepeat;
+
+            //WARNING: this node will destroy the image size information from the child
+            if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
+                fprintf(stderr, "WARNING: RowRepeat operation cannot inherit image size information from its child. Image size info is lost.\n");
+        }
+
+        virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
+        {
+            fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
+
+            if (!IsLeaf())
+            {
+                fprintf(stderr, "(");
+                for (size_t i = 0; i<ChildrenSize(); i++)
+                {
+                    ComputationNodePtr child = Inputs(i);
+                    if (i > 0)
+                        fprintf(stderr, ", ");
+
+                    if (child == nullptr)
+                    {
+                        if (allowNulls)
+                        {
+                            fprintf(stderr, "NULL");
+                            continue;
+                        }
+                        RuntimeError("One of the children is missing.");
+                    }
+
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
+                }
+
+                fprintf(stderr, ", numRepeats=%lu)", m_numRepeat);
+            }
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+
+            Resize(Inputs(0)->GetNumRows() * m_numRepeat, Inputs(0)->GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
+            InferImageDimsFromInputs();
+        }
+
+        void EvaluateThisNodeMap()    // TODO: This is a stop-gap; in most cases, we should just be able to delete this (but need to review one by one)
+        {
+            if (m_numRepeat > 1)
+            {
+                EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), m_numRepeat);
+            }
+        }
+
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        {
+            if (m_numRepeat > 1)
+            {
+            //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
+            Matrix<ElemType> sliceInputValue = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+
+            EvaluateThisNodeS(sliceOutputValue, sliceInputValue, m_numRepeat);
+        }
+        }
+
+        /*TODO: merge with call site*/void EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues, const size_t numRepeats)
+        {
+            functionValues.AssignRepeatOf(inputFunctionValues, numRepeats, 1);
+#if NANCHECK
+            functionValues.HasNan("RowRepeat");
+#endif
+        }
+
+        void ComputeInputPartialMap(const size_t inputIndex)
+        {
+            assert(inputIndex == 0); inputIndex;
+            ComputeInputPartialS(Inputs(0)->GradientValues(), GradientValues(), m_numRepeat);
+        }
+
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        {
+            if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
+            assert(inputIndex == 0); inputIndex;
+
+            Matrix<ElemType> sliceInputGrad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+            Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
+
+            ComputeInputPartialS(sliceInputGrad, sliceOutputGrad, m_numRepeat);
+        }
+
+        /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const size_t numRepeats)
+        {
+            inputGradientValues.AddToRowRepeatValuesOf(gradientValues, numRepeats);
+        }
+
+        virtual const Matrix<ElemType>& FunctionValues() const
+        {
+            if (m_numRepeat > 1)
+                return *m_functionValues;
+            else
+                return Inputs(0)->FunctionValues();
+        }
+
+        virtual Matrix<ElemType>& FunctionValues() 
+        {
+            if (m_numRepeat > 1)
+                return *m_functionValues;
+            else
+                return Inputs(0)->FunctionValues();
+        }
+
+    private:
+        size_t m_numRepeat;
+    };
+
+    template class RowRepeatNode<float>;
+    template class RowRepeatNode<double>;
+
 }}}
