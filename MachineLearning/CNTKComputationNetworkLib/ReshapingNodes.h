@@ -270,7 +270,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // create the derived layout
                 // BUGBUG: This assumes that the layout is complete at this point in time. RecurrentNodeBase makes the same assumption. Becomes invalid once we go sequence-to-sequence.
                 m_pMBLayout->Init(GetNumParallelSequences(), Inputs(0)->GetNumTimeSteps() * Inputs(0)->GetNumRows() / m_numRows);
-                LogicError("ReshapeNode::OnEvaluateBeginIteration() to be completed for MBLayout case.");
+                if (!m_pMBLayout->IsAllNone())
+                    LogicError("ReshapeNode::OnEvaluateBeginIteration() to be completed for MBLayout case.");
             }
         }
 
@@ -343,7 +344,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_numRows;
         bool weStack() const { return m_numRows > Inputs(0)->GetNumRows(); }        // do we stack (multiple frames into one)
         size_t factor() const { return m_numRows > Inputs(0)->GetNumRows() ? m_numRows / Inputs(0)->GetNumRows() : Inputs(0)->GetNumRows() / m_numRows; }   // factor by which we stack or unstack
-        bool isNoop() const { return m_numRows == Inputs(0)->GetNumRows(); }
+        bool isNoop() const { return m_numRows == Inputs(0)->GetNumRows(); }        // TODO: we also must test for changes in image layout
         ImageLayout m_imageLayout;
 
         void InferImageDimensions()
