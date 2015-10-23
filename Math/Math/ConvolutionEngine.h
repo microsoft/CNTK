@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t h() const { return m_h; }
         size_t c() const { return m_c; }
         size_t n() const { return m_n; }
-        void setN(size_t n) { m_n = n; }
+        virtual void setN(size_t n) { m_n = n; }
     public:
         ConvolutionTensor4D(size_t w = 1, size_t h = 1, size_t c = 1, size_t n = 1)
         {
@@ -41,10 +41,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         virtual ~ConvolutionTensor4D() = default;
         // Deleting copy ctor/assignment as derived objects may contain non-copyable state.
-        //ConvolutionTensor4D(const ConvolutionTensor4D&) = delete;
-        //ConvolutionTensor4D& operator=(const ConvolutionTensor4D&) = delete;
-        // Have to implement move ctor explicitly as VS2013 does not support default move ctors.
-        //ConvolutionTensor4D(const ConvolutionTensor4D&&);
+        ConvolutionTensor4D(const ConvolutionTensor4D&) = delete;
+        ConvolutionTensor4D& operator=(const ConvolutionTensor4D&) = delete;
+        // REVIEW alexeyk: Have to implement move ctor explicitly as VS2013 does not support default move ctors.
+        //ConvolutionTensor4D(ConvolutionTensor4D&&);
         //ConvolutionTensor4D& operator=(ConvolutionTensor4D&&);
 
     private:
@@ -72,6 +72,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         virtual ~ConvolutionFilter() = default;
 
+        // Deleting copy ctor/assignment as derived objects may contain non-copyable state.
+        ConvolutionFilter(const ConvolutionFilter&) = delete;
+        ConvolutionFilter& operator=(const ConvolutionFilter&) = delete;
     private:
         size_t m_w;
         size_t m_h;
@@ -102,8 +105,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         virtual ~ConvolutionDescriptor() = default;
         // Deleting copy ctor/assignment as derived objects may contain non-copyable state.
-        //ConvolutionDescriptor(const ConvolutionDescriptor&) = delete;
-        //ConvolutionDescriptor& operator=(const ConvolutionDescriptor&) = delete;
+        ConvolutionDescriptor(const ConvolutionDescriptor&) = delete;
+        ConvolutionDescriptor& operator=(const ConvolutionDescriptor&) = delete;
 
     private:
         size_t m_wStride;
@@ -123,7 +126,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using ConvDescPtr = std::unique_ptr<ConvolutionDescriptor>;
         using Mat = Matrix<ElemType>;
 
-        ConvolutionEngine() {}
+        ConvolutionEngine() = default;
         virtual ~ConvolutionEngine() = default;
 
         static std::unique_ptr<ConvolutionEngine<ElemType>> Create(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples);
@@ -131,7 +134,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         virtual void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
             const Tensor4D& outT, Mat& out) = 0;
-        //virtual void BackwardData() = 0;
+        virtual void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+            const Tensor4D& gradT, Mat& grad) = 0;
         //virtual void BackwardFilter() = 0;
 
         virtual Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) = 0;
