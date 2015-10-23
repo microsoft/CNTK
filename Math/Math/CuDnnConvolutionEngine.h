@@ -20,6 +20,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    template<class ElemType>
     class CuDnnConvolutionEngineImpl;
 
     template<class ElemType>
@@ -31,6 +32,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvolutionDescriptor& convDesc,
             const Tensor4D& outT, Mat& out) override;
+        void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+            const Tensor4D& gradT, Mat& grad) override;
 
         Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override;
         FilterPtr CreateFilter(size_t w, size_t h, size_t c, size_t k) override;
@@ -40,7 +43,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static bool IsSupported();
     private:
         // Using pimpl to hide cuDNN objects. CuDnnConvolutionEngine.h is included in other projects that are not aware of cuDNN.
-        std::unique_ptr<CuDnnConvolutionEngineImpl> m_impl;
+        std::unique_ptr<CuDnnConvolutionEngineImpl<ElemType>> m_impl;
     };
 
 }}}
