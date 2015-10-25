@@ -151,7 +151,7 @@ ifeq ("$(BUILDTYPE)","debug")
 
   CXXFLAGS += -g
   CPPFLAGS += -D_DEBUG
-  CUFLAGS += -O0 -G -lineinfo  $(GENCODE_FLAGS)
+  CUFLAGS += -O0 -use_fast_math -lineinfo  $(GENCODE_FLAGS)
 endif
 
 ifeq ("$(BUILDTYPE)","release")
@@ -163,6 +163,10 @@ ifeq ("$(BUILDTYPE)","release")
 
   CXXFLAGS += -O4
   CUFLAGS += -O3 -use_fast_math -lineinfo $(GENCODE_FLAGS)
+endif
+
+ifdef CNTK_CUDA_DEVICE_DEBUGINFO
+  CUFLAGS += -G
 endif
 
 #######
