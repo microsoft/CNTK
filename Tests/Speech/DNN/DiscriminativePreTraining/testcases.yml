@@ -3,11 +3,7 @@ tags:
      # running on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
      - bvt-s  (flavor=='debug') ^ (device=='cpu')
      # running unconditionally on every Nightly job in 'S' leg
-     # TODO: Temporary disabling Release-GPU because of a known bug causing large variance between
-     # Release and Debug configurations for GPU only for this (Speech/DNN/DiscriminativePreTraining) test. 
-     # This will be re-enabled after the bug has been addressed. 
-     # DO NOT COPY this disablement for other tests!!
-     - nightly-s  (flavor!='release') or (device!='gpu')
+     - nightly-s
 
 testCases:
   CNTK Run must be completed:
