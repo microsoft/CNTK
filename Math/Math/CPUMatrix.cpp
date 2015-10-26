@@ -740,6 +740,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void CPUMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val)
+    {
+        if (GetNumCols() != columnsMask.GetNumCols())
+            RuntimeError("Matrix and column mask must have equal number of columns");
+
+        auto& us = *this;
+        long n = (long)GetNumCols(), m = (long)GetNumRows();
+#pragma omp parallel for
+        for (long j = 0; j<n; j++)
+        {
+            if (columnsMask(0, j) == 1)
+                continue;
+
+            //four-way unrolling
+            for (size_t i = 0; i<(m & ~3); i += 4)
+            {
+                us(i, j) = val;
+                us(i + 1, j) = val;
+                us(i + 2, j) = val;
+                us(i + 3, j) = val;
+            }
+
+            //handle remaining
+            for (size_t i = m & ~3; i<m; i++)
+            {
+                us(i, j) = val;
+            }
+        }
+    }
+
+    template<class ElemType>
     void CPUMatrix<ElemType>::SetColumn(const ElemType* colPointer, size_t j)
     {
         if (IsEmpty())

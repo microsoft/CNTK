@@ -90,6 +90,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const ElemType v);
         void SetValue(const CPUMatrix<ElemType>& deepCopyFrom);
         void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, size_t matrixFlags=matrixFlagNormal);
+
+        void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
+
         void SetColumn(const ElemType* colPointer, size_t colInd);
         void SetColumn(const CPUMatrix<ElemType>& valMat, size_t colInd);
         void SetColumn(const ElemType val, size_t j);

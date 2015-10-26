@@ -4599,4 +4599,21 @@ __global__ void _assignNumOfDiffCol(const ElemType *a, const ElemType *b, ElemTy
         *c = res;
 }
 
+template<class ElemType>
+__global__ void _maskColumnsValue(ElemType *a, const char *columnsMask, CUDA_LONG numCols, CUDA_LONG numRows, ElemType val)
+{
+    CUDA_LONG colIdx = blockIdx.x;
+    if (colIdx > numCols)
+        return;
+
+    if (columnsMask[IDX2C(0, colIdx, 1)] == 1)
+        return;
+
+    CUDA_LONG rowIdx = threadIdx.x;
+    for (; rowIdx < numRows; rowIdx += blockDim.x)
+    {
+        a[IDX2C(rowIdx, colIdx, numRows)] = val;
+    }
+}
+
 #endif // !CPUONLY

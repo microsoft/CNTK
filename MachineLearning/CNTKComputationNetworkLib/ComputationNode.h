@@ -1048,28 +1048,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (matrixToBeMasked.GetNumCols() != nT * nS)
                     LogicError("MaskMissingColumnsToZero: pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
 
-                size_t startT = frameRange.IsAllFrames() ?  0 : frameRange.t();
-                size_t endT   = frameRange.IsAllFrames() ? nT : frameRange.t() + 1;
-
-                size_t startS = (frameRange.seqIndex == SIZE_MAX) ?  0 : frameRange.seqIndex;
-                size_t endS   = (frameRange.seqIndex == SIZE_MAX) ? nS : frameRange.seqIndex + 1;
-
-                for (size_t t = startT; t < endT; t++)
+                shared_ptr<Matrix<char>> columnsValidityMask = pMBLayout->GetColumnsValidityMask(frameRange, matrixToBeMasked.GetDeviceId());
+                if (columnsValidityMask != nullptr)
                 {
-                    FrameRange frameRange(t);
-                    if (pMBLayout->Is(t, MinibatchPackingFlags::NoInput))
-                    {
-                        // TODO: to support sparse inputs, if we set to NaN, we should only set one value per column for those. Should be encapsulated in class Matrix.
-                        for (size_t s = startS; s < endS; s++)
-                            if (pMBLayout->Is(s, t, MinibatchPackingFlags::NoInput))
-                                DataSlice(matrixToBeMasked, frameRange.Sequence(s), pMBLayout).SetValue(val);
-                        foundLabelOrFeatureMissing = true;
-                    }
+                    auto matrixSliceToMask = DataSlice(matrixToBeMasked, frameRange, pMBLayout);
+                    foundLabelOrFeatureMissing = true;
+                    matrixSliceToMask.MaskColumnsValue(*columnsValidityMask, val);
                 }
             }
 
             return foundLabelOrFeatureMissing;
         }
+
     public:
         static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & frameRange)
         {
