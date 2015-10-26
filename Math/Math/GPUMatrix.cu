@@ -1028,6 +1028,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    void GPUMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val)
+    {
+        if (GetNumCols() != columnsMask.GetNumCols())
+            RuntimeError("Matrix and column mask must have equal number of columns");
+
+        if (GetComputeDeviceId() != columnsMask.GetComputeDeviceId())
+            RuntimeError("Matrix and column mask must be on the same device");
+
+        int blocksPerGrid = (int)GetNumCols();
+        PrepareDevice();
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _maskColumnsValue<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(m_pArray, columnsMask.m_pArray, (CUDA_LONG)GetNumCols(), (CUDA_LONG)GetNumRows(), val);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
+    }
+
+    template<class ElemType>
     void GPUMatrix<ElemType>::SetColumn(const ElemType* colPointer, size_t colInd)
     {
         if (IsEmpty())

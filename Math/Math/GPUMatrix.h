@@ -69,6 +69,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class MATH_API GPUMatrix : public BaseMatrix<ElemType>
     {
         typedef BaseMatrix<ElemType> B; using B::m_numRows; using B::m_numCols; using B::m_pArray;   // without this, base members would require to use thi-> in GCC
+
+        template<typename T>
+        friend class GPUMatrix;
+
     public:
         static const int MaxGpus = 8;  // support up to 8 GPUs
         using BaseMatrix<ElemType>::m_computeDevice;
@@ -149,6 +153,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const ElemType* d_v); //d_v is pointer to the the value in GPU memory
         void SetColumn(const ElemType* colPointer, size_t colInd);
         void SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd);
+
+        void MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val);
+
         void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
         void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, size_t matrixFlags = matrixFlagNormal);
 

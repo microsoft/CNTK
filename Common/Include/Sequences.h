@@ -14,6 +14,9 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // Forward declarations
+    struct FrameRange;
+
     // -----------------------------------------------------------------------
     // MBLayout -- layout information of minibatch
     //
@@ -53,8 +56,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef std::shared_ptr<MBLayout> MBLayoutPtr;
 
-        MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { Init(1, 0, false); }
-        MBLayout(size_t numParallelSequences, size_t numTimeSteps, bool dataIsSequential) : m_sentenceBoundaryFlags(CPUDEVICE) { Init(numParallelSequences, numTimeSteps, dataIsSequential); }
+        MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE), m_writable(true) { Init(1, 0, false); }
+        MBLayout(size_t numParallelSequences, size_t numTimeSteps, bool dataIsSequential) : m_sentenceBoundaryFlags(CPUDEVICE), m_writable(true) { Init(numParallelSequences, numTimeSteps, dataIsSequential); }
 
         // copy the content of another MBLayoutPtr over
         // Use this instead of actual assignment to make it super-obvious that this is not copying the pointer but actual content. The pointer is kept fixed.
@@ -124,6 +127,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // set a boundary flag (OR it on top of the existing layout)
         void Set(size_t s, size_t t, MinibatchPackingFlags f)
         {
+            CheckWritable();
+
             if (f == MinibatchPackingFlags::None)   // actually not setting anything: skip allocation
                 return;
             //if ((f & (MinibatchPackingFlags::SequenceStart | MinibatchPackingFlags::SequenceEnd)) && !m_dataIsSequential)
@@ -221,6 +226,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// == 0 denotes such case is not in this frame
         mutable vector<MinibatchPackingFlags> m_minibatchPackingFlags;  // column-wise OR over m_sentenceBoundaryFlags for fast testing
 
+        // A boolean flag indicating whether the MBLayout can be further modified
+        // When it's value is false, no set operations are allowed on the MBLayout
+        mutable bool m_writable;
+
+        // Cached mask indicating the validity of each column in the MBLayout
+        // TODO: We actually just need a boolean matrix for this.
+        // A value of 1 indicates that the column has valid content 
+        // and 0 indicates invalid (aka MinibatchPackingFlags::NoInput)
+        // If the matrix is empty it means all columns are valid
+        mutable std::shared_ptr<Matrix<char>> m_columnsValidityMask;
+
+        // Ensure that the MBLayout allows writes
+        void CheckWritable() const
+        {
+            if (!m_writable)
+                LogicError("Modification attempted on a MBLayout that is no longer writable.");
+        }
+
+        // Freeze the MBLayout disallowing further modifications through set operations
+        void Lock() const
+        {
+            m_writable = false;
+        }
+
         // explicit list of sequences
         // Currently this is for diagnostics only, but in the future this will include utterance ids etc, meant for lining up inconsistent MB layouts.
         struct SequenceDesc
@@ -282,6 +311,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 other->m_minibatchPackingFlags.begin() + startTimeStep,
                 other->m_minibatchPackingFlags.begin() + startTimeStep + numTimeSteps);
         }
+
+        shared_ptr<Matrix<char>> GetColumnsValidityMask(const FrameRange& frameRange, DEVICEID_TYPE deviceId) const;
     };
     typedef MBLayout::MBLayoutPtr MBLayoutPtr;
 
@@ -379,6 +410,66 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("FrameRange::t() called when frame range refers to whole minibatch");
         }
     };
+
+    inline shared_ptr<Matrix<char>> MBLayout::GetColumnsValidityMask(const FrameRange& frameRange, DEVICEID_TYPE deviceId) const
+    {
+        if (m_columnsValidityMask == nullptr)
+        {
+            Lock();
+            m_columnsValidityMask.reset(new Matrix<char>(deviceId));
+
+            // Determine indices of all invalid columns in the specified frameRange
+            if (!IsAllNone())
+            {
+                size_t nT = GetNumTimeSteps();
+                size_t nS = GetNumParallelSequences();
+
+                std::vector<char> columnsValidityMask(nT * nS, 1);
+                bool foundInvalidColumn = false;
+                for (size_t t = 0; t < nT; t++)
+                {
+                    if (Is(t, MinibatchPackingFlags::NoInput))
+                    {
+                        for (size_t s = 0; s < nS; s++)
+                        {
+                            if (Is(s, t, MinibatchPackingFlags::NoInput))
+                                columnsValidityMask[(t * nS) + s] = 0;
+                        }
+
+                        foundInvalidColumn = true;
+                    }
+                }
+
+                if (foundInvalidColumn)
+                    m_columnsValidityMask->SetValue(1, columnsValidityMask.size(), deviceId, &(columnsValidityMask[0]));
+            }
+        }
+
+        if (m_columnsValidityMask->IsEmpty())
+            return nullptr;
+
+        if (frameRange.IsAllFrames())
+            return m_columnsValidityMask;
+
+        // Check if there are any invalid frames in the specified frameRange
+        bool foundInvalidColumnsInRange = false;
+        if (frameRange.seqIndex == SIZE_MAX)
+        {
+            foundInvalidColumnsInRange = Is(frameRange.t(), MinibatchPackingFlags::NoInput);
+        }
+        else
+        {
+            foundInvalidColumnsInRange = Is(frameRange.seqIndex, frameRange.t(), MinibatchPackingFlags::NoInput);
+        }
+
+        if (!foundInvalidColumnsInRange)
+            return nullptr;
+
+        size_t startColumn = (frameRange.t() * GetNumParallelSequences()) + ((frameRange.seqIndex == SIZE_MAX) ? 0 : frameRange.seqIndex);
+        size_t numColumns = (frameRange.seqIndex == SIZE_MAX) ? GetNumParallelSequences() : 1;
+
+        return make_shared<Matrix<char>>(m_columnsValidityMask->ColumnSlice(startColumn, numColumns));
+    }
 
     // class for defining an iteration over a sequence
     // Currently supports time sequences, forward and backward.

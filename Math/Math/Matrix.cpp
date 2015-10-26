@@ -1123,6 +1123,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<> /*static*/ char   Matrix<char>::MakeNan(size_t)               { return 0; }   // (needed for completeness)
 
     template<class ElemType>
+    void Matrix<ElemType>::MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val)
+    {
+        if (GetNumCols() != columnsMask.GetNumCols())
+            RuntimeError("Matrix and column mask must have equal number of columns");
+
+        if (GetDeviceId() != columnsMask.GetDeviceId())
+            RuntimeError("Matrix and column mask must be on the same device");
+
+        DISPATCH_MATRIX_ON_FLAG(this,
+            this,
+            this->m_CPUMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val),
+            this->m_GPUMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
+    }
+
+    template<class ElemType>
     void Matrix<ElemType>::SetColumn(const ElemType* colPointer, size_t colInd)
     {
         if (colPointer == nullptr)
@@ -5062,4 +5080,5 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template size_t Matrix<char>::GetNumRows() const;
     template size_t Matrix<char>::GetNumCols() const;
     template void Matrix<char>::SetValue(const char);
+    template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char *pArray, size_t matrixFlags);
 }}}

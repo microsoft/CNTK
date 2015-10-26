@@ -215,6 +215,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
             const size_t nz, const size_t numRows, const size_t numCols);
 
+        void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val);
+
         void SetColumn(const ElemType* colPointer, size_t colInd);
         void SetColumn(const ElemType val, size_t colInd);
         void SetColumn(const Matrix<ElemType>& valMat, size_t colInd);
@@ -490,6 +492,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         template<typename T>
         friend class QuantizedMatrix;
+
+        template<typename T>
+        friend class Matrix;
     };
 
     // overload I/O operators
