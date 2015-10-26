@@ -5069,6 +5069,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // We use Matrix<char> as the backing store for QuantizedMatrix
     // Let's explicitly instantiate the methods we need for that purpose
+    template Matrix<char>::Matrix(DEVICEID_TYPE);
+    template Matrix<char>::Matrix(Matrix<char>&&);
     template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat);
     template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char *pArray, const size_t matrixFlags, DEVICEID_TYPE deviceId, const size_t nnz);
     template Matrix<char>::~Matrix();
