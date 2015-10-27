@@ -265,6 +265,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: there seems to be semantic overlap between OnEvaluateBeginIteration() and UpdateFunctionMBSize()
         virtual void /*IComputationNode::*/OnEvaluateBeginIteration() override
         {
+            Base::OnEvaluateBeginIteration();
             if (m_pMBLayout)
             {
                 // create the derived layout
@@ -294,7 +295,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // (We still need to copy the values since there is currently no way to point to an input function value while reshaping at the same time.)
             if (!m_pMBLayout)
             {
-                FunctionValues().Reshaped(newCols * m_numRows, 1) = Inputs(0)->FunctionValues().Reshaped(cols * rows, 1);   // copy the values as one long vector
+                FunctionValues().Reshaped(newCols * m_numRows, 1).SetValue(Inputs(0)->FunctionValues().Reshaped(cols * rows, 1));   // copy the values as one long vector
             }
             // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
             else
