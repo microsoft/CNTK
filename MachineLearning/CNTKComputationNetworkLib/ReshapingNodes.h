@@ -283,8 +283,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - frameRange refers to *functionValues*, not the inputs
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (isNoop())       // no change in dimension: FunctionValues() will return our input directly
-                return;
+            //if (isNoop())       // no change in dimension: FunctionValues() will return our input directly
+            //    return;
 
             size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
             size_t newCols = cols * rows / m_numRows;
@@ -317,7 +317,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t newCols = cols * rows / m_numRows;
 
             // no layout case: this is indeed just a reshape
-            if (!m_pMBLayout || isNoop())
+            if (!m_pMBLayout/* || isNoop()*/)
             {
                 Inputs(0)->GradientValues().Reshaped(cols * rows, 1) += GradientValues().Reshaped(newCols * m_numRows, 1);   // treat the values as one long vector
             }
@@ -332,13 +332,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // BUGBUG: there is a const and a non-const version of this function
-        virtual const Matrix<ElemType>& FunctionValues() const
-        {
-            if (!isNoop())
-                return *m_functionValues;
-            else
-                return Inputs(0)->FunctionValues();
-        }
+        //virtual const Matrix<ElemType>& FunctionValues() const
+        //{
+        //    if (!isNoop())
+        //        return *m_functionValues;
+        //    else
+        //        return Inputs(0)->FunctionValues();
+        //}
 
     private:
         size_t m_numRows;
@@ -403,7 +403,70 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class ReshapeNode<float>;
     template class ReshapeNode<double>;
+#if 0
+    // -----------------------------------------------------------------------
+    // ReconcileMBLayout (dataInput, layoutInput)
+    // This node copies data from 'dataInput' while propagates the minibatch-layout information from 'layoutInpt'
+    // it has to be continuous segments of rows since each column is treated as one sample
+    // -----------------------------------------------------------------------
 
+    template<class ElemType>
+    class ReconcileMBLayout : public ComputationNode<ElemType>, public NumInputs<2>
+    {
+        typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"RowSlice"; }
+    public:
+        ReconcileMBLayout(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name),
+        { }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        {
+            Base::CopyTo(nodeP, newName, flags);
+            auto node = dynamic_pointer_cast<RowSliceNode<ElemType>>(nodeP);
+
+            node->m_startIndex = m_startIndex;
+            node->m_numRows = m_numRows;
+        }
+
+        virtual void SaveToFile(File& fstream) const override
+        {
+            Base::SaveToFile(fstream);
+            fstream << m_startIndex << m_numRows;
+        }
+        
+        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
+        {
+            Base::LoadFromFile(fstream, modelVersion);
+            fstream >> m_startIndex >> m_numRows;
+        }
+
+        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        {
+            Inputs(0)->GradientSlice(frameRange).AddToRowSliceValuesOf(GradientSlice(frameRange), m_startIndex, m_numRows);
+        }
+
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        {
+            ValueSlice(frameRange).AssignRowSliceValuesOf(Inputs(0)->ValueSlice(frameRange), m_startIndex, m_numRows);
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+            Base::Validate(isFinalValidationPass);
+
+            if (isFinalValidationPass && Inputs(0)->GetNumRows() < m_startIndex + m_numRows)
+                RuntimeError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
+
+            Resize(m_numRows, Inputs(0)->GetNumCols());
+            InferMBLayoutFromInputsForStandardCase();
+            InferImageDimsFromInputs(); 
+        }
+    };
+
+    template class ReconcileMBLayout<float>; 
+    template class ReconcileMBLayout<double>;
+#endif
     // -----------------------------------------------------------------------
     // RowSliceNode (input)
     // this node extracts part of the input by rows as the output
