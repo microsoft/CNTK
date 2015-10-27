@@ -853,6 +853,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // This constructor does not call MoveMatricesToDevice(), but that is needed for full initialization.
             // Only call this constructor through the New() factory below, which will ensure this.
         }
+		ComputationNode(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) : ComputationNodeBase(deviceId, name)
+		{
+			CreateMatrixIfNull(m_functionValues); 
+			Resize(rows, cols);
+			FunctionValues().SetValue(0);
+		}
     public:
         // public constructor
         // You must construct ComputationNode derivates with this function. The real C++ constructor itself is hidden,
