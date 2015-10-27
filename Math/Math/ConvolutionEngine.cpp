@@ -153,6 +153,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
 
             if (numSubBatches == 1 && allowReuse)  //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps.
+                // REVIEW alexeyk: the following makes an assumption that data in m_tempMatrix was filled by Forward call and remained unchanged. Find way to enforce/verify that.
                 Matrix<ElemType>::MultiplyAndAdd(srcGradTmp, false, m_tempMatrix, true, filter);
             else
             {

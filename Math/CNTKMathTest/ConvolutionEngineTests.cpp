@@ -97,7 +97,7 @@ namespace CNTKMathTest
             int kH = 3;
             int sW = 2;
             int sH = 2;
-            int cmapOut = 1;
+            int cmapOut = 2;
             int outW = GetNumOut(inW, kW, sW, false);
             int outH = GetNumOut(inH, kH, sH, false);
 
@@ -111,6 +111,7 @@ namespace CNTKMathTest
 
                 // Source grads is in NHWC format.
                 float srcGradBuf[] = {
+                    1.0f, 1.0f,
                     1.0f, 1.0f
                 };
                 SingleMatrix srcGrad(outW * outH * cmapOut, n, srcGradBuf, matrixFlagNormal, deviceId);
@@ -130,7 +131,7 @@ namespace CNTKMathTest
                 {
                     for (int icur = 0; icur < inW * inH * cmapIn; icur++)
                     {
-                        gradB[i * inW * inH * cmapIn + icur] = (float)(icur / cmapIn + (icur % cmapIn) * kW * kH);
+                        gradB[i * inW * inH * cmapIn + icur] = (float)(icur / cmapIn + (icur % cmapIn) * kW * kH) * cmapOut;
                     }
                 }
                 SingleMatrix exp(inW * inH * cmapIn, n, gradB.data(), matrixFlagNormal, deviceId);
@@ -152,7 +153,7 @@ namespace CNTKMathTest
             int kH = 3;
             int sW = 2;
             int sH = 2;
-            int cmapOut = 1;
+            int cmapOut = 2;
             int outW = GetNumOut(inW, kW, sW, false);
             int outH = GetNumOut(inH, kH, sH, false);
 
@@ -166,7 +167,8 @@ namespace CNTKMathTest
 
                 // Source grads is in NHWC format.
                 float srcGradBuf[] = {
-                    1.0f, 1.0f
+                    1.0f, 1.0f,
+                    1.0f, 1.0f,
                 };
                 SingleMatrix srcGrad(outW * outH * cmapOut, n, srcGradBuf, matrixFlagNormal, deviceId);
 
@@ -182,13 +184,15 @@ namespace CNTKMathTest
 
                 SingleMatrix filt(cmapOut, kW * kH * cmapIn, deviceId);
                 filt.SetValue(0);
-
+                
                 eng->BackwardFilter(*srcGradT, srcGrad, *inT, in, *convT, *filtT, filt, false);
 
                 std::vector<float> expFiltB(cmapOut * kW * kH * cmapIn);
                 for (int icur = 0; icur < inW * inH * cmapIn; icur++)
                 {
-                    expFiltB[icur] = (float)(n * ((icur % (kW * kH)) * cmapIn + icur / (kW * kH)));
+                    float val = (float)(n * ((icur % (kW * kH)) * cmapIn + icur / (kW * kH)));
+                    for (int i = icur * cmapOut; i < (icur + 1) * cmapOut; i++)
+                        expFiltB[i] = val;
                 }
                 SingleMatrix exp(cmapOut, kW * kH * cmapIn, expFiltB.data(), matrixFlagNormal, deviceId);
                 Assert::IsTrue(filt.IsEqualTo(exp));
