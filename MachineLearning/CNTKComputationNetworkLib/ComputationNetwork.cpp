@@ -1537,7 +1537,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     // This function performs SVD decomposition for different groups of learnable  parameters
-    template<class ElemType> void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDConfig)
+    template<class ElemType> void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDConfig, size_t AlignedSize)
     {
         vector<pair<vector<wstring>, float>> nodeGroups;
         wregex NameFilter;
@@ -1633,7 +1633,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                r = (r + 7) & (~7); //  to keep the number of rows/cols of resultant matrix a multipier of 8
+				r = r > S.GetNumRows() ? S.GetNumRows() : r; 
+
+				if (r%AlignedSize != 0)
+				{
+					r -= r%AlignedSize; 
+					r = r + AlignedSize > S.GetNumRows() ? S.GetNumRows() : r + AlignedSize; 
+				}
+                // r = (r + 7) & (~7); //  to keep the number of rows/cols of resultant matrix a multipier of 8
                 //  which can be helpful at runtime
 
                 std::chrono::duration<double> elapsedtime = enTime - stTime;
@@ -1685,13 +1692,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template void ComputationNetwork::InitLearnableParameters<float>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const float initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<float>(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
-    template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig);
+    template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<float>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<float>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
 
     template void ComputationNetwork::InitLearnableParameters<double>(const ComputationNodeBasePtr& node, const bool uniformInit, const unsigned long randomSeed, const double initValueScale, bool initOnCPUOnly);
     template void ComputationNetwork::LoadFromFile<double>(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork);
-    template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig);
+    template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
     template /*static*/void ComputationNetwork::SetDropoutRate<double>(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template void ComputationNetwork::SetSeqParam<double>(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
 }}}
