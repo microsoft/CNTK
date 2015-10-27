@@ -427,6 +427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         for (auto & node : nodes)
         {
+#if 1       // not possible once we have inconsistent layouts
             // verify that the contract with MB layout was obeyed by Validate()
             if (node->GetMBLayout() && node->GetMBLayout()->GetNumCols() != node->GetNumCols())
             {
@@ -435,6 +436,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("%ls %ls operation's Validate() function set function values width (%d) inconsistent with MB layout width (T=%d x S=%d)",
                            node->NodeName().c_str(), node->OperationName().c_str(), (int)node->GetNumCols(), (int)node->GetNumTimeSteps(), (int)node->GetNumParallelSequences());
             }
+#endif
             // nodes must output non-zero dimensional data, otherwise assume user error
             if (node->GetNumRows() == 0 && (node->GetMBLayout() || node->GetNumCols() == 0))
                 RuntimeError("%ls operation has 0 elements", node->NodeName().c_str());

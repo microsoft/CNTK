@@ -235,7 +235,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if ((m_numRows > rows && m_numRows % rows != 0) ||  // grouping columns
                     (m_numRows < rows && rows % m_numRows != 0))    // splitting columns
                     InvalidArgument("%ls %ls operation: output row dimension %d is not an integer multiple or divisor of input dimension %d", (int)m_numRows, (int)rows);
-                if (!m_pMBLayout && rows * cols != m_numRows != newCols)    // sadly, cannot verify here if we have a layout, since current #cols may be bogus
+                if (!m_pMBLayout && rows * cols != m_numRows * newCols)    // sadly, cannot verify here if we have a layout, since current #cols may be bogus
                     LogicError("%ls %ls operation: unexpected dimension mismatch");
             }
 
@@ -268,10 +268,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_pMBLayout)
             {
                 // create the derived layout
-                // BUGBUG: This assumes that the layout is complete at this point in time. RecurrentNodeBase makes the same assumption. Becomes invalid once we go sequence-to-sequence.
-                m_pMBLayout->Init(GetNumParallelSequences(), Inputs(0)->GetNumTimeSteps() * Inputs(0)->GetNumRows() / m_numRows);
+                // BUGBUG: This assumes that the layout is complete at this point in time. RecurrentNodeBase makes the same assumption.
+                //         This assumption is correct at present, but will becomes invalid once we go sequence-to-sequence.
+                m_pMBLayout->Init(Inputs(0)->GetNumParallelSequences(), Inputs(0)->GetNumTimeSteps() * Inputs(0)->GetNumRows() / m_numRows);
                 if (!m_pMBLayout->IsAllNone())
                     LogicError("ReshapeNode::OnEvaluateBeginIteration() to be completed for MBLayout case.");
+                // TODO: ^^ MBLayout update
             }
         }
 
@@ -297,9 +299,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // layout case: reshape semantics happens across parallel seqeunces, i.e. requiring data shuffling
             else
             {
-                bool untested = true;
-                if (untested)
-                    LogicError("%ls %ls operation not tested for layout case. Remove this error once you test it, or contact fseide@microsoft.com, I will help.", NodeName().c_str(), OperationName().c_str());
                 // TODO: It does not make sense to run ReshapeNode frame-by-frame inside a loop, because it changes the time base.
                 //       However, in the future, we should be able to run inside an outer loop.
                 if (!frameRange.IsAllFrames())

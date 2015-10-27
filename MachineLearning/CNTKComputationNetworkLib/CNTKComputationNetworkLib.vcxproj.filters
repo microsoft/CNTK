@@ -111,6 +111,9 @@
     <ClInclude Include="ReshapingNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\Sequences.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

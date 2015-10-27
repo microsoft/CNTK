@@ -4323,7 +4323,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // sanity checks for current use cases--these are not strictly necessary and can be deleted
         if (a.GetNumRows() % D != 0 || b.GetNumRows() % D != 0 || c.GetNumRows() % D != 0)
             InvalidArgument("TensorShuffleScaleAndAdd: a, b, and c are meant to have a row dimension that is a multiple of D.");
-        if (a.GetNumCols() % D != 0 || b.GetNumCols() % D != 0 || c.GetNumCols() % D != 0)
+        if (a.GetNumCols() % T != 0 || b.GetNumCols() % T != 0 || c.GetNumCols() % T != 0)
             InvalidArgument("TensorShuffleScaleAndAdd: a, b, and c are meant to have a column dimension that is a multiple of T.");
 
         DecideAndMoveToRightDevice(a, b, c);

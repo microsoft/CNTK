@@ -159,6 +159,9 @@
     <ClInclude Include="MultiNetworksEvaluator.h">
       <Filter>MultiNetworks</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Common\Include\Sequences.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

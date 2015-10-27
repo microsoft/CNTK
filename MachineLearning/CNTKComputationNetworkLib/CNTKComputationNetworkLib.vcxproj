@@ -160,6 +160,7 @@
     <ClInclude Include="..\..\Common\Include\nvml.h" />
     <ClInclude Include="..\..\Common\Include\Platform.h" />
     <ClInclude Include="..\..\Common\Include\ScriptableObjects.h" />
+    <ClInclude Include="..\..\Common\Include\Sequences.h" />
     <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
     <ClInclude Include="..\..\Math\Math\Matrix.h" />
     <ClInclude Include="CompositeComputationNodes.h" />

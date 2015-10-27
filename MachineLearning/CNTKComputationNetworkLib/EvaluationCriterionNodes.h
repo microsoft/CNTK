@@ -53,9 +53,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
+#if 1
+            ValidateBinaryReduce(isFinalValidationPass);
+#else
             Base::Validate(isFinalValidationPass);
 
             ValidateInferBinaryChildrenDims();
+
+            if (isFinalValidationPass)
+            {
+                if (!(
+                      Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match size
+                      (Inputs(0)->HasMBLayout() || Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols())
+                     ))
+                {
+                    LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
+                }
+            }
+            Resize(1,1);
+            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
+            InferImageDimsFromInputs(); 
+#endif
 
             m_topK = 1;
             // TODO: Make topK a constructor parameter
@@ -65,25 +83,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     throw std::logic_error("TopK in ErrorPredictionNode must be a scalar value.");
                 m_topK = static_cast<int>(Inputs(2)->Get00Element());
             }
-            //if (Inputs(0)->GetNumRows() == 0 || Inputs(1)->GetNumRows() == 0)
-            //    LogicError("ErrorPrediction operation: one of the operands has 0 elements.");
-
-            if (isFinalValidationPass)
-            {
-                if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
-                {
-                    LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
-                }       
-
-                if (((!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&  //match size
-                        Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))))
-                {
-                    LogicError("The Matrix dimension in the ErrorPrediction operation does not match.");
-                }
-            }
-            Resize(1,1);
-            m_pMBLayout = nullptr;    // this node does not hold mini-batch data
-            InferImageDimsFromInputs(); 
 
             // resize the temporaries to their proper size
             size_t cols = Inputs(0)->GetNumCols();

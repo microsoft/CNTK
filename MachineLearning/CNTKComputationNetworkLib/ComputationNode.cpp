@@ -39,7 +39,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (!pMBLayout)                // first non-NULL layout: just copy it
                 pMBLayout = child->m_pMBLayout;
             else if (!(*pMBLayout == *child->m_pMBLayout)) // got a layout--compare whether it is the same
+#if 0
+                fprintf(stderr, "InferMBLayoutFromInputsForStandardCase: found inconsistent layout in node '%ls', mismatch detected for child '%ls'", NodeName().c_str(), child->NodeName().c_str());
+#else
                 RuntimeError("InferMBLayoutFromInputsForStandardCase: found inconsistent layout in node '%ls', mismatch detected for child '%ls'", NodeName().c_str(), child->NodeName().c_str());
+#endif
         }
         //fprintf(stderr, "  --> (%s)\n", pMBLayout ? "." : "NULL");
         // all are consistent: install it
@@ -98,7 +102,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodeBase::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;              // this node does not hold mini-batch data
         ValidateInferBinaryChildrenDims();
-        if (isFinalValidationPass && !(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
+        if (isFinalValidationPass &&
+            !(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
+              (Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))))
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         Resize(1, 1);
         InferImageDimsFromInputs();
