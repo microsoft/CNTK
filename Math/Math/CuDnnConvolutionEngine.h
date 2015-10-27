@@ -34,6 +34,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Tensor4D& outT, Mat& out) override;
         void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
             const Tensor4D& gradT, Mat& grad) override;
+        void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
+            const Filter& filterT, Mat& filter, bool allowReuse) override;
 
         Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override;
         FilterPtr CreateFilter(size_t w, size_t h, size_t c, size_t k) override;
