@@ -194,7 +194,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     public:
-        void Forward(const Tensor4D& inT, ElemType alpha, const ElemType* in, const Filter& filterT, const ElemType* filter, const ConvDesc& convDesc,
+        void Forward(ElemType alpha, const Tensor4D& inT, const ElemType* in, const Filter& filterT, const ElemType* filter, const ConvDesc& convDesc,
             ElemType beta, const Tensor4D& outT, ElemType* out)
         {
             auto& filtT = As<const CuDnnFilter>(filterT);
@@ -206,19 +206,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 nullptr, 0, &beta, t(outT), out));
         }
 
-        void BackwardData(const Tensor4D& srcGradT, ElemType alpha, const ElemType* srcGrad, const Filter& filterT, const ElemType* filter, const ConvDesc& convDesc,
+        void BackwardData(ElemType alpha, const Tensor4D& srcGradT, const ElemType* srcGrad, const Filter& filterT, const ElemType* filter, const ConvDesc& convDesc,
             ElemType beta, const Tensor4D& gradT, ElemType* grad)
         {
-            UNUSED(srcGradT);
-            UNUSED(alpha);
-            UNUSED(srcGrad);
-            UNUSED(filterT);
-            UNUSED(filter);
-            UNUSED(convDesc);
-            UNUSED(beta);
-            UNUSED(gradT);
-            UNUSED(grad);
-            RuntimeError("Not implemented");
+            auto& filtT = As<const CuDnnFilter>(filterT);
+            // Convert filter to NCWH format.
+            m_temp.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w(), 1);
+            CUDNN_CALL(cudnnTransformTensor(m_cudnn, &One, filtT.InTensor(), filter, &Zero, filtT.OutTensor(), m_temp.BufferPointer()));
+            // Compute gradients with respect to the output tensor (data).
+            CUDNN_CALL(cudnnConvolutionBackwardData(m_cudnn, &alpha, filtT, m_temp.BufferPointer(), t(srcGradT), srcGrad, cd(convDesc), CUDNN_CONVOLUTION_BWD_DATA_ALGO_0,
+                nullptr, 0, &beta, t(gradT), grad));
+        }
+
+        void BackwardFilter(ElemType alpha, const Tensor4D& srcGradT, const ElemType* srcGrad, const Tensor4D& inT, const ElemType* in, const ConvDesc& convDesc,
+            ElemType beta, const Filter& filterT, ElemType* filter)
+        {
+            auto& filtT = As<const CuDnnFilter>(filterT);
+            // Convert filter to NCWH format.
+            m_temp.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w() + srcGradT.n() * srcGradT.c() * srcGradT.h() * srcGradT.w(), 1);
+            CUDNN_CALL(cudnnTransformTensor(m_cudnn, &One, filtT.InTensor(), filter, &Zero, filtT.OutTensor(), m_temp.BufferPointer()));
+            // Compute gradients with respect to the output tensor (data).
+            CUDNN_CALL(cudnnConvolutionBackwardFilter(m_cudnn, &alpha, t(inT), in, t(srcGradT), srcGrad, cd(convDesc), CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0,
+                nullptr, 0, &beta, filtT, m_temp.BufferPointer()));
+            // Convert filter back to CWHN format.
+            CUDNN_CALL(cudnnTransformTensor(m_cudnn, &One, filtT.OutTensor(), m_temp.BufferPointer(), &Zero, filtT.InTensor(), filter));
         }
 
         template <typename ElemType>
@@ -309,8 +320,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CuDnnConvolutionEngineImpl(DEVICEID_TYPE, size_t) { }
 
     public:
-        void Forward(const Tensor4D&, ElemType, const ElemType*, const Filter&, const ElemType*, const ConvDesc&,
+        void Forward(ElemType, const Tensor4D&, const ElemType*, const Filter&, const ElemType*, const ConvDesc&,
             ElemType, const Tensor4D&, ElemType*)
+        {
+            RuntimeError("The code is compiled without USE_CUDNN macro.");
+        }
+
+        void BackwardData(ElemType, const Tensor4D&, const ElemType*, const Filter&, const ElemType*, const ConvDesc&,
+            ElemType, const Tensor4D&, ElemType*)
+        {
+            RuntimeError("The code is compiled without USE_CUDNN macro.");
+        }
+
+        void BackwardFilter(ElemType, const Tensor4D&, const ElemType*, const Tensor4D&, const ElemType*, const ConvDesc&,
+            ElemType, const Filter&, ElemType*)
         {
             RuntimeError("The code is compiled without USE_CUDNN macro.");
         }
@@ -345,14 +368,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void CuDnnConvolutionEngine<ElemType>::Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
         const Tensor4D& outT, Mat& out)
     {
-        m_impl->Forward(inT, 1, in.BufferPointer(), filterT, filter.BufferPointer(), convDesc, 0, outT, out.BufferPointer());
+        m_impl->Forward(1, inT, in.BufferPointer(), filterT, filter.BufferPointer(), convDesc, 0, outT, out.BufferPointer());
     }
 
     template<class ElemType>
     void CuDnnConvolutionEngine<ElemType>::BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
         const Tensor4D& gradT, Mat& grad)
     {
-        m_impl->BackwardData(srcGradT, 1, srcGrad.BufferPointer(), filterT, filter.BufferPointer(), convDesc, 0, gradT, grad.BufferPointer());
+        m_impl->BackwardData(1, srcGradT, srcGrad.BufferPointer(), filterT, filter.BufferPointer(), convDesc, 0, gradT, grad.BufferPointer());
+    }
+
+    template<class ElemType>
+    void CuDnnConvolutionEngine<ElemType>::BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in,
+        const ConvDesc& convDesc, const Filter& filterT, Mat& filter, bool allowReuse)
+    {
+        // REVIEW alexeyk: currently unused.
+        UNUSED(allowReuse);
+        m_impl->BackwardFilter(1, srcGradT, srcGrad.BufferPointer(), inT, in.BufferPointer(), convDesc, 0, filterT, filter.BufferPointer());
     }
 
     template<class ElemType>
