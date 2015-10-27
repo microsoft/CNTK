@@ -128,50 +128,59 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void BackpropToOverWeight(Matrix<ElemType> &gradientValues,
             Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix, const bool inLoop)
         {
-            size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputSampleLayout.GetNumChannels();
-            size_t packedInputColsPerSample = m_sampleLayout.GetWidth() * m_sampleLayout.GetHeight();
-            size_t outputSizePerChannel = packedInputColsPerSample;
-            //size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
-            //size_t inputDim = m_inputSampleLayout.GetWidth() * m_inputSampleLayout.GetHeight() * m_inputSampleLayout.GetNumChannels();  //size of each input sample
+            UNUSED(inLoop);
+            UNUSED(tempMatrix);
+            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            m_inT->setN(batchSize);
+            m_outT->setN(batchSize);
+            assert(m_convEng != nullptr);
+            m_convEng->BackwardFilter(*m_outT, gradientValues, *m_inT, input1, *m_convDesc, *m_filterT, inputGradientValues, !inLoop);
 
-            size_t batchSize = input1.GetNumCols(); //right child is the input sample
+            //size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputImageLayout.channels;
+            //size_t packedInputColsPerSample = m_outputImageLayout.width * m_outputImageLayout.height;
+            //size_t outputSizePerChannel = packedInputColsPerSample;
+            ////size_t packedInputDim = packedInputRows * packedInputColsPerSample; // size of each packed input sample
+            ////size_t inputDim = m_inputImageLayout.width * m_inputImageLayout.height * m_inputImageLayout.channels;  //size of each input sample
 
-            size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
+            //size_t batchSize = input1.GetNumCols(); //right child is the input sample
 
-            //const Matrix<ElemType> & weightMatrix = input0;
-            //inputGradientValues.Resize(weightMatrix.GetNumRows(), weightMatrix.GetNumCols()); //should have been resized when preparing gradient computation
+            //size_t maxTempMemSizeInSamples = (m_maxTempMemSizeInSamples == 0 ? batchSize : m_maxTempMemSizeInSamples);
 
-            gradientValues.Reshape(m_sampleLayout.GetNumChannels(), batchSize * outputSizePerChannel);  //reshape to match the longernal operation
+            ////const Matrix<ElemType> & weightMatrix = input0;
+            ////inputGradientValues.Resize(weightMatrix.GetNumRows(), weightMatrix.GetNumCols()); //should have been resized when preparing gradient computation
 
-            size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
-            size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
+            //gradientValues.Reshape(m_outputImageLayout.channels, outputSizePerChannel * batchSize);  //reshape to match the longernal operation
+
+            //size_t subBatchSize = min(batchSize, maxTempMemSizeInSamples);
+            //size_t numSubBatches = (batchSize + subBatchSize - 1) / subBatchSize;
 
             // REVIEW alexeyk: temp commented out.
             UNUSED(inLoop);
             //if (numSubBatches == 1 && !inLoop && !m_1DConvolutionOnGPUSparse)  //reuse packed input from evaluation step if it's not changed by either subbatch or recurrent steps or special 1-D convolution for text.
             //    Matrix<ElemType>::MultiplyAndAdd(gradientValues, false, tempMatrix, true, inputGradientValues);
             //else
-            {
-                for (size_t i = 0; i<numSubBatches; i++)
-                {
-                    size_t startSampleID = i*subBatchSize;
-                    size_t endSampleID = min(batchSize, startSampleID + subBatchSize);
-                    size_t smallBatchSize = endSampleID - startSampleID;
-                    Matrix<ElemType> outputGradientSubBatch = gradientValues.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
+            //{
+            //    for (size_t i = 0; i<numSubBatches; i++)
+            //    {
+            //        size_t startSampleID = i*subBatchSize;
+            //        size_t endSampleID = min(batchSize, startSampleID + subBatchSize);
+            //        size_t smallBatchSize = endSampleID - startSampleID;
 
-                    Matrix<ElemType> inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
-                        inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, inputSubBatch.GetFormat(), true);
-                        tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
-                        tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
-                            m_inputSampleLayout.GetWidth(), m_inputSampleLayout.GetHeight(), m_inputSampleLayout.GetNumChannels(),
-                            m_sampleLayout.GetWidth(), m_sampleLayout.GetHeight(), m_sampleLayout.GetNumChannels(),
-                            m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
+            //        tempMatrix.Resize(packedInputRows, packedInputColsPerSample * smallBatchSize);
+            //        Matrix<ElemType> inputSubBatch = input1.ColumnSlice(startSampleID, smallBatchSize);
+            //        inputSubBatch.SwitchToMatrixType(MatrixType::DENSE, inputSubBatch.GetFormat(), true);
+            //        tempMatrix.AssignPackedConvolutionInput(inputSubBatch,
+            //                                                m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels,
+            //                                                m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels,
+            //                                                m_kernelWidth, m_kernelHeight, m_horizontalSubsample, m_verticalSubsample,
+            //                                                m_zeroPadding);
 
-                    Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, tempMatrix, true, inputGradientValues);
-                }
-            }
+            //        Matrix<ElemType> outputGradientSubBatch = gradientValues.ColumnSlice(startSampleID * outputSizePerChannel, smallBatchSize * outputSizePerChannel);
+            //        Matrix<ElemType>::MultiplyAndAdd(outputGradientSubBatch, false, tempMatrix, true, inputGradientValues);
+            //    }
+            //}
 
-            gradientValues.Reshape(m_sampleLayout.GetNumChannels() * outputSizePerChannel, batchSize);  //change back
+            //gradientValues.Reshape(m_outputImageLayout.channels * outputSizePerChannel, batchSize);  //change back
         }
 
         //compute gradient over the packed input and then convert the result to the original input
@@ -184,7 +193,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inT->setN(batchSize);
             m_outT->setN(batchSize);
             assert(m_convEng != nullptr);
-            m_convEng->BackwardData(*m_outT, inputGradientValues, *m_filterT, input0, *m_convDesc, *m_inT, gradientValues);
+            m_convEng->BackwardData(*m_outT, gradientValues, *m_filterT, input0, *m_convDesc, *m_inT, inputGradientValues);
 
             //size_t packedInputRows = m_kernelWidth * m_kernelHeight * m_inputImageLayout.channels;
             //size_t packedInputColsPerSample = m_outputImageLayout.width * m_outputImageLayout.height;
@@ -240,6 +249,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             input0.HasNan("Convolution-input0");
             input1.HasNan("Convolution-input1");
 #endif
+            UNUSED(tempMatrix);
             // REVIEW alexeyk: setting batch size, can it be done elsewhere in a single place?
             size_t batchSize = m_pMBLayout->GetNumParallelSequences();
             m_inT->setN(batchSize);
