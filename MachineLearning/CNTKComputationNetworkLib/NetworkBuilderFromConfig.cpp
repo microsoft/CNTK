@@ -481,7 +481,6 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 {
                     // inputs /*one*/, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0
                     node = New<ReshapeNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRows"], ImageLayout(config[L"imageWidth"], config[L"imageHeight"], config[L"imageChannels"]));
-                    node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
 #if 0
                 else if (cnNodeType == OperationNameOf(ConvolutionNode))

@@ -1662,7 +1662,9 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-
+#if 1
+            ValidateInferBinaryChildrenDims();
+#else
             //if dimension is missing make the two operatants to have same size
             size_t index = 0;
             {
@@ -1677,8 +1679,8 @@ private:
                 size_t cols = Inputs(index)->GetNumCols() == 0? Inputs(1-index)->GetNumCols() : Inputs(index)->GetNumCols();
                 ValidateInferChildDims(index, rows, cols);
             }
-
-            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))
+#endif
+            if (isFinalValidationPass && (Inputs(1)->GetNumRows() != Inputs(0)->GetNumRows() || (HasMBLayout() && (Inputs(1)->GetNumCols() != Inputs(0)->GetNumCols()))))
                 LogicError("The Matrix dimension in the CosDistance operation does not match.");
 
             Resize(1, Inputs(1)->GetNumCols());

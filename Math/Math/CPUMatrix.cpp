@@ -4798,17 +4798,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         const ElemType * pb = b.m_pArray;
         ElemType *       pc = c.m_pArray;
         // Note: This code is written to match a GPU implementation. It is not super-efficient on the CPU.
-        for (size_t n = 0; n < N; n++)  // loop over all elements
+        for (size_t na = 0; na < N; na++)  // loop over all elements
         {
             // recover the 5 indices from the loop counter
-            size_t d =  n                  % D;
-            size_t s = (n / D            ) % S;
-            size_t m = (n / D / S        ) % M;
-            size_t k = (n / D / S / M    ) % K;
-            size_t t = (n / D / S / M / K) % T;
+            size_t d =  na                  % D;
+            size_t s = (na / D            ) % S;
+            size_t m = (na / D / S        ) % M;
+            size_t k = (na / D / S / M    ) % K;
+            size_t t = (na / D / S / M / K) % T;
             // compute index for the a and b/c tensors
-            size_t na = (((t * K + k) * M + m) * S + s) * D + d;    // tensor of dimension (D x S x M x K x T)
+            size_t na1= (((t * K + k) * M + m) * S + s) * D + d;    // tensor of dimension (D x S x M x K x T)
             size_t nb = (((t * S + s) * M + m) * K + k) * D + d;    // tensor of dimension (D x K x M x S x T)  --note: k/K and s/S swapped
+            assert(na == na1);
+            assert(nb < N);
             // perform the computation
             ElemType cval = keepWeight ? keepWeight * pb[nb] : 0;   // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
             cval += scaleFactor * pa[na];

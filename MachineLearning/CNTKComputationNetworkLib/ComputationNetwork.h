@@ -628,11 +628,6 @@ public:
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedEvaluate = false;
 
-        // (left-over from refactoring: now we only verify that stuff is consistent)
-        for (const auto & node : allNodes)
-            if (node->GetMBLayout())
-                node->VerifyNumParallelSequences(GetNumParallelSequences());
-
         // traverse all nodes in the pre-determined evaluation order
         for (auto & node : allNodes)
         {

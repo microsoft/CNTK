@@ -883,7 +883,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if 0//def _DEBUG
             fprintf(stderr, "Resize: Destructive resize to (%d x %d) in %ls %ls operation.\n", (int)rows, (int)cols, NodeName().c_str(), OperationName().c_str());
 #endif
+#ifdef _DEBUG
+            a_rows = rows; a_cols = cols;
+#endif
         }
+#ifdef _DEBUG
+    private:
+        size_t a_rows, a_cols;      // convenience copy of rows/cols that show high up in the debugger
+    public:
+#endif
         /*implement*/double Get00Element() const { return FunctionValues().Get00Element(); }
 
         // recover a shared_ptr from ourselves if given a naked pointer
