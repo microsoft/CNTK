@@ -18,8 +18,9 @@ template<> static const char* CudaErrString(cudnnStatus_t x)
 
 // REVIEW alexeyk: this is the format used originally by CNTK. Consider changing it to NCHW as NHWC currently does not support FFT-based convolutions.
 #define TENSOR_FORMAT CUDNN_TENSOR_NHWC
-// CNTK default implementation uses CHWN format which is converted in runtime to NCHW.
-#define FILTER_FORMAT CUDNN_TENSOR_NCHW
+// CNTK default implementation uses CHWN format which is converted in runtime to NHWC. Filter format must be the same as tensor as cuDNN back data/filter
+// routines currently support only such configuration.
+#define FILTER_FORMAT CUDNN_TENSOR_NHWC
 #endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -87,9 +88,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             int dims[] = { static_cast<int>(c), static_cast<int>(h), static_cast<int>(w), static_cast<int>(k) };
             int inStride[] =  { static_cast<int>(h * w * k), static_cast<int>(w * k), static_cast<int>(k), 1 };
             CUDNN_CALL(cudnnSetTensorNdDescriptor(m_inF, dataType, 4, dims, inStride));
-            // Create output tensor which is a transpose of input tensor so the output becomes NCHW-format tensor supported by cuDNN.
+            // Create output tensor which is a transpose of input tensor so the output becomes NHWC-format tensor supported by cuDNN.
             // Note that only strides change, tensor dimensions must be the same.
-            int outStride[] =  { static_cast<int>(h * w), static_cast<int>(w), 1, static_cast<int>(c * h * w) };
+            int outStride[] =  { 1, static_cast<int>(w * c), static_cast<int>(c), static_cast<int>(c * h * w) };
             CUDNN_CALL(cudnnSetTensorNdDescriptor(m_outF, dataType, 4, dims, outStride));
         }
     public:
@@ -135,7 +136,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     private:
         cudnnFilterDescriptor_t m_filter;
-        // REVIEW alexeyk: tensors and temp storage for filter conversion from CHWN to NCHW format, remove.
+        // REVIEW alexeyk: tensors and temp storage for filter conversion from CHWN to NHWC format, remove.
         cudnnTensorDescriptor_t m_inF;
         cudnnTensorDescriptor_t m_outF;
     };
@@ -183,6 +184,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             CUDNN_CALL(cudnnCreate(&m_cudnn));
             CUDNN_CALL(cudnnSetStream(m_cudnn, GetStream()));
+            m_fwdAlgo.status = CUDNN_STATUS_NOT_INITIALIZED;
+            m_backDataAlgo.status = CUDNN_STATUS_NOT_INITIALIZED;
+            m_backFiltAlgo.status = CUDNN_STATUS_NOT_INITIALIZED;
         }
 
         ~CuDnnConvolutionEngineImpl()
@@ -197,37 +201,49 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void Forward(ElemType alpha, const Tensor4D& inT, const ElemType* in, const Filter& filterT, const ElemType* filter, const ConvDesc& convDesc,
             ElemType beta, const Tensor4D& outT, ElemType* out)
         {
-            auto& filtT = As<const CuDnnFilter>(filterT);
-            // Convert filter to NCWH format.
+            auto& filtT = f(filterT);
+            // Convert filter to NHWC format.
             m_temp.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w(), 1);
             CUDNN_CALL(cudnnTransformTensor(m_cudnn, &One, filtT.InTensor(), filter, &Zero, filtT.OutTensor(), m_temp.BufferPointer()));
+            // Find best algo and allocate temp buffer, if needed.
+            FindBestForwardAlgo(t(inT), filtT, cd(convDesc), t(outT));
+            if (m_fwdAlgo.memory > 0)
+                m_temp.Resize((m_fwdAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Perform forward convolution operation.
-            CUDNN_CALL(cudnnConvolutionForward(m_cudnn, &alpha, t(inT), in, filtT, m_temp.BufferPointer(), cd(convDesc), CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM,
-                nullptr, 0, &beta, t(outT), out));
+            CUDNN_CALL(cudnnConvolutionForward(m_cudnn, &alpha, t(inT), in, filtT, m_temp.BufferPointer(), cd(convDesc), m_fwdAlgo.algo,
+                m_temp.BufferPointer(), m_fwdAlgo.memory, &beta, t(outT), out));
         }
 
         void BackwardData(ElemType alpha, const Tensor4D& srcGradT, const ElemType* srcGrad, const Filter& filterT, const ElemType* filter, const ConvDesc& convDesc,
             ElemType beta, const Tensor4D& gradT, ElemType* grad)
         {
-            auto& filtT = As<const CuDnnFilter>(filterT);
-            // Convert filter to NCWH format.
+            auto& filtT = f(filterT);
+            // Convert filter to NHWC format.
             m_temp.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w(), 1);
             CUDNN_CALL(cudnnTransformTensor(m_cudnn, &One, filtT.InTensor(), filter, &Zero, filtT.OutTensor(), m_temp.BufferPointer()));
+            // Find best algo and allocate temp buffer, if needed.
+            FindBestBackwardDataAlgo(filtT, t(srcGradT), cd(convDesc), t(gradT));
+            if (m_backDataAlgo.memory > 0)
+                m_temp.Resize((m_backDataAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Compute gradients with respect to the output tensor (data).
-            CUDNN_CALL(cudnnConvolutionBackwardData(m_cudnn, &alpha, filtT, m_temp.BufferPointer(), t(srcGradT), srcGrad, cd(convDesc), CUDNN_CONVOLUTION_BWD_DATA_ALGO_0,
-                nullptr, 0, &beta, t(gradT), grad));
+            CUDNN_CALL(cudnnConvolutionBackwardData(m_cudnn, &alpha, filtT, m_temp.BufferPointer(), t(srcGradT), srcGrad, cd(convDesc), m_backDataAlgo.algo,
+                m_temp.BufferPointer(), m_backDataAlgo.memory, &beta, t(gradT), grad));
         }
 
         void BackwardFilter(ElemType alpha, const Tensor4D& srcGradT, const ElemType* srcGrad, const Tensor4D& inT, const ElemType* in, const ConvDesc& convDesc,
             ElemType beta, const Filter& filterT, ElemType* filter)
         {
-            auto& filtT = As<const CuDnnFilter>(filterT);
-            // Convert filter to NCWH format.
-            m_temp.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w() + srcGradT.n() * srcGradT.c() * srcGradT.h() * srcGradT.w(), 1);
+            auto& filtT = f(filterT);
+            // Convert filter to NHWC format.
+            m_temp.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w(), 1);
             CUDNN_CALL(cudnnTransformTensor(m_cudnn, &One, filtT.InTensor(), filter, &Zero, filtT.OutTensor(), m_temp.BufferPointer()));
+            // Find best algo and allocate temp buffer, if needed.
+            FindBestBackwardFilterAlgo(t(inT), t(srcGradT), cd(convDesc), filtT);
+            if (m_backFiltAlgo.memory > 0)
+                m_temp.Resize((m_backFiltAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Compute gradients with respect to the output tensor (data).
-            CUDNN_CALL(cudnnConvolutionBackwardFilter(m_cudnn, &alpha, t(inT), in, t(srcGradT), srcGrad, cd(convDesc), CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0,
-                nullptr, 0, &beta, filtT, m_temp.BufferPointer()));
+            CUDNN_CALL(cudnnConvolutionBackwardFilter(m_cudnn, &alpha, t(inT), in, t(srcGradT), srcGrad, cd(convDesc), m_backFiltAlgo.algo,
+                m_temp.BufferPointer(), m_backFiltAlgo.memory, &beta, filtT, m_temp.BufferPointer()));
             // Convert filter back to CWHN format.
             CUDNN_CALL(cudnnTransformTensor(m_cudnn, &One, filtT.OutTensor(), m_temp.BufferPointer(), &Zero, filtT.InTensor(), filter));
         }
@@ -278,17 +294,80 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(dynamic_cast<CuDnnT*>(&src) != nullptr);
             return static_cast<CuDnnT&>(src);
         }
-        const cudnnTensorDescriptor_t t(const Tensor4D& src)
+        const CuDnnTensor4D& t(const Tensor4D& src)
         {
             return As<const CuDnnTensor4D>(src);
         }
-        const cudnnFilterDescriptor_t f(const ConvolutionFilter& src)
+        const CuDnnFilter& f(const ConvolutionFilter& src)
         {
             return As<const CuDnnFilter>(src);
         }
-        const cudnnConvolutionDescriptor_t cd(const ConvolutionDescriptor& src)
+        const CuDnnConvolutionDescriptor& cd(const ConvolutionDescriptor& src)
         {
             return As<const CuDnnConvolutionDescriptor>(src);
+        }
+
+        void FindBestForwardAlgo(const CuDnnTensor4D& inT, const CuDnnFilter& filtT, const CuDnnConvolutionDescriptor& convDesc, const CuDnnTensor4D& outT)
+        {
+            if (m_fwdAlgo.status == CUDNN_STATUS_SUCCESS)
+                return;
+            const int MaxAlgoCount = 10;
+            int calgo = 0;
+            cudnnConvolutionFwdAlgoPerf_t algoPerf[MaxAlgoCount];
+            CUDNN_CALL(cudnnFindConvolutionForwardAlgorithm(m_cudnn, inT, filtT, convDesc, outT, MaxAlgoCount, &calgo, algoPerf));
+            assert(calgo > 0);
+            size_t maxMem = m_maxTempMemSizeInSamples == 0 ? (std::numeric_limits<size_t>::max)() : inT.w() * inT.h() * inT.c() * m_maxTempMemSizeInSamples * sizeof(ElemType);
+            auto res = std::find_if(algoPerf, algoPerf + calgo, 
+                [=](const cudnnConvolutionFwdAlgoPerf_t& cur)
+                { 
+                    return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem;
+                }
+            );
+            if (res == algoPerf + calgo)
+                RuntimeError("cuDNN could not find suitable algorithm for cudnnConvolutionForward.");
+            m_fwdAlgo = *res;
+        }
+
+        void FindBestBackwardDataAlgo(const CuDnnFilter& filtT, const CuDnnTensor4D& srcGradT, const CuDnnConvolutionDescriptor& convDesc, const CuDnnTensor4D& gradT)
+        {
+            if (m_backDataAlgo.status == CUDNN_STATUS_SUCCESS)
+                return;
+            const int MaxAlgoCount = 10;
+            int calgo = 0;
+            cudnnConvolutionBwdDataAlgoPerf_t algoPerf[MaxAlgoCount];
+            CUDNN_CALL(cudnnFindConvolutionBackwardDataAlgorithm(m_cudnn, filtT, srcGradT, convDesc, gradT, MaxAlgoCount, &calgo, algoPerf));
+            assert(calgo > 0);
+            size_t maxMem = m_maxTempMemSizeInSamples == 0 ? (std::numeric_limits<size_t>::max)() : gradT.w() * gradT.h() * gradT.c() * m_maxTempMemSizeInSamples * sizeof(ElemType);
+            auto res = std::find_if(algoPerf, algoPerf + calgo, 
+                [=](const cudnnConvolutionBwdDataAlgoPerf_t& cur)
+                { 
+                    return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem;
+                }
+            );
+            if (res == algoPerf + calgo)
+                RuntimeError("cuDNN could not find suitable algorithm for cudnnConvolutionBackwardData.");
+            m_backDataAlgo = *res;
+        }
+
+        void FindBestBackwardFilterAlgo(const CuDnnTensor4D& inT, const CuDnnTensor4D& srcGradT, const CuDnnConvolutionDescriptor& convDesc, const CuDnnFilter& filtT)
+        {
+            if (m_backFiltAlgo.status == CUDNN_STATUS_SUCCESS)
+                return;
+            const int MaxAlgoCount = 10;
+            int calgo = 0;
+            cudnnConvolutionBwdFilterAlgoPerf_t algoPerf[MaxAlgoCount];
+            CUDNN_CALL(cudnnFindConvolutionBackwardFilterAlgorithm(m_cudnn, inT, srcGradT, convDesc, filtT, MaxAlgoCount, &calgo, algoPerf));
+            assert(calgo > 0);
+            size_t maxMem = m_maxTempMemSizeInSamples == 0 ? (std::numeric_limits<size_t>::max)() : inT.w() * inT.h() * inT.c() * m_maxTempMemSizeInSamples * sizeof(ElemType);
+            auto res = std::find_if(algoPerf, algoPerf + calgo, 
+                [=](const cudnnConvolutionBwdFilterAlgoPerf_t& cur)
+                { 
+                    return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem;
+                }
+            );
+            if (res == algoPerf + calgo)
+                RuntimeError("cuDNN could not find suitable algorithm for cudnnConvolutionBackwardFilter.");
+            m_backFiltAlgo = *res;
         }
 
     private:
@@ -298,6 +377,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t m_maxTempMemSizeInSamples;
         cudnnHandle_t m_cudnn;
         GPUMatrix<ElemType> m_temp;
+        cudnnConvolutionFwdAlgoPerf_t m_fwdAlgo;
+        cudnnConvolutionBwdDataAlgoPerf_t m_backDataAlgo;
+        cudnnConvolutionBwdFilterAlgoPerf_t m_backFiltAlgo;
     };
     template<> const float CuDnnConvolutionEngineImpl<float>::One = 1;
     template<> const double CuDnnConvolutionEngineImpl<double>::One = 1;
