@@ -79,6 +79,7 @@ void SparsePCReader<ElemType>::Init(const ConfigParameters& readerConfig)
     m_microBatchSize = readerConfig("microbatchSize", "1");
 
     m_miniBatchSize = 0;
+    m_microBatchSize = readerConfig("microbatchSize", "1");
     m_traceLevel = readerConfig("traceLevel", "0");
     m_maxReadData = readerConfig("maxReadData", "0");
     m_doGradientCheck = readerConfig("gradientCheck", "false");
@@ -193,6 +194,8 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
     {
         return false;
     }
+
+    m_pMBLayout->Init(m_miniBatchSize / m_microBatchSize, m_microBatchSize, false);
 
     Matrix<ElemType>* labels = nullptr;
     auto labelEntry = matrices.find(m_labelName);
