@@ -8,6 +8,5 @@ echo === Deleting last epoch data
 rm $TEST_RUN_DIR/models/*.dnn
 echo ==== Re-running from checkpoint
 DeleteExistingModels=0
-makeMode=true
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun cntk.config || exit $?
+cntkrun cntk.config 'makeMode=true' || exit $?
