@@ -1442,7 +1442,7 @@ public:
     //========================================
     // BUGBUG: this only currently works for one ElemType, not both
     template<class ElemType>
-    void PerformSVDecomposition(const map<wstring, float>& SVDConfig);
+    void PerformSVDecomposition(const map<wstring, float>& SVDConfig, size_t AlignedSize);
 
 public:
     // -----------------------------------------------------------------------
