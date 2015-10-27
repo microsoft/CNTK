@@ -406,66 +406,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if 0
     // -----------------------------------------------------------------------
     // ReconcileMBLayout (dataInput, layoutInput)
-    // This node copies data from 'dataInput' while propagates the minibatch-layout information from 'layoutInpt'
-    // it has to be continuous segments of rows since each column is treated as one sample
+    // This node copies data from 'dataInput' while it propagates the minibatch-layout information from 'layoutInput'.
+    // It does perform a runtime check to enforce that the layout of 'dataInput' is compatible (identical content) to that of 'layoutInput'.
+    // This node is meant to be used from BrainScript macros that bracket expand/reduce pairs of nodes.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ReconcileMBLayout : public ComputationNode<ElemType>, public NumInputs<2>
+    class ReconcileMBLayoutNode : public ComputationNode<ElemType>, public NumInputs<2>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-        static const std::wstring TypeName() { return L"RowSlice"; }
+        static const std::wstring TypeName() { return L"ReconcileMBLayout"; }
     public:
-        ReconcileMBLayout(DEVICEID_TYPE deviceId, const wstring & name) :
+        ReconcileMBLayoutNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name),
         { }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
-        {
-            Base::CopyTo(nodeP, newName, flags);
-            auto node = dynamic_pointer_cast<RowSliceNode<ElemType>>(nodeP);
-
-            node->m_startIndex = m_startIndex;
-            node->m_numRows = m_numRows;
-        }
-
-        virtual void SaveToFile(File& fstream) const override
-        {
-            Base::SaveToFile(fstream);
-            fstream << m_startIndex << m_numRows;
-        }
-        
-        virtual void LoadFromFile(File& fstream, size_t modelVersion) override
-        {
-            Base::LoadFromFile(fstream, modelVersion);
-            fstream >> m_startIndex >> m_numRows;
-        }
-
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-            Inputs(0)->GradientSlice(frameRange).AddToRowSliceValuesOf(GradientSlice(frameRange), m_startIndex, m_numRows);
+            Inputs(0)->GradientSlice(frameRange) += GradientSlice(frameRange);
+            // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            ValueSlice(frameRange).AssignRowSliceValuesOf(Inputs(0)->ValueSlice(frameRange), m_startIndex, m_numRows);
+            // copy the data from 'dataInput'
+            ValueSlice.SetValue(Inputs(0)->GradientSlice(frameRange));  // just propagate through
+            // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
+
+            // enforce compatibility of 'dataInput' with 'layoutInput'
+            if (*m_pMBLayout != Inputs(0)->GetMBLayout())
+                InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompaitble with that of %ls %ls.");
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
 
-            if (isFinalValidationPass && Inputs(0)->GetNumRows() < m_startIndex + m_numRows)
-                RuntimeError("RowSlice operation: m_startIndex + m_numRows exceeds number of rows in the input.");
+            if (isFinalValidationPass && (!Inputs(0)->HasMBLayout() || !Inputs(1)->HasMBLayout()))
+                RuntimeError("%ls %ls operation requires two inputs that both have an associated MB layout.");
+            m_pMBLayout = Inputs(1)->GetMBLayout(); // output layout is that of 'layoutInput'
 
-            Resize(m_numRows, Inputs(0)->GetNumCols());
-            InferMBLayoutFromInputsForStandardCase();
-            InferImageDimsFromInputs(); 
+            Resize(Inputs(0));
+            InferImageDimsFromInputs();
         }
     };
 
-    template class ReconcileMBLayout<float>; 
-    template class ReconcileMBLayout<double>;
+    template class ReconcileMBLayoutNode<float>; 
+    template class ReconcileMBLayoutNode<double>;
 #endif
     // -----------------------------------------------------------------------
     // RowSliceNode (input)
