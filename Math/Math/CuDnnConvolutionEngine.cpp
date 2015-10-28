@@ -118,39 +118,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     private:
-        size_t GetDataTypeSizeInBytes(cudnnDataType_t dtype) 
-        {
-            switch (dtype)
-            {
-            case CUDNN_DATA_FLOAT:
-                return sizeof(float);
-            case CUDNN_DATA_DOUBLE:
-                return sizeof(float);
-            case CUDNN_DATA_HALF:
-                return 2;
-            default:
-                assert(false);
-            }
-            return 0;
-        }
-
-    private:
         cudnnFilterDescriptor_t m_filter;
         // REVIEW alexeyk: tensors and temp storage for filter conversion from CHWN to NHWC format, remove.
         cudnnTensorDescriptor_t m_inF;
         cudnnTensorDescriptor_t m_outF;
     };
-
+    
     class CuDnnConvolutionDescriptor : public ConvolutionDescriptor
     {
     public:
-        CuDnnConvolutionDescriptor(const ConvolutionTensor4D& inT, const ConvolutionFilter& filterT, 
-            size_t wStride, size_t hStride, bool padding)
-            : ConvolutionDescriptor(inT, filterT, wStride, hStride, padding), m_conv(nullptr)
+        CuDnnConvolutionDescriptor(size_t wStride, size_t hStride, size_t wPad, size_t hPad)
+            : ConvolutionDescriptor(wStride, hStride, wPad == 0 && hPad == 0), m_conv(nullptr)
         {
             CUDNN_CALL(cudnnCreateConvolutionDescriptor(&m_conv));
             CUDNN_CALL(cudnnSetConvolution2dDescriptor(m_conv,
-                0, 0, static_cast<int>(hStride), static_cast<int>(wStride),
+                static_cast<int>(hPad), static_cast<int>(wPad),
+                static_cast<int>(hStride), static_cast<int>(wStride),
                 1, 1, CUDNN_CROSS_CORRELATION));
         }
     public:
@@ -280,10 +263,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return std::make_unique<CuDnnFilter>(w, h, c, k, CUDNN_DATA_DOUBLE);
         }
 
-        ConvDescPtr CreateConvDescriptor(const Tensor4D& inT, const Filter& filterT, 
+        ConvDescPtr CreateConvDescriptor(const Tensor4D& /*inT*/, const Filter& filterT, 
             size_t wStride, size_t hStride, bool padding)
         {
-            return std::make_unique<CuDnnConvolutionDescriptor>(inT, filterT, wStride, hStride, padding);
+            size_t wPad = padding ? filterT.w() / 2 : 0;
+            size_t hPad = padding ? filterT.h() / 2 : 0;
+            return std::make_unique<CuDnnConvolutionDescriptor>(wStride, hStride, wPad, hPad);
         }
 
     private:
@@ -374,6 +359,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const ElemType Zero;
         static const ElemType One;
 
+        // REVIEW alexeyk: currently limit is set once in ctor though in CNTK it can be, theoretically, changed in runtime.
         size_t m_maxTempMemSizeInSamples;
         cudnnHandle_t m_cudnn;
         GPUMatrix<ElemType> m_temp;
@@ -432,9 +418,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return std::make_unique<Filter>();
         }
 
-        ConvDescPtr CreateConvDescriptor(const Tensor4D& inT, const Filter& filterT, size_t, size_t, bool)
+        ConvDescPtr CreateConvDescriptor(const Tensor4D&, const Filter&, size_t, size_t, bool)
         {
-            return std::make_unique<ConvDesc>(inT, filterT);
+            return std::make_unique<ConvDesc>();
         }
     };
 

@@ -190,10 +190,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return std::make_unique<Filter>(w, h, c, k);
         }
 
-        ConvDescPtr CreateConvDescriptor(const Tensor4D& inT, const Filter& filterT, 
+        ConvDescPtr CreateConvDescriptor(const Tensor4D& /*inT*/, const Filter& /*filterT*/, 
             size_t wStride, size_t hStride, bool padding) override
         {
-            return std::make_unique<ConvDesc>(inT, filterT, wStride, hStride, padding);
+            return std::make_unique<ConvDesc>(wStride, hStride, padding);
         }
 
     private:
