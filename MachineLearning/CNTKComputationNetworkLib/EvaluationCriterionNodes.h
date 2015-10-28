@@ -98,14 +98,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout = ImageLayout();
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_maxIndexes0->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_maxIndexes1->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_maxValues->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-        }
-
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);

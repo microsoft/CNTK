@@ -107,7 +107,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void SaveToFile(File& fstream) const = 0;
         virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/) = 0;
         // TODO: is this always just called with deviceId == m_deviceId?   TODO: Where is this actually EVERY called?? I don't see it!
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) = 0;
         virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
 
         // --- optional overrides that describe a feature or property of the node
@@ -848,22 +847,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // This constructor does not call MoveMatricesToDevice(), but that is needed for full initialization.
             // Only call this constructor through the New() factory below, which will ensure this.
         }
-		ComputationNode(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) : ComputationNodeBase(deviceId, name)
-		{
-			CreateMatrixIfNull(m_functionValues); 
-			Resize(rows, cols);
-			FunctionValues().SetValue(0);
-		}
+        ComputationNode(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) : ComputationNodeBase(deviceId, name)
+        {
+            CreateMatrixIfNull(m_functionValues);
+            Resize(rows, cols);
+            FunctionValues().SetValue(0);
+        }
     public:
         // public constructor
         // You must construct ComputationNode derivates with this function. The real C++ constructor itself is hidden,
         // as we need to call a virtual function after construction. This function does that.
+        // TODO: Actually, that is no longer necessary. We can get rid of this again.
         template<class C, class... _Types> static inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
         {
-            auto p = make_shared<C>(deviceId, name, forward<_Types>(_Args)...);     // creates objects, esp. assigns deviceId to matrices, but otherwise does nothing
-            //disable this line. Instead we should make sure matrices are allocated at the right device
-            //p->MoveMatricesToDevice(deviceId);                                      // this is a virtual call, i.e. it will handle extra matrices an object might own
-            return p;
+            return make_shared<C>(deviceId, name, forward<_Types>(_Args)...);     // creates objects, esp. assigns deviceId to matrices, but otherwise does nothing
         }
 
         virtual ~ComputationNode()
@@ -872,8 +869,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf (stderr, "Called Destructor NodeName: %s\n", (msra::strfun::utf8 (NodeName())).c_str()), fflush(stderr);
 #endif
         }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override;
 
         // our own output dimensions
         /*implement*/size_t GetNumRows() const { return FunctionValues().GetNumRows(); }
@@ -1532,7 +1527,7 @@ public: \
     using Base::EvaluateThisNode; using Base::FunctionValues; \
     using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
-    using Base::LoadFromFile; using Base::MoveMatricesToDevice; using Base::NodeName; \
+    using Base::LoadFromFile; using Base::NodeName; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
     using Base::SaveToFile; using Base::UpdateFunctionMBSize; using Base::SetInput; \

@@ -492,14 +492,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_numSamples += samples.GetNumCols();
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_mean.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_var.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-            m_temp.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-        }
-
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
@@ -873,12 +865,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual bool HasComputed() const { return m_hasComputed; }
         virtual void MarkComputed(const bool hasComputed) { m_hasComputed = hasComputed; }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_memory.TransferToDeviceIfNotThere(deviceId, true, m_memory.HasNoElements());
-        }
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
