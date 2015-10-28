@@ -20,6 +20,7 @@ namespace CNTKMathTest
     TEST_CLASS(MatrixUnitTest)
     {
         using ConvEng = ConvolutionEngine<float>;
+        using vec = std::vector<float>;
 
     public:
         BEGIN_TEST_METHOD_ATTRIBUTE(ConvolutionForward)
@@ -41,18 +42,18 @@ namespace CNTKMathTest
 
             for (int deviceId : { -1, 0 })
             {
-                auto eng = ConvEng::Create(deviceId, 1000);
+                auto eng = ConvEng::Create(deviceId, 0);
                 auto inT = eng->CreateTensor(inW, inH, cmapIn, n);
                 auto filtT = eng->CreateFilter(kW, kH, cmapIn, cmapOut);
                 auto outT = eng->CreateTensor(outW, outH, cmapOut, n);
                 auto convT = eng->CreateConvDescriptor(*inT, *filtT, sW, sH, false);
 
-                std::vector<float> buf(inW * inH * cmapIn * n);
+                vec buf(inW * inH * cmapIn * n);
                 int seed = 0;
                 for (int i = 0; i < n; i++)
                 {
                     seed = 0;
-                    // Create input, cmapIn feature maps, inW x inH each.
+                    // Create input, cmapIn feature maps, inW x inH each (CHWN format).
                     std::generate(buf.begin() + i * buf.size() / n, buf.begin() + (i + 1) * buf.size() / n, [&seed]{ return seed++; });
                 }
                 SingleMatrix in(inW * inH * cmapIn, n, buf.data(), matrixFlagNormal, deviceId);
@@ -83,6 +84,54 @@ namespace CNTKMathTest
             }
         }
 
+        // REVIEW alexeyk: this really should be rolled into ConvolutionForward, make it data-driven.
+        BEGIN_TEST_METHOD_ATTRIBUTE(ConvolutionForwardPad)
+            TEST_METHOD_ATTRIBUTE(L"Category", L"Convolution")
+        END_TEST_METHOD_ATTRIBUTE()
+        TEST_METHOD(ConvolutionForwardPad)
+        {
+            int n = 2;
+            int cmapIn = 1;
+            int inW = 4;
+            int inH = 4;
+            int kW = 3;
+            int kH = 3;
+            int sW = 2;
+            int sH = 2;
+            int cmapOut = 1;
+            bool pad = true;
+            int outW = GetNumOut(inW, kW, sW, pad);
+            int outH = GetNumOut(inH, kH, sH, pad);
+
+            for (int deviceId : { -1, 0 })
+            {
+                auto eng = ConvEng::Create(deviceId, 0);
+                auto inT = eng->CreateTensor(inW, inH, cmapIn, n);
+                auto filtT = eng->CreateFilter(kW, kH, cmapIn, cmapOut);
+                auto outT = eng->CreateTensor(outW, outH, cmapOut, n);
+                auto convT = eng->CreateConvDescriptor(*inT, *filtT, sW, sH, pad);
+
+                // Input in NHWC format.
+                SingleMatrix in(inW * inH * cmapIn, n, vec(inW * inH * cmapIn * n, 1.0f).data(), matrixFlagNormal, deviceId);
+                // Create cmapOut filters, each kW x kH x cmapIn (CHWN format).
+                SingleMatrix filt(cmapOut, kW * kH * cmapIn, vec(kW * kH * cmapIn * cmapOut, 1.0f).data(), matrixFlagNormal, deviceId);
+
+                SingleMatrix out(outW * outH * cmapOut, n, deviceId);
+
+                eng->Forward(*inT, in, *filtT, filt, *convT, *outT, out);
+
+                // Output is in NHWC format.
+                float expBuf[] = {
+                    4.0f, 6.0f,
+                    6.0f, 9.0f,
+                    4.0f, 6.0f,
+                    6.0f, 9.0f,
+                };
+                SingleMatrix exp(outW * outH * cmapOut, n, expBuf, matrixFlagNormal, deviceId);
+                Assert::IsTrue(out.IsEqualTo(exp));
+            }
+        }
+
         BEGIN_TEST_METHOD_ATTRIBUTE(ConvolutionBackwardData)
             TEST_METHOD_ATTRIBUTE(L"Category", L"Convolution")
         END_TEST_METHOD_ATTRIBUTE()
@@ -103,7 +152,7 @@ namespace CNTKMathTest
 
             for (int deviceId : { -1, 0 })
             {
-                auto eng = ConvEng::Create(deviceId, 1000);
+                auto eng = ConvEng::Create(deviceId, 0);
                 auto srcGradT = eng->CreateTensor(outW, outH, cmapOut, n);
                 auto filtT = eng->CreateFilter(kW, kH, cmapIn, cmapOut);
                 auto gradT = eng->CreateTensor(inW, inH, cmapIn, n);
@@ -116,7 +165,7 @@ namespace CNTKMathTest
                 };
                 SingleMatrix srcGrad(outW * outH * cmapOut, n, srcGradBuf, matrixFlagNormal, deviceId);
 
-                std::vector<float> filtB(kW * kH * cmapIn * cmapOut);
+                vec filtB(kW * kH * cmapIn * cmapOut);
                 // Create cmapOut filters, each kW x kH x cmapIn (CHWN format).
                 int seed = 0;
                 std::generate(filtB.begin(), filtB.end(), [&seed, cmapOut]{ return seed++ / cmapOut; });
@@ -126,7 +175,7 @@ namespace CNTKMathTest
                 eng->BackwardData(*srcGradT, srcGrad, *filtT, filt, *convT, *gradT, grad);
 
                 // Target grads is in NHWC format.
-                std::vector<float> gradB(inW * inH * cmapIn * n);
+                vec gradB(inW * inH * cmapIn * n);
                 for (int i = 0; i < n; i++)
                 {
                     for (int icur = 0; icur < inW * inH * cmapIn; icur++)
@@ -159,7 +208,7 @@ namespace CNTKMathTest
 
             for (int deviceId : { -1, 0 })
             {
-                auto eng = ConvEng::Create(deviceId, 1000);
+                auto eng = ConvEng::Create(deviceId, 0);
                 auto srcGradT = eng->CreateTensor(outW, outH, cmapOut, n);
                 auto filtT = eng->CreateFilter(kW, kH, cmapIn, cmapOut);
                 auto inT = eng->CreateTensor(inW, inH, cmapIn, n);
@@ -172,7 +221,7 @@ namespace CNTKMathTest
                 };
                 SingleMatrix srcGrad(outW * outH * cmapOut, n, srcGradBuf, matrixFlagNormal, deviceId);
 
-                std::vector<float> buf(inW * inH * cmapIn * n);
+                vec buf(inW * inH * cmapIn * n);
                 int seed = 0;
                 for (int i = 0; i < n; i++)
                 {
@@ -187,7 +236,7 @@ namespace CNTKMathTest
                 
                 eng->BackwardFilter(*srcGradT, srcGrad, *inT, in, *convT, *filtT, filt, false);
 
-                std::vector<float> expFiltB(cmapOut * kW * kH * cmapIn);
+                vec expFiltB(cmapOut * kW * kH * cmapIn);
                 for (int icur = 0; icur < inW * inH * cmapIn; icur++)
                 {
                     float val = (float)(n * ((icur % (kW * kH)) * cmapIn + icur / (kW * kH)));
