@@ -753,22 +753,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         else if (GetMatrixType() == MatrixType::SPARSE)
         {
-            // TODO: Implement optimized ColumnSlice functions for sparse matrices. For now use the ColumnSliceToDense instead.
             if (devId == CPUDEVICE)
             {
-                if (slice.m_CPUMatrix != nullptr)
-                    slice.m_CPUMatrix->operator=(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
+                if (slice.m_CPUSparseMatrix != nullptr)
+                    slice.m_CPUSparseMatrix->operator=(static_cast<CPUSparseMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSlice(startColumn, numCols)));
                 else
-                    slice.m_CPUMatrix = new CPUMatrix<ElemType>(static_cast<CPUMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
-                slice.SetDataLocation(CPU, DENSE);
+                    slice.m_CPUSparseMatrix = new CPUSparseMatrix<ElemType>(static_cast<CPUSparseMatrix<ElemType>&&>(m_CPUSparseMatrix->ColumnSlice(startColumn, numCols)));
+                slice.SetDataLocation(CPU, SPARSE);
             }
             else
             {
-                if (slice.m_GPUMatrix != nullptr)
-                    slice.m_GPUMatrix->operator=(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
+                if (slice.m_GPUSparseMatrix != nullptr)
+                    slice.m_GPUSparseMatrix->operator=(static_cast<GPUSparseMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSlice(startColumn, numCols)));
                 else
-                    slice.m_GPUMatrix = new GPUMatrix<ElemType>(static_cast<GPUMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSliceToDense(startColumn, numCols)));
-                slice.SetDataLocation(GPU, DENSE);
+                    slice.m_GPUSparseMatrix = new GPUSparseMatrix<ElemType>(static_cast<GPUSparseMatrix<ElemType>&&>(m_GPUSparseMatrix->ColumnSlice(startColumn, numCols)));
+                slice.SetDataLocation(GPU, SPARSE);
             }
         }
         else 

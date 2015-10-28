@@ -62,6 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_numCols=0;
         m_elemSizeAllocated = m_nz = 0; //Number of non-zero elements
         m_totalBufferSizeAllocated = 0;
+        m_sliceViewOffset = 0;
         m_format = matrixFormat;
         m_externalBuffer = false;
         m_pArray=nullptr; 
@@ -580,22 +581,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::Clear()
     {
-        if (m_matrixName!=nullptr) 
+        if (!m_externalBuffer)
         {
-            delete[] m_matrixName;
-            m_matrixName = NULL;
+            if (m_matrixName != nullptr)
+            {
+                delete[] m_matrixName;
+                m_matrixName = NULL;
+            }
+
+            if (m_pArray != nullptr)
+                CUDA_CALL(cudaFree(m_pArray));
+
+            if (m_rowToId != nullptr)
+                CUDA_CALL(cudaFree(m_rowToId));
+
+            if (m_tempHostBuffer != nullptr)
+                delete[](byte*)m_tempHostBuffer;
+
+            ZeroInit(m_format, m_computeDevice);
         }
-
-        if(m_pArray != nullptr) 
-            CUDA_CALL(cudaFree(m_pArray));
-
-        if (m_rowToId != nullptr)
-            CUDA_CALL(cudaFree(m_rowToId));
-
-        if (m_tempHostBuffer != nullptr)
-            delete[] (byte*)m_tempHostBuffer;
-
-        ZeroInit(m_format, m_computeDevice);
     }
 
     //ResizeAsAndCopyIndexFrom - Resize this sparse matrix to have the same element structure as the passed matrix
@@ -1950,6 +1954,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
+    GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
+    {
+        if (startColumn + numCols > m_numCols)
+            InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)m_numCols);
+
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        GPUSparseMatrix<ElemType> slice;
+        slice.m_computeDevice = m_computeDevice;
+        slice.m_numRows = m_numRows;
+        slice.m_numCols = m_numCols;
+        slice.m_nz = m_nz;
+        slice.m_elemSizeAllocated = m_elemSizeAllocated;
+        slice.m_totalBufferSizeAllocated = m_totalBufferSizeAllocated;
+        slice.m_pArray = m_pArray;
+        slice.m_format = m_format;
+        slice.m_externalBuffer = true;
+        slice.m_sliceViewOffset = startColumn;
+        slice.m_matrixName = m_matrixName;
+        slice.m_blockSize = m_blockSize;
+        slice.m_rowToId = m_rowToId;
+        slice.m_tempHostBuffer = m_tempHostBuffer;
+        slice.m_tempHostBufferSize = m_tempHostBufferSize;
+
+        return slice;
+    }
+
+    template<class ElemType>
     GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
     {
         int m = (int)GetNumRows();
@@ -2418,7 +2451,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void GPUSparseMatrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly, bool keepExistingValues);
     template GPUSparseMatrix<char>::~GPUSparseMatrix();
     template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char>&&);
+    template GPUSparseMatrix<char> GPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
     template GPUMatrix<char> GPUSparseMatrix<char>::ColumnSliceToDense(size_t startColumn, size_t numCols) const;
+    template GPUSparseMatrix<char>& GPUSparseMatrix<char>::operator=(GPUSparseMatrix<char>&& deepCopy);
 
     template <class ElemType>
     MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)

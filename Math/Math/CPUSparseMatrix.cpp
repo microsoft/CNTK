@@ -177,12 +177,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
         {
-            if(m_pArray != NULL) 
-                delete[] m_pArray;
-            if(m_unCompIndex != NULL) 
-                delete[] m_unCompIndex;
-            if(m_compIndex != NULL)
-                delete[] m_compIndex;
+            if (!m_externalBuffer)
+            {
+                if (m_pArray != NULL)
+                    delete[] m_pArray;
+                if (m_unCompIndex != NULL)
+                    delete[] m_unCompIndex;
+                if (m_compIndex != NULL)
+                    delete[] m_compIndex;
+            }
+
             m_pArray = NULL; 
             m_unCompIndex = NULL; 
             m_compIndex = NULL;
@@ -299,6 +303,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 			fprintf(stderr, "%d:%.f ", unCompressedIndex[i], dataBuffer[i]);
 		}
 		fprintf(stderr, "\n");
+    }
+
+    template<class ElemType>
+    CPUSparseMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
+    {
+        if (startColumn + numCols > m_numCols)
+            InvalidArgument("The slice (%d+%d) is out of range of the source matrix (%d).", (int)startColumn, (int)numCols, (int)m_numCols);
+
+        if (m_format != MatrixFormat::matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        CPUSparseMatrix<ElemType> slice(m_format, m_numRows, numCols, m_elemSizeAllocated);
+        slice.m_pArray = m_pArray;
+        slice.m_unCompIndex = m_unCompIndex;
+        slice.m_compIndex = m_compIndex + startColumn;
+        slice.m_externalBuffer = true;
+
+        return slice;
     }
 
     template<class ElemType>
@@ -1182,6 +1204,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template char* CPUSparseMatrix<char>::BufferPointer() const;
     template void CPUSparseMatrix<char>::Reset(void);
     template CPUSparseMatrix<char>::~CPUSparseMatrix();
+    template CPUSparseMatrix<char> CPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
     template CPUMatrix<char> CPUSparseMatrix<char>::ColumnSliceToDense(size_t startColumn, size_t numCols) const;
+    template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(const CPUSparseMatrix<char>& deepCopyFrom);
 
 }}}
