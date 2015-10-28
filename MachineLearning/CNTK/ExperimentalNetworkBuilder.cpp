@@ -62,6 +62,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         L"Constant(value, rows = 1, cols = 1, tag='') = Parameter(rows, cols, needGradient = false, init = 'fixedValue') \n"
         L"PastValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'PastValue' ; inputs = input /*plus the function args*/ ]\n"
         L"FutureValue(rows, cols, input, timeStep = 1, defaultHiddenActivation = 0.1, tag='') = new ComputationNode [ operation = 'FutureValue' ; inputs = input /*plus the function args*/ ]\n"
+        // TODO: ^^ DelayedValues no longer need to know their dimension. That is inferred in Validation.
         L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
         L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
         L"RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]\n"

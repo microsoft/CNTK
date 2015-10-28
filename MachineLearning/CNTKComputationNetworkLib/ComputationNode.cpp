@@ -73,10 +73,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
         if (isFinalValidationPass && !(
-               (rows0 == rows1 && cols0 == cols1) ||                                    // matching size (obvious case)
-               (allowMultiples && (rows0 == 1 || rows1 == 1) && cols0 == cols1) ||      // one is row vec
+               (rows0 == rows1 && (Inputs(0)->GetMBLayout() == Inputs(1)->GetMBLayout() || cols0 == cols1)) ||                                  // matching size (obvious case)
+               (allowMultiples && (rows0 == 1 || rows1 == 1) && (Inputs(0)->GetMBLayout() == Inputs(1)->GetMBLayout() || cols0 == cols1)) ||    // one is row vec
                (allowMultiples && ((!HasMBLayout() && cols0 > cols1 && cols0 % cols1 == 0) || (cols0 == 1 && rows1 % rows0 == 0) || (cols1 == 1 && rows0 % rows1 == 0)))
-           ))
+           ))   // TODO: ^^ I don't understand the asymmetry of this last one
         {
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         }
