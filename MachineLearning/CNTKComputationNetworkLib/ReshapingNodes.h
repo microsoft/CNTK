@@ -26,15 +26,15 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
-    // ReshapingNodeBase (input) -- base class for nodes that reshape
+    // ReinterpretNodeBase (input) -- base class for nodes that reinterpret
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ReshapingNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
+    class ReinterpretNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
         typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
     public:
-        ReshapingNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
+        ReinterpretNodeBase(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
 
@@ -122,10 +122,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     };
 
-#define UsingReshapingNodeBaseMembers UsingComputationNodeMembersBoilerplate
+#define UsingReinterpretNodeBaseMembers UsingComputationNodeMembersBoilerplate
 
     // -----------------------------------------------------------------------
-    // ReshapeNode (input) -- reshape input matrix
+    // ReshapeNode (input) -- reinterpret input matrix as having different dimensions
     //
     // If input has no layout, then this reshapes the input matrix
     // from (rows x cols) to (newRows x (cols / newRows * rows)).
@@ -135,16 +135,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // E.g. going from rows=20 to newRows=40 groups two consecutive time steps into one.
     // In this case, multiple parallel sequences are treated independently.
     //
-    // Unlike most other nodes, this node has intimate inside knowlegde of MBLayouts and frameRanges.
+    // Optionally, this node can set boundary flags for the expanded sequence.
+    // TODO: or should it always? Or use a separate node? Options need to be serialized...
     //
-    // BUGBUG: THIS IS UNTESTED for non-layout case!!  --TODO: remove these comments once tested
-    // BUGBUG: THIS IS UNTESTED for MBLayout case!!
+    // Unlike most other nodes, this node has intimate inside knowlegde of MBLayouts and frameRanges.
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class ReshapeNode : public ReshapingNodeBase<ElemType>
+    class ReshapeNode : public ReinterpretNodeBase<ElemType>
     {
-        typedef ReshapingNodeBase<ElemType> Base; UsingReshapingNodeBaseMembers;
+        typedef ReinterpretNodeBase<ElemType> Base; UsingReinterpretNodeBaseMembers;
         static const std::wstring TypeName() { return L"Reshape"; }
     public:
         ReshapeNode(DEVICEID_TYPE deviceId, const wstring & name, size_t numRows = 0, const ImageLayout & imageLayout = ImageLayout(0,0,0)) :
@@ -193,12 +193,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void PrintSelfBeforeValidation(bool allowNulls = false) const
+        // TODO: get rid of bool arg--need to check whether it already has been removed
+        // TODO: Is this a dup?
+        virtual void PrintSelfBeforeValidation(bool /*allowNulls = false*/) const
         {
             fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
 
-            if (!IsLeaf())
-            {
+            //if (!IsLeaf())    // can't be a leaf, must have an input
+            //{
                 fprintf(stderr, "(");
                 for (size_t i = 0; i < ChildrenSize(); i++)
                 {
@@ -206,21 +208,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (i > 0)
                         fprintf(stderr, ", ");
 
-                    if (child == nullptr)
-                    {
-                        if (allowNulls)
-                        {
-                            fprintf(stderr, "NULL");
-                            continue;
-                        }
-                        RuntimeError("One of the children is missing.");
-                    }
-
-                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
+                    if (!child)
+                        fprintf(stderr, "NULL");
+                    else
+                        fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
                 }
 
                 fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numRows, m_imageLayout.width, m_imageLayout.height, m_imageLayout.channels);
-            }
+            //}
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -283,9 +278,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - frameRange refers to *functionValues*, not the inputs
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            //if (isNoop())       // no change in dimension: FunctionValues() will return our input directly
-            //    return;
-
             size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
             size_t newCols = cols * rows / m_numRows;
             assert(newCols * m_numRows == cols * rows); // follows from above check
@@ -317,7 +309,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t newCols = cols * rows / m_numRows;
 
             // no layout case: this is indeed just a reshape
-            if (!m_pMBLayout/* || isNoop()*/)
+            if (!m_pMBLayout)
             {
                 Inputs(0)->GradientValues().Reshaped(cols * rows, 1) += GradientValues().Reshaped(newCols * m_numRows, 1);   // treat the values as one long vector
             }
@@ -331,20 +323,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        // BUGBUG: there is a const and a non-const version of this function
-        //virtual const Matrix<ElemType>& FunctionValues() const
-        //{
-        //    if (!isNoop())
-        //        return *m_functionValues;
-        //    else
-        //        return Inputs(0)->FunctionValues();
-        //}
-
     private:
         size_t m_numRows;
         bool weStack() const { return m_numRows > Inputs(0)->GetNumRows(); }        // do we stack (multiple frames into one)
         size_t factor() const { return m_numRows > Inputs(0)->GetNumRows() ? m_numRows / Inputs(0)->GetNumRows() : Inputs(0)->GetNumRows() / m_numRows; }   // factor by which we stack or unstack
-        bool isNoop() const { return m_numRows == Inputs(0)->GetNumRows(); }        // TODO: we also must test for changes in image layout
         ImageLayout m_imageLayout;
 
         void InferImageDimensions()
@@ -403,12 +385,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class ReshapeNode<float>;
     template class ReshapeNode<double>;
-#if 0
+#if 1
     // -----------------------------------------------------------------------
     // ReconcileMBLayout (dataInput, layoutInput)
     // This node copies data from 'dataInput' while it propagates the minibatch-layout information from 'layoutInput'.
     // It does perform a runtime check to enforce that the layout of 'dataInput' is compatible (identical content) to that of 'layoutInput'.
-    // This node is meant to be used from BrainScript macros that bracket expand/reduce pairs of nodes.
+    // This node is meant to be used from BrainScript macros that bracket expand/reduce pairs of nodes. It is not meant to really be used directly.
+    // TODO: What to do with sequence-boundary flags?
     // -----------------------------------------------------------------------
 
     template<class ElemType>
@@ -418,7 +401,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"ReconcileMBLayout"; }
     public:
         ReconcileMBLayoutNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
+            Base(deviceId, name)
         { }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
@@ -430,11 +413,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             // copy the data from 'dataInput'
-            ValueSlice.SetValue(Inputs(0)->GradientSlice(frameRange));  // just propagate through
+            ValueSlice(frameRange).SetValue(Inputs(0)->ValueSlice(frameRange));  // just propagate through
             // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
 
             // enforce compatibility of 'dataInput' with 'layoutInput'
-            if (*m_pMBLayout != Inputs(0)->GetMBLayout())
+            // TODO: how to deal with boundary flags?
+            if (*m_pMBLayout != *Inputs(0)->GetMBLayout())   // this does a deep value-level comparison
                 InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompaitble with that of %ls %ls.");
         }
 
@@ -445,6 +429,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (isFinalValidationPass && (!Inputs(0)->HasMBLayout() || !Inputs(1)->HasMBLayout()))
                 RuntimeError("%ls %ls operation requires two inputs that both have an associated MB layout.");
             m_pMBLayout = Inputs(1)->GetMBLayout(); // output layout is that of 'layoutInput'
+            // Note: We could also enforce that both inputs in fact have different layouts. But maybe there are edge cases where it isn't. Then this just becomes a nop. Also OK.
 
             Resize(Inputs(0));
             InferImageDimsFromInputs();
@@ -697,8 +682,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (!isNoop())    // if m_numRepeat == 1 then virtual FunctionValues() will return the child   --TODO: do this as an in-place optimization instead
-                ValueSlice(frameRange).AssignRepeatOf(Inputs(0)->ValueSlice(frameRange), m_numRepeat, 1);
+            //if (!isNoop())    // if m_numRepeat == 1 then virtual FunctionValues() will return the child   --TODO: do this as an in-place optimization instead
+            ValueSlice(frameRange).AssignRepeatOf(Inputs(0)->ValueSlice(frameRange), m_numRepeat, 1);
         }
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
@@ -707,24 +692,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // TODO: Can we remove this const-related duplication as well?
-        virtual const Matrix<ElemType>& FunctionValues() const
-        {
-            if (!isNoop())
-                return *m_functionValues;
-            else
-                return Inputs(0)->FunctionValues();
-        }
+        //virtual const Matrix<ElemType>& FunctionValues() const
+        //{
+        //    if (!isNoop())
+        //        return *m_functionValues;
+        //    else
+        //        return Inputs(0)->FunctionValues();
+        //}
 
-        virtual Matrix<ElemType>& FunctionValues() 
-        {
-            if (!isNoop())
-                return *m_functionValues;
-            else
-                return Inputs(0)->FunctionValues();
-        }
+        //virtual Matrix<ElemType>& FunctionValues() 
+        //{
+        //    if (!isNoop())
+        //        return *m_functionValues;
+        //    else
+        //        return Inputs(0)->FunctionValues();
+        //}
 
     private:
-        bool isNoop() const { return m_numRepeat == 1; }    // in this case this node does nothing
+        //bool isNoop() const { return m_numRepeat == 1; }    // in this case this node does nothing
         size_t m_numRepeat;
     };
 

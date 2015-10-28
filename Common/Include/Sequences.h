@@ -102,12 +102,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         // compare whether two layouts are the same
+        // BUGBUG: Need to implement comparing the content. Also need to define "equal", e.g. w.r.t. missing features.
         bool operator==(const MBLayout & other) const
         {
             // for now just check the object identity
-            // TODO: in the future, we also need to compare the content; and we need to define "equal", e.g. w.r.t. missing features
             return this == &other;
         }
+        bool operator!=(const MBLayout & other) const { return !(*this == other); } // duh
 
         // get boundary flags
         MinibatchPackingFlags Get(size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : m_minibatchPackingFlags[t]; }
