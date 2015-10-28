@@ -180,9 +180,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             if(m_format == MatrixFormat::matrixFormatSparseCSC || m_format == MatrixFormat::matrixFormatSparseCSR) 
             {
+            if (!m_externalBuffer)
+            {
                     delete[] m_pArray;
                     delete[] m_unCompIndex;
                     delete[] m_compIndex;
+            }
+
             }  
             else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
             {

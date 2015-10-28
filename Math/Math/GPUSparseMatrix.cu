@@ -601,8 +601,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             delete[] m_matrixName;
             delete[](byte*)m_tempHostBuffer;
-            CUDA_CALL(cudaFree(m_pArray));
-            CUDA_CALL(cudaFree(m_rowToId));
+                CUDA_CALL(cudaFree(m_pArray));
+                CUDA_CALL(cudaFree(m_rowToId));
             ZeroInit(m_format, m_computeDevice);
         }
     }
@@ -2019,6 +2019,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         slice.m_computeDevice = m_computeDevice;
         slice.m_numRows = m_numRows;
         slice.m_numCols = numCols;
+        slice.m_nz = m_nz;
+        slice.m_elemSizeAllocated = m_elemSizeAllocated;
+        slice.m_totalBufferSizeAllocated = m_totalBufferSizeAllocated;
+        slice.m_pArray = m_pArray;
+        slice.m_format = m_format;
+        slice.m_externalBuffer = true;
         slice.m_nz = m_nz;
         slice.m_elemSizeAllocated = m_elemSizeAllocated;
         slice.m_totalBufferSizeAllocated = m_totalBufferSizeAllocated;
