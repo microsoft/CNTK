@@ -385,7 +385,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
         }
 
-        virtual size_t UpdateFunctionMBSize(size_t numCols = SIZE_MAX/*means take from layout--this is the main use*/) = 0;
+        virtual void UpdateFunctionMBSize() = 0;
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
         MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
         bool HasMBLayout() const { return !!m_pMBLayout; }
@@ -982,22 +982,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // update size (#columns) of m_{function,gradient}Values to match MBLayout
         // This must be called right before EvaluateThisNode() the first time for a given minibatch.
-        // The 'numCols' parameter is legacy and will go away.
         // Currently overridden by
         //  - InputValue, which verifies instead of resizing (since Resize() is specified to be destructive, it should not call it).
         //  - LearnableParameters
         //  - GMMLogLikelihoodNode (which allocates some internal temp memory).
         // Important: Unless overridden, this function is destructive. Nodes cannot carry over minibatch-size dependent state across minibatches through m_functionValues because of this.
         // TODO: How is this function different from OnEvaluateBeginIteration()?
-        virtual size_t UpdateFunctionMBSize(size_t numCols)
+        virtual void UpdateFunctionMBSize() override
         {
-            if (!m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
-                return numCols;             // BUGBUG: what to return here?
-            if (numCols == SIZE_MAX)        // SIZE_MAX means determine from layout
-                numCols = m_pMBLayout->GetNumCols();
-            m_functionValues->ResizeColumns(numCols);
-            //m_gradientValues->ResizeColumns(numCols);  //gradient matrix will be resized only when needed
-            return numCols;
+            if (m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
+                m_functionValues->ResizeColumns(m_pMBLayout->GetNumCols());
         }
 
         void ValidateInferChildDims(size_t i, size_t rows, size_t cols) override final;
@@ -1432,7 +1426,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ComputationNodeBase::CopyTo(node, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
-                *node->m_functionValues = *m_functionValues; 
+                *node->m_functionValues = *m_functionValues;
                 *node->m_gradientValues = *m_gradientValues;
             }
         }

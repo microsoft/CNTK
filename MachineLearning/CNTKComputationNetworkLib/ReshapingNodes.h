@@ -126,17 +126,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // ReshapeNode (input) -- reinterpret input matrix as having different dimensions
+    // where the new row dimension is given, and the column dimension is inferred.
     //
     // If input has no layout, then this reshapes the input matrix
     // from (rows x cols) to (newRows x (cols / newRows * rows)).
     //
-    // If input has a layout, then it changes the number of time steps, i.e.
-    // from (rows x T time steps) to (newRows x (T / newRows * rows) time steps).
-    // E.g. going from rows=20 to newRows=40 groups two consecutive time steps into one.
-    // In this case, multiple parallel sequences are treated independently.
+    // If input has a layout, then it adds or removes a nested time dimension.
+    //  - If newRows > rows, then we remove a time dimension by stacking all frames from the dimension into one:
+    //       (rows x (newRows/rows nested time steps) x T time steps)
+    //    -> (newRows x T time steps).
+    //  - If newRows < rows, then we add a time dimension, going
+    //       (rows x T time steps)
+    //    -> (newRows x (rows/newRows nested time steps) x T time steps).
+    //    which requires the nested time sequence to have the correct number of steps.
+    // E.g. going from rows=20 to newRows=40 assumes a nested time sequence of 2 steps, which are grouped into one step, with the two vectors stacked.
+    // Multiple parallel sequences are treated independently.
+    // TODO: This definition is poor; we should use a different node name, and specify the factor directly.
+    //       We may hide that in BrainScript, but better use different node types.
+    //       E.g. ReinterpretRowStackAsSequence and ReinterpretSequenceAsRowStack.
+    // BUGBUG: This is not actually implemented yet. Instead, it goes from 1 to K steps or from K to 1 step. This is temporary/experimental, until the plumbing for nesting is there.
     //
-    // Optionally, this node can set boundary flags for the expanded sequence.
-    // TODO: or should it always? Or use a separate node? Options need to be serialized...
+    // Note: The new row dimension must be a straight multiple or divisor of the current row dimension.
+    // To reshape to a non-multiple go to row dim 1 first.
     //
     // Unlike most other nodes, this node has intimate inside knowlegde of MBLayouts and frameRanges.
     // -----------------------------------------------------------------------
@@ -237,16 +248,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInputs();
         }
 
-        virtual size_t UpdateFunctionMBSize(size_t numCols) override
+        virtual void UpdateFunctionMBSize() override
         {
-            // BUGBUG: numCols parameter is legacy and not really supported
             size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
             size_t newCols = cols * rows / m_numRows;
             if (!m_pMBLayout)               // if no layout, this node contains parameters independent of MB size, don't resize
                 VerifySize(m_numRows, newCols);
             else
                 Resize(m_numRows, newCols);
-            return numCols;
         }
 
         // TODO: there seems to be semantic overlap between OnEvaluateBeginIteration() and UpdateFunctionMBSize()
