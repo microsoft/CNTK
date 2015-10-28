@@ -92,11 +92,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t hStride() const { return m_hStride; }
         bool padding() const { return m_padding; }
     public:
-        ConvolutionDescriptor(const ConvolutionTensor4D& inT, const ConvolutionFilter& filterT, 
-            size_t wStride = 1, size_t hStride = 1, bool padding = false)
+        ConvolutionDescriptor(size_t wStride = 1, size_t hStride = 1, bool padding = false)
         {
-            UNUSED(inT);
-            UNUSED(filterT);
             m_wStride = wStride;
             m_hStride = hStride;
             m_padding = padding;
