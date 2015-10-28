@@ -69,6 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(PerDimMeanVarDeNormalizationNode) || nodeType == L"PerDimMeanVarDeNormalizationNode")	return New<PerDimMeanVarDeNormalizationNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(PerDimMeanVarNormalizationNode) || nodeType == L"PerDimMeanVarNormalizationNode")	return New<PerDimMeanVarNormalizationNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(PlusNode))	            return New<PlusNode<ElemType>>(deviceId, name);
+        else if (nodeType == OperationNameOf(ReconcileMBLayoutNode))	            return New<ReconcileMBLayoutNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(RectifiedLinearNode))	    return New<RectifiedLinearNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(ReshapeNode))	            return New<ReshapeNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(RowElementTimesNode))	    return New<RowElementTimesNode<ElemType>>(deviceId, name);
