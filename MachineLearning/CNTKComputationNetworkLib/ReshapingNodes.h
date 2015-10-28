@@ -193,29 +193,21 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        // TODO: get rid of bool arg--need to check whether it already has been removed
-        // TODO: Is this a dup?
-        virtual void PrintSelfBeforeValidation(bool /*allowNulls = false*/) const
+        virtual void /*IComputationNode::*/PrintSelfBeforeValidation() const override
         {
             fprintf(stderr, "\nValidating --> %ls = %ls", NodeName().c_str(), OperationName().c_str());
-
-            //if (!IsLeaf())    // can't be a leaf, must have an input
-            //{
-                fprintf(stderr, "(");
-                for (size_t i = 0; i < ChildrenSize(); i++)
-                {
-                    ComputationNodePtr child = Inputs(i);
-                    if (i > 0)
-                        fprintf(stderr, ", ");
-
-                    if (!child)
-                        fprintf(stderr, "NULL");
-                    else
-                        fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
-                }
-
-                fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numRows, m_imageLayout.width, m_imageLayout.height, m_imageLayout.channels);
-            //}
+            fprintf(stderr, "(");
+            for (size_t i = 0; i < ChildrenSize(); i++)
+            {
+                ComputationNodePtr child = Inputs(i);
+                if (i > 0)
+                    fprintf(stderr, ", ");
+                if (!child)
+                    fprintf(stderr, "NULL");
+                else
+                    fprintf(stderr, "%ls[%lu, %lu]", child->NodeName().c_str(), child->GetNumRows(), child->GetNumCols());
+            }
+            fprintf(stderr, ", NumOfRows=%lu, imageWidth=%lu, imageHeight=%lu, imageChannels=%lu)", m_numRows, m_imageLayout.width, m_imageLayout.height, m_imageLayout.channels);
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
@@ -385,7 +377,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class ReshapeNode<float>;
     template class ReshapeNode<double>;
-#if 1
+
     // -----------------------------------------------------------------------
     // ReconcileMBLayout (dataInput, layoutInput)
     // This node copies data from 'dataInput' while it propagates the minibatch-layout information from 'layoutInput'.
@@ -438,7 +430,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class ReconcileMBLayoutNode<float>; 
     template class ReconcileMBLayoutNode<double>;
-#endif
+
     // -----------------------------------------------------------------------
     // RowSliceNode (input)
     // this node extracts part of the input by rows as the output
