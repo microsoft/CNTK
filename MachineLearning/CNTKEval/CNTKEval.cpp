@@ -141,7 +141,7 @@ void CNTKEval<ElemType>::StartEvaluateMinibatchLoop(const std::wstring & outputN
 template<class ElemType>
 void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)
 {
-    size_t minibatchSize = m_config("minibatchSize", "1024");
+    size_t minibatchSize = m_config("minibatchSize", "10240");
     // get the evaluation names from the output string
     vector<wstring> outNodeNames;
 

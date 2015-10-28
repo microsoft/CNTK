@@ -161,7 +161,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "figures", "figures", "{889C
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{39E42C4B-A078-4CA4-9D92-B883D8129601}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CheckInSuites", "CheckInSuites\CheckInSuites.vcxproj", "{DBB3C106-B0B4-4059-8477-C89528CEC1B0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CheckInSuites", "Common\CheckInSuites\CheckInSuites.vcxproj", "{DBB3C106-B0B4-4059-8477-C89528CEC1B0}"
 	ProjectSection(ProjectDependencies) = postProject
 		{E6F26F9A-FF64-4F0A-B749-CD309EE357EE} = {E6F26F9A-FF64-4F0A-B749-CD309EE357EE}
 	EndProjectSection
