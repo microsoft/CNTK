@@ -427,7 +427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         for (auto & node : nodes)
         {
-#if 1       // not possible once we have inconsistent layouts
+#if 0       // not possible once we have inconsistent layouts
             // verify that the contract with MB layout was obeyed by Validate()
             if (node->GetMBLayout() && node->GetMBLayout()->GetNumCols() != node->GetNumCols())
             {
