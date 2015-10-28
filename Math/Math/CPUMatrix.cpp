@@ -4807,9 +4807,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             size_t k = (na / D / S / M    ) % K;
             size_t t = (na / D / S / M / K) % T;
             // compute index for the a and b/c tensors
-            size_t na1= (((t * K + k) * M + m) * S + s) * D + d;    // tensor of dimension (D x S x M x K x T)
-            size_t nb = (((t * S + s) * M + m) * K + k) * D + d;    // tensor of dimension (D x K x M x S x T)  --note: k/K and s/S swapped
-            assert(na == na1); na1;
+            assert(na== (((t * K + k) * M + m) * S + s) * D + d);   // input tensor of dimension (D x S x M x K x T)
+            size_t nb = (((t * S + s) * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S x T): k/K and s/S swapped
             assert(nb < N);
             // perform the computation
             ElemType cval = keepWeight ? keepWeight * pb[nb] : 0;   // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)

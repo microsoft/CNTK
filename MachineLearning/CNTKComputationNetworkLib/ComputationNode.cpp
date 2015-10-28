@@ -150,8 +150,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     /*virtual*/ void ComputationNode<ElemType>::MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
     {
+        bool deprecated = true;
+        if (deprecated)
+            LogicError("MoveMatricesToDevice: should not be called anymore");
         m_functionValues->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_functionValues->HasNoElements());
-        m_gradientValues->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_gradientValues->HasNoElements());
+        if (m_gradientValues)
+            m_gradientValues->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_gradientValues->HasNoElements());
     }
 
     template<class ElemType>

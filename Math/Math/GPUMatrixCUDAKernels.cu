@@ -1063,18 +1063,17 @@ __global__ void _tensorShuffleScaleAndAdd(
     ElemType keepWeight, const ElemType* pa, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const ElemType* pb, ElemType* pc)
 {
     size_t N = D * S * M * K * T;
-    CUDA_LONG n = blockDim.x * blockIdx.x + threadIdx.x;
-    if (n >= N)
+    CUDA_LONG na = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
+    if (na >= N)
         return;
     // recover the 5 indices from the loop counter
-    size_t d =  n                  % D;
-    size_t s = (n / D            ) % S;
-    size_t m = (n / D / S        ) % M;
-    size_t k = (n / D / S / M    ) % K;
-    size_t t = (n / D / S / M / K) % T;
+    size_t d =  na                  % D;
+    size_t s = (na / D            ) % S;
+    size_t m = (na / D / S        ) % M;
+    size_t k = (na / D / S / M    ) % K;
+    size_t t = (na / D / S / M / K) % T;
     // compute index for the a and b/c tensors
-    size_t na = (((t * K + k) * M + m) * S + s) * D + d;    // tensor of dimension (D x S x M x K x T)
-    size_t nb = (((t * S + s) * M + m) * K + k) * D + d;    // tensor of dimension (D x K x M x S x T)  --note: k/K and s/S swapped
+    size_t nb = (((t * S + s) * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S x T): k/K and s/S swapped
     // perform the computation
     ElemType cval = keepWeight ? keepWeight * pb[nb] : 0;   // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
     cval += scaleFactor * pa[na];
