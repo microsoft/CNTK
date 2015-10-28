@@ -56,8 +56,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef std::shared_ptr<MBLayout> MBLayoutPtr;
 
-        MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE), m_writable(true) { Init(1, 0, false); }
-        MBLayout(size_t numParallelSequences, size_t numTimeSteps, bool dataIsSequential) : m_sentenceBoundaryFlags(CPUDEVICE), m_writable(true) { Init(numParallelSequences, numTimeSteps, dataIsSequential); }
+        MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { Init(1, 0, false); }
+        MBLayout(size_t numParallelSequences, size_t numTimeSteps, bool dataIsSequential) : m_sentenceBoundaryFlags(CPUDEVICE) { Init(numParallelSequences, numTimeSteps, dataIsSequential); }
 
         // copy the content of another MBLayoutPtr over
         // Use this instead of actual assignment to make it super-obvious that this is not copying the pointer but actual content. The pointer is kept fixed.
@@ -78,6 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sentenceBoundaryFlags.Resize(0, 0);
             m_minibatchPackingFlags.clear();
             m_sequences.clear();
+            m_writable = true;
         }
 
         size_t GetNumTimeSteps()         const { return m_numTimeSteps; }
@@ -140,6 +141,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // mark a range of frames in a parallel sequence as one sentence
+        // Note that endTime is the last frame +1. Think of begin/end as used in STL containers.
         void SetAsSentence(size_t s, size_t beginTime, size_t endTime)
         {
             Set(s, beginTime, MinibatchPackingFlags::SequenceStart);

@@ -265,12 +265,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_pMBLayout)
             {
                 // create the derived layout
-                // BUGBUG: This assumes that the layout is complete at this point in time. RecurrentNodeBase makes the same assumption.
+                // BUGBUG: This assumes that the layout is complete at this point in time (RecurrentNodeBase makes the same assumption).
                 //         This assumption is correct at present, but will becomes invalid once we go sequence-to-sequence.
                 m_pMBLayout->Init(Inputs(0)->GetNumParallelSequences(), Inputs(0)->GetNumTimeSteps() * Inputs(0)->GetNumRows() / m_numRows);
+#if 1           // temporary hack until nested sequences are plumbed for
+                if (weStack())
+                {
+                    if (m_pMBLayout->GetNumTimeSteps() != 1)
+                        LogicError("ReshapeNode::OnEvaluateBeginIteration() faking to remove a nested time dimension only works when going back to a single frame per sequence.");
+                    // leave flags empty (single-frame 'utterances' come form frame randomization, hence no flags)
+                }
+                else
+                {
+                    if (Inputs(0)->GetMBLayout()->GetNumTimeSteps() != 1)
+                        LogicError("ReshapeNode::OnEvaluateBeginIteration() faking to add a nested time dimension only works when coming from a single frame per sequence.");
+                    for (size_t s = 0; s < m_pMBLayout->GetNumParallelSequences(); s++)
+                        m_pMBLayout->SetAsSentence(s, 0, m_pMBLayout->GetNumTimeSteps());
+                }
+#else
                 if (!m_pMBLayout->IsAllNone())
                     LogicError("ReshapeNode::OnEvaluateBeginIteration() to be completed for MBLayout case.");
                 // TODO: ^^ MBLayout update
+#endif
             }
         }
 
