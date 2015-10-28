@@ -851,7 +851,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                         }
                                     }
                                 }
-                                data.SetValue(feat.rows(), feat.cols(), m_featuresBufferMultiIO[id],matrixFlagNormal);
+                                data.SetValue(feat.rows(), feat.cols(), data.GetDeviceId(), m_featuresBufferMultiIO[id],matrixFlagNormal);
                             }
                         }
                         else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
@@ -919,7 +919,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 }
 
 
-                                data.SetValue(dim,uids.size(),m_labelsBufferMultiIO[id],matrixFlagNormal);
+                                data.SetValue(dim,uids.size(),data.GetDeviceId(), m_labelsBufferMultiIO[id],matrixFlagNormal);
                             }
 
                         }
@@ -1190,13 +1190,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             id = m_featureNameToIdMap[iter->first];
                             dim = m_featureNameToDimMap[iter->first];
-                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, m_featuresBufferMultiIO[id],matrixFlagNormal);
+                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, data.GetDeviceId(), m_featuresBufferMultiIO[id],matrixFlagNormal);
                         }
                         else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
                         {
                             id = m_labelNameToIdMap[iter->first];
                             dim = m_labelNameToDimMap[iter->first];
-                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, m_labelsBufferMultiIO[id],matrixFlagNormal);
+                            data.SetValue(dim, m_mbSize*m_numberOfuttsPerMinibatch, data.GetDeviceId(), m_labelsBufferMultiIO[id],matrixFlagNormal);
                         }
                     }
                     skip=false;
@@ -1317,7 +1317,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 }
                             }
                         }
-                        data.SetValue(feat.rows(), feat.cols(), m_featuresBufferMultiIO[id],matrixFlagNormal);
+                        data.SetValue(feat.rows(), feat.cols(), data.GetDeviceId(), m_featuresBufferMultiIO[id],matrixFlagNormal);
                     }
                 }
                 return true;
