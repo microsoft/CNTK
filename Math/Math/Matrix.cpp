@@ -4312,6 +4312,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - The original matrix dimensions are ignored except that sizes must match (rows x cols == D x S x M x K x T).
     //    For diagnostics purposes, this function also enforces the rows % D == 0 and cols % T == 0, but this is not a functional requirement and can be removed if that helps.
     //  - Dense matrices only.
+    // TODO: Handle these cases:
+    //  - no swapping happening  --just do a block copy
+    //  - swapping can be implemented by cuDNN  --do so
     template<class ElemType>
     /*static*/ void Matrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const Matrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const Matrix<ElemType>& b, Matrix<ElemType>& c)
     {

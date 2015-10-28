@@ -7,7 +7,6 @@
 #pragma once
 
 // TODOs:
-//  - eliminate Network::SetActualMiniBatchSizeFromFeatures() entirely, it should already be covered by Node::UpdateFunctionMBSize() which is called from inside the Eval loop
 //  - need Matrix::RowSlice() (problem: currently has no 'lead' dimension separate from numRows)
 //  - BUGBUG (in the future): Once we have > 1 layout in the system, all nodes must compare their actual layouts upon Evaluate().
 //    Example: TimeReverse must create a new layout. A second TimeReverse ideally would revert back, but can't know. Hence, all consumers of layouts must compare upon Evaluate().
@@ -573,32 +572,6 @@ public:
             LogicError("VerifyActualNumParallelSequences: mismatching MB size in MBLayout");
     }
 
-#if 0
-    // propagate the features' MB size to all nodes of the network
-    // TODO: This function should go. Resizing is now part of Validate() and EvaluateThisNode().
-    //       It is still used at many places though, to determine the MB size.
-    //       And it resets m_completedEvaluate (which is also cleared in Evaluate() itself), and m_completedGradient (which is cleared conditioned on some flag of unknown semantics).
-    size_t SetActualMiniBatchSizeFromFeatures()
-    {
-        size_t m_actualMBSize = DetermineActualMBSizeFromFeatures();
-
-        // assume that all nodes in recurrent loops need to be reset to aSize minibatch size, so need to reset the following
-        for (int i = 0; i < m_recurrentInfo.size(); i++)
-        {
-            m_recurrentInfo[i].m_completedEvaluate = false;
-            m_recurrentInfo[i].m_completedGradient = false;
-        }
-
-#if 0
-        // resize function values and gradients of everything in m_recurrentInfo
-        for (int i = 0; i < m_recurrentInfo.size(); i++)
-            for (auto & nodeIter : m_recurrentInfo[i].m_recurrentNodes)
-                nodeIter->UpdateFunctionMBSize(m_actualMBSize);
-#endif
-
-        return m_actualMBSize;
-    }
-#endif
     // MAIN ENTRY POINT for evaluating one minibatch (forward prop)
     // TODO: pass a set of nodes instead of only one
     // TODO: rename to ForwardProp()? To make it very clear?

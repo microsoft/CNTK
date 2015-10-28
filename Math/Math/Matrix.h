@@ -355,10 +355,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void VectorSum(const Matrix<ElemType>& a, Matrix<ElemType>& c, const bool isColWise);
 
         void VectorNorm1(Matrix<ElemType>& c, const bool isColWise) const;
-        Matrix<ElemType>& AssignVectorNorm1Of(Matrix<ElemType>& a, const bool isColWise);
+        Matrix<ElemType>& AssignVectorNorm1Of(Matrix<ElemType>& a, const bool isColWise);       // TODO: arg should be const
 
         void VectorNorm2(Matrix<ElemType>& c, const bool isColWise) const;
-        Matrix<ElemType>& AssignVectorNorm2Of(Matrix<ElemType>& a, const bool isColWise);
+        Matrix<ElemType>& AssignVectorNorm2Of(Matrix<ElemType>& a, const bool isColWise);       // TODO: arg should be const
 
         void VectorNormInf(Matrix<ElemType>& c, const bool isColWise) const;
         Matrix<ElemType>& AssignVectorNormInfOf(Matrix<ElemType>& a, const bool isColWise);
