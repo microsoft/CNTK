@@ -15,7 +15,7 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Forward declarations
-    struct FrameRange;
+    class FrameRange;
 
     // -----------------------------------------------------------------------
     // MBLayout -- layout information of minibatch
@@ -102,12 +102,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         // compare whether two layouts are the same
+        // BUGBUG: Need to implement comparing the content. Also need to define "equal", e.g. w.r.t. missing features.
         bool operator==(const MBLayout & other) const
         {
             // for now just check the object identity
-            // TODO: in the future, we also need to compare the content; and we need to define "equal", e.g. w.r.t. missing features
             return this == &other;
         }
+        bool operator!=(const MBLayout & other) const { return !(*this == other); } // duh
 
         // get boundary flags
         MinibatchPackingFlags Get(size_t t) const { return IsEmpty() ? MinibatchPackingFlags::None : m_minibatchPackingFlags[t]; }
@@ -346,16 +347,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - ReshapeNode:
     //      Matrix<ElemType> sliceOutputGrad = GradientSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t() * outputSamplesInRecurrentStep, outputSamplesInRecurrentStep, m_pMBLayout));
     //    using a differeren #sequences. Find out what this really means.
-    struct FrameRange
+    class FrameRange
     {
-        size_t timeIdxInSeq;              // start frame; SIZE_MAX = all frames in MB
-        size_t seqIndex;                  // sequence index; SIZE_MAX = all sequences in MB (most common case)
+    public: // TODO: fix this (currently used from masking and DataSlice)
+        size_t timeIdxInSeq;                // start frame; SIZE_MAX = all frames in MB
+        size_t seqIndex;                    // sequence index; SIZE_MAX = all sequences in MB (most common case)
+        //MBLayoutPtr m_pMBLayout;            // layout associated with this
+        const FrameRange *parent;           // or NULL: parent range, relative to which this FrameRange is interpreted  --TODO: not used yet
 
+    public:
         // can construct from a single size_t -> a single-frame range
-        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), seqIndex(SIZE_MAX) {}
+        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), seqIndex(SIZE_MAX), parent(nullptr) {}
 
         // or without arguments -> entire minibatch / no frame-range
-        FrameRange() : timeIdxInSeq(SIZE_MAX), seqIndex(SIZE_MAX) {}
+        FrameRange() : timeIdxInSeq(SIZE_MAX), seqIndex(SIZE_MAX), parent(nullptr) {}
 
         // create a FrameRange that accesses a single sequence only
         // FrameRange(t).Sequence(seq)
