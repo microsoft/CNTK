@@ -29,6 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using B::m_numCols; 
         using B::m_pArray; 
         using B::m_elemSizeAllocated; 
+        using B::m_sliceViewOffset;
         using B::m_nz; 
         using B::m_format;   
         using B::m_computeDevice;
@@ -102,7 +103,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (m_format == matrixFormatSparseBlockRow)
                 return MajorIndexLocation() + m_numRows;
             else
-                return MajorIndexLocation() + m_elemSizeAllocated;
+                return MajorIndexLocation() + m_elemSizeAllocated + m_sliceViewOffset;
         } 
         size_t SecondaryIndexCount(const size_t numRows, const size_t numCols, const size_t numNZReserved, const MatrixFormat format) const
         {
@@ -188,6 +189,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void InplaceTranspose();
         GPUSparseMatrix<ElemType>& AssignTransposeOf(const GPUSparseMatrix<ElemType>& a);
 
+        GPUSparseMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
         GPUMatrix<ElemType> ColumnSliceToDense(size_t startColumn, size_t numCols) const;
 
         GPUMatrix<ElemType> DiagonalToDense() const;
