@@ -497,7 +497,8 @@ void DoCreateLabelMap(const ConfigParameters& config)
 //                  1)  modelPath           -- path to the existing model 
 //                  2)  outputmodelPath     -- where to write the transformed model 
 //                  3)  KeepRatio           -- how many percentage of energy we want to keep
-//                  4)  ParameterName       -- name (regex) of the parameter node we want to perform a SVD decomposition 
+//					4)	AlignedSize			-- the resultant number of signular values is aligned to e.g., 32 or 64  
+//                  5)  ParameterName       -- name (regex) of the parameter node we want to perform a SVD decomposition 
 //              
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
@@ -537,6 +538,7 @@ void  DoParameterSVD(const ConfigParameters& config)
     map<wstring, float>     svdconfig;
 
     float keepratio = config("KeepRatio", "0.4");
+	size_t AlignedSize = config("AlignedSize", "8");
     wstring svdnodeRegex = config("NodeNameRegex", L"");
     if (!svdnodeRegex.empty())
     {
@@ -564,7 +566,7 @@ void  DoParameterSVD(const ConfigParameters& config)
     ComputationNetwork net(deviceID);
     net.LoadFromFile<ElemType>(modelPath);
 
-    net.PerformSVDecomposition<ElemType>(svdconfig);
+    net.PerformSVDecomposition<ElemType>(svdconfig, AlignedSize);
     if (!outputmodelPath.empty())
         net.SaveToFile(outputmodelPath);
 
