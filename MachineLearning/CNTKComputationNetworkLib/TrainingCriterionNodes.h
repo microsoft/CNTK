@@ -69,12 +69,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout = ImageLayout();
         }       
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_leftMinusRight->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-        }
-
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
@@ -196,13 +190,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout = ImageLayout();
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_logSoftmaxOfRight->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_softmaxOfRight->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-        }
-
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
@@ -317,12 +304,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout = ImageLayout();
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_logOfRight->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-        }
-
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
@@ -421,12 +402,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout = ImageLayout();
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_gradientOfL1Norm->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-        }
-
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
@@ -509,11 +484,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0, false);
 
             m_outputImageLayout = ImageLayout();
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);
         }
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
@@ -683,14 +653,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InferImageDimsFromInput(0, false);
             m_outputImageLayout = ImageLayout();
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_logSoftmax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_softMax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_grdToSoftMaxInput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
@@ -972,16 +934,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0, false);
 
             m_outputImageLayout = ImageLayout();
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_logSoftmax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_softMax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_clsLogSoftmax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_clsSoftmax.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_grdToSoftMaxInput.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
@@ -1525,15 +1477,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0, false);
 
             m_outputImageLayout = ImageLayout();
-        }
-
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);            
-            m_logSoftmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace( deviceId, true);
-            m_softmaxOfRight.TransferToDeviceIfNotThereAndNotAutoPlace( deviceId, true);
-            m_gammaFromLattice.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
-            m_framesDroppedMask.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);            
         }
 
         virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

@@ -3760,6 +3760,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (GetDeviceId() != id_to)
             TransferFromDeviceToDevice(GetDeviceId(), id_to, ismoved, emptyTransfer, updatePreferredDevice);
     }
+    // TODO: This function vv is now (after memshare update) only used by LearnableParameter::InitRandom(). Maybe it is time to get rid of it.
     template<class ElemType>
     void Matrix<ElemType>::TransferToDeviceIfNotThereAndNotAutoPlace(int id_to, bool ismoved, bool emptyTransfer, bool updatePreferredDevice) const
     {

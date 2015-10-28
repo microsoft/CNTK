@@ -323,12 +323,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }    
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
-        {
-            Base::MoveMatricesToDevice(deviceId);
-            m_tempMatrix->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
-        }
-
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
         {
             Base::DumpNodeInfo(printValues, fstream);
