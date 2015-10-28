@@ -598,11 +598,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // is simply a view over another matrix. In that
         // case we shouldn't free anything.
         if (OwnBuffer())
-        {
-            delete[] m_matrixName;
-            delete[](byte*)m_tempHostBuffer;
-            CUDA_CALL(cudaFree(m_pArray));
-            CUDA_CALL(cudaFree(m_rowToId));
+            {
+                delete[] m_matrixName;
+                delete[](byte*)m_tempHostBuffer;
+                CUDA_CALL(cudaFree(m_pArray));
+                CUDA_CALL(cudaFree(m_rowToId));
             ZeroInit(m_format, m_computeDevice);
         }
     }
