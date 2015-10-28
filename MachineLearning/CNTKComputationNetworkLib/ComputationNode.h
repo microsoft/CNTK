@@ -97,33 +97,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) = 0;
         virtual void OnComputeGradientEndIteration() = 0;             // called after last iteration step of ComputeGradient()
 
-        // --- optional overrides
+        // --- optional overrides that add functionality
 
         // Any override must call Base version as well.
         // Default implementations are in ComputationNodeBase or ComputationNode<ElemType>.
-        // TODO: is this always just called with deviceId == m_deviceId?
 
         virtual void Validate(bool isFinalValidationPass) = 0;          // main base validation function
         virtual void InferImageDimsFromInputs() = 0;
         virtual void SaveToFile(File& fstream) const = 0;
         virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/) = 0;
+        // TODO: is this always just called with deviceId == m_deviceId?   TODO: Where is this actually EVERY called?? I don't see it!
         virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) = 0;
-        virtual void PrintSelfBeforeValidation() const = 0;             // called in validation loop right before Validate()
-        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const = 0;
+        virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
+
+        // --- optional overrides that describe a feature or property of the node
+
         virtual bool RequiresPreCompute() const = 0;                    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() = 0; // // indicates whether special handling is needed.The standard handleing will be just mask the function values after the evalaution and mask the gradient before gradiant computation for the children. this is not valid for all criterion nodes whose result is a scalar.
 
-        // --- problem cases
-        
-        // These are overridden in their ComputationNode<ElemType> version, no with this prototype.
-        // We should list those functions somewhere as well.
+        // --- optional overrides for more informative logging
 
-        //virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const = 0;
-
-        // --- left-overs from refactoring--keeping it here for a while for debugging
-
-        // return true if the node's value should be computed in batch mode only, e.g., time-reverse node
-        //virtual bool RequiresBatchMode() const { return false; }  // not used actually
+        virtual void PrintSelfBeforeValidation() const = 0;             // called in validation loop right before Validate()
+        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const = 0;
     };
 
     // =======================================================================
@@ -872,7 +867,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId);
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override;
 
         // our own output dimensions
         /*implement*/size_t GetNumRows() const { return FunctionValues().GetNumRows(); }
@@ -1417,17 +1412,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     public:
-        void /*ComputationNodeBase::*/CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
-            CopyTo(UpCast(node), newName, flags);
-        }
-        virtual void CopyTo(const ComputationNodePtr node, const std::wstring& newName, const CopyNodeFlags flags) const
-        {
-            ComputationNodeBase::CopyTo(node, newName, flags);
+            Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
             {
+                auto node = UpCast(nodeP);
                 *node->m_functionValues = *m_functionValues;
-                *node->m_gradientValues = *m_gradientValues;
+                if (m_gradientValues)
+                    *node->m_gradientValues = *m_gradientValues;
+                else
+                    node->m_gradientValues = nullptr;
             }
         }
 

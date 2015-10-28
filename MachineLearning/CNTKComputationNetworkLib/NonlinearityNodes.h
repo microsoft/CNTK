@@ -66,13 +66,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateUnaryMap(isFinalValidationPass);
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
             Base::MoveMatricesToDevice(deviceId);
             m_gradient->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -483,13 +483,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateUnaryMap(isFinalValidationPass);
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
-            NonlinearityNodeBase<ElemType>::MoveMatricesToDevice(deviceId);
+            Base::MoveMatricesToDevice(deviceId);
             m_diff->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -577,13 +577,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateUnaryMap(isFinalValidationPass);
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
             Base::MoveMatricesToDevice(deviceId);
             m_softmax->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -961,7 +961,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_outputImageLayout = ImageLayout();
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
             Base::MoveMatricesToDevice(deviceId);
             m_prior->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
@@ -971,7 +971,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_posterior->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -1150,13 +1150,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_randomSeed = (unsigned long)val;
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
             Base::MoveMatricesToDevice(deviceId);
             m_maskOfDropout->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)

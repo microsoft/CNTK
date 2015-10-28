@@ -332,13 +332,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_delayedActivationMBLayout->Init(GetNumParallelSequences(), hist.GetNumCols() / GetNumParallelSequences(), true/*sequential*/);
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
             Base::MoveMatricesToDevice(deviceId);
             m_delayedActivation.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -472,7 +472,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream >> m_DefaultState;
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -1388,7 +1388,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //    m_children[4] = memoryCellWgt;
         //}
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
             Base::MoveMatricesToDevice(deviceId);
             m_functionValues->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_functionValues->HasNoElements());

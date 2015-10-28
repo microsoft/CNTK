@@ -826,7 +826,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0);
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
             Base::MoveMatricesToDevice(deviceId);
             m_tempMatrix->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
@@ -980,7 +980,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0);
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
             Base::MoveMatricesToDevice(deviceId);
             m_tempMatrix->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
@@ -1116,14 +1116,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(1);
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
             Base::MoveMatricesToDevice(deviceId);
             m_innerproduct->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
             m_rightGradient->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -1395,7 +1395,7 @@ private:
             Base(deviceId, name)
         { }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -1605,7 +1605,7 @@ private:
             m_outputImageLayout = ImageLayout();
         }
 
-        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
             Base::MoveMatricesToDevice(deviceId);
             m_invNorm0->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
@@ -1615,7 +1615,7 @@ private:
             m_temp->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
@@ -1958,7 +1958,7 @@ private:
             m_outputImageLayout = ImageLayout();
         }
 
-        virtual void MoveMatricesToDevice(const short deviceId)
+        virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId) override
         {
             Base::MoveMatricesToDevice(deviceId);
             m_invNorm0->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
@@ -1969,7 +1969,7 @@ private:
             m_temp->TransferToDeviceIfNotThereAndNotAutoPlace(deviceId);
         }
 
-        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
         {
             Base::CopyTo(nodeP, newName, flags);
             if (flags & CopyNodeFlags::copyNodeValue)
