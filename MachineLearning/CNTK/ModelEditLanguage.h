@@ -1,5 +1,5 @@
 //
-// <copyright file="NetworkDescriptionLanguage.h" company="Microsoft">
+// <copyright file="ModelEditLanguage.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //

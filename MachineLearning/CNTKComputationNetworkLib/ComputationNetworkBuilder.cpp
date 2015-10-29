@@ -1,6 +1,6 @@
 // ComputationNetworkBuilder -- helper class for constructing ComputationNetworks and ComputationNodes from C++ (internal and external)
 //
-// <copyright file="ComputationNode.cpp" company="Microsoft">
+// <copyright file="ComputationNetworkBuilder.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
