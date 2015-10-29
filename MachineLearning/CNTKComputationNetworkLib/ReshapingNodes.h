@@ -709,7 +709,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // TODO: Can we remove this const-related duplication as well?
-        //virtual const Matrix<ElemType>& FunctionValues() const
+        //virtual const Matrix<ElemType>& FunctionValues() const override
         //{
         //    if (!isNoop())
         //        return *m_functionValues;
@@ -717,7 +717,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //        return Inputs(0)->FunctionValues();
         //}
 
-        //virtual Matrix<ElemType>& FunctionValues() 
+        //virtual Matrix<ElemType>& FunctionValues() override 
         //{
         //    if (!isNoop())
         //        return *m_functionValues;

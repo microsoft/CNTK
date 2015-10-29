@@ -16,6 +16,12 @@
 //  - code prettification:
 //     - sort all node implementations' methods into the same order; esp, EvaluateThisNode() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
+//  - renaming:
+//     EvaluateThisNode     -> ForwardProp
+//     ComputeInputPartial  -> BackpropToInput
+//     m_children           -> m_inputs   and related functions
+//     ValueSlice           -> FunctionValues (with FrameRange argument)
+//     GradientSlice        -> GradientValues
 //  - finish the job:
 //     - everywhere complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
 //     - revise node constructors, merge by means of default parameters

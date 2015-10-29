@@ -1145,11 +1145,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[childIndex] = node;
         }
 
-        // these are overridden by DropoutNode, ReshapeNode, and RowRepeatNode to optimize for the trivial case that those don't do anything
-        // TODO: lots of nodes read out m_functionValues directly--was that a bug or intentional? They have now been changed to ValueSlice(), i.e. would pick it up
-        // BUGBUG: There is no matching virtual for GradientValues(). This should be symmetrical. Or better, replace this by optimizng for in-place operations.
-        virtual const Matrix<ElemType>& FunctionValues() const { return *m_functionValues; }
-        virtual Matrix<ElemType>& FunctionValues() { return *m_functionValues; }
+        const Matrix<ElemType>& FunctionValues() const { return *m_functionValues; }
+        Matrix<ElemType>& FunctionValues() { return *m_functionValues; }
 
         const Matrix<ElemType>& GradientValues() const { return *m_gradientValues; }
         Matrix<ElemType>& GradientValues() { return *m_gradientValues; }
