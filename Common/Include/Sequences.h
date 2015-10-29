@@ -354,15 +354,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public: // TODO: fix this (currently used from masking and DataSlice)
         size_t timeIdxInSeq;                // start frame; SIZE_MAX = all frames in MB
         size_t seqIndex;                    // sequence index; SIZE_MAX = all sequences in MB (most common case)
-        //MBLayoutPtr m_pMBLayout;            // layout associated with this
+        MBLayoutPtr m_pMBLayout;            // layout associated with this
         const FrameRange *parent;           // or NULL: parent range, relative to which this FrameRange is interpreted  --TODO: not used yet
 
     public:
         // can construct from a single size_t -> a single-frame range
-        FrameRange(size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), seqIndex(SIZE_MAX), parent(nullptr) {}
+        FrameRange(MBLayoutPtr pMBLayout, size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), parent(nullptr) {}
 
         // or without arguments -> entire minibatch / no frame-range
-        FrameRange() : timeIdxInSeq(SIZE_MAX), seqIndex(SIZE_MAX), parent(nullptr) {}
+        FrameRange(MBLayoutPtr pMBLayout) : timeIdxInSeq(SIZE_MAX), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), parent(nullptr) {}
 
         // create a FrameRange that accesses a single sequence only
         // FrameRange(t).Sequence(seq)
@@ -504,24 +504,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // iterators for iterating forward
         FrameRangeIterator begin() const
         {
-            if (m_delay < 0) return FrameRangeIterator(FrameRange(0), +1);
-            else return FrameRangeIterator(FrameRange(m_pMBLayout->GetNumTimeSteps()-1), -1);
+            if (m_delay < 0) return FrameRangeIterator(FrameRange(m_pMBLayout, 0), +1);
+            else return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1), -1);
         }
         FrameRangeIterator end() const
         {
-            if (m_delay > 0) return FrameRangeIterator(FrameRange((size_t)-1), 0);
-            else return FrameRangeIterator(FrameRange(m_pMBLayout->GetNumTimeSteps()), 0);
+            if (m_delay > 0) return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t)-1), 0);
+            else return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps()), 0);
         }
         // iterators for iterating in reverse order (as needed for gradient update)
         FrameRangeIterator rbegin() const
         {
-            if (m_delay > 0) return FrameRangeIterator(FrameRange(0), +1);
-            else return FrameRangeIterator(FrameRange(m_pMBLayout->GetNumTimeSteps() - 1), -1);
+            if (m_delay > 0) return FrameRangeIterator(FrameRange(m_pMBLayout, 0), +1);
+            else return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1), -1);
         }
         FrameRangeIterator rend() const
         {
-            if (m_delay < 0) return FrameRangeIterator(FrameRange((size_t)-1), 0);
-            else return FrameRangeIterator(FrameRange(m_pMBLayout->GetNumTimeSteps()), 0);
+            if (m_delay < 0) return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t)-1), 0);
+            else return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps()), 0);
         }
         // one-dimensional iteration (time sequences)
         // Delay specifies from which side the delayed value comes from:
