@@ -3829,7 +3829,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 long startOutX = (long) max(0, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
                 long endOutX = (long) ((x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1); //inclusive end
                 long startOutY = (long)  max(0, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-                long endOutY = (long) ((x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1); //inclusive end
+                long endOutY = (long) ((y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1); //inclusive end
 
                 ElemType inputValue = inputBatch(inputIndexWithinSample, sample);
                 for (long outY=startOutY; outY<=endOutY; outY++)
