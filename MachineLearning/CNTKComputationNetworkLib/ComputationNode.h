@@ -1164,8 +1164,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         static Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
                                           const FrameRange & frameRange/*select frame or entire batch*/,
-                                          const MBLayoutPtr & pMBLayout)
+                                          const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
         {
+            // TODO: for now we verify that we always pass in layouts in frameRange that match data.
+            //       In the future, we may want to allow a value-wise comparison of compatibility. Or hint users to use ReconcileMBNode.
+            if (frameRange.m_pMBLayout != pMBLayout)
+                LogicError("DataSlice: frameRange's MBLayout inconsistent with matrix");
             // if FrameRange refers to whole minibatch (map mode)
             // or if we don't even have a layout
             // then return the whole matrix
