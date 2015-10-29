@@ -159,15 +159,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 FrameRangeIteration range(m_pMBLayout, dir);
                 for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iterator
                     ComputeInputPartial(inputIndex, t);
-                //if (dir < 0) for (size_t t = GetNumTimeSteps(); t --> 0; )
-                //    ComputeInputPartial(inputIndex, FrameRange(t));
-                //else for (size_t t = 0; t < GetNumTimeSteps(); t++)
-                //    ComputeInputPartial(inputIndex, FrameRange(t));
                 return;
             }
 
             size_t t = frameRange.t();
-            //MaskMissingGradientColumnsToZero(t);
 
             // if delayed input is within valid time range then add its gradient
             int t_delayed = (int)t + direction * m_timeStep;
@@ -182,15 +177,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         if (!m_pShiftedMBLayout->Is(id, t, SequenceStart_or_End | MinibatchPackingFlags::NoFeature))    // don't propagate boundary frames or gaps
                         {
                             Matrix<ElemType> frm = GradientSlice(frameRange.Sequence(id));
-                            Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(t_delayed).Sequence(id));
+                            Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
                             to += frm;
                         }
                     }
                 }
                 else    // operate on entire time step in one go (over all parallel sequences)
                 {
-                    Matrix<ElemType> frm = GradientSlice(t);
-                    Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(t_delayed));
+                    Matrix<ElemType> frm = GradientSlice(frameRange);
+                    Matrix<ElemType> to = Inputs(0)->GradientSlice(FrameRange(m_pMBLayout, t_delayed)); // TODO: we need to be able to create a FrameRange with a delta, not like this
                     to += frm;
                 }
             }
@@ -269,11 +264,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         // inside the sequence: access delayed value
                         if (t_delayed < 0)
-                            inp = DataSlice(m_delayedActivation, FrameRange(t_delayed + T_delayedActivation).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
+                            inp = DataSlice(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                         else if (t_delayed >= T)
-                            inp = DataSlice(m_delayedActivation, FrameRange(t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
+                            inp = DataSlice(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                         else
-                            inp = Inputs(0)->ValueSlice(FrameRange(t_delayed).Sequence(id));
+                            inp = Inputs(0)->ValueSlice(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
                         out.SetValue(inp);
                     }
@@ -284,11 +279,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> out = ValueSlice(frameRange);
 
                 if (t_delayed < 0)
-                    inp = DataSlice(m_delayedActivation, FrameRange(t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
+                    inp = DataSlice(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
                 else if (t_delayed >= T)
-                    inp = DataSlice(m_delayedActivation, FrameRange(t_delayed - T), m_delayedActivationMBLayout);
+                    inp = DataSlice(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
                 else
-                    inp = Inputs(0)->ValueSlice(FrameRange(t_delayed));
+                    inp = Inputs(0)->ValueSlice(FrameRange(m_pMBLayout, t_delayed));
 
                 out.SetValue(inp);
             }
@@ -532,7 +527,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (int timeIdxInSeq = nT - GetNumParallelSequences(); timeIdxInSeq >= 0; timeIdxInSeq -= GetNumParallelSequences())
                 {
-                    FrameRange frameRange(timeIdxInSeq);
+                    FrameRange frameRange(m_pMBLayout, timeIdxInSeq);
                     Matrix<ElemType> sliceObs = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceOutput = ValueSlice(frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceState = DataSlice(m_State, frameRange/*TODO: delete this:*/.Check(timeIdxInSeq, GetNumParallelSequences(), m_pMBLayout));
@@ -923,7 +918,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 for (size_t timeIdxInSeq = 0; timeIdxInSeq < nT; timeIdxInSeq += GetNumParallelSequences())
                 {
-                    FrameRange frameRange(timeIdxInSeq);
+                    FrameRange frameRange(m_pMBLayout, timeIdxInSeq);
                     Matrix<ElemType> sliceObs = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceOutput = ValueSlice(frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));
                     Matrix<ElemType> sliceState = DataSlice(m_State, frameRange/*TODO: delete this:*/.Check(frameRange.t(), GetNumParallelSequences(), m_pMBLayout));
@@ -1308,7 +1303,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Resize(nOutput, nT);
 
                 m_DefaultState = 0.0;
-                EvaluateThisNode(FrameRange());
+                EvaluateThisNode(FrameRange(m_pMBLayout));
 
                 // check with expected values
                 if (!ISCLOSE(FunctionValues()(0, 0), 0.0335975, EPSILON) ||
@@ -1328,7 +1323,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Inputs(i)->GradientValues().SetValue(0);
                 }
                 for (size_t i = 0; i < 5; i++)
-                    ComputeInputPartial(i, FrameRange());
+                    ComputeInputPartial(i, FrameRange(m_pMBLayout));
 
                 // check with expected values
                 if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 0.07843818, EPSILON) // bi

@@ -386,9 +386,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         TimesNode(DEVICEID_TYPE deviceId, const wstring & name) :
             Base(deviceId, name)
         { }
-		TimesNode(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
-            Base(deviceId, name, rows, cols)
-        { }
+        //TimesNode(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) :
+        //    Base(deviceId, name, rows, cols)
+        //{ }
 		
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {

@@ -669,9 +669,9 @@ public:
                 if (!node->IsLeaf() && !node->RequiresPreCompute())
                     node->Validate(true);
                 node->OnEvaluateBeginIteration();
-                node->EvaluateThisNode(FrameRange());
+                node->EvaluateThisNode(FrameRange(node->GetMBLayout()));
                 if (IsNodeReqMultiSeqHandling(node))
-                    node->MaskMissingValuesColumnsToZero(FrameRange());
+                    node->MaskMissingValuesColumnsToZero(FrameRange(node->GetMBLayout()));
                 node->OnEvaluateEndIteration();
                 node->UpdateEvalTimeStamp();
             }
@@ -767,14 +767,14 @@ public:
             else
             {
                 node->OnComputeGradientBeginIteration();
-                if (IsNodeReqMultiSeqHandling(node))
-            {
-                // batch is done only for feed-forward nodes
-                if (node->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
-                    LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
-                    node->MaskMissingGradientColumnsToZero(FrameRange());
-            }
-                node->ComputeGradientForChildren(FrameRange());
+                if (IsNodeReqMultiSeqHandling(node))    // (TODO: This will go away.)
+                {
+                    // batch is done only for feed-forward nodes
+                    if (node->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
+                        LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
+                    node->MaskMissingGradientColumnsToZero(FrameRange(node->GetMBLayout()));
+                }
+                node->ComputeGradientForChildren(FrameRange(node->GetMBLayout()));
                 node->OnComputeGradientEndIteration();
             }
         }

@@ -36,7 +36,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             if (inputIndex == 0)
                 Inputs(0)->GradientSlice(frameRange).AddWithScaleOf(GradientValues().Get00Element(), *m_leftMinusRight);
             else
@@ -45,7 +45,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             m_leftMinusRight->AssignDifferenceOf(Inputs(0)->ValueSlice(frameRange), Inputs(1)->ValueSlice(frameRange));
             MaskMissingColumnsToZero(*m_leftMinusRight, Inputs(0)->GetMBLayout(), frameRange);    // we are fine since it will only be called with full minibatch.
             ElemType v = m_leftMinusRight->FrobeniusNorm();
@@ -120,7 +120,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             // left input is scalar
             if (inputIndex == 0)  // left derivative
             {
@@ -158,7 +158,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             // first compute the softmax (column-wise)
             // Note that we need both log and non-log for gradient computation.
             m_logSoftmaxOfRight->AssignLogSoftmaxOf(Inputs(1)->ValueSlice(frameRange), true);
@@ -246,7 +246,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
@@ -268,7 +268,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const Matrix<ElemType> inputFunctionValues0, const Matrix<ElemType> inputFunctionValues1,
             Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
             MaskMissingColumnsToZero(leftDivRight, Inputs(0)->GetMBLayout(), frameRange);
             Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
@@ -277,7 +277,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //-sum(left_i * log(right_i))
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             m_logOfRight->SetValue(Inputs(1)->ValueSlice(frameRange));
             m_logOfRight->InplaceLog();
             MaskMissingColumnsToZero(*m_logOfRight, Inputs(1)->GetMBLayout(), frameRange);
@@ -367,7 +367,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(*m_gradientOfL1Norm, Inputs(0)->GradientSlice(frameRange), GradientValues(), Inputs(0)->ValueSlice(frameRange));
         }
@@ -381,7 +381,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             VerifySize(1, 1);
             FunctionValues().SetValue(Inputs(0)->MaskedValueSlice(frameRange).MatrixNorm1());
 #if NANCHECK
@@ -453,7 +453,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             assert(inputIndex == 0); inputIndex;
             ComputeInputPartialS(Inputs(0)->GradientSlice(frameRange), GradientValues(), Inputs(0)->ValueSlice(frameRange), FunctionValues());
         }
@@ -466,7 +466,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             VerifySize(1,1);
             FunctionValues().SetValue(Inputs(0)->MaskedValueSlice(frameRange).FrobeniusNorm());
 #if NANCHECK
@@ -549,7 +549,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         */
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             m_needRecomputeGradientToSoftmaxInput = false;
             //gradient computation@yinggongzhao
             //inputIndex should be 2 this time
@@ -581,7 +581,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             if (Inputs(0)->HasMBLayout() && Inputs(0)->GetMBLayout()->HasGaps())
                 LogicError("%ls %ls operation does not handle multiple parallel sequences with gaps correctly. Contact fseide@microsoft.com if you have a need and a test case.", NodeName().c_str(), OperationName().c_str());
             //Inputs(0)->MaskMissingValuesColumnsToZero(frameRange);
@@ -722,7 +722,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (Inputs(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
                     continue;
-                FrameRange frameRange = FrameRange(t).Sequence(s);
+                FrameRange frameRange = FrameRange(Inputs(0)->GetMBLayout(), t).Sequence(s);
 
                 Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange);
                 size_t c_t = (size_t)lbl_t(1, 0);
@@ -779,7 +779,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (Inputs(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
                         continue;
-                    FrameRange frameRange = FrameRange(t).Sequence(s);
+                    FrameRange frameRange = FrameRange(Inputs(0)->GetMBLayout(), t).Sequence(s);
 
                     Matrix<ElemType> lbl_t = Inputs(0)->ValueSlice(frameRange);
                     size_t y_t = (size_t)lbl_t(0, 0);       // word index
@@ -829,7 +829,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (Inputs(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
                     continue;
-                FrameRange frameRange = FrameRange(t).Sequence(s);
+                FrameRange frameRange = FrameRange(Inputs(0)->GetMBLayout(), t).Sequence(s);
 
                 const Matrix<ElemType> & lbl_t = Inputs(0)->ValueSlice(frameRange);
                 size_t lft_bnd = (size_t)lbl_t(2, 0);
@@ -853,7 +853,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (Inputs(0)->GetMBLayout()->Is(s, t, MinibatchPackingFlags::NoInput))  // skip gaps
                     continue;
-                FrameRange frameRange = FrameRange(t).Sequence(s);
+                FrameRange frameRange = FrameRange(Inputs(0)->GetMBLayout(), t).Sequence(s);
 
                 const Matrix<ElemType> & lbl_t = Inputs(0)->ValueSlice(frameRange);
                 size_t y_t = (size_t)lbl_t(0, 0);     // current word token index
@@ -996,7 +996,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /// compute posterior probability of label y at position t
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             size_t nrow = Inputs(0)->GetNumRows();
             size_t ncol = Inputs(0)->GetNumCols();
 
@@ -1030,7 +1030,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override  //scaled by 2*number of colmns (samples) in the Matrix<ElemType>
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             // inputIndex 0 should not get us here, it should be prevented by the needGradient flag of input[0]
             if (inputIndex != 1 && inputIndex != 2)
                 InvalidArgument("CRFNode only takes with respect to input and weight.");
@@ -1267,7 +1267,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
-            FrameRange frameRange;
+            FrameRange frameRange(m_pMBLayout);
             if (inputIndex == 0)
                 LogicError("DummyCriterionNode: derivatives with respect to objective features are not necessary, not implemented yet.\n");
             else if (inputIndex == 1)
@@ -1364,7 +1364,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_gammaFromLattice,
                     m_fsSmoothingWeight, m_frameDropThreshold);
 #ifdef _DEBUG
-                Inputs(inputIndex)->InvalidateMissingGradientColumns(FrameRange());
+                Inputs(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Inputs(inputIndex)->GetMBLayout()));
 #endif
             }
             else if (inputIndex == 2)

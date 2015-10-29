@@ -566,7 +566,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto nodeIter = batchComputeNodes.begin(); nodeIter != batchComputeNodes.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
-                node->EvaluateThisNode(FrameRange(atTime));
+                node->EvaluateThisNode(FrameRange(node->GetMBLayout(), atTime));
                 if (node->GetNumCols() != node->GetNumParallelSequences())
                     RuntimeError("preComputeActivityAtTime: the function values has to be a single column matrix ");
             }

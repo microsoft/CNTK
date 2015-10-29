@@ -837,6 +837,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef ElemType OurElemType;
     protected:
         // TODO: this should be protected and only accessible to the New method; maybe just move it in here?
+        //        TODO: after memshare, this requirement has gone away. We can construct directly again.
         // TODO: Once we switch to VS 2015, we shall use inheriting constructors, i.e. we can delete all those redundant constructor forwards in each ComputationNode derivate
         // TODO: verify that we initialize all members (e.g. m_parameterUpdateRequired was missing before)
         ComputationNode(DEVICEID_TYPE deviceId, const wstring & name) :
@@ -844,20 +845,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             InitRecurrentNode();
             ResetEvalTimeStamp();   // bring it into defined state
-            // This constructor does not call MoveMatricesToDevice(), but that is needed for full initialization.
-            // Only call this constructor through the New() factory below, which will ensure this.
         }
+#if 0   // (this was used by TimesNode when created by SVD, but seems unneccessary, and is buggy since inconsistent with the above)
         ComputationNode(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) : ComputationNodeBase(deviceId, name)
         {
             CreateMatrixIfNull(m_functionValues);
             Resize(rows, cols);
             FunctionValues().SetValue(0);
         }
+#endif
     public:
         // public constructor
         // You must construct ComputationNode derivates with this function. The real C++ constructor itself is hidden,
         // as we need to call a virtual function after construction. This function does that.
-        // TODO: Actually, that is no longer necessary. We can get rid of this again.
+        // TODO: Actually, that is no longer necessary. We can get rid of this again. Or keep it just as a convenience function that returns a shared_ptr.
         template<class C, class... _Types> static inline shared_ptr<C> New(DEVICEID_TYPE deviceId, const wstring & name, _Types&&... _Args)
         {
             return make_shared<C>(deviceId, name, forward<_Types>(_Args)...);     // creates objects, esp. assigns deviceId to matrices, but otherwise does nothing
@@ -1225,11 +1226,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             Base::OnEvaluateEndIteration();
 #ifdef TRACK_GAP_NANS
-            MaskMissingValuesColumnsToZero(FrameRange());       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+            MaskMissingValuesColumnsToZero(FrameRange(m_pMBLayout));       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
             if (FunctionValues().HasNan("OnEvaluateEndIteration"))
                 LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
 #endif
-            InvalidateMissingValuesColumns(FrameRange());        // blast NaNs into columns that are gaps in a packed layout
+            InvalidateMissingValuesColumns(FrameRange(m_pMBLayout));        // blast NaNs into columns that are gaps in a packed layout
         }
 #endif
 
@@ -1256,16 +1257,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // BUGBUG: This masks a bug: Nodes should do that by themselves, like in EvaluateThisNode(), but they currently don't.
             if (m_needsGradient)
             {
-                MaskMissingValuesColumnsToZero(FrameRange());
+                MaskMissingValuesColumnsToZero(FrameRange(m_pMBLayout));
                 if (m_gradientInitialized)
-                    MaskMissingGradientColumnsToZero(FrameRange());
+                    MaskMissingGradientColumnsToZero(FrameRange(m_pMBLayout));
             }
             bool anyChildNeedsGradient = false;
             for (size_t i = 0; i < m_children.size(); i++)
                 anyChildNeedsGradient |= Inputs(i)->m_needsGradient;
             if (anyChildNeedsGradient)
                 for (size_t i = 0; i < m_children.size(); i++)
-                   Inputs(i)->MaskMissingValuesColumnsToZero(FrameRange());
+                    Inputs(i)->MaskMissingValuesColumnsToZero(FrameRange(m_pMBLayout));
         }
 
 #ifdef _DEBUG
@@ -1278,7 +1279,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNodePtr child = Inputs(i);
                 if (child->m_needsGradient)
                 {
-                    child->MaskMissingGradientColumnsToZero(FrameRange());       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+                    child->MaskMissingGradientColumnsToZero(FrameRange(m_pMBLayout));       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
                     if (child->GradientValues().HasNan("OnComputeGradientEndIteration"))
                         LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
                 }
