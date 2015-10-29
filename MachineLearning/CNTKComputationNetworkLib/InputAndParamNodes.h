@@ -486,7 +486,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(1)->FunctionValues().SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, true);
                 Resize(nInput, nOutput);
 
-                EvaluateThisNode(FrameRange());
+                EvaluateThisNode(FrameRange(m_pMBLayout));
 
                 /// check with expected values
                 FunctionValues().TransferFromDeviceToDevice(m_deviceId, CPUDEVICE, true);
@@ -505,7 +505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     Inputs(i)->GradientValues().SetValue(0);
                 }
                 for (size_t i = 0; i < 2; i++)
-                    ComputeInputPartial(i, FrameRange());
+                    ComputeInputPartial(i, FrameRange(m_pMBLayout));
 
                 // check with expected values
                 if (!ISCLOSE(Inputs(1)->GradientValues()(0, 0), 2, EPSILON) /// bi
