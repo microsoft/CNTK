@@ -1,5 +1,5 @@
 //
-// <copyright file="cn.cpp" company="Microsoft">
+// <copyright file="CNTK.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //

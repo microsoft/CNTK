@@ -1,7 +1,7 @@
 // TODO: this is a dup; use the one in Include/ instead
 
 //
-// <copyright file="fileutil.h" company="Microsoft">
+// <copyright file="fileutil.old.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //

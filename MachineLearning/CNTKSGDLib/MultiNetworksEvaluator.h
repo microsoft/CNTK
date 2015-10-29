@@ -1,6 +1,6 @@
 // MultiNetworksEvaluator/SGD -- This represents earlier efforts to use CNTK for sequence-to-sequence modeling. This is no longer the intended design.
 //
-// <copyright file="SimpleEvaluator.h" company="Microsoft">
+// <copyright file="MultiNetworksEvaluator.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //

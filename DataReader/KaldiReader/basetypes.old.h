@@ -1,7 +1,7 @@
 // TODO: This is a dup, we should get back to the shared one. But this one has some stuff the other doesn't.
 
 //
-// <copyright file="basetypes.h" company="Microsoft">
+// <copyright file="basetypes.old.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
