@@ -14,13 +14,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     /*static*/ struct DataReaderHelpers
     {
+        // -------------------------------------------------------------------
+        // DecimateMinibatch - decimate minibatch for parallelization
+        // -------------------------------------------------------------------
 
-        // decimate minibatch for parallelization--in utterance mode, also requires presence of parallel utterances
-        // We sub-sample the utterances.
+        // We sub-sample the parallel utterances.
         template<class ElemType> 
-        static void DecimateMinibatchSequences(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*> &mb,  /* (input) matrix to be decimated */
-                                                   int numprocs, int rank,                                    /* (input) rank info */
-                                                   MBLayoutPtr pMBLayout)                                     // gets decimated as well
+        static void DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,   // matrix to be decimated
+                                                   int numprocs, int rank,             // rank info
+                                                   MBLayoutPtr pMBLayout)              // gets decimated as well
         {
             if (numprocs == 1)
                 return;
@@ -46,7 +48,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (nOrigParallelUtts % numprocs != 0 && !warned)
             {
                 /* give a warning of potential bandwidth wasting */
-                fprintf(stderr, "DecimateMinibatchSequences: WARNING: Number of parallel utterances %d not a multiple of number of GPUs %d, GPU usage will be suboptimal.\n",
+                fprintf(stderr, "DecimateMinibatch: WARNING: Number of parallel utterances %d not a multiple of number of GPUs %d, GPU usage will be suboptimal.\n",
                         (int)nOrigParallelUtts, (int)numprocs);
                 warned = true;
             }
@@ -63,7 +65,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (rv == 0)
                     rv = nCols;
                 else if (rv != nCols)
-                    LogicError("DecimateMinibatchSequences: Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)nCols);
+                    LogicError("DecimateMinibatch: Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)nCols);
 
                 if (T != nCols / nOrigParallelUtts)
                     LogicError("ERROR: MBLayout borked, GetNumTimeSteps() mismatches minibatch number of columns\n");
@@ -75,7 +77,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // should never happen, print debug info
                     // BUGBUG: Yes, this can happen if we got less parallel sequences than GPUs. But users wouldn't want that, so we should fail.
                     // BUGBUG: This can also happen for a very small minibatch at the end of the epoch.
-                    fprintf(stderr, "DecimateMinibatchSequences: WARNING: col_st=col_en=%d, nCol=%d, nBlock=%d, nParaUtts=%d, nGPU=%d--This can happen if #parallel sequences < #GPUs (you'd be leaving a GPU unused)\n",
+                    fprintf(stderr, "DecimateMinibatch: WARNING: col_st=col_en=%d, nCol=%d, nBlock=%d, nParaUtts=%d, nGPU=%d--This can happen if #parallel sequences < #GPUs (you'd be leaving a GPU unused)\n",
                         (int)sent_start, (int)nCols, (int)T, (int)nOrigParallelUtts, (int)numprocs);
                 }
 
@@ -94,9 +96,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             pMBLayout->MoveFrom(pNewMBLayout);  // update layout in-place
         }
 
+        // -------------------------------------------------------------------
         // GetMinibatchIntoNetwork() -- get one minibatch from Reader (this->trainSetDataReader) into Network (this->net)
         // Returns false if end of epoch has been reached.
         // If not, then actualMBSize is set. Note that 0 is a valid value to be returned for actualMBSize, caller must handle that correctly.
+        // -------------------------------------------------------------------
+
         // Note: Later, a function like this will become part of the reader interface.
         // TODO: callers of this often do ComputationNetwork::UpdateEvalTimeStamps(featureNodes) and also for labels; we should eliminate the need for this.
         template<class ElemType>
@@ -165,13 +170,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // decimate if needed. Decimation happens in-place.
             if (wasDataRead && !useDistributedMBReading && useParallelTrain)
-            {
-                //if (pMBLayout->RequireSentenceSeg())   // decimate in sequences
-                    DecimateMinibatchSequences(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
-                //else        // frame mode: decimate in frames
-                //    DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
-                // Note: we decimate parallel sequences now also in frame mode, where one frame is one sequence
-            }
+                DecimateMinibatch(inputMatrices, g_mpi->NumNodesInUse(), g_mpi->CurrentNodeRank(), net.GetMBLayoutPtr());
 
             // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
             // Note: Decimation may have reduced this to 0 frames.
