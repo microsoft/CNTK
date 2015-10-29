@@ -991,8 +991,8 @@ private:
             if (chunkdata.isinram())
             {
                 if (verbosity)
-                fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n",
-                     (int)k, (int)randomizedchunks[m][k].globalts, (int)(randomizedchunks[m][k].globalte()-1), (int)(chunksinram-1));
+                    fprintf (stderr, "releaserandomizedchunk: paging out randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n",
+                             (int)k, (int)randomizedchunks[m][k].globalts, (int)(randomizedchunks[m][k].globalte()-1), (int)(chunksinram-1));
                 chunkdata.releasedata();
                 numreleased++;
             }
@@ -1034,7 +1034,7 @@ private:
                 auto & chunk = randomizedchunks[m][chunkindex];
                 auto & chunkdata = chunk.getchunkdata();
                 if (verbosity)
-                fprintf (stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n", m, (int)chunkindex, (int)chunk.globalts, (int)(chunk.globalte()-1), (int)(chunksinram+1));
+                    fprintf (stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n", m, (int)chunkindex, (int)chunk.globalts, (int)(chunk.globalte()-1), (int)(chunksinram+1));
                 msra::util::attempt (5, [&]()   // (reading from network)
                 {
                     chunkdata.requiredata (featkind[m], featdim[m], sampperiod[m], this->lattices, verbosity);
@@ -1282,8 +1282,8 @@ public:
             const size_t windowbegin = randomizedchunks[0][firstchunk].windowbegin;
             const size_t windowend = randomizedchunks[0][lastchunk].windowend;
             if (verbosity > 0)
-            fprintf (stderr, "getbatch: getting randomized frames [%d..%d] (%d frames out of %d requested) in sweep %d; chunks [%d..%d] -> chunk window [%d..%d)\n",
-                     (int)globalts, (int)globalte, (int)mbframes, (int)framesrequested, (int)sweep, (int)firstchunk, (int)lastchunk, (int)windowbegin, (int)windowend);
+                fprintf (stderr, "getbatch: getting randomized frames [%d..%d] (%d frames out of %d requested) in sweep %d; chunks [%d..%d] -> chunk window [%d..%d)\n",
+                         (int)globalts, (int)globalte, (int)mbframes, (int)framesrequested, (int)sweep, (int)firstchunk, (int)lastchunk, (int)windowbegin, (int)windowend);
             // release all data outside, and page in all data inside
             for (size_t k = 0; k < windowbegin; k++)
                 releaserandomizedchunk (k);
