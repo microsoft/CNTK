@@ -14,58 +14,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     /*static*/ struct DataReaderHelpers
     {
-#if 0   // no longer needed since frame mode now uses N sequences with 1 frame each
-        // decimate minibatch for parallelization--in frame mode
-        // We sub-sample the individual frames (= matrix columns).
-        template<class ElemType>
-        static void DecimateMinibatch(std::map<std::wstring, MSR::CNTK::Matrix<ElemType>*>& mb, int procs, int rank, MBLayoutPtr pMBLayout)
-        {
-            if (procs == 1)
-                return;
-
-            const size_t nCols = mb.begin()->second->GetNumCols();
-            const size_t colBegin = (nCols * rank) / procs;
-            const size_t colEnd = (nCols * (rank + 1)) / procs;
-
-            for (auto it = mb.begin(); it != mb.end(); ++it)
-            {
-                MSR::CNTK::Matrix<ElemType> &mat = *(it->second);
-
-                if (nCols != mat.GetNumCols())  // all matrices must have the same number of columns
-                    LogicError("DecimateMinibatch: Inconsistent number of columns among inputs (found %d and %d).", (int)nCols, (int)mat.GetNumCols());
-
-#if 1
-                MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(colBegin, colEnd - colBegin);
-                if (tmp.GetNumRows() != mat.GetNumRows())
-                    LogicError("DecimateMinibatch:: found ColumnSlice() to not preserve #rows when asking for 0 columns. That's a bug in ColumnSlice()");// TODO: remove this if confirmed the original code below indicates that it may not (then that would be a bug in ColumnSlice())
-                mat.SetValue(tmp);
-#else
-                if (colEnd == colBegin)
-                {
-                    MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), 0, AUTOPLACEMATRIX, DENSE);
-                    mat.SetValue(tmp);
-                    // TODO: ^^ why is ColumnSlice not applicable here? That would be a bug in ColumnSlice()
-                }
-                else
-                {
-                    MSR::CNTK::Matrix<ElemType> tmp = mat.ColumnSlice(colBegin, colEnd - colBegin);
-                    mat.SetValue(tmp);
-                }
-#endif
-
-            }
-
-            // fix the layout
-            // In frame mode, this is easy, since the layout has no flags. So we can just recreate one.
-            if (!pMBLayout->IsAllNone())
-                LogicError("DecimateMinibatch: unexpectedly called on minibatch that has sentence-boundary flags set");
-            else if (pMBLayout->GetNumParallelSequences() != 1)
-                LogicError("DecimateMinibatch: unexpectedly called on minibatch that has >1 parallel sequence");
-            else if (nCols != pMBLayout->GetNumTimeSteps())     // matrices must match the layout prior to decimation
-                LogicError("DecimateMinibatch: Number of columns inconsistent with layout (%d vs. %d).", (int)nCols, (int)pMBLayout->GetNumTimeSteps());
-            pMBLayout->Init(1, colEnd - colBegin, false);
-        }
-#endif
 
         // decimate minibatch for parallelization--in utterance mode, also requires presence of parallel utterances
         // We sub-sample the utterances.
@@ -86,58 +34,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //   | x_t^{st} ... x_t^{en-1}|  .... | x_{t+T-1}^{st} ... x_{t+T-1}^{en-1} | 
             // Each block now has nSlice/nProcs 
             // 
-            // Correspondingly, the SentenceBoundary and PackingFlags will be revised 
+            // Correspondingly, the MBLayout will be revised 
+
             size_t nOrigParallelUtts = pMBLayout->GetNumParallelSequences();
             size_t T = pMBLayout->GetNumTimeSteps();
 
             // decide new parallel utterances
-#if 1
             size_t sent_start = nOrigParallelUtts * (size_t)rank / numprocs;
             size_t sent_end = nOrigParallelUtts * (size_t)(rank + 1) / numprocs;
             static bool warned = false;
-            if (!warned)
+            if (nOrigParallelUtts % numprocs != 0 && !warned)
             {
                 /* give a warning of potential bandwidth wasting */
                 fprintf(stderr, "DecimateMinibatchSequences: WARNING: Number of parallel utterances %d not a multiple of number of GPUs %d, GPU usage will be suboptimal.\n",
                         (int)nOrigParallelUtts, (int)numprocs);
                 warned = true;
             }
-#else
-            size_t nSlices = nOrigParallelUtts;
-            static bool warned = false;
-            size_t sent_start = 0;
-            size_t sent_end = 0;
-            if (nOrigParallelUtts % numprocs != 0)
-            {
-                if (!warned)
-                {
-                    /* give a warning of potential bandwidth wasting */
-                    fprintf(stderr, "WARNING: %d GPUs are used in model averaging, but the number of parallel utterances are %d, a potential training speed degradation.\n",
-                            (int)g_mpi->NumNodesInUse(), (int)nOrigParallelUtts);
-                    warned = true;
-                }
-                if (rank == numprocs - 1)
-                {
-                    nSlices = nOrigParallelUtts - (nOrigParallelUtts / numprocs + 1) * (numprocs - 1);
-                    sent_start = (nOrigParallelUtts / numprocs + 1) * (numprocs - 1);
-                    sent_end = nOrigParallelUtts;
-                }
-                else
-                {
-                    nSlices = nOrigParallelUtts / numprocs + 1;
-                    sent_start = nSlices * rank;
-                    sent_end = nSlices * (rank + 1);
-                    if (sent_end > nOrigParallelUtts) sent_end = nOrigParallelUtts;
-                }
-            }
-            else
-            {
-                nSlices = nOrigParallelUtts / numprocs;
-                sent_start = rank*nSlices;
-                sent_end = (rank + 1)*nSlices;
-                if (sent_end > nOrigParallelUtts) sent_end = nOrigParallelUtts;
-            }
-#endif
             size_t newNumParallelSequences = sent_end - sent_start;
 
             // decimate data
@@ -173,6 +85,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     tmp.SetColumnSlice(mat.ColumnSlice(t*nOrigParallelUtts + sent_start, newNumParallelSequences), t*newNumParallelSequences, newNumParallelSequences);
                 mat.SetValue(tmp);      // update matrix in-place (new matrix has less parallel streams)
                 // TODO: ^^ If had Matrix::RowSlice(), this would be simpler.
+                //       TODO: But we do have a row-slice assignment function. This could be used.
             }
             // decimate layout
             auto pNewMBLayout = make_shared<MBLayout>(newNumParallelSequences, T, true);
