@@ -3,6 +3,7 @@
 # This script collects coverage for all unit tests in a specified directory.
 # For each test file outputs a binary coverage file produces by the VS tool chain.
 # The coverage file can be opened in VS for detailed analysis or be used for reporting.
+# For collection of full coverage the binaries should be compiled with /PROFILE linker flag.
 
 import os
 import argparse
@@ -13,7 +14,7 @@ def collectCoverage(tests, testDir, outputDir, toolDir, config):
 
     for test in tests:
         outputFile = os.path.join(outputDir, test + ".coverage")
-        print "Running executable %s" % test + " with result in %s" % outputFile
+        print "Running executable %s with result in %s" % (test, outputFile)
         subprocess.check_call([coverage, "collect", "/output:%s" % outputFile, "" if config == "" else "/config:%s" % config, os.path.join(testDir, test)])
 
 def collectCoverageSingle(test, outputDir, toolDir, config):    
@@ -24,7 +25,7 @@ def collectCoverageMulti(testDir, outputDir, toolDir, config):
     collectCoverage(tests, testDir, outputDir, toolDir, config)
 
 def main():
-    parser = argparse.ArgumentParser(description="Runs all boost unit tests in the directory")
+    parser = argparse.ArgumentParser(description="Collects coverage for the executable or directory with test executables")
     parser.add_argument('--test', help='Path to the executable or directory that has to be analyzed', required=True)
     parser.add_argument('--outputdir', help='Output directory for coverage results', required=True)
     parser.add_argument('--tooldir', help='Tool directory for CodeCoverage tool', required=False, default=r'c:\Program Files (x86)\Microsoft Visual Studio 12.0\Team Tools\Dynamic Code Coverage Tools\amd64')
@@ -37,7 +38,9 @@ def main():
 
     if os.path.isfile(args.test):
         collectCoverageSingle(args.test, args.outputdir, args.tooldir, args.config)
+    elif os.path.isdir(args.test):
+        collectCoverageMulti(args.test, args.outputdir, args.tooldir, args.config)
     else:
-        collectCoverageMulti(args.test, args.outputdir, args.tooldir, args.config)        
+        print('Please specify correct executable or test directory where the coverage should be collected.')        
 
 main()

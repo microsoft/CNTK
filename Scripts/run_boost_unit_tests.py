@@ -17,7 +17,7 @@ def runBoostUnitTests(testDir, outputDir):
         # running the test with correct suffix
         if test.lower().endswith("tests.exe") or test.lower().endswith("tests"):
             outputFile = os.path.join(outputDir, test + ".xml")
-            print "Running test executable %s" % test + " with result in %s" % outputFile
+            print "Running test executable %s with result in %s" % (test, outputFile)
             subprocess.check_call([os.path.join(testDir, test), "--log_format=XML", "--log_sink=%s" % outputFile, "--log_level=all", "--report_level=no"])
 
 def main():
