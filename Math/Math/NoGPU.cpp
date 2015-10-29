@@ -74,7 +74,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyToDenseMatrix() const
     {
-        GPUMatrix < ElemType> res;
+        GPUMatrix < ElemType> res(0);
         return res;
     }
     template<class ElemType> void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType> &denseMatrix) const {}
@@ -205,7 +205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& /*b*/)
     {
-        GPUMatrix<ElemType> c;
+        GPUMatrix<ElemType> c(0);
         return c;
     }
 
@@ -237,13 +237,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
     {
-        GPUMatrix<ElemType> a;
+        GPUMatrix<ElemType> a(0);
         return a;
     }
     template<class ElemType>
     GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::DiagonalToDense() const
     {
-        GPUMatrix<ElemType> a;
+        GPUMatrix<ElemType> a(0);
         return a;
     }
 
@@ -458,7 +458,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId) { };
 
-    template<class ElemType> GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags, int deviceId) { };
+    template<class ElemType> GPUMatrix<ElemType>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, const size_t matrixFlags) { };
 
     template<class ElemType> GPUMatrix<ElemType>::GPUMatrix(const GPUMatrix<ElemType>& deepCopyFrom) { }
 
@@ -483,7 +483,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #pragma region Basic Operators
     template<class ElemType> GPUMatrix<ElemType> GPUMatrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCols) const
     {
-        GPUMatrix<ElemType> slice;
+        GPUMatrix<ElemType> slice(0);
 
         return slice;
     }
@@ -493,7 +493,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols) { return *this; }
     template<class ElemType> GPUMatrix<ElemType> GPUMatrix<ElemType>::Diagonal() const
     {
-        GPUMatrix<ElemType> diag;
+        GPUMatrix<ElemType> diag(0);
         return diag;
     }
 
@@ -535,10 +535,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUMatrix<ElemType>::SetColumn(const ElemType* colPointer, size_t colInd) { }
     template<class ElemType> void GPUMatrix<ElemType>::SetColumn(const GPUMatrix<ElemType>& valMat, size_t colInd) { }
 
+    template<class ElemType> void GPUMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val) { }
+
+    template<class ElemType> void GPUMatrix<ElemType>:: CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride) { }
     template<class ElemType> void GPUMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& deepCopyFrom) { }
 
     template<class ElemType>
-    void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, size_t matrixFlags, int deviceId) { }
+    void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, size_t matrixFlags) { }
 
 
     template<class ElemType> void GPUMatrix<ElemType>::SetDiagonalValue(const ElemType v) { }
@@ -863,7 +866,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise) const
     {}
 
-    template<class ElemType> void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise, int topK, GPUMatrix<ElemType>& workspace) const
+    template<class ElemType> void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<ElemType>& maxValues, const bool isColWise, int topK) const
     {}
 
     template<class ElemType> void GPUMatrix<ElemType>::VectorMin(GPUMatrix<ElemType>& minIndexes, GPUMatrix<ElemType>& minValues, const bool isColWise) const
@@ -1026,33 +1029,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> void GPUMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c) { }
 
-    template<class ElemType> GPUMatrix<ElemType>  GPUMatrix<ElemType>::Ones(const size_t rows, const size_t cols)
+    template<class ElemType> GPUMatrix<ElemType>  GPUMatrix<ElemType>::Ones(const size_t rows, const size_t cols, int deviceId)
     {
-        GPUMatrix<ElemType> mat;
+        GPUMatrix<ElemType> mat(0);
         return mat;
     }
 
-    template<class ElemType> GPUMatrix<ElemType>  GPUMatrix<ElemType>::Zeros(const size_t rows, const size_t cols)
+    template<class ElemType> GPUMatrix<ElemType>  GPUMatrix<ElemType>::Zeros(const size_t rows, const size_t cols, int deviceId)
     {
-        GPUMatrix<ElemType> mat;
+        GPUMatrix<ElemType> mat(0);
         return mat;
     }
 
-    template<class ElemType> GPUMatrix<ElemType>  GPUMatrix<ElemType>::Eye(const size_t rows)
+    template<class ElemType> GPUMatrix<ElemType>  GPUMatrix<ElemType>::Eye(const size_t rows, int deviceId)
     {
-        GPUMatrix<ElemType> mat;
+        GPUMatrix<ElemType> mat(0);
         return mat;
     }
 
-    template<class ElemType> GPUMatrix<ElemType>  GPUMatrix<ElemType>::RandomUniform(const size_t rows, const size_t cols, const ElemType low, const ElemType high, unsigned long seed)
+    template<class ElemType> GPUMatrix<ElemType>  GPUMatrix<ElemType>::RandomUniform(const size_t rows, const size_t cols, int deviceId, const ElemType low, const ElemType high, unsigned long seed)
     {
-        GPUMatrix<ElemType> mat;
+        GPUMatrix<ElemType> mat(0);
         return mat;
     }
 
-    template<class ElemType> GPUMatrix<ElemType> GPUMatrix<ElemType>::RandomGaussian(const size_t rows, const size_t cols, const ElemType mean, const ElemType sigma, unsigned long seed)
+    template<class ElemType> GPUMatrix<ElemType> GPUMatrix<ElemType>::RandomGaussian(const size_t rows, const size_t cols, int deviceId, const ElemType mean, const ElemType sigma, unsigned long seed)
     {
-        GPUMatrix<ElemType> mat;
+        GPUMatrix<ElemType> mat(0);
         return mat;
     }
 
@@ -1110,8 +1113,7 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
 
 #pragma region MatrixQuantizerGPU functions
     template<class ElemType>
-    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(const Matrix<ElemType>& inMatrix, bool forceSync)
-        : MatrixQuantizer<ElemType>(inMatrix)
+    MatrixQuantizerGPU<ElemType>::MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool forceSync)
     {
     }
 
@@ -1121,7 +1123,7 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
     }
 
     template<class ElemType>
-    void MatrixQuantizerGPU<ElemType>::QuantizeAsync(QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit)
+    void MatrixQuantizerGPU<ElemType>::QuantizeAsync(const Matrix<ElemType>& inMatrix, QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit)
     {
     }
 
@@ -1146,12 +1148,12 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
     template class GPUMatrix<double>;
     template class DeviceBoundNumber<float>;
     template class DeviceBoundNumber<double>;
-    template MatrixQuantizerGPU<float>::MatrixQuantizerGPU(const Matrix<float>&, bool forceSync);
-    template MatrixQuantizerGPU<double>::MatrixQuantizerGPU(const Matrix<double>&, bool forceSync);
+    //template MatrixQuantizerGPU<float>::MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool);
+    //template MatrixQuantizerGPU<double>::MatrixQuantizerGPU(size_t numRows, size_t numCols, int deviceId, bool);
     template MatrixQuantizerGPU<float>::~MatrixQuantizerGPU();
     template MatrixQuantizerGPU<double>::~MatrixQuantizerGPU();
-    template void MatrixQuantizerGPU<float>::QuantizeAsync(QuantizedMatrix<float>&, bool);
-    template void MatrixQuantizerGPU<double>::QuantizeAsync(QuantizedMatrix<double>&, bool);
+    template void MatrixQuantizerGPU<float>::QuantizeAsync(const Matrix<float>&, QuantizedMatrix<float>&, bool);
+    template void MatrixQuantizerGPU<double>::QuantizeAsync(const Matrix<double>&, QuantizedMatrix<double>&, bool);
 
     template<class ElemType> cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = { 0 };
 
