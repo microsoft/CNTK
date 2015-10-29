@@ -88,7 +88,9 @@ private:
     std::vector<size_t> m_labelDims;
 
     std::vector<std::vector<std::vector<ElemType>>>m_labelToTargetMapMultiIO;
-     
+    
+    int m_verbosity;
+
     void PrepareForTrainingOrTesting(const ConfigParameters& config);
     void PrepareForWriting(const ConfigParameters& config);
     
