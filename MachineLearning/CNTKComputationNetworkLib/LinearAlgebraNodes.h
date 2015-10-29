@@ -1504,11 +1504,6 @@ private:
             inputGradientValues.SetValue(0);
             inputGradientValues.SetDiagonalValue(diag);
         }
-
-        virtual const Matrix<ElemType>& FunctionValues() const
-        {
-            return *m_functionValues;
-        }
     };
 
     template class DiagonalNode<float>;
