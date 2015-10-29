@@ -449,7 +449,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 if (foundInvalidColumn)
-                    m_columnsValidityMask->SetValue(1, columnsValidityMask.size(), deviceId, &(columnsValidityMask[0]));
+                    m_columnsValidityMask->SetValue(1, columnsValidityMask.size(), deviceId, columnsValidityMask.data());
             }
         }
 
