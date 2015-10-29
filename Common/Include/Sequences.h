@@ -78,6 +78,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_sentenceBoundaryFlags.Resize(0, 0);
             m_minibatchPackingFlags.clear();
             m_sequences.clear();
+			m_writable = true; 
         }
 
         size_t GetNumTimeSteps()         const { return m_numTimeSteps; }
@@ -251,6 +252,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_writable = false;
         }
 
+		void Unlock() const
+		{
+			m_writable = true;
+		}
         // explicit list of sequences
         // Currently this is for diagnostics only, but in the future this will include utterance ids etc, meant for lining up inconsistent MB layouts.
         struct SequenceDesc
