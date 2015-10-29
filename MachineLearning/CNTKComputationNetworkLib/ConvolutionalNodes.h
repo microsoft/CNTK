@@ -55,6 +55,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_zeroPadding(zeroPadding), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
         {
             m_imageLayout = ImageLayoutWHC(1, 1, outputChannels);
+            m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId);
         }
         ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp) :
             ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelWidth"), configp->Get(L"kernelHeight"), configp->Get(L"outputChannels"),
@@ -114,7 +115,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //        ComputeInputPartialOverInputFeature(GradientValues(), Inputs(1)->GradientValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_tempMatrix);
         //}
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
+        virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange & frameRange) override
         {
             //if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
 
@@ -259,7 +260,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void EvaluateThisNode(const FrameRange & frameRange) override
         {
             //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
 
@@ -435,17 +436,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                      m_imageLayout.GetNumChannels());
             }    
 
-            // REVIEW alexeyk: is there a better place to create engine?
+            // REVIEW alexeyk: is there a better place to create engines?
+            if (m_factory == nullptr)
+                m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
             if (m_convEng == nullptr)
-                m_convEng = ConvolutionEngine<ElemType>::Create(m_deviceId, m_maxTempMemSizeInSamples);
+                m_convEng = m_factory->CreateConvEngine(m_maxTempMemSizeInSamples);
             if (m_inT == nullptr)
-                m_inT = m_convEng->CreateTensor(m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels, 1);
+                m_inT = m_factory->CreateTensor(m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels, 1);
             if (m_filterT == nullptr)
-                m_filterT = m_convEng->CreateFilter(m_kernelWidth, m_kernelHeight, m_inputImageLayout.channels, m_outputImageLayout.channels);
+                m_filterT = m_factory->CreateFilter(m_kernelWidth, m_kernelHeight, m_inputImageLayout.channels, m_outputImageLayout.channels);
             if (m_outT == nullptr)
-                m_outT = m_convEng->CreateTensor(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels, 1);
+                m_outT = m_factory->CreateTensor(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels, 1);
             if (m_convDesc == nullptr)
-                m_convDesc = m_convEng->CreateConvDescriptor(*m_inT, *m_filterT, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
+                m_convDesc = m_factory->CreateConvDescriptor(*m_inT, *m_filterT, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -483,6 +486,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
+        std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
         std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
 
         std::unique_ptr<ConvolutionTensor4D> m_inT;
@@ -522,7 +526,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(deviceId, name),
             m_windowWidth(windowWidth), m_windowHeight(windowHeight),
             m_horizontalSubsample(horizontalSubsample), m_verticalSubsample(verticalSubsample)
-        { }
+        {
+            m_factory = ConvolutionEngineFactory<ElemType>::Create(deviceId);
+        }
         PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp) :
             PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"))
         {
@@ -560,7 +566,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
+        virtual void ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
             //if (frameRange.IsAllFrames()) { ComputeInputPartialMap(inputIndex); return; } // TODO: remove these one by one
             Matrix<ElemType> sliceInput0Grad = Inputs(0)->GradientSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
@@ -569,24 +575,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
 
-            ComputeInputPartialV(sliceOutputGrad, sliceInput0Grad, sliceInput0Value, sliceOutputValue);
+            ComputeGradient(sliceOutputGrad, sliceInput0Grad, sliceInput0Value, sliceOutputValue);
         }
 
         // this function must be overriden by Max or AveragePoolingNode
-        virtual void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) = 0;
+        virtual void ComputeGradient(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) = 0;
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
+        virtual void EvaluateThisNode(const FrameRange & frameRange) override
         {
             //if (frameRange.IsAllFrames()) { EvaluateThisNodeMap(); return; }
             Matrix<ElemType> sliceInput0Value = Inputs(0)->ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
             Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange/*TODO: delete this:*/.Check_t(GetNumParallelSequences(), m_pMBLayout));
-            EvaluateThisNodeV(sliceOutputValue, sliceInput0Value);
+            Evaluate(sliceOutputValue, sliceInput0Value);
         }
 
         // this function must be overriden by Max or AveragePoolingNode
-        virtual void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) = 0;
+        virtual void Evaluate(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) = 0;
 
-        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        virtual void Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
 
@@ -608,7 +614,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             SetDims(m_outputSizePerSample, Inputs(0)->GetNumCols());
         }
 
-        virtual void InferImageDimsFromInputs()
+        virtual void InferImageDimsFromInputs() override
         {
             InferImageDimsFromInput(0, false);
 
@@ -618,6 +624,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_imageLayout = ImageLayoutWHC((m_inputImageLayout.GetWidth()  - m_windowWidth)  / m_horizontalSubsample + 1,
                                                  (m_inputImageLayout.GetHeight() - m_windowHeight) / m_verticalSubsample   + 1,
                                                  m_inputImageLayout.GetNumChannels());
+
+            // REVIEW alexeyk: is there a better place to create engines?
+            if (m_factory == nullptr)
+                m_factory = ConvolutionEngineFactory<ElemType>::Create(m_deviceId);
+            if (m_poolEng == nullptr)
+                m_poolEng = m_factory->CreatePoolEngine();
+            if (m_inT == nullptr)
+                m_inT = m_factory->CreateTensor(m_inputImageLayout.width, m_inputImageLayout.height, m_inputImageLayout.channels, 1);
+            if (m_outT == nullptr)
+                m_outT = m_factory->CreateTensor(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels, 1);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -636,6 +652,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     protected:
+        std::unique_ptr<ConvolutionEngineFactory<ElemType>> m_factory;
+        std::unique_ptr<PoolingEngine<ElemType>> m_poolEng;
+
+        std::unique_ptr<ConvolutionTensor4D> m_inT;
+        std::unique_ptr<ConvolutionTensor4D> m_outT;
+        std::unique_ptr<PoolingDescriptor> m_poolDesc;
+
         size_t m_windowWidth, m_windowHeight;
         size_t m_horizontalSubsample, m_verticalSubsample;
         size_t m_inputSizePerSample, m_outputSizePerSample;
@@ -666,15 +689,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(configp)
         { }
 
+<<<<<<< HEAD
         virtual void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) override
+=======
+        void ComputeGradient(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &input0, const Matrix<ElemType> &functionValues) override
+>>>>>>> cudnn: added pooling engine, unit tests and refactoring.
         {
-            inputGradientValues.AddMaxPoolingGradient(gradientValues, input0, functionValues, m_inputImageLayout.GetNumChannels(),
-                                                      m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputSizePerSample, 
-                                                      m_imageLayout.GetWidth(), m_imageLayout.GetHeight(), m_outputSizePerSample, 
+            //m_poolEng->Backward(*m_inT, input0, *m_poolDesc, *m_outT, functionValues);
+            inputGradientValues.AddMaxPoolingGradient(gradientValues, input0, functionValues, m_inputImageLayout.channels,
+                                                      m_inputImageLayout.width, m_inputImageLayout.height, m_inputSizePerSample, 
+                                                      m_outputImageLayout.width, m_outputImageLayout.height, m_outputSizePerSample, 
                                                       m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         }
 
+<<<<<<< HEAD
         virtual void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
+=======
+        void Evaluate(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
+        {
+            size_t batchSize = m_pMBLayout->GetNumParallelSequences();
+            m_inT->setN(batchSize);
+            m_outT->setN(batchSize);
+            assert(m_poolEng != nullptr);
+            m_poolEng->Forward(*m_inT, input0, *m_poolDesc, *m_outT, functionValues);
+        }
+
+        void InferImageDimsFromInputs() override
+>>>>>>> cudnn: added pooling engine, unit tests and refactoring.
         {
             functionValues.AssignMaxPoolingResult(input0, m_inputImageLayout.GetNumChannels(),
                                                   m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputSizePerSample, 
@@ -704,7 +745,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Base(configp)
         { }
 
+<<<<<<< HEAD
         virtual void ComputeInputPartialV(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/) override
+=======
+        void ComputeGradient(const Matrix<ElemType> &gradientValues, Matrix<ElemType> &inputGradientValues, const Matrix<ElemType> &/*input0*/, const Matrix<ElemType> &/*functionValues*/) override
+>>>>>>> cudnn: added pooling engine, unit tests and refactoring.
         {
             inputGradientValues.AddAveragePoolingGradient(gradientValues, m_inputImageLayout.GetNumChannels(),
                                                           m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputSizePerSample, 
@@ -712,7 +757,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                           m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
         }
 
+<<<<<<< HEAD
         virtual void EvaluateThisNodeV(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
+=======
+        void Evaluate(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0) override
+>>>>>>> cudnn: added pooling engine, unit tests and refactoring.
         {
             functionValues.AssignAveragePoolingResult(input0, m_inputImageLayout.GetNumChannels(),
                                                       m_inputImageLayout.GetWidth(), m_inputImageLayout.GetHeight(), m_inputSizePerSample, 

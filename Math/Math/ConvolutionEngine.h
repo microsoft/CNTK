@@ -111,8 +111,103 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_padding;
     };
 
+    // PoolingDescriptor describes properties specific to convolution application.
+    class PoolingDescriptor
+    {
+    public:
+        enum class PoolKind { Max = 0, Average };
+        
+        PoolKind kind() { return m_kind; }
+        // Pooling window size.
+        size_t w() const { return m_w; }
+        size_t h() const { return m_h; }
+        // Horizontal stride (in w-dimension).
+        size_t wStride() const { return m_wStride; }
+        // Vertical stride (in h-dimension).
+        size_t hStride() const { return m_hStride; }
+        // Horizontal pad (in w-dimension).
+        size_t wPad() const { return m_wPad; }
+        // Vertical pad (in h-dimension).
+        size_t hPad() const { return m_hPad; }
+    public:
+        PoolingDescriptor(PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad)
+        {
+            m_kind = kind;
+            m_w = w;
+            m_h = h;
+            m_wStride = wStride;
+            m_hStride = hStride;
+            m_wPad = wPad;
+            m_hPad = hPad;
+        }
+
+    public:
+        virtual ~PoolingDescriptor() = default;
+        // Deleting copy ctor/assignment as derived objects may contain non-copyable state.
+        PoolingDescriptor(const PoolingDescriptor&) = delete;
+        PoolingDescriptor& operator=(const PoolingDescriptor&) = delete;
+
+    private:
+        PoolKind m_kind;
+        size_t m_w;
+        size_t m_h;
+        size_t m_wStride;
+        size_t m_hStride;
+        size_t m_wPad;
+        size_t m_hPad;
+    };
+
     template<class ElemType>
     class MATH_API ConvolutionEngine
+    {
+    public:
+        using Tensor4D = ConvolutionTensor4D;
+        using Filter = ConvolutionFilter;
+        using ConvDesc = ConvolutionDescriptor;
+        using Mat = Matrix<ElemType>;
+
+    public:
+        ConvolutionEngine() = default;
+        virtual ~ConvolutionEngine() = default;
+
+        virtual void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+            const Tensor4D& outT, Mat& out) = 0;
+        virtual void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+            const Tensor4D& gradT, Mat& grad) = 0;
+        virtual void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
+            const Filter& filterT, Mat& filter, bool allowReuse) = 0;
+
+    public:
+        ConvolutionEngine(const ConvolutionEngine&) = delete;
+        ConvolutionEngine& operator=(const ConvolutionEngine&) = delete;
+        ConvolutionEngine(ConvolutionEngine&&) = delete;
+        ConvolutionEngine& operator=(ConvolutionEngine&&) = delete;
+    };
+
+    template<class ElemType>
+    class MATH_API PoolingEngine
+    {
+    public:
+        using Tensor4D = ConvolutionTensor4D;
+        using PoolDesc = PoolingDescriptor;
+        using Mat = Matrix<ElemType>;
+
+    public:
+        PoolingEngine() = default;
+        virtual ~PoolingEngine() = default;
+
+        virtual void Forward(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out) = 0;
+        virtual void Backward(const Tensor4D& srcGradT, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& gradT, Mat& grad) = 0;
+
+    public:
+        PoolingEngine(const PoolingEngine&) = delete;
+        PoolingEngine& operator=(const PoolingEngine&) = delete;
+        PoolingEngine(PoolingEngine&&) = delete;
+        PoolingEngine& operator=(PoolingEngine&&) = delete;
+    };
+
+    template<class ElemType>
+    class MATH_API ConvolutionEngineFactory
     {
     public:
         using Tensor4D = ConvolutionTensor4D;
@@ -121,32 +216,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using FilterPtr = std::unique_ptr<ConvolutionFilter>;
         using ConvDesc = ConvolutionDescriptor;
         using ConvDescPtr = std::unique_ptr<ConvolutionDescriptor>;
-        using Mat = Matrix<ElemType>;
+        using PoolDesc = PoolingDescriptor;
+        using PoolDescPtr = std::unique_ptr<PoolingDescriptor>;
 
-        ConvolutionEngine() = default;
-        virtual ~ConvolutionEngine() = default;
-
-        static std::unique_ptr<ConvolutionEngine<ElemType>> Create(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples);
+        using ConvEnginePtr = std::unique_ptr<ConvolutionEngine<ElemType>>;
+        using PoolEnginePtr = std::unique_ptr<PoolingEngine<ElemType>>;
 
     public:
-        virtual void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-            const Tensor4D& outT, Mat& out) = 0;
-        virtual void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-            const Tensor4D& gradT, Mat& grad) = 0;
-        virtual void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
-            const Filter& filterT, Mat& filter, bool allowReuse) = 0;
+        ConvolutionEngineFactory(DEVICEID_TYPE deviceId)
+            : m_deviceId(deviceId)
+        {
+        }
+        virtual ~ConvolutionEngineFactory() = default;
 
         virtual Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) = 0;
         virtual FilterPtr CreateFilter(size_t w, size_t h, size_t c, size_t k) = 0;
         virtual ConvDescPtr CreateConvDescriptor(const Tensor4D& inT, const Filter& filterT, 
             size_t wStride, size_t hStride, bool padding) = 0;
-        //virtual Tensor4DPtr CreatePoolingTensor() = 0;
-        //virtual Tensor4DPtr CreateLrnTensor() = 0;
+        virtual PoolDescPtr CreatePoolDescriptor(PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad) = 0;
+        //virtual Tensor4DPtr CreateLrnDescriptor() = 0;
+
+        virtual ConvEnginePtr CreateConvEngine(size_t maxTempMemSizeInSamples) = 0;
+        virtual PoolEnginePtr CreatePoolEngine() = 0;
+
+        static std::unique_ptr<ConvolutionEngineFactory<ElemType>> Create(DEVICEID_TYPE deviceId);
 
     public:
-        ConvolutionEngine(const ConvolutionEngine&) = delete;
-        ConvolutionEngine& operator=(const ConvolutionEngine&) = delete;
-        ConvolutionEngine(ConvolutionEngine&&) = delete;
-        ConvolutionEngine& operator=(ConvolutionEngine&&) = delete;
+        ConvolutionEngineFactory(const ConvolutionEngineFactory&) = delete;
+        ConvolutionEngineFactory& operator=(const ConvolutionEngineFactory&) = delete;
+        ConvolutionEngineFactory(ConvolutionEngineFactory&&) = delete;
+        ConvolutionEngineFactory& operator=(ConvolutionEngineFactory&&) = delete;
+
+    protected:
+        DEVICEID_TYPE m_deviceId;
     };
 }}}

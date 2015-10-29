@@ -26,7 +26,7 @@ template<> static const char* CudaErrString(cudnnStatus_t x)
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
-    bool CuDnnConvolutionEngine<ElemType>::IsSupported()
+    bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported()
     {
         // REVIEW alexeyk: compile-time for now, make runtime, config-driven.
 #ifdef USE_CUDNN
@@ -151,8 +151,83 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cudnnConvolutionDescriptor_t m_conv;
     };
 
+    class CuDnnPoolingDescriptor : public PoolingDescriptor
+    {
+    public:
+        CuDnnPoolingDescriptor(PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad)
+            : PoolingDescriptor(kind, w, h, wStride, hStride, wPad, hPad), m_pool(nullptr)
+        {
+            assert(kind == PoolKind::Max || kind == PoolKind::Average);
+
+            CUDNN_CALL(cudnnCreatePoolingDescriptor(&m_pool));
+            CUDNN_CALL(cudnnSetPooling2dDescriptor(m_pool,
+                kind == PoolKind::Max ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
+                static_cast<int>(h), static_cast<int>(w),
+                static_cast<int>(hPad), static_cast<int>(wPad),
+                static_cast<int>(hStride), static_cast<int>(wStride)));
+        }
+    public:
+        operator cudnnPoolingDescriptor_t() const { return m_pool; }
+
+        ~CuDnnPoolingDescriptor()
+        {
+            if (m_pool != nullptr)
+            {
+                cudnnDestroyPoolingDescriptor(m_pool);
+                m_pool = nullptr;
+            }
+        }
+    private:
+        cudnnPoolingDescriptor_t m_pool;
+    };
+
+    template <typename CuDnnT, typename In>
+    static CuDnnT& As(In& src)
+    {
+        // Do dynamic_cast only in debug builds and static_cast in release builds.
+        assert(dynamic_cast<CuDnnT*>(&src) != nullptr);
+        return static_cast<CuDnnT&>(src);
+    }
+    static const CuDnnTensor4D& t(const ConvolutionTensor4D& src)
+    {
+        return As<const CuDnnTensor4D>(src);
+    }
+    static const CuDnnFilter& f(const ConvolutionFilter& src)
+    {
+        return As<const CuDnnFilter>(src);
+    }
+    static const CuDnnConvolutionDescriptor& cd(const ConvolutionDescriptor& src)
+    {
+        return As<const CuDnnConvolutionDescriptor>(src);
+    }
+    static const CuDnnPoolingDescriptor& p(const PoolingDescriptor& src)
+    {
+        return As<const CuDnnPoolingDescriptor>(src);
+    }
     template <typename ElemType>
-    class CuDnnConvolutionEngineImpl
+    static ElemType* ptr(Matrix<ElemType>& src)
+    {
+        return src.BufferPointer();
+    }
+    template <typename ElemType>
+    static const ElemType* ptr(const Matrix<ElemType>& src)
+    {
+        return src.BufferPointer();
+    }
+
+    template <typename ElemType>
+    struct Consts
+    {
+        static const ElemType Zero;
+        static const ElemType One;
+    };
+    template<> const float Consts<float>::One = 1;
+    template<> const double Consts<double>::One = 1;
+    template<> const float Consts<float>::Zero = 0;
+    template<> const double Consts<double>::Zero = 0;
+
+    template <typename ElemType>
+    class CuDnnConvolutionEngine : public ConvolutionEngine<ElemType>
     {
     public:
         using Tensor4D = ConvolutionTensor4D;
@@ -162,8 +237,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         using ConvDesc = ConvolutionDescriptor;
         using ConvDescPtr = std::unique_ptr<ConvolutionDescriptor>;
 
-        CuDnnConvolutionEngineImpl(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
-            : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_cudnn(nullptr), m_temp(deviceId)
+        CuDnnConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
+            : m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_cudnn(nullptr), m_tempF(deviceId), m_tempC(deviceId)
         {
             CUDNN_CALL(cudnnCreate(&m_cudnn));
             CUDNN_CALL(cudnnSetStream(m_cudnn, GetStream()));
@@ -172,7 +247,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_backFiltAlgo.status = CUDNN_STATUS_NOT_INITIALIZED;
         }
 
-        ~CuDnnConvolutionEngineImpl()
+        ~CuDnnConvolutionEngine()
         {
             if (m_cudnn != nullptr)
             {
@@ -181,117 +256,57 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     public:
-        void Forward(ElemType alpha, const Tensor4D& inT, const ElemType* in, const Filter& filterT, const ElemType* filter, const ConvDesc& convDesc,
-            ElemType beta, const Tensor4D& outT, ElemType* out)
+        void Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+            const Tensor4D& outT, Mat& out) override
         {
             auto& filtT = f(filterT);
             // Convert filter to NHWC format.
-            m_temp.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w(), 1);
-            CUDNN_CALL(cudnnTransformTensor(m_cudnn, &One, filtT.InTensor(), filter, &Zero, filtT.OutTensor(), m_temp.BufferPointer()));
+            m_tempF.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w(), 1);
+            CUDNN_CALL(cudnnTransformTensor(m_cudnn, &C::One, filtT.InTensor(), ptr(filter), &C::Zero, filtT.OutTensor(), m_tempF.BufferPointer()));
             // Find best algo and allocate temp buffer, if needed.
             FindBestForwardAlgo(t(inT), filtT, cd(convDesc), t(outT));
             if (m_fwdAlgo.memory > 0)
-                m_temp.Resize((m_fwdAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
+                m_tempC.Resize((m_fwdAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Perform forward convolution operation.
-            CUDNN_CALL(cudnnConvolutionForward(m_cudnn, &alpha, t(inT), in, filtT, m_temp.BufferPointer(), cd(convDesc), m_fwdAlgo.algo,
-                m_temp.BufferPointer(), m_fwdAlgo.memory, &beta, t(outT), out));
+            CUDNN_CALL(cudnnConvolutionForward(m_cudnn, &C::One, t(inT), ptr(in), filtT, m_tempF.BufferPointer(), cd(convDesc), m_fwdAlgo.algo,
+                m_tempC.BufferPointer(), m_fwdAlgo.memory, &C::Zero, t(outT), ptr(out)));
         }
 
-        void BackwardData(ElemType alpha, const Tensor4D& srcGradT, const ElemType* srcGrad, const Filter& filterT, const ElemType* filter, const ConvDesc& convDesc,
-            ElemType beta, const Tensor4D& gradT, ElemType* grad)
+        void BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
+            const Tensor4D& gradT, Mat& grad) override
         {
             auto& filtT = f(filterT);
             // Convert filter to NHWC format.
-            m_temp.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w(), 1);
-            CUDNN_CALL(cudnnTransformTensor(m_cudnn, &One, filtT.InTensor(), filter, &Zero, filtT.OutTensor(), m_temp.BufferPointer()));
+            m_tempF.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w(), 1);
+            CUDNN_CALL(cudnnTransformTensor(m_cudnn, &C::One, filtT.InTensor(), ptr(filter), &C::Zero, filtT.OutTensor(), m_tempF.BufferPointer()));
             // Find best algo and allocate temp buffer, if needed.
             FindBestBackwardDataAlgo(filtT, t(srcGradT), cd(convDesc), t(gradT));
             if (m_backDataAlgo.memory > 0)
-                m_temp.Resize((m_backDataAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
+                m_tempC.Resize((m_backDataAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Compute gradients with respect to the output tensor (data).
-            CUDNN_CALL(cudnnConvolutionBackwardData(m_cudnn, &alpha, filtT, m_temp.BufferPointer(), t(srcGradT), srcGrad, cd(convDesc), m_backDataAlgo.algo,
-                m_temp.BufferPointer(), m_backDataAlgo.memory, &beta, t(gradT), grad));
+            CUDNN_CALL(cudnnConvolutionBackwardData(m_cudnn, &C::One, filtT, m_tempF.BufferPointer(), t(srcGradT), ptr(srcGrad), cd(convDesc), m_backDataAlgo.algo,
+                m_tempC.BufferPointer(), m_backDataAlgo.memory, &C::Zero, t(gradT), ptr(grad)));
         }
 
-        void BackwardFilter(ElemType alpha, const Tensor4D& srcGradT, const ElemType* srcGrad, const Tensor4D& inT, const ElemType* in, const ConvDesc& convDesc,
-            ElemType beta, const Filter& filterT, ElemType* filter)
+        void BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in, const ConvDesc& convDesc,
+            const Filter& filterT, Mat& filter, bool /*allowReuse*/) override
         {
             auto& filtT = f(filterT);
             // Convert filter to NHWC format.
-            m_temp.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w(), 1);
-            CUDNN_CALL(cudnnTransformTensor(m_cudnn, &One, filtT.InTensor(), filter, &Zero, filtT.OutTensor(), m_temp.BufferPointer()));
+            m_tempF.Resize(filtT.k() * filtT.c() * filtT.h() * filtT.w(), 1);
+            CUDNN_CALL(cudnnTransformTensor(m_cudnn, &C::One, filtT.InTensor(), ptr(filter), &C::Zero, filtT.OutTensor(), m_tempF.BufferPointer()));
             // Find best algo and allocate temp buffer, if needed.
             FindBestBackwardFilterAlgo(t(inT), t(srcGradT), cd(convDesc), filtT);
             if (m_backFiltAlgo.memory > 0)
-                m_temp.Resize((m_backFiltAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
+                m_tempC.Resize((m_backFiltAlgo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
             // Compute gradients with respect to the output tensor (data).
-            CUDNN_CALL(cudnnConvolutionBackwardFilter(m_cudnn, &alpha, t(inT), in, t(srcGradT), srcGrad, cd(convDesc), m_backFiltAlgo.algo,
-                m_temp.BufferPointer(), m_backFiltAlgo.memory, &beta, filtT, m_temp.BufferPointer()));
+            CUDNN_CALL(cudnnConvolutionBackwardFilter(m_cudnn, &C::One, t(inT), ptr(in), t(srcGradT), ptr(srcGrad), cd(convDesc), m_backFiltAlgo.algo,
+                m_tempC.BufferPointer(), m_backFiltAlgo.memory, &C::Zero, filtT, m_tempF.BufferPointer()));
             // Convert filter back to CWHN format.
-            CUDNN_CALL(cudnnTransformTensor(m_cudnn, &One, filtT.OutTensor(), m_temp.BufferPointer(), &Zero, filtT.InTensor(), filter));
-        }
-
-        template <typename ElemType>
-        Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n)
-        {
-            static_assert(false, "cuDNN engine currently supports only single and double precision tensors.");
-        }
-        template <>
-        Tensor4DPtr CreateTensor<float>(size_t w, size_t h, size_t c, size_t n)
-        {
-            return std::make_unique<CuDnnTensor4D>(w, h, c, n, CUDNN_DATA_FLOAT);
-        }
-        template <>
-        Tensor4DPtr CreateTensor<double>(size_t w, size_t h, size_t c, size_t n)
-        {
-            return std::make_unique<CuDnnTensor4D>(w, h, c, n, CUDNN_DATA_DOUBLE);
-        }
-
-        template <typename ElemType>
-        FilterPtr CreateFilter(size_t w, size_t h, size_t c, size_t k)
-        {
-            static_assert(false, "cuDNN engine currently supports only single and double precision filters.");
-        }
-        template <>
-        FilterPtr CreateFilter<float>(size_t w, size_t h, size_t c, size_t k)
-        {
-            return std::make_unique<CuDnnFilter>(w, h, c, k, CUDNN_DATA_FLOAT);
-        }
-        template <>
-        FilterPtr CreateFilter<double>(size_t w, size_t h, size_t c, size_t k)
-        {
-            return std::make_unique<CuDnnFilter>(w, h, c, k, CUDNN_DATA_DOUBLE);
-        }
-
-        ConvDescPtr CreateConvDescriptor(const Tensor4D& /*inT*/, const Filter& filterT, 
-            size_t wStride, size_t hStride, bool padding)
-        {
-            size_t wPad = padding ? filterT.w() / 2 : 0;
-            size_t hPad = padding ? filterT.h() / 2 : 0;
-            return std::make_unique<CuDnnConvolutionDescriptor>(wStride, hStride, wPad, hPad);
+            CUDNN_CALL(cudnnTransformTensor(m_cudnn, &C::One, filtT.OutTensor(), m_tempF.BufferPointer(), &C::Zero, filtT.InTensor(), ptr(filter)));
         }
 
     private:
-        template <typename CuDnnT, typename In>
-        CuDnnT& As(In& src)
-        {
-            // Do dynamic_cast only in debug builds and static_cast in release builds.
-            assert(dynamic_cast<CuDnnT*>(&src) != nullptr);
-            return static_cast<CuDnnT&>(src);
-        }
-        const CuDnnTensor4D& t(const Tensor4D& src)
-        {
-            return As<const CuDnnTensor4D>(src);
-        }
-        const CuDnnFilter& f(const ConvolutionFilter& src)
-        {
-            return As<const CuDnnFilter>(src);
-        }
-        const CuDnnConvolutionDescriptor& cd(const ConvolutionDescriptor& src)
-        {
-            return As<const CuDnnConvolutionDescriptor>(src);
-        }
-
         void FindBestForwardAlgo(const CuDnnTensor4D& inT, const CuDnnFilter& filtT, const CuDnnConvolutionDescriptor& convDesc, const CuDnnTensor4D& outT)
         {
             if (m_fwdAlgo.status == CUDNN_STATUS_SUCCESS)
@@ -356,124 +371,167 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
     private:
-        static const ElemType Zero;
-        static const ElemType One;
+        using C = Consts<ElemType>;
 
         // REVIEW alexeyk: currently limit is set once in ctor though in CNTK it can be, theoretically, changed in runtime.
         size_t m_maxTempMemSizeInSamples;
         cudnnHandle_t m_cudnn;
-        GPUMatrix<ElemType> m_temp;
+        // Temp buffer for filter conversion.
+        GPUMatrix<ElemType> m_tempF;
+        // Temp buffer for convolution operation (optional).
+        GPUMatrix<ElemType> m_tempC;
         cudnnConvolutionFwdAlgoPerf_t m_fwdAlgo;
         cudnnConvolutionBwdDataAlgoPerf_t m_backDataAlgo;
         cudnnConvolutionBwdFilterAlgoPerf_t m_backFiltAlgo;
     };
-    template<> const float CuDnnConvolutionEngineImpl<float>::One = 1;
-    template<> const double CuDnnConvolutionEngineImpl<double>::One = 1;
-    template<> const float CuDnnConvolutionEngineImpl<float>::Zero = 0;
-    template<> const double CuDnnConvolutionEngineImpl<double>::Zero = 0;
+
+    template<class ElemType>
+    class CuDnnPoolingEngine : public PoolingEngine<ElemType>
+    {
+    public:
+        CuDnnPoolingEngine()
+            : m_cudnn(nullptr)
+        {
+            CUDNN_CALL(cudnnCreate(&m_cudnn));
+            CUDNN_CALL(cudnnSetStream(m_cudnn, GetStream()));
+        }
+
+        ~CuDnnPoolingEngine()
+        {
+            if (m_cudnn != nullptr)
+            {
+                cudnnDestroy(m_cudnn);
+                m_cudnn = nullptr;
+            }
+        }
+    public:
+        void Forward(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out) override
+        {
+            assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
+            assert(inT.n() == in.GetNumCols());
+            assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
+            assert(outT.n() == out.GetNumCols());
+            CUDNN_CALL(cudnnPoolingForward(m_cudnn, p(poolDesc), &C::One, t(inT), ptr(in), &C::Zero, t(outT), ptr(out)));
+        }
+
+        void Backward(const Tensor4D& srcGradT, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& gradT, Mat& grad) override
+        {
+            UNUSED(poolDesc);
+            assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
+            assert(srcGradT.n() == srcGrad.GetNumCols());
+            assert(gradT.w() * gradT.h() * gradT.c() == grad.GetNumRows());
+            assert(gradT.n() == grad.GetNumCols());
+        }
+
+    private:
+        using C = Consts<ElemType>;
+
+        cudnnHandle_t m_cudnn;
+    };
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::Tensor4DPtr CuDnnConvolutionEngineFactory<ElemType>::CreateTensor(size_t w, size_t h, size_t c, size_t n)
+    {
+        static_assert(false, "cuDNN engine currently supports only single and double precision tensors.");
+    }
+    template<>
+    typename CuDnnConvolutionEngineFactory<float>::Tensor4DPtr CuDnnConvolutionEngineFactory<float>::CreateTensor(size_t w, size_t h, size_t c, size_t n)
+    {
+        return std::make_unique<CuDnnTensor4D>(w, h, c, n, CUDNN_DATA_FLOAT);
+    }
+    template<>
+    typename CuDnnConvolutionEngineFactory<double>::Tensor4DPtr CuDnnConvolutionEngineFactory<double>::CreateTensor(size_t w, size_t h, size_t c, size_t n)
+    {
+        return std::make_unique<CuDnnTensor4D>(w, h, c, n, CUDNN_DATA_DOUBLE);
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::FilterPtr CuDnnConvolutionEngineFactory<ElemType>::CreateFilter(size_t w, size_t h, size_t c, size_t k)
+    {
+        static_assert(false, "cuDNN engine currently supports only single and double precision filters.");
+    }
+    template<>
+    typename CuDnnConvolutionEngineFactory<float>::FilterPtr CuDnnConvolutionEngineFactory<float>::CreateFilter(size_t w, size_t h, size_t c, size_t k)
+    {
+        return std::make_unique<CuDnnFilter>(w, h, c, k, CUDNN_DATA_FLOAT);
+    }
+    template <>
+    typename CuDnnConvolutionEngineFactory<double>::FilterPtr CuDnnConvolutionEngineFactory<double>::CreateFilter(size_t w, size_t h, size_t c, size_t k)
+    {
+        return std::make_unique<CuDnnFilter>(w, h, c, k, CUDNN_DATA_DOUBLE);
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::ConvDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvDescriptor(
+        const Tensor4D& /*inT*/, const Filter& filterT, size_t wStride, size_t hStride, bool padding)
+    {
+        size_t wPad = padding ? filterT.w() / 2 : 0;
+        size_t hPad = padding ? filterT.h() / 2 : 0;
+        return std::make_unique<CuDnnConvolutionDescriptor>(wStride, hStride, wPad, hPad);
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolDescriptor(
+        PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad)
+    {
+        return std::make_unique<CuDnnPoolingDescriptor>(kind, w, h, wStride, hStride, wPad, hPad);
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(
+        size_t maxTempMemSizeInSamples)
+    {
+        return std::make_unique<CuDnnConvolutionEngine<ElemType>>(m_deviceId, maxTempMemSizeInSamples);
+    }
+
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine()
+    {
+        return std::make_unique<CuDnnPoolingEngine<ElemType>>();
+    }
 
 #else
 
-    template <typename ElemType>
-    class CuDnnConvolutionEngineImpl
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::Tensor4DPtr CuDnnConvolutionEngineFactory<ElemType>::CreateTensor(size_t, size_t, size_t, size_t)
     {
-    public:
-        using Tensor4D = ConvolutionTensor4D;
-        using Tensor4DPtr = std::unique_ptr<Tensor4D>;
-        using Filter = ConvolutionFilter;
-        using FilterPtr = std::unique_ptr<ConvolutionFilter>;
-        using ConvDesc = ConvolutionDescriptor;
-        using ConvDescPtr = std::unique_ptr<ConvolutionDescriptor>;
+        RuntimeError("The code is compiled without USE_CUDNN macro.");
+    }
 
-        CuDnnConvolutionEngineImpl(DEVICEID_TYPE, size_t) { }
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::FilterPtr CuDnnConvolutionEngineFactory<ElemType>::CreateFilter(size_t, size_t, size_t, size_t)
+    {
+        RuntimeError("The code is compiled without USE_CUDNN macro.");
+    }
 
-    public:
-        void Forward(ElemType, const Tensor4D&, const ElemType*, const Filter&, const ElemType*, const ConvDesc&,
-            ElemType, const Tensor4D&, ElemType*)
-        {
-            RuntimeError("The code is compiled without USE_CUDNN macro.");
-        }
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::ConvDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvDescriptor(
+        const Tensor4D&, const Filter&, size_t, size_t, bool)
+    {
+        RuntimeError("The code is compiled without USE_CUDNN macro.");
+    }
 
-        void BackwardData(ElemType, const Tensor4D&, const ElemType*, const Filter&, const ElemType*, const ConvDesc&,
-            ElemType, const Tensor4D&, ElemType*)
-        {
-            RuntimeError("The code is compiled without USE_CUDNN macro.");
-        }
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::PoolDescPtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolDescriptor(
+        PoolDesc::PoolKind, size_t, size_t, size_t, size_t, size_t, size_t)
+    {
+        RuntimeError("The code is compiled without USE_CUDNN macro.");
+    }
 
-        void BackwardFilter(ElemType, const Tensor4D&, const ElemType*, const Tensor4D&, const ElemType*, const ConvDesc&,
-            ElemType, const Filter&, ElemType*)
-        {
-            RuntimeError("The code is compiled without USE_CUDNN macro.");
-        }
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::ConvEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreateConvEngine(size_t)
+    {
+        RuntimeError("The code is compiled without USE_CUDNN macro.");
+    }
 
-        template <typename ElemType>
-        Tensor4DPtr CreateTensor(size_t, size_t, size_t, size_t)
-        {
-            return std::make_unique<Tensor4D>();
-        }
-
-        template <typename ElemType>
-        FilterPtr CreateFilter(size_t, size_t, size_t, size_t)
-        {
-            return std::make_unique<Filter>();
-        }
-
-        ConvDescPtr CreateConvDescriptor(const Tensor4D&, const Filter&, size_t, size_t, bool)
-        {
-            return std::make_unique<ConvDesc>();
-        }
-    };
+    template<class ElemType>
+    typename CuDnnConvolutionEngineFactory<ElemType>::PoolEnginePtr CuDnnConvolutionEngineFactory<ElemType>::CreatePoolEngine()
+    {
+        RuntimeError("The code is compiled without USE_CUDNN macro.");
+    }
 
 #endif
 
-    template<class ElemType>
-    CuDnnConvolutionEngine<ElemType>::CuDnnConvolutionEngine(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
-        : m_impl(std::make_unique<CuDnnConvolutionEngineImpl<ElemType>>(deviceId, maxTempMemSizeInSamples))
-    {
-    }
-
-    template<class ElemType>
-    void CuDnnConvolutionEngine<ElemType>::Forward(const Tensor4D& inT, const Mat& in, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-        const Tensor4D& outT, Mat& out)
-    {
-        m_impl->Forward(1, inT, in.BufferPointer(), filterT, filter.BufferPointer(), convDesc, 0, outT, out.BufferPointer());
-    }
-
-    template<class ElemType>
-    void CuDnnConvolutionEngine<ElemType>::BackwardData(const Tensor4D& srcGradT, const Mat& srcGrad, const Filter& filterT, const Mat& filter, const ConvDesc& convDesc,
-        const Tensor4D& gradT, Mat& grad)
-    {
-        m_impl->BackwardData(1, srcGradT, srcGrad.BufferPointer(), filterT, filter.BufferPointer(), convDesc, 0, gradT, grad.BufferPointer());
-    }
-
-    template<class ElemType>
-    void CuDnnConvolutionEngine<ElemType>::BackwardFilter(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& inT, const Mat& in,
-        const ConvDesc& convDesc, const Filter& filterT, Mat& filter, bool allowReuse)
-    {
-        // REVIEW alexeyk: currently unused.
-        UNUSED(allowReuse);
-        m_impl->BackwardFilter(1, srcGradT, srcGrad.BufferPointer(), inT, in.BufferPointer(), convDesc, 0, filterT, filter.BufferPointer());
-    }
-
-    template<class ElemType>
-    typename CuDnnConvolutionEngine<ElemType>::Tensor4DPtr CuDnnConvolutionEngine<ElemType>::CreateTensor(size_t w, size_t h, size_t c, size_t n)
-    {
-        return m_impl->CreateTensor<ElemType>(w, h, c, n);
-    }
-
-    template<class ElemType>
-    typename CuDnnConvolutionEngine<ElemType>::FilterPtr CuDnnConvolutionEngine<ElemType>::CreateFilter(size_t w, size_t h, size_t c, size_t k)
-    {
-        return m_impl->CreateFilter<ElemType>(w, h, c, k);
-    }
-
-    template<class ElemType>
-    typename CuDnnConvolutionEngine<ElemType>::ConvDescPtr typename CuDnnConvolutionEngine<ElemType>::CreateConvDescriptor(const Tensor4D& inT, const Filter& filterT, 
-        size_t wStride, size_t hStride, bool padding)
-    {
-        return m_impl->CreateConvDescriptor(inT, filterT, wStride, hStride, padding);
-    }
-
-    template class CuDnnConvolutionEngine<float>;
-    template class CuDnnConvolutionEngine<double>;
+    template class CuDnnConvolutionEngineFactory<float>;
+    template class CuDnnConvolutionEngineFactory<double>;
 }}}

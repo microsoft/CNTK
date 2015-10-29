@@ -11,6 +11,60 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
+    class DefaultConvolutionEngineFactory : public ConvolutionEngineFactory<ElemType>
+    {
+    public:
+        DefaultConvolutionEngineFactory(DEVICEID_TYPE deviceId)
+            : ConvolutionEngineFactory<ElemType>(deviceId)
+        {
+        }
+
+    public:
+        Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override
+        {
+            return std::make_unique<ConvolutionTensor4D>(w, h, c, n);
+        }
+
+        FilterPtr CreateFilter(size_t w, size_t h, size_t c, size_t k) override
+        {
+            return std::make_unique<Filter>(w, h, c, k);
+        }
+
+        ConvDescPtr CreateConvDescriptor(const Tensor4D& /*inT*/, const Filter& /*filterT*/, 
+            size_t wStride, size_t hStride, bool padding) override
+        {
+            return std::make_unique<ConvDesc>(wStride, hStride, padding);
+        }
+
+        PoolDescPtr CreatePoolDescriptor(PoolDesc::PoolKind kind, size_t w, size_t h, size_t wStride, size_t hStride, size_t wPad, size_t hPad) override
+        {
+            return std::make_unique<PoolDesc>(kind, w, h, wStride, hStride, wPad, hPad);
+        }
+
+        ConvEnginePtr CreateConvEngine(size_t maxTempMemSizeInSamples) override
+        {
+            return std::make_unique<DefaultConvolutionEngine<ElemType>>(m_deviceId, maxTempMemSizeInSamples);
+        }
+
+        PoolEnginePtr CreatePoolEngine() override
+        {
+            return std::make_unique<DefaultPoolingEngine<ElemType>>();
+        }
+    };
+
+    template<class ElemType>
+    std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId)
+    {
+        // REVIEW alexeyk: make cuDNN default when running on GPU and compiled with cuDNN, add config parameter to enable runtime switch between implementations.
+        if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported())
+            return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>(deviceId);
+        return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>(deviceId);
+    }
+
+    template class ConvolutionEngineFactory<float>;
+    template class ConvolutionEngineFactory<double>;
+
+    template<class ElemType>
     class DefaultConvolutionEngine : public ConvolutionEngine<ElemType>
     {
     public:
@@ -180,36 +234,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(srcGradT.n() == srcGrad.GetNumCols());
         }
 
-        Tensor4DPtr CreateTensor(size_t w, size_t h, size_t c, size_t n) override
-        {
-            return std::make_unique<ConvolutionTensor4D>(w, h, c, n);
-        }
-
-        FilterPtr CreateFilter(size_t w, size_t h, size_t c, size_t k) override
-        {
-            return std::make_unique<Filter>(w, h, c, k);
-        }
-
-        ConvDescPtr CreateConvDescriptor(const Tensor4D& /*inT*/, const Filter& /*filterT*/, 
-            size_t wStride, size_t hStride, bool padding) override
-        {
-            return std::make_unique<ConvDesc>(wStride, hStride, padding);
-        }
-
     private:
         size_t m_maxTempMemSizeInSamples;
         Mat m_tempMatrix;
     };
 
-    template<class ElemType>
-    std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create(DEVICEID_TYPE deviceId, size_t maxTempMemSizeInSamples)
-    {
-        // REVIEW alexeyk: make cuDNN default when running on GPU and compiled with cuDNN, add config parameter to enable runtime switch between implementations.
-        if (deviceId >= 0 && CuDnnConvolutionEngine<ElemType>::IsSupported())
-            return std::make_unique<CuDnnConvolutionEngine<ElemType>>(deviceId, maxTempMemSizeInSamples);
-        return std::make_unique<DefaultConvolutionEngine<ElemType>>(deviceId, maxTempMemSizeInSamples);
-    }
-
     template class ConvolutionEngine<float>;
     template class ConvolutionEngine<double>;
+
+    template<class ElemType>
+    class DefaultPoolingEngine : public PoolingEngine<ElemType>
+    {
+    public:
+        void Forward(const Tensor4D& inT, const Mat& in, const PoolingDescriptor& poolDesc, const Tensor4D& outT, Mat& out) override
+        {
+            assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
+            assert(inT.n() == in.GetNumCols());
+            assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
+            assert(outT.n() == out.GetNumCols());
+
+            out.AssignMaxPoolingResult(in, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
+                outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
+                poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
+        }
+
+        void Backward(const Tensor4D& srcGradT, const Mat& srcGrad, const PoolingDescriptor& poolDesc, const Tensor4D& gradT, Mat& grad) override
+        {
+            UNUSED(poolDesc);
+            assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
+            assert(srcGradT.n() == srcGrad.GetNumCols());
+            assert(gradT.w() * gradT.h() * gradT.c() == grad.GetNumRows());
+            assert(gradT.n() == grad.GetNumCols());
+        }
+    };
+
+    template class PoolingEngine<float>;
+    template class PoolingEngine<double>;
 }}}
