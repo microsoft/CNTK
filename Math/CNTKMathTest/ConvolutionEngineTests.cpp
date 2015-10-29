@@ -19,7 +19,7 @@ namespace CNTKMathTest
 
     TEST_CLASS(MatrixUnitTest)
     {
-        using ConvEng = ConvolutionEngine<float>;
+        using ConvFact = ConvolutionEngineFactory<float>;
         using vec = std::vector<float>;
 
     public:
@@ -42,11 +42,12 @@ namespace CNTKMathTest
 
             for (int deviceId : { -1, 0 })
             {
-                auto eng = ConvEng::Create(deviceId, 0);
-                auto inT = eng->CreateTensor(inW, inH, cmapIn, n);
-                auto filtT = eng->CreateFilter(kW, kH, cmapIn, cmapOut);
-                auto outT = eng->CreateTensor(outW, outH, cmapOut, n);
-                auto convT = eng->CreateConvDescriptor(*inT, *filtT, sW, sH, false);
+                auto fact = ConvFact::Create(deviceId);
+                auto eng = fact->CreateConvEngine(0);
+                auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
+                auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
+                auto outT = fact->CreateTensor(outW, outH, cmapOut, n);
+                auto convT = fact->CreateConvDescriptor(*inT, *filtT, sW, sH, false);
 
                 vec buf(inW * inH * cmapIn * n);
                 int seed = 0;
@@ -105,11 +106,12 @@ namespace CNTKMathTest
 
             for (int deviceId : { -1, 0 })
             {
-                auto eng = ConvEng::Create(deviceId, 0);
-                auto inT = eng->CreateTensor(inW, inH, cmapIn, n);
-                auto filtT = eng->CreateFilter(kW, kH, cmapIn, cmapOut);
-                auto outT = eng->CreateTensor(outW, outH, cmapOut, n);
-                auto convT = eng->CreateConvDescriptor(*inT, *filtT, sW, sH, pad);
+                auto fact = ConvFact::Create(deviceId);
+                auto eng = fact->CreateConvEngine(0);
+                auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
+                auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
+                auto outT = fact->CreateTensor(outW, outH, cmapOut, n);
+                auto convT = fact->CreateConvDescriptor(*inT, *filtT, sW, sH, pad);
 
                 // Input in NHWC format.
                 SingleMatrix in(inW * inH * cmapIn, n, vec(inW * inH * cmapIn * n, 1.0f).data(), matrixFlagNormal, deviceId);
@@ -152,11 +154,12 @@ namespace CNTKMathTest
 
             for (int deviceId : { -1, 0 })
             {
-                auto eng = ConvEng::Create(deviceId, 0);
-                auto srcGradT = eng->CreateTensor(outW, outH, cmapOut, n);
-                auto filtT = eng->CreateFilter(kW, kH, cmapIn, cmapOut);
-                auto gradT = eng->CreateTensor(inW, inH, cmapIn, n);
-                auto convT = eng->CreateConvDescriptor(*gradT, *filtT, sW, sH, false);
+                auto fact = ConvFact::Create(deviceId);
+                auto eng = fact->CreateConvEngine(0);
+                auto srcGradT = fact->CreateTensor(outW, outH, cmapOut, n);
+                auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
+                auto gradT = fact->CreateTensor(inW, inH, cmapIn, n);
+                auto convT = fact->CreateConvDescriptor(*gradT, *filtT, sW, sH, false);
 
                 // Source grads is in NHWC format.
                 float srcGradBuf[] = {
@@ -208,11 +211,12 @@ namespace CNTKMathTest
 
             for (int deviceId : { -1, 0 })
             {
-                auto eng = ConvEng::Create(deviceId, 0);
-                auto srcGradT = eng->CreateTensor(outW, outH, cmapOut, n);
-                auto filtT = eng->CreateFilter(kW, kH, cmapIn, cmapOut);
-                auto inT = eng->CreateTensor(inW, inH, cmapIn, n);
-                auto convT = eng->CreateConvDescriptor(*inT, *filtT, sW, sH, false);
+                auto fact = ConvFact::Create(deviceId);
+                auto eng = fact->CreateConvEngine(0);
+                auto srcGradT = fact->CreateTensor(outW, outH, cmapOut, n);
+                auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
+                auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
+                auto convT = fact->CreateConvDescriptor(*inT, *filtT, sW, sH, false);
 
                 // Source grads is in NHWC format.
                 float srcGradBuf[] = {
@@ -245,6 +249,60 @@ namespace CNTKMathTest
                 }
                 SingleMatrix exp(cmapOut, kW * kH * cmapIn, expFiltB.data(), matrixFlagNormal, deviceId);
                 Assert::IsTrue(filt.IsEqualTo(exp));
+            }
+        }
+
+        BEGIN_TEST_METHOD_ATTRIBUTE(MaxPoolForward)
+            TEST_METHOD_ATTRIBUTE(L"Category", L"Convolution")
+        END_TEST_METHOD_ATTRIBUTE()
+        TEST_METHOD(MaxPoolForward)
+        {
+            int n = 2;
+            int cmap = 2;
+            int inW = 4;
+            int inH = 4;
+            int kW = 2;
+            int kH = 2;
+            int sW = 2;
+            int sH = 2;
+            int outW = GetNumOut(inW, kW, sW, false);
+            int outH = GetNumOut(inH, kH, sH, false);
+
+            for (int deviceId : { 0 })
+            {
+                auto fact = ConvFact::Create(deviceId);
+                auto eng = fact->CreatePoolEngine();
+                auto inT = fact->CreateTensor(inW, inH, cmap, n);
+                auto outT = fact->CreateTensor(outW, outH, cmap, n);
+                auto poolT = fact->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Max, kW, kH, sW, sH, 0, 0);
+
+                vec buf(inW * inH * cmap * n);
+                int seed = 0;
+                for (int i = 0; i < n; i++)
+                {
+                    seed = 0;
+                    // Create input, cmapIn feature maps, inW x inH each (NHWC format).
+                    std::generate(buf.begin() + i * buf.size() / n, buf.begin() + (i + 1) * buf.size() / n, [&seed]{ return seed++; });
+                }
+                SingleMatrix in(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
+
+                SingleMatrix out(outW * outH * cmap, n, deviceId);
+
+                eng->Forward(*inT, in, *poolT, *outT, out);
+
+                // Output is in NHWC format.
+                float expBuf[] = {
+                    10.0f, 11.0f,
+                    14.0f, 15.0f,
+                    26.0f, 27.0f,
+                    30.0f, 31.0f,
+                    10.0f, 11.0f,
+                    14.0f, 15.0f,
+                    26.0f, 27.0f,
+                    30.0f, 31.0f,
+                };
+                SingleMatrix exp(outW * outH * cmap, n, expBuf, matrixFlagNormal, deviceId);
+                Assert::IsTrue(out.IsEqualTo(exp));
             }
         }
 
