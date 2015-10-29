@@ -434,7 +434,7 @@ CNTK_SRC +=\
 
 else
 CNTK_SRC +=\
-	MachineLearning/CNTKSequenceTrainingLib/NoGPU.cpp \
+	MachineLearning/CNTKSequenceTrainingLib/latticeNoGPU.cpp \
 
 endif
 
