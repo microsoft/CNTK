@@ -25,6 +25,7 @@
 #include "DataReader.h"
 #include "commandArgUtil.h"
 #include "HTKMLFReader.h"
+#include "TimerUtility.h"
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
 #endif
@@ -104,7 +105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigParameters& readerConfig)
         {
             vector<wstring> scriptpaths;
-			vector<wstring> RootPathInScripts; 
+            vector<wstring> RootPathInScripts; 
             vector<wstring> mlfpaths;
             vector<vector<wstring>>mlfpathsmulti;
             size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
@@ -180,8 +181,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 m_featureNameToIdMap[featureNames[i]]= iFeat;
                 scriptpaths.push_back(thisFeature("scpFile"));
-				RootPathInScripts.push_back(thisFeature("PrefixPathInSCP", ""));
-				m_featureNameToDimMap[featureNames[i]] = m_featDims[i];
+                RootPathInScripts.push_back(thisFeature("PrefixPathInSCP", ""));
+                m_featureNameToDimMap[featureNames[i]] = m_featDims[i];
 
                 m_featuresBufferMultiIO.push_back(nullptr);
                 m_featuresBufferAllocatedMultiIO.push_back(0);
@@ -323,7 +324,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("nbrUttsInEachRecurrentIter cannot be more than 1 in frame mode reading.");
             }
 
-            int verbosity = readerConfig("verbosity","2");
+            m_verbosity = readerConfig("verbosity","2");
 
             // determine if we partial minibatches are desired
             std::string minibatchMode(readerConfig("minibatchMode","Partial"));
@@ -361,50 +362,50 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (n!=numFiles)
                         RuntimeError(msra::strfun::strprintf ("number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
 
-				// post processing file list : 
-				// 	if users specified PrefixPath, add the prefix to each of path in filelist 
-				//	else do the dotdotdot expansion if necessary 
-				wstring rootpath = RootPathInScripts[i]; 
-				if (!rootpath.empty()) // use has specified a path prefix for this  feature 
-				{
-					// first make slash consistent (sorry for linux users:this is not necessary for you)
-					std::replace(rootpath.begin(), rootpath.end(), L'\\', L'/'); 
-					// second, remove trailling slash if there is any 
-					std::wregex trailer(L"/+$");
-					rootpath=std::regex_replace(rootpath, trailer, wstring(L""));
-					// third, join the rootpath with each entry in filelist 
-					if (!rootpath.empty())
-					{
-						for (wstring & path : filelist)
-						{
-#ifdef WIN32				// sorry for windows users, we have to pay some cost here 
-							std::replace(path.begin(), path.end(), L'\\', L'/'); 
+                // post processing file list : 
+                //  - if users specified PrefixPath, add the prefix to each of path in filelist
+                //  - else do the dotdotdot expansion if necessary 
+                wstring rootpath = RootPathInScripts[i]; 
+                if (!rootpath.empty()) // use has specified a path prefix for this  feature 
+                {
+                    // first make slash consistent (sorry for linux users:this is not necessary for you)
+                    std::replace(rootpath.begin(), rootpath.end(), L'\\', L'/'); 
+                    // second, remove trailling slash if there is any 
+                    std::wregex trailer(L"/+$");
+                    rootpath=std::regex_replace(rootpath, trailer, wstring(L""));
+                    // third, join the rootpath with each entry in filelist 
+                    if (!rootpath.empty())
+                    {
+                        for (wstring & path : filelist)
+                        {
+#ifdef WIN32                // sorry for windows users, we have to pay some cost here 
+                            std::replace(path.begin(), path.end(), L'\\', L'/'); 
 #endif 
-							path = rootpath + L"/" + path;  
-						}
-					}
-				}
-				else 
-				{
-					/*
-					   do "..." expansion if SCP uses relative path names
-					   "..." in the SCP means full path is the same as the SCP file
-					   for example, if scp file is "//aaa/bbb/ccc/ddd.scp"
-					   and contains entry like
-					   .../file1.feat
-					   .../file2.feat
-					   etc.
-					   the features will be read from
-					   //aaa/bbb/ccc/file1.feat
-					   //aaa/bbb/ccc/file2.feat
-					   etc.
-					   This works well if you store the scp file with the features but
-					   do not want different scp files everytime you move or create new features
-					   */
-					wstring scpdircached;
-					for (auto & entry : filelist)
-						ExpandDotDotDot(entry, scriptpath, scpdircached);
-				}
+                            path = rootpath + L"/" + path;  
+                        }
+                    }
+                }
+                else 
+                {
+                    /*
+                       do "..." expansion if SCP uses relative path names
+                       "..." in the SCP means full path is the same as the SCP file
+                       for example, if scp file is "//aaa/bbb/ccc/ddd.scp"
+                       and contains entry like
+                       .../file1.feat
+                       .../file2.feat
+                       etc.
+                       the features will be read from
+                       //aaa/bbb/ccc/file1.feat
+                       //aaa/bbb/ccc/file2.feat
+                       etc.
+                       This works well if you store the scp file with the features but
+                       do not want different scp files everytime you move or create new features
+                       */
+                    wstring scpdircached;
+                    for (auto & entry : filelist)
+                        ExpandDotDotDot(entry, scriptpath, scpdircached);
+                }
 
 
                 infilesmulti.push_back(filelist);
@@ -467,7 +468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 // now get the frame source. This has better randomization and doesn't create temp files
                 m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, *m_lattices, m_latticeMap, m_frameMode));
-                m_frameSource->setverbosity(verbosity);
+                m_frameSource->setverbosity(m_verbosity);
             }
             else if (!_stricmp(readMethod.c_str(),"rollingWindow"))
             {
@@ -540,7 +541,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int addEnergy = 0;
 
                 m_frameSource.reset(new msra::dbn::minibatchframesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, numContextLeft, numContextRight, randomize, pagePaths, mayhavenoframe, addEnergy));
-                m_frameSource->setverbosity(verbosity);
+                m_frameSource->setverbosity(m_verbosity);
             }
             else
             {
@@ -909,16 +910,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // on first minibatch, make sure we can supply data for requested nodes
             std::map<std::wstring,size_t>::iterator iter;
-            if     (m_checkDictionaryKeys)
+            if (m_checkDictionaryKeys)
             {
                 for (auto iter=matrices.begin();iter!=matrices.end();iter++)
                 {
                     if (m_nameToTypeMap.find(iter->first)==m_nameToTypeMap.end())
                         RuntimeError("minibatch requested for input node %ls not found in reader - cannot generate input\n", iter->first.c_str());
-
                 }
                 m_checkDictionaryKeys=false;
             }
+
+            Timer aggregateTimer;
+            if (m_verbosity > 2)
+                aggregateTimer.Start();
 
             do 
             {
@@ -1291,6 +1295,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             while(skip); // keep going if we didn't get the right size minibatch
 
+            if (m_verbosity > 2)
+            {
+                aggregateTimer.Stop();
+                double totalMBReadTime = aggregateTimer.ElapsedSeconds();
+                fprintf(stderr, "Total Minibatch read time = %.8g\n", totalMBReadTime);
+            }
+
             return true;
         }
 
@@ -1487,6 +1498,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_numFramesToProcess[i] = 0;
                 return false;
             }
+
             size_t numOfFea = m_featuresBufferMultiIO.size();
             size_t numOfLabel = m_labelsBufferMultiIO.size();
 
@@ -1614,7 +1626,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_processedFrame[i] = 0;
 
+            Timer mbIterAdvancementTimer;
+            if (m_verbosity > 2)
+                mbIterAdvancementTimer.Start();
+
             (*m_mbiter)++;
+
+            if (m_verbosity > 2)
+            {
+                mbIterAdvancementTimer.Stop();
+                double advancementTime = mbIterAdvancementTimer.ElapsedSeconds();
+                fprintf(stderr, "Time to advance mbiter = %.8g\n", advancementTime);
+            }
+
             if (!(*m_mbiter))
                 m_noData = true;
 

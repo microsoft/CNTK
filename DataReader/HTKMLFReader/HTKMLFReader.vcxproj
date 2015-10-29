@@ -118,6 +118,9 @@
     <ClInclude Include="utterancesourcemulti.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Common\TimerUtility.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="DataReader.cpp" />
     <ClCompile Include="DataWriter.cpp" />
     <ClCompile Include="dllmain.cpp">

@@ -57,6 +57,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         typedef std::shared_ptr<MBLayout> MBLayoutPtr;
 
         MBLayout() : m_sentenceBoundaryFlags(CPUDEVICE) { Init(1, 0, false); }
+        // TODO: ^^ use forwarding constructor to this guy vv, or default args
         MBLayout(size_t numParallelSequences, size_t numTimeSteps, bool dataIsSequential) : m_sentenceBoundaryFlags(CPUDEVICE) { Init(numParallelSequences, numTimeSteps, dataIsSequential); }
 
         // copy the content of another MBLayoutPtr over
