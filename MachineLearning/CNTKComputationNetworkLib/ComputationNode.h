@@ -616,6 +616,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
 
+#if 0
         bool ChildrenNeedGradient()  const //this is only valid when called in the forward computation order.
         {
             for (int i = 0; i<m_children.size(); i++)
@@ -627,10 +628,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             return false;
         }
-
-        // This is part of the FormRecurrentLoops() process, and only called from there.
-        void ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult,
-                                                     std::list<ComputationNodeBasePtr>& noRecurrentResult);
+#endif
 
         // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
         // If this returns false, node must be evaluated to update m_functionValues.
@@ -1451,22 +1449,23 @@ protected: \
     using Base::EvaluateThisNode; using Base::ComputeInputPartial; \
     using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputImageLayout; using Base::m_outputImageLayout; \
-    using Base::m_parameterUpdateRequired; using Base::m_nodeName; using Base::s_constOnes; \
+    using Base::m_parameterUpdateRequired; using Base::m_nodeName; \
     using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
 public: \
     using Base::CreateUniqId; \
-    using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifySize; \
+    using Base::AttachInputs; using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifySize; \
     using Base::ConstOnes; \
     using Base::InferImageDimsFromInput; using Base::InferImageDimsFromInputs; using Base::InferMBLayoutFromInputsForStandardCase; \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
     using Base::FunctionValues; using Base::GradientValues; \
-    using Base::Inputs; using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; \
+    using Base::Inputs; using Base::SetInput; \
+    using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; \
     using Base::LoadFromFile; using Base::NodeName; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; \
-    using Base::SaveToFile; using Base::UpdateFunctionMBSize; using Base::SetInput; \
+    using Base::SaveToFile; using Base::UpdateFunctionMBSize; \
     using Base::RequestMatricesBeforeEval; using Base::ReleaseMatricesAfterEval; \
     using Base::RequestMatricesBeforeGradientComp; using Base::ReleaseMatricesAfterGradientComp; \
     using Base::Validate; using Base::ValidateUnaryMap; using Base::ValidateBinaryZip; using Base::ValidateUnaryReduce; using Base::ValidateBinaryReduce; using Base::ValidateInferBinaryChildrenDims; using Base::ValidateInferChildDims
