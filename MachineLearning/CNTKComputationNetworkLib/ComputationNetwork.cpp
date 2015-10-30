@@ -56,10 +56,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_inputs.clear();
         m_learnableParameters.clear();
 
-        //for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        //{
-        //    delete nodeIter->second;
-        //}
         m_nameToNodeMap.clear();    // will also deref and likely deallocate all nodes we hold in here
     }
 
@@ -657,7 +653,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // purge identical loops (i.e. loops that have the same source node)
-    void ComputationNetwork::MergeRecurrentLoops(const ComputationNodeBasePtr& /*rootNode*/)
+    void ComputationNetwork::MergeRecurrentLoops()
     {
         if (m_recurrentInfo.size() <= 1)
             return;
@@ -679,31 +675,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_recurrentInfoTmp.push_back(*iter);
         }
         m_recurrentInfo = move(m_recurrentInfoTmp);
-
-        // for debug purposes
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
-        {
-            fprintf(stderr, " nodes in the recurrent loops : \n");
-            for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
-                fprintf(stderr, "%ls\t", (*itr)->NodeName().c_str());
-        }
     }
 
-    // get the strong connected component from the graph
-    // This sets index, lowLink, m_visited, m_inStack
-    void ComputationNetwork::getStrongSCC(const ComputationNodeBasePtr& rootNode)    // TODO: method names start uppercase
+    // get the strongly connected components from the graph
+    // This sets index, lowLink, m_visited, m_inStack.
+    void ComputationNetwork::DetermineStrongSCCs(const ComputationNodeBasePtr& rootNode)
     {
-        /// notice that this graph including graphs from a parent networks if two or more networks are connected via PairNetworkNode
+        // notice that this graph including graphs from a parent networks if two or more networks are connected via PairNetworkNode
         std::unordered_set<ComputationNodeBasePtr> visited;
         std::list<ComputationNodeBasePtr> sccStack;
         size_t index = 0;
         size_t loopId = 0;
-        if (rootNode->IsVisisted() == false)
-            strongSCC(rootNode, sccStack, index, loopId);
+        if (!rootNode->IsVisisted())
+            DetermineStrongSCCsRec(rootNode, sccStack, index, loopId);
     }
 
-    // (called only from getStrongSCC())
-    void ComputationNetwork::strongSCC(ComputationNodeBasePtr cur,      // TODO: method names start uppercase
+    // (recursive part of DetermineStrongSCCs())
+    void ComputationNetwork::DetermineStrongSCCsRec(ComputationNodeBasePtr cur,
                                        std::list<ComputationNodeBasePtr>& sccStack,
                                        size_t& index, size_t& loopId)
     {
@@ -717,12 +705,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (cur->OperationName() != L"PairNetwork")
         {
-            // pairnetwork is the socket from other network, so ignore its children, which are in the other networks
+            // PairNetwork is the socket from other network, so ignore its children, which are in the other networks
             for (int i = 0; i < cur->ChildrenSize(); i++)
             {
-                if (cur->GetChildren()[i]->IsVisisted() == false)
+                if (!cur->GetChildren()[i]->IsVisisted())
                 {
-                    strongSCC(cur->GetChildren()[i], sccStack, index, loopId);
+                    DetermineStrongSCCsRec(cur->GetChildren()[i], sccStack, index, loopId);
                     cur->SetLowLink(min(cur->GetLowLink(), cur->GetChildren()[i]->GetLowLink()));
                 }
                 else if (cur->GetChildren()[i]->IsInStack())
@@ -736,7 +724,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             RecurrentInfo rInfo;
             rInfo.m_loopId = loopId;
-            rInfo.m_sourceNode = cur;
+            rInfo.m_sourceNode = cur;           // source node is the node with low link equal to index
             size_t sccSize = 0;
             for (;;)
             {
@@ -757,7 +745,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    void ComputationNetwork::getLoopForwordOrder(std::unordered_set<ComputationNodeBasePtr>& visited,   // TODO: method name
+    void ComputationNetwork::DetermineLoopForwardOrder(std::unordered_set<ComputationNodeBasePtr>& visited,
                                                  std::unordered_set<ComputationNodeBasePtr>& recStack,
                                                  std::list<ComputationNodeBasePtr>& nodesStack,
                                                  ComputationNodeBasePtr cur)
@@ -767,12 +755,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             visited.insert(cur);
             recStack.insert(cur);
 
-            if (cur->OperationName() != OperationNameOf(PastValueNode) && 
+            if (cur->OperationName() != OperationNameOf(PastValueNode) &&   // recurrence stops at delays
                 cur->OperationName() != OperationNameOf(FutureValueNode))
             {
                 for (size_t i = 0; i < cur->ChildrenSize(); i++)
                     if (cur->GetChildren()[i]->GetLoopId() == cur->GetLoopId())
-                        getLoopForwordOrder(visited, recStack, nodesStack, cur->GetChildren()[i]);
+                        DetermineLoopForwardOrder(visited, recStack, nodesStack, cur->GetChildren()[i]);
             }
             recStack.erase(cur);
             nodesStack.push_back(cur);
@@ -780,38 +768,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else
         {
             if (!(recStack.find(cur) == recStack.end()))
-                LogicError("There is infinite Loop which cannot be unrolled!!");
+                LogicError("%ls %ls operation is part of an infinite loop that cannot be unrolled.", cur->NodeName().c_str(), cur->OperationName().c_str());
         }
     }
 
     // forms the recurrent loop that 'rootNode' participates in
     // TODO: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't. Not sure why/how that's OK--won't we reassign loop ids?
     // This sets/updates:
-    //  - 
+    //  - ...?
     // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
     void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode)
     {
-        // ...?
-        getStrongSCC(rootNode);
+        // determine the strongly connected cliques -> m_recurrentInfo[]
+        DetermineStrongSCCs(rootNode);
 
         std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*recurrent*/);
 
-        // ??
-        MergeRecurrentLoops(rootNode);
+        // purge identical loops (i.e. loops that have the same source node)
+        MergeRecurrentLoops();
 
-        /// debug purpose  --TODO: <-- this comment seems incorrect; SetVisitedOrder() is basis of IsSmaller()
-        // ... where does m_recurrentInfo get set?
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+        // now we have formed all loops, with all nodes assigned to a loop or none
+
+        // set m_visitedOrder of all nodes
+        for (auto & iter : m_recurrentInfo)
         {
-            fprintf(stderr, " nodes in the recurrent loops : \n");
             size_t max_visitedOrderInLoop = 0;
-            for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
+            for (auto itr = iter.m_recurrentNodes.begin(); itr != iter.m_recurrentNodes.end(); itr++)
             {
-                fprintf(stderr, "%ls\t", (*itr)->NodeName().c_str());
                 if (max_visitedOrderInLoop < (*itr)->GetVisitedOrder())
                     max_visitedOrderInLoop = (*itr)->GetVisitedOrder();
             }
-            for (auto itr = (*iter).m_recurrentNodes.begin(); itr != (*iter).m_recurrentNodes.end(); itr++)
+            for (auto itr = iter.m_recurrentNodes.begin(); itr != iter.m_recurrentNodes.end(); itr++)
                 (*itr)->SetVisitedOrder(max_visitedOrderInLoop);
         }
 
@@ -835,7 +822,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
         {
-            // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
+            // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R   --TODO: is this comment correct?
             (*iter).m_recurrentNodesForForward.clear();
             if ((*iter).m_recurrentNodes.size() > 1)
             {
@@ -857,13 +844,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                //for (auto nodeRecIter = startNodes.begin(); nodeRecIter != startNodes.end(); nodeRecIter++)
-
                 for (size_t i = 0; i < (*iter).m_recurrentNodes.size(); i++)
                 {
                     ComputationNodeBasePtr nodeRecIter = (*iter).m_recurrentNodes[i];
                     if (visited.find(nodeRecIter) == visited.end() && nodeRecIter->GetIndexInLoop() == 0)
-                        getLoopForwordOrder(visited, recStack, result, nodeRecIter);
+                        DetermineLoopForwardOrder(visited, recStack, result, nodeRecIter);
                 }
 
                 for (size_t i = 0; i < (*iter).m_recurrentNodes.size(); i++)
@@ -901,13 +886,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
         
-        DetermineLoopTypes();
+        DetermineLoopDirection();
         
         for (auto & iter : nodes)
             iter->ClearCache();
+
+        for (auto & iter : m_recurrentInfo)
+        {
+            // Loop[0] --> LSTMOoutput[13] (35 nodes)
+            fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter.m_loopId, iter.m_sourceNode->NodeName().c_str(), (int)iter.m_recurrentNodes.size());
+            size_t n = 0;
+            for (auto itr = iter.m_recurrentNodes.begin(); itr != iter.m_recurrentNodes.end(); itr++)
+            {
+                if (n++ % 3 == 0)
+                    fprintf(stderr, "\n");
+                fprintf(stderr, "\t%ls", (*itr)->NodeName().c_str());
+            }
+            fprintf(stderr, "\n");
+        }
     }
 
-    void ComputationNetwork::DetermineLoopTypes()
+    void ComputationNetwork::DetermineLoopDirection()
     {
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
         {
@@ -923,31 +922,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     ComputationNodeBasePtr nodeRecIter = recurrentInfo->m_recurrentNodes[j];
 
                     if (nodeRecIter->OperationName() == OperationNameOf(PastValueNode))
-                    {
                         hasPastValueNode = true;
-                    }
                     else if (nodeRecIter->OperationName() == OperationNameOf(FutureValueNode))
-                    {
                         hasFutureValueNode = true;
-                    }
                 }
 
                 if (hasPastValueNode && hasFutureValueNode)
-                {
                     RuntimeError("It is not allowed to have both PastValue and FutureValue nodes in the same loop.");
-                }
                 else if (!hasPastValueNode && !hasFutureValueNode)
-                {
                     RuntimeError("There is neither PastValue nor FutureValue nodes in the loop.");
-                }
                 else if (hasPastValueNode)
-                {
-                    recurrentInfo->m_isForwardLoop = true;
-                }
+                    recurrentInfo->m_steppingDirection = +1;
                 else
-                {
-                    recurrentInfo->m_isForwardLoop = false;
-                }
+                    recurrentInfo->m_steppingDirection = -1;
             }
         }
     }
