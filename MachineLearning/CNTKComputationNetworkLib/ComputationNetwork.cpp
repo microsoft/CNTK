@@ -440,32 +440,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return pNode;
     }
 
-    // sets m_parameterUpdateRequired in all LearnableParameters feeding into the passed rootNode
-    // Called from MEL  --TODO: correct?
-    void ComputationNetwork::SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode)
-    {
-        // find nodes from all available nodes
-        if (rootNode == nullptr)
-        {
-            for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-            {
-                ComputationNodeBasePtr node = nodeIter->second;
-                if (node->OperationName() == OperationNameOf(LearnableParameter))
-                    node->SetParameterUpdateRequired(needGradient);
-            }
-        }
-        else
-        {
-            // for calculating a specific node
-            list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, false);
-            for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-            {
-                ComputationNodeBasePtr node = (*nodeIter);
-                if (node->OperationName() == OperationNameOf(LearnableParameter))
-                    node->SetParameterUpdateRequired(needGradient);
-            }
-        }
-    }
 
     // non-static version needed because it accesses m_randomSeedOffset
     // Excessively used by SimpleNetworkBuilder, but always after CreateLearnableParameter(), so we should really absorb it there
@@ -654,12 +628,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_learnableParameters[rootNode] = learnableParameters;
         }
-    }
-
-    /*static*/void ComputationNetwork::UpdateEvalTimeStamps(const vector<ComputationNodeBasePtr> & nodes)
-    {
-        for (size_t i = 0; i<nodes.size(); i++)
-            nodes[i]->UpdateEvalTimeStamp();
     }
 
     template<class ElemType>
@@ -1011,7 +979,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // specialized operations
     // -----------------------------------------------------------------------
 
+    // TODO: lift this into config language, move underlying code to math lib
+
+    //========================================
     // This function performs SVD decomposition for different groups of learnable  parameters
+    // we perform SVD decomposition such that
+    //  A \approx B*C, where rank(B)=rank(C)=r < rank(A)
+    // After SVD decomposition, the node A will become an intermediate node whose children are B,C ;
+    // B and C are two learnable parameters
+    //========================================
+    // BUGBUG: this only currently works for one ElemType, not both
     template<class ElemType> void ComputationNetwork::PerformSVDecomposition(const map<wstring, float>& SVDConfig, size_t AlignedSize)
     {
         vector<pair<vector<wstring>, float>> nodeGroups;
@@ -1155,6 +1132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 pRight->FunctionValues() = redVT;
 
                 shared_ptr<ComputationNode<ElemType>> pTimes = AddNodeToNetAndAttachInputs(New<TimesNode<ElemType>>(m_deviceId, name + L"-SVD"/*, m, n*/), pLeft, pRight);
+                // BUGBUG: This ^^ is reported to cause a crash since m_functionValues is no longer created.
 
                 //========================================
                 // Step 3. remove old node
