@@ -368,7 +368,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            FrameRange frameRange(m_pMBLayout);
+            FrameRange frameRange(Inputs(0)->GetMBLayout());
             if (m_hasComputed)
                 return;     // not accumulating
 
@@ -454,7 +454,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            FrameRange frameRange(m_pMBLayout);
+            FrameRange frameRange(Inputs(0)->GetMBLayout());
             if (m_hasComputed)
                 return;     // not accumulating
 
