@@ -3381,43 +3381,55 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         a.PrepareDevice();
         if ((a.GetComputeDeviceId()!=b.GetComputeDeviceId()) || (b.GetComputeDeviceId()!=c.GetComputeDeviceId())) //different GPUs
-        {
             InvalidArgument("All matrices must be on the same GPU");
-        }
-        else
-        {  
-            cublasHandle_t cuHandle = GetCublasHandle(b.GetComputeDeviceId());
-            cublasOperation_t transA =  transposeA ? CUBLAS_OP_T : CUBLAS_OP_N;
-            cublasOperation_t transB =  transposeB ? CUBLAS_OP_T : CUBLAS_OP_N;
-            int m = int(transposeA ? a.m_numCols : a.m_numRows);
-            int n = int(transposeB ? b.m_numRows : b.m_numCols);
-            int k = int(transposeA ? a.m_numRows : a.m_numCols);
-            int l = int(transposeB ? b.m_numCols : b.m_numRows);
-            c.Resize(m,n);
 
-            if (!(m>0 && k>0 && l>0 && n>0)) 
-            {
-                RuntimeError("!(m>0 && k>0 && l>0 && n>0)");  //converting from size_t to int may cause overflow
-            }
-            if (k!=l) 
-            {
-                RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
-            }
-            if (sizeof(ElemType)==sizeof(float))
-            {
-                CUBLAS_CALL(cublasSgemm(cuHandle,transA,transB,m,n,k,reinterpret_cast<float*>(&alpha),reinterpret_cast<float*>(a.m_pArray),(int)a.m_numRows,reinterpret_cast<float*>(b.m_pArray),(int)b.m_numRows,reinterpret_cast<float*>(&beta),reinterpret_cast<float*>(c.m_pArray),(int)c.m_numRows));
-            }
-            else if (sizeof(ElemType)==sizeof(double))
-            {            
-                CUBLAS_CALL(cublasDgemm(cuHandle,transA,transB,m,n,k,reinterpret_cast<double*>(&alpha),reinterpret_cast<double*>(a.m_pArray),(int)a.m_numRows,reinterpret_cast<double*>(b.m_pArray),(int)b.m_numRows,reinterpret_cast<double*>(&beta),reinterpret_cast<double*>(c.m_pArray),(int)c.m_numRows));
-            }
-            else 
-            {
-                RuntimeError("Unsupported template argument in GPUMatrix");             
-            }
-            c.m_numRows=m;
-            c.m_numCols=n;
+        cublasHandle_t cuHandle = GetCublasHandle(b.GetComputeDeviceId());
+        cublasOperation_t transA =  transposeA ? CUBLAS_OP_T : CUBLAS_OP_N;
+        cublasOperation_t transB =  transposeB ? CUBLAS_OP_T : CUBLAS_OP_N;
+        int m = int(transposeA ? a.m_numCols : a.m_numRows);
+        int n = int(transposeB ? b.m_numRows : b.m_numCols);
+        int k = int(transposeA ? a.m_numRows : a.m_numCols);
+        int l = int(transposeB ? b.m_numCols : b.m_numRows);
+        c.Resize(m,n);
+
+        if (!(m>0 && k>0 && l>0 && n>0)) 
+        {
+            RuntimeError("!(m>0 && k>0 && l>0 && n>0)");  //converting from size_t to int may cause overflow
         }
+        if (k!=l) 
+        {
+            RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
+        }
+        if (sizeof(ElemType)==sizeof(float))
+        {
+            CUBLAS_CALL(cublasSgemm(cuHandle,transA,transB,m,n,k,reinterpret_cast<float*>(&alpha),reinterpret_cast<float*>(a.m_pArray),(int)a.m_numRows,reinterpret_cast<float*>(b.m_pArray),(int)b.m_numRows,reinterpret_cast<float*>(&beta),reinterpret_cast<float*>(c.m_pArray),(int)c.m_numRows));
+        }
+        else if (sizeof(ElemType)==sizeof(double))
+        {            
+            CUBLAS_CALL(cublasDgemm(cuHandle,transA,transB,m,n,k,reinterpret_cast<double*>(&alpha),reinterpret_cast<double*>(a.m_pArray),(int)a.m_numRows,reinterpret_cast<double*>(b.m_pArray),(int)b.m_numRows,reinterpret_cast<double*>(&beta),reinterpret_cast<double*>(c.m_pArray),(int)c.m_numRows));
+        }
+        else 
+        {
+            RuntimeError("Unsupported template argument in GPUMatrix");             
+        }
+        c.m_numRows=m;
+        c.m_numCols=n;
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, ElemType beta, GPUMatrix<ElemType>& c)
+    {
+        a.PrepareDevice();
+        if ((a.GetComputeDeviceId() != b.GetComputeDeviceId()) || (b.GetComputeDeviceId() != c.GetComputeDeviceId())) //different GPUs
+            InvalidArgument("All matrices must be on the same GPU");
+        CUDA_LONG N = (CUDA_LONG)c.GetNumElements();
+        int blocksPerGrid = (int)ceil(1.0*N / threadsPerBlock);
+        cudaEvent_t done = nullptr;
+        if (do_sync)    CUDA_CALL(cudaEventCreate(&done));
+        _multiply1x1AndWeightedAdd<ElemType> << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(alpha, a.m_pArray, b.m_pArray, beta, c.m_pArray, N);
+        if (do_sync)    CUDA_CALL(cudaEventRecord(done));
+        if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));
+        if (do_sync)    CUDA_CALL(cudaEventDestroy(done));
     }
 
     template<class ElemType>
