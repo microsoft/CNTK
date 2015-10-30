@@ -565,6 +565,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Side-effects (unbeknownst to the name of the function):
         //  - m_needsGradient flags, are propagated up from children         --BUGBUG! This should only be computed in ValidateSubNetwork().
         //  - ComputationNetworkOwnedNodeState::m_visitedOrder (only if 'recurrent' flag is set; otherwise leave untouched), as needed by FormRecurrentNodes()
+        // TODO: This should be a method of ComputationNetwork, not ComputationNode.
         std::list<ComputationNodeBasePtr> EnumerateNodes(bool forForwardProp/*else get order for backprop*/, bool setVisitedOrder)
         {
             std::list<ComputationNodeBasePtr> nodes;
@@ -641,11 +642,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-
         typedef std::pair<ComputationNodeBasePtr, ComputationNodeBasePtr> ComputationArc;
         // [1/13/2015 erw] add to enumerate all the edges 
         // enumerate arcs that can be reached starting from the current node's children
         // [in/out] visited record already visited nodes 
+        // TODO: This should be a method of ComputationNetwork, not ComputationNode.
         void EnumerateArcs(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationArc>& arcs)
         {
             std::list<ComputationNodeBasePtr>	tovisit;
@@ -734,7 +735,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef ComputationNodeBase::ComputationNodeBasePtr ComputationNodeBasePtr;
 
     // =======================================================================
-    // ComputationNode -- abstract base class for computation nodes parameterized by float vs. double
+    // ComputationNode -- abstract base class for computation nodes, deriving from CompuationNodeBase, parameterized by float vs. double
     // =======================================================================
 
     // little helper class to allow derived Node classes to specify how many inputs they expect
@@ -1182,6 +1183,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 #endif
 
+#if 0       // TODO: If you get a NaN failure, feel free to put this back in
             // many gradients are reduction operations
             // They touch both in-flowing gradients and function values, so we must set both to 0.
             // BUGBUG: This masks a bug: Nodes should do that by themselves, like in EvaluateThisNode(), but they currently don't.
@@ -1197,6 +1199,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (anyChildNeedsGradient)
                 for (size_t i = 0; i < m_children.size(); i++)
                     Inputs(i)->MaskMissingValuesColumnsToZero(FrameRange(Inputs(i)->GetMBLayout()));
+#endif
         }
 
 #ifdef _DEBUG
@@ -1209,7 +1212,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNodePtr child = Inputs(i);
                 if (child->m_needsGradient)
                 {
-                    child->MaskMissingGradientColumnsToZero(FrameRange(m_pMBLayout));       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+                    child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout()));       // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
                     if (child->GradientValues().HasNan("OnComputeGradientEndIteration"))
                         LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
                 }

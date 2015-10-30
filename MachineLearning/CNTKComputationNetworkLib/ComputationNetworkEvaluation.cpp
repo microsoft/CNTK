@@ -119,7 +119,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // we manage time stamp here so that derived classes don't need to worry about it
                 node->UpdateFunctionMBSize();
                 if (!node->IsLeaf() && !node->RequiresPreCompute())
-                    node->Validate(true);
+                    node->Validate(true);                   // BUGBUG: Validate() should not be called during evaluation. This is meant to update m_functionValues' size in case of sharing.
                 node->OnEvaluateBeginIteration();
                 node->EvaluateThisNode(FrameRange(node->GetMBLayout()));
                 if (IsNodeReqMultiSeqHandling(node))
