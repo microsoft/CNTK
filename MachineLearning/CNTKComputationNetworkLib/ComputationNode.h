@@ -1157,7 +1157,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note: This is not used anywhere yet, only a sketch how we may further abstract timing.
         Matrix<ElemType> DataSlice(Matrix<ElemType> & data, const FrameRange & frameRange/*select frame or entire batch*/)
         {
-            return DataSlice(data, frameRange, m_pMBLayout);
+            try
+            {
+                return DataSlice(data, frameRange, m_pMBLayout);
+            }
+            catch (const logic_error & e)   // catch the error and rethrow it with the node name attached
+            {
+                LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+            }
         }
         static Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
                                           const FrameRange & frameRange/*select frame or entire batch*/,
@@ -1273,7 +1280,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 anyChildNeedsGradient |= Inputs(i)->m_needsGradient;
             if (anyChildNeedsGradient)
                 for (size_t i = 0; i < m_children.size(); i++)
-                    Inputs(i)->MaskMissingValuesColumnsToZero(FrameRange(m_pMBLayout));
+                    Inputs(i)->MaskMissingValuesColumnsToZero(FrameRange(Inputs(i)->GetMBLayout()));
         }
 
 #ifdef _DEBUG
