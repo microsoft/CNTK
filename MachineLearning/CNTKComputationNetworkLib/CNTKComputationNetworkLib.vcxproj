@@ -190,7 +190,9 @@
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
     <ClCompile Include="ComputationNetwork.cpp" />
+    <ClCompile Include="ComputationNetworkAnalysis.cpp" />
     <ClCompile Include="ComputationNetworkBuilder.cpp" />
+    <ClCompile Include="ComputationNetworkEvaluation.cpp" />
     <ClCompile Include="ComputationNode.cpp" />
     <ClCompile Include="NetworkBuilderFromConfig.cpp" />
     <ClCompile Include="stdafx.cpp" />
