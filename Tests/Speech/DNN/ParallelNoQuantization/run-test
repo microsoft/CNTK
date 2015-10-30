@@ -6,12 +6,9 @@ ConfigDir=$TEST_DIR/..
 LogFileName=stderr
 
 # cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
-if cntkmpirun "-n 3" cntk.config ; then
-  ExitCode=$?
-  sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank0
-  sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank1
-  sed 's/^/MPI Rank 2: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank2
-  exit $ExitCode
-else
-  exit $?
-fi
+cntkmpirun "-n 3" cntk.config
+ExitCode=$?
+sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank0
+sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank1
+sed 's/^/MPI Rank 2: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank2
+exit $ExitCode
