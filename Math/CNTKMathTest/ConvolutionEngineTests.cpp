@@ -268,7 +268,7 @@ namespace CNTKMathTest
             int outW = GetNumOut(inW, kW, sW, false);
             int outH = GetNumOut(inH, kH, sH, false);
 
-            for (int deviceId : { 0 })
+            for (int deviceId : { -1, 0 })
             {
                 auto fact = ConvFact::Create(deviceId);
                 auto eng = fact->CreatePoolEngine();
@@ -278,12 +278,8 @@ namespace CNTKMathTest
 
                 vec buf(inW * inH * cmap * n);
                 int seed = 0;
-                for (int i = 0; i < n; i++)
-                {
-                    seed = 0;
-                    // Create input, cmapIn feature maps, inW x inH each (NHWC format).
-                    std::generate(buf.begin() + i * buf.size() / n, buf.begin() + (i + 1) * buf.size() / n, [&seed]{ return seed++; });
-                }
+                // Create input, cmapIn feature maps, inW x inH each (NHWC format).
+                std::generate(buf.begin(), buf.end(), [=, &seed]{ return seed++ % (inW * inH * cmap); });
                 SingleMatrix in(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
 
                 SingleMatrix out(outW * outH * cmap, n, deviceId);
@@ -303,6 +299,173 @@ namespace CNTKMathTest
                 };
                 SingleMatrix exp(outW * outH * cmap, n, expBuf, matrixFlagNormal, deviceId);
                 Assert::IsTrue(out.IsEqualTo(exp));
+            }
+        }
+
+        BEGIN_TEST_METHOD_ATTRIBUTE(MaxPoolBackward)
+            TEST_METHOD_ATTRIBUTE(L"Category", L"Convolution")
+        END_TEST_METHOD_ATTRIBUTE()
+        TEST_METHOD(MaxPoolBackward)
+        {
+            int n = 2;
+            int cmap = 2;
+            int inW = 4;
+            int inH = 4;
+            int kW = 2;
+            int kH = 2;
+            int sW = 2;
+            int sH = 2;
+            int outW = GetNumOut(inW, kW, sW, false);
+            int outH = GetNumOut(inH, kH, sH, false);
+
+            for (int deviceId : { -1, 0 })
+            {
+                auto fact = ConvFact::Create(deviceId);
+                auto eng = fact->CreatePoolEngine();
+                auto inT = fact->CreateTensor(inW, inH, cmap, n);
+                auto outT = fact->CreateTensor(outW, outH, cmap, n);
+                auto poolT = fact->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Max, kW, kH, sW, sH, 0, 0);
+
+                vec buf(inW * inH * cmap * n);
+                int seed = 0;
+                // Create input, cmapIn feature maps, inW x inH each (NHWC format).
+                std::generate(buf.begin(), buf.end(), [=, &seed]{ return seed++ % (inW * inH * cmap); });
+                SingleMatrix in(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
+                SingleMatrix out(outW * outH * cmap, n, deviceId);
+                // Do forward pass first.
+                eng->Forward(*inT, in, *poolT, *outT, out);
+
+                // For gradients, use the same values as outputs.
+                SingleMatrix srcGrad(out);
+                SingleMatrix grad(inW * inH * cmap, n, deviceId);
+                grad.SetValue(0);
+
+                eng->Backward(*outT, out, srcGrad, *poolT, *inT, in, grad);
+
+                // Output is in NHWC format.
+                std::fill(buf.begin(), buf.end(), 0.0f);
+                vec expMap = {
+                    10.0f, 11.0f,
+                    14.0f, 15.0f,
+                    26.0f, 27.0f,
+                    30.0f, 31.0f,
+                    10.0f, 11.0f,
+                    14.0f, 15.0f,
+                    26.0f, 27.0f,
+                    30.0f, 31.0f,
+                };
+                for (size_t i = 0; i < expMap.size(); i++)
+                    buf[(int)expMap[i] + inW * inH * cmap * (i / (expMap.size() / n)) ] = expMap[i];
+                SingleMatrix exp(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
+
+                Assert::IsTrue(grad.IsEqualTo(exp));
+            }
+        }
+
+        BEGIN_TEST_METHOD_ATTRIBUTE(AvgPoolForward)
+            TEST_METHOD_ATTRIBUTE(L"Category", L"Convolution")
+        END_TEST_METHOD_ATTRIBUTE()
+        TEST_METHOD(AvgPoolForward)
+        {
+            int n = 2;
+            int cmap = 2;
+            int inW = 4;
+            int inH = 4;
+            int kW = 2;
+            int kH = 2;
+            int sW = 2;
+            int sH = 2;
+            int outW = GetNumOut(inW, kW, sW, false);
+            int outH = GetNumOut(inH, kH, sH, false);
+
+            for (int deviceId : { -1, 0 })
+            {
+                auto fact = ConvFact::Create(deviceId);
+                auto eng = fact->CreatePoolEngine();
+                auto inT = fact->CreateTensor(inW, inH, cmap, n);
+                auto outT = fact->CreateTensor(outW, outH, cmap, n);
+                auto poolT = fact->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Average, kW, kH, sW, sH, 0, 0);
+
+                vec buf(inW * inH * cmap * n);
+                int seed = 0;
+                // Create input, cmapIn feature maps, inW x inH each (NHWC format).
+                std::generate(buf.begin(), buf.end(), [=, &seed]{ return seed++ % (inW * inH * cmap); });
+                SingleMatrix in(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
+
+                SingleMatrix out(outW * outH * cmap, n, deviceId);
+
+                eng->Forward(*inT, in, *poolT, *outT, out);
+
+                // Output is in NHWC format.
+                float expBuf[] = {
+                    5.0f,  6.0f,
+                    9.0f,  10.0f,
+                    21.0f, 22.0f,
+                    25.0f, 26.0f,
+                    5.0f,  6.0f,
+                    9.0f,  10.0f,
+                    21.0f, 22.0f,
+                    25.0f, 26.0f,
+                };
+                SingleMatrix exp(outW * outH * cmap, n, expBuf, matrixFlagNormal, deviceId);
+                Assert::IsTrue(out.IsEqualTo(exp));
+            }
+        }
+
+        BEGIN_TEST_METHOD_ATTRIBUTE(AvgPoolBackward)
+            TEST_METHOD_ATTRIBUTE(L"Category", L"Convolution")
+        END_TEST_METHOD_ATTRIBUTE()
+        TEST_METHOD(AvgPoolBackward)
+        {
+            int n = 1;
+            int cmap = 1;
+            int inW = 4;
+            int inH = 4;
+            int kW = 2;
+            int kH = 2;
+            int sW = 2;
+            int sH = 2;
+            int outW = GetNumOut(inW, kW, sW, false);
+            int outH = GetNumOut(inH, kH, sH, false);
+
+            for (int deviceId : { 0 })
+            {
+                auto fact = ConvFact::Create(deviceId);
+                auto eng = fact->CreatePoolEngine();
+                auto inT = fact->CreateTensor(inW, inH, cmap, n);
+                auto outT = fact->CreateTensor(outW, outH, cmap, n);
+                auto poolT = fact->CreatePoolDescriptor(PoolingDescriptor::PoolKind::Average, kW, kH, sW, sH, 0, 0);
+
+                vec buf(inW * inH * cmap * n);
+                int seed = 0;
+                // Create input, cmapIn feature maps, inW x inH each (NHWC format).
+                std::generate(buf.begin(), buf.end(), [=, &seed]{ return seed++ % (inW * inH * cmap); });
+                SingleMatrix in(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
+                SingleMatrix out(outW * outH * cmap, n, deviceId);
+                // Do forward pass first.
+                eng->Forward(*inT, in, *poolT, *outT, out);
+
+                // For gradients, use the same values as outputs.
+                SingleMatrix srcGrad(out);
+                SingleMatrix grad(inW * inH * cmap, n, deviceId);
+                grad.SetValue(0);
+
+                eng->Backward(*outT, out, srcGrad, *poolT, *inT, in, grad);
+                auto aa = grad.CopyToArray();
+                UNUSED(aa);
+                //// Output is in NHWC format.
+                //float expBuf[] = {
+                //    5.0f,  6.0f,
+                //    9.0f,  10.0f,
+                //    21.0f, 22.0f,
+                //    25.0f, 26.0f,
+                //    5.0f,  6.0f,
+                //    9.0f,  10.0f,
+                //    21.0f, 22.0f,
+                //    25.0f, 26.0f,
+                //};
+                //SingleMatrix exp(outW * outH * cmap, n, expBuf, matrixFlagNormal, deviceId);
+                //Assert::IsTrue(out.IsEqualTo(exp));
             }
         }
 

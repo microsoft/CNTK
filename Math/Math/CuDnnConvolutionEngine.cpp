@@ -414,13 +414,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             CUDNN_CALL(cudnnPoolingForward(m_cudnn, p(poolDesc), &C::One, t(inT), ptr(in), &C::Zero, t(outT), ptr(out)));
         }
 
-        void Backward(const Tensor4D& srcGradT, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& gradT, Mat& grad) override
+        void Backward(const Tensor4D& outT, const Mat& out, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& inT, const Mat& in, Mat& grad) override
         {
-            UNUSED(poolDesc);
-            assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
-            assert(srcGradT.n() == srcGrad.GetNumCols());
-            assert(gradT.w() * gradT.h() * gradT.c() == grad.GetNumRows());
-            assert(gradT.n() == grad.GetNumCols());
+            assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
+            assert(outT.n() == out.GetNumCols());
+            assert(out.GetNumRows() == srcGrad.GetNumRows());
+            assert(out.GetNumCols() == srcGrad.GetNumCols());
+            assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
+            assert(inT.n() == in.GetNumCols());
+            assert(in.GetNumRows() == grad.GetNumRows());
+            assert(in.GetNumCols() == grad.GetNumCols());
+            CUDNN_CALL(cudnnPoolingBackward(m_cudnn, p(poolDesc), &C::One, t(outT), ptr(out), t(outT), ptr(srcGrad), 
+                t(inT), ptr(in), &C::One, t(inT), ptr(grad)));
         }
 
     private:
