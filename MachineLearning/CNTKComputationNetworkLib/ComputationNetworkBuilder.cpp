@@ -17,7 +17,7 @@
 #include "ConvolutionalNodes.h"
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
-#include "DecoderNode.h"
+#include "EsotericNodes.h"
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"

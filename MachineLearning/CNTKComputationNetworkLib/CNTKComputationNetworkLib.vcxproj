@@ -168,7 +168,7 @@
     <ClInclude Include="ComputationNetworkBuilder.h" />
     <ClInclude Include="ComputationNode.h" />
     <ClInclude Include="ConvolutionalNodes.h" />
-    <ClInclude Include="DecoderNode.h" />
+    <ClInclude Include="EsotericNodes.h" />
     <ClInclude Include="EvaluationCriterionNodes.h" />
     <ClInclude Include="InputAndParamNodes.h" />
     <ClInclude Include="LinearAlgebraNodes.h" />

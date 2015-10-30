@@ -96,9 +96,6 @@
     <ClInclude Include="InputAndParamNodes.h">
       <Filter>Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="DecoderNode.h">
-      <Filter>Nodes</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\Common\CrossProcessMutex.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
@@ -122,6 +119,9 @@
     </ClInclude>
     <ClInclude Include="..\..\Common\Include\Sequences.h">
       <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="EsotericNodes.h">
+      <Filter>Nodes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
