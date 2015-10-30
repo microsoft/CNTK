@@ -1166,7 +1166,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: for now we verify that we always pass in layouts in frameRange that match data.
             //       In the future, we may want to allow a value-wise comparison of compatibility. Or hint users to use ReconcileMBNode.
             if (frameRange.m_pMBLayout != pMBLayout)
+            {
+                // if broadcast allowed then it is allowed to broadcast from an outer-loop value
+                // Currently, the only 'outer' loop we have is to have no layout.
+                if (frameRange.m_broadcastAllowed && !pMBLayout && data.GetNumCols() == 1)
+                    return data.AsReference();
                 LogicError("DataSlice: frameRange's MBLayout inconsistent with matrix");
+            }
             // if FrameRange refers to whole minibatch (map mode)
             // or if we don't even have a layout
             // then return the whole matrix

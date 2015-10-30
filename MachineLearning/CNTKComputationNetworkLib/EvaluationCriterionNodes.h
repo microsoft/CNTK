@@ -37,7 +37,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
-            FrameRange frameRange(m_pMBLayout);
+            FrameRange frameRange(Inputs(0)->GetMBLayout());
             Inputs(0)->ValueSlice(frameRange).VectorMax(*m_maxIndexes0, *m_maxValues, true);
             Inputs(1)->ValueSlice(frameRange).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
             MaskMissingColumnsToZero(*m_maxIndexes0, Inputs(0)->GetMBLayout(), frameRange);

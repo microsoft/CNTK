@@ -82,6 +82,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
                 // copy the respective columns
+                // TODO: not efficient. Instead, use Reshape() and AssignRowSlice...()
                 MSR::CNTK::Matrix<ElemType> tmp(mat.GetNumRows(), newNumParallelSequences*T, mat.GetPreferredDeviceId(), mat.GetMatrixType());
                 for (size_t t = 0; t < T; t++)
                     tmp.SetColumnSlice(mat.ColumnSlice(t*nOrigParallelUtts + sent_start, newNumParallelSequences), t*newNumParallelSequences, newNumParallelSequences);

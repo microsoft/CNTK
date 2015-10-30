@@ -356,19 +356,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t timeIdxInSeq;                // start frame; SIZE_MAX = all frames in MB
         size_t seqIndex;                    // sequence index; SIZE_MAX = all sequences in MB (most common case)
         MBLayoutPtr m_pMBLayout;            // layout associated with this
+        bool m_broadcastAllowed;            // frame range may be broadcast from outer layout (e.g. a matrix with NULL layout and 1 column is acceptable to this frame range)
         const FrameRange *parent;           // or NULL: parent range, relative to which this FrameRange is interpreted  --TODO: not used yet
 
     public:
         // can construct from a single size_t -> a single-frame range
-        FrameRange(MBLayoutPtr pMBLayout, size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), parent(nullptr) {}
+        FrameRange(MBLayoutPtr pMBLayout, size_t timeIdxInSeq) : timeIdxInSeq(timeIdxInSeq), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), m_broadcastAllowed(false), parent(nullptr) {}
 
         // or without arguments -> entire minibatch / no frame-range
-        FrameRange(MBLayoutPtr pMBLayout) : timeIdxInSeq(SIZE_MAX), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), parent(nullptr) {}
+        //FrameRange(MBLayoutPtr pMBLayout) : timeIdxInSeq(SIZE_MAX), seqIndex(SIZE_MAX), m_pMBLayout(pMBLayout), parent(nullptr) {}
+        FrameRange(MBLayoutPtr pMBLayout) : FrameRange(pMBLayout, SIZE_MAX) {}
+
+        // return a frame range with broadcast allowed
+        // This is used, e.g., by PlusNode which can combine minibatch data and single-column vectors.
+        FrameRange AllowBroadcast() const
+        {
+            if (seqIndex != SIZE_MAX)
+                LogicError("FrameRange::AllowBroadcast() is incompatible with frame ranges that select a single sequence.");
+            FrameRange ret = *this;
+            ret.m_broadcastAllowed = true;
+            return ret;
+        }
 
         // create a FrameRange that accesses a single sequence only
         // FrameRange(t).Sequence(seq)
         FrameRange Sequence(size_t s) const
         {
+            if (m_broadcastAllowed)
+                LogicError("FrameRange::Sequence() is incompatible with frame ranges with m_broadcastAllowed.");
             FrameRange ret = *this;
             ret.seqIndex = s;
             return ret;
