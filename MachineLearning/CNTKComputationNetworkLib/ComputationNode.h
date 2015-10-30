@@ -133,15 +133,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         friend class ComputationNetwork;
 
         ComputationNetworkOwnedNodeState() :
-            m_needsGradient(false),
+            m_needsGradient(false)/*,
             m_loopId(-1),
             m_visitedOrder(-1),
             m_index(-1),
             m_lowLink(-1),
             m_indexInLoop(0),
             m_visited(false),
-            m_inStack(false)
-        { }
+            m_inStack(false)*/
+        {
+            ClearCache();
+            InitRecurrentNode();
+            ResetEvalTimeStamp();   // bring it into defined state
+        }
 
         void ClearCache()
         {
@@ -154,7 +158,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inStack = false;
         }
 
-        void SetLoopId(const int id) { m_loopId = id; }
+        void SetLoopId(const int id) { m_loopId = id; SetLoop(true); }
         int GetLoopId() const { return m_loopId; }
 
         void SetVisitedOrder(const int id) { m_visitedOrder = id; }
@@ -843,8 +847,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNode(DEVICEID_TYPE deviceId, const wstring & name) :
             ComputationNodeBase(deviceId, name), m_functionValues(nullptr), m_gradientValues(nullptr)
         {
-            InitRecurrentNode();
-            ResetEvalTimeStamp();   // bring it into defined state
         }
 #if 0   // (this was used by TimesNode when created by SVD, but seems unneccessary, and is buggy since inconsistent with the above)
         ComputationNode(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) : ComputationNodeBase(deviceId, name)
