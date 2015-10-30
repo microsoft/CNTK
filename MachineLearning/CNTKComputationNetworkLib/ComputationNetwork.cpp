@@ -822,10 +822,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             size_t max_visitedOrderInLoop = 0;
             for (auto itr = iter.m_recurrentNodes.begin(); itr != iter.m_recurrentNodes.end(); itr++)
-                if (max_visitedOrderInLoop < (*itr)->GetVisitedOrder())
-                    max_visitedOrderInLoop = (*itr)->GetVisitedOrder();
+                if (max_visitedOrderInLoop < (*itr)->m_visitedOrder)
+                    max_visitedOrderInLoop = (*itr)->m_visitedOrder;
             for (auto itr = iter.m_recurrentNodes.begin(); itr != iter.m_recurrentNodes.end(); itr++)
-                (*itr)->SetVisitedOrder(max_visitedOrderInLoop);
+                (*itr)->m_visitedOrder = max_visitedOrderInLoop;
         }
 
         // implant m_loopId in all nodes in all loops
@@ -838,7 +838,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                       iter->m_recurrentNodes[0]->IsSmaller);
 
             for (auto & node : iter->m_recurrentNodes)
-                node->SetLoopId(iter->m_loopId);
+            {
+                node->m_isPartOfLoop = true;        // this is the only flag in ComputationNode that escapes FormRecurrentLoops()!
+                node->m_loopId = iter->m_loopId;
+            }
         }
 
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
@@ -857,11 +860,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNodeBasePtr node = iter->m_recurrentNodes[j];
                 for (size_t i = 0; i < node->ChildrenSize(); i++)
                 {
-                    if (node->GetChildren()[i]->GetLoopId() == node->GetLoopId() && 
+                    if (node->GetChildren()[i]->m_loopId == node->m_loopId && 
                         node->OperationName() != OperationNameOf(PastValueNode) &&
                         node->OperationName() != OperationNameOf(FutureValueNode))     // TODO: test for type RecurrentNode instead?
                     {
-                        node->GetChildren()[i]->SetIndexInLoop(node->GetChildren()[i]->GetIndexInLoop() + 1);
+                        node->GetChildren()[i]->m_indexInLoop = node->GetChildren()[i]->m_indexInLoop + 1;
                     }
                 }
             }
@@ -869,7 +872,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (size_t i = 0; i < iter->m_recurrentNodes.size(); i++)
             {
                 ComputationNodeBasePtr node = iter->m_recurrentNodes[i];
-                if (visited.find(node) == visited.end() && node->GetIndexInLoop() == 0)
+                if (visited.find(node) == visited.end() && node->m_indexInLoop == 0)
                     DetermineLoopForwardOrder(visited, recStack, result, node);
             }
 
@@ -965,7 +968,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::list<ComputationNodeBasePtr> sccStack;
         size_t index = 0;
         size_t loopId = 0;
-        if (!rootNode->IsVisited())
+        if (!rootNode->m_visited)
             DetermineStrongSCCsRec(rootNode, sccStack, index, loopId);
     }
 
@@ -974,36 +977,36 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                                     std::list<ComputationNodeBasePtr>& sccStack,
                                                     size_t& index, size_t& loopId)
     {
-        assert(!cur->IsVisited());
+        assert(!cur->m_visited);
 
         // set the index (in order of visitation)
-        cur->SetIndex(index);
-        cur->SetLowLink(index); // also set m_lowLink
+        cur->m_index = index;
+        cur->m_lowLink = index; // also set m_lowLink
         index++;
 
-        cur->SetVisited(true);
+        cur->m_visited = true;
         sccStack.push_back(cur);
-        cur->SetInStack(true);
+        cur->m_inStack = true;
 
         if (cur->OperationName() != L"PairNetwork")     // PairNetwork is the connection from another network, so ignore its children (they are part of the other network)
         {
             // set m_lowLink to min over m_lowLinks of children
             for (int i = 0; i < cur->ChildrenSize(); i++)
             {
-                if (!cur->GetChildren()[i]->IsVisited())
+                if (!cur->GetChildren()[i]->m_visited)
                 {
                     DetermineStrongSCCsRec(cur->GetChildren()[i], sccStack, index, loopId);
-                    cur->SetLowLink(min(cur->GetLowLink(), cur->GetChildren()[i]->GetLowLink()));
+                    cur->m_lowLink = min(cur->m_lowLink, cur->GetChildren()[i]->m_lowLink);
                 }
-                else if (cur->GetChildren()[i]->IsInStack())
+                else if (cur->GetChildren()[i]->m_inStack)
                 {
-                    cur->SetLowLink(min(cur->GetLowLink(), cur->GetChildren()[i]->GetLowLink()));
+                    cur->m_lowLink = min(cur->m_lowLink, cur->GetChildren()[i]->m_lowLink);
                 }
             }
         }
 
         // if we closed a loop then create an entry in m_recurrentInfo
-        if (cur->GetLowLink() == cur->GetIndex())   // m_lowLink is still equal to m_index, as we set it at the start of this function: we closed a loop
+        if (cur->m_lowLink == cur->m_index)   // m_lowLink is still equal to m_index, as we set it at the start of this function: we closed a loop
         {
             RecurrentInfo rInfo;
             rInfo.m_loopId = loopId;
@@ -1012,7 +1015,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 ComputationNodeBasePtr w = sccStack.back();
                 sccStack.pop_back();
-                w->SetInStack(false);
+                w->m_inStack = false;
                 rInfo.m_recurrentNodes.push_back(w);
                 if (w == cur)                       // hit our starting point: done
                     break;
@@ -1040,7 +1043,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 cur->OperationName() != OperationNameOf(FutureValueNode))
             {
                 for (size_t i = 0; i < cur->ChildrenSize(); i++)
-                    if (cur->GetChildren()[i]->GetLoopId() == cur->GetLoopId())
+                    if (cur->GetChildren()[i]->m_loopId == cur->m_loopId)
                         DetermineLoopForwardOrder(visited, recStack, nodesStack, cur->GetChildren()[i]);
             }
             recStack.erase(cur);
@@ -1186,6 +1189,42 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             m_learnableParameters[rootNode] = learnableParameters;
+        }
+    }
+
+    // we host two functions of ComputationNode here as well, which exist for use by FormRecurrentNodes() only
+
+    std::list<ComputationNodeBasePtr> ComputationNodeBase::ReshuffleNodes(std::map<int, std::list<ComputationNodeBasePtr>> recurrentResult)
+    {
+        std::list<ComputationNodeBasePtr> noRecurrentResult;
+        std::unordered_set<ComputationNodeBasePtr> visited;
+
+        ReshuffleNodesForEvalWithRecurrentLoops(visited, recurrentResult, noRecurrentResult);
+
+        return noRecurrentResult;
+    }
+
+    // TODO: what does this do?
+    // This is part of the FormRecurrentLoops() process, and only called from there.
+    // As a side effect, it also propagates m_needsGradient to intermediate nodes (but ValidateSubNetwork() does that, too). Maybe it is needed by the FormRecurrentLoops() logic as well.
+    void ComputationNodeBase::ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult,
+                                                                      std::list<ComputationNodeBasePtr>& noRecurrentResult)
+    {
+        if (visited.find(shared_from_this()) == visited.end())  //not visited
+        {
+            visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
+
+            for (int i = 0; i<m_children.size(); i++)
+                m_children[i]->ReshuffleNodesForEvalWithRecurrentLoops(visited, recurrentResult, noRecurrentResult);
+
+            //children first for function evaluation
+            if (!IsLeaf())
+                m_needsGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
+
+            if (m_loopId >= 0)
+                recurrentResult[m_loopId].push_back(shared_from_this());
+            else
+                noRecurrentResult.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
         }
     }
 

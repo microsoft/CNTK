@@ -198,6 +198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inStack = false;
         }
 
+#if 0
         void SetLoopId(const int id)
         {
             m_isPartOfLoop = true;      // This is the only viarable that escapes from FormRecurrentLoops(). Note: there is no code to ever reset this to false again, which is likely wrong (it would preclude analysis to be rerun after changes).
@@ -212,7 +213,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t GetIndex() const { return m_index; }
 
         void SetLowLink(const size_t lowlink) { m_lowLink = lowlink; }
-        size_t GetLowLink() const { return m_lowLink; }
+        size_t GetLowLink() const{ return m_lowLink; }
 
         void SetVisited(const bool visited) { m_visited = visited; }
         bool IsVisited() const { return m_visited; }
@@ -222,6 +223,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void SetIndexInLoop(const size_t index) { m_indexInLoop = index; }
         size_t GetIndexInLoop() const { return m_indexInLoop; }
+#endif
 
         int m_loopId;           // index into recurrent info array (TODO: verify this)
         int m_visitedOrder;
@@ -635,37 +637,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // now that all children are in list before us, put ourselves
                 result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
 
-                if (recurrent)
-                    SetVisitedOrder(result.size());
+                if (recurrent)  // called from FormRecurrentNodes(), which would like this variable to be set as well
+                    m_visitedOrder = result.size();
             }
         }
     public:
 
         // This is part of the FormRecurrentLoops() process, and only called from there.
-        std::list<ComputationNodeBasePtr> ReshuffleNodes(std::map<int, std::list<ComputationNodeBasePtr>> recurrentResult)
-        {
-            std::list<ComputationNodeBasePtr> noRecurrentResult;
-            std::unordered_set<ComputationNodeBasePtr> visited;
-
-            ReshuffleNodesForEvalWithRecurrentLoops(visited, recurrentResult, noRecurrentResult);
-
-            return noRecurrentResult;
-        }
-
-#if 0
-        std::list<ComputationNodeBasePtr> EnumerateNodes(const bool forwardComputation, bool recurrent)
-        {
-            if (forwardComputation)
-            {
-                std::list<ComputationNodeBasePtr> result;
-                std::unordered_set<ComputationNodeBasePtr> visited;
-                EnumerateNodesForEval(visited, result, recurrent);
-                return result;
-            }
-            else
-                return EnumerateNodesForGradient();
-        }
-#endif
+        std::list<ComputationNodeBasePtr> ReshuffleNodes(std::map<int, std::list<ComputationNodeBasePtr>> recurrentResult);
 
     protected:
 
@@ -681,30 +660,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return false;
         }
 
-        // TODO: what does this do?
         // This is part of the FormRecurrentLoops() process, and only called from there.
-        // As a side effect, it also propagates m_needsGradient to intermediate nodes (but ValidateSubNetwork() does that, too). Maybe it is needed by the FormRecurrentLoops() logic as well.
         void ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult,
-                                                     std::list<ComputationNodeBasePtr>& noRecurrentResult)
-        {
-            if (visited.find(shared_from_this()) == visited.end())  //not visited
-            {
-                visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
-
-                for (int i = 0; i<m_children.size(); i++)
-                    m_children[i]->ReshuffleNodesForEvalWithRecurrentLoops(visited, recurrentResult, noRecurrentResult);
-
-                //children first for function evaluation
-                if (!IsLeaf())
-                    m_needsGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
-
-                if (GetLoopId() >= 0)
-                    recurrentResult[GetLoopId()].push_back(shared_from_this());
-                else
-                    noRecurrentResult.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
-            }
-        }
-
+                                                     std::list<ComputationNodeBasePtr>& noRecurrentResult);
     public:
 
         // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
@@ -1540,7 +1498,7 @@ public: \
     using Base::Inputs; using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
     using Base::LoadFromFile; using Base::NodeName; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
-    using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \
+    using Base::RequiresPreCompute; \
     using Base::SaveToFile; using Base::UpdateFunctionMBSize; using Base::SetInput; \
     using Base::RequestMatricesBeforeEval; using Base::ReleaseMatricesAfterEval; \
     using Base::RequestMatricesBeforeGradientComp; using Base::ReleaseMatricesAfterGradientComp; \
