@@ -37,10 +37,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
+#if 1
+            auto gradient = Inputs(0)->GradientSlice(frameRange);
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 1.0f : -1.0f, GradientValues()/*1x1*/, *m_leftMinusRight, 1.0f, gradient);
+#else
             if (inputIndex == 0)
                 Inputs(0)->GradientSlice(frameRange).AddWithScaleOf(GradientValues().Get00Element(), *m_leftMinusRight);
             else
                 Inputs(1)->GradientSlice(frameRange).AddWithScaleOf(-GradientValues().Get00Element(), *m_leftMinusRight);
+#endif
         }
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
@@ -130,8 +135,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(0)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
 #endif
                 auto gradient = Inputs(0)->GradientSlice(frameRange);
-                Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_logSoftmaxOfRight, gradient);
-                // TODO: ^^ This routes the gradient value through the CPU. Necessary?
+                //Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_logSoftmaxOfRight, gradient);
+                Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, GradientValues()/*1x1*/, *m_logSoftmaxOfRight, 1.0f, gradient);
 #if DUMPOUTPUT
                 Inputs(0)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
 #endif
@@ -261,7 +266,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         /*TODO: merge with call site*/void ComputeInputPartialLeft(const Matrix<ElemType>& logOfRight, Matrix<ElemType> inputGradientValues, 
             const Matrix<ElemType>& gradientValues)  
         {
-            Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logOfRight, inputGradientValues);
+            //Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logOfRight, inputGradientValues);
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues/*1x1*/, logOfRight, 1.0f, inputGradientValues);
         }
 
         /*TODO: merge with call site*/void ComputeInputPartialRight(Matrix<ElemType>& leftDivRight, 
@@ -271,7 +277,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
             leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
             MaskMissingColumnsToZero(leftDivRight, Inputs(0)->GetMBLayout(), frameRange);
-            Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
+            //Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), leftDivRight, inputGradientValues);
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues/*1x1*/, leftDivRight, 1.0f, inputGradientValues);
         }
 
         //-sum(left_i * log(right_i))
@@ -376,7 +383,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues)  
         {
             gradientOfL1Norm.AssignSignOf(inputFunctionValues);
-            inputGradientValues.AddWithScaleOf(gradientValues.Get00Element(), gradientOfL1Norm);
+            //inputGradientValues.AddWithScaleOf(gradientValues.Get00Element(), gradientOfL1Norm);
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, gradientValues/*1x1*/, gradientOfL1Norm, 1.0f, inputGradientValues);
         }
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
@@ -460,7 +468,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /*TODO: merge with call site*/void ComputeInputPartialS(Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& functionValues)  
         {
-            ElemType v = gradientValues.Get00Element() / (functionValues.Get00Element() + EPS_IN_INVERSE);
+            ElemType v = gradientValues.Get00Element() / (functionValues.Get00Element() + EPS_IN_INVERSE);  // TODO: GPU inefficiency
             inputGradientValues.AddWithScaleOf(v, inputFunctionValues);
         }
 
@@ -1275,7 +1283,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (inputIndex == 2)
             {
                 auto gradient = Inputs(2)->GradientSlice(frameRange);
-                Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Inputs(1)->ValueSlice(frameRange), gradient);
+                //Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Inputs(1)->ValueSlice(frameRange), gradient);
+                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, GradientValues()/*1x1*/, Inputs(1)->ValueSlice(frameRange), 1.0f, gradient);
             }
         }
 
@@ -1284,7 +1293,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(0)->GetNumRows() != 1 || Inputs(0)->GetNumCols() != 1 || Inputs(0)->HasMBLayout())
                 LogicError("%ls %ls operation expects first input to be a (1 x 1) matrix", NodeName().c_str(), OperationName().c_str());
             FunctionValues().VerifySize(1, 1);
-            FunctionValues().SetValue((ElemType)Inputs(0)->Get00Element());
+            Inputs(0)->FunctionValues().VerifySize(1, 1);
+            FunctionValues().SetValue(Inputs(0)->FunctionValues());
 #if NANCHECK
             FunctionValues().HasNan("DummyCriterionNode");
 #endif
@@ -1389,7 +1399,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-in");
 #endif
 
-            Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
+            //Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues/*1x1*/, logSoftmaxOfRight, 1.0f, inputGradientValues);
 #if DUMPOUTPUT
             inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-out");
 #endif

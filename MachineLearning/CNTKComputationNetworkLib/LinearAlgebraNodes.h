@@ -307,13 +307,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (inputIndex == 1)   // right derivative
             {
                 Matrix<ElemType> sliceInput1Grad = Inputs(1)->GradientSlice(frameRange);
-                Matrix<ElemType>::ScaleAndAdd(Inputs(0)->FunctionValues().Get00Element(), GradientSlice(frameRange), sliceInput1Grad);
+                //Matrix<ElemType>::ScaleAndAdd(Inputs(0)->FunctionValues().Get00Element(), GradientSlice(frameRange), sliceInput1Grad);
+                Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, Inputs(0)->FunctionValues()/*1x1*/, GradientSlice(frameRange), 1.0f, sliceInput1Grad);
             }
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            ValueSlice(frameRange).AssignProductOf(Inputs(0)->FunctionValues().Get00Element(), Inputs(1)->ValueSlice(frameRange));
+            //ValueSlice(frameRange).AssignProductOf(Inputs(0)->FunctionValues().Get00Element(), Inputs(1)->ValueSlice(frameRange));
+            ValueSlice(frameRange).Assign1x1ProductOf(Inputs(0)->FunctionValues()/*1x1*/, Inputs(1)->ValueSlice(frameRange));
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
