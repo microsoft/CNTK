@@ -18,9 +18,10 @@
 #include "TrainingCriterionNodes.h"
 #include "CompositeComputationNodes.h"
 #include "EvaluationCriterionNodes.h"
-#include "MPIWrapper.h"
+#include "MPIWrapper.h"                 // TODO: does not belong here
 #include <string>
-#include <fstream>
+#include <vector>
+#include <list>
 #include <set>
 
 using namespace std;
@@ -498,29 +499,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    bool ComputationNetwork::IsFuncValueOlderThanInputs(const vector<ComputationNodeBasePtr>& recurrentNodes)
-    {
-        for (auto ptr = recurrentNodes.begin(); ptr != recurrentNodes.end(); ptr++)
-        {
-            if ((*ptr)->IsFuncValueOlderThanInputs() && 
-                (*ptr)->OperationName() != OperationNameOf(PastValueNode) &&
-                (*ptr)->OperationName() != OperationNameOf(FutureValueNode))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
     // note: all of these have NodeDoesItsOwnCustomizedMissingColumnsMasking() returning true
     bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
     {
+        // TODO: just use return!
         if (nodePtr->OperationName() == OperationNameOf(SquareErrorNode) ||
             nodePtr->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
             nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
             nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
             nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
-            nodePtr->OperationName() == OperationNameOf(ErrorPredictionNode) ||               
+            nodePtr->OperationName() == OperationNameOf(ErrorPredictionNode) ||
             nodePtr->OperationName() == OperationNameOf(CRFNode) ||
             nodePtr->OperationName() == OperationNameOf(DummyCriterionNode))
             return true;
