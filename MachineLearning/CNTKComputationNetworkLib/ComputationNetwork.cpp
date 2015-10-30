@@ -725,18 +725,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RecurrentInfo rInfo;
             rInfo.m_loopId = loopId;
             rInfo.m_sourceNode = cur;           // source node is the node with low link equal to index
-            size_t sccSize = 0;
             for (;;)
             {
                 ComputationNodeBasePtr w = sccStack.back();
                 sccStack.pop_back();
                 w->SetInStack(false);
                 rInfo.m_recurrentNodes.push_back(w);
-                sccSize++;
-                if (w == cur)
+                if (w == cur)   // hit our starting point: done
                     break;
             }
-            assert(sccSize == rInfo.m_recurrentNodes.size());
             rInfo.Reset();
             if (rInfo.m_recurrentNodes.size() > 1)
             {
@@ -802,60 +799,60 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 (*itr)->SetVisitedOrder(max_visitedOrderInLoop);
         }
 
+        // implant m_loopId in all nodes in all loops
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
         {
             // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
-            assert((*iter).m_recurrentNodes.size() > 1);
-            {
-                // it is done in the mergerecurrentloops function, but just keep the code       --TODO: why??
-                std::sort((*iter).m_recurrentNodes.begin(),
-                          (*iter).m_recurrentNodes.end(),
-                          (*iter).m_recurrentNodes[0]->IsSmaller);
+            // it is done in the mergerecurrentloops function, but just keep the code       --TODO: why??
+            std::sort(iter->m_recurrentNodes.begin(),
+                      iter->m_recurrentNodes.end(),
+                      iter->m_recurrentNodes[0]->IsSmaller);
 
-                for (auto nodeRecIter = (*iter).m_recurrentNodes.begin(); nodeRecIter != (*iter).m_recurrentNodes.end(); nodeRecIter++)
-                    (*nodeRecIter)->SetLoopId((*iter).m_loopId);
-            }
+            for (auto & node : iter->m_recurrentNodes)
+                node->SetLoopId(iter->m_loopId);
         }
 
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
         {
             // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R   --TODO: is this comment correct?
-            (*iter).m_recurrentNodesForForward.clear();
-            assert((*iter).m_recurrentNodes.size() > 1);
-            {
-                std::list<ComputationNodeBasePtr> result;
-                std::unordered_set<ComputationNodeBasePtr> visited;
-                std::unordered_set<ComputationNodeBasePtr> recStack;
+            iter->m_recurrentNodesForForward.clear();
 
-                for (size_t j = 0; j < (*iter).m_recurrentNodes.size(); j++)
+            std::list<ComputationNodeBasePtr> result;
+            std::unordered_set<ComputationNodeBasePtr> visited;
+            std::unordered_set<ComputationNodeBasePtr> recStack;
+
+            // set m_indexInLoop for all nodes except Past/FutureValueNodes in all loops
+            // This value is only used in the block right after this.
+            for (size_t j = 0; j < iter->m_recurrentNodes.size(); j++)
+            {
+                ComputationNodeBasePtr node = iter->m_recurrentNodes[j];
+                for (size_t i = 0; i < node->ChildrenSize(); i++)
                 {
-                    ComputationNodeBasePtr nodeRecIter = (*iter).m_recurrentNodes[j];
-                    for (size_t i = 0; i < nodeRecIter->ChildrenSize(); i++)
+                    if (node->GetChildren()[i]->GetLoopId() == node->GetLoopId() && 
+                        node->OperationName() != OperationNameOf(PastValueNode) &&
+                        node->OperationName() != OperationNameOf(FutureValueNode))     // TODO: test for type RecurrentNode instead?
                     {
-                        if (nodeRecIter->GetChildren()[i]->GetLoopId() == nodeRecIter->GetLoopId() && 
-                            nodeRecIter->OperationName() != OperationNameOf(PastValueNode) &&
-                            nodeRecIter->OperationName() != OperationNameOf(FutureValueNode))     // TODO: test for type RecurrentNode instead?
-                        {
-                            nodeRecIter->GetChildren()[i]->SetIndexInLoop(nodeRecIter->GetChildren()[i]->GetIndexInLoop() + 1);
-                        }
+                        node->GetChildren()[i]->SetIndexInLoop(node->GetChildren()[i]->GetIndexInLoop() + 1);
                     }
                 }
-
-                for (size_t i = 0; i < (*iter).m_recurrentNodes.size(); i++)
-                {
-                    ComputationNodeBasePtr nodeRecIter = (*iter).m_recurrentNodes[i];
-                    if (visited.find(nodeRecIter) == visited.end() && nodeRecIter->GetIndexInLoop() == 0)
-                        DetermineLoopForwardOrder(visited, recStack, result, nodeRecIter);
-                }
-
-                for (size_t i = 0; i < (*iter).m_recurrentNodes.size(); i++)
-                {
-                    (*iter).m_recurrentNodesForForward.push_back(result.front());
-                    result.pop_front();
-                }
-
-                (*iter).m_recurrentNodes = (*iter).m_recurrentNodesForForward;
             }
+
+            for (size_t i = 0; i < iter->m_recurrentNodes.size(); i++)
+            {
+                ComputationNodeBasePtr node = iter->m_recurrentNodes[i];
+                if (visited.find(node) == visited.end() && node->GetIndexInLoop() == 0)
+                    DetermineLoopForwardOrder(visited, recStack, result, node);
+            }
+
+            // TODO: this loop seems to just reverse the list
+            //       m_recurrentNodesForForward = reverse(result)
+            for (size_t i = 0; i < iter->m_recurrentNodes.size(); i++)
+            {
+                iter->m_recurrentNodesForForward.push_back(result.front());
+                result.pop_front();
+            }
+
+            iter->m_recurrentNodes = iter->m_recurrentNodesForForward;  // TODO: are they ever different?
         }
 
         if (m_recurrentInfo.size() > 0)
@@ -865,9 +862,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             noRecurrentNodes = rootNode->ReshuffleNodes(recurrentNodes);
 
-            nodes.sort(ComputationNodeBase::IsSmaller);
+            nodes.sort(ComputationNodeBase::IsSmaller); // this sorts by m_visitedOrder, actually
 
-            ReorderLoops(nodes, recurrentNodes, noRecurrentNodes);
+            ReorderLoops(nodes, recurrentNodes, noRecurrentNodes);  // group nodes in loops together
 
             m_cacheEvalOrders[rootNode] = nodes;
             std::list<ComputationNodeBasePtr> nodesForGrad = nodes;
@@ -884,13 +881,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         
         DetermineLoopDirection();
-        
-        for (auto & iter : nodes)
-            iter->ClearCache();
 
+        // done: clear up after ourselves
+        // TODO: don't we better do that at the start as well?
+        for (auto & node : nodes)
+            node->ClearCache();
+
+        // log the loops
         for (auto & iter : m_recurrentInfo)
         {
-            // Loop[0] --> LSTMOoutput[13] (35 nodes)
             fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter.m_loopId, iter.m_sourceNode->NodeName().c_str(), (int)iter.m_recurrentNodes.size());
             size_t n = 0;
             for (auto itr = iter.m_recurrentNodes.begin(); itr != iter.m_recurrentNodes.end(); itr++)
@@ -903,39 +902,44 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    // set m_steppingDirection for all loops
     void ComputationNetwork::DetermineLoopDirection()
     {
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+        for (auto & rInfo : m_recurrentInfo)
         {
             bool hasPastValueNode = false;
             bool hasFutureValueNode = false;
 
-            RecurrentInfo* recurrentInfo = &(*iter);
-
-            if (recurrentInfo->m_recurrentNodes.size() > 0)
+            if (rInfo.m_recurrentNodes.size() > 0)
             {
-                for (size_t j = 0; j < recurrentInfo->m_recurrentNodes.size(); j++)
+                for (size_t j = 0; j < rInfo.m_recurrentNodes.size(); j++)
                 {
-                    ComputationNodeBasePtr nodeRecIter = recurrentInfo->m_recurrentNodes[j];
+                    ComputationNodeBasePtr node = rInfo.m_recurrentNodes[j];
 
-                    if (nodeRecIter->OperationName() == OperationNameOf(PastValueNode))
+                    if (node->OperationName() == OperationNameOf(PastValueNode))
                         hasPastValueNode = true;
-                    else if (nodeRecIter->OperationName() == OperationNameOf(FutureValueNode))
+                    else if (node->OperationName() == OperationNameOf(FutureValueNode))
                         hasFutureValueNode = true;
                 }
 
                 if (hasPastValueNode && hasFutureValueNode)
-                    RuntimeError("It is not allowed to have both PastValue and FutureValue nodes in the same loop.");
+                    InvalidArgument("It is not allowed to have both PastValue and FutureValue nodes in the same loop. How is that going to work anyway.");
                 else if (!hasPastValueNode && !hasFutureValueNode)
-                    RuntimeError("There is neither PastValue nor FutureValue nodes in the loop.");
+                    LogicError("There is neither PastValue nor FutureValue nodes in the loop.");
                 else if (hasPastValueNode)
-                    recurrentInfo->m_steppingDirection = +1;
+                    rInfo.m_steppingDirection = +1;
                 else
-                    recurrentInfo->m_steppingDirection = -1;
+                    rInfo.m_steppingDirection = -1;
             }
         }
     }
 
+    // takes a list of nodes and modifies it such that all nodes of the same loop are consecutive
+    //  - 'nodes' is in some traversal order
+    //  - that order is preserved for all nodes outside loops
+    //  - each node that belongs to a loop is replaced by all nodes of that loop in loop order
+    // Called only from FormRecurrentLoops().
+    // TODO: This could be a good place to insert sentinel nodes for nesting?
     void ComputationNetwork::ReorderLoops(std::list<ComputationNodeBasePtr>& nodes,
                                                     const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/,
                                                     const std::list<ComputationNodeBasePtr> & /*noRecurrentNodes*/)
