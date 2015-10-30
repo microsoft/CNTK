@@ -28,6 +28,12 @@
     <ClCompile Include="NetworkBuilderFromConfig.cpp">
       <Filter>Scripting</Filter>
     </ClCompile>
+    <ClCompile Include="ComputationNetworkEvaluation.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="ComputationNetworkAnalysis.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Common\Include\basetypes.h">

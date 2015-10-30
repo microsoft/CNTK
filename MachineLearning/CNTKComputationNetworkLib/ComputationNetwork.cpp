@@ -72,6 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // In case of parallel training only the main node should we saving the model to prevent
         // the parallel training nodes from colliding to write the same file
+        // TODO: This does not belong here.
         if ((g_mpi == nullptr) || g_mpi->IsMainNode())
         {
             // Saving into temporary file and then renaming it to the requested fileName
