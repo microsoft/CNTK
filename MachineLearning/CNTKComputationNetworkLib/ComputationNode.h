@@ -133,17 +133,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         friend class ComputationNetwork;
 
         ComputationNetworkOwnedNodeState() :
-            m_needsGradient(false)/*,
-            m_loopId(-1),
-            m_visitedOrder(-1),
-            m_index(-1),
-            m_lowLink(-1),
-            m_indexInLoop(0),
-            m_visited(false),
-            m_inStack(false)*/
+            m_needsGradient(false)
         {
             ClearCache();
-            InitRecurrentNode();
+            m_hasloop = false;
             ResetEvalTimeStamp();   // bring it into defined state
         }
 
@@ -158,8 +151,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inStack = false;
         }
 
-        void SetLoopId(const int id) { m_loopId = id; SetLoop(true); }
+        void SetLoopId(const int id) { m_loopId = id; m_hasloop = true; }
         int GetLoopId() const { return m_loopId; }
+        bool HasLoop() const { return m_hasloop; }
+        //void SetLoop(bool hasLoop) { m_hasloop = hasLoop; }
 
         void SetVisitedOrder(const int id) { m_visitedOrder = id; }
         size_t GetVisitedOrder() const { return m_visitedOrder; }
@@ -178,14 +173,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void SetIndexInLoop(const size_t index) { m_indexInLoop = index; }
         size_t GetIndexInLoop() const { return m_indexInLoop; }
-
-        void InitRecurrentNode()    // this initialization says that this node is not inside a loop
-        {
-            SetLoop(false);
-        }
-
-        bool HasLoop() const { return m_hasloop; }
-        void SetLoop(bool hasLoop) { m_hasloop = hasLoop; }
 
         void CopyTo(ComputationNetworkOwnedNodeState & other) const
         {
@@ -680,7 +667,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (int i = 0; i<m_children.size(); i++)
             {
-                if (m_children[i] == nullptr)
+                if (!m_children[i])
                     continue;
                 if (m_children[i]->m_needsGradient)
                     return true;
@@ -845,7 +832,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: Once we switch to VS 2015, we shall use inheriting constructors, i.e. we can delete all those redundant constructor forwards in each ComputationNode derivate
         // TODO: verify that we initialize all members (e.g. m_parameterUpdateRequired was missing before)
         ComputationNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeBase(deviceId, name), m_functionValues(nullptr), m_gradientValues(nullptr)
+            ComputationNodeBase(deviceId, name)
         {
         }
 #if 0   // (this was used by TimesNode when created by SVD, but seems unneccessary, and is buggy since inconsistent with the above)
@@ -1532,7 +1519,7 @@ protected: \
     using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputImageLayout; using Base::m_outputImageLayout; \
     using Base::m_parameterUpdateRequired; using Base::m_nodeName; using Base::s_constOnes; \
-    using Base::shared_from_this; using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
+    using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
 public: \
     using Base::CreateUniqId; \
     using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifySize; \
@@ -1542,7 +1529,7 @@ public: \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
     using Base::EvaluateThisNode; using Base::FunctionValues; \
-    using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
+    using Base::GradientValues; using Base::HasLoop; using Base::Inputs; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
     using Base::LoadFromFile; using Base::NodeName; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
