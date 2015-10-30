@@ -135,50 +135,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNetworkOwnedNodeState() :
             m_needsGradient(false)
         {
-            ClearCache();
-            m_hasloop = false;
+            PurgeStateForFormingRecurrentLoops();
+            m_isPartOfLoop = false;
             ResetEvalTimeStamp();   // bring it into defined state
         }
-
-        void ClearCache()
-        {
-            m_loopId = -1;
-            m_visitedOrder = -1;
-            m_index = -1;
-            m_lowLink = -1;
-            m_indexInLoop = 0;
-            m_visited = false;
-            m_inStack = false;
-        }
-
-        void SetLoopId(const int id) { m_loopId = id; m_hasloop = true; }
-        int GetLoopId() const { return m_loopId; }
-        bool HasLoop() const { return m_hasloop; }
-        //void SetLoop(bool hasLoop) { m_hasloop = hasLoop; }
-
-        void SetVisitedOrder(const int id) { m_visitedOrder = id; }
-        size_t GetVisitedOrder() const { return m_visitedOrder; }
-
-        void SetIndex(const size_t ind) { m_index = ind; }
-        size_t GetIndex() const { return m_index; }
-
-        void SetLowLink(const size_t lowlink) { m_lowLink = lowlink; }
-        size_t GetLowLink() const { return m_lowLink; }
-
-        void SetVisited(const bool visited) { m_visited = visited; }
-        bool IsVisisted() const { return m_visited; }
-
-        void SetInStack(const bool instack) { m_inStack = instack; }
-        bool IsInStack() const { return m_inStack; }
-
-        void SetIndexInLoop(const size_t index) { m_indexInLoop = index; }
-        size_t GetIndexInLoop() const { return m_indexInLoop; }
 
         void CopyTo(ComputationNetworkOwnedNodeState & other) const
         {
             // TODO: is that really all we copy? (this is a result of refactoring, so it seems yes indeed). Should we at least ClearCache()?
             other.m_evalTimeStamp = m_evalTimeStamp;
-            other.m_hasloop = m_hasloop;
+            other.m_isPartOfLoop = m_isPartOfLoop;
             other.m_needsGradient = m_needsGradient;
         }
 
@@ -205,13 +171,49 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return lhs->m_visitedOrder < rhs->m_visitedOrder;
         }
 
+        bool IsPartOfLoop() const { return m_isPartOfLoop; }
+
+    protected:
+        // these are used during FormRecurrentLoops() (which calls ClearCache() at its end)
+        void PurgeStateForFormingRecurrentLoops()
+        {
+            m_loopId = -1;
+            m_visitedOrder = -1;
+            m_index = -1;
+            m_lowLink = -1;
+            m_indexInLoop = 0;
+            m_visited = false;
+            m_inStack = false;
+        }
+
+        void SetLoopId(const int id) { m_loopId = id; m_isPartOfLoop = true; }
+        int GetLoopId() const { return m_loopId; }
+
+        void SetVisitedOrder(const int id) { m_visitedOrder = id; }
+        size_t GetVisitedOrder() const { return m_visitedOrder; }
+
+        void SetIndex(const size_t ind) { m_index = ind; }
+        size_t GetIndex() const { return m_index; }
+
+        void SetLowLink(const size_t lowlink) { m_lowLink = lowlink; }
+        size_t GetLowLink() const { return m_lowLink; }
+
+        void SetVisited(const bool visited) { m_visited = visited; }
+        bool IsVisited() const { return m_visited; }
+
+        void SetInStack(const bool instack) { m_inStack = instack; }
+        bool IsInStack() const { return m_inStack; }
+
+        void SetIndexInLoop(const size_t index) { m_indexInLoop = index; }
+        size_t GetIndexInLoop() const { return m_indexInLoop; }
+
     private:
 
         static atomic_ullong s_timeStampCounter;
         int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 
         // for loop nodes
-        bool m_hasloop;
+        bool m_isPartOfLoop;
         int m_loopId;           // index into recurrent info array (TODO: verify this)
 
     protected:  // TODO: should be fully encapsulated here
@@ -636,6 +638,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
 
+        // This is part of the FormRecurrentLoops() process, and only called from there.
         std::list<ComputationNodeBasePtr> ReshuffleNodes(std::map<int, std::list<ComputationNodeBasePtr>> recurrentResult)
         {
             std::list<ComputationNodeBasePtr> noRecurrentResult;
@@ -676,7 +679,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // TODO: what does this do?
-        // As a side effect, it also propagates m_needsGradient to intermediate nodes
+        // This is part of the FormRecurrentLoops() process, and only called from there.
+        // As a side effect, it also propagates m_needsGradient to intermediate nodes (but ValidateSubNetwork() does that, too). Maybe it is needed by the FormRecurrentLoops() logic as well.
         void ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult,
                                                      std::list<ComputationNodeBasePtr>& noRecurrentResult)
         {
@@ -1294,7 +1298,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
         void ComputeGradientForChildren(const FrameRange & frameRange) override
         {
-            if (frameRange.IsAllFrames() && HasLoop())
+            if (frameRange.IsAllFrames() && IsPartOfLoop())
                 LogicError("%ls %ls operation: ComputeGradientForChildren called with whole-batch FrameRange on node that participates in a loop");
 
             for (size_t i = 0; i < m_children.size(); i++)
@@ -1515,7 +1519,8 @@ protected: \
     using Base::Resize; using Base::GetNumRows; using Base::GetNumCols; \
     using Base::m_pMBLayout; using Base::GetNumTimeSteps; using Base::GetNumParallelSequences; \
     using Base::MaskMissingColumnsToZero; using Base::MaskMissingValuesColumnsToZero; using Base::MaskMissingGradientColumnsToZero; using Base::InvalidateMissingValuesColumns; using Base::InvalidateMissingGradientColumns; \
-    using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; using Base::ComputeInputPartial; \
+    using Base::DataSlice; using Base::ValueSlice; using Base::GradientSlice; using Base::MaskedValueSlice; using Base::MaskedGradientSlice; \
+    using Base::EvaluateThisNode; using Base::ComputeInputPartial; \
     using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputImageLayout; using Base::m_outputImageLayout; \
     using Base::m_parameterUpdateRequired; using Base::m_nodeName; using Base::s_constOnes; \
@@ -1528,9 +1533,8 @@ public: \
     using Base::CopyTo; using Base::CreateUniqNodeName; using Base::DetachInputs; \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
-    using Base::EvaluateThisNode; using Base::FunctionValues; \
-    using Base::GradientValues; using Base::HasLoop; using Base::Inputs; \
-    using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
+    using Base::FunctionValues; using Base::GradientValues; \
+    using Base::Inputs; using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
     using Base::LoadFromFile; using Base::NodeName; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; using Base::ReshuffleNodes; using Base::ReshuffleNodesForEvalWithRecurrentLoops; \

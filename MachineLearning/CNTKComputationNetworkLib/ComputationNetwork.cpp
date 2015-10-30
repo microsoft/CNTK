@@ -643,11 +643,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
     // TODO: Can this be moved to a separate class, or at least a separate CPP?
 
+    // this is called from ClearCache() only, which in turn is called by model editing operations, such as DeleteNode(), and by RebuildNetwork()
     void ComputationNetwork::ClearCalcOrderCaches()
     {
         for (auto & it : m_cacheEvalOrders)
             for (auto & iter2 : m_cacheEvalOrders[it.first])
-                iter2->ClearCache();
+                iter2->PurgeStateForFormingRecurrentLoops();
+        // TODO: ^^ Why is this done? This looks like an error (this function was called ClearCache() before, so maybe someone threw this call in for good measure)
         m_cacheEvalOrders.clear();
         m_cacheGradientCalcOrders.clear();
     }
@@ -678,7 +680,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // get the strongly connected components from the graph
-    // This sets index, lowLink, m_visited, m_inStack.
+    // This sets index, lowLink, m_visited, and m_inStack.
     void ComputationNetwork::DetermineStrongSCCs(const ComputationNodeBasePtr& rootNode)
     {
         // notice that this graph including graphs from a parent networks if two or more networks are connected via PairNetworkNode
@@ -686,29 +688,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::list<ComputationNodeBasePtr> sccStack;
         size_t index = 0;
         size_t loopId = 0;
-        if (!rootNode->IsVisisted())
+        if (!rootNode->IsVisited())
             DetermineStrongSCCsRec(rootNode, sccStack, index, loopId);
     }
 
     // (recursive part of DetermineStrongSCCs())
     void ComputationNetwork::DetermineStrongSCCsRec(ComputationNodeBasePtr cur,
-                                       std::list<ComputationNodeBasePtr>& sccStack,
-                                       size_t& index, size_t& loopId)
+                                                    std::list<ComputationNodeBasePtr>& sccStack,
+                                                    size_t& index, size_t& loopId)
     {
+        assert(!cur->IsVisited());
+
+        // set the index (in order of visitation)
         cur->SetIndex(index);
-        cur->SetLowLink(index);
+        cur->SetLowLink(index); // also set m_lowLink
         index++;
 
         cur->SetVisited(true);
         sccStack.push_back(cur);
         cur->SetInStack(true);
 
-        if (cur->OperationName() != L"PairNetwork")
+        if (cur->OperationName() != L"PairNetwork")     // PairNetwork is the connection from another network, so ignore its children (they are part of the other network)
         {
-            // PairNetwork is the socket from other network, so ignore its children, which are in the other networks
+            // set m_lowLink to min over m_lowLinks of children
             for (int i = 0; i < cur->ChildrenSize(); i++)
             {
-                if (!cur->GetChildren()[i]->IsVisisted())
+                if (!cur->GetChildren()[i]->IsVisited())
                 {
                     DetermineStrongSCCsRec(cur->GetChildren()[i], sccStack, index, loopId);
                     cur->SetLowLink(min(cur->GetLowLink(), cur->GetChildren()[i]->GetLowLink()));
@@ -720,33 +725,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        if (cur->GetLowLink() == cur->GetIndex())   // something special has happened   --TODO: comment what that was!!
+        // if we closed a loop then create an entry in m_recurrentInfo
+        if (cur->GetLowLink() == cur->GetIndex())   // m_lowLink is still equal to m_index, as we set it at the start of this function: we closed a loop
         {
             RecurrentInfo rInfo;
             rInfo.m_loopId = loopId;
-            rInfo.m_sourceNode = cur;           // source node is the node with low link equal to index
+            rInfo.m_sourceNode = cur;               // source node is the node with low link equal to index
             for (;;)
             {
                 ComputationNodeBasePtr w = sccStack.back();
                 sccStack.pop_back();
                 w->SetInStack(false);
                 rInfo.m_recurrentNodes.push_back(w);
-                if (w == cur)   // hit our starting point: done
+                if (w == cur)                       // hit our starting point: done
                     break;
             }
-            rInfo.Reset();
-            if (rInfo.m_recurrentNodes.size() > 1)
+            if (rInfo.m_recurrentNodes.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
             {
                 loopId++;
+                rInfo.Reset();                      // (init for use)
                 m_recurrentInfo.push_back(rInfo);
             }
         }
     }
 
     void ComputationNetwork::DetermineLoopForwardOrder(std::unordered_set<ComputationNodeBasePtr>& visited,
-                                                 std::unordered_set<ComputationNodeBasePtr>& recStack,
-                                                 std::list<ComputationNodeBasePtr>& nodesStack,
-                                                 ComputationNodeBasePtr cur)
+                                                       std::unordered_set<ComputationNodeBasePtr>& recStack,
+                                                       std::list<ComputationNodeBasePtr>& nodesStack,
+                                                       ComputationNodeBasePtr cur)
     {
         if (visited.find(cur) == visited.end())
         {
@@ -885,7 +891,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // done: clear up after ourselves
         // TODO: don't we better do that at the start as well?
         for (auto & node : nodes)
-            node->ClearCache();
+            node->PurgeStateForFormingRecurrentLoops();
 
         // log the loops
         for (auto & iter : m_recurrentInfo)
