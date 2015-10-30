@@ -305,7 +305,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         // helper functions for common cases
     private:
-        ComputationNodeBasePtr Inputs(size_t index) const { return m_children[index]; } // TODO: delete this; change to m_children
         // determine number of columns from a child and/or layout
         size_t DetermineNumCols(const ComputationNodeBasePtr & child) const
         {
@@ -339,6 +338,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void DetachInputs() { m_children.clear(); }
 
         const std::vector<ComputationNodeBasePtr> & GetChildren() const { return m_children; }
+        ComputationNodeBasePtr Inputs(size_t index) const { return m_children[index]; } // TODO: delete this; change to m_children
 
         //return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
         virtual bool /*IComputationNode::*/RequiresPreCompute() const { return false; }
@@ -600,10 +600,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
+#if 0
                 // propagate m_needsGradient flags upwards from leaves
                 // TODO: This belongs into Validate().
                 if (!IsLeaf())
-                    m_needsGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
+                    m_needsGradient = ChildrenNeedGradient();
+#endif
 
                 // now that all children are in list before us, put ourselves
                 result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
@@ -613,11 +615,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
     public:
-
-        // This is part of the FormRecurrentLoops() process, and only called from there.
-        std::list<ComputationNodeBasePtr> ReshuffleNodes(std::map<int, std::list<ComputationNodeBasePtr>> recurrentResult);
-
-    protected:
 
         bool ChildrenNeedGradient()  const //this is only valid when called in the forward computation order.
         {
@@ -634,7 +631,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This is part of the FormRecurrentLoops() process, and only called from there.
         void ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult,
                                                      std::list<ComputationNodeBasePtr>& noRecurrentResult);
-    public:
 
         // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
         // If this returns false, node must be evaluated to update m_functionValues.

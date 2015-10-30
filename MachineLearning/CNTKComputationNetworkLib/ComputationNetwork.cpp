@@ -111,10 +111,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fstream << nodePtr->NodeName() << nodePtr->ChildrenSize();
             for (size_t i = 0; i < nodePtr->ChildrenSize(); i++)
             {
-                if (nodePtr->GetChildren()[i] == nullptr)
+                if (!nodePtr->Inputs(i))
                     fprintf(stderr, "Warning: node %ls 's child is null, please check your ndl/mel file.\n", nodePtr->NodeName().c_str());
                 else
-                    fstream << nodePtr->GetChildren()[i]->NodeName();
+                    fstream << nodePtr->Inputs(i)->NodeName();
             }
         }
         fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ERelation");
@@ -419,13 +419,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (IsNodePtr<PreComputedNode<float>>(pNode))
             {
                 auto preComputedNode = AsNodePtr<PreComputedNode<float>>(pNode);
-                preComputedNode->FunctionValues().SetValue((float)value);    // TODO: comment: is this an expensive operation?
+                preComputedNode->FunctionValues().SetValue((float)value);
                 preComputedNode->MarkComputed(true);
             }
             else
             {
                 auto preComputedNode = AsNodePtr<PreComputedNode<double>>(pNode);
-                preComputedNode->FunctionValues().SetValue((double)value);    // TODO: comment: is this an expensive operation?
+                preComputedNode->FunctionValues().SetValue((double)value);
                 preComputedNode->MarkComputed(true);
             }
         }
@@ -860,11 +860,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNodeBasePtr node = iter->m_recurrentNodes[j];
                 for (size_t i = 0; i < node->ChildrenSize(); i++)
                 {
-                    if (node->GetChildren()[i]->m_loopId == node->m_loopId && 
+                    if (node->Inputs(i)->m_loopId == node->m_loopId && 
                         node->OperationName() != OperationNameOf(PastValueNode) &&
                         node->OperationName() != OperationNameOf(FutureValueNode))     // TODO: test for type RecurrentNode instead?
                     {
-                        node->GetChildren()[i]->m_indexInLoop = node->GetChildren()[i]->m_indexInLoop + 1;
+                        node->Inputs(i)->m_indexInLoop = node->Inputs(i)->m_indexInLoop + 1;
                     }
                 }
             }
@@ -889,10 +889,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (m_recurrentInfo.size() > 0)
         {
+            std::unordered_set<ComputationNodeBasePtr> visited;
+
+            // get set of all nodes in and outside loops hanging off rootNode
             std::map<int, std::list<ComputationNodeBasePtr>> recurrentNodes;
             std::list<ComputationNodeBasePtr> noRecurrentNodes;
-
-            noRecurrentNodes = rootNode->ReshuffleNodes(recurrentNodes);
+            rootNode->ReshuffleNodesForEvalWithRecurrentLoops(visited, recurrentNodes, noRecurrentNodes);
 
             nodes.sort(ComputationNodeBase::ByVisitedOrder);        // sorts by m_visitedOrder
 
@@ -993,14 +995,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // set m_lowLink to min over m_lowLinks of children
             for (int i = 0; i < cur->ChildrenSize(); i++)
             {
-                if (!cur->GetChildren()[i]->m_visited)
+                if (!cur->Inputs(i)->m_visited)
                 {
-                    DetermineStrongSCCsRec(cur->GetChildren()[i], sccStack, index, loopId);
-                    cur->m_lowLink = min(cur->m_lowLink, cur->GetChildren()[i]->m_lowLink);
+                    DetermineStrongSCCsRec(cur->Inputs(i), sccStack, index, loopId);
+                    cur->m_lowLink = min(cur->m_lowLink, cur->Inputs(i)->m_lowLink);
                 }
-                else if (cur->GetChildren()[i]->m_inStack)
+                else if (cur->Inputs(i)->m_inStack)
                 {
-                    cur->m_lowLink = min(cur->m_lowLink, cur->GetChildren()[i]->m_lowLink);
+                    cur->m_lowLink = min(cur->m_lowLink, cur->Inputs(i)->m_lowLink);
                 }
             }
         }
@@ -1043,8 +1045,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 cur->OperationName() != OperationNameOf(FutureValueNode))
             {
                 for (size_t i = 0; i < cur->ChildrenSize(); i++)
-                    if (cur->GetChildren()[i]->m_loopId == cur->m_loopId)
-                        DetermineLoopForwardOrder(visited, recStack, nodesStack, cur->GetChildren()[i]);
+                    if (cur->Inputs(i)->m_loopId == cur->m_loopId)
+                        DetermineLoopForwardOrder(visited, recStack, nodesStack, cur->Inputs(i));
             }
             recStack.erase(cur);
             nodesStack.push_back(cur);
@@ -1194,6 +1196,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // we host two functions of ComputationNode here as well, which exist for use by FormRecurrentNodes() only
 
+#if 0
     std::list<ComputationNodeBasePtr> ComputationNodeBase::ReshuffleNodes(std::map<int, std::list<ComputationNodeBasePtr>> recurrentResult)
     {
         std::list<ComputationNodeBasePtr> noRecurrentResult;
@@ -1203,10 +1206,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return noRecurrentResult;
     }
+#endif
 
-    // TODO: what does this do?
-    // This is part of the FormRecurrentLoops() process, and only called from there.
-    // As a side effect, it also propagates m_needsGradient to intermediate nodes (but ValidateSubNetwork() does that, too). Maybe it is needed by the FormRecurrentLoops() logic as well.
+    // traverse sub-graph feeding this node (which is a top-level node at start, e.g. training criterion) and list
+    //  - all nodes that participate in a loop -> recurrentResult[]
+    //  - all nodes that don't                 -> noRecurrentResult[]
+    // in order of traversal (depth-first).
+    // This is part of the FormRecurrentLoops() process, and only called from there from one place.
+    // TODO: As a side effect, it also propagates m_needsGradient to intermediate nodes (but ValidateSubNetwork() does that, too). Maybe it is needed by the FormRecurrentLoops() logic as well.
     void ComputationNodeBase::ReshuffleNodesForEvalWithRecurrentLoops(std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult,
                                                                       std::list<ComputationNodeBasePtr>& noRecurrentResult)
     {
@@ -1217,9 +1224,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (int i = 0; i<m_children.size(); i++)
                 m_children[i]->ReshuffleNodesForEvalWithRecurrentLoops(visited, recurrentResult, noRecurrentResult);
 
+#if 0
             //children first for function evaluation
+            // TODO: This seems not necessary here. Why does this get set here?
             if (!IsLeaf())
                 m_needsGradient = ChildrenNeedGradient();  //only nodes that require gradient calculation is included in gradient calculation
+#endif
 
             if (m_loopId >= 0)
                 recurrentResult[m_loopId].push_back(shared_from_this());
