@@ -835,7 +835,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // it is done in the mergerecurrentloops function, but just keep the code       --TODO: why??
             std::sort(iter->m_recurrentNodes.begin(),
                       iter->m_recurrentNodes.end(),
-                      iter->m_recurrentNodes[0]->IsSmaller);
+                      iter->m_recurrentNodes[0]->ByVisitedOrder);
 
             for (auto & node : iter->m_recurrentNodes)
             {
@@ -894,7 +894,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             noRecurrentNodes = rootNode->ReshuffleNodes(recurrentNodes);
 
-            nodes.sort(ComputationNodeBase::IsSmaller); // this sorts by m_visitedOrder, actually
+            nodes.sort(ComputationNodeBase::ByVisitedOrder);        // sorts by m_visitedOrder
 
             ReorderLoops(nodes, recurrentNodes, noRecurrentNodes);  // group nodes in loops together
 
