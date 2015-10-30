@@ -24,7 +24,10 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // -----------------------------------------------------------------------
     // MatrixPool methods
+    // -----------------------------------------------------------------------
+
     template<>
     vector<shared_ptr<Matrix<float>>>& MatrixPool::GetReleasedMatrices<float>()
     {
@@ -212,6 +215,190 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_pMBLayout->Init(1, 0, false);
             ValidateNetwork();
         }
+    }
+
+    template<class ElemType> void ComputationNetwork::LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork)
+    {
+        ClearNet();
+
+        File fstream(fileName, fileFormat | FileOptions::fileOptionsRead);
+
+        fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCN");
+
+        //model version
+        size_t modelVersion = CNTK_MODEL_VERSION_1; //if version info is not there it is version 1
+        if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BVersion"))
+        {
+            fstream >> modelVersion;
+            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EVersion");
+        }
+
+        size_t numNodes;
+        fstream >> numNodes;
+
+        //get all node info first
+        fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BNodeList");
+        for (size_t i = 0; i < numNodes; i++)
+        {
+            std::wstring opName, nodeName;
+            fstream >> opName >> nodeName;
+
+            auto newNode = ComputationNetworkBuilder<ElemType>::NewNode(opName, m_deviceId, nodeName);
+
+            if (!newNode)
+            {
+                fprintf(stderr, "Unknown ComputationNode type %ls (node name %ls)\n", opName.c_str(), nodeName.c_str());
+                InvalidArgument("Invalid node type.");
+            }
+            newNode->LoadFromFile(fstream, modelVersion);
+            AddNodeToNet(newNode);
+        }
+        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
+
+        //put relationship
+        fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BRelation");
+        for (size_t i = 0; i < numNodes; i++)
+        {
+            std::wstring nodeName;
+            size_t numChildren;
+            fstream >> nodeName >> numChildren;
+            if (numChildren > 0)
+            {
+                std::vector<std::wstring> childrenNames;
+                childrenNames.resize(numChildren);
+                for (size_t j = 0; j < numChildren; j++)
+                {
+                    fstream >> childrenNames[j];
+                }
+
+                // TODO: how does the file distinguish float from double?
+                ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
+                std::vector<ComputationNodeBasePtr> childrenNodes;
+                childrenNodes.resize(numChildren);
+                for (int j = 0; j < numChildren; j++)
+                    childrenNodes[j] = GetNodeFromName(childrenNames[j], anotherNetwork);
+
+                if (nodePtr->OperationName() == OperationNameOf(RowStackNode))
+                {
+                    //allow for variable input nodes
+                    nodePtr->AttachInputs(childrenNodes);
+                }
+                else
+                {
+                    //fixed input nodes
+                    // TODO: don't we have a variable-length AttachInputs() now?
+                    switch (numChildren)
+                    {
+                        case 1:
+                            nodePtr->AttachInputs(childrenNodes[0]);
+                            break;
+                        case 2:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1]);
+                            break;
+                        case 3:
+                            nodePtr->AttachInputs(childrenNodes[0],childrenNodes[1], childrenNodes[2]);
+                            break;
+                        case 4:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3]);
+                            break;
+                        case 5:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4]);
+                            break;
+                        case 6:
+                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2], childrenNodes[3], childrenNodes[4], childrenNodes[5]);
+                            break;
+                        default:
+                            LogicError("Invalid number of children.");
+                    }
+                }
+            }
+        }
+
+        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ERelation");
+
+        fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BRootNodes");
+        {
+            std::wstring nodeName;
+            size_t num;
+
+            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BFeatureNodes");
+            fstream >> num;
+
+            for (size_t i = 0; i < num; i++)
+            {
+                fstream >> nodeName;
+                m_features.push_back(GetNodeFromName(nodeName));
+            }
+
+            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EFeatureNodes");
+
+            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BLabelNodes");
+            fstream >> num;
+            for (size_t i = 0; i < num; i++)
+            {
+                fstream >> nodeName;
+                m_labels.push_back(GetNodeFromName(nodeName));
+            }
+
+            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ELabelNodes");
+
+            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCriteriaNodes");
+            fstream >> num;
+            for (size_t i = 0; i < num; i++)
+            {
+                fstream >> nodeName;
+                m_finalCriteria.push_back(GetNodeFromName(nodeName));
+            }
+
+            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
+
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling"))
+            {
+                fstream >> num;
+                for (size_t i = 0; i<num; i++)
+                {
+                    fstream >> nodeName;
+                    m_requestNodesMultiSeqHandling.push_back(GetNodeFromName(nodeName));
+                }
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
+            }
+
+            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
+            fstream >> num;
+            for (size_t i = 0; i < num; i++)
+            {
+                fstream >> nodeName;
+                m_evalNodes.push_back(GetNodeFromName(nodeName));
+            }
+            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EEvalNodes");
+
+            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BOutputNodes");
+            fstream >> num;
+            for (size_t i = 0; i < num; i++)
+            {
+                fstream >> nodeName;
+                m_outputNodes.push_back(GetNodeFromName(nodeName));
+            }
+            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
+
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes"))
+            {
+                fstream >> num;
+                for (size_t i = 0; i < num; i++)
+                {
+                    fstream >> nodeName;
+                    m_pairNodes.push_back(GetNodeFromName(nodeName));
+                }
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
+            }
+        }
+
+        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
+
+        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
+
+        //some internal values in the nodes are computed during validation
+        ValidateNetwork(false, bAllowNoCriterionNode);
     }
 
     // -----------------------------------------------------------------------
@@ -1002,6 +1189,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    // END OF CODE related to FormRecurrentLoops()
+
     /*static*/void ComputationNetwork::UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes)
     {
         for (size_t i = 0; i<nodes.size(); i++)
@@ -1066,199 +1255,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
             }
         }
-    }
-
-    // -----------------------------------------------------------------------
-    // serialization
-    // -----------------------------------------------------------------------
-
-    template<class ElemType> void ComputationNetwork::LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat, const bool bAllowNoCriterionNode, ComputationNetwork* anotherNetwork)
-    {
-        ClearNet();
-
-        File fstream(fileName, fileFormat | FileOptions::fileOptionsRead);
-
-        fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCN");
-
-        //model version
-        size_t modelVersion = CNTK_MODEL_VERSION_1; //if version info is not there it is version 1
-        if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BVersion"))
-        {
-            fstream >> modelVersion;
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EVersion");
-        }
-
-        size_t numNodes;
-        fstream >> numNodes;
-
-        //get all node info first
-        fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BNodeList");
-        for (size_t i = 0; i < numNodes; i++)
-        {
-            std::wstring opName, nodeName;
-            fstream >> opName >> nodeName;
-
-            auto newNode = ComputationNetworkBuilder<ElemType>::NewNode(opName, m_deviceId, nodeName);
-
-            if (!newNode)
-            {
-                fprintf(stderr, "Unknown ComputationNode type %ls (node name %ls)\n", opName.c_str(), nodeName.c_str());
-                InvalidArgument("Invalid node type.");
-            }
-            newNode->LoadFromFile(fstream, modelVersion);
-            AddNodeToNet(newNode);
-        }
-        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
-
-        //put relationship
-        fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BRelation");
-        for (size_t i = 0; i < numNodes; i++)
-        {
-            std::wstring nodeName;
-            size_t numChildren;
-            fstream >> nodeName >> numChildren;
-            if (numChildren > 0)
-            {
-                std::vector<std::wstring> childrenNames;
-                childrenNames.resize(numChildren);
-                for (size_t j = 0; j < numChildren; j++)
-                {
-                    fstream >> childrenNames[j];
-                }
-
-                // TODO: how does the file distinguish float from double?
-                ComputationNodeBasePtr nodePtr = GetNodeFromName(nodeName);
-                std::vector<ComputationNodeBasePtr> childrenNodes;
-                childrenNodes.resize(numChildren);
-                for (int j = 0; j < numChildren; j++)
-                    childrenNodes[j] = GetNodeFromName(childrenNames[j], anotherNetwork);
-
-                if (nodePtr->OperationName() == OperationNameOf(RowStackNode)) {
-                    //allow for variable input nodes
-                    nodePtr->AttachInputs(childrenNodes);
-                }
-                else
-                {
-                    //fixed input nodes
-                    switch (numChildren)
-                    {
-                        case 1:
-                            nodePtr->AttachInputs(childrenNodes[0]);
-                            break;
-
-                        case 2:
-                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1]);
-                            break;
-                        case 3:
-                            nodePtr->AttachInputs(childrenNodes[0],childrenNodes[1],
-                                                  childrenNodes[2]);
-                            break;
-                        case 4:
-                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1],
-                                                  childrenNodes[2], childrenNodes[3]);
-                            break;
-                        case 5:
-                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2],
-                                                  childrenNodes[3], childrenNodes[4]);
-                            break;
-                        case 6:
-                            nodePtr->AttachInputs(childrenNodes[0], childrenNodes[1], childrenNodes[2],
-                                                  childrenNodes[3], childrenNodes[4], childrenNodes[5]);
-                            break;
-
-                        default:
-                            LogicError("Invalid number of children.");
-                    }
-                }
-            }
-        }
-
-        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ERelation");
-
-        fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BRootNodes");
-        {
-            std::wstring nodeName;
-            size_t num;
-
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BFeatureNodes");
-            fstream >> num;
-
-            for (size_t i = 0; i < num; i++)
-            {
-                fstream >> nodeName;
-                m_features.push_back(GetNodeFromName(nodeName));
-            }
-
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EFeatureNodes");
-
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BLabelNodes");
-            fstream >> num;
-            for (size_t i = 0; i < num; i++)
-            {
-                fstream >> nodeName;
-                m_labels.push_back(GetNodeFromName(nodeName));
-            }
-
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ELabelNodes");
-
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCriteriaNodes");
-            fstream >> num;
-            for (size_t i = 0; i < num; i++)
-            {
-                fstream >> nodeName;
-                m_finalCriteria.push_back(GetNodeFromName(nodeName));
-            }
-
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECriteriaNodes");
-
-            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BNodesReqMultiSeqHandling"))
-            {
-                fstream >> num;
-                for (size_t i = 0; i<num; i++)
-                {
-                    fstream >> nodeName;
-                    m_requestNodesMultiSeqHandling.push_back(GetNodeFromName(nodeName));
-                }
-                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodesReqMultiSeqHandling");
-            }
-
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BEvalNodes");
-            fstream >> num;
-            for (size_t i = 0; i < num; i++)
-            {
-                fstream >> nodeName;
-                m_evalNodes.push_back(GetNodeFromName(nodeName));
-            }
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EEvalNodes");
-
-            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BOutputNodes");
-            fstream >> num;
-            for (size_t i = 0; i < num; i++)
-            {
-                fstream >> nodeName;
-                m_outputNodes.push_back(GetNodeFromName(nodeName));
-            }
-            fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EOutputNodes");
-
-            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BPairNodes"))
-            {
-                fstream >> num;
-                for (size_t i = 0; i < num; i++)
-                {
-                    fstream >> nodeName;
-                    m_pairNodes.push_back(GetNodeFromName(nodeName));
-                }
-                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EPairNodes");
-            }
-        }
-
-        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
-
-        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
-
-        //some internal values in the nodes are computed during validation
-        //SetFakeMBLayoutForValidation();
-        ValidateNetwork(false, bAllowNoCriterionNode);
     }
 
     // -----------------------------------------------------------------------
@@ -1585,13 +1581,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-				r = r > S.GetNumRows() ? S.GetNumRows() : r; 
+                r = r > S.GetNumRows() ? S.GetNumRows() : r;
 
-				if (r%AlignedSize != 0)
-				{
-					r -= r%AlignedSize; 
-					r = r + AlignedSize > S.GetNumRows() ? S.GetNumRows() : r + AlignedSize; 
-				}
+                if (r%AlignedSize != 0)
+                {
+                    r -= r%AlignedSize;
+                    r = r + AlignedSize > S.GetNumRows() ? S.GetNumRows() : r + AlignedSize;
+                }
                 // r = (r + 7) & (~7); //  to keep the number of rows/cols of resultant matrix a multipier of 8
                 //  which can be helpful at runtime
 
