@@ -1748,7 +1748,7 @@ __global__ void _addAveragePoolingGradient(ElemType * inputGradientBatch, const 
     CUDA_LONG startOutX = max(0.0f, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
     CUDA_LONG endOutX = (x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1; //inclusive end
     CUDA_LONG startOutY = max(0.0f, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-    CUDA_LONG endOutY = (x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1; //inclusive end
+    CUDA_LONG endOutY = (y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1; //inclusive end
 
     ElemType *inputGradientBatchBase4Sample = inputGradientBatch + sample*inputSizePerSample;
     const ElemType *outputGradientBatchBase4Sample = outputGradientBatch + sample*outputSizePerSample;
