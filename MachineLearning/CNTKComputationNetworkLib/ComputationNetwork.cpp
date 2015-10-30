@@ -723,6 +723,68 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // -----------------------------------------------------------------------
+    // unit test
+    // -----------------------------------------------------------------------
+
+    /**
+    call unit test of each node
+    this adds a verification of the correctness of node operations.
+    */
+    bool ComputationNetwork::UnitTest(bool allowFragment)
+    {
+        vector<wstring> vErrors;
+        // currently only validates nodes, we should validate everything we can
+        if (FeatureNodes().size() == 0 && !allowFragment)
+            RuntimeError("No Feature nodes specified");
+        // first give criteria nodes as root node
+        if (FinalCriterionNodes().size() > 0)
+        {
+            for (auto & node : FinalCriterionNodes())
+            {
+                if (!allowFragment)
+                    FormRecurrentLoops(node);
+                //this->SetActualMiniBatchSizeFromFeatures();
+                if (!UnitTest(node))
+                    vErrors.push_back(node->NodeName().c_str());
+            }
+        }
+        else if (!allowFragment)
+            RuntimeError("No Criterion nodes specified");
+        // now output nodes
+        if (OutputNodes().size() > 0)
+        {
+            for (auto & node : OutputNodes())
+            if (!UnitTest(node))
+                vErrors.push_back(node->NodeName().c_str());
+        }
+        else if (!allowFragment)
+            RuntimeError("No Output nodes specified");
+        // now evaluation nodes
+        if (EvaluationNodes().size() > 0)
+        {
+            for (auto & node : EvaluationNodes())
+            if (!UnitTest(node))
+                vErrors.push_back(node->NodeName().c_str());
+        }
+        return vErrors.empty();
+    }
+
+    bool ComputationNetwork::UnitTest(const ComputationNodeBasePtr& rootNode)
+    {
+        fprintf(stderr, "\n\n Unit test node %ls \n", rootNode->NodeName().c_str());
+
+        std::list<ComputationNodeBasePtr>&  nodes = GetEvalOrder(rootNode, false);
+
+        for (auto & nodeIter : nodes)
+            if (!nodeIter->UnitTest())
+                return false;
+
+        fprintf(stderr, "\n\n");
+
+        return true;
+    }
+
+    // -----------------------------------------------------------------------
     // topological plot [erw]
     // -----------------------------------------------------------------------
 
