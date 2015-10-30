@@ -20,6 +20,7 @@
 //     EvaluateThisNode     -> ForwardProp
 //     ComputeInputPartial  -> BackpropToInput
 //     m_children           -> m_inputs   and related functions
+//     Inputs()             -> Input()
 //     ValueSlice           -> FunctionValues (with FrameRange argument)
 //     GradientSlice        -> GradientValues
 //  - finish the job:
