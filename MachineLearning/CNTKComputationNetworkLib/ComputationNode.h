@@ -133,15 +133,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         friend class ComputationNetwork;
 
         ComputationNetworkOwnedNodeState() :
-            m_needsGradient(false),
-            m_loopId(-1),
-            m_visitedOrder(-1),
-            m_index(-1),
-            m_lowLink(-1),
-            m_indexInLoop(0),
-            m_visited(false),
-            m_inStack(false)
-        { }
+            m_needsGradient(false)
+        {
+            ClearCache();
+            m_hasloop = false;
+            ResetEvalTimeStamp();   // bring it into defined state
+        }
 
         void ClearCache()
         {
@@ -154,8 +151,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inStack = false;
         }
 
-        void SetLoopId(const int id) { m_loopId = id; }
+        void SetLoopId(const int id) { m_loopId = id; m_hasloop = true; }
         int GetLoopId() const { return m_loopId; }
+        bool HasLoop() const { return m_hasloop; }
+        //void SetLoop(bool hasLoop) { m_hasloop = hasLoop; }
 
         void SetVisitedOrder(const int id) { m_visitedOrder = id; }
         size_t GetVisitedOrder() const { return m_visitedOrder; }
@@ -174,14 +173,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         void SetIndexInLoop(const size_t index) { m_indexInLoop = index; }
         size_t GetIndexInLoop() const { return m_indexInLoop; }
-
-        void InitRecurrentNode()    // this initialization says that this node is not inside a loop
-        {
-            SetLoop(false);
-        }
-
-        bool HasLoop() const { return m_hasloop; }
-        void SetLoop(bool hasLoop) { m_hasloop = hasLoop; }
 
         void CopyTo(ComputationNetworkOwnedNodeState & other) const
         {
@@ -229,8 +220,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // the order in reverse graph. 
         int m_visitedOrder;
-        int m_index;
-        int m_lowLink;          // TODO: comment this, as it is not obvious
+        int m_index;            // index denoting order in which nodes were visited in DetermineStrongSCCs()
+        int m_lowLink;          // min of m_index over all nodes within a single loop
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;
@@ -676,7 +667,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (int i = 0; i<m_children.size(); i++)
             {
-                if (m_children[i] == nullptr)
+                if (!m_children[i])
                     continue;
                 if (m_children[i]->m_needsGradient)
                     return true;
@@ -841,10 +832,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: Once we switch to VS 2015, we shall use inheriting constructors, i.e. we can delete all those redundant constructor forwards in each ComputationNode derivate
         // TODO: verify that we initialize all members (e.g. m_parameterUpdateRequired was missing before)
         ComputationNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            ComputationNodeBase(deviceId, name), m_functionValues(nullptr), m_gradientValues(nullptr)
+            ComputationNodeBase(deviceId, name)
         {
-            InitRecurrentNode();
-            ResetEvalTimeStamp();   // bring it into defined state
         }
 #if 0   // (this was used by TimesNode when created by SVD, but seems unneccessary, and is buggy since inconsistent with the above)
         ComputationNode(DEVICEID_TYPE deviceId, const wstring & name, size_t rows, size_t cols) : ComputationNodeBase(deviceId, name)
@@ -1145,11 +1134,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_children[childIndex] = node;
         }
 
-        // these are overridden by DropoutNode, ReshapeNode, and RowRepeatNode to optimize for the trivial case that those don't do anything
-        // TODO: lots of nodes read out m_functionValues directly--was that a bug or intentional? They have now been changed to ValueSlice(), i.e. would pick it up
-        // BUGBUG: There is no matching virtual for GradientValues(). This should be symmetrical. Or better, replace this by optimizng for in-place operations.
-        virtual const Matrix<ElemType>& FunctionValues() const { return *m_functionValues; }
-        virtual Matrix<ElemType>& FunctionValues() { return *m_functionValues; }
+        const Matrix<ElemType>& FunctionValues() const { return *m_functionValues; }
+        Matrix<ElemType>& FunctionValues() { return *m_functionValues; }
 
         const Matrix<ElemType>& GradientValues() const { return *m_gradientValues; }
         Matrix<ElemType>& GradientValues() { return *m_gradientValues; }
@@ -1160,12 +1146,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Note: This is not used anywhere yet, only a sketch how we may further abstract timing.
         Matrix<ElemType> DataSlice(Matrix<ElemType> & data, const FrameRange & frameRange/*select frame or entire batch*/)
         {
-            return DataSlice(data, frameRange, m_pMBLayout);
+            try
+            {
+                return DataSlice(data, frameRange, m_pMBLayout);
+            }
+            catch (const logic_error & e)   // catch the error and rethrow it with the node name attached
+            {
+                LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
+            }
         }
         static Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
                                           const FrameRange & frameRange/*select frame or entire batch*/,
-                                          const MBLayoutPtr & pMBLayout)
+                                          const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
         {
+            // TODO: for now we verify that we always pass in layouts in frameRange that match data.
+            //       In the future, we may want to allow a value-wise comparison of compatibility. Or hint users to use ReconcileMBNode.
+            if (frameRange.m_pMBLayout != pMBLayout)
+            {
+                // if broadcast allowed then it is allowed to broadcast from an outer-loop value
+                // Currently, the only 'outer' loop we have is to have no layout.
+                if (frameRange.m_broadcastAllowed && !pMBLayout && data.GetNumCols() == 1)
+                    return data.AsReference();
+                LogicError("DataSlice: frameRange's MBLayout inconsistent with matrix");
+            }
             // if FrameRange refers to whole minibatch (map mode)
             // or if we don't even have a layout
             // then return the whole matrix
@@ -1266,7 +1269,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 anyChildNeedsGradient |= Inputs(i)->m_needsGradient;
             if (anyChildNeedsGradient)
                 for (size_t i = 0; i < m_children.size(); i++)
-                    Inputs(i)->MaskMissingValuesColumnsToZero(FrameRange(m_pMBLayout));
+                    Inputs(i)->MaskMissingValuesColumnsToZero(FrameRange(Inputs(i)->GetMBLayout()));
         }
 
 #ifdef _DEBUG
@@ -1516,7 +1519,7 @@ protected: \
     using Base::m_children; using Base::m_deviceId; using Base::m_functionValues; using Base::m_gradientValues; \
     using Base::m_inputImageLayout; using Base::m_outputImageLayout; \
     using Base::m_parameterUpdateRequired; using Base::m_nodeName; using Base::s_constOnes; \
-    using Base::shared_from_this; using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
+    using Base::CreateMatrixIfNull; using Base::RequestMatrixFromPool; using Base::ReleaseMatrixToPool; \
 public: \
     using Base::CreateUniqId; \
     using Base::AttachInputs; using Base::ChildrenNeedGradient; using Base::ChildrenSize; using Base::ClearGradientForChildren; using Base::VerifySize; \
@@ -1526,7 +1529,7 @@ public: \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
     using Base::EvaluateThisNode; using Base::FunctionValues; \
-    using Base::GradientValues; using Base::HasLoop; using Base::InitRecurrentNode; using Base::Inputs; \
+    using Base::GradientValues; using Base::HasLoop; using Base::Inputs; \
     using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
     using Base::LoadFromFile; using Base::NodeName; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \

@@ -1083,26 +1083,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                //remove this line since we can get same effect by overwritting the FunctionValues functions without copying the values
-                //functionValues = inputFunctionValues;
+                // TODO: Is this tested? In the past, for dropoutrate == 0 it would just override FunctionValues() to return the input; which now breaks stuff.
+                functionValues.SetValue(inputFunctionValues);
             }
         }
 
-        virtual const Matrix<ElemType>& FunctionValues() const
-        {
-            if (m_dropoutRate > 0)
-                return *m_functionValues;
-            else
-                return Inputs(0)->FunctionValues();
-        }
-
-        virtual Matrix<ElemType>& FunctionValues()
-        {
-            if (m_dropoutRate > 0)
-                return *m_functionValues;
-            else
-                return Inputs(0)->FunctionValues();
-        }
+        //virtual const Matrix<ElemType>& FunctionValues() const override
+        //{
+        //    if (m_dropoutRate > 0)
+        //        return *m_functionValues;
+        //    else
+        //        return Inputs(0)->FunctionValues();
+        //}
+        //
+        //virtual Matrix<ElemType>& FunctionValues() override
+        //{
+        //    if (m_dropoutRate > 0)
+        //        return *m_functionValues;
+        //    else
+        //        return Inputs(0)->FunctionValues();
+        //}
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {

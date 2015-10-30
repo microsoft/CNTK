@@ -16,6 +16,12 @@
 //  - code prettification:
 //     - sort all node implementations' methods into the same order; esp, EvaluateThisNode() comes before partial
 //     - sort important nodes first; move unused/experimental nodes into source files named accordingly
+//  - renaming:
+//     EvaluateThisNode     -> ForwardProp
+//     ComputeInputPartial  -> BackpropToInput
+//     m_children           -> m_inputs   and related functions
+//     ValueSlice           -> FunctionValues (with FrameRange argument)
+//     GradientSlice        -> GradientValues
 //  - finish the job:
 //     - everywhere complete folding EvaluateThisNodeS() into EvaluateThisNode(FrameRange()), same for partial
 //     - revise node constructors, merge by means of default parameters
@@ -62,7 +68,7 @@ protected:
         bool m_completedGradient;
         bool m_completedEvaluate;
         bool m_loopClosed;
-        bool m_isForwardLoop;                                               // true if left to right (t=0..T-1), false otherwise (t=T-1..0)
+        int m_steppingDirection;                                            // +1 if left to right (t=0..T-1), -1 if rightt to left (t=T-1..0)
 
         void Reset()
         {
@@ -634,7 +640,7 @@ public:
                 }
 
                 // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
-                FrameRangeIteration range(pMBLayout, recInfo->m_isForwardLoop ? -1 : +1);
+                FrameRangeIteration range(pMBLayout, recInfo->m_steppingDirection);
                 for (auto t = range.begin(); t != range.end(); t++)
                 {
                     for (auto & node2 : recurrentNodes)
@@ -744,7 +750,7 @@ public:
                     for (auto & node2 : recurrentNodes)
                         node2->OnComputeGradientBeginIteration();
                     auto pMBLayout = recurrentNodes[0]->GetMBLayout();
-                    FrameRangeIteration range(pMBLayout, recInfo->m_isForwardLoop ? -1 : +1);
+                    FrameRangeIteration range(pMBLayout, recInfo->m_steppingDirection);
                     for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iteration
                     {
                         for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
@@ -1192,10 +1198,9 @@ public:
                                  std::vector<ComputationNodeBasePtr>& trainRootNodes)
     {
         //allocate memory for forward computation
-        fprintf(stderr, "\n\nAllocating matrices for forward computing\n");
+        fprintf(stderr, "\n\nAllocating matrices for forward propagation.\n");
         for (int i = 0; i < evalRootNodes.size(); i++)
             AllocateEvalMatrices(evalRootNodes[i]);
-
         for (int i = 0; i < outValueRootNodes.size(); i++)
             AllocateEvalMatrices(outValueRootNodes[i]);
         for (int i = 0; i < trainRootNodes.size(); i++)
@@ -1483,14 +1488,14 @@ protected:
     // TODO: Can this be moved to a separate class, or at least a separate CPP?
 
     void ClearCalcOrderCaches();
-    void MergeRecurrentLoops(const ComputationNodeBasePtr& /*rootNode*/);
+    void MergeRecurrentLoops();
     // get the strong connected component from the graph
-    void getStrongSCC(const ComputationNodeBasePtr& rootNode);    // TODO: method names start uppercase
-    void strongSCC(ComputationNodeBasePtr cur, std::list<ComputationNodeBasePtr>& sccStack, size_t& index, size_t& loopId);     // TODO: method names start uppercase
-    void getLoopForwordOrder(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);   // TODO: method name
+    void DetermineStrongSCCs(const ComputationNodeBasePtr& rootNode);
+    void DetermineStrongSCCsRec(ComputationNodeBasePtr cur, std::list<ComputationNodeBasePtr>& sccStack, size_t& index, size_t& loopId);
+    void DetermineLoopForwardOrder(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);
     //must be called before ValidateSubNetwork
     void FormRecurrentLoops(const ComputationNodeBasePtr& rootNode);
-    void DetermineLoopTypes();
+    void DetermineLoopDirection();
     void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr> & /*noRecurrentNodes*/);
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
 
