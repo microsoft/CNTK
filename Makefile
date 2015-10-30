@@ -427,6 +427,7 @@ CNTK_SRC =\
 	BrainScript/BrainScriptParser.cpp \
 	BrainScript/BrainScriptTest.cpp \
 	MachineLearning/CNTK/ExperimentalNetworkBuilder.cpp \
+	Common/MPIWrapper.cpp \
 
 
 ifdef CUDA_PATH
