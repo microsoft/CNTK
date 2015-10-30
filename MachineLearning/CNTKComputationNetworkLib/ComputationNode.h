@@ -57,7 +57,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // describes inner layout of feature vector that is an image
     // TODO: This will grow into a more general tensor mechanism.
-    // TODO: SaveToFile() and LoadFromFile() currenrly use individual elements; provide an overload for the entire object.
+    // TODO: SaveToFile() and LoadFromFile() currently use individual elements; provide an overload for the entire object.
     struct ImageLayout
     {
         size_t width, height, channels;
@@ -166,7 +166,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
         }
 
-        static bool IsSmaller(const ComputationNetworkOwnedNodeState * lhs, const ComputationNetworkOwnedNodeState * rhs)
+        static bool ByVisitedOrder(const ComputationNetworkOwnedNodeState * lhs, const ComputationNetworkOwnedNodeState * rhs)  // sorting predicate
         {
             return lhs->m_visitedOrder < rhs->m_visitedOrder;
         }
@@ -178,14 +178,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static atomic_ullong s_timeStampCounter;
         int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 
-        // for loop nodes
-        bool m_isPartOfLoop;
+        bool m_isPartOfLoop;        // true if this loop is part of a recurrent loop
 
     protected:  // TODO: should be fully encapsulated here
         bool m_needsGradient;   // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     protected:
-        // these are used during FormRecurrentLoops() (which calls ClearCache() at its end)
+        // owned by FormRecurrentLoops() and stuff it calls, only used from inside there (FormRecurrentLoops() calls PurgeStateForFormingRecurrentLoops() at its end to make that super-clear)
         // TODO: get rid of all the accessors--FormRecurrentLoops() owns these variables and can touch them directly.
         void PurgeStateForFormingRecurrentLoops()
         {
@@ -198,35 +197,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inStack = false;
         }
 
-#if 0
-        void SetLoopId(const int id)
-        {
-            m_isPartOfLoop = true;      // This is the only viarable that escapes from FormRecurrentLoops(). Note: there is no code to ever reset this to false again, which is likely wrong (it would preclude analysis to be rerun after changes).
-            m_loopId = id;
-        }
-        int GetLoopId() const { return m_loopId; }
-
-        void SetVisitedOrder(const int id) { m_visitedOrder = id; }
-        size_t GetVisitedOrder() const { return m_visitedOrder; }
-
-        void SetIndex(const size_t ind) { m_index = ind; }
-        size_t GetIndex() const { return m_index; }
-
-        void SetLowLink(const size_t lowlink) { m_lowLink = lowlink; }
-        size_t GetLowLink() const{ return m_lowLink; }
-
-        void SetVisited(const bool visited) { m_visited = visited; }
-        bool IsVisited() const { return m_visited; }
-
-        void SetInStack(const bool instack) { m_inStack = instack; }
-        bool IsInStack() const { return m_inStack; }
-
-        void SetIndexInLoop(const size_t index) { m_indexInLoop = index; }
-        size_t GetIndexInLoop() const { return m_indexInLoop; }
-#endif
-
         int m_loopId;           // index into recurrent info array (TODO: verify this)
-        int m_visitedOrder;
+        int m_visitedOrder;     // order in which nodes were visited by EnumerateNodes()
         int m_index;            // index denoting order in which nodes were visited in DetermineStrongSCCs()
         int m_lowLink;          // min of m_index over all nodes within a single loop
         bool m_visited;
@@ -563,9 +535,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
 
-        static bool IsSmaller(const ComputationNodeBasePtr& lhs, const ComputationNodeBasePtr& rhs)
+        static bool ByVisitedOrder(const ComputationNodeBasePtr& lhs, const ComputationNodeBasePtr& rhs)    // sorting predicate
         {
-            return ComputationNetworkOwnedNodeState::IsSmaller(lhs.get(), rhs.get());
+            return ComputationNetworkOwnedNodeState::ByVisitedOrder(lhs.get(), rhs.get());
         }
 
         bool IsEqualTo(const ComputationNodeBasePtr& other) const //this will be used to determine whehter two nodes are the same
@@ -592,7 +564,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // The 'recurrent' version is only called from FormRecurrentLoops().
         // Side-effects (unbeknownst to the name of the function):
         //  - m_needsGradient flags, are propagated up from children         --BUGBUG! This should only be computed in ValidateSubNetwork().
-        //  - m_visitedOrder (only if 'recurrent' flag is set; otherwise leave untouched)
+        //  - ComputationNetworkOwnedNodeState::m_visitedOrder (only if 'recurrent' flag is set; otherwise leave untouched), as needed by FormRecurrentNodes()
         std::list<ComputationNodeBasePtr> EnumerateNodes(bool forForwardProp/*else get order for backprop*/, bool recurrent)
         {
             std::list<ComputationNodeBasePtr> nodes;
@@ -605,7 +577,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (!forForwardProp)
             {
                 assert(!recurrent);     // TODO: not sure if required, but currently only called this way
-
                 nodes.reverse();        // and go backwards
             }
 
@@ -1474,7 +1445,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // This macro expects 'Base' to be the name of the base class. Please also use 'Base' outside this macro to make it less likely to accidentally call the wrong base class members.
     // BUGBUG: some should be protected, not public
     // Note: Whoever invented that insanity called two-phase name lookup shall rot in hell, for the crime of causing infinite pain. [fseide]
-#define UsingComputationNodeMembers /*-WithoutOperationName needed to support inconsistent pattern of InputValue */    \
+#define UsingComputationNodeMembers /*without OperationName; needed to support inconsistent pattern of InputValue */    \
 protected: \
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;  /*TODO: can we just use 'using?' */ \
     using Base::Resize; using Base::GetNumRows; using Base::GetNumCols; \
@@ -1495,7 +1466,7 @@ public: \
     using Base::DumpNodeInfo; using Base::EnumerateNodes; \
     using Base::HasMBLayout; using Base::GetMBLayout; using Base::LinkToMBLayout; \
     using Base::FunctionValues; using Base::GradientValues; \
-    using Base::Inputs; using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; using Base::IsSmaller; \
+    using Base::Inputs; using Base::IsChildAnImage; using Base::IsEqualTo; using Base::IsFuncValueOlderThanInputs; using Base::IsLeaf; \
     using Base::LoadFromFile; using Base::NodeName; \
     using Base::PrintNodeValuesToFile; using Base::PrintSelfBeforeValidation; \
     using Base::RequiresPreCompute; \
