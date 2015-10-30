@@ -229,8 +229,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // the order in reverse graph. 
         int m_visitedOrder;
-        int m_index;
-        int m_lowLink;          // TODO: comment this, as it is not obvious
+        int m_index;            // index denoting order in which nodes were visited in DetermineStrongSCCs()
+        int m_lowLink;          // min of m_index over all nodes within a single loop
         bool m_visited;
         bool m_inStack;
         int m_indexInLoop;

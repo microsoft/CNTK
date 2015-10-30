@@ -29,6 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // The two differ in the step direction, some loop directions, and sequence-boundary flags.
     // -----------------------------------------------------------------------
 
+    // TODO: 'direction' is really too general. signOfTimeOffset?
     template<class ElemType, int direction/*-1 for Past/left-to-right or +1 for Future/right-to-left*/, MinibatchPackingFlags SequenceStart_or_End/*-Start or -End*/>
     class DelayedValueNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     {
@@ -156,7 +157,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.IsAllFrames())
             {
                 // recursive call to ourselves
-                FrameRangeIteration range(m_pMBLayout, dir);
+                FrameRangeIteration range(m_pMBLayout, -dir);
                 for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iterator
                     ComputeInputPartial(inputIndex, t);
                 return;
@@ -230,7 +231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (frameRange.IsAllFrames())
             {
                 // recursive call to ourselves
-                FrameRangeIteration range(m_pMBLayout, dir);
+                FrameRangeIteration range(m_pMBLayout, -dir);
                 for (auto t = range.begin(); t != range.end(); t++)
                     EvaluateThisNode(t);
                 return;

@@ -499,14 +499,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: It is meant to some day generalize to multi-dimensional iterations, e.g. across an image:
     //  - abstract delay direction to be multi-dimensional (let's call it FrameStep)
     //  - DelayedValueNode::direction gets replaced with a FrameStep
-    //  - recInfo->m_isForwardLoop will be replaced by a FrameStep
+    //  - recInfo->m_steppingDirection will be replaced by a FrameStep
     //  - FrameRangeIterator derives from FrameStep, and operator++ adds tat to FrameRange
     // Longer-term, we will also have nested structures. For those, FrameRangeIterations will be able to be instantiated from FrameRange objects to loop over their nested dimension.
     class FrameRangeIteration
     {
         MBLayoutPtr m_pMBLayout;
-        int m_delay;
+        int m_step;
     public:
+        // one-dimensional iteration (time sequences)
+        // 'Step' specifies the stepping direction of the loop:
+        //  - for left-to-right models -> pass step = +1
+        //  - for right-to-left models -> pass step = -1
+        FrameRangeIteration(MBLayoutPtr pMBLayout, int step) : m_pMBLayout(pMBLayout), m_step(step) { }
+        // in the future we may consier multi-dimensional iterators such as iterators over images
         // This class is returned by begin() and end().
         // It is a FrameRange with additions ++ and != operators needed in the for loop.
         class FrameRangeIterator : public FrameRange
@@ -520,31 +526,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // iterators for iterating forward
         FrameRangeIterator begin() const
         {
-            if (m_delay < 0) return FrameRangeIterator(FrameRange(m_pMBLayout, 0), +1);
-            else return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1), -1);
+            if (m_step > 0) return FrameRangeIterator(FrameRange(m_pMBLayout, 0),                                  +1);
+            else            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1), -1);
         }
         FrameRangeIterator end() const
         {
-            if (m_delay > 0) return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t)-1), 0);
-            else return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps()), 0);
+            if (m_step < 0) return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t)-1),                     0/*dummy*/);
+            else            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps()), 0);
         }
         // iterators for iterating in reverse order (as needed for gradient update)
         FrameRangeIterator rbegin() const
         {
-            if (m_delay > 0) return FrameRangeIterator(FrameRange(m_pMBLayout, 0), +1);
-            else return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1), -1);
+            if (m_step < 0) return FrameRangeIterator(FrameRange(m_pMBLayout, 0),                                  +1);
+            else            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1), -1);
         }
         FrameRangeIterator rend() const
         {
-            if (m_delay < 0) return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t)-1), 0);
-            else return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps()), 0);
+            if (m_step > 0) return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t)-1),                     0);
+            else            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps()), 0);
         }
-        // one-dimensional iteration (time sequences)
-        // Delay specifies from which side the delayed value comes from:
-        //  - for left-to-right models -> pass delay = -1
-        //  - for right-to-left models -> pass delay = +1
-        FrameRangeIteration(MBLayoutPtr pMBLayout, int delay) : m_pMBLayout(pMBLayout), m_delay(delay) { }
-        // in the future we may consier multi-dimensional iterators such as iterators over images
     };
 
 }}}
