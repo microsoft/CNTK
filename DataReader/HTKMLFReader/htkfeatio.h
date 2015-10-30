@@ -778,7 +778,7 @@ class htkmlfreader : public map<wstring,vector<ENTRY>>   // [key][i] the data
         wstring key = msra::strfun::utf16 (regex_replace (filename, regex ("\\.[^\\.\\\\/:]*$"), string()));  // delete extension (or not if none)
 #endif
 #ifdef __unix__
-        wstring key = msra::strfun::utf16 (removeExtension(basename(filename))); // note that c++ 4.8 is incomplete for supporting regex
+        wstring key = msra::strfun::utf16 (removeExtension(filename)); // note that c++ 4.8 is incomplete for supporting regex
 #endif
 
         // determine lines range

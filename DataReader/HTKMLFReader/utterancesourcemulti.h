@@ -60,7 +60,7 @@ class minibatchutterancesourcemulti : public minibatchsource
             return regex_replace (logicalpath(), deleteextensionre, emptywstring);  // delete extension (or not if none)
 #endif
 #ifdef __unix__
-            return removeExtension(basename(logicalpath()));
+            return removeExtension(logicalpath());
 #endif
         }
     };
