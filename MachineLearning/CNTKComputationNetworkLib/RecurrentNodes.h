@@ -1210,12 +1210,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (Inputs(0)->FunctionValues().GetMatrixType() == SPARSE)
                 LogicError("LSTMNode: input to LSTM has to be dense matrix. Consider adding a project layer using lookuptable before LSTM node. ");
 
+#if 0
             // TODO: use dynamic_pointer_cast instead
             if (Inputs(1)->OperationName() != OperationNameOf(LearnableParameter) ||
                 Inputs(2)->OperationName() != OperationNameOf(LearnableParameter) ||
                 Inputs(3)->OperationName() != OperationNameOf(LearnableParameter) ||
                 Inputs(4)->OperationName() != OperationNameOf(LearnableParameter))
                 LogicError("LSTM validation: need to have learnable parameters ");
+#endif
 
             //if (Inputs(0)->GetNumRows() == 0)
             //    LogicError("LSTM validation: input size is zero!");
