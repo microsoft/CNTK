@@ -76,7 +76,6 @@ protected:
             m_completedEvaluate = false;
             m_loopClosed = false;
         }
-
     };
 
 public:
@@ -776,7 +775,7 @@ public:
                 if (IsNodeReqMultiSeqHandling(node))    // (TODO: This will go away.)
                 {
                     // batch is done only for feed-forward nodes
-                    if (node->HasLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
+                    if (node->IsPartOfLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
                         LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
                     node->MaskMissingGradientColumnsToZero(FrameRange(node->GetMBLayout()));
                 }
@@ -1222,15 +1221,15 @@ public:
             {
                 ComputationNodeBasePtr pNode = n->GetChildren()[i];
                 parentCount[pNode]++;
+            }
         }
-    }
 
         for (int i = 0; i < m_recurrentInfo.size(); i++)
             m_recurrentInfo[i].m_completedEvaluate = false;
 
         for (auto &nodeIter : allNodes)
-    {
-            if (nodeIter->HasLoop())
+        {
+            if (nodeIter->IsPartOfLoop())
             {
                 RecurrentInfo* recInfo = FindInRecurrentLoops(nodeIter);
                 assert(recInfo != nullptr);
@@ -1245,7 +1244,7 @@ public:
                     recInfo->m_completedEvaluate = true;
 
                     for (auto &nodeLoopIter : recurrentNodes)
-        {
+                    {
                         ReleaseMatricesAfterEvalForChildren(nodeLoopIter, parentCount);
                     }
                 }
@@ -1294,7 +1293,7 @@ public:
 
         for (auto &n : allNodes)
         {
-            if (n->HasLoop())
+            if (n->IsPartOfLoop())
             {
                 std::vector<ComputationNodeBasePtr> recurrentNodes;
                 RecurrentInfo * recInfo = FindInRecurrentLoops(n);
@@ -1306,7 +1305,7 @@ public:
                     {
                         AllocateGradientMatricesForChildren(*nodeIter);
                     }
-                recInfo->m_completedGradient = true;
+                    recInfo->m_completedGradient = true;
                     for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                     {
                         if ((*nodeIter)->NeedGradient())
