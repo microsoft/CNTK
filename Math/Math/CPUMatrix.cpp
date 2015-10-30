@@ -3881,8 +3881,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     long rowInInput = rowInWindowBase + colInWindow * inputHeightTimesChannel;
                     for (long rowInWindow=0; rowInWindow<windowHeight; rowInWindow++)
                     {
-                        const ElemType val = inputBatch(rowInInput, sample); //pf[rowInWindow*channels]; 
-                        sum += val; 
+                        sum += inputBatch(rowInInput, sample);
+                        rowInInput += (long)channels;
                     }
                 }
 
@@ -3924,7 +3924,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 long startOutX = (long) max(0, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
                 long endOutX = (long) ((x / verticalSubsample < outputHeight - 1) ? x / (long)verticalSubsample : outputHeight - 1); //inclusive end
                 long startOutY = (long) max(0, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-                long endOutY = (long) ((x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1); //inclusive end
+                long endOutY = (long) ((y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1); //inclusive end
 
                 for (long outY=startOutY; outY<=endOutY; outY++)
                 {
