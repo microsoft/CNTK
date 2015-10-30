@@ -228,6 +228,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'"></PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\Common\TimerUtility.cpp" />
+    <ClCompile Include="..\..\Common\MPIWrapper.cpp" />
     <ClCompile Include="CNTK.cpp" />
     <ClCompile Include="ExperimentalNetworkBuilder.cpp" />
     <ClCompile Include="ModelEditLanguage.cpp" />
