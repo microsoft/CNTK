@@ -56,8 +56,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId)
     {
         // REVIEW alexeyk: make cuDNN default when running on GPU and compiled with cuDNN, add config parameter to enable runtime switch between implementations.
-        if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported())
-            return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>(deviceId);
+        //if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported())
+        //    return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>(deviceId);
         return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>(deviceId);
     }
 
@@ -246,25 +246,55 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class DefaultPoolingEngine : public PoolingEngine<ElemType>
     {
     public:
-        void Forward(const Tensor4D& inT, const Mat& in, const PoolingDescriptor& poolDesc, const Tensor4D& outT, Mat& out) override
+        void Forward(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out) override
         {
             assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
             assert(inT.n() == in.GetNumCols());
             assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
             assert(outT.n() == out.GetNumCols());
 
-            out.AssignMaxPoolingResult(in, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
-                outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
-                poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
+            if (poolDesc.kind() == PoolDesc::PoolKind::Max)
+            {
+                out.AssignMaxPoolingResult(in, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
+                    outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
+                    poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
+            }
+            if (poolDesc.kind() == PoolDesc::PoolKind::Average)
+            {
+                out.AssignAveragePoolingResult(in, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
+                    outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
+                    poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
+            }
+            else
+                assert(false);
         }
 
-        void Backward(const Tensor4D& srcGradT, const Mat& srcGrad, const PoolingDescriptor& poolDesc, const Tensor4D& gradT, Mat& grad) override
+        void Backward(const Tensor4D& outT, const Mat& out, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& inT, const Mat& in, Mat& grad) override
         {
-            UNUSED(poolDesc);
-            assert(srcGradT.w() * srcGradT.h() * srcGradT.c() == srcGrad.GetNumRows());
-            assert(srcGradT.n() == srcGrad.GetNumCols());
-            assert(gradT.w() * gradT.h() * gradT.c() == grad.GetNumRows());
-            assert(gradT.n() == grad.GetNumCols());
+            assert(outT.w() * outT.h() * outT.c() == out.GetNumRows());
+            assert(outT.n() == out.GetNumCols());
+            assert(out.GetNumRows() == srcGrad.GetNumRows());
+            assert(out.GetNumCols() == srcGrad.GetNumCols());
+            assert(inT.w() * inT.h() * inT.c() == in.GetNumRows());
+            assert(inT.n() == in.GetNumCols());
+            assert(in.GetNumRows() == grad.GetNumRows());
+            assert(in.GetNumCols() == grad.GetNumCols());
+
+            if (poolDesc.kind() == PoolDesc::PoolKind::Max)
+            {
+                grad.AddMaxPoolingGradient(srcGrad, in, out,
+                    inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
+                    outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
+                    poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
+            }
+            if (poolDesc.kind() == PoolDesc::PoolKind::Average)
+            {
+                grad.AddAveragePoolingGradient(srcGrad, inT.c(), inT.w(), inT.h(), inT.w() * inT.h() * inT.c(),
+                    outT.w(), outT.h(), outT.w() * outT.h() * outT.c(),
+                    poolDesc.w(), poolDesc.h(), poolDesc.wStride(), poolDesc.hStride());
+            }
+            else
+                assert(false);
         }
     };
 

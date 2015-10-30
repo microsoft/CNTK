@@ -115,9 +115,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class PoolingDescriptor
     {
     public:
-        enum class PoolKind { Max = 0, Average };
+        enum class PoolKind { Max, Average };
         
-        PoolKind kind() { return m_kind; }
+        PoolKind kind() const { return m_kind; }
         // Pooling window size.
         size_t w() const { return m_w; }
         size_t h() const { return m_h; }
@@ -197,7 +197,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual ~PoolingEngine() = default;
 
         virtual void Forward(const Tensor4D& inT, const Mat& in, const PoolDesc& poolDesc, const Tensor4D& outT, Mat& out) = 0;
-        virtual void Backward(const Tensor4D& srcGradT, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& gradT, Mat& grad) = 0;
+        virtual void Backward(const Tensor4D& outT, const Mat& out, const Mat& srcGrad, const PoolDesc& poolDesc, const Tensor4D& inT, const Mat& in, Mat& grad) = 0;
 
     public:
         PoolingEngine(const PoolingEngine&) = delete;
