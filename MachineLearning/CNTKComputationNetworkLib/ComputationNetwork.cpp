@@ -736,8 +736,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (w == cur)
                     break;
             }
+            assert(sccSize == rInfo.m_recurrentNodes.size());
             rInfo.Reset();
-            if (sccSize > 1)
+            if (rInfo.m_recurrentNodes.size() > 1)
             {
                 loopId++;
                 m_recurrentInfo.push_back(rInfo);
@@ -790,14 +791,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // now we have formed all loops, with all nodes assigned to a loop or none
 
         // set m_visitedOrder of all nodes
+        // All nodes that participate in a loop get the same m_visitedOrder value.
         for (auto & iter : m_recurrentInfo)
         {
             size_t max_visitedOrderInLoop = 0;
             for (auto itr = iter.m_recurrentNodes.begin(); itr != iter.m_recurrentNodes.end(); itr++)
-            {
                 if (max_visitedOrderInLoop < (*itr)->GetVisitedOrder())
                     max_visitedOrderInLoop = (*itr)->GetVisitedOrder();
-            }
             for (auto itr = iter.m_recurrentNodes.begin(); itr != iter.m_recurrentNodes.end(); itr++)
                 (*itr)->SetVisitedOrder(max_visitedOrderInLoop);
         }
@@ -805,18 +805,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
         {
             // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
-            if ((*iter).m_recurrentNodes.size() > 1)
+            assert((*iter).m_recurrentNodes.size() > 1);
             {
-                /// it is done in the mergerecurrentloops function, but just keep the code
+                // it is done in the mergerecurrentloops function, but just keep the code       --TODO: why??
                 std::sort((*iter).m_recurrentNodes.begin(),
                           (*iter).m_recurrentNodes.end(),
                           (*iter).m_recurrentNodes[0]->IsSmaller);
 
                 for (auto nodeRecIter = (*iter).m_recurrentNodes.begin(); nodeRecIter != (*iter).m_recurrentNodes.end(); nodeRecIter++)
-                {
-                    (*nodeRecIter)->SetLoop(true);
                     (*nodeRecIter)->SetLoopId((*iter).m_loopId);
-                }
             }
         }
 
@@ -824,7 +821,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R   --TODO: is this comment correct?
             (*iter).m_recurrentNodesForForward.clear();
-            if ((*iter).m_recurrentNodes.size() > 1)
+            assert((*iter).m_recurrentNodes.size() > 1);
             {
                 std::list<ComputationNodeBasePtr> result;
                 std::unordered_set<ComputationNodeBasePtr> visited;
