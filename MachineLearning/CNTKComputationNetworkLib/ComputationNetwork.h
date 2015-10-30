@@ -1169,9 +1169,12 @@ public: // yak--used by NDLUtil. Will go away someday.
 private:
     void ValidateNodes(list<ComputationNodeBasePtr> nodes, bool isFinalValidationPass, size_t & todo);
     void ValidateSubNetwork(const ComputationNodeBasePtr& rootNode);
-public:
     // prepares the network for computation
     void BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode);
+private:
+    void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
+    bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
+public:
     // and for a set of nodes
     void StartEvaluateMinibatchLoop(const ComputationNodeBasePtr & rootNode)  // (ugly name; meant to be unique so we can rename if needed)
     {
@@ -1189,7 +1192,6 @@ public:
         StartEvaluateMinibatchLoop(nodes1);
         StartEvaluateMinibatchLoop(nodes2);
     }
-    bool BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode);
 
     //this function will need to be called before actual validation and execution to 
     //predetermine how to share matrices to reduce memory usage.
@@ -1493,17 +1495,13 @@ protected:
 
     // This is part of the FormRecurrentLoops() process, and only called from there.
     void FormRecurrentLoops(const ComputationNodeBasePtr& rootNode);
-    void MergeRecurrentLoops();
-    // get the strong connected component from the graph
     void DetermineStrongSCCs(const ComputationNodeBasePtr& rootNode);
-    void DetermineStrongSCCsRec(ComputationNodeBasePtr cur, std::list<ComputationNodeBasePtr>& sccStack, size_t& index, size_t& loopId);
+    void DetermineStrongSCCsR(ComputationNodeBasePtr cur, std::list<ComputationNodeBasePtr>& sccStack, size_t& index, size_t& loopId);
+    void UniqRecurrentLoops();
     void DetermineLoopForwardOrder(std::unordered_set<ComputationNodeBasePtr>& visited, std::unordered_set<ComputationNodeBasePtr>& recStack, std::list<ComputationNodeBasePtr>& nodesStack, ComputationNodeBasePtr cur);
-    //must be called before ValidateSubNetwork
-    void DetermineLoopDirections();
-    void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr> & /*noRecurrentNodes*/);
-    void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
     void GatherLoopNodesR(const ComputationNodeBasePtr& rootNode, std::unordered_set<ComputationNodeBasePtr>& visited, std::map<int, std::list<ComputationNodeBasePtr>>& recurrentResult, std::list<ComputationNodeBasePtr>& noRecurrentResult);
-
+    void ReorderLoops(std::list<ComputationNodeBasePtr>& nodes, const std::map<int, std::list<ComputationNodeBasePtr>>& /*recurrentNodes*/, const std::list<ComputationNodeBasePtr> & /*noRecurrentNodes*/);
+    void DetermineLoopDirections();
 
     // -----------------------------------------------------------------------
     // node creation
@@ -1559,16 +1557,16 @@ public:
 
     // determine the required order in which nodes must be computed in order to compute 'rootNode'
     // recurrent == true is only used when called from FormRecurrentLoops()
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode, bool recurrent)
+    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode, bool setVisitedOrder)
     {
-        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*means for forward prop*/, recurrent);
+        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*means for forward prop*/, setVisitedOrder);
     }
 
     // determine the required order in which nodes must be computed in order to compute the gradient of 'rootNode'
     // Basically returns the reverse of GetEvalOrder(), with some special consideration to loops.
     std::list<ComputationNodeBasePtr>& GetGradientCalcOrder(const ComputationNodeBasePtr& rootNode)
     {
-        return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*means for backprop*/, false/*recurrent*/);
+        return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*means for backprop*/, false/*setVisitedOrder*/);
     }
 
 private:
@@ -1593,12 +1591,12 @@ private:
     //}
     static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                           const bool forwardCompute, bool recurrent)
+                                                           const bool forwardCompute, bool setVisitedOrder)
     {
         if (!rootNode)
             LogicError("rootNode is NULL.");
         if (orderMap.find(rootNode) == orderMap.end())
-            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, recurrent);
+            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, setVisitedOrder);
         return orderMap[rootNode];
     }
 

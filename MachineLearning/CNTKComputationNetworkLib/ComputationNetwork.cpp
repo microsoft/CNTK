@@ -661,7 +661,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!inserted)
             return;                                             // already done
 
-        // detect recurrent loops for this root node (more loops will be detected inside ValidateSubNetwork())
+        // detect recurrent loops for this root node
         // TODO: not nice--why not always call this in ValidateSubNetwork() only?
         FormRecurrentLoops(rootNode);
 
@@ -806,19 +806,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //  - m_recurrentInfo
     //  - ComputationNode::m_isPartOfLoop and m_loopId
     // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
+    // This function is called for multiple nodes, e.g. eval and training criterion. I.e. it must be able to add to a previous result. E.g. it does not clear the m_visited flags at start. This seems brittle.
+    // BUGBUG: m_visited is also used by ValidateSubNetwork(). Hence, it may be in unexpected state when calling into this multiple times.
     void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode)
     {
         // determine the strongly connected cliques -> m_recurrentInfo[]
         DetermineStrongSCCs(rootNode);
 
-        list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*recurrent*/);
+        list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*set m_visitedOrder*/);
 
         // purge identical loops (i.e. loops that have the same source node)
-        MergeRecurrentLoops();
+        // TODO: Is this for the case that we call this function multiple times, or do the nodes of a loop generate multiple entries? Comment this.
+        UniqRecurrentLoops();
 
         // now we have formed all loops, with all nodes assigned to a loop or none
 
-        // set m_visitedOrder of all nodes
+        // update m_visitedOrder of all nodes
+        // This was originally set by EnumerateNodes(), which gets called from GetEvalOrder().
         // All nodes that participate in a loop get the same m_visitedOrder value.
         for (auto & iter : m_recurrentInfo)
         {
@@ -938,46 +942,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    // purge identical loops (i.e. loops that have the same source node)
-    void ComputationNetwork::MergeRecurrentLoops()
-    {
-        if (m_recurrentInfo.size() <= 1)
-            return;
-
-        // uniq the m_recurrentInfo array w.r.t. m_sourceNode
-        vector<RecurrentInfo> m_recurrentInfoTmp;
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)    // enumerate all loops
-        {
-            bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
-            for (auto iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
-            {
-                if ((*iter2).m_sourceNode == (*iter).m_sourceNode)
-                {
-                    bFound = true;
-                    break;
-                }
-            }
-            if (!bFound)
-                m_recurrentInfoTmp.push_back(*iter);
-        }
-        m_recurrentInfo = move(m_recurrentInfoTmp);
-    }
-
     // get the strongly connected components from the graph
     // This sets index, lowLink, m_visited, and m_inStack.
     void ComputationNetwork::DetermineStrongSCCs(const ComputationNodeBasePtr& rootNode)
     {
         // notice that this graph including graphs from a parent networks if two or more networks are connected via PairNetworkNode
-        unordered_set<ComputationNodeBasePtr> visited;
         list<ComputationNodeBasePtr> sccStack;
         size_t index = 0;
         size_t loopId = 0;
         if (!rootNode->m_visited)
-            DetermineStrongSCCsRec(rootNode, sccStack, index, loopId);
+            DetermineStrongSCCsR(rootNode, sccStack, index, loopId);
     }
 
     // (recursive part of DetermineStrongSCCs())
-    void ComputationNetwork::DetermineStrongSCCsRec(ComputationNodeBasePtr cur,
+    void ComputationNetwork::DetermineStrongSCCsR(ComputationNodeBasePtr cur,
                                                     list<ComputationNodeBasePtr>& sccStack,
                                                     size_t& index, size_t& loopId)
     {
@@ -999,7 +977,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (!cur->Inputs(i)->m_visited)
                 {
-                    DetermineStrongSCCsRec(cur->Inputs(i), sccStack, index, loopId);
+                    DetermineStrongSCCsR(cur->Inputs(i), sccStack, index, loopId);
                     cur->m_lowLink = min(cur->m_lowLink, cur->Inputs(i)->m_lowLink);
                 }
                 else if (cur->Inputs(i)->m_inStack)
@@ -1033,6 +1011,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
+    // purge identical loops (i.e. loops that have the same source node)
+    void ComputationNetwork::UniqRecurrentLoops()
+    {
+        if (m_recurrentInfo.size() <= 1)
+            return;
+
+        // uniq the m_recurrentInfo array w.r.t. m_sourceNode
+        vector<RecurrentInfo> m_recurrentInfoTmp;
+        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)    // enumerate all loops
+        {
+            bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
+            for (auto iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
+            {
+                if ((*iter2).m_sourceNode == (*iter).m_sourceNode)
+                {
+                    bFound = true;
+                    break;
+                }
+            }
+            if (!bFound)
+                m_recurrentInfoTmp.push_back(*iter);
+        }
+        m_recurrentInfo = move(m_recurrentInfoTmp);
+    }
+
     void ComputationNetwork::DetermineLoopForwardOrder(unordered_set<ComputationNodeBasePtr>& visited,
                                                        unordered_set<ComputationNodeBasePtr>& recStack,
                                                        list<ComputationNodeBasePtr>& nodesStack,
@@ -1057,38 +1060,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             if (!(recStack.find(cur) == recStack.end()))
                 LogicError("%ls %ls operation is part of an infinite loop that cannot be unrolled.", cur->NodeName().c_str(), cur->OperationName().c_str());
-        }
-    }
-
-    // set m_steppingDirection for all loops
-    void ComputationNetwork::DetermineLoopDirections()
-    {
-        for (auto & rInfo : m_recurrentInfo)
-        {
-            bool hasPastValueNode = false;
-            bool hasFutureValueNode = false;
-
-            if (rInfo.m_recurrentNodes.size() > 0)
-            {
-                for (size_t j = 0; j < rInfo.m_recurrentNodes.size(); j++)
-                {
-                    ComputationNodeBasePtr node = rInfo.m_recurrentNodes[j];
-
-                    if (node->OperationName() == OperationNameOf(PastValueNode))
-                        hasPastValueNode = true;
-                    else if (node->OperationName() == OperationNameOf(FutureValueNode))
-                        hasFutureValueNode = true;
-                }
-
-                if (hasPastValueNode && hasFutureValueNode)
-                    InvalidArgument("It is not allowed to have both PastValue and FutureValue nodes in the same loop. How is that going to work anyway.");
-                else if (!hasPastValueNode && !hasFutureValueNode)
-                    LogicError("There is neither PastValue nor FutureValue nodes in the loop.");
-                else if (hasPastValueNode)
-                    rInfo.m_steppingDirection = +1;
-                else
-                    rInfo.m_steppingDirection = -1;
-            }
         }
     }
 
@@ -1169,6 +1140,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         nodes = newList;
+    }
+
+    // set m_steppingDirection for all loops
+    void ComputationNetwork::DetermineLoopDirections()
+    {
+        for (auto & rInfo : m_recurrentInfo)
+        {
+            bool hasPastValueNode = false;
+            bool hasFutureValueNode = false;
+
+            if (rInfo.m_recurrentNodes.size() > 0)
+            {
+                for (size_t j = 0; j < rInfo.m_recurrentNodes.size(); j++)
+                {
+                    ComputationNodeBasePtr node = rInfo.m_recurrentNodes[j];
+
+                    if (node->OperationName() == OperationNameOf(PastValueNode))
+                        hasPastValueNode = true;
+                    else if (node->OperationName() == OperationNameOf(FutureValueNode))
+                        hasFutureValueNode = true;
+                }
+
+                if (hasPastValueNode && hasFutureValueNode)
+                    InvalidArgument("It is not allowed to have both PastValue and FutureValue nodes in the same loop. How is that going to work anyway.");
+                else if (!hasPastValueNode && !hasFutureValueNode)
+                    LogicError("There is neither PastValue nor FutureValue nodes in the loop.");
+                else if (hasPastValueNode)
+                    rInfo.m_steppingDirection = +1;
+                else
+                    rInfo.m_steppingDirection = -1;
+            }
+        }
     }
 
     // END OF CODE related to FormRecurrentLoops()

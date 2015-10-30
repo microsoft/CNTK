@@ -185,25 +185,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     protected:
         // owned by FormRecurrentLoops() and stuff it calls, only used from inside there (FormRecurrentLoops() calls PurgeStateForFormingRecurrentLoops() at its end to make that super-clear)
-        // TODO: get rid of all the accessors--FormRecurrentLoops() owns these variables and can touch them directly.
         void PurgeStateForFormingRecurrentLoops()
         {
             m_loopId = -1;
             m_visitedOrder = -1;
-            m_index = -1;
-            m_lowLink = -1;
             m_indexInLoop = 0;
             m_visited = false;
+            m_index = -1;
+            m_lowLink = -1;
             m_inStack = false;
         }
 
         int m_loopId;           // index into recurrent info array (TODO: verify this)
-        int m_visitedOrder;     // order in which nodes were visited by EnumerateNodes()
+        int m_visitedOrder;     // remembers order in which nodes were visited by EnumerateNodes(), but gets updated
+        bool m_visited;         // note: also used by ValidateSubNetwork()
+        int m_indexInLoop;
+        // only used inside DetermineStrongSCCs():
         int m_index;            // index denoting order in which nodes were visited in DetermineStrongSCCs()
         int m_lowLink;          // min of m_index over all nodes within a single loop
-        bool m_visited;
         bool m_inStack;
-        int m_indexInLoop;
     };
 
     // =======================================================================
@@ -565,38 +565,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Side-effects (unbeknownst to the name of the function):
         //  - m_needsGradient flags, are propagated up from children         --BUGBUG! This should only be computed in ValidateSubNetwork().
         //  - ComputationNetworkOwnedNodeState::m_visitedOrder (only if 'recurrent' flag is set; otherwise leave untouched), as needed by FormRecurrentNodes()
-        std::list<ComputationNodeBasePtr> EnumerateNodes(bool forForwardProp/*else get order for backprop*/, bool recurrent)
+        std::list<ComputationNodeBasePtr> EnumerateNodes(bool forForwardProp/*else get order for backprop*/, bool setVisitedOrder)
         {
             std::list<ComputationNodeBasePtr> nodes;
             std::unordered_set<ComputationNodeBasePtr> visited;
 
             // get forward computation order
-            EnumerateNodesR(visited, nodes, recurrent);  // call into the recursive portion of this function below
+            EnumerateNodesR(visited, nodes, setVisitedOrder);  // call into the recursive portion of this function below
 
             // if caller wants order for backprop then reverse it
             if (!forForwardProp)
-            {
-                assert(!recurrent);     // TODO: not sure if required, but currently only called this way
-                nodes.reverse();        // and go backwards
-            }
+                nodes.reverse();            // and go backwards
 
             return nodes;
         }
     private:
         // Recursive part of EnumerateNodes().
-        void EnumerateNodesR(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool recurrent)
+        void EnumerateNodesR(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool setVisitedOrder)
         {
             if (visited.find(shared_from_this()) == visited.end())      // do not include a node twice
             {
                 visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 // children first for function evaluation
-                if (OperationName() != L"PairNetwork" || !recurrent)    // (don't step through network-pair boundary if recurrent)
+                if (OperationName() != L"PairNetwork" || !setVisitedOrder)    // (don't step through network-pair boundary if called from FormRecurrentLoops())
                 {
                     for (int i = 0; i < m_children.size(); i++)
                     {
                         if (m_children[i])
-                            m_children[i]->EnumerateNodesR(visited, result, recurrent);
+                            m_children[i]->EnumerateNodesR(visited, result, setVisitedOrder);
                     }
                 }
 
@@ -608,9 +605,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
                 // now that all children are in list before us, put ourselves
-                result.push_back(shared_from_this());  //we put this in the list even if it's leaf since we need to use it to determine learnable params 
+                result.push_back(shared_from_this());
 
-                if (recurrent)  // called from FormRecurrentNodes(), which would like this variable to be set as well
+                if (setVisitedOrder)    // FormRecurrentNodes() would like this variable to be set as well
                     m_visitedOrder = result.size();
             }
         }
