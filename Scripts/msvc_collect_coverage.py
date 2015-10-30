@@ -21,10 +21,10 @@ def collectCoverageSingle(test, outputDir, toolDir, config):
     collectCoverage([os.path.basename(test)], os.path.dirname(test), outputDir, toolDir, config)
 
 def collectCoverageMulti(testDir, outputDir, toolDir, config):
-    tests = [ f for f in os.listdir(testDir) if os.path.isfile(os.path.join(testDir, f)) and f.lower().endswith("tests.exe") ]
+    tests = [ f for f in os.listdir(testDir) if os.path.isfile(os.path.join(testDir, f)) and f.lower().endswith(".exe") ]
     collectCoverage(tests, testDir, outputDir, toolDir, config)
 
-def main():
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Collects coverage for the executable or directory with test executables")
     parser.add_argument('--test', help='Path to the executable or directory that has to be analyzed', required=True)
     parser.add_argument('--outputdir', help='Output directory for coverage results', required=True)
@@ -41,6 +41,4 @@ def main():
     elif os.path.isdir(args.test):
         collectCoverageMulti(args.test, args.outputdir, args.tooldir, args.config)
     else:
-        print('Please specify correct executable or test directory where the coverage should be collected.')        
-
-main()
+        print('Please specify correct executable or test directory where the coverage should be collected.')
