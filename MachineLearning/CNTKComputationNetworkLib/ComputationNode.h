@@ -173,8 +173,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool IsPartOfLoop() const { return m_isPartOfLoop; }
 
+    private:
+
+        static atomic_ullong s_timeStampCounter;
+        int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
+
+        // for loop nodes
+        bool m_isPartOfLoop;
+
+    protected:  // TODO: should be fully encapsulated here
+        bool m_needsGradient;   // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
+
     protected:
         // these are used during FormRecurrentLoops() (which calls ClearCache() at its end)
+        // TODO: get rid of all the accessors--FormRecurrentLoops() owns these variables and can touch them directly.
         void PurgeStateForFormingRecurrentLoops()
         {
             m_loopId = -1;
@@ -186,7 +198,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_inStack = false;
         }
 
-        void SetLoopId(const int id) { m_loopId = id; m_isPartOfLoop = true; }
+        void SetLoopId(const int id)
+        {
+            m_isPartOfLoop = true;      // This is the only viarable that escapes from FormRecurrentLoops(). Note: there is no code to ever reset this to false again, which is likely wrong (it would preclude analysis to be rerun after changes).
+            m_loopId = id;
+        }
         int GetLoopId() const { return m_loopId; }
 
         void SetVisitedOrder(const int id) { m_visitedOrder = id; }
@@ -207,20 +223,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetIndexInLoop(const size_t index) { m_indexInLoop = index; }
         size_t GetIndexInLoop() const { return m_indexInLoop; }
 
-    private:
-
-        static atomic_ullong s_timeStampCounter;
-        int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
-
-        // for loop nodes
-        bool m_isPartOfLoop;
         int m_loopId;           // index into recurrent info array (TODO: verify this)
-
-    protected:  // TODO: should be fully encapsulated here
-        bool m_needsGradient;   // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
-    private:
-
-        // the order in reverse graph. 
         int m_visitedOrder;
         int m_index;            // index denoting order in which nodes were visited in DetermineStrongSCCs()
         int m_lowLink;          // min of m_index over all nodes within a single loop

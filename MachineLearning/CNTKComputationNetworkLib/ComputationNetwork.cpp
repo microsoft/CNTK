@@ -542,55 +542,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return maskingWasRequested;
     }
 
-#if 0
-    // TODO: this vv has become this ^^
-    // transfer user-specified request for masking to the indivudal nodes
-    // This is only needed if users explicitly perform reduce-like operations.
-    // It makes no sense for some nodes, so we skip those.
-    void ComputationNetwork::SetRequestNodesMultiSeqHandling()
-    {
-        for (auto & node : m_requestNodesMultiSeqHandling)  // this set is defined in NDL; here we propagate that into the actual nodes' flags, except for a few where it makes no sense (avoid user error)
-        {
-            //SumElements node will generate a scalar value and so it should never require special handling
-            //TransposeNode will change the size of columns and so it should also not included for special handling
-            //their child node should instead
-#if 0
-            if (node->OperationName() != OperationNameOf(SumElementsNode) &&
-                node->OperationName() != OperationNameOf(TransposeNode) &&
-                node->OperationName() != OperationNameOf(MeanNode) &&
-                node->OperationName() != OperationNameOf(InvStdDevNode) 
-                )
-                node->SetMaskMissingColumnsToZero();
-#else
-            if (node->OperationName() == OperationNameOf(SumElementsNode) ||
-                node->OperationName() == OperationNameOf(TransposeNode) ||
-                node->OperationName() == OperationNameOf(MeanNode) ||
-                node->OperationName() == OperationNameOf(InvStdDevNode))
-            {
-                RuntimeError("SetRequestNodesMultiSeqHandling: NodesReqMultiSeqHandling cannot be used with operation '%ls'\nIn the past, CNTK silently fixed this; now please change your NDL instead", node->OperationName().c_str());
-            }
-            node->SetMaskMissingColumnsToZero();
-#endif
-        }
-
-        // if a typical criterion node is used as the training criterion node we assume it requires multiseq handling 
-        // this is for backward compatibility
-        // All of these have NodeDoesItsOwnCustomizedMissingColumnsMasking() return true, i.e. they will not have MaskMissingColumnsToZero() auto-called from Network.
-        // Hence, instead of setting the flag, we just ensure that this is true.
-        for (auto & node : m_finalCriteria)
-            if (IsTypicalCriterionNode(node))
-                //node->SetMaskMissingColumnsToZero();
-                if (!node->NodeDoesItsOwnCustomizedMissingColumnsMasking())
-                    LogicError("criterion %ls's NodeDoesItsOwnCustomizedMissingColumnsMasking() function must return true", node->OperationName().c_str());
-
-        for (auto & node : m_evalNodes)
-            if (IsTypicalCriterionNode(node))
-                //node->SetMaskMissingColumnsToZero();
-                if (!node->NodeDoesItsOwnCustomizedMissingColumnsMasking())
-                    LogicError("criterion %ls's NodeDoesItsOwnCustomizedMissingColumnsMasking() function must return true", node->OperationName().c_str());
-    }
-#endif
-
     template<class N> void ComputationNetwork::GetNodesRequiringX(std::list<ComputationNodeBasePtr>& nodesRequiringX, const ComputationNodeBasePtr& rootNode, bool checkComputed)
     {
         if (!rootNode)              // find nodes from all available nodes
@@ -640,9 +591,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return nodesRequiringX;
     }
 
-    // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
-    // TODO: Can this be moved to a separate class, or at least a separate CPP?
-
     // this is called from ClearCache() only, which in turn is called by model editing operations, such as DeleteNode(), and by RebuildNetwork()
     void ComputationNetwork::ClearCalcOrderCaches()
     {
@@ -654,132 +602,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_cacheGradientCalcOrders.clear();
     }
 
-    // purge identical loops (i.e. loops that have the same source node)
-    void ComputationNetwork::MergeRecurrentLoops()
-    {
-        if (m_recurrentInfo.size() <= 1)
-            return;
+    // -----------------------------------------------------------------------
+    // network recurrent-loop analysis
+    // -----------------------------------------------------------------------
 
-        // uniq the m_recurrentInfo array w.r.t. m_sourceNode
-        std::vector<RecurrentInfo> m_recurrentInfoTmp;
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)    // enumerate all loops
-        {
-            bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
-            for (auto iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
-            {
-                if ((*iter2).m_sourceNode == (*iter).m_sourceNode)
-                {
-                    bFound = true;
-                    break;
-                }
-            }
-            if (!bFound)
-                m_recurrentInfoTmp.push_back(*iter);
-        }
-        m_recurrentInfo = move(m_recurrentInfoTmp);
-    }
+    // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
+    // TODO: Can this be moved to a separate class, or at least a separate CPP?
 
-    // get the strongly connected components from the graph
-    // This sets index, lowLink, m_visited, and m_inStack.
-    void ComputationNetwork::DetermineStrongSCCs(const ComputationNodeBasePtr& rootNode)
-    {
-        // notice that this graph including graphs from a parent networks if two or more networks are connected via PairNetworkNode
-        std::unordered_set<ComputationNodeBasePtr> visited;
-        std::list<ComputationNodeBasePtr> sccStack;
-        size_t index = 0;
-        size_t loopId = 0;
-        if (!rootNode->IsVisited())
-            DetermineStrongSCCsRec(rootNode, sccStack, index, loopId);
-    }
-
-    // (recursive part of DetermineStrongSCCs())
-    void ComputationNetwork::DetermineStrongSCCsRec(ComputationNodeBasePtr cur,
-                                                    std::list<ComputationNodeBasePtr>& sccStack,
-                                                    size_t& index, size_t& loopId)
-    {
-        assert(!cur->IsVisited());
-
-        // set the index (in order of visitation)
-        cur->SetIndex(index);
-        cur->SetLowLink(index); // also set m_lowLink
-        index++;
-
-        cur->SetVisited(true);
-        sccStack.push_back(cur);
-        cur->SetInStack(true);
-
-        if (cur->OperationName() != L"PairNetwork")     // PairNetwork is the connection from another network, so ignore its children (they are part of the other network)
-        {
-            // set m_lowLink to min over m_lowLinks of children
-            for (int i = 0; i < cur->ChildrenSize(); i++)
-            {
-                if (!cur->GetChildren()[i]->IsVisited())
-                {
-                    DetermineStrongSCCsRec(cur->GetChildren()[i], sccStack, index, loopId);
-                    cur->SetLowLink(min(cur->GetLowLink(), cur->GetChildren()[i]->GetLowLink()));
-                }
-                else if (cur->GetChildren()[i]->IsInStack())
-                {
-                    cur->SetLowLink(min(cur->GetLowLink(), cur->GetChildren()[i]->GetLowLink()));
-                }
-            }
-        }
-
-        // if we closed a loop then create an entry in m_recurrentInfo
-        if (cur->GetLowLink() == cur->GetIndex())   // m_lowLink is still equal to m_index, as we set it at the start of this function: we closed a loop
-        {
-            RecurrentInfo rInfo;
-            rInfo.m_loopId = loopId;
-            rInfo.m_sourceNode = cur;               // source node is the node with low link equal to index
-            for (;;)
-            {
-                ComputationNodeBasePtr w = sccStack.back();
-                sccStack.pop_back();
-                w->SetInStack(false);
-                rInfo.m_recurrentNodes.push_back(w);
-                if (w == cur)                       // hit our starting point: done
-                    break;
-            }
-            if (rInfo.m_recurrentNodes.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
-            {
-                loopId++;
-                rInfo.Reset();                      // (init for use)
-                m_recurrentInfo.push_back(rInfo);
-            }
-        }
-    }
-
-    void ComputationNetwork::DetermineLoopForwardOrder(std::unordered_set<ComputationNodeBasePtr>& visited,
-                                                       std::unordered_set<ComputationNodeBasePtr>& recStack,
-                                                       std::list<ComputationNodeBasePtr>& nodesStack,
-                                                       ComputationNodeBasePtr cur)
-    {
-        if (visited.find(cur) == visited.end())
-        {
-            visited.insert(cur);
-            recStack.insert(cur);
-
-            if (cur->OperationName() != OperationNameOf(PastValueNode) &&   // recurrence stops at delays
-                cur->OperationName() != OperationNameOf(FutureValueNode))
-            {
-                for (size_t i = 0; i < cur->ChildrenSize(); i++)
-                    if (cur->GetChildren()[i]->GetLoopId() == cur->GetLoopId())
-                        DetermineLoopForwardOrder(visited, recStack, nodesStack, cur->GetChildren()[i]);
-            }
-            recStack.erase(cur);
-            nodesStack.push_back(cur);
-        }
-        else
-        {
-            if (!(recStack.find(cur) == recStack.end()))
-                LogicError("%ls %ls operation is part of an infinite loop that cannot be unrolled.", cur->NodeName().c_str(), cur->OperationName().c_str());
-        }
-    }
+    // MAIN ENTRY POINT for network recurrent-loop analysis. All other functions below are called from this one.
 
     // forms the recurrent loop that 'rootNode' participates in
     // TODO: This function is not lazy, i.e. not cached. BuildAndValidateSubNetwork() caches, but others don't. Not sure why/how that's OK--won't we reassign loop ids?
     // This sets/updates:
-    //  - ...?
+    //  - m_recurrentInfo
+    //  - ComputationNode::m_isPartOfLoop and m_loopId
     // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
     void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode)
     {
@@ -905,6 +741,128 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 fprintf(stderr, "\t%ls", (*itr)->NodeName().c_str());
             }
             fprintf(stderr, "\n");
+        }
+    }
+
+    // purge identical loops (i.e. loops that have the same source node)
+    void ComputationNetwork::MergeRecurrentLoops()
+    {
+        if (m_recurrentInfo.size() <= 1)
+            return;
+
+        // uniq the m_recurrentInfo array w.r.t. m_sourceNode
+        std::vector<RecurrentInfo> m_recurrentInfoTmp;
+        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)    // enumerate all loops
+        {
+            bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
+            for (auto iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
+            {
+                if ((*iter2).m_sourceNode == (*iter).m_sourceNode)
+                {
+                    bFound = true;
+                    break;
+                }
+            }
+            if (!bFound)
+                m_recurrentInfoTmp.push_back(*iter);
+        }
+        m_recurrentInfo = move(m_recurrentInfoTmp);
+    }
+
+    // get the strongly connected components from the graph
+    // This sets index, lowLink, m_visited, and m_inStack.
+    void ComputationNetwork::DetermineStrongSCCs(const ComputationNodeBasePtr& rootNode)
+    {
+        // notice that this graph including graphs from a parent networks if two or more networks are connected via PairNetworkNode
+        std::unordered_set<ComputationNodeBasePtr> visited;
+        std::list<ComputationNodeBasePtr> sccStack;
+        size_t index = 0;
+        size_t loopId = 0;
+        if (!rootNode->IsVisited())
+            DetermineStrongSCCsRec(rootNode, sccStack, index, loopId);
+    }
+
+    // (recursive part of DetermineStrongSCCs())
+    void ComputationNetwork::DetermineStrongSCCsRec(ComputationNodeBasePtr cur,
+                                                    std::list<ComputationNodeBasePtr>& sccStack,
+                                                    size_t& index, size_t& loopId)
+    {
+        assert(!cur->IsVisited());
+
+        // set the index (in order of visitation)
+        cur->SetIndex(index);
+        cur->SetLowLink(index); // also set m_lowLink
+        index++;
+
+        cur->SetVisited(true);
+        sccStack.push_back(cur);
+        cur->SetInStack(true);
+
+        if (cur->OperationName() != L"PairNetwork")     // PairNetwork is the connection from another network, so ignore its children (they are part of the other network)
+        {
+            // set m_lowLink to min over m_lowLinks of children
+            for (int i = 0; i < cur->ChildrenSize(); i++)
+            {
+                if (!cur->GetChildren()[i]->IsVisited())
+                {
+                    DetermineStrongSCCsRec(cur->GetChildren()[i], sccStack, index, loopId);
+                    cur->SetLowLink(min(cur->GetLowLink(), cur->GetChildren()[i]->GetLowLink()));
+                }
+                else if (cur->GetChildren()[i]->IsInStack())
+                {
+                    cur->SetLowLink(min(cur->GetLowLink(), cur->GetChildren()[i]->GetLowLink()));
+                }
+            }
+        }
+
+        // if we closed a loop then create an entry in m_recurrentInfo
+        if (cur->GetLowLink() == cur->GetIndex())   // m_lowLink is still equal to m_index, as we set it at the start of this function: we closed a loop
+        {
+            RecurrentInfo rInfo;
+            rInfo.m_loopId = loopId;
+            rInfo.m_sourceNode = cur;               // source node is the node with low link equal to index
+            for (;;)
+            {
+                ComputationNodeBasePtr w = sccStack.back();
+                sccStack.pop_back();
+                w->SetInStack(false);
+                rInfo.m_recurrentNodes.push_back(w);
+                if (w == cur)                       // hit our starting point: done
+                    break;
+            }
+            if (rInfo.m_recurrentNodes.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
+            {
+                loopId++;
+                rInfo.Reset();                      // (init for use)
+                m_recurrentInfo.push_back(rInfo);
+            }
+        }
+    }
+
+    void ComputationNetwork::DetermineLoopForwardOrder(std::unordered_set<ComputationNodeBasePtr>& visited,
+                                                       std::unordered_set<ComputationNodeBasePtr>& recStack,
+                                                       std::list<ComputationNodeBasePtr>& nodesStack,
+                                                       ComputationNodeBasePtr cur)
+    {
+        if (visited.find(cur) == visited.end())
+        {
+            visited.insert(cur);
+            recStack.insert(cur);
+
+            if (cur->OperationName() != OperationNameOf(PastValueNode) &&   // recurrence stops at delays
+                cur->OperationName() != OperationNameOf(FutureValueNode))
+            {
+                for (size_t i = 0; i < cur->ChildrenSize(); i++)
+                    if (cur->GetChildren()[i]->GetLoopId() == cur->GetLoopId())
+                        DetermineLoopForwardOrder(visited, recStack, nodesStack, cur->GetChildren()[i]);
+            }
+            recStack.erase(cur);
+            nodesStack.push_back(cur);
+        }
+        else
+        {
+            if (!(recStack.find(cur) == recStack.end()))
+                LogicError("%ls %ls operation is part of an infinite loop that cannot be unrolled.", cur->NodeName().c_str(), cur->OperationName().c_str());
         }
     }
 
