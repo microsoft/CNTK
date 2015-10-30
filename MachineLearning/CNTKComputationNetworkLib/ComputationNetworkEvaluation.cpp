@@ -19,7 +19,7 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // This source file contains methods related to evaluation (forward prop, backprop) and network validation.
+    // This source file contains methods related to evaluation (forward prop, backprop), network validation, and matrix memory allocation (memory sharing).
 
     // -----------------------------------------------------------------------
     // evaluation
@@ -518,6 +518,168 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     bool ComputationNetwork::BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode)
     {
         return m_built.find(rootNode) != m_built.end();
+    }
+
+    // -----------------------------------------------------------------------
+    // memory allocation
+    // -----------------------------------------------------------------------
+
+    //this function will need to be called before actual validation and execution to 
+    //predetermine how to share matrices to reduce memory usage.
+    //TODO: find a simple topological order and allocateEvalMatrices on that order directly
+    //without passing in eval, out, and train nodes.
+    void ComputationNetwork::AllocateAllEvalMatrices(std::vector<ComputationNodeBasePtr>& evalRootNodes,
+                                                     std::vector<ComputationNodeBasePtr>& outValueRootNodes,
+                                                     std::vector<ComputationNodeBasePtr>& trainRootNodes)
+    {
+        //allocate memory for forward computation
+        fprintf(stderr, "\n\nAllocating matrices for forward propagation.\n");
+        for (int i = 0; i < evalRootNodes.size(); i++)
+            AllocateEvalMatrices(evalRootNodes[i]);
+        for (int i = 0; i < outValueRootNodes.size(); i++)
+            AllocateEvalMatrices(outValueRootNodes[i]);
+        for (int i = 0; i < trainRootNodes.size(); i++)
+            AllocateEvalMatrices(trainRootNodes[i]);
+
+    }
+
+    void ComputationNetwork::AllocateEvalMatrices(ComputationNodeBasePtr rootNode)
+    {
+        FormRecurrentLoops(rootNode);
+
+        std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode, false);
+
+        //determine parent size
+        std::map<ComputationNodeBasePtr, int> parentCount;
+        for (auto &n : allNodes)
+        {
+            for (int i = 0; i < n->ChildrenSize(); i++)
+            {
+                ComputationNodeBasePtr pNode = n->GetChildren()[i];
+                parentCount[pNode]++;
+            }
+        }
+
+        for (int i = 0; i < m_recurrentInfo.size(); i++)
+            m_recurrentInfo[i].m_completedEvaluate = false;
+
+        for (auto &nodeIter : allNodes)
+        {
+            if (nodeIter->IsPartOfLoop())
+            {
+                RecurrentInfo* recInfo = FindInRecurrentLoops(nodeIter);
+                assert(recInfo != nullptr);
+                if (recInfo->m_completedEvaluate == false)
+                {
+                    const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+                    for (auto &nodeLoopIter : recurrentNodes)
+                    {
+                        nodeLoopIter->RequestMatricesBeforeEval(m_matrixPool);
+                    }
+
+                    recInfo->m_completedEvaluate = true;
+
+                    for (auto &nodeLoopIter : recurrentNodes)
+                    {
+                        ReleaseMatricesAfterEvalForChildren(nodeLoopIter, parentCount);
+                    }
+                }
+            }
+            else
+            {
+                nodeIter->RequestMatricesBeforeEval(m_matrixPool);
+                //we only release matrices for the children since the root node's informatioin will be used and should not be shared
+                //with others
+                ReleaseMatricesAfterEvalForChildren(nodeIter, parentCount);
+            }
+        }
+    }
+
+    void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& parentCount)
+    {
+        for (int i = 0; i < n->ChildrenSize(); i++)
+        {
+            ComputationNodeBasePtr pNode = n->GetChildren()[i];
+            parentCount[pNode]--;
+            if (parentCount[pNode] == 0)
+                pNode->ReleaseMatricesAfterEval(m_matrixPool);
+        }
+    }
+
+    void ComputationNetwork::AllocateGradientMatrices(ComputationNodeBasePtr rootNode)
+    {
+        FormRecurrentLoops(rootNode);
+
+        //PopulateParents(rootNode);
+        std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
+
+        //determine children size
+        //std::map<ComputationNodeBasePtr, int> childrenCount;
+        //for (auto &nodeIter : allNodes)
+        //{
+        //    childrenCount[nodeIter] = nodeIter->ChildrenSize();
+        //}
+
+        //now, simulate the gradient computation order to determine how to allocate matrices
+        for (int i = 0; i < m_recurrentInfo.size(); i++)
+            m_recurrentInfo[i].m_completedGradient = false;
+
+        //we need to call it here since we always compute gradients for children and root node is not children of other node
+        rootNode->RequestMatricesBeforeGradientComp(m_matrixPool);
+
+        for (auto &n : allNodes)
+        {
+            if (n->IsPartOfLoop())
+            {
+                std::vector<ComputationNodeBasePtr> recurrentNodes;
+                RecurrentInfo * recInfo = FindInRecurrentLoops(n);
+                if (recInfo && recInfo->m_completedGradient == false)
+                {
+                    const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+                    //loops are computed sample by sample so we have to allocate them all 
+                    for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                    {
+                        AllocateGradientMatricesForChildren(*nodeIter);
+                    }
+                    recInfo->m_completedGradient = true;
+                    for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
+                    {
+                        if ((*nodeIter)->NeedGradient())
+                        {
+                            (*nodeIter)->ReleaseMatricesAfterGradientComp(m_matrixPool);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                AllocateGradientMatricesForChildren(n);
+                if ((n != rootNode) && n->NeedGradient())  //root node's informatioin will be used and should not be shared with others, also it's small (1x1)
+                    n->ReleaseMatricesAfterGradientComp(m_matrixPool);
+            }
+        }
+    }
+
+    //void ReleaseMatricesAfterGradientCompForParents(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& childrenCount)
+    //{
+    //    for (int i = 0; i < n->ParentSize(); i++)
+    //    {
+    //        ComputationNodeBasePtr pNode = n->Parent(i);
+    //        childrenCount[pNode] --;
+    //        if (childrenCount[pNode] == 0)
+    //            pNode->ReleaseMatricesAfterGradientComp(m_matrixPool);
+    //    }
+    //}
+  
+
+    void ComputationNetwork::AllocateGradientMatricesForChildren(ComputationNodeBasePtr parentNode)
+    {
+        std::vector<ComputationNodeBasePtr> children = parentNode->GetChildren();
+        for (int i = 0; i < children.size(); i++)
+        {
+            if (children[i]->NeedGradient())
+                children[i]->RequestMatricesBeforeGradientComp(m_matrixPool);
+        }
     }
 
 }}}
