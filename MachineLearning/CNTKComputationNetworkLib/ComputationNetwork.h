@@ -270,10 +270,6 @@ public:
     void LoadFromFile(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary,
                       const bool bAllowNoCriterionNode = false, ComputationNetwork* anotherNetwork = nullptr);
 
-#pragma region Network Modification
-
-    void SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode = nullptr);
-
     // -----------------------------------------------------------------------
     // evaluation
     // -----------------------------------------------------------------------
@@ -323,72 +319,6 @@ public:
                                  bool initOnCPUOnly = false);
 
     // -----------------------------------------------------------------------
-    // network editing
-    // -----------------------------------------------------------------------
-
-    void DeleteNode(const std::wstring & nodeName)
-    {
-        //so that deleted node will not be referenced
-        ClearCaches();
-
-        ComputationNodeBasePtr nodeToDelete = GetNodeFromName(nodeName);
-
-        //first delete links, if this node is involved, the whole connection will be removed
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        {
-            ComputationNodeBasePtr node = nodeIter->second;
-            for (size_t i = 0; i < node->ChildrenSize(); i++)
-            {
-                ComputationNodeBasePtr child = node->GetChildren()[i];
-
-                //nodeToDelete is a child
-                if (child == nodeToDelete)
-                {
-                    // this used to call DetatchInputs(), but it's better for MEL to retain other inputs
-                    node->SetInput(i, nullptr);
-                    break;
-                }
-            }
-        }
-
-        //nodeToDelete is a parent
-        nodeToDelete->DetachInputs();       // deref all its inputs; if we don't do that, we might end up with a mem leak due to a circular reference
-
-        // unlink from all node-group sets
-        for (auto groupIter : GetAllNodeGroups())
-        {
-            auto search = std::find(groupIter->begin(), groupIter->end(), nodeToDelete);
-            if (search != groupIter->end())
-                groupIter->erase(search);
-        }
-
-        // ? how to deal with m_recurrentInfo, when we delete a node.
-
-        //delete the node itself
-        m_nameToNodeMap.erase(nodeName);    // this will deref the node and possibly deallocate it
-    }
-
-    // RenameNode - Rename a node to another name
-    // nodeNameOrig - original node name
-    // nodeNameNew - new node name
-    void RenameNode(const std::wstring& nodeNameOrig, const std::wstring& nodeNameNew)
-    {
-        //so that renamed node will not be referenced
-        ClearCaches();
-
-        ComputationNodeBasePtr nodeToRename = GetNodeFromName(nodeNameOrig);
-
-        auto iter = m_nameToNodeMap.find(nodeNameNew);
-        if (iter != m_nameToNodeMap.end()) //found
-            RuntimeError("RenameNode: Target name already exists.");
-
-        //rename the node and update the mapping table
-        nodeToRename->SetNodeName(nodeNameNew);
-        m_nameToNodeMap.erase(nodeNameOrig);
-        m_nameToNodeMap[nodeNameNew] = nodeToRename;
-    }
-
-    // -----------------------------------------------------------------------
     // node construction
     // -----------------------------------------------------------------------
 
@@ -410,83 +340,18 @@ public:
     // network editing
     // -----------------------------------------------------------------------
 
-    ComputationNodeBasePtr CopyNode(const ComputationNetwork & fromNet,
-                                const std::wstring fromName,
-                                std::wstring toName = L"",
-                                const CopyNodeFlags flags = CopyNodeFlags::copyNodeAll)
-    {
-        if (toName == L"") {
-            toName = fromName;
-        }
-
-        ComputationNodeBasePtr pFromNode = fromNet.GetNodeFromName(fromName);
-        ComputationNodeBasePtr pToNode;
-
-        // don't allow cross network child copy unless caller explicity handles children fixup
-        if ((flags & CopyNodeFlags::copyNodeChildren) &&
-            this != &fromNet && !(flags & CopyNodeFlags::copyNodeChildrenCrossNetwork))
-        {
-            LogicError("CopyNode: Copying node children across network is invalid.");
-        }
-
-        if (!NodeNameExist(toName))
-        {
-            pToNode = pFromNode->Duplicate(toName, flags);
-            AddNodeToNet(pToNode);
-        }
-        else
-        {
-            //node already exists
-
-            pToNode = GetNodeFromName(toName);
-
-            //same node. no copy needed
-            if (pFromNode == pToNode)
-                LogicError("CopyNode: You are copying the node to the same network with same node name.");
-            else
-                pFromNode->CopyTo(pToNode, toName, flags);  // blast it over the existing node
-        }
-        return pToNode;
-    }
-
-    //only copy a complete independent tree
-    //when node name exists
-    void CopySubTree(const ComputationNetwork & fromNet,
-                     const std::wstring fromName, std::wstring toNamePrefix = L"",
-                     const CopyNodeFlags flags = copyNodeAll)
-    {
-        if (!(flags & CopyNodeFlags::copyNodeValue))
-            LogicError("CopySubTree: you cannot copy a tree without copying the node values.");
-
-        ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
-
-        std::list<ComputationNodeBasePtr>& nodes = GetEvalOrder(fromRoot, false);
-        for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
-        {
-            ComputationNodeBasePtr fromNode = *nodeIter;
-            wstring fromNodeName = fromNode->NodeName();
-            wstring toNodeName = toNamePrefix + fromNodeName;
-
-            ComputationNodeBasePtr toNode = CopyNode(fromNet, fromNodeName,
-                                                  toNodeName,
-                                                  CopyNodeFlags::copyNodeValue);
-
-            if (flags & CopyNodeFlags::copyNodeChildren)
-            {
-                //copy the children structure but use the new nodes generated
-                for (int i = 0; i < fromNode->ChildrenSize(); i++)
-                    toNode->SetInput(i, GetNodeFromName(toNamePrefix + fromNode->GetChildren()[i]->NodeName()));
-            }
-        }
-    }
-
-    //you can only copy inputs from nodes in the same network
-    void CopyInputs(const std::wstring fromName, std::wstring toName)
-    {
-        CopyNode(*this, fromName, toName, CopyNodeFlags::copyNodeChildren);
-    }
-
-#pragma endregion Network Modification
+    ComputationNodeBasePtr CopyNode(const ComputationNetwork & fromNet, const std::wstring fromName, std::wstring toName, const CopyNodeFlags flags);
+    void CopySubTree(const ComputationNetwork & fromNet, const std::wstring fromName, std::wstring toNamePrefix, const CopyNodeFlags flags);
+    void CopyInputs(const std::wstring fromName, std::wstring toName);
+    void RenameNode(const std::wstring& nodeNameOrig, const std::wstring& nodeNameNew);
+    void RenameNode(ComputationNodeBasePtr node, const std::wstring& newNodeName);
+    void DeleteNode(const std::wstring & nodeName);
+    void ChangeNode(wstring nodeName, ComputationNodeBasePtr newNode);
+    void ReplaceLeafNode(wstring oldNodeName, ComputationNodeBasePtr newNode);
+    void ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodeBasePtr newNode);
+    void AddFeatureNode(ComputationNodeBasePtr featureNode);
+    void RemoveFeatureNode(ComputationNodeBasePtr featureNode);
+    void SetLearnableNodesBelowNeedGradient(const bool needGradient, const ComputationNodeBasePtr& rootNode = nullptr);
 
     // -----------------------------------------------------------------------
     // node access
@@ -570,6 +435,7 @@ public:
     }
 
     static void UpdateEvalTimeStamps(const std::vector<ComputationNodeBasePtr> & nodes);
+    void ResetEvalTimeStamp();
 
 private:
     RecurrentInfo * FindInRecurrentLoops(const ComputationNodeBasePtr& node);
@@ -589,24 +455,15 @@ public:
             LogicError("VerifyActualNumParallelSequences: mismatching MB size in MBLayout");
     }
 
-    // a few more helpers
+    // -----------------------------------------------------------------------
+    // pass on SGD options
+    // -----------------------------------------------------------------------
+
     template<class ElemType> // TODO: dropoutRate change to double
     static void SetDropoutRate(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double & prevDropoutRate, unsigned long & dropOutSeed);
     template<class ElemType>
     static void SetSeqParam(ComputationNetwork& net, const ComputationNodeBasePtr criterionNode, double hsmoothingWeight, double frameDropThresh, const bool doreferencealign);
     static void SetMaxTempMemSizeForCNN(ComputationNetwork& net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
-
-    // -----------------------------------------------------------------------
-    // network editing
-    // -----------------------------------------------------------------------
-
-    void RenameNode(ComputationNodeBasePtr node, const std::wstring& newNodeName)
-    {
-        // TODO: check if new name exists
-        m_nameToNodeMap.erase(node->NodeName());
-        node->SetNodeName(newNodeName);
-        AddNodeToNet(node);
-    }
 
     // -----------------------------------------------------------------------
     // evaluation
@@ -678,142 +535,6 @@ public:
     std::map<const std::wstring, ComputationNodeBasePtr, nocase_compare> & GetNameToNodeMap()    // specially for ExperimentalNetworkBuilder; don't use this otherwise
     {
         return m_nameToNodeMap;
-    }
-
-    // -----------------------------------------------------------------------
-    // evaluation
-    // -----------------------------------------------------------------------
-
-    void ResetEvalTimeStamp()
-    {
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-            nodeIter->second->ResetEvalTimeStamp();
-    }
-
-    // -----------------------------------------------------------------------
-    // network editing
-    // -----------------------------------------------------------------------
-
-    //change the node associated with nodeName to newNode; used in the KL-reg based adaptation to reduce feature copy
-    //need to update all the mappings as well childrens
-    void ChangeNode(wstring nodeName, ComputationNodeBasePtr newNode)
-    {
-        ComputationNodeBasePtr oldNode = GetNodeFromName(nodeName);
-        if (oldNode->OperationName() != newNode->OperationName())
-            InvalidArgument("newNode must have the same type as the old node.");
-
-        //change children
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        {
-            ComputationNodeBasePtr node = nodeIter->second;
-            for (int i = 0; i < node->ChildrenSize(); i++)
-                if (node->GetChildren()[i] == oldNode)
-                    node->SetInput(i, newNode);
-        }
-
-        //change name map
-        m_nameToNodeMap[nodeName] = newNode;
-        for (int i = 0; i < oldNode->ChildrenSize(); i++)
-            newNode->SetInput(i, oldNode->GetChildren()[i]);
-
-        //change other maps
-        for (auto groupIter : GetAllNodeGroups())
-        {
-            auto & group = *groupIter;
-            for (int i = 0; i < group.size(); i++)
-                if (group[i] == oldNode)
-                    group[i] = newNode;
-        }
-    }
-
-    // replace the old node with the current node, assuming the old node is a leaf node
-    // need to update those nodes who use oldNode as their child
-    void ReplaceLeafNode(wstring oldNodeName, ComputationNodeBasePtr newNode)
-    {
-        ComputationNodeBasePtr oldNode = GetNodeFromName(oldNodeName);
-
-        // change the input of those nodes whose child is oldNode
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
-        {
-            ComputationNodeBasePtr node = nodeIter->second;
-            for (int i = 0; i < node->ChildrenSize(); i++)
-                if (node->GetChildren()[i] == oldNode)
-                    node->SetInput(i, newNode);
-        }
-        m_nameToNodeMap[newNode->GetName()] = newNode;
-
-        // now the old node becomes a orphan node , remove it
-        DeleteNode(oldNodeName);
-        //RemoveOrphanNode(oldNode);
-    }
-
-    void ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodeBasePtr newNode)
-    {
-        // Checks if the node is a criterion node.
-        int index = -1;
-        for (int i = 0; i < m_finalCriteria.size(); ++i)
-        {
-            if (m_finalCriteria[i]->NodeName() == oldNodeName)
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-            RuntimeError("ReplaceFinalCriterionNode: the node to be replaced is not a criterion node.");
-
-        // Replaces children.
-        for (int i = 0; i < newNode->ChildrenSize(); ++i)
-        {
-            if (m_nameToNodeMap.find(newNode->GetChildren()[i]->NodeName()) == m_nameToNodeMap.end())
-                RuntimeError("Child node does not exist.");
-            newNode->SetInput(i, m_nameToNodeMap[newNode->GetChildren()[i]->NodeName()]);
-        }
-
-        // Addes it to criterion node list.
-        m_finalCriteria[index] = newNode;
-        m_nameToNodeMap[newNode->NodeName()] = newNode;
-    }
-
-    void AddFeatureNode(ComputationNodeBasePtr featureNode)
-    {
-        wstring nodeName = featureNode->NodeName();
-        if (NodeNameExist(nodeName))
-            RuntimeError("AddFeatureNode: feature node already exists.");
-        m_nameToNodeMap[nodeName] = featureNode;
-        m_features.push_back(featureNode);
-    }
-
-    // We only remove the node, not delete it.
-    void RemoveFeatureNode(ComputationNodeBasePtr featureNode)
-    {
-        wstring nodeName = featureNode->NodeName();
-        if (!NodeNameExist(nodeName))
-            RuntimeError("RemoveFeatureNode: feature node does not exist.");
-
-        ClearCaches();
-
-        // Removes links.
-        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); ++nodeIter)
-        {
-            ComputationNodeBasePtr node = nodeIter->second;
-            for (size_t i = 0; i < node->ChildrenSize(); ++i)
-            {
-                ComputationNodeBasePtr child = node->GetChildren()[i];
-                if (child == featureNode)
-                {
-                    node->SetInput(i,NULL);
-                    break;
-                }
-            }
-        }
-
-        // Removes from feature list.
-        auto search = std::find(m_features.begin(), m_features.end(), featureNode);
-        if (search != m_features.end())
-            m_features.erase(search);
-
-        m_nameToNodeMap.erase(nodeName);
     }
 
     // -----------------------------------------------------------------------
@@ -908,6 +629,10 @@ private:
     void AllocateGradientMatricesForChildren(ComputationNodeBasePtr parentNode);
 public:
 
+    // -----------------------------------------------------------------------
+    // unit testing
+    // -----------------------------------------------------------------------
+
     bool UnitTest(bool allowFragment = false);
     bool UnitTest(const ComputationNodeBasePtr& rootNode);
 
@@ -915,16 +640,6 @@ public:
     // specialized operations
     // -----------------------------------------------------------------------
 
-    // TODO: lift this into config language, move underlying code to math lib
-
-    //========================================
-    // This function performs SVD decomposition for different groups of learnable  parameters
-    // we perform SVD decomposition such that
-    //  A \approx B*C, where rank(B)=rank(C)=r < rank(A)
-    // After SVD decomposition, the node A will become an intermediate node whose children are B,C ;
-    // B and C are two learnable parameters
-    //========================================
-    // BUGBUG: this only currently works for one ElemType, not both
     template<class ElemType>
     void PerformSVDecomposition(const map<wstring, float>& SVDConfig, size_t AlignedSize);
 
@@ -933,6 +648,7 @@ public:
     // evaluation
     // -----------------------------------------------------------------------
 
+    // the following two are only called from FindBestPath() and FindbestPathWithVariableLength()
     // TODO: make these templated on <ElemType> locally
     template<class ElemType>
     void GetHistory(map<wstring, Matrix<ElemType>>& history, bool bLastTime = false)
@@ -947,7 +663,6 @@ public:
         }
     };
 
-    // only called from FindBestPath() and FindbestPathWithVariableLength()
     template<class ElemType>
     void SetHistory(map<wstring, Matrix<ElemType>>& history)
     {
@@ -992,7 +707,7 @@ protected:
 
     // The methods below determine evaluation order, which is tricky in presence of recurrent loops.
     // TODO: Can this be moved to a separate class, or at least a separate CPP?
-
+private:
     void ClearCalcOrderCaches();
 
     // This is part of the FormRecurrentLoops() process, and only called from there.

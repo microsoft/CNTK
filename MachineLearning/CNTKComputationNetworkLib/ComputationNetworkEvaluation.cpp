@@ -228,6 +228,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ResetEvalTimeStamp();
     }
 
+    template void ComputationNetwork::ComputeGradient<float>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<float>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
+    template void ComputationNetwork::ComputeGradient<double>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<double>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
+
     // find if node is part of a recurrent loop; and return the loop id
     // If found then return a pointer to the list of nodes of this loop.
     // TODO: This should just return &m_recurrentInfo of the matching loop, or nullptr if no match. If needed, m_recurrentInfo knows its loop id.
@@ -252,6 +255,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
         return false;
+    }
+
+    void ComputationNetwork::ResetEvalTimeStamp()
+    {
+        for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
+            nodeIter->second->ResetEvalTimeStamp();
+    }
+
+    /*static*/void ComputationNetwork::UpdateEvalTimeStamps(const vector<ComputationNodeBasePtr> & nodes)
+    {
+        for (size_t i = 0; i<nodes.size(); i++)
+            nodes[i]->UpdateEvalTimeStamp();
     }
 
     // for debugging
