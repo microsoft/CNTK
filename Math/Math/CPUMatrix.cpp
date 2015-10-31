@@ -4786,9 +4786,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool CPUMatrix<ElemType>::AreEqual(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const ElemType threshold /*= 1e-8*/)
     {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("AreEqual: one of the input matrices is empty.");
-
         if (a.GetNumRows()  != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
             return false;
 
