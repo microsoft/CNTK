@@ -112,7 +112,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return          m_numTimeSteps == other.m_numTimeSteps &&
                     m_numParallelSequences == other.m_numParallelSequences &&
                    m_minibatchPackingFlags == other.m_minibatchPackingFlags &&
-                   m_sentenceBoundaryFlags.IsEqualTo(other.m_sentenceBoundaryFlags);
+            m_sentenceBoundaryFlags.IsEqualTo(other.m_sentenceBoundaryFlags);
         }
         bool operator!=(const MBLayout & other) const { return !(*this == other); } // duh
 
