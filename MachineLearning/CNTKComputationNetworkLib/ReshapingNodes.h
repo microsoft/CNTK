@@ -317,7 +317,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (weStack())
                     Base::Stack(frameRange, m_pMBLayout, Inputs(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
                 else
-                    Base::Unstack(FrameRange(Inputs(0)->GetMBLayout()), Inputs(0)->GetMBLayout(), Inputs(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
+                    Base::Unstack(frameRange.WithLayout(Inputs(0)->GetMBLayout()), Inputs(0)->GetMBLayout(), Inputs(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
             }
         }
 
@@ -337,7 +337,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (weStack())
                     Base::Unstack(frameRange, m_pMBLayout, GradientValues(), Inputs(0)->GradientValues(), factor(), true/*addTo*/);
                 else
-                    Base::Stack(FrameRange(Inputs(0)->GetMBLayout()), Inputs(0)->GetMBLayout(), GradientValues(), Inputs(0)->GradientValues(), factor(), true/*addTo*/);
+                    Base::Stack(frameRange.WithLayout(Inputs(0)->GetMBLayout()), Inputs(0)->GetMBLayout(), GradientValues(), Inputs(0)->GradientValues(), factor(), true/*addTo*/);
             }
         }
 
