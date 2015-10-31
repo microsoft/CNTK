@@ -104,11 +104,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         // compare whether two layouts are the same
-        // BUGBUG: Need to implement comparing the content. Also need to define "equal", e.g. w.r.t. missing features.
         bool operator==(const MBLayout & other) const
         {
             // for now just check the object identity
-            return this == &other;
+            if (this == &other)
+                return true;
+            return          m_numTimeSteps == other.m_numTimeSteps &&
+                    m_numParallelSequences == other.m_numParallelSequences &&
+                   m_minibatchPackingFlags == other.m_minibatchPackingFlags &&
+                   m_sentenceBoundaryFlags.IsEqualTo(other.m_sentenceBoundaryFlags);
         }
         bool operator!=(const MBLayout & other) const { return !(*this == other); } // duh
 
@@ -386,6 +390,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("FrameRange::Sequence() is incompatible with frame ranges with m_broadcastAllowed.");
             FrameRange ret = *this;
             ret.seqIndex = s;
+            return ret;
+        }
+
+        // create a FrameRange with its MBLayout replaced by another
+        // You must check yourself whether this is correct.
+        FrameRange WithLayout(MBLayoutPtr pMBLayout) const
+        {
+            FrameRange ret = *this;
+            ret.m_pMBLayout = pMBLayout;
             return ret;
         }
 
