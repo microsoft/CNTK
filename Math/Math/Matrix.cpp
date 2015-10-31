@@ -1278,9 +1278,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DISPATCH_MATRIX_ON_FLAG(&vector,
                 nullptr,
                 SetDiagonalValue(vector(0,0)), 
-                SetDiagonalValue(vector.m_GPUMatrix->Get00Element()), 
+                SetDiagonalValue(vector.m_GPUMatrix->Get00Element()),       // BUGBUG: efficiency
                 SetDiagonalValue(vector(0,0)), 
-                SetDiagonalValue(vector.m_GPUMatrix->Get00Element())
+                SetDiagonalValue(vector.m_GPUMatrix->Get00Element())        // BUGBUG: efficiency
                 );
         }
         else if (vector.GetNumRows() != GetNumRows())
@@ -1616,7 +1616,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DISPATCH_MATRIX_ON_FLAG(this,
                 &c,
                 c += (*this)(0,0), 
-                c += (this->m_GPUMatrix->Get00Element()), 
+                c += (this->m_GPUMatrix->Get00Element()),   // BUGBUG: efficiency
                 c += (*this)(0,0), 
                 NOT_IMPLEMENTED
                 );
@@ -1629,7 +1629,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DISPATCH_MATRIX_ON_FLAG(&a,
                 &c,
                 c += a(0,0), 
-                c += (a.m_GPUMatrix->Get00Element()), 
+                c += (a.m_GPUMatrix->Get00Element()),        // BUGBUG: efficiency
                 c += a(0,0), 
                 NOT_IMPLEMENTED
                 );
@@ -2030,11 +2030,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DISPATCH_MATRIX_ON_FLAG(this,
                 nullptr,
                 (*this) *= a(0,0), 
-                (*this) *= a.m_GPUMatrix->Get00Element(), 
+                (*this) *= a.m_GPUMatrix->Get00Element(),
                 (*this) *= a(0,0), 
                 NOT_IMPLEMENTED
                 );
-                
         }
         else if (b.GetNumElements() == 1)
         { 
@@ -2046,7 +2045,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DISPATCH_MATRIX_ON_FLAG(this,
                 nullptr,
                 (*this) *= b(0,0), 
-                (*this) *= b.m_GPUMatrix->Get00Element(), 
+                (*this) *= b.m_GPUMatrix->Get00Element(),
                 (*this) *= b(0,0) ,
                 NOT_IMPLEMENTED
                 );                
@@ -2059,7 +2058,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     Matrix<ElemType> Matrix<ElemType>::operator* (const Matrix<ElemType>& a) const
-    {        
+    {
         if (GetNumElements() == 1)
         {
             Matrix<ElemType> c((DEVICEID_TYPE)a.GetPreferredDeviceId());
@@ -2067,7 +2066,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DISPATCH_MATRIX_ON_FLAG(this,
                 nullptr,
                 c.AssignProductOf((*this)(0,0), a), 
-                c.AssignProductOf(this->m_GPUMatrix->Get00Element(), a), 
+                c.AssignProductOf(this->m_GPUMatrix->Get00Element(), a),       // BUGBUG: efficiency
                 c.AssignProductOf((*this)(0,0), a), 
                 NOT_IMPLEMENTED
                 );
@@ -2081,7 +2080,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             DISPATCH_MATRIX_ON_FLAG(&a,
                 nullptr,
                 c.AssignProductOf(a(0,0), (*this)), 
-                c.AssignProductOf(a.m_GPUMatrix->Get00Element(), (*this)), 
+                c.AssignProductOf(a.m_GPUMatrix->Get00Element(), (*this)),       // BUGBUG: efficiency
                 c.AssignProductOf(a(0,0), (*this)), 
                 NOT_IMPLEMENTED
                 );
@@ -2094,6 +2093,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Multiply(*this, a, c);
             return c;
         }
+    }
+
+    // [this]=a*b  where a is a 1x1 scalar
+    template<class ElemType>
+    Matrix<ElemType>& Matrix<ElemType>::Assign1x1ProductOf (const Matrix<ElemType>& a, const Matrix<ElemType>& b)
+    {
+        Multiply1x1AndWeightedAdd(+1, a, b, 0.0f, *this);
+        return *this;
     }
 
     template<class ElemType>
@@ -4085,10 +4092,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, 
         ElemType beta, Matrix<ElemType>& c)
     {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("MultiplyAndWeightedAdd:  one of the input matrix is empty.");        
-
-        DecideAndMoveToRightDevice(a,b,c);        
+        DecideAndMoveToRightDevice(a,b,c);
 
         if (c.GetDeviceId()<0) //CPU
         {
@@ -4103,8 +4107,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
                 else if (c.GetMatrixType() == MatrixType::SPARSE)
                 {
-                        CPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, *c.m_CPUSparseMatrix);
-                        c.SetDataLocation(CPU, SPARSE); 
+                    CPUSparseMatrix<ElemType>::MultiplyAndAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUSparseMatrix, transposeB, *c.m_CPUSparseMatrix);
+                    c.SetDataLocation(CPU, SPARSE);
                 }
                 else
                     NOT_IMPLEMENTED;
@@ -4190,6 +4194,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 NOT_IMPLEMENTED;
         }
+    }
+
+    template<class ElemType>
+    /*static*/ void Matrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c)
+    {
+        // special case: a is a 1x1 matrix
+        // The only alternative is to Get00Elements(), which makes things inefficient.
+        if (a.GetNumElements() != 1)
+            InvalidArgument("Multiply1x1AndWeightedAdd: first arg must be a scalar.");
+
+        DISPATCH_MATRIX_ON_FLAG(&c,
+            nullptr,
+            CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(alpha, *a.m_CPUMatrix, *b.m_CPUMatrix, beta, *c.m_CPUMatrix),
+            GPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(alpha, *a.m_GPUMatrix, *b.m_GPUMatrix, beta, *c.m_GPUMatrix),
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED
+            );
     }
 
     /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c =  op(a) * op(b) + c</summary>
@@ -4361,7 +4382,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             NOT_IMPLEMENTED, 
             NOT_IMPLEMENTED
             );
-
     }
 
     /// <summary> c = alpha * (a-b)</summary>

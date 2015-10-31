@@ -547,6 +547,20 @@ __global__ void _scaleAndAddScalar(
 };
 
 template<class ElemType>
+__global__ void _multiply1x1AndWeightedAdd(
+    ElemType alpha, const ElemType* a, const ElemType* b, ElemType beta, ElemType* c, CUDA_LONG N)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    ElemType f = alpha * *a;    // scalar matrix
+    if (beta == 0)              // don't even read the memory if beta is 0
+        c[id] = b[id] * f;
+    else
+        c[id] = b[id] * f + c[id] * beta;
+}
+
+template<class ElemType>
 __global__ void _addValue(    
     ElemType* a,
     const ElemType v,

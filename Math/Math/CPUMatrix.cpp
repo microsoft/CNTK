@@ -3956,7 +3956,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType beta, CPUMatrix<ElemType>& c)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            LogicError("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
+            return;
 
         int m, n, k, l;
         int lda, ldb, ldc;
@@ -4038,6 +4038,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             cblas_sgemm ((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <float*>(a.m_pArray), lda, reinterpret_cast <float*>(b.m_pArray), ldb, beta, reinterpret_cast <float*>(c.m_pArray), ldc);
 #endif
         }
+    }
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b,
+        ElemType beta, CPUMatrix<ElemType>& c)
+    {
+        assert(a.GetNumElements() == 1);        // a is a scalar
+
+        ElemType f = alpha * a.Get00Element();
+        if (beta == 0)      // don't even read the memory if beta is 0
+#pragma omp parallel for
+            foreach_coord(i, j, c)
+                c(i, j) = b(i, j) * f;
+        else
+#pragma omp parallel for
+            foreach_coord(i, j, c)
+            c(i, j) = b(i, j) * f + c(i, j) * beta;
     }
 
     /* compute singular value decomposition as 
