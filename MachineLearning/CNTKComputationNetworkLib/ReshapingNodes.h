@@ -6,6 +6,11 @@
 //
 #pragma once
 
+#include "Basics.h"
+#include "Matrix.h"
+#include "ComputationNode.h"
+#include "Sequences.h"
+
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -18,10 +23,6 @@
 #include <atomic>
 #include <sstream>
 #include <iostream>
-
-#include "Basics.h"
-#include "Matrix.h"
-#include "ComputationNode.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -316,7 +317,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (weStack())
                     Base::Stack(frameRange, m_pMBLayout, Inputs(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
                 else
-                    Base::Unstack(frameRange, Inputs(0)->GetMBLayout(), Inputs(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
+                    Base::Unstack(FrameRange(Inputs(0)->GetMBLayout()), Inputs(0)->GetMBLayout(), Inputs(0)->FunctionValues(), FunctionValues(), factor(), false/*addTo*/);
             }
         }
 
@@ -336,7 +337,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (weStack())
                     Base::Unstack(frameRange, m_pMBLayout, GradientValues(), Inputs(0)->GradientValues(), factor(), true/*addTo*/);
                 else
-                    Base::Stack(frameRange, Inputs(0)->GetMBLayout(), GradientValues(), Inputs(0)->GradientValues(), factor(), true/*addTo*/);
+                    Base::Stack(FrameRange(Inputs(0)->GetMBLayout()), Inputs(0)->GetMBLayout(), GradientValues(), Inputs(0)->GradientValues(), factor(), true/*addTo*/);
             }
         }
 
@@ -423,20 +424,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/ComputeInputPartial(const size_t /*inputIndex*/, const FrameRange & frameRange) override
         {
-            Inputs(0)->GradientSlice(frameRange) += GradientSlice(frameRange);
+            Inputs(0)->GradientSlice(frameRange.WithLayout(Inputs(0)->GetMBLayout())) += GradientSlice(frameRange);
             // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
         }
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            // copy the data from 'dataInput'
-            ValueSlice(frameRange).SetValue(Inputs(0)->ValueSlice(frameRange));  // just propagate through
-            // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
-
             // enforce compatibility of 'dataInput' with 'layoutInput'
             // TODO: how to deal with boundary flags?
             if (*m_pMBLayout != *Inputs(0)->GetMBLayout())   // this does a deep value-level comparison
-                InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompaitble with that of %ls %ls.");
+                InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompaitble with that of %ls %ls.",
+                                NodeName().c_str(), OperationName().c_str(),
+                                Inputs(0)->NodeName().c_str(), Inputs(0)->OperationName().c_str(),
+                                Inputs(1)->NodeName().c_str(), Inputs(1)->OperationName().c_str());
+
+            // copy the data from 'dataInput'
+            ValueSlice(frameRange).SetValue(Inputs(0)->ValueSlice(frameRange.WithLayout(Inputs(0)->GetMBLayout())));  // just propagate through
+            // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
         }
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override

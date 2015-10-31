@@ -4538,7 +4538,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::Scale(ElemType alpha, Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            LogicError("Scale:  Input matrix a is empty.");
+            return;
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             &a,
@@ -4557,7 +4557,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::Scale(const Matrix<ElemType>& alpha, Matrix<ElemType>& a)
     {
         if (a.IsEmpty())
-            LogicError("Scale:  Input matrix a is empty.");
+            return;
 
         DecideAndMoveToRightDevice(a,alpha);
 
@@ -4661,7 +4661,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void Matrix<ElemType>::ElementWisePower (ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c)
     {
         if (a.IsEmpty())
-            LogicError("Scale:  The input matrix a is empty.");
+            return;
 
         DecideAndMoveToRightDevice(a, c);        
         c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
@@ -4678,33 +4678,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool Matrix<ElemType>::AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold /*= 1e-8*/)
     {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("AreEqual: one of the input matrices is empty.");
-
         if (a.GetNumRows()  != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
             return false;
 
         DecideAndMoveToRightDevice(a,b);        
 
         if (a.GetMatrixType() == b.GetMatrixType())
-            {
-            DISPATCH_MATRIX_ON_FLAG(&a,
-                nullptr,
-                return CPUMatrix<ElemType>::AreEqual(*a.m_CPUMatrix, *b.m_CPUMatrix, threshold),
-                return GPUMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUMatrix, threshold),
-                return CPUSparseMatrix<ElemType>::AreEqual(*a.m_CPUSparseMatrix, *b.m_CPUSparseMatrix, threshold),
-                return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, threshold)
-                );                
-            }
-            else
-            {
-            DISPATCH_MATRIX_ON_FLAG(&a,
-                nullptr,
-                NOT_IMPLEMENTED; return false,
-                return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUSparseMatrix, threshold),
-                NOT_IMPLEMENTED; return false,
-                return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, threshold)
-                );                
+        {
+        DISPATCH_MATRIX_ON_FLAG(&a,
+            nullptr,
+            return CPUMatrix<ElemType>::AreEqual(*a.m_CPUMatrix, *b.m_CPUMatrix, threshold),
+            return GPUMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUMatrix, threshold),
+            return CPUSparseMatrix<ElemType>::AreEqual(*a.m_CPUSparseMatrix, *b.m_CPUSparseMatrix, threshold),
+            return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, threshold)
+            );                
+        }
+        else
+        {
+        DISPATCH_MATRIX_ON_FLAG(&a,
+            nullptr,
+            NOT_IMPLEMENTED; return false,
+            return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUMatrix, *b.m_GPUSparseMatrix, threshold),
+            NOT_IMPLEMENTED; return false,
+            return GPUSparseMatrix<ElemType>::AreEqual(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, threshold)
+            );                
         }
         
     }
@@ -4713,7 +4710,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     bool Matrix<ElemType>::HasElement(const Matrix<ElemType>& a, const ElemType value)
     {
         if (a.IsEmpty())
-            LogicError("HasElement: input matrix is empty.");
+            return false;
 
         DISPATCH_MATRIX_ON_FLAG(&a,
             &a,
