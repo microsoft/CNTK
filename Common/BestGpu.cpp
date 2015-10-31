@@ -274,8 +274,6 @@ void BestGpu::Init()
         RuntimeError(errmsg);
     }
 
-
-
     ProcessorData pdEmpty = { 0 };
     for (int i = 0; i < m_deviceCount; i++)
     {
@@ -433,9 +431,9 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
         score = (1.0 - pd->utilization.gpu / 75.0f) * utilGpuW;
         score += (1.0 - pd->utilization.memory / 60.0f) * utilMemW;
         score += pd->cores / 1000.0f * speedW;
-        double mem = pd->memory.free / (double)pd->memory.total;
+        double mem = pd->memory.total > 0 ? pd->memory.free / (double)pd->memory.total : 1000000;   // I saw this to be 0 when remoted in
         // if it's not a tcc driver, then it's WDDM driver and values will be off because windows allocates all the memory from the nvml point of view
-        if (!pd->deviceProp.tccDriver)
+        if (!pd->deviceProp.tccDriver || pd->memory.total == 0)
             mem = pd->cudaFreeMem / (double)pd->cudaTotalMem;
         score += mem * freeMemW;
         score += ((pd->cnFound || pd->dbnFound) ? 0 : 1)*mlAppRunningW;
@@ -477,21 +475,21 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
 	// even if user do not want to lock the GPU, we still need to check whether a particular GPU is locked or not, 
 	// to respect other users' exclusive lock.
 
-		vector<int> bestAndAvaialbe; 
-		for (auto i : best)
-		{
-			if (LockDevice(i, true))
-			{
-				// available
-				bestAndAvaialbe.push_back(i);
-			}
-		}
-		best = bestAndAvaialbe;
-		if (best.size() > number)
-		{
-			best.resize(number);
-		}
-	}
+        vector<int> bestAndAvaialbe;
+        for (auto i : best)
+        {
+            if (LockDevice(i, true))
+            {
+                // available
+                bestAndAvaialbe.push_back(i);
+            }
+        }
+        best = bestAndAvaialbe;
+        if (best.size() > number)
+        {
+            best.resize(number);
+        }
+    }
 
     // save off the last values for future requeries
     m_lastFlags = bestFlags;
