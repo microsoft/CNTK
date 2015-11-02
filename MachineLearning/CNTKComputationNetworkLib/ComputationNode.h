@@ -99,6 +99,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) = 0;
         virtual void OnComputeGradientEndIteration() = 0;             // called after last iteration step of ComputeGradient()
 
+        // TODO: this one does not quite fit here
+        virtual void ComputeGradientForChildren(const FrameRange & frameRange) = 0;
+
         // --- optional overrides that add functionality
 
         // Any override must call Base version as well.
@@ -1140,6 +1143,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
 
         // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
+        // TODO: move to -Base (or -Network?)
         void ComputeGradientForChildren(const FrameRange & frameRange) override
         {
             if (frameRange.IsAllFrames() && IsPartOfLoop())

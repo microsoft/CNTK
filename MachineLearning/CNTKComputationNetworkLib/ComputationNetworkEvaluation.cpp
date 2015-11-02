@@ -107,9 +107,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
                 for (auto & node2 : recurrentNodes)
                     node2->OnEvaluateEndIteration();
-
-                recInfo->m_completedEvaluate = true;
 #endif
+                recInfo->m_completedEvaluate = true;
             }
 
             // --- not recurrent: do the whole batch (unless it's already done, e.g. because the node participated in a recurren ttloop)
@@ -198,8 +197,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
         for (auto & node2 : m_recurrentNodesForForward)
             node2->OnEvaluateEndIteration();
-
-        m_completedEvaluate = true;
     }
 
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
@@ -207,8 +204,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: remove Evaluate() from here, instead call it at call site, and in here merely check whether everything is computed already
     // BUGBUG: The decision to loop (SEQ execution) is made by parent, but some children can be executer PAR. It should be possible to detect this.
     template<class ElemType>
-    void ComputationNetwork::ComputeGradient(const ComputationNodeBasePtr rootNode, 
-                                             bool bResetToOne,                              // true if reset the gradient of rootnode to 1.0
+    void ComputationNetwork::ComputeGradient(const ComputationNodeBasePtr rootNode,         // training criterion to compute the gradients for
+                                             bool bResetToOne,                              // true if reset the gradient of rootnode to 1.0  --This is the default.
                                              const Matrix<ElemType>* rootGradientInitValue, // if given then this is the starting gradient from the top
                                              bool bClearGradient,                           // if false then gradients are not cleared  --TODO: When does that happen?
                                              bool resetTimeStampAfterComputation)
@@ -234,7 +231,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (bResetToOne)
         {
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().Resize(1, 1);   // TODO: make this a function of ComputationNode; but first need to get rid of Matrix<ElemType> here, or make it a local template parameter
-            dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(1);
+            dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(1);    // TODO: is there not a single SetValue() call that also takes dimensions?
         }
 
         if (rootGradientInitValue != nullptr)   // user-specified gradient to start with
@@ -253,6 +250,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (!recInfo->m_completedGradient)
                 {
+#if 1   // TODO: currently blocked by ComputeGradientForChildren() which is a member of ComputationNode
+                    recInfo->OnComputeGradientBeginIteration();
+                    recInfo->ComputeGradientForChildren(FrameRange(node->GetMBLayout()));
+                    recInfo->OnComputeGradientEndIteration();
+#else
                     const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
                     for (auto & node2 : recurrentNodes)
                         node2->OnComputeGradientBeginIteration();
@@ -272,6 +274,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     for (auto & node2 : recurrentNodes)
                         node2->OnComputeGradientEndIteration();
+#endif
                     recInfo->m_completedGradient = true;
                 }
             }
@@ -298,6 +301,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //resetTimeStampAfterComputation is by default false because ComputeGradient in normal case is followed by new batch of input
         if (resetTimeStampAfterComputation)
             ResetEvalTimeStamp();
+    }
+
+    // called before first iteration step of ComputeGradient()
+    /*virtual*/ void ComputationNetwork::RecurrentInfo::OnComputeGradientBeginIteration() /*override*/
+    {
+        for (auto & node2 : m_recurrentNodesForForward)
+            node2->OnComputeGradientBeginIteration();
+    }
+    /*virtual*/ void ComputationNetwork::RecurrentInfo::ComputeGradientForChildren(const FrameRange &) /*override*/
+    {
+        const auto & recurrentNodes = m_recurrentNodesForForward;       // BUGBUG: -ForForward?? Does this mean we can remove non-ForForward?
+        auto pMBLayout = recurrentNodes[0]->GetMBLayout();
+        FrameRangeIteration range(pMBLayout, m_steppingDirection);
+        for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iteration
+        {
+            for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
+            {
+                auto & node2 = *nodeIter2;
+                // BUGBUG: The following can no longer be done after this code was moved into RecurrentInfo
+                //node2->VerifyNumParallelSequences(GetNumParallelSequences());
+                //if (IsNodeReqMultiSeqHandling(node2))
+                //    node2->MaskMissingGradientColumnsToZero(t);
+                // TODO: exclude children that are not part of the recurrent loop, and do thise below, separately.
+                node2->ComputeGradientForChildren(t);
+            }
+        }
+    }
+    // called after last iteration step of ComputeGradient()
+    /*virtual*/ void ComputationNetwork::RecurrentInfo::OnComputeGradientEndIteration() /*override*/
+    {
+        for (auto & node2 : m_recurrentNodesForForward)
+            node2->OnComputeGradientEndIteration();
     }
 
     template void ComputationNetwork::ComputeGradient<float>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<float>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
