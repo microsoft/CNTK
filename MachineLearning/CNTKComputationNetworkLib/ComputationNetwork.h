@@ -62,12 +62,24 @@ class ComputationNetwork : public ScriptableObjects::Object, public ScriptableOb
 protected:
     // recurrent loops in CNTK are like little local ComputationNetworks, but stored in a completely separate set of structures
     // This structure stores that little sub-network.
-    struct RecurrentInfo
+    class RecurrentInfo : public FlowControlNode
     {
+    public:
+        // next steps:
+        //  - move code from Evaluate() and ComputePartial() here, so that the calling code becomes regular
+        //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
+        virtual const std::wstring OperationName() const override { return L"RecurrentInfo"; }
+        virtual void OnEvaluateBeginIteration() override { }
+        virtual void EvaluateThisNode(const FrameRange &) override { }  // forward prop for one minibatch
+        virtual void OnEvaluateEndIteration() override { }              // called after last iteration step of EvaluateThisNode()
+        virtual void OnComputeGradientBeginIteration() override { }             // called before first iteration step of ComputeGradient()
+        virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) override { }
+        virtual void OnComputeGradientEndIteration() override { }             // called after last iteration step of ComputeGradient()
+    public:
         std::vector<ComputationNodeBasePtr> m_recurrentNodes;               // all nodes involved in thisloop
-        std::vector<ComputationNodeBasePtr> m_recurrentNodesForForward;
+        std::vector<ComputationNodeBasePtr> m_recurrentNodesForForward;     // TODO: is this ever different from m_recurrentNodes?
         ComputationNodeBasePtr m_sourceNode;
-        int m_loopId;                                                       // the loop id (index in xxx array)
+        int m_loopId;                                                       // the loop id (index in m_recurrentInfo array)
         bool m_completedGradient;
         bool m_completedEvaluate;
         bool m_loopClosed;
