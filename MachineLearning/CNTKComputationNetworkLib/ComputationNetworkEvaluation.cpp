@@ -250,9 +250,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (!recInfo->m_completedGradient)
                 {
-#if 1   // TODO: currently blocked by ComputeGradientForChildren() which is a member of ComputationNode
+#if 1
                     recInfo->OnComputeGradientBeginIteration();
-                    recInfo->ComputeGradientForChildren(FrameRange(node->GetMBLayout()));
+                    recInfo->ComputeGradientForChildren(FrameRange(node->GetMBLayout()), true, true);
                     recInfo->OnComputeGradientEndIteration();
 #else
                     const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
@@ -291,7 +291,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
                     node->MaskMissingGradientColumnsToZero(FrameRange(node->GetMBLayout()));
                 }
-                node->ComputeGradientForChildren(FrameRange(node->GetMBLayout()));
+                node->ComputeGradientForChildren(FrameRange(node->GetMBLayout()), true, true);
                 node->OnComputeGradientEndIteration();
             }
         }
@@ -309,8 +309,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto & node2 : m_recurrentNodesForForward)
             node2->OnComputeGradientBeginIteration();
     }
-    /*virtual*/ void ComputationNetwork::RecurrentInfo::ComputeGradientForChildren(const FrameRange &) /*override*/
+    /*virtual*/ void ComputationNetwork::RecurrentInfo::ComputeGradientForChildren(const FrameRange &, bool childrenInSameLoop, bool childrenInDifferentLoop) /*override*/
     {
+        childrenInSameLoop, childrenInDifferentLoop;    // TODO: think this through
         const auto & recurrentNodes = m_recurrentNodesForForward;       // BUGBUG: -ForForward?? Does this mean we can remove non-ForForward?
         auto pMBLayout = recurrentNodes[0]->GetMBLayout();
         FrameRangeIteration range(pMBLayout, m_steppingDirection);
@@ -324,7 +325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //if (IsNodeReqMultiSeqHandling(node2))
                 //    node2->MaskMissingGradientColumnsToZero(t);
                 // TODO: exclude children that are not part of the recurrent loop, and do thise below, separately.
-                node2->ComputeGradientForChildren(t);
+                node2->ComputeGradientForChildren(t, true, true);
             }
         }
     }
