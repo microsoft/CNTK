@@ -1170,9 +1170,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #if 1
                     // TODO: There is an inefficiency here which we should fix.
-                    if (IsPartOfLoop() && !child->IsPartOfLoop())
+                    if (IsPartOfLoop() && !child->IsPartOfLoop() && !frameRange.IsAllFrames())
                     {
-                        assert(!frameRange.IsAllFrames() || !childrenInThisLoop);
                         static int warnings = 0;
                         if (warnings++ < 20)
                             fprintf (stderr, "ComputeGradientForChildren: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",

@@ -526,9 +526,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0, true);
             m_outputImageLayout.height = m_numRows;        
 
+#if 0       // disabled for now since we now call Validate() inside the loop, and therefore get lots of these warnings. TODO: Bring it back once we no longer call Validate() from inside the loop.
             //WARNING: this node will destroy the image size information from the child
             if (m_inputImageLayout.width * m_inputImageLayout.channels != 1)
                 fprintf(stderr, "WARNING: RowSlice operation cannot inherit image size information from its child. Image size info is lost.\n");
+#endif
         }
 
     private:

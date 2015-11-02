@@ -325,7 +325,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //if (IsNodeReqMultiSeqHandling(node2))
                 //    node2->MaskMissingGradientColumnsToZero(t);
                 // TODO: exclude children that are not part of the recurrent loop, and do thise below, separately.
-// #define OPT_OUTER_GRADIENT
+#define OPT_OUTER_GRADIENT  // if true then we compute the gradient outside of the loop where it is possible
 #ifdef OPT_OUTER_GRADIENT
                 node2->ComputeGradientForChildren(t, true/*childrenInThisLoop*/, false/*childrenInOuterLoop*/);
 #else
