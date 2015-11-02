@@ -34,10 +34,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Is often called before ValidateNetwork() on a root; will be called from inside ValidateNetwork() as well.
     // This function is called for multiple nodes, e.g. eval and training criterion. I.e. it must be able to add to a previous result. E.g. it does not clear the m_visited flags at start. This seems brittle.
     // BUGBUG: m_visited is also used by ValidateSubNetwork(). Hence, it may be in unexpected state when calling into this multiple times.
+    // BUGBUG: This currently does not handle nested loops. To handle that:
+    //  - loops are isolated by a ReconcileMBLayout--loop determination should see right through it, and then include everything inside
+    //  - ...? Need to figure this out.
     void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNode)
     {
         // determine the strongly connected cliques -> m_recurrentInfo[]
-        DetermineStrongSCCs(rootNode);
+        DetermineSCCs(rootNode);
 
         list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*set m_visitedOrder*/);
 
@@ -170,18 +173,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // get the strongly connected components from the graph
     // This sets index, lowLink, m_visited, and m_inStack.
-    void ComputationNetwork::DetermineStrongSCCs(const ComputationNodeBasePtr& rootNode)
+    void ComputationNetwork::DetermineSCCs(const ComputationNodeBasePtr& rootNode)
     {
         // notice that this graph including graphs from a parent networks if two or more networks are connected via PairNetworkNode
         list<ComputationNodeBasePtr> sccStack;
         size_t index = 0;
         size_t loopId = 0;
         if (!rootNode->m_visited)
-            DetermineStrongSCCsR(rootNode, sccStack, index, loopId);
+            DetermineSCCsR(rootNode, sccStack, index, loopId);
     }
 
-    // (recursive part of DetermineStrongSCCs())
-    void ComputationNetwork::DetermineStrongSCCsR(ComputationNodeBasePtr cur,
+    // (recursive part of DetermineSCCs())
+    void ComputationNetwork::DetermineSCCsR(ComputationNodeBasePtr cur,
                                                     list<ComputationNodeBasePtr>& sccStack,
                                                     size_t& index, size_t& loopId)
     {
@@ -203,7 +206,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 if (!cur->Inputs(i)->m_visited)
                 {
-                    DetermineStrongSCCsR(cur->Inputs(i), sccStack, index, loopId);
+                    DetermineSCCsR(cur->Inputs(i), sccStack, index, loopId);
                     cur->m_lowLink = min(cur->m_lowLink, cur->Inputs(i)->m_lowLink);
                 }
                 else if (cur->Inputs(i)->m_inStack)
