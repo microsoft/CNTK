@@ -66,7 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUSparseMatrix<ElemType>::ResizeAsAndCopyIndexFrom(const GPUSparseMatrix<ElemType>& a, const bool growOnly /*= true*/){}
 
     //-------------------------------------------------------------------------
-    // Start of new GPU Sparse Matrix code 
+    // Start of new GPU Sparse Matrix code
     //-------------------------------------------------------------------------
 
     template<class ElemType> void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly, bool keepExistingValues) {}//matrix format will affect the size to allocate
@@ -88,7 +88,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Static BLAS Functions
 
-    // copy features to GPU matrix 
+    // copy features to GPU matrix
     template<class ElemType> void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/) { }
 
@@ -473,7 +473,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> GPUMatrix<ElemType>::~GPUMatrix(void) { }
 
     template<class ElemType> void GPUMatrix<ElemType>::Clear() { }
-#pragma endregion Constructors and Destructor 
+#pragma endregion Constructors and Destructor
 
     template<class ElemType> int GPUMatrix<ElemType>::GetComputeDeviceId() const
     {
@@ -501,7 +501,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
     //for each column of a, we assign all rows of a to this starting from startIndex
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignToRowSliceValuesOf(const GPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows) { return *this; }
- 
+
     //for each column of a, we add all rows of a to this starting from startIndex
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddWithRowSliceValuesOf(const GPUMatrix<ElemType>& /*a*/, const size_t startIndex, const size_t numRows) { return *this; }
@@ -827,7 +827,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignKhatriRaoProductOf(const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/) { return *this; }
 
     //column-wise reshaped product. Used to compute KhatriRaoProduct Gradient
-    //   this = reshape each column of a from (K1xK2,1) to (K1, K2) 
+    //   this = reshape each column of a from (K1xK2,1) to (K1, K2)
     //   if each column of a is not transposed, each (K1, K2) times each column of b (K2, frames).
     //   the output is a (K1, frames) matrix
     //   if each column of a is tranposed, each (K1, K2)^T times each column of b(K1, frames) and output is (K2, frames)
@@ -874,7 +874,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignNumOfDiff(const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/, bool /*searchInCol = false*/) { return *this; }
 
-#pragma endregion Member BLAS Functions    
+#pragma endregion Member BLAS Functions
 
 #pragma region Other helper functions
     template<class ElemType> void GPUMatrix<ElemType>::Print(const char* matrixName, size_t rowStart, size_t rowEnd, size_t colStart, size_t colEnd) const
@@ -892,7 +892,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUMatrix<ElemType>::WriteToFile(FILE* f, const char * matrixName)
     {}
 
-    //helpfer function used for convolution neural network 
+    //helpfer function used for convolution neural network
     template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::AssignPackedConvolutionInput(const GPUMatrix<ElemType>& inputSubBatch,
         const size_t inputWidth, const size_t inputHeight, const size_t inputChannels,
         const size_t outputWidth, const size_t outputHeight, const size_t outputChannels,
@@ -901,7 +901,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
-    //helpfer function used for convolution neural network 
+    //helpfer function used for convolution neural network
     template<class ElemType> GPUMatrix<ElemType>&  GPUMatrix<ElemType>::UnpackConvolutionInput(GPUMatrix<ElemType>& inputSubBatch,
         const size_t inputWidth, const size_t inputHeight, const size_t inputChannels,
         const size_t outputWidth, const size_t outputHeight, const size_t outputChannels,
@@ -957,8 +957,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUMatrix<ElemType>::Multiply(const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/, GPUMatrix<ElemType>& c) { }
 
     /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + c</summary>
-    /// if a is a column vector, add to all columns of c 
-    /// if a is a row vector, add to all rows of c    
+    /// if a is a column vector, add to all columns of c
+    /// if a is a row vector, add to all rows of c
     /// if a is a scalar, add to all elements of c
     /// <param name="alpha">Scalar</param>
     /// <param name="a">Input matrix</param>
@@ -966,7 +966,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, GPUMatrix<ElemType>& c) { }
 
     /// <summary>c += alpha * (a-b)</summary>
-    /// if a, b, c  must have same dim 
+    /// if a, b, c  must have same dim
     /// <param name="alpha">Scalar</param>
     /// <param name="a">Input matrix</param>
     /// <param name="b">Input matrix</param>
@@ -974,7 +974,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/, GPUMatrix<ElemType>& c) { }
 
     /// <summary> c = alpha * (a-b)</summary>
-    /// if a, b, c  must have same dim 
+    /// if a, b, c  must have same dim
     /// <param name="alpha">Scalar</param>
     /// <param name="a">Input matrix</param>
     /// <param name="b">Input matrix</param>
@@ -983,7 +983,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUMatrix<ElemType>::AssignScaledDifference(const ElemType alpha, const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/, GPUMatrix<ElemType>& c) { }
 
     /// <summary>c += alpha * (a-b)</summary>
-    /// if a, b, c  must have same dim 
+    /// if a, b, c  must have same dim
     /// <param name="alpha">1X1 matrix</param>
     /// <param name="a">Input matrix</param>
     /// <param name="b">Input matrix</param>
@@ -991,7 +991,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> void GPUMatrix<ElemType>::AddScaledDifference(const GPUMatrix<ElemType>& /*alpha*/, const GPUMatrix<ElemType>& /*a*/, const GPUMatrix<ElemType>& /*b*/, GPUMatrix<ElemType>& c) { }
 
     /// <summary> c = alpha * (a-b)</summary>
-    /// if a, b, c  must have same dim 
+    /// if a, b, c  must have same dim
     /// <param name="alpha">Scalar</param>
     /// <param name="a">Input matrix</param>
     /// <param name="b">Input matrix</param>
@@ -1072,8 +1072,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    void GPUMatrix<ElemType>::RCRFBackwardCompute(        
-        const GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,        
+    void GPUMatrix<ElemType>::RCRFBackwardCompute(
+        const GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
         const GPUMatrix<ElemType>& lbls,
         const GPUMatrix<ElemType>& pos_scores, const GPUMatrix<ElemType>& pair_scores, const int shift)
     {}
@@ -1108,7 +1108,7 @@ const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCoun
 
     template<class ElemType>
     void GPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
-    {              
+    {
     }
 #pragma endregion Static BLAS Functions
 

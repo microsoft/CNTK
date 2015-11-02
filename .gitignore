@@ -182,5 +182,9 @@ core
 MachineLearning/CNTK/buildinfo.h
 MachineLearning/CNTK/buildinfo.h$$
 
-
-*.lyx#
+CMakeCache.txt
+CMakeFiles/
+/Makefile
+/CNTKCMake.sln
+/*.vcxproj
+/*.vcxproj.filters
