@@ -1351,7 +1351,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void ComputeInputPartialNonLooping(size_t inputIndex) = 0;
     };
 
+    // =======================================================================
+    // FlowControlNode -- special wrapper node for use by ComputationNetwork only
+    // =======================================================================
+
+    class FlowControlNode : public IComputationNode
+    {
+        typedef ComputationNodeBase Base;
+    public:
+#pragma warning (disable: 4100)
+        // these should never be called on flow-control nodes
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { NOT_IMPLEMENTED; }
+        virtual void Validate(bool isFinalValidationPass) { NOT_IMPLEMENTED; }          // main base validation function
+        virtual void InferImageDimsFromInputs() { NOT_IMPLEMENTED; }
+        virtual void SaveToFile(File& fstream) const { NOT_IMPLEMENTED; }
+        virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/) { NOT_IMPLEMENTED; }
+        virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const { NOT_IMPLEMENTED; }
+        // these are meant to be called during computation, so provide dummy implementations
+        virtual bool RequiresPreCompute() const { return false; }                    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
+        virtual void PrintSelfBeforeValidation() const { }
+        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const { }
+    };
+
+    // =======================================================================
     // helper macro to ease access to base members in presence of C++ two-phase name lookup
+    // =======================================================================
+
     // Add 'typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;' at the start of each derived class
     // (some derived classes define a similar macro; there please modify the typedef for Base accordingly.)
     // This macro imports, one by one, every member of ComputationNode into the name space of the derived class.
