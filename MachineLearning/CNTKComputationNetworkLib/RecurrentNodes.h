@@ -265,9 +265,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         // inside the sequence: access delayed value
                         if (t_delayed < 0)
-                            inp = DataSlice(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
+                            inp = DataSliceWithMBLayout(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                         else if (t_delayed >= T)
-                            inp = DataSlice(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
+                            inp = DataSliceWithMBLayout(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T).Sequence(id), m_delayedActivationMBLayout); // delay reaches in previous minibatch
                         else
                             inp = Inputs(0)->ValueSlice(FrameRange(m_pMBLayout, t_delayed).Sequence(id));
 
@@ -280,9 +280,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> out = ValueSlice(frameRange);
 
                 if (t_delayed < 0)
-                    inp = DataSlice(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
+                    inp = DataSliceWithMBLayout(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed + T_delayedActivation), m_delayedActivationMBLayout);
                 else if (t_delayed >= T)
-                    inp = DataSlice(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
+                    inp = DataSliceWithMBLayout(m_delayedActivation, FrameRange(m_delayedActivationMBLayout, t_delayed - T), m_delayedActivationMBLayout);
                 else
                     inp = Inputs(0)->ValueSlice(FrameRange(m_pMBLayout, t_delayed));
 

@@ -938,48 +938,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 #endif
 
-        /**
-        reset to error signals to 0 for any elements without labels
-        */
-        // This sets MB columns to 0 that have the NoLabel or NoFeature flag set.
-        // This happens as a result of packing multiple sequences for parallel processing--there will be some gaps, which are flagged by these flags.
-        // Nodes that operate in 'map' style (input(j) -> output(j) independently) can ignore this; it will be garbage-in-garbage-out.
-        // However, nodes that 'reduce' minibatches (e.g. computing the sum of all frames across all sequences) must deal with the garbage.
-        // This function sets those to 0, assuming that now they can be reduced without affecting the result.
-        // This function can operate on the whole range or on a selected single frame and/or a single sequence.
-        // It is indirectly guarded by the m_maskMissingColumnsToZero flag, which, if false, will install a layout with IsAllNone() to be true. TODO: we better always install the same layout, and instead test m_maskMissingColumnsToZero here.
-        // Note that existing 'reduce' style operations--the criterion nodes and gradient computation--already call this.  --BUGBUG: They can't, wrong layout!
-        // Warning: The layout used here must match the matrix. E.g. don't pass a child's matrix from a criterion node (use Inputs(x)->MaskMissing{Values,Gradient}ColumnsToZero() instead.
-        // TODO: move this where static DataSlice() goes in the future
-    private:
-        static bool MaskMissingColumnsTo(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & frameRange, ElemType val)
-        {
-            bool foundLabelOrFeatureMissing = false;    // return value: set to true if either nolabel or feature missing is processed
-
-            if (pMBLayout && !pMBLayout->IsAllNone())
-            {
-                size_t nT = pMBLayout->GetNumTimeSteps();
-                size_t nS = pMBLayout->GetNumParallelSequences();
-
-                if (matrixToBeMasked.GetNumCols() != nT * nS)
-                    LogicError("MaskMissingColumnsToZero: pMBLayout->m_minibatchPackingFlags should have one element for each timestep of all streams. Check feature reader. ");
-
-                shared_ptr<Matrix<char>> columnsValidityMask = pMBLayout->GetColumnsValidityMask(frameRange, matrixToBeMasked.GetDeviceId());
-                if (columnsValidityMask != nullptr)
-                {
-                    auto matrixSliceToMask = DataSlice(matrixToBeMasked, frameRange, pMBLayout);
-                    foundLabelOrFeatureMissing = true;
-                    matrixSliceToMask.MaskColumnsValue(*columnsValidityMask, val);
-                }
-            }
-
-            return foundLabelOrFeatureMissing;
-        }
-
     public:
         static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & frameRange)
         {
-            return MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, frameRange, 0);
+            return MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, frameRange, (ElemType)0);
         }
 
         void /*ComputationNodeBase::*/MaskMissingValuesColumnsToZero(const FrameRange & frameRange) override final
@@ -1069,66 +1031,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& GradientValues() { return *m_gradientValues; }
 
         // function to access any input and output, value and gradient, whole batch or single frame
-        // Note: This returns an object, not a reference. That object is a column slice, i.e. a small object that just points into another object.
-        // TODO: remove FrameRange::samplesInRecurrentStep from FrameRange, as it belongs into pMBLayout. Hence this function that binds both together.
-        // Note: This is not used anywhere yet, only a sketch how we may further abstract timing.
+        // Note: This returns a reference into 'data' in the form of a column slice, i.e. a small matrix object that just points into 'data'.
         Matrix<ElemType> DataSlice(Matrix<ElemType> & data, const FrameRange & frameRange/*select frame or entire batch*/)
         {
             try
             {
-                return DataSlice(data, frameRange, m_pMBLayout);
+                return DataSliceWithMBLayout(data, frameRange, m_pMBLayout);
             }
             catch (const logic_error & e)   // catch the error and rethrow it with the node name attached
             {
                 LogicError("%s, for %ls %ls operation.", e.what(), NodeName().c_str(), OperationName().c_str());
-            }
-        }
-        static Matrix<ElemType> DataSlice(Matrix<ElemType> & data,
-                                          const FrameRange & frameRange/*select frame or entire batch*/,
-                                          const MBLayoutPtr & pMBLayout/*the MB layout of 'data'*/)
-        {
-            // TODO: for now we verify that we always pass in layouts in frameRange that match data.
-            //       In the future, we may want to allow a value-wise comparison of compatibility. Or hint users to use ReconcileMBNode.
-            if (frameRange.m_pMBLayout != pMBLayout)
-            {
-                // if broadcast allowed then it is allowed to broadcast from an outer-loop value
-                // Currently, the only 'outer' loop we have is to have no layout.
-                if (frameRange.m_broadcastAllowed && !pMBLayout && data.GetNumCols() == 1)
-                    return data.AsReference();
-                LogicError("DataSlice: frameRange's MBLayout inconsistent with matrix");
-            }
-            // if FrameRange refers to whole minibatch (map mode)
-            // or if we don't even have a layout
-            // then return the whole matrix
-            if (!pMBLayout || frameRange.IsAllFrames())
-            {
-                if (frameRange.seqIndex == SIZE_MAX)
-                    return data.ColumnSlice(0, data.GetNumCols());
-                else
-                {
-                    if (!pMBLayout)
-                        LogicError("DataSlice: Attempting to retrieve a parallel sequence from data without layout.");
-#if 1
-                    else
-                        LogicError("DataSlice: To retrieve a parallel sequence, implement Matrix::RowSlice() first!");
-#else
-                    // get a reshaped view that stacks all sequences into T long vectors
-                    auto mat = data.ColumnSlice(0, data.GetNumCols());
-                    mat.Resize(data.GetNumRows() * pMBLayout->GetNumParallelSequences(), data.GetNumRows() / pMBLayout->GetNumParallelSequences());
-                    return mat;   // .RowSlice(frameRange.seqIndex * data.GetNumRows());
-                    // TODO: Why does RowSlice() not exist? Seems simple. Is there a hidden assumption of contiguous memory?#endif
-#endif
-                }
-            }
-            // FrameRange refers to a time slice -> return that
-            else
-            {
-                size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
-                size_t startColumn = frameRange.t() * numParallelSequences;
-                if (frameRange.seqIndex == SIZE_MAX)
-                    return data.ColumnSlice(startColumn, numParallelSequences);
-                else
-                    return data.ColumnSlice(startColumn + frameRange.seqIndex, 1);
             }
         }
         Matrix<ElemType> ValueSlice(const FrameRange & frameRange/*select frame or entire batch*/)

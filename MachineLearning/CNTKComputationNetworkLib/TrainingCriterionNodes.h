@@ -742,7 +742,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Matrix<ElemType> weightForClass = Inputs(2)->FunctionValues().ColumnSlice(lft_bnd, nbr_wrd);
                 Matrix<ElemType> obs = Inputs(1)->ValueSlice(frameRange);   // hidden activation vector for current word token
                 Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
-                Matrix<ElemType> grd_to_cls_prob = DataSlice(m_clsLogSoftmax, frameRange, Inputs(3)->GetMBLayout());
+                Matrix<ElemType> grd_to_cls_prob = DataSliceWithMBLayout(m_clsLogSoftmax, frameRange, Inputs(3)->GetMBLayout());
 
                 switch (inputIndex)
                 {
@@ -758,7 +758,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     break;
                 case 3:
                     grd_t = Inputs(3)->GradientSlice(frameRange);
-                    grd_t.SetValue(DataSlice(m_clsSoftmax, frameRange, Inputs(3)->GetMBLayout()));
+                    grd_t.SetValue(DataSliceWithMBLayout(m_clsSoftmax, frameRange, Inputs(3)->GetMBLayout()));
                     ComputeCEPartialToSoftmaxInputs(grd_t, GradientValues(), c_t);
                     break;
                 }
@@ -1023,9 +1023,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 FrameRange sequenceRange = frameRange.Sequence(i);    // FrameRange to select one sequence
                 // BUGBUG: This ^^ is neither supported nor correct, since this code does not handle gaps or start/end flags
                 EvaluateThisNodeS(
-                    DataSlice(mPostProb, sequenceRange, Inputs(0)->GetMBLayout()),
-                    DataSlice(mAlpha,    sequenceRange, Inputs(0)->GetMBLayout()),
-                    DataSlice(mBeta,     sequenceRange, Inputs(0)->GetMBLayout()),
+                    DataSliceWithMBLayout(mPostProb, sequenceRange, Inputs(0)->GetMBLayout()),
+                    DataSliceWithMBLayout(mAlpha,    sequenceRange, Inputs(0)->GetMBLayout()),
+                    DataSliceWithMBLayout(mBeta,     sequenceRange, Inputs(0)->GetMBLayout()),
                     funcVal,
                     Inputs(0)->ValueSlice(sequenceRange),
                     Inputs(1)->ValueSlice(sequenceRange),
@@ -1057,11 +1057,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     FrameRange sequenceRange = frameRange.Sequence(i);    // FrameRange to select one sequence
                     auto gradient = Inputs(2)->GradientSlice(frameRange);
                     TransGrdCompute(Inputs(0)->ValueSlice(sequenceRange),
-                        DataSlice(mAlpha, sequenceRange, Inputs(0)->GetMBLayout()),
-                        DataSlice(mBeta, sequenceRange, Inputs(0)->GetMBLayout()),
-                        Inputs(2)->ValueSlice(frameRange),
-                        gradient,
-                        mStartLbl, 1);
+                                    DataSliceWithMBLayout(mAlpha, sequenceRange, Inputs(0)->GetMBLayout()),
+                                    DataSliceWithMBLayout(mBeta,  sequenceRange, Inputs(0)->GetMBLayout()),
+                                    Inputs(2)->ValueSlice(frameRange),
+                                    gradient,
+                                    mStartLbl, 1);
                 }
             }
             else

@@ -85,8 +85,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // We operate on the 'to' layout, frameRange refers to result, not the input.
             // The input layout is different, but reshaping the input to output dimensions will allow us to pull out the right values anyway.
             auto from0      = from.Reshaped(to.GetNumRows(), to.GetNumCols());   // we operate on 'to' layout
-            auto fromSlice0 = DataSlice(from0, frameRange, pMBLayout);
-            auto   toSlice0 = DataSlice(to,    frameRange, pMBLayout);
+            auto fromSlice0 = DataSliceWithMBLayout(from0, frameRange, pMBLayout);
+            auto   toSlice0 = DataSliceWithMBLayout(to,    frameRange, pMBLayout);
             // now we got views on the right ranges of values, but with weird dimensions
 
             // reshape them into a unified view with D being the row dimension, and (S,M,K,T) the column dimension
@@ -107,9 +107,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This function is the inverse of Stack(). See comments there and exchange from and to.
         static void Unstack(const FrameRange & frameRange, const shared_ptr<MBLayout> & pMBLayout, /*const*/ Matrix<ElemType> & from, Matrix<ElemType> & to, size_t K, bool addTo)
         {
-            auto fromSlice0 = DataSlice(from, frameRange, pMBLayout);
+            auto fromSlice0 = DataSliceWithMBLayout(from, frameRange, pMBLayout);
             auto   to0      = to.Reshaped(from.GetNumRows(), from.GetNumCols());
-            auto   toSlice0 = DataSlice(to0, frameRange, pMBLayout);
+            auto   toSlice0 = DataSliceWithMBLayout(to0, frameRange, pMBLayout);
 
             size_t    D = to.GetNumRows();
             size_t SMKT = to.GetNumCols();
