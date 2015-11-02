@@ -234,7 +234,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rInfo.m_recurrentNodes.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
             {
                 loopId++;
-                rInfo.Reset();                      // (init for use)
+                rInfo.ResetInfoState();             // init for use      --TODO: does this have to be a method?
                 m_recurrentInfo.push_back(rInfo);
             }
         }

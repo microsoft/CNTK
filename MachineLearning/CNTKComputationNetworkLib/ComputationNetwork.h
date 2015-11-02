@@ -73,7 +73,7 @@ protected:
         bool m_loopClosed;
         int m_steppingDirection;                                            // +1 if left to right (t=0..T-1), -1 if rightt to left (t=T-1..0)
 
-        void Reset()
+        void ResetInfoState()   // (unique name for easier renaming  --TODO: or delete this method, only used at one place)
         {
             m_completedGradient = false;
             m_completedEvaluate = false;
