@@ -337,9 +337,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // called after last iteration step of ComputeGradient()
     /*virtual*/ void ComputationNetwork::RecurrentInfo::OnComputeGradientEndIteration() /*override*/
     {
-        const auto & recurrentNodes = m_recurrentNodesForForward;       // BUGBUG: -ForForward?? Does this mean we can remove non-ForForward?
 #ifdef OPT_OUTER_GRADIENT
-        for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
+        for (auto nodeIter2 = m_recurrentNodesForForward.rbegin(); nodeIter2 != m_recurrentNodesForForward.rend(); ++nodeIter2)
         {
             auto & node2 = *nodeIter2;
             // BUGBUG: The following can no longer be done after this code was moved into RecurrentInfo
@@ -347,7 +346,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //if (IsNodeReqMultiSeqHandling(node2))
             //    node2->MaskMissingGradientColumnsToZero(t);
             // TODO: exclude children that are not part of the recurrent loop, and do thise below, separately.
-            node2->ComputeGradientForChildren(FrameRange(recurrentNodes[0]->GetMBLayout()), false/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
+            node2->ComputeGradientForChildren(FrameRange(m_recurrentNodesForForward[0]->GetMBLayout()), false/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
         }
 #endif
         for (auto & node2 : m_recurrentNodesForForward)
