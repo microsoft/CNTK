@@ -69,9 +69,10 @@ protected:
         //  - move code from Evaluate() and ComputePartial() here, so that the calling code becomes regular
         //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
         virtual const std::wstring OperationName() const override { return L"RecurrentInfo"; }
-        virtual void OnEvaluateBeginIteration() override { }
-        virtual void EvaluateThisNode(const FrameRange &) override { }  // forward prop for one minibatch
-        virtual void OnEvaluateEndIteration() override { }              // called after last iteration step of EvaluateThisNode()
+        virtual void UpdateFunctionMBSize() override;
+        virtual void OnEvaluateBeginIteration() override;
+        virtual void EvaluateThisNode(const FrameRange &) override;
+        virtual void OnEvaluateEndIteration() override;
         virtual void OnComputeGradientBeginIteration() override { }             // called before first iteration step of ComputeGradient()
         virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) override { }
         virtual void OnComputeGradientEndIteration() override { }             // called after last iteration step of ComputeGradient()
