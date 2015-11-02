@@ -200,8 +200,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         int m_visitedOrder;     // remembers order in which nodes were visited by EnumerateNodes(), but gets updated
         bool m_visited;         // note: also used by ValidateSubNetwork()
         int m_indexInLoop;
-        // only used inside DetermineStrongSCCs():
-        int m_index;            // index denoting order in which nodes were visited in DetermineStrongSCCs()
+        // only used inside DetermineSCCs():
+        int m_index;            // index denoting order in which nodes were visited in DetermineSCCs()
         int m_lowLink;          // min of m_index over all nodes within a single loop
         bool m_inStack;
     };
@@ -941,25 +941,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
         static bool MaskMissingColumnsToZero(Matrix<ElemType>& matrixToBeMasked, const MBLayoutPtr & pMBLayout, const FrameRange & frameRange)
         {
+            //fprintf(stderr, "masking column range %d\n", (int)frameRange.timeIdxInSeq);
             return MaskMissingColumnsTo(matrixToBeMasked, pMBLayout, frameRange, (ElemType)0);
         }
 
         void /*ComputationNodeBase::*/MaskMissingValuesColumnsToZero(const FrameRange & frameRange) override final
         {
+            //fprintf(stderr, "%ls %ls m_functionValues ", NodeName().c_str(), OperationName().c_str());
             MaskMissingColumnsToZero(*m_functionValues, m_pMBLayout, frameRange);
         }
         void /*ComputationNodeBase::*/MaskMissingGradientColumnsToZero(const FrameRange & frameRange) override final
         {
+            //fprintf(stderr, "%ls %ls m_gradientValues ", NodeName().c_str(), OperationName().c_str());
             MaskMissingColumnsToZero(*m_gradientValues, m_pMBLayout, frameRange);
         }
 
         // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
         void InvalidateMissingValuesColumns(const FrameRange & frameRange) override final
         {
+            //fprintf(stderr, "invalidating %ls %ls m_functionValues column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)frameRange.timeIdxInSeq);
             MaskMissingColumnsTo(*m_functionValues, m_pMBLayout, frameRange, Matrix<ElemType>::MakeNan(__LINE__));
         }
         void InvalidateMissingGradientColumns(const FrameRange & frameRange) override final
         {
+            //fprintf(stderr, "invalidating %ls %ls m_gradientValues column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)frameRange.timeIdxInSeq);
             MaskMissingColumnsTo(*m_gradientValues, m_pMBLayout, frameRange, Matrix<ElemType>::MakeNan(__LINE__));
         }
 
