@@ -89,6 +89,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual const std::wstring OperationName() const = 0;
 #define OperationNameOf(T) (T<float>::TypeName())    // we are templated, but for this the type param matters not. So we just pick one, and hide that fact.
 
+        virtual void UpdateFunctionMBSize() = 0;
+
         virtual void OnEvaluateBeginIteration() = 0;
         virtual void EvaluateThisNode(const FrameRange &) = 0;  // forward prop for one minibatch
         virtual void OnEvaluateEndIteration() = 0;              // called after last iteration step of EvaluateThisNode()
@@ -349,7 +351,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf(stderr, "Node --> %ls = %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
         }
 
-        virtual void UpdateFunctionMBSize() = 0;
         void LinkToMBLayout(MBLayoutPtr pMBLayout) { m_pMBLayout = pMBLayout; }
         MBLayoutPtr GetMBLayout() { return m_pMBLayout; }
         bool HasMBLayout() const { return !!m_pMBLayout; }

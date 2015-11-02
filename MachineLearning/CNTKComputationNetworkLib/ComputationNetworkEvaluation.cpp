@@ -62,6 +62,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (recInfo && IsFuncValueOlderThanInputs(recInfo->m_recurrentNodesForForward) && !recInfo->m_completedEvaluate)
             {
+#if 1
+                recInfo->UpdateFunctionMBSize();
+                recInfo->OnEvaluateBeginIteration();
+                recInfo->EvaluateThisNode(FrameRange(node->GetMBLayout()));
+                recInfo->OnEvaluateEndIteration();
+#else
                 // node participates in a recurrent loop: process the loop frame by frame
                 const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
 
@@ -103,6 +109,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     node2->OnEvaluateEndIteration();
 
                 recInfo->m_completedEvaluate = true;
+#endif
             }
 
             // --- not recurrent: do the whole batch (unless it's already done, e.g. because the node participated in a recurren ttloop)
@@ -127,9 +134,72 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->OnEvaluateEndIteration();
                 node->UpdateEvalTimeStamp();
             }
+#ifdef _DEBUG
             else
-                node->OnEvaluateEndIteration();  // HACK to enforce NaN check
+                node->OnEvaluateEndIteration();  // HACK: performs NaN check, but does nothing else
+#endif
         }
+    }
+
+    // implementations of loop unrolling
+    /*virtual*/ void ComputationNetwork::RecurrentInfo::UpdateFunctionMBSize() /*override*/
+    {
+        for (auto & node2 : m_recurrentNodesForForward)
+            node2->UpdateFunctionMBSize(); // TODO: for sequence-to-sequence models we will need to be able to grow this step by step since size is unknown upfront
+    }
+
+    /*virtual*/ void ComputationNetwork::RecurrentInfo::OnEvaluateBeginIteration() /*override*/
+    {
+        // get layout associated with this loop
+        auto pMBLayout = m_recurrentNodesForForward[0]->GetMBLayout();
+
+        // tell all that loop is about to commence
+        for (auto & node2 : m_recurrentNodesForForward)
+        {
+            if (!pMBLayout || node2->GetMBLayout() != pMBLayout)  // take the opportunity to check that layout is shared by all nodes in the loop
+                LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
+                            node2->NodeName().c_str(), m_recurrentNodesForForward[0]->NodeName().c_str());
+            node2->OnEvaluateBeginIteration();
+        }
+
+        // since we share memory we need to resize function value matrices correctly
+        // TODO: No, Validate() should only run as a prep stage. This will go away once we separate dimension inference and actual resizing.
+        for (auto & node2 : m_recurrentNodesForForward)
+            node2->Validate(true);
+    }
+
+    // evaluation of a RecurrentInfo FlowControlNode
+    // This evaluates all nodes in this FlowControlNode in SEQ mode: process the loop frame by frame in a nested loop.
+    // This is where the time axis changes.
+    // TODO: Once we do nested loops, then the FrameRange argument to this will refer to the outer loop.
+    /*virtual*/ void ComputationNetwork::RecurrentInfo::EvaluateThisNode(const FrameRange &) /*override*/
+    {
+        // get layout associated with this loop
+        // All nodes share the same layout.
+        auto pMBLayout = m_recurrentNodesForForward[0]->GetMBLayout();
+
+        // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
+        FrameRangeIteration range(pMBLayout, m_steppingDirection);
+        for (auto t = range.begin(); t != range.end(); t++)
+        {
+            for (auto & node2 : m_recurrentNodesForForward)
+            {
+                node2->EvaluateThisNode(t);
+                // TODO: this cannot be done since it is stored in the network now
+                //if (IsNodeReqMultiSeqHandling(node2))
+                //    node2->MaskMissingValuesColumnsToZero(t);
+                node2->UpdateEvalTimeStamp();
+            }
+        } 
+    }
+
+    /*virtual*/ void ComputationNetwork::RecurrentInfo::OnEvaluateEndIteration() /*override*/
+    {
+        // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
+        for (auto & node2 : m_recurrentNodesForForward)
+            node2->OnEvaluateEndIteration();
+
+        m_completedEvaluate = true;
     }
 
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
