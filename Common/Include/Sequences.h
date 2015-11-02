@@ -195,6 +195,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         // test function for those pieces of the code that cannot handle gaps
+        // TODO: Not efficient (linear scan). Use a global OR of all values.
         bool HasGaps() const
         {
             if (!IsAllNone())
@@ -416,7 +417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // TODO: remove these ^^ two in favor of these vv
         size_t StartColumn(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); return timeIdxInSeq * pMBLayout->GetNumParallelSequences(); }
         size_t NumCols(const shared_ptr<MBLayout> & pMBLayout) const { EnsureNotAllFrames(); return pMBLayout->GetNumParallelSequences(); }
-        bool IsAllFrames() const { return timeIdxInSeq == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead
+        bool IsAllFrames() const { return timeIdxInSeq == SIZE_MAX; } // if true then above functions may not be called; caller must use entire batch instead (PAR mode)
 
         const FrameRange & Check(size_t expectedStartColumn, size_t expectedNumCols, const shared_ptr<MBLayout> & pMBLayout) const
         {
@@ -444,18 +445,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     inline shared_ptr<Matrix<char>> MBLayout::GetColumnsValidityMask(const FrameRange& frameRange, DEVICEID_TYPE deviceId) const
     {
+        // lazily compute the validity mask
         if (m_columnsValidityMask == nullptr)
         {
             Lock();
             m_columnsValidityMask.reset(new Matrix<char>(deviceId));
 
             // Determine indices of all invalid columns in the specified frameRange
-            if (!IsAllNone())
+            if (!IsAllNone())       // TODO: use HasGaps() (but currently that would mean a second linear scan, which is not efficient)
             {
                 size_t nT = GetNumTimeSteps();
                 size_t nS = GetNumParallelSequences();
 
-                std::vector<char> columnsValidityMask(nT * nS, 1);
+                std::vector<char> columnsValidityMask(nT * nS, 1);  // form the mask in a CPU-side STL vector first
                 bool foundInvalidColumn = false;
                 for (size_t t = 0; t < nT; t++)
                 {
@@ -471,14 +473,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                 }
 
-                if (foundInvalidColumn)
+                if (foundInvalidColumn)                     // if any then blast it over to the GPU side
                     m_columnsValidityMask->SetValue(1, columnsValidityMask.size(), deviceId, columnsValidityMask.data());
             }
         }
 
-        if (m_columnsValidityMask->IsEmpty())
+        if (m_columnsValidityMask->IsEmpty())               // mask matrix was kept empty, which means no gaps detected
             return nullptr;
 
+        // we have a validity mask: decide what to return
         if (frameRange.IsAllFrames())
             return m_columnsValidityMask;
 
@@ -496,9 +499,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (!foundInvalidColumnsInRange)
             return nullptr;
 
+        // we get here if there is an actual validity mask and there are invalid frames in its range
         size_t startColumn = (frameRange.t() * GetNumParallelSequences()) + ((frameRange.seqIndex == SIZE_MAX) ? 0 : frameRange.seqIndex);
         size_t numColumns = (frameRange.seqIndex == SIZE_MAX) ? GetNumParallelSequences() : 1;
 
+        // TODO: why use ColumnSlice() and not DataSlice()?
         return make_shared<Matrix<char>>(m_columnsValidityMask->ColumnSlice(startColumn, numColumns));
     }
 

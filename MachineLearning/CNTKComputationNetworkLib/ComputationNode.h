@@ -1158,13 +1158,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if DUMPOUTPUT
                     fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
 #endif
-                    child->LazyZeroGradient();          // set gradient to 0 if this is the first time
+                    child->LazyZeroGradient();              // set gradient to 0 if this is the first time
 
-#if 0
-                    if (frameRange.IsAllFrames())       // TODO: remove this
-                        ComputeInputPartial(i);
-                    else
-#endif
+                    // TODO: There is an inefficiency here which we should fix.
+                    if (IsPartOfLoop() && !child->IsPartOfLoop())
+                    {
+                        assert(!frameRange.IsAllFrames());
+                        static int warnings = 0;
+                        if (warnings++ < 20)
+                            fprintf (stderr, "ComputeGradientForChildren: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
+                            NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
+                    }
+
                     ComputeInputPartial(i, frameRange);     // this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
