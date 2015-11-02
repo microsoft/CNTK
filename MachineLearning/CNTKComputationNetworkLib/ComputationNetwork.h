@@ -66,20 +66,20 @@ protected:
     {
     public:
         // next steps:
-        //  - move code from Evaluate() and ComputePartial() here, so that the calling code becomes regular
         //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
         virtual const std::wstring OperationName() const override { return L"RecurrentInfo"; }
         virtual void UpdateFunctionMBSize() override;
         virtual void OnEvaluateBeginIteration() override;
         virtual void EvaluateThisNode(const FrameRange &) override;
         virtual void OnEvaluateEndIteration() override;
-        virtual void OnComputeGradientBeginIteration() override { }             // called before first iteration step of ComputeGradient()
-        virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) override { }
-        virtual void OnComputeGradientEndIteration() override { }             // called after last iteration step of ComputeGradient()
+        virtual void OnComputeGradientBeginIteration() override;
+        virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientForChildren() instead
+        virtual void OnComputeGradientEndIteration() override;
+        virtual void ComputeGradientForChildren(const FrameRange & frameRange) override;
     public:
         std::vector<ComputationNodeBasePtr> m_recurrentNodes;               // all nodes involved in thisloop
-        std::vector<ComputationNodeBasePtr> m_recurrentNodesForForward;     // TODO: is this ever different from m_recurrentNodes?
-        ComputationNodeBasePtr m_sourceNode;
+        std::vector<ComputationNodeBasePtr> m_recurrentNodesForForward;     // TODO: is this ever different from m_recurrentNodes? This is used by both forward and back prop.
+        ComputationNodeBasePtr m_sourceNode;                                // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
         int m_loopId;                                                       // the loop id (index in m_recurrentInfo array)
         bool m_completedGradient;
         bool m_completedEvaluate;

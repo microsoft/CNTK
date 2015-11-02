@@ -491,7 +491,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // test for user-specified request for masking to the individual nodes
-    // This is only needed if users explicitly perform reduce-like operations, to workaround current limitations of CNTK.
+    // This will go away. It is currently only needed if users explicitly perform reduce-like operations, to work around current limitations of CNTK.
     // It makes no sense for some nodes, so we skip those.
     template <typename T>
     static bool VectorContains(const vector<T> & v, const T & what)
