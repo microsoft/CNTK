@@ -1,5 +1,5 @@
 //
-// <copyright file="CPUMatrixUnitTests.cpp" company="Microsoft">
+// <copyright file="CPUMatrixTests.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
