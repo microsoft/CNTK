@@ -100,7 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void OnComputeGradientEndIteration() = 0;             // called after last iteration step of ComputeGradient()
 
         // TODO: this one does not quite fit here
-        virtual void ComputeGradientForChildren(const FrameRange & frameRange) = 0;
+        virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInSameLoop, bool childrenInDifferentLoop) = 0;
 
         // --- optional overrides that add functionality
 
@@ -480,7 +480,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //{
         //    ComputeInputPartial(inputIndex, FrameRange(/*whole batch*/));      // nodes that do not implement this will know to understand SIZE_MAX as full batch
         //}
-        virtual void ComputeGradientForChildren(const FrameRange & frameRange) = 0;
+        //virtual void ComputeGradientForChildren(const FrameRange & frameRange) = 0;
         virtual void ClearGradientForChildren() = 0;
 
         // masking
@@ -1144,8 +1144,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
         // TODO: move to -Base (or -Network?)
-        void ComputeGradientForChildren(const FrameRange & frameRange) override
+        void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInSameLoop, bool childrenInDifferentLoop) override
         {
+            childrenInSameLoop, childrenInDifferentLoop;
             if (frameRange.IsAllFrames() && IsPartOfLoop())
                 LogicError("%ls %ls operation: ComputeGradientForChildren called with whole-batch FrameRange on node that participates in a loop");
 
