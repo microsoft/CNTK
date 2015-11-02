@@ -110,7 +110,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<vector<wstring>>mlfpathsmulti;
             size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
             vector<vector<wstring>> infilesmulti;
-            vector<wstring> filelist;
             size_t numFiles;
             wstring unigrampath(L"");
             //wstring statelistpath(L"");
@@ -344,7 +343,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             numFiles=0;
             foreach_index(i,scriptpaths)
             {
-                filelist.clear();
+                vector<wstring> filelist;
                 std::wstring scriptpath = scriptpaths[i];
                 fprintf(stderr, "reading script file %S ...", scriptpath.c_str());
                 size_t n = 0;
@@ -408,7 +407,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
 
 
-                infilesmulti.push_back(filelist);
+                infilesmulti.push_back(std::move(filelist));
             }
 
             if (readerConfig.Exists("unigram"))
@@ -458,7 +457,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>  
                 labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordmap, (map<string,size_t>*) NULL, htktimetoframe);      // label MLF
                 // get the temp file name for the page file
-                labelsmulti.push_back(labels);
+
+                // Make sure 'msra::asr::htkmlfreader' type has a move constructor
+                static_assert(std::is_move_constructible<msra::asr::htkmlfreader<msra::asr::htkmlfentry, msra::lattices::lattice::htkmlfwordsequence>>::value,
+                              "Type 'msra::asr::htkmlfreader' should be move constructible!");
+
+                labelsmulti.push_back(std::move(labels));
             }
 
             if (!_stricmp(readMethod.c_str(),"blockRandomize"))
@@ -558,7 +562,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void HTKMLFReader<ElemType>::PrepareForWriting(const ConfigParameters& readerConfig)
         {
             vector<wstring> scriptpaths;
-            vector<wstring> filelist;
             size_t numFiles;
             size_t firstfilesonly = SIZE_MAX;   // set to a lower value for testing
             size_t evalchunksize = 2048;
@@ -627,7 +630,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             numFiles=0;
             foreach_index(i,scriptpaths)
             {
-                filelist.clear();
+                vector<wstring> filelist;
                 std::wstring scriptpath = scriptpaths[i];
                 fprintf(stderr, "reading script file %S ...", scriptpath.c_str());
                 size_t n = 0;
@@ -645,7 +648,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     if (n!=numFiles)
                         RuntimeError(msra::strfun::strprintf ("HTKMLFReader::InitEvalReader: number of files in each scriptfile inconsistent (%d vs. %d)", numFiles,n));
 
-                m_inputFilesMultiIO.push_back(filelist);
+                m_inputFilesMultiIO.push_back(std::move(filelist));
             }
 
             m_fileEvalSource.reset(new msra::dbn::FileEvalSource(realDims, numContextLeft, numContextRight, evalchunksize));

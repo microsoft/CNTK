@@ -48,7 +48,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         msra::asr::htkfeatreader::parsedpath parsedpath;    // archive filename and frame range in that file
         size_t classidsbegin;       // index into allclassids[] array (first frame)
 
-        utterancedesc (msra::asr::htkfeatreader::parsedpath && ppath, size_t classidsbegin) : parsedpath (ppath), classidsbegin (classidsbegin) {}
+        utterancedesc (msra::asr::htkfeatreader::parsedpath&& ppath, size_t classidsbegin) : parsedpath (std::move(ppath)), classidsbegin (classidsbegin) {}
 
         const wstring & logicalpath() const { return parsedpath; /*type cast will return logical path*/ }
         size_t numframes() const { return parsedpath.numframes(); }
@@ -64,6 +64,10 @@ class minibatchutterancesourcemulti : public minibatchsource
 #endif
         }
     };
+
+    // Make sure type 'utterancedesc' has a move constructor
+    static_assert(std::is_move_constructible<utterancedesc>::value, "Type 'utterancedesc' should be move constructible!");
+
     struct utterancechunkdata       // data for a chunk of utterances
     {
         std::vector<utterancedesc> utteranceset;    // utterances in this set
@@ -370,11 +374,12 @@ public:
                     RuntimeError("minibatchutterancesource: utterances < 2 frames not supported");
                 if (uttframes > frameref::maxframesperutterance)
                 {
-                            fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S\n", i, (int)uttframes, (int)frameref::maxframesperutterance, key.c_str());
+                    fprintf(stderr, "minibatchutterancesource: skipping %d-th file (%d frames) because it exceeds max. frames (%d) for frameref bit field: %S\n", i, (int)uttframes, (int)frameref::maxframesperutterance, key.c_str());
                     uttduration[i] = 0;
                     uttisvalid[i] = false;
                 }
-                else{
+                else
+                {
                     if (m == 0){
                         uttduration[i] = uttframes;
                         uttisvalid[i] = true;
