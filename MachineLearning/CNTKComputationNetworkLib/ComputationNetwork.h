@@ -75,7 +75,7 @@ protected:
         virtual void OnComputeGradientBeginIteration() override;
         virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientForChildren() instead
         virtual void OnComputeGradientEndIteration() override;
-        virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInSameLoop, bool childrenInDifferentLoop) override;
+        virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
     public:
         std::vector<ComputationNodeBasePtr> m_recurrentNodes;               // all nodes involved in thisloop
         std::vector<ComputationNodeBasePtr> m_recurrentNodesForForward;     // TODO: is this ever different from m_recurrentNodes? This is used by both forward and back prop.

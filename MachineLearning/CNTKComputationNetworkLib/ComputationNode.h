@@ -100,7 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void OnComputeGradientEndIteration() = 0;             // called after last iteration step of ComputeGradient()
 
         // TODO: this one does not quite fit here
-        virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInSameLoop, bool childrenInDifferentLoop) = 0;
+        virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
 
         // --- optional overrides that add functionality
 
@@ -1144,16 +1144,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // this is the entry point from Network; while it will call virtual ComputeInputPartial() into the actual node implementation
         // TODO: move to -Base (or -Network?)
-        void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInSameLoop, bool childrenInDifferentLoop) override
+        void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override
         {
-            childrenInSameLoop, childrenInDifferentLoop;
-            if (frameRange.IsAllFrames() && IsPartOfLoop())
+            if (frameRange.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
                 LogicError("%ls %ls operation: ComputeGradientForChildren called with whole-batch FrameRange on node that participates in a loop");
 
             for (size_t i = 0; i < m_children.size(); i++)
             {
                 ComputationNodePtr child = Inputs(i);
-                if (child->m_needsGradient)
+                if (child->m_needsGradient &&
+                    (childrenInThisLoop  && child->IsPartOfLoop() == IsPartOfLoop() ||
+                     childrenInOuterLoop && child->IsPartOfLoop() != IsPartOfLoop()
+                    ))
                 {
                     //fprintf(stderr, "ComputeGradientForChildren: %ls %ls operation -> child %d %ls %ls\n", NodeName().c_str(), OperationName().c_str(), (int)i, child->NodeName().c_str(), child->OperationName().c_str());
                     if (!m_needsGradient)
@@ -1166,15 +1168,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
                     child->LazyZeroGradient();              // set gradient to 0 if this is the first time
 
+#if 1
                     // TODO: There is an inefficiency here which we should fix.
                     if (IsPartOfLoop() && !child->IsPartOfLoop())
                     {
-                        assert(!frameRange.IsAllFrames());
+                        assert(!frameRange.IsAllFrames() || !childrenInThisLoop);
                         static int warnings = 0;
                         if (warnings++ < 20)
                             fprintf (stderr, "ComputeGradientForChildren: Inefficiency: %ls %ls operation in loop propagates gradient to non-loop %ls %ls\n",
                             NodeName().c_str(), OperationName().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
                     }
+#endif
 
                     ComputeInputPartial(i, frameRange);     // this computes partial wrt to the child and sums the gradient value in the child
                 }
