@@ -135,6 +135,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
     // TODO: pass a set of nodes instead of only one?
     // TODO: remove Evaluate() from here, instead call it at call site, and in here merely check whether everything is computed already
+    // BUGBUG: The decision to loop (SEQ execution) is made by parent, but some children can be executer PAR. It should be possible to detect this.
     template<class ElemType>
     void ComputationNetwork::ComputeGradient(const ComputationNodeBasePtr rootNode, 
                                              bool bResetToOne,                              // true if reset the gradient of rootnode to 1.0
@@ -195,6 +196,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             node2->VerifyNumParallelSequences(GetNumParallelSequences());
                             if (IsNodeReqMultiSeqHandling(node2))
                                 node2->MaskMissingGradientColumnsToZero(t);
+                            // TODO: exclude children that are not part of the recurrent loop, and do thise below, separately.
                             node2->ComputeGradientForChildren(t);
                         }
                     }
@@ -237,6 +239,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     ComputationNetwork::RecurrentInfo * ComputationNetwork::FindInRecurrentLoops(const ComputationNodeBasePtr& node)
     {
         // look in all recurrent loops of the network
+        // TODO: Check for IsPartOfLoop(). Also why not store the loop id in the node for direct lookup?
         for (auto & iter : m_recurrentInfo)
             if (std::find(iter.m_recurrentNodes.begin(), iter.m_recurrentNodes.end(), node) != iter.m_recurrentNodes.end())
                 return &iter;
