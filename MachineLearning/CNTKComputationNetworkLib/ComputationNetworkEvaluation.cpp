@@ -309,9 +309,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto & node2 : m_recurrentNodesForForward)
             node2->OnComputeGradientBeginIteration();
     }
-    /*virtual*/ void ComputationNetwork::RecurrentInfo::ComputeGradientForChildren(const FrameRange &, bool childrenInSameLoop, bool childrenInDifferentLoop) /*override*/
+    /*virtual*/ void ComputationNetwork::RecurrentInfo::ComputeGradientForChildren(const FrameRange &, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
     {
-        childrenInSameLoop, childrenInDifferentLoop;    // TODO: think this through
+        childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
         const auto & recurrentNodes = m_recurrentNodesForForward;       // BUGBUG: -ForForward?? Does this mean we can remove non-ForForward?
         auto pMBLayout = recurrentNodes[0]->GetMBLayout();
         FrameRangeIteration range(pMBLayout, m_steppingDirection);
@@ -325,13 +325,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 //if (IsNodeReqMultiSeqHandling(node2))
                 //    node2->MaskMissingGradientColumnsToZero(t);
                 // TODO: exclude children that are not part of the recurrent loop, and do thise below, separately.
-                node2->ComputeGradientForChildren(t, true, true);
+// #define OPT_OUTER_GRADIENT
+#ifdef OPT_OUTER_GRADIENT
+                node2->ComputeGradientForChildren(t, true/*childrenInThisLoop*/, false/*childrenInOuterLoop*/);
+#else
+                node2->ComputeGradientForChildren(t, true/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
+#endif
             }
         }
     }
     // called after last iteration step of ComputeGradient()
     /*virtual*/ void ComputationNetwork::RecurrentInfo::OnComputeGradientEndIteration() /*override*/
     {
+        const auto & recurrentNodes = m_recurrentNodesForForward;       // BUGBUG: -ForForward?? Does this mean we can remove non-ForForward?
+#ifdef OPT_OUTER_GRADIENT
+        for (auto nodeIter2 = recurrentNodes.rbegin(); nodeIter2 != recurrentNodes.rend(); ++nodeIter2)
+        {
+            auto & node2 = *nodeIter2;
+            // BUGBUG: The following can no longer be done after this code was moved into RecurrentInfo
+            //node2->VerifyNumParallelSequences(GetNumParallelSequences());
+            //if (IsNodeReqMultiSeqHandling(node2))
+            //    node2->MaskMissingGradientColumnsToZero(t);
+            // TODO: exclude children that are not part of the recurrent loop, and do thise below, separately.
+            node2->ComputeGradientForChildren(FrameRange(recurrentNodes[0]->GetMBLayout()), false/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
+        }
+#endif
         for (auto & node2 : m_recurrentNodesForForward)
             node2->OnComputeGradientEndIteration();
     }
