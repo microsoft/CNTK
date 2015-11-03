@@ -2535,6 +2535,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         case TrainingCriterion::SquareError:
             output = builder.SquareError(label, tinput, (trainNodeName == L"") ? L"SquareError" : trainNodeName);
             break;
+        case TrainingCriterion::Logistic:
+            output = builder.Logistic(label, tinput, (trainNodeName == L"") ? L"Logistic" : trainNodeName);
+            break;
         case TrainingCriterion::CRF:
             assert(trans != nullptr);
             output = builder.CRF(label, input, trans, (trainNodeName == L"") ? L"CRF" : trainNodeName);
@@ -2553,6 +2556,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (!((m_evalCriterion == EvalCriterion::CrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::CrossEntropyWithSoftmax) ||
             (m_evalCriterion == EvalCriterion::SquareError && m_trainCriterion == TrainingCriterion::SquareError) ||
+            (m_evalCriterion == EvalCriterion::Logistic && m_trainCriterion == TrainingCriterion::Logistic) ||
             (m_evalCriterion == EvalCriterion::CRF && m_trainCriterion == TrainingCriterion::CRF) ||
             (m_evalCriterion == EvalCriterion::ClassCrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::ClassCrossEntropyWithSoftmax) ||
             (m_evalCriterion == EvalCriterion::NCECrossEntropyWithSoftmax && m_trainCriterion == TrainingCriterion::NCECrossEntropyWithSoftmax)))
@@ -2573,6 +2577,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             case EvalCriterion::SquareError:
                 //output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
                 output = builder.SquareError(label, tinput, (evalNodeName == L"") ? L"SquareError" : evalNodeName);
+                break;
+            case EvalCriterion::Logistic:
+                //output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
+                output = builder.Logistic(label, tinput, (evalNodeName == L"") ? L"Logistic" : evalNodeName);
                 break;
             case EvalCriterion::ErrorPrediction:
                 output = builder.ErrorPrediction(label, tinput, (evalNodeName == L"") ? L"EvalErrorPrediction" : evalNodeName);
