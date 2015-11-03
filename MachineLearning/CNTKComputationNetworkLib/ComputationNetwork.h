@@ -81,7 +81,6 @@ protected:
         bool IsFuncValueOlderThanInputs() const;
     public:
         std::vector<ComputationNodeBasePtr> m_recurrentNodes;               // all nodes involved in this loop, in evaluation order
-        std::vector<ComputationNodeBasePtr> m_recurrentNodesRedundantCopy;  // all nodes involved in this loop, differing from m_recurrentNodes in unknown form, probably should be deleted. Only used inside ComputationNetworkAnalysis.cpp.
         ComputationNodeBasePtr m_sourceNode;                                // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
         int m_loopId;                                                       // the loop id (index in m_recurrentInfo array)
         bool m_completedGradient;

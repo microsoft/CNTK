@@ -57,10 +57,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             size_t max_visitedOrderInLoop = 0;
             // TODO: I am sure there is an STL algorithm for this.
-            for (auto itr : iter->m_recurrentNodesRedundantCopy)
+            for (auto itr : iter->m_recurrentNodes)
                 if (max_visitedOrderInLoop < itr->m_visitedOrder)
                     max_visitedOrderInLoop = itr->m_visitedOrder;
-            for (auto itr : iter->m_recurrentNodesRedundantCopy)
+            for (auto itr : iter->m_recurrentNodes)
                 itr->m_visitedOrder = max_visitedOrderInLoop;
         }
 
@@ -69,11 +69,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
             // it is done in the mergerecurrentloops function, but just keep the code       --TODO: why?? Why not rather verify the order?
-            sort(iter->m_recurrentNodesRedundantCopy.begin(),
-                 iter->m_recurrentNodesRedundantCopy.end(),
-                 iter->m_recurrentNodesRedundantCopy[0]->ByVisitedOrder);
+            // BUGBUG: This sort() seems to do nothing, since the above loop sets all m_visitedOrder to the same value??
+            sort(iter->m_recurrentNodes.begin(),
+                 iter->m_recurrentNodes.end(),
+                 iter->m_recurrentNodes[0]->ByVisitedOrder);
  
-            for (auto & node : iter->m_recurrentNodesRedundantCopy)
+            for (auto & node : iter->m_recurrentNodes)
             {
                 node->m_isPartOfLoop = true;        // this is the only flag in ComputationNode that escapes FormRecurrentLoops()!
                 // TODO: ^^ We should instead remember a pointer to our loop sentinel
@@ -90,37 +91,43 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // set m_indexInLoop for all nodes except Past/FutureValueNodes in all loops
             // This value is only used in the block right after this.
-            for (size_t j = 0; j < iter->m_recurrentNodesRedundantCopy.size(); j++)
+            for (size_t j = 0; j < iter->m_recurrentNodes.size(); j++)
             {
-                ComputationNodeBasePtr node = iter->m_recurrentNodesRedundantCopy[j];
+                ComputationNodeBasePtr node = iter->m_recurrentNodes[j];
                 for (size_t i = 0; i < node->ChildrenSize(); i++)
                 {
                     if (node->Inputs(i)->m_loopId == node->m_loopId && 
                         node->OperationName() != OperationNameOf(PastValueNode) &&
-                        node->OperationName() != OperationNameOf(FutureValueNode))     // TODO: test for type RecurrentNode instead?
+                        node->OperationName() != OperationNameOf(FutureValueNode))      // TODO: test for type RecurrentNode instead?
                     {
+                        //assert(node->Inputs(i)->m_indexInLoop == 0);                    // No. It seems this variable really counts the number of parents.
                         node->Inputs(i)->m_indexInLoop = node->Inputs(i)->m_indexInLoop + 1;        // BUGBUG: this is bumping up the m_indexInLoop, but I don't think it is initialized anywhere. i-1?
                     }
                 }
             }
 
-            for (size_t i = 0; i < iter->m_recurrentNodesRedundantCopy.size(); i++)
+            for (size_t i = 0; i < iter->m_recurrentNodes.size(); i++)
             {
-                ComputationNodeBasePtr node = iter->m_recurrentNodesRedundantCopy[i];
+                ComputationNodeBasePtr node = iter->m_recurrentNodes[i];
                 if (visited.find(node) == visited.end() && node->m_indexInLoop == 0)
                     DetermineLoopForwardOrder(visited, recStack, result, node);
             }
 
-            // TODO: this loop seems to just reverse the list
+#if 1
+            // update m_recurrentNodes with 'result'
+            iter->m_recurrentNodes.assign(result.begin(), result.end());
+#else
+            // TODO: this loop seems to just copy the list
             //       m_recurrentNodes = reverse(result)
             iter->m_recurrentNodes.clear();
-            for (size_t i = 0; i < iter->m_recurrentNodesRedundantCopy.size(); i++)
+            for (size_t i = 0; i < iter->m_recurrentNodesxx.size(); i++)    // BUGBUG: is the size of m_recurrentNodes (before clear) the same as result? Guaranteed?
             {
                 iter->m_recurrentNodes.push_back(result.front());
                 result.pop_front();
             }
 
-            iter->m_recurrentNodesRedundantCopy = iter->m_recurrentNodes;  // TODO: are they ever different?
+            iter->m_recurrentNodes = iter->m_recurrentNodes;  // TODO: are they ever different?
+#endif
         }
 
         if (m_recurrentInfo.size() > 0)
@@ -160,9 +167,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // log the loops
         for (auto & iter : m_recurrentInfo)
         {
-            fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter->m_loopId, iter->m_sourceNode->NodeName().c_str(), (int)iter->m_recurrentNodesRedundantCopy.size());
+            fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter->m_loopId, iter->m_sourceNode->NodeName().c_str(), (int)iter->m_recurrentNodes.size());
             size_t n = 0;
-            for (auto itr = iter->m_recurrentNodesRedundantCopy.begin(); itr != iter->m_recurrentNodesRedundantCopy.end(); itr++)
+            for (auto itr = iter->m_recurrentNodes.begin(); itr != iter->m_recurrentNodes.end(); itr++)
             {
                 if (n++ % 3 == 0)
                     fprintf(stderr, "\n");
@@ -226,11 +233,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNodeBasePtr w = sccStack.back();
                 sccStack.pop_back();
                 w->m_inStack = false;
-                rInfo.m_recurrentNodesRedundantCopy.push_back(w);
+                rInfo.m_recurrentNodes.push_back(w);
                 if (w == cur)                       // hit our starting point: done
                     break;
             }
-            if (rInfo.m_recurrentNodesRedundantCopy.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
+            if (rInfo.m_recurrentNodes.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
             {
                 loopId++;
                 m_recurrentInfo.push_back(make_shared<RecurrentFlowControlNode>(move(rInfo)));
@@ -264,6 +271,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_recurrentInfo = move(m_recurrentInfoTmp);
     }
 
+    // recovers the processing order within a recurrent loop
     void ComputationNetwork::DetermineLoopForwardOrder(unordered_set<ComputationNodeBasePtr>& visited,
                                                        unordered_set<ComputationNodeBasePtr>& recStack,
                                                        list<ComputationNodeBasePtr>& nodesStack,
@@ -284,11 +292,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             recStack.erase(cur);
             nodesStack.push_back(cur);
         }
-        else
-        {
-            if (!(recStack.find(cur) == recStack.end()))
-                LogicError("%ls %ls operation is part of an infinite loop that cannot be unrolled.", cur->NodeName().c_str(), cur->OperationName().c_str());
-        }
+        else if (recStack.find(cur) != recStack.end())
+            LogicError("%ls %ls operation is part of an infinite loop that cannot be unrolled.", cur->NodeName().c_str(), cur->OperationName().c_str());
     }
 
     // traverse sub-graph feeding this node (which is a top-level node at start, e.g. training criterion) and list
@@ -343,7 +348,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int iId = recInfo->m_loopId;
                 if (!accessed[iId])
                 {
-                    newList.insert(newList.end(), recInfo->m_recurrentNodesRedundantCopy.begin(), recInfo->m_recurrentNodesRedundantCopy.end());
+                    newList.insert(newList.end(), recInfo->m_recurrentNodes.begin(), recInfo->m_recurrentNodes.end());
                     accessed[iId] = true;
                 }
             }
@@ -373,28 +378,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         for (auto & rInfo : m_recurrentInfo)
         {
+            assert(rInfo->m_recurrentNodes.size() > 0);    // (this check was left over after refactoring; it should not be necessary)
+
             bool hasPastValueNode = false;
             bool hasFutureValueNode = false;
 
-            if (rInfo->m_recurrentNodesRedundantCopy.size() > 0)    // TODO: why this check? And why are the above vars not inside the block?
+            for (auto & node : rInfo->m_recurrentNodes)
             {
-                for (auto & node : rInfo->m_recurrentNodesRedundantCopy)
-                {
-                    if (node->OperationName() == OperationNameOf(PastValueNode))
-                        hasPastValueNode = true;
-                    else if (node->OperationName() == OperationNameOf(FutureValueNode))
-                        hasFutureValueNode = true;
-                }
-
-                if (hasPastValueNode && !hasFutureValueNode)
-                    rInfo->m_steppingDirection = +1;
-                else if (hasFutureValueNode && !hasPastValueNode)
-                    rInfo->m_steppingDirection = -1;
-                else if (hasPastValueNode && hasFutureValueNode)
-                    InvalidArgument("It is not allowed to have both PastValue and FutureValue nodes in the same loop. How do you think that should work??");
-                else
-                    LogicError("There is neither PastValue nor FutureValue nodes in the loop.");
+                if (node->OperationName() == OperationNameOf(PastValueNode))
+                    hasPastValueNode = true;
+                else if (node->OperationName() == OperationNameOf(FutureValueNode))
+                    hasFutureValueNode = true;
             }
+
+            if (hasPastValueNode && !hasFutureValueNode)
+                rInfo->m_steppingDirection = +1;
+            else if (hasFutureValueNode && !hasPastValueNode)
+                rInfo->m_steppingDirection = -1;
+            else if (hasPastValueNode && hasFutureValueNode)
+                InvalidArgument("It is not allowed to have both PastValue and FutureValue nodes in the same loop. How do you think that should work??");
+            else
+                LogicError("There is neither PastValue nor FutureValue nodes in the loop.");
         }
     }
 
