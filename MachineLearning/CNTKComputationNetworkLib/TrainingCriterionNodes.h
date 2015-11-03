@@ -1609,7 +1609,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
     template<class ElemType>
-    class LogisticNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
+    class LogisticNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
     {
         typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
         static const std::wstring TypeName() { return L"Logistic"; }
@@ -1689,28 +1689,53 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
-            if (m_children.size() != 2 && m_children.size() != 3)
-                InvalidArgument("%ls %ls operation requires two or three inputs.", NodeName().c_str(), OperationName().c_str());
+			if (m_children.size() != 2 && m_children.size() != 3)
+			{
+				InvalidArgument("%ls %ls operation requires two or three inputs.", NodeName().c_str(), OperationName().c_str());
+			}
 
-            ValidateBinaryReduce(isFinalValidationPass);
+			if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
+			{
+				throw std::logic_error("LogisticNode criterion requires the first input to be the label.");
+			}
 
-            if (m_children.size() == 3)
-            {
-                size_t index = 2;
-                // BUGBUG: 1-index is -1
-                size_t rows =                                   Inputs(index)->GetNumRows() == 0  ? Inputs(1 - index)->GetNumRows() : Inputs(index)->GetNumRows();
-                size_t cols = (!Inputs(index)->HasMBLayout() && Inputs(index)->GetNumCols() == 0) ? Inputs(1 - index)->GetNumCols() : Inputs(index)->GetNumCols();
-                ValidateInferChildDims(index, rows, cols);
-            }
+			if (m_children.size() == 3)
+			{
+				if (Inputs(2)->OperationName() != L"InputValue" && Inputs(2)->OperationName() != L"SparseInputValue")
+				{
+					throw std::logic_error("LogisticNode criterion requires the second input to be the weight.");
+				}
+			}
+
+			ComputationNodeBase::Validate(isFinalValidationPass);
+			m_pMBLayout = nullptr;              // this node does not hold mini-batch data
+
+			for (size_t index = 0; index < m_children.size(); index++)
+			{
+				auto in = Inputs(index);
+				auto other = Inputs((index == 1 ) ? 0 : 1 );
+				// borrow any unset dimension on one input from the other input
+				size_t rows =                        in->GetNumRows() == 0  ? other->GetNumRows()/*borrow from peer*/ : in->GetNumRows()/*keep as is*/;
+				size_t cols = (!in->HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols()/*borrow from peer*/ : in->GetNumCols()/*keep as is*/;
+				ValidateInferChildDims(index, rows, cols);
+			}
+
+			Resize(1, 1);
+			InferImageDimsFromInputs();
 
             if (isFinalValidationPass)
             {
+				if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
+					(Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))))
+				{
+					InvalidArgument("The dimension of the weight matrix in the LogisticNode operation does not match.");
+				}
                 if (m_children.size() == 3)
                 {
-                    if (!(Inputs(2)->GetNumRows() == Inputs(0)->GetNumRows() &&  //match size
-                        (!Inputs(2)->HasMBLayout() || Inputs(2)->GetNumCols() == Inputs(0)->GetNumCols())))
+					if (!(Inputs(0)->GetNumRows() == Inputs(2)->GetNumRows() &&
+						(Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(2)->GetNumCols()))))
                     {
-                        InvalidArgument("The Matrix<ElemType>  dimension in the LogisticNode operation does not match.");
+                        InvalidArgument("The dimension of the weight matrix in the LogisticNode operation does not match.");
                     }
                 }
             }
