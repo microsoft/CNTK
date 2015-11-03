@@ -1,5 +1,5 @@
 //
-// <copyright file="ComputationNetwork.cpp" company="Microsoft">
+// <copyright file="ComputationNetworkEditing.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //

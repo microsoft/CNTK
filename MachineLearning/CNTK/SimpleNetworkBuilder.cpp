@@ -1,5 +1,5 @@
 //
-// <copyright file="ComputationNode.cpp" company="Microsoft">
+// <copyright file="SimpleNetworkBuilder.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
