@@ -76,6 +76,9 @@ protected:
         virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientForChildren() instead
         virtual void OnComputeGradientEndIteration() override;
         virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        // TODO: should the following be virtualized, too?
+        const wstring & NodeName() const { return m_sourceNode->NodeName(); }   // TODO: why not return a const wchar_t* again?
+        bool IsFuncValueOlderThanInputs() const;
     public:
         std::vector<ComputationNodeBasePtr> m_recurrentNodes;               // all nodes involved in this loop, in evaluation order
         std::vector<ComputationNodeBasePtr> m_recurrentNodesRedundantCopy;  // all nodes involved in this loop, differing from m_recurrentNodes in unknown form, probably should be deleted. Only used inside ComputationNetworkAnalysis.cpp.
@@ -109,8 +112,8 @@ protected:
         virtual void OnComputeGradientEndIteration() override { }
         virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
     public:
-        OuterLoopNode(/*const*/ std::vector<RecurrentFlowControlNode> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
-        std::list<ComputationNodeBasePtr> m_outerNodes;             // all top-level nodes, in evaluation order. Nested nodes are tucked inside FlowControlNodes.
+        OuterLoopNode(/*const*/ std::vector<shared_ptr<RecurrentFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
+        std::list<shared_ptr<IComputationNode>> m_outerNodes;             // all top-level nodes, in evaluation order. Nested nodes are tucked inside FlowControlNodes.
     };
 
 public:
@@ -638,6 +641,7 @@ public:
     // and for a set of nodes
     void StartEvaluateMinibatchLoop(const ComputationNodeBasePtr & rootNode)  // (ugly name; meant to be unique so we can rename if needed)
     {
+        // TODO: do we need to reset time stamps?
         BuildAndValidateSubNetwork(rootNode);
     }
     template<class NODESET>
