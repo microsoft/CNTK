@@ -50,8 +50,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             fprintf (stderr, "Evaluate Node: %s\n",(msra::strfun::utf8 ((*nodeIter)->NodeName())).c_str());
 #endif
 
-        for (int i = 0; i < m_recurrentInfo.size(); i++)
-            m_recurrentInfo[i].m_completedEvaluate = false;
+        // TODO: change this to a time stamp to make it consistent with PAR mode
+        for (auto & recInfo : m_recurrentInfo)
+            recInfo.m_completedEvaluate = false;
+
+        // TODO: remove m_recurrentNodesRedundantCopy if we can
+        for (const auto & recInfo : m_recurrentInfo)
+            if (recInfo.m_recurrentNodesRedundantCopy != recInfo.m_recurrentNodes)
+                LogicError("Evaluate: mismatch of m_recurrentNodesRedundantCopy for node %ls %ls", recInfo.m_sourceNode->NodeName().c_str(), recInfo.m_sourceNode->OperationName().c_str());
 
         // traverse all nodes in the pre-determined evaluation order
         for (auto & node : allNodes)
@@ -62,7 +68,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             RecurrentInfo * recInfo = FindInRecurrentLoops(node);   // check if this node participates in a recurrent loop
 
-            if (recInfo && IsFuncValueOlderThanInputs(recInfo->m_recurrentNodesForForward) && !recInfo->m_completedEvaluate)
+            if (recInfo && IsFuncValueOlderThanInputs(recInfo->m_recurrentNodes) && !recInfo->m_completedEvaluate)
             {
 #if 1
                 recInfo->UpdateFunctionMBSize();
@@ -71,7 +77,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 recInfo->OnEvaluateEndIteration();
 #else
                 // node participates in a recurrent loop: process the loop frame by frame
-                const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+                const auto & recurrentNodes = recInfo->m_recurrentNodes;
 
                 // get layout associated with this loop
                 auto pMBLayout = recurrentNodes[0]->GetMBLayout();
@@ -146,27 +152,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // implementations of loop unrolling
     /*virtual*/ void ComputationNetwork::RecurrentInfo::UpdateFunctionMBSize() /*override*/
     {
-        for (auto & node2 : m_recurrentNodesForForward)
+        for (auto & node2 : m_recurrentNodes)
             node2->UpdateFunctionMBSize(); // TODO: for sequence-to-sequence models we will need to be able to grow this step by step since size is unknown upfront
     }
 
     /*virtual*/ void ComputationNetwork::RecurrentInfo::OnEvaluateBeginIteration() /*override*/
     {
         // get layout associated with this loop
-        auto pMBLayout = m_recurrentNodesForForward[0]->GetMBLayout();
+        auto pMBLayout = m_recurrentNodes[0]->GetMBLayout();
 
         // tell all that loop is about to commence
-        for (auto & node2 : m_recurrentNodesForForward)
+        for (auto & node2 : m_recurrentNodes)
         {
             if (!pMBLayout || node2->GetMBLayout() != pMBLayout)  // take the opportunity to check that layout is shared by all nodes in the loop
                 LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
-                            node2->NodeName().c_str(), m_recurrentNodesForForward[0]->NodeName().c_str());
+                            node2->NodeName().c_str(), m_recurrentNodes[0]->NodeName().c_str());
             node2->OnEvaluateBeginIteration();
         }
 
         // since we share memory we need to resize function value matrices correctly
         // TODO: No, Validate() should only run as a prep stage. This will go away once we separate dimension inference and actual resizing.
-        for (auto & node2 : m_recurrentNodesForForward)
+        for (auto & node2 : m_recurrentNodes)
             node2->Validate(true);
     }
 
@@ -178,13 +184,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // get layout associated with this loop
         // All nodes share the same layout.
-        auto pMBLayout = m_recurrentNodesForForward[0]->GetMBLayout();
+        auto pMBLayout = m_recurrentNodes[0]->GetMBLayout();
 
         // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
         FrameRangeIteration range(pMBLayout, m_steppingDirection);
         for (auto t = range.begin(); t != range.end(); t++)
         {
-            for (auto & node2 : m_recurrentNodesForForward)
+            for (auto & node2 : m_recurrentNodes)
             {
                 //fprintf(stderr, "EvaluateThisNode %d %ls %ls\n", (int)t.timeIdxInSeq, node2->NodeName().c_str(), node2->OperationName().c_str());
                 node2->EvaluateThisNode(t);
@@ -199,7 +205,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /*virtual*/ void ComputationNetwork::RecurrentInfo::OnEvaluateEndIteration() /*override*/
     {
         // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
-        for (auto & node2 : m_recurrentNodesForForward)
+        for (auto & node2 : m_recurrentNodes)
             node2->OnEvaluateEndIteration();
     }
 
@@ -259,7 +265,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     recInfo->ComputeGradientForChildren(FrameRange(node->GetMBLayout()), true, true);
                     recInfo->OnComputeGradientEndIteration();
 #else
-                    const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+                    const auto & recurrentNodes = recInfo->m_recurrentNodes;
                     for (auto & node2 : recurrentNodes)
                         node2->OnComputeGradientBeginIteration();
                     auto pMBLayout = recurrentNodes[0]->GetMBLayout();
@@ -310,13 +316,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // called before first iteration step of ComputeGradient()
     /*virtual*/ void ComputationNetwork::RecurrentInfo::OnComputeGradientBeginIteration() /*override*/
     {
-        for (auto & node2 : m_recurrentNodesForForward)
+        for (auto & node2 : m_recurrentNodes)
             node2->OnComputeGradientBeginIteration();
     }
     /*virtual*/ void ComputationNetwork::RecurrentInfo::ComputeGradientForChildren(const FrameRange &, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
     {
         childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
-        const auto & recurrentNodes = m_recurrentNodesForForward;       // BUGBUG: -ForForward?? Does this mean we can remove non-ForForward?
+        const auto & recurrentNodes = m_recurrentNodes;       // BUGBUG: -ForForward?? Does this mean we can remove non-ForForward?
         auto pMBLayout = recurrentNodes[0]->GetMBLayout();
         FrameRangeIteration range(pMBLayout, m_steppingDirection);
         for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iteration
@@ -342,7 +348,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /*virtual*/ void ComputationNetwork::RecurrentInfo::OnComputeGradientEndIteration() /*override*/
     {
 #ifdef OPT_OUTER_GRADIENT
-        for (auto nodeIter2 = m_recurrentNodesForForward.rbegin(); nodeIter2 != m_recurrentNodesForForward.rend(); ++nodeIter2)
+        for (auto nodeIter2 = m_recurrentNodes.rbegin(); nodeIter2 != m_recurrentNodes.rend(); ++nodeIter2)
         {
             auto & node2 = *nodeIter2;
             // BUGBUG: The following can no longer be done after this code was moved into RecurrentInfo
@@ -350,10 +356,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //if (IsNodeReqMultiSeqHandling(node2))
             //    node2->MaskMissingGradientColumnsToZero(t);
             // TODO: exclude children that are not part of the recurrent loop, and do thise below, separately.
-            node2->ComputeGradientForChildren(FrameRange(m_recurrentNodesForForward[0]->GetMBLayout()), false/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
+            node2->ComputeGradientForChildren(FrameRange(m_recurrentNodes[0]->GetMBLayout()), false/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
         }
 #endif
-        for (auto & node2 : m_recurrentNodesForForward)
+        for (auto & node2 : m_recurrentNodes)
             node2->OnComputeGradientEndIteration();
     }
 
@@ -368,7 +374,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // look in all recurrent loops of the network
         // TODO: Check for IsPartOfLoop(). Also why not store the loop id in the node for direct lookup?
         for (auto & iter : m_recurrentInfo)
-            if (std::find(iter.m_recurrentNodes.begin(), iter.m_recurrentNodes.end(), node) != iter.m_recurrentNodes.end())
+            if (std::find(iter.m_recurrentNodesRedundantCopy.begin(), iter.m_recurrentNodesRedundantCopy.end(), node) != iter.m_recurrentNodesRedundantCopy.end())
                 return &iter;
         return nullptr;  // not part of a recurrent loop
     }
@@ -716,7 +722,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 assert(recInfo != nullptr);
                 if (recInfo->m_completedEvaluate == false)
                 {
-                    const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+                    const auto & recurrentNodes = recInfo->m_recurrentNodes;
                     for (auto &nodeLoopIter : recurrentNodes)
                     {
                         nodeLoopIter->RequestMatricesBeforeEval(m_matrixPool);
@@ -780,7 +786,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RecurrentInfo * recInfo = FindInRecurrentLoops(n);
                 if (recInfo && recInfo->m_completedGradient == false)
                 {
-                    const auto & recurrentNodes = recInfo->m_recurrentNodesForForward;
+                    const auto & recurrentNodes = recInfo->m_recurrentNodes;
                     //loops are computed sample by sample so we have to allocate them all 
                     for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                     {
