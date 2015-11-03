@@ -123,6 +123,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UnaryStandardNode(Sigmoid, z)
         UnaryStandardNode(Softmax, z)
         BinaryStandardNode(SquareError, aMatrix, anotherMatrix)
+        BinaryStandardNode(Logistic, ClassLabels, ClassOneProbabilities)
         //BinaryStandardNode(StrideTimesNode)
         //BinaryStandardNode(SumColumnElementsNode)
         UnaryStandardNode(SumElements, matrix)

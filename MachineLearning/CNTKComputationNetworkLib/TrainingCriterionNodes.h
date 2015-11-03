@@ -38,7 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
 #if 1
-            auto gradient = Inputs(0)->GradientSlice(frameRange);
+            auto gradient = Inputs(inputIndex)->GradientSlice(frameRange);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 1.0f : -1.0f, GradientValues()/*1x1*/, *m_leftMinusRight, 1.0f, gradient);
 #else
             if (inputIndex == 0)
@@ -1574,4 +1574,318 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class SequenceWithSoftmaxNode<float>;
     template class SequenceWithSoftmaxNode<double>;
+
+
+	//calculates: -sum(left_i * log(right_i) + (1-left_i) * log(1-right_i))
+	template<class ElemType>
+	class LogisticNode : public ComputationNode<ElemType>
+	{
+		UsingComputationNodeMembers;
+	public:
+		LogisticNode(const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+			: ComputationNode<ElemType>(m_deviceId), m_classZeroLabels(m_deviceId),
+			m_result(m_deviceId), m_temp(m_deviceId)
+		{
+			m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+			m_deviceId = deviceId;
+			MoveMatricesToDevice(deviceId);
+			InitRecurrentNode();
+		}
+
+		LogisticNode(File& fstream, const size_t modelVersion, const DEVICEID_TYPE deviceId = AUTOPLACEMATRIX, const std::wstring name = L"")
+			: ComputationNode<ElemType>(m_deviceId), m_classZeroLabels(m_deviceId),
+			m_result(m_deviceId), m_temp(m_deviceId)
+		{
+			m_nodeName = (name == L"" ? CreateUniqNodeName() : name);
+			LoadFromFile(fstream, modelVersion, deviceId);
+		}
+
+		virtual const std::wstring OperationName() const { return TypeName(); }
+		static const std::wstring TypeName() { return L"Logistic"; }
+
+		virtual void ComputeInputPartial(const size_t inputIndex)
+		{
+			if (inputIndex != 1)
+				throw std::invalid_argument("LogisticNode requires only the second input to require a derivative.");
+
+			//left Node must be a scalar
+			if (m_children.size() == 2)
+			{
+				ComputeInputPartialRight(m_temp, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(),
+					GradientValues(), m_classZeroLabels, m_result);
+			}
+			else
+			{
+				ComputeInputPartialRight(m_temp, Inputs(0)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(inputIndex)->GradientValues(),
+					GradientValues(), m_classZeroLabels, m_result);
+			}
+
+		}
+
+		virtual void ComputeInputPartial(const size_t /*inputIndex*/, const size_t /*timeIdxInSeq*/)
+		{
+			throw std::logic_error("Logistic node should never be in a loop.");
+		}
+
+		static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& temp, const Matrix<ElemType>& input0,
+			Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+			Matrix<ElemType>& classZeroLabels, Matrix<ElemType>& result)
+		{
+			// Create vector with 1 for class 1, and -1 for class 0
+			temp.AssignDifferenceOf(input0, classZeroLabels);
+
+			// divide class by p (class 1) or (1-p) (class 0)
+			temp.AssignElementDivisionOf(temp, result);
+
+			Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), temp, inputGradientValues);
+		}
+
+		static void WINAPI ComputeInputPartialRight(Matrix<ElemType>& temp,
+			const Matrix<ElemType>& input0, const Matrix<ElemType>& weights,
+			Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+			Matrix<ElemType>& classZeroLabels, Matrix<ElemType>& result)
+		{
+			// Create vector with 1 for class 1, and -1 for class 0
+			temp.AssignDifferenceOf(input0, classZeroLabels);
+
+			// Multiply the vector by the weights
+			temp.AssignElementProductOf(temp, weights);
+
+			// divide class by p (class 1) or (1-p) (class 0)
+			temp.AssignElementDivisionOf(temp, result);
+			Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), temp, inputGradientValues);
+		}
+
+		virtual void EvaluateThisNode()   //-sum(left * log(right) + (1-left)*log(1-right)) (optionally * weight)
+		{
+			if (m_children.size() == 2)
+			{
+				EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(),
+					m_classZeroLabels, m_result, m_temp);
+			}
+			else {
+				EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), Inputs(2)->FunctionValues(),
+					m_classZeroLabels, m_result, m_temp);
+			}
+		}
+
+		virtual void EvaluateThisNode(const size_t /*timeIdxInSeq*/)
+		{
+			throw std::logic_error("Logistic node should never be in a loop.");
+		}
+
+		static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& classOneLabels, const Matrix<ElemType>& classOneProbabilities,
+			Matrix<ElemType>& classZeroLabels, Matrix<ElemType>& result, Matrix<ElemType>& logResult)
+		{
+			Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
+
+			// compute the indices for the class 0 indices
+			classZeroLabels.AssignDifferenceOf(ones, classOneLabels);
+
+			/* We're computing result = y*p + (1-y)*(1-p) = 2*y*p + (1-y) - p */
+
+			/* First compute result = y*p */
+			result.AssignElementProductOf(classOneLabels, classOneProbabilities);
+
+			/* Now compute result = 2*y*p */
+			result.AssignProductOf((ElemType)2.0, result);
+
+			/* Now compute result = 2*y*p + (1-y) */
+			result.AssignSumOf(result, classZeroLabels);
+
+			/* Finally compute result = 2*y*p + (1-y) - p */
+			result.AssignDifferenceOf(result, classOneProbabilities);
+
+			// compute the log, resulting in y*log(p) + (1-y)*log(1-p)
+			logResult.AssignLogOf(result);
+
+			// The error is the negative of the sum of the result
+			functionValues.AssignSumOfElements(logResult);
+			functionValues *= (-1);
+
+		}
+
+		static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Matrix<ElemType>& classOneLabels, const Matrix<ElemType>& classOneProbabilities,
+			const Matrix<ElemType>& weights, Matrix<ElemType>& classZeroLabels, Matrix<ElemType>& result, Matrix<ElemType>& logResult)
+		{
+			Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
+
+			// compute the indices for the class 0 indices
+			classZeroLabels.AssignDifferenceOf(ones, classOneLabels);
+
+			/* We're computing result = weight*(y*p + (1-y)*(1-p) = 2*y*p + (1-y) - p) */
+
+			/* First compute result = y*p */
+			result.AssignElementProductOf(classOneLabels, classOneProbabilities);
+
+			/* Now compute result = 2*y*p */
+			result.AssignProductOf((ElemType)2.0, result);
+
+			/* Now compute result = 2*y*p + (1-y) */
+			result.AssignSumOf(result, classZeroLabels);
+
+			/* Finally compute result = 2*y*p + (1-y) - p */
+			result.AssignDifferenceOf(result, classOneProbabilities);
+
+			// compute the log, resulting in y*log(p) + (1-y)*log(1-p)
+			logResult.AssignLogOf(result);
+
+			// The error is the negative of the sum of the result
+			functionValues.AssignInnerProductOf(weights, logResult, false);
+			functionValues *= (-1);
+
+		}
+
+		virtual void Validate()
+		{
+			PrintSelfBeforeValidation();
+
+			if (m_children.size() != 2 && m_children.size() != 3)
+				throw std::logic_error("LogisticNode criterion requires two or three inputs.");
+
+			if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
+				throw std::logic_error("LogisticNode criterion requires the first input to be the label.");
+
+			//we may release the constraint that the first operant is an inputValue later so the following code should be kept
+			size_t index = 0;
+			if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+			{
+				size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
+				size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
+				Inputs(index)->FunctionValues().Resize(rows, cols);
+			}
+
+			index = 1;
+			if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+			{
+				size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
+				size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
+				Inputs(index)->FunctionValues().Resize(rows, cols);
+			}
+
+			if (m_children.size() == 3)
+			{
+				index = 2;
+				if (Inputs(index)->OperationName() == LearnableParameter<ElemType>::TypeName())
+				{
+					size_t rows = Inputs(index)->FunctionValues().GetNumRows() == 0 ? Inputs(1 - index)->FunctionValues().GetNumRows() : Inputs(index)->FunctionValues().GetNumRows();
+					size_t cols = Inputs(index)->FunctionValues().GetNumCols() == 0 ? Inputs(1 - index)->FunctionValues().GetNumCols() : Inputs(index)->FunctionValues().GetNumCols();
+					Inputs(index)->FunctionValues().Resize(rows, cols);
+				}
+			}
+
+			if (Inputs(0)->FunctionValues().GetNumElements() == 0 || Inputs(1)->FunctionValues().GetNumElements() == 0)
+				throw std::logic_error("LogisticNode operation: one of the operants has 0 element.");
+
+			if (m_children.size() == 3)
+			{
+				if (Inputs(2)->FunctionValues().GetNumElements() == 0)
+					throw std::logic_error("LogisticNode operation: one of the operants has 0 element.");
+			}
+
+			if (!(Inputs(0)->FunctionValues().GetNumRows() == Inputs(1)->FunctionValues().GetNumRows() &&  //match size
+				Inputs(0)->FunctionValues().GetNumCols() == Inputs(1)->FunctionValues().GetNumCols()))
+			{
+				throw std::logic_error("The Matrix<ElemType>  dimension in the LogisticNode operation does not match.");
+			}
+			if (m_children.size() == 3)
+			{
+				if (!(Inputs(2)->FunctionValues().GetNumRows() == Inputs(0)->FunctionValues().GetNumRows() &&  //match size
+					Inputs(2)->FunctionValues().GetNumCols() == Inputs(0)->FunctionValues().GetNumCols()))
+				{
+					throw std::logic_error("The Matrix<ElemType>  dimension in the LogisticNode operation does not match.");
+				}
+			}
+
+			FunctionValues().Resize(1, 1);
+			InferImageDimsFromInputs();
+
+			m_classZeroLabels.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+			m_result.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+			m_temp.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
+		}
+
+		virtual void InferImageDimsFromInputs()
+		{
+			InferImageDimsFromInput(0, false);
+
+			m_outputChannels = 1;
+			m_outputWidth = 1;
+			m_outputHeight = 1;
+		}
+
+		//leftNode should be the empirical
+		virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction)
+		{
+			m_children.resize(2);
+			m_children[0] = label;
+			m_children[1] = prediction;
+		}
+
+		virtual void AttachInputs(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr weights)
+		{
+			m_children.resize(3);
+			m_children[0] = label;
+			m_children[1] = prediction;
+			m_children[2] = weights;
+		}
+
+		virtual void MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
+		{
+			ComputationNode<ElemType>::MoveMatricesToDevice(deviceId);
+
+			if (deviceId != AUTOPLACEMATRIX)
+			{
+				if (m_classZeroLabels.GetDeviceId() != deviceId)
+				{
+					m_classZeroLabels.TransferFromDeviceToDevice(m_classZeroLabels.GetDeviceId(), deviceId, true);
+				}
+				if (m_result.GetDeviceId() != deviceId)
+				{
+					m_result.TransferFromDeviceToDevice(m_result.GetDeviceId(), deviceId, true);
+				}
+				if (m_temp.GetDeviceId() != deviceId)
+				{
+					m_temp.TransferFromDeviceToDevice(m_temp.GetDeviceId(), deviceId, true);
+				}
+			}
+		}
+
+		virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+		{
+			ComputationNode<ElemType>::CopyTo(nodeP, newName, flags);
+			LogisticNode<ElemType>* node = (LogisticNode<ElemType>*) nodeP;
+
+			if (flags & CopyNodeFlags::copyNodeValue)
+			{
+				node->m_classZeroLabels = m_classZeroLabels;
+				node->m_result = m_result;
+				node->m_temp = m_temp;
+			}
+		}
+
+		// copy constructor
+		LogisticNode(const LogisticNode<ElemType>* node, const std::wstring& newName, const CopyNodeFlags flags)
+			: ComputationNode<ElemType>(node->m_deviceId), m_classZeroLabels(node->m_deviceId),
+			m_result(node->m_deviceId), m_temp(node->m_deviceId)
+		{
+			node->CopyTo(this, newName, flags);
+		}
+
+		virtual ComputationNodePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) const
+		{
+			const std::wstring& name = (newName == L"") ? NodeName() : newName;
+
+			ComputationNodePtr node = new LogisticNode<ElemType>(this, name, flags);
+			return node;
+		}
+
+	protected:
+		Matrix<ElemType> m_classZeroLabels;
+		Matrix<ElemType> m_result;
+		Matrix<ElemType> m_temp;
+	};
+
+	template class LogisticNode<float>;
+	template class LogisticNode<double>;
 }}}
