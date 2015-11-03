@@ -46,11 +46,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto & recInfo : m_recurrentInfo)
             recInfo->m_completedEvaluate = false;
 
-        // TODO: remove m_recurrentNodesRedundantCopy if we can
-        for (const auto & recInfo : m_recurrentInfo)
-            if (recInfo->m_recurrentNodesRedundantCopy != recInfo->m_recurrentNodes)
-                LogicError("Evaluate: mismatch of m_recurrentNodesRedundantCopy for node %ls %ls", recInfo->m_sourceNode->NodeName().c_str(), recInfo->m_sourceNode->OperationName().c_str());
-
         // traverse all nodes in the pre-determined evaluation order
 // #define USE_OUTER_LOOP_NODE     // once this is working then get rid of this #define
 #ifdef USE_OUTER_LOOP_NODE
