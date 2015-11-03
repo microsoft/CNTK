@@ -127,22 +127,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
             // left input is scalar
-            if (inputIndex == 0)  // left derivative
+            if (inputIndex == 0)  //left derivative
             {
 #if DUMPOUTPUT
                 *m_logSoftmaxOfRight.Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
                 GradientValues().Print("CrossEntropyWithSoftmax Partial-gradientValues");
                 Inputs(0)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
 #endif
+
                 auto gradient = Inputs(0)->GradientSlice(frameRange);
                 //Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_logSoftmaxOfRight, gradient);
                 Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, GradientValues()/*1x1*/, *m_logSoftmaxOfRight, 1.0f, gradient);
 #if DUMPOUTPUT
                 Inputs(0)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
 #endif
-            }
+
+        }
+
             else if (inputIndex == 1)  // right derivative
-            {
+        {
 #if DUMPOUTPUT
                 *m_softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
                 Inputs(0)->ValueSlice(frameRange).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
@@ -192,6 +195,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
+
             m_outputImageLayout = ImageLayout();
         }
 
@@ -493,6 +497,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_outputImageLayout = ImageLayout();
         }
+
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     };
@@ -662,6 +667,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0, false);
             m_outputImageLayout = ImageLayout();
         }
+
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
@@ -914,6 +920,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_needRecomputeGradientToSoftmaxInput = true;
         }
 
+
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
@@ -943,6 +950,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_outputImageLayout = ImageLayout();
         }
+
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
@@ -1061,7 +1069,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     DataSliceWithMBLayout(mBeta,  sequenceRange, Inputs(0)->GetMBLayout()),
                                     Inputs(2)->ValueSlice(frameRange),
                                     gradient,
-                                    mStartLbl, 1);
+                        mStartLbl, 1);
                 }
             }
             else
@@ -1281,7 +1289,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (inputIndex == 1)
                 LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
             else if (inputIndex == 2)
-            {
+        {
                 auto gradient = Inputs(2)->GradientSlice(frameRange);
                 //Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Inputs(1)->ValueSlice(frameRange), gradient);
                 Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, GradientValues()/*1x1*/, Inputs(1)->ValueSlice(frameRange), 1.0f, gradient);
@@ -1342,7 +1350,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     /// SequenceWithSoftmaxNode (label, prediction, loglikelihood)
     // word-lattice based sequence training criterion
-    // BUGBUG: Not yet converted to memshare conventions.
     // BUGBUG: Likely not very useful since it uses an MS-proprietary lattice-archive format
     //         that requires Frank's DBN.exe tool to create. The inner C++ code for conversion
     //         is in this repo (latticearchive.h), but not the outer main program.
@@ -1355,8 +1362,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"SequenceWithSoftmax"; }
     public:
         SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
-            m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_framesDroppedMask(deviceId), m_gammaCalcInitialized(false)
+            Base(deviceId, name), m_gammaCalcInitialized(false)
         {
         }
         
@@ -1367,12 +1373,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
-                ComputeInputPartialLeft(m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
+                ComputeInputPartialLeft(*m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
             }
             else if (inputIndex == 1)
             {
-                ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_gammaFromLattice,
-                    m_fsSmoothingWeight, m_frameDropThreshold);
+                ComputeInputPartialRight(*m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(),
+                                         GradientValues(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
 #ifdef _DEBUG
                 Inputs(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Inputs(inputIndex)->GetMBLayout()));
 #endif
@@ -1390,8 +1396,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("SequenceWithSoftmaxNode criterion only takes with respect to label, DNN output and log likelihood.");
         }
 
-        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
-            const Matrix<ElemType>& gradientValues)
+        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             logSoftmaxOfRight.Print("SequenceWithSoftmaxNode Partial-logSoftmaxOfRight");
@@ -1407,8 +1412,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType> & gammaFromLattice,
-            double hsmoothingWeight, double frameDropThresh)
+                                                    Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+                                                    const Matrix<ElemType> & gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
         {
 #if DUMPOUTPUT
             softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
@@ -1439,13 +1444,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_gammaCalcInitialized = true;
             }
             //softmax
-            m_logSoftmaxOfRight.AssignLogSoftmaxOf(Inputs(1)->FunctionValues()/*prediction*/, true);
-            m_softmaxOfRight.SetValue(m_logSoftmaxOfRight);
-            m_softmaxOfRight.InplaceExp();
+            m_logSoftmaxOfRight->AssignLogSoftmaxOf(Inputs(1)->FunctionValues()/*prediction*/, true);
+            m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            m_softmaxOfRight->InplaceExp();
 
-            m_gammaFromLattice.SwitchToMatrixType(m_softmaxOfRight.GetMatrixType(), m_softmaxOfRight.GetFormat(), false);
-            m_gammaFromLattice.Resize(m_softmaxOfRight.GetNumRows(), m_softmaxOfRight.GetNumCols());
-            m_gammaCalculator.calgammaformb(FunctionValues(), m_lattices, Inputs(2)->FunctionValues()/*log LLs*/, Inputs(0)->FunctionValues()/*labels*/, m_gammaFromLattice, m_uids, m_boundaries, Inputs(1)->GetNumParallelSequences(), Inputs(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
+            m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
+            m_gammaFromLattice->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
+            m_gammaCalculator.calgammaformb(FunctionValues(), m_lattices, Inputs(2)->FunctionValues()/*log LLs*/,
+                                            Inputs(0)->FunctionValues()/*labels*/, *m_gammaFromLattice,
+                                            m_uids, m_boundaries, Inputs(1)->GetNumParallelSequences(),
+                                            Inputs(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
             
 #if NANCHECK
             FunctionValues().HasNan("SequenceWithSoftmaxNode");
@@ -1475,10 +1483,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_pMBLayout = nullptr;  // no layout
             InferImageDimsFromInputs();
 
-            m_logSoftmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-            m_softmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-            m_gammaFromLattice.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-            m_framesDroppedMask.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             m_gammatime = 0;
             m_partialtime = 0;
         }
@@ -1498,16 +1502,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(nodeP);
 
-                node->m_logSoftmaxOfRight = m_logSoftmaxOfRight;
-                node->m_softmaxOfRight = m_softmaxOfRight;
-                node->m_gammaFromLattice = m_gammaFromLattice;
-                node->m_framesDroppedMask = m_framesDroppedMask;
+                *node->m_logSoftmaxOfRight = *m_logSoftmaxOfRight;
+                *node->m_softmaxOfRight = *m_softmaxOfRight;
+                *node->m_gammaFromLattice = *m_gammaFromLattice;
                 node->m_fsSmoothingWeight = m_fsSmoothingWeight;
                 node->m_frameDropThreshold = m_frameDropThreshold;
                 node->m_doReferenceAlignment = m_doReferenceAlignment;
             }
         }
 
+        //request matrices needed to do node function value evaluation
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeEval(matrixPool);
+            RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
+            RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
+            RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
+        }
         // TODO: method names should be CamelCase
         std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> * getLatticePtr()
         {
@@ -1553,10 +1564,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-        Matrix<ElemType> m_logSoftmaxOfRight;
-        Matrix<ElemType> m_softmaxOfRight;
-        Matrix<ElemType> m_gammaFromLattice;
-        Matrix<ElemType> m_framesDroppedMask;
+        shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
+        shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
+        shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
         double m_frameDropThreshold;
         double m_fsSmoothingWeight;         // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
         bool m_doReferenceAlignment;
