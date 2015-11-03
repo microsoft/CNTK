@@ -56,6 +56,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // traverse all nodes in the pre-determined evaluation order
         for (auto & node : allNodes)
         {
+            FrameRange frameRange(node->GetMBLayout());
+
             // --- if this node is part of a recurrence, evaluate all nodes that participate in this loop
 
             RecurrentInfo * recInfo = FindInRecurrentLoops(node);   // check if this node participates in a recurrent loop
@@ -65,7 +67,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if 1
                 recInfo->UpdateFunctionMBSize();
                 recInfo->OnEvaluateBeginIteration();
-                recInfo->EvaluateThisNode(FrameRange(node->GetMBLayout()));
+                recInfo->EvaluateThisNode(frameRange);
                 recInfo->OnEvaluateEndIteration();
 #else
                 // node participates in a recurrent loop: process the loop frame by frame
@@ -127,9 +129,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if (!node->IsLeaf() && !node->RequiresPreCompute())
                     node->Validate(true);                   // BUGBUG: Validate() should not be called during evaluation. This is meant to update m_functionValues' size in case of sharing.
                 node->OnEvaluateBeginIteration();
-                node->EvaluateThisNode(FrameRange(node->GetMBLayout()));
+                //fprintf(stderr, "EvaluateThisNode %d %ls %ls\n", -1, node->NodeName().c_str(), node->OperationName().c_str());
+                node->EvaluateThisNode(frameRange);
                 if (IsNodeReqMultiSeqHandling(node))
-                    node->MaskMissingValuesColumnsToZero(FrameRange(node->GetMBLayout()));
+                    node->MaskMissingValuesColumnsToZero(frameRange);
                 node->OnEvaluateEndIteration();
                 node->UpdateEvalTimeStamp();
             }
@@ -183,6 +186,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             for (auto & node2 : m_recurrentNodesForForward)
             {
+                //fprintf(stderr, "EvaluateThisNode %d %ls %ls\n", (int)t.timeIdxInSeq, node2->NodeName().c_str(), node2->OperationName().c_str());
                 node2->EvaluateThisNode(t);
                 // TODO: this cannot be done since it is stored in the network now
                 //if (IsNodeReqMultiSeqHandling(node2))
