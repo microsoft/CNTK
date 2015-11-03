@@ -82,6 +82,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(SigmoidNode))	            return New<SigmoidNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SoftmaxNode))	            return New<SoftmaxNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SquareErrorNode))	    return New<SquareErrorNode<ElemType>>(deviceId, name);
+        else if (nodeType == OperationNameOf(LogisticNode))	    return New<LogisticNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(StrideTimesNode))	    return New<StrideTimesNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SumColumnElementsNode))   return New<SumColumnElementsNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SumElementsNode))	    return New<SumElementsNode<ElemType>>(deviceId, name);
@@ -293,6 +294,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return net.AddNodeToNetAndAttachInputs(New<SquareErrorNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
     }
 
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Logistic(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+    {
+        return net.AddNodeToNetAndAttachInputs(New<LogisticNode<ElemType>>(net.GetDeviceId(), nodeName), a, b);
+    }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName)
     {
