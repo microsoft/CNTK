@@ -1179,6 +1179,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
 #endif
 
+                    //fprintf(stderr, "ComputeInputPartial %d %d %ls %ls\n", (int)frameRange.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
                     ComputeInputPartial(i, frameRange);     // this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
