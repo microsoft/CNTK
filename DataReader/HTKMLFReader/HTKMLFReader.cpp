@@ -1096,8 +1096,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 m_sentenceEnd[i] = false;
                                 m_switchFrame[i] = m_mbNumTimeSteps+1;
-                                if (m_processedFrame[i] == 1)
-                                    m_pMBLayout->SetWithoutOr(i, 0, MinibatchPackingFlags::SequenceEnd);   // TODO: shouldn't both Start and End be set? TODO: can we just use Set()?
                             }
                             else
                             {
