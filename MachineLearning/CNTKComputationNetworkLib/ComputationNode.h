@@ -123,6 +123,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void PrintSelfBeforeValidation() const = 0;             // called in validation loop right before Validate()
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const = 0;
+    protected:
+        virtual ~IComputationNode() { }
     };
 
     // =======================================================================
