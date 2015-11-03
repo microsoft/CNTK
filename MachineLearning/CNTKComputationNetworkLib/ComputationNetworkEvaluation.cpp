@@ -47,7 +47,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             recInfo->m_completedEvaluate = false;
 
         // traverse all nodes in the pre-determined evaluation order
-// #define USE_OUTER_LOOP_NODE     // once this is working then get rid of this #define
+#define USE_OUTER_LOOP_NODE     // once this is working then get rid of this #define
 #ifdef USE_OUTER_LOOP_NODE
         OuterLoopNode outerLoopNode(m_recurrentInfo, GetEvalOrder(rootNode, false));
         outerLoopNode.EvaluateThisNode(FrameRange(nullptr));
@@ -181,12 +181,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
 
 #ifdef USE_OUTER_LOOP_NODE
-        // sanity check
+#if 1
+        // sanity check   --TODO: remove this once this has been found to not trigger for a while (it should be--EnumerateNodes() just reverses its result when called by GetGradientCalcOrder(). Which makes a lot of sense.)
         auto evalOrder = GetEvalOrder(rootNode, false);
         auto gradOrder = GetGradientCalcOrder(rootNode);
         evalOrder.reverse();
         if (evalOrder != gradOrder)
             LogicError("ComputeGradient: Gradient computation order must be reverse of evaluation order.");
+#endif
 
         OuterLoopNode outerLoopNode(m_recurrentInfo, GetEvalOrder(rootNode, false));
         outerLoopNode.ComputeGradientForChildren(FrameRange(nullptr), true, true);
@@ -350,10 +352,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             if (recInfo)
             {
+                assert(!recInfo->m_completedGradient);
                 if (!recInfo->m_completedGradient)  // TODO: this should not be necessary; change to an assert()
                 {
                     pnode->OnComputeGradientBeginIteration();
-                    pnode->ComputeGradientForChildren(frameRange.WithLayout(node->GetMBLayout()), true, true);
+                    pnode->ComputeGradientForChildren(frameRange.WithLayout(recInfo->m_sourceNode->GetMBLayout()), true, true);
                     pnode->OnComputeGradientEndIteration();
                     recInfo->m_completedGradient = true;
                 }
