@@ -137,6 +137,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("ValidateInferChildDims: Inferred matrix must not be empty.");
             Inputs(i)->Resize(rows, cols);
             Inputs(i)->Validate(true);  // validate it properly
+            // BUGBUG: ^^ Validate() calls are under the control of ValidateSubNetwork(). E.g. it checks whether something has changed & re-validates until there is no change. If we validate here, the change goes unnoticed.
             // big BUGBUG: This should do random initialization.
             Inputs(i)->FunctionValues().SetValue(0);
             fprintf(stderr, "ValidateInferChildDims: %ls %ls operation inferred, resized to (%d x %d), and (incorrectly) initialized to 0.\n", Inputs(i)->NodeName().c_str(), Inputs(i)->OperationName().c_str(), (int)rows, (int)cols);
