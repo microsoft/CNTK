@@ -56,15 +56,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto & iter : m_recurrentInfo)
         {
             size_t max_visitedOrderInLoop = 0;
-            for (auto itr = iter.m_recurrentNodesRedundantCopy.begin(); itr != iter.m_recurrentNodesRedundantCopy.end(); itr++)
-                if (max_visitedOrderInLoop < (*itr)->m_visitedOrder)
-                    max_visitedOrderInLoop = (*itr)->m_visitedOrder;
-            for (auto itr = iter.m_recurrentNodesRedundantCopy.begin(); itr != iter.m_recurrentNodesRedundantCopy.end(); itr++)
-                (*itr)->m_visitedOrder = max_visitedOrderInLoop;
+            // TODO: I am sure there is an STL algorithm for this.
+            for (auto itr : iter->m_recurrentNodesRedundantCopy)
+                if (max_visitedOrderInLoop < itr->m_visitedOrder)
+                    max_visitedOrderInLoop = itr->m_visitedOrder;
+            for (auto itr : iter->m_recurrentNodesRedundantCopy)
+                itr->m_visitedOrder = max_visitedOrderInLoop;
         }
 
         // implant m_loopId in all nodes in all loops
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+        for (auto & iter : m_recurrentInfo)
         {
             // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
             // it is done in the mergerecurrentloops function, but just keep the code       --TODO: why?? Why not rather verify the order?
@@ -75,16 +76,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (auto & node : iter->m_recurrentNodesRedundantCopy)
             {
                 node->m_isPartOfLoop = true;        // this is the only flag in ComputationNode that escapes FormRecurrentLoops()!
+                // TODO: ^^ We should instead remember a pointer to our loop sentinel
                 node->m_loopId = iter->m_loopId;
             }
         }
 
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)
+        for (auto & iter : m_recurrentInfo)
         {
             // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R   --TODO: is this comment correct?
-            iter->m_recurrentNodes.clear();
-            // BUGBUG: ^^ wrong one being cleared!
-
             list<ComputationNodeBasePtr> result;
             unordered_set<ComputationNodeBasePtr> visited;
             unordered_set<ComputationNodeBasePtr> recStack;
@@ -100,7 +99,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         node->OperationName() != OperationNameOf(PastValueNode) &&
                         node->OperationName() != OperationNameOf(FutureValueNode))     // TODO: test for type RecurrentNode instead?
                     {
-                        node->Inputs(i)->m_indexInLoop = node->Inputs(i)->m_indexInLoop + 1;
+                        node->Inputs(i)->m_indexInLoop = node->Inputs(i)->m_indexInLoop + 1;        // BUGBUG: this is bumping up the m_indexInLoop, but I don't think it is initialized anywhere. i-1?
                     }
                 }
             }
@@ -114,6 +113,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // TODO: this loop seems to just reverse the list
             //       m_recurrentNodes = reverse(result)
+            iter->m_recurrentNodes.clear();
             for (size_t i = 0; i < iter->m_recurrentNodesRedundantCopy.size(); i++)
             {
                 iter->m_recurrentNodes.push_back(result.front());
@@ -160,9 +160,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // log the loops
         for (auto & iter : m_recurrentInfo)
         {
-            fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter.m_loopId, iter.m_sourceNode->NodeName().c_str(), (int)iter.m_recurrentNodesRedundantCopy.size());
+            fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter->m_loopId, iter->m_sourceNode->NodeName().c_str(), (int)iter->m_recurrentNodesRedundantCopy.size());
             size_t n = 0;
-            for (auto itr = iter.m_recurrentNodesRedundantCopy.begin(); itr != iter.m_recurrentNodesRedundantCopy.end(); itr++)
+            for (auto itr = iter->m_recurrentNodesRedundantCopy.begin(); itr != iter->m_recurrentNodesRedundantCopy.end(); itr++)
             {
                 if (n++ % 3 == 0)
                     fprintf(stderr, "\n");
@@ -220,9 +220,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // if we closed a loop then create an entry in m_recurrentInfo
         if (cur->m_lowLink == cur->m_index)   // m_lowLink is still equal to m_index, as we set it at the start of this function: we closed a loop
         {
-            RecurrentInfo rInfo;
-            rInfo.m_loopId = loopId;
-            rInfo.m_sourceNode = cur;               // source node is the node with low link equal to index
+            RecurrentFlowControlNode rInfo(loopId, cur);
             for (;;)
             {
                 ComputationNodeBasePtr w = sccStack.back();
@@ -235,33 +233,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (rInfo.m_recurrentNodesRedundantCopy.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
             {
                 loopId++;
-                rInfo.ResetInfoState();             // init for use      --TODO: does this have to be a method?
-                m_recurrentInfo.push_back(rInfo);
+                m_recurrentInfo.push_back(make_shared<RecurrentFlowControlNode>(move(rInfo)));
             }
         }
     }
 
     // purge identical loops (i.e. loops that have the same source node)
+    // TODO: Why not do this where we push a loop into m_recurrentInfo?
     void ComputationNetwork::UniqRecurrentLoops()
     {
         if (m_recurrentInfo.size() <= 1)
             return;
 
         // uniq the m_recurrentInfo array w.r.t. m_sourceNode
-        vector<RecurrentInfo> m_recurrentInfoTmp;
-        for (auto iter = m_recurrentInfo.begin(); iter != m_recurrentInfo.end(); iter++)    // enumerate all loops
+        vector<shared_ptr<RecurrentFlowControlNode>> m_recurrentInfoTmp;
+        for (const auto & iter : m_recurrentInfo)    // enumerate all loops
         {
             bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
-            for (auto iter2 = m_recurrentInfoTmp.begin(); iter2 != m_recurrentInfoTmp.end(); iter2++)
+            for (const auto & iter2 : m_recurrentInfoTmp)
             {
-                if ((*iter2).m_sourceNode == (*iter).m_sourceNode)
+                if ((*iter2).m_sourceNode == iter->m_sourceNode)
                 {
                     bFound = true;
                     break;
                 }
             }
             if (!bFound)
-                m_recurrentInfoTmp.push_back(*iter);
+                m_recurrentInfoTmp.push_back(iter);
         }
         m_recurrentInfo = move(m_recurrentInfoTmp);
     }
@@ -339,15 +337,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         vector<bool> accessed(m_recurrentInfo.size(), false);
         for (auto nodeIter = nodes.begin(); nodeIter != nodes.end(); nodeIter++)
         {
-            const RecurrentInfo * recInfo = FindInRecurrentLoops(*nodeIter);
+            const shared_ptr<RecurrentFlowControlNode> recInfo = FindInRecurrentLoops(m_recurrentInfo, *nodeIter);
             if (recInfo)
             {
                 int iId = recInfo->m_loopId;
                 if (!accessed[iId])
                 {
-                    newList.insert(newList.end(),
-                                   m_recurrentInfo[iId].m_recurrentNodesRedundantCopy.begin(),
-                                   m_recurrentInfo[iId].m_recurrentNodesRedundantCopy.end());
+                    newList.insert(newList.end(), recInfo->m_recurrentNodesRedundantCopy.begin(), recInfo->m_recurrentNodesRedundantCopy.end());
                     accessed[iId] = true;
                 }
             }
@@ -380,26 +376,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             bool hasPastValueNode = false;
             bool hasFutureValueNode = false;
 
-            if (rInfo.m_recurrentNodesRedundantCopy.size() > 0)
+            if (rInfo->m_recurrentNodesRedundantCopy.size() > 0)    // TODO: why this check? And why are the above vars not inside the block?
             {
-                for (size_t j = 0; j < rInfo.m_recurrentNodesRedundantCopy.size(); j++)
+                for (auto & node : rInfo->m_recurrentNodesRedundantCopy)
                 {
-                    ComputationNodeBasePtr node = rInfo.m_recurrentNodesRedundantCopy[j];
-
                     if (node->OperationName() == OperationNameOf(PastValueNode))
                         hasPastValueNode = true;
                     else if (node->OperationName() == OperationNameOf(FutureValueNode))
                         hasFutureValueNode = true;
                 }
 
-                if (hasPastValueNode && hasFutureValueNode)
-                    InvalidArgument("It is not allowed to have both PastValue and FutureValue nodes in the same loop. How is that going to work anyway.");
-                else if (!hasPastValueNode && !hasFutureValueNode)
-                    LogicError("There is neither PastValue nor FutureValue nodes in the loop.");
-                else if (hasPastValueNode)
-                    rInfo.m_steppingDirection = +1;
+                if (hasPastValueNode && !hasFutureValueNode)
+                    rInfo->m_steppingDirection = +1;
+                else if (hasFutureValueNode && !hasPastValueNode)
+                    rInfo->m_steppingDirection = -1;
+                else if (hasPastValueNode && hasFutureValueNode)
+                    InvalidArgument("It is not allowed to have both PastValue and FutureValue nodes in the same loop. How do you think that should work??");
                 else
-                    rInfo.m_steppingDirection = -1;
+                    LogicError("There is neither PastValue nor FutureValue nodes in the loop.");
             }
         }
     }
