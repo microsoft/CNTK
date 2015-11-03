@@ -87,9 +87,6 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_20,sm_20;compute_30,sm_30;%(CodeGeneration)</CodeGeneration>
     </CudaCompile>
-    <PostBuildEvent>
-      <Command>xcopy /Y $(SolutionDir)$(Platform)\$(Configuration)\*.dll $(OutDir)</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -113,9 +110,6 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(BOOST_LIB_PATH);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
-    <PostBuildEvent>
-      <Command>xcopy /Y $(SolutionDir)$(Platform)\$(Configuration)\*.dll $(OutDir)</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -145,5 +139,13 @@
   </ImportGroup>
   <Target Name="CheckDependencies">
     <Warning Condition="!$(HasBoost)" Text="MathTests requires Boost 1.55 or higher to build. Skipping the build. Please install the library from http://boost.org and set BOOST_INCLUDE_PATH environment variable to boost headers directory and BOOST_LIB_PATH to boost lib directory." />
+  </Target>
+  <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
+    <ItemGroup >
+      <UnitTestDependencies Include="$(OutDir)..\cntkmath.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libif*.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\cuda*.dll;$(OutDir)..\svml_*.dll"/>
+    </ItemGroup>
+    <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
+      <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
+    </Copy>
   </Target>
 </Project>
