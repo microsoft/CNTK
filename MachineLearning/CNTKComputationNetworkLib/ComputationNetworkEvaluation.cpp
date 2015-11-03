@@ -150,180 +150,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
     }
 
-#ifdef USE_OUTER_LOOP_NODE
-    // implementation of outer loop
-    ComputationNetwork::OuterLoopNode::OuterLoopNode(/*const*/ std::vector<shared_ptr<RecurrentFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes/*must be in eval order*/)
-    {
-        // traverse the network in evaluation order and create a new list that replaces all recurrence by a RecurrentFlowControlNode
-        set<shared_ptr<IComputationNode>> loopsSeen;  // for consistency check only
-        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); )
-        {
-            shared_ptr<RecurrentFlowControlNode> recInfo = FindInRecurrentLoops(recurrentInfo, *nodeIter);   // check if this node participates in a recurrent loop
-            if (recInfo)            // node is part of a SEQ loop: gather all of them. The nodes must be consecutive in 'allNodes'
-            {
-                // instead of the node itself, include the sentinel RecurrentFlowControlNode in our list
-                m_outerNodes.push_back(recInfo);
-                // and verify that we only encountered the loop once (all nodes should have been consecutive)
-                if (!loopsSeen.insert(recInfo).second)
-                    LogicError("OuterLoopNode: members of loop %ls are not consecutive in node list.", recInfo->NodeName().c_str());
-                // consume all nodes that are part of the same loop (they are all consecutive)
-                while (nodeIter != allNodes.end() && (*nodeIter)->IsPartOfLoop() && FindInRecurrentLoops(recurrentInfo, *nodeIter) == recInfo)
-                    nodeIter++;
-            }
-            else                    // regular top-level node (non-looping, PAR)
-            {
-                m_outerNodes.push_back(*nodeIter);
-                nodeIter++;         // and consume this node
-            }
-        }
-    }
-    /*virtual*/ void ComputationNetwork::OuterLoopNode::EvaluateThisNode(const FrameRange & frameRange) /*override*/
-    {
-        for (auto & pnode : m_outerNodes)
-        {
-            auto recInfo = dynamic_pointer_cast<RecurrentFlowControlNode>(pnode);
-            auto node = dynamic_pointer_cast<ComputationNodeBase>(pnode);
-            // TODO: This ^^ is not nice.
-            //       We are close but not finished with unifying. Eventually, there must be no if statement below.
-
-            // --- if this node is part of a recurrence, evaluate all nodes that participate in this loop
-
-            if (recInfo && recInfo->IsFuncValueOlderThanInputs() && !recInfo->m_completedEvaluate)
-            {
-                pnode->UpdateFunctionMBSize();
-                pnode->OnEvaluateBeginIteration();
-                pnode->EvaluateThisNode(frameRange.WithLayout(recInfo->m_sourceNode->GetMBLayout()));
-                pnode->OnEvaluateEndIteration();
-                recInfo->m_completedEvaluate = true;
-            }
-
-            // --- not recurrent: do the whole batch (unless it's already done, e.g. because the node participated in a recurren ttloop)
-
-            else if (!recInfo && node->IsFuncValueOlderThanInputs())
-            {
-                // evaluate the node for all frames concurrently (map)
-                // we manage time stamp here so that derived classes don't need to worry about it
-                pnode->UpdateFunctionMBSize();
-                if (!node->IsLeaf() && !node->RequiresPreCompute())
-                    node->Validate(true);                   // BUGBUG: Validate() should not be called during evaluation. This is meant to update m_functionValues' size in case of sharing.
-                pnode->OnEvaluateBeginIteration();
-                //fprintf(stderr, "EvaluateThisNode %d %ls %ls\n", -1, node->NodeName().c_str(), node->OperationName().c_str());
-                pnode->EvaluateThisNode(frameRange.WithLayout(node->GetMBLayout()));
-                //if (IsNodeReqMultiSeqHandling(node))
-                //    node->MaskMissingValuesColumnsToZero(frameRange);
-                pnode->OnEvaluateEndIteration();
-                node->UpdateEvalTimeStamp();
-            }
-#ifdef _DEBUG
-            else if (node)
-                node->OnEvaluateEndIteration();  // HACK: performs NaN check, but does nothing else
-#endif
-        }
-    }
-
-    /*virtual*/ void ComputationNetwork::OuterLoopNode::ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
-    {
-        childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
-        // TODO: finish this
-        // process nodes in pre-determined order
-        for (auto inode = m_outerNodes.rbegin(); inode != m_outerNodes.rend(); inode++)   // iterate backwards over evaluation order
-        {
-            auto pnode = *inode;
-            auto recInfo = dynamic_pointer_cast<RecurrentFlowControlNode>(pnode);
-            auto node = dynamic_pointer_cast<ComputationNodeBase>(pnode);
-
-            // --- first, perform recurrent loops if this node participates in one
-
-            if (recInfo)
-            {
-                if (!recInfo->m_completedGradient)  // TODO: this should not be necessary; change to an assert()
-                {
-                    pnode->OnComputeGradientBeginIteration();
-                    pnode->ComputeGradientForChildren(frameRange.WithLayout(node->GetMBLayout()), true, true);
-                    pnode->OnComputeGradientEndIteration();
-                    recInfo->m_completedGradient = true;
-                }
-            }
-
-            // --- second, do whole-batch operation if not recurrent
-
-            else
-            {
-                pnode->OnComputeGradientBeginIteration();
-                //if (IsNodeReqMultiSeqHandling(node))    // (TODO: This will go away.)
-                //{
-                //    // batch is done only for feed-forward nodes
-                //    if (node->IsPartOfLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
-                //        LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
-                //    node->MaskMissingGradientColumnsToZero(FrameRange(node->GetMBLayout()));
-                //}
-                pnode->ComputeGradientForChildren(frameRange.WithLayout(node->GetMBLayout()), true, true);
-                pnode->OnComputeGradientEndIteration();
-            }
-        }
-    }
-#endif
-
-    // implementations of loop unrolling
-    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::UpdateFunctionMBSize() /*override*/
-    {
-        for (auto & node2 : m_recurrentNodes)
-            node2->UpdateFunctionMBSize(); // TODO: for sequence-to-sequence models we will need to be able to grow this step by step since size is unknown upfront
-    }
-
-    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::OnEvaluateBeginIteration() /*override*/
-    {
-        // get layout associated with this loop
-        auto pMBLayout = m_recurrentNodes[0]->GetMBLayout();
-
-        // tell all that loop is about to commence
-        for (auto & node2 : m_recurrentNodes)
-        {
-            if (!pMBLayout || node2->GetMBLayout() != pMBLayout)  // take the opportunity to check that layout is shared by all nodes in the loop
-                LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
-                            node2->NodeName().c_str(), m_recurrentNodes[0]->NodeName().c_str());
-            node2->OnEvaluateBeginIteration();
-        }
-
-        // since we share memory we need to resize function value matrices correctly
-        // TODO: No, Validate() should only run as a prep stage. This will go away once we separate dimension inference and actual resizing.
-        for (auto & node2 : m_recurrentNodes)
-            node2->Validate(true);
-    }
-
-    // evaluation of a RecurrentFlowControlNode FlowControlNode
-    // This evaluates all nodes in this FlowControlNode in SEQ mode: process the loop frame by frame in a nested loop.
-    // This is where the time axis changes.
-    // TODO: Once we do nested loops, then the FrameRange argument to this will refer to the outer loop.
-    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::EvaluateThisNode(const FrameRange &) /*override*/
-    {
-        // get layout associated with this loop
-        // All nodes share the same layout.
-        auto pMBLayout = m_recurrentNodes[0]->GetMBLayout();
-
-        // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
-        FrameRangeIteration range(pMBLayout, m_steppingDirection);
-        for (auto t = range.begin(); t != range.end(); t++)
-        {
-            for (auto & node2 : m_recurrentNodes)
-            {
-                //fprintf(stderr, "EvaluateThisNode %d %ls %ls\n", (int)t.timeIdxInSeq, node2->NodeName().c_str(), node2->OperationName().c_str());
-                node2->EvaluateThisNode(t);
-                // TODO: this cannot be done since it is stored in the network now
-                //if (IsNodeReqMultiSeqHandling(node2))
-                //    node2->MaskMissingValuesColumnsToZero(t);
-                node2->UpdateEvalTimeStamp();
-            }
-        } 
-    }
-
-    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::OnEvaluateEndIteration() /*override*/
-    {
-        // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
-        for (auto & node2 : m_recurrentNodes)
-            node2->OnEvaluateEndIteration();
-    }
-
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
     // TODO: pass a set of nodes instead of only one?
     // TODO: remove Evaluate() from here, instead call it at call site, and in here merely check whether everything is computed already
@@ -440,6 +266,183 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ResetEvalTimeStamp();
     }
 
+    template void ComputationNetwork::ComputeGradient<float>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<float>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
+    template void ComputationNetwork::ComputeGradient<double>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<double>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
+
+#ifdef USE_OUTER_LOOP_NODE
+    // implementation of OuterLoopNode (implements outer loop over non-recurrent nodes)
+    ComputationNetwork::OuterLoopNode::OuterLoopNode(/*const*/ std::vector<shared_ptr<RecurrentFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes/*must be in eval order*/)
+    {
+        // traverse the network in evaluation order and create a new list that replaces all recurrence by a RecurrentFlowControlNode
+        set<shared_ptr<IComputationNode>> loopsSeen;  // for consistency check only
+        for (auto nodeIter = allNodes.begin(); nodeIter != allNodes.end(); )
+        {
+            shared_ptr<RecurrentFlowControlNode> recInfo = FindInRecurrentLoops(recurrentInfo, *nodeIter);   // check if this node participates in a recurrent loop
+            if (recInfo)            // node is part of a SEQ loop: gather all of them. The nodes must be consecutive in 'allNodes'
+            {
+                // instead of the node itself, include the sentinel RecurrentFlowControlNode in our list
+                m_outerNodes.push_back(recInfo);
+                // and verify that we only encountered the loop once (all nodes should have been consecutive)
+                if (!loopsSeen.insert(recInfo).second)
+                    LogicError("OuterLoopNode: members of loop %ls are not consecutive in node list.", recInfo->NodeName().c_str());
+                // consume all nodes that are part of the same loop (they are all consecutive)
+                while (nodeIter != allNodes.end() && (*nodeIter)->IsPartOfLoop() && FindInRecurrentLoops(recurrentInfo, *nodeIter) == recInfo)
+                    nodeIter++;
+            }
+            else                    // regular top-level node (non-looping, PAR)
+            {
+                m_outerNodes.push_back(*nodeIter);
+                nodeIter++;         // and consume this node
+            }
+        }
+    }
+    /*virtual*/ void ComputationNetwork::OuterLoopNode::EvaluateThisNode(const FrameRange & frameRange) /*override*/
+    {
+        for (auto & pnode : m_outerNodes)
+        {
+            auto recInfo = dynamic_pointer_cast<RecurrentFlowControlNode>(pnode);
+            auto node = dynamic_pointer_cast<ComputationNodeBase>(pnode);
+            // TODO: This ^^ is not nice.
+            //       We are close but not finished with unifying. Eventually, there must be no if statement below.
+
+            // --- if this node is part of a recurrence, evaluate all nodes that participate in this loop
+
+            if (recInfo && recInfo->IsFuncValueOlderThanInputs() && !recInfo->m_completedEvaluate)
+            {
+                pnode->UpdateFunctionMBSize();
+                pnode->OnEvaluateBeginIteration();
+                pnode->EvaluateThisNode(frameRange.WithLayout(recInfo->m_sourceNode->GetMBLayout()));
+                pnode->OnEvaluateEndIteration();
+                recInfo->m_completedEvaluate = true;
+            }
+
+            // --- not recurrent: do the whole batch (unless it's already done, e.g. because the node participated in a recurren ttloop)
+
+            else if (!recInfo && node->IsFuncValueOlderThanInputs())
+            {
+                // evaluate the node for all frames concurrently (map)
+                // we manage time stamp here so that derived classes don't need to worry about it
+                pnode->UpdateFunctionMBSize();
+                if (!node->IsLeaf() && !node->RequiresPreCompute())
+                    node->Validate(true);                   // BUGBUG: Validate() should not be called during evaluation. This is meant to update m_functionValues' size in case of sharing.
+                pnode->OnEvaluateBeginIteration();
+                //fprintf(stderr, "EvaluateThisNode %d %ls %ls\n", -1, node->NodeName().c_str(), node->OperationName().c_str());
+                pnode->EvaluateThisNode(frameRange.WithLayout(node->GetMBLayout()));
+                //if (IsNodeReqMultiSeqHandling(node))
+                //    node->MaskMissingValuesColumnsToZero(frameRange);
+                pnode->OnEvaluateEndIteration();
+                node->UpdateEvalTimeStamp();
+            }
+#ifdef _DEBUG
+            else if (node)
+                node->OnEvaluateEndIteration();  // HACK: performs NaN check, but does nothing else
+#endif
+        }
+    }
+
+    /*virtual*/ void ComputationNetwork::OuterLoopNode::ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
+    {
+        childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
+        // TODO: finish this
+        // process nodes in pre-determined order
+        for (auto inode = m_outerNodes.rbegin(); inode != m_outerNodes.rend(); inode++)   // iterate backwards over evaluation order
+        {
+            auto pnode = *inode;
+            auto recInfo = dynamic_pointer_cast<RecurrentFlowControlNode>(pnode);
+            auto node = dynamic_pointer_cast<ComputationNodeBase>(pnode);
+
+            // --- first, perform recurrent loops if this node participates in one
+
+            if (recInfo)
+            {
+                if (!recInfo->m_completedGradient)  // TODO: this should not be necessary; change to an assert()
+                {
+                    pnode->OnComputeGradientBeginIteration();
+                    pnode->ComputeGradientForChildren(frameRange.WithLayout(node->GetMBLayout()), true, true);
+                    pnode->OnComputeGradientEndIteration();
+                    recInfo->m_completedGradient = true;
+                }
+            }
+
+            // --- second, do whole-batch operation if not recurrent
+
+            else
+            {
+                pnode->OnComputeGradientBeginIteration();
+                //if (IsNodeReqMultiSeqHandling(node))    // (TODO: This will go away.)
+                //{
+                //    // batch is done only for feed-forward nodes
+                //    if (node->IsPartOfLoop()) // (this test was moved out from MaskMissingGradientColumnsToZero(void), it is likely unnecessary)
+                //        LogicError("Evaluate: Applying whole-MB operation to node that participates in a loop. This is likely wrong.");
+                //    node->MaskMissingGradientColumnsToZero(FrameRange(node->GetMBLayout()));
+                //}
+                pnode->ComputeGradientForChildren(frameRange.WithLayout(node->GetMBLayout()), true, true);
+                pnode->OnComputeGradientEndIteration();
+            }
+        }
+    }
+#endif
+
+    // implementations of RecurrentFlowControlNode (loop unrolling)
+    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::UpdateFunctionMBSize() /*override*/
+    {
+        for (auto & node2 : m_recurrentNodes)
+            node2->UpdateFunctionMBSize(); // TODO: for sequence-to-sequence models we will need to be able to grow this step by step since size is unknown upfront
+    }
+
+    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::OnEvaluateBeginIteration() /*override*/
+    {
+        // get layout associated with this loop
+        auto pMBLayout = m_recurrentNodes[0]->GetMBLayout();
+
+        // tell all that loop is about to commence
+        for (auto & node2 : m_recurrentNodes)
+        {
+            if (!pMBLayout || node2->GetMBLayout() != pMBLayout)  // take the opportunity to check that layout is shared by all nodes in the loop
+                LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
+                            node2->NodeName().c_str(), m_recurrentNodes[0]->NodeName().c_str());
+            node2->OnEvaluateBeginIteration();
+        }
+
+        // since we share memory we need to resize function value matrices correctly
+        // TODO: No, Validate() should only run as a prep stage. This will go away once we separate dimension inference and actual resizing.
+        for (auto & node2 : m_recurrentNodes)
+            node2->Validate(true);
+    }
+
+    // evaluation of a RecurrentFlowControlNode FlowControlNode
+    // This evaluates all nodes in this FlowControlNode in SEQ mode: process the loop frame by frame in a nested loop.
+    // This is where the time axis changes.
+    // TODO: Once we do nested loops, then the FrameRange argument to this will refer to the outer loop.
+    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::EvaluateThisNode(const FrameRange &) /*override*/
+    {
+        // get layout associated with this loop
+        // All nodes share the same layout.
+        auto pMBLayout = m_recurrentNodes[0]->GetMBLayout();
+
+        // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
+        FrameRangeIteration range(pMBLayout, m_steppingDirection);
+        for (auto t = range.begin(); t != range.end(); t++)
+        {
+            for (auto & node2 : m_recurrentNodes)
+            {
+                //fprintf(stderr, "EvaluateThisNode %d %ls %ls\n", (int)t.timeIdxInSeq, node2->NodeName().c_str(), node2->OperationName().c_str());
+                node2->EvaluateThisNode(t);
+                // TODO: this cannot be done since it is stored in the network now
+                //if (IsNodeReqMultiSeqHandling(node2))
+                //    node2->MaskMissingValuesColumnsToZero(t);
+                node2->UpdateEvalTimeStamp();
+            }
+        } 
+    }
+
+    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::OnEvaluateEndIteration() /*override*/
+    {
+        // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
+        for (auto & node2 : m_recurrentNodes)
+            node2->OnEvaluateEndIteration();
+    }
+
     // called before first iteration step of ComputeGradient()
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::OnComputeGradientBeginIteration() /*override*/
     {
@@ -489,9 +492,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto & node2 : m_recurrentNodes)
             node2->OnComputeGradientEndIteration();
     }
-
-    template void ComputationNetwork::ComputeGradient<float>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<float>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
-    template void ComputationNetwork::ComputeGradient<double>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<double>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
 
     // find if node is part of a recurrent loop; and return the loop id
     // If found then return a pointer to the list of nodes of this loop.
