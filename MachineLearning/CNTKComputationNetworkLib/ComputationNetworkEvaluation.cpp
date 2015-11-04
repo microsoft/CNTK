@@ -29,11 +29,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: pass a set of nodes instead of only one
     // TODO: rename to ForwardProp()? To make it very clear?
     // This calls EvaluateThisNode() on all nodes in order of data flow through the network.
-    // By default, the network is applied concurrently on all frames in a minibatch in parallel (a "map" operation)
+    // By default, the network is applied concurrently on all frames in a minibatch in parallel (PAR mode, a "map" operation)
     // Recurrent loops deviate:
     //  - a recurrent loop is the loop of nodes that make up computation for one time step (e.g. Times -> Plus -> Sigmoid -> Delay)
     //  - these must be executed frame by frame rather than as a map
-    //  - such a loop is treated as if they were a little nested network; this is done inside here
+    //  - such a loop is treated as if they were a little nested network; this is done inside RecurrentFlowControlNodes
     //  - these little nested networks are defined in m_recurrentInfo[]
     void ComputationNetwork::Evaluate(const ComputationNodeBasePtr & rootNode)
     {
@@ -43,14 +43,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             LogicError("Evaluate for node %ls %ls: BuildAndValidateSubNetwork() has not been called on this node.");
 
         // TODO: change this to a time stamp to make it consistent with PAR mode
+        // TODO: No, this is no longer needed with OuterLoopNode. Keep it for now to verify this through runtime checks.
         for (auto & recInfo : m_recurrentInfo)
             recInfo->m_completedEvaluate = false;
 
         // traverse all nodes in the pre-determined evaluation order
 #define USE_OUTER_LOOP_NODE     // once this is working then get rid of this #define
 #ifdef USE_OUTER_LOOP_NODE
-        OuterLoopNode outerLoopNode(m_recurrentInfo, GetEvalOrder(rootNode, false));
-        outerLoopNode.EvaluateThisNode(FrameRange(nullptr));
+        GetOuterLoopNode(rootNode)->EvaluateThisNode(FrameRange(nullptr));
 #else
         // determines order of evaluation, such that children get evaluated before their parent nodes
         std::list<ComputationNodeBasePtr>& allNodes = GetEvalOrder(rootNode, false);
@@ -148,7 +148,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // MAIN ENTRY POINT for evaluation followed by gradient computation (forward prop then back prop)
     // TODO: pass a set of nodes instead of only one?
     // TODO: remove Evaluate() from here, instead call it at call site, and in here merely check whether everything is computed already
-    // BUGBUG: The decision to loop (SEQ execution) is made by parent, but some children can be executer PAR. It should be possible to detect this.
     template<class ElemType>
     void ComputationNetwork::ComputeGradient(const ComputationNodeBasePtr rootNode,         // training criterion to compute the gradients for
                                              bool bResetToOne,                              // true if reset the gradient of rootnode to 1.0  --This is the default.
@@ -181,17 +180,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             dynamic_pointer_cast<ComputationNode<ElemType>>(rootNode)->GradientValues().SetValue(*rootGradientInitValue);
 
 #ifdef USE_OUTER_LOOP_NODE
-#if 1
-        // sanity check   --TODO: remove this once this has been found to not trigger for a while (it should be--EnumerateNodes() just reverses its result when called by GetGradientCalcOrder(). Which makes a lot of sense.)
-        auto evalOrder = GetEvalOrder(rootNode, false);
-        auto gradOrder = GetGradientCalcOrder(rootNode);
-        evalOrder.reverse();
-        if (evalOrder != gradOrder)
-            LogicError("ComputeGradient: Gradient computation order must be reverse of evaluation order.");
-#endif
-
-        OuterLoopNode outerLoopNode(m_recurrentInfo, GetEvalOrder(rootNode, false));
-        outerLoopNode.ComputeGradientForChildren(FrameRange(nullptr), true, true);
+        GetOuterLoopNode(rootNode)->ComputeGradientForChildren(FrameRange(nullptr), true, true);
 #else
         // run backprop pass
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
@@ -299,38 +288,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
     /*virtual*/ void ComputationNetwork::OuterLoopNode::EvaluateThisNode(const FrameRange & frameRange) /*override*/
     {
-        for (auto & pnode : m_outerNodes)
+        for (auto & node : m_outerNodes)
         {
-            auto recInfo = dynamic_pointer_cast<RecurrentFlowControlNode>(pnode);
-            auto node = dynamic_pointer_cast<ComputationNodeBase>(pnode);
-            assert(node);
-            // TODO: This ^^ is not nice.
-            //       We are close but not finished with unifying. Eventually, there must be no if statement below.
-
 #if 1
 #if 1
-            bool isFuncValueOlderThanInputs = node->IsFuncValueOlderThanInputs();
+            if (node->IsFuncValueOlderThanInputs())
 #else
             bool isFuncValueOlderThanInputs =
                 (recInfo && recInfo->IsFuncValueOlderThanInputs()) ||           // TODO: abstract this out into a virtual function
                 (node && node->IsFuncValueOlderThanInputs());
-#endif
             if (isFuncValueOlderThanInputs)
+#endif
             {
-                MBLayoutPtr pMBLayout = recInfo ? recInfo->m_sourceNode->GetMBLayout() : node->GetMBLayout();   // TODO: abstract this out to a virtual function
+                auto recInfo = dynamic_pointer_cast<RecurrentFlowControlNode>(node);
+                if (recInfo)
+                    assert(recInfo->m_sourceNode->GetMBLayout() == node->GetMBLayout());
 
                 if (recInfo)
                     assert(!recInfo->m_completedEvaluate);      // TODO: not needed anymore, I think
 
-                pnode->UpdateFunctionMBSize();
+                node->UpdateFunctionMBSize();
 
                 // BUGBUG: IsLeaf() for RecurrentFlowControlNode returns false because that node has no children. So we get lucky here. Otherwise it would fail in Validate(). Fix this by getting rid of the Validate() call here.
                 if (node && !node->IsLeaf() && !node->RequiresPreCompute())
                     node->Validate(true);                       // BUGBUG: Validate() should not be called during evaluation. This is meant to update m_functionValues' size in case of sharing.
 
-                pnode->OnEvaluateBeginIteration();
-                pnode->EvaluateThisNode(frameRange.WithLayout(pMBLayout));
-                pnode->OnEvaluateEndIteration();
+                node->OnEvaluateBeginIteration();
+                node->EvaluateThisNode(frameRange.WithLayout(node->GetMBLayout()));
+                node->OnEvaluateEndIteration();
 
                 if (recInfo)
                     recInfo->m_completedEvaluate = true;
@@ -377,23 +362,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /*virtual*/ void ComputationNetwork::OuterLoopNode::ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
     {
         childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
-        // TODO: finish this
         // process nodes in pre-determined order
-        for (auto inode = m_outerNodes.rbegin(); inode != m_outerNodes.rend(); inode++)   // iterate backwards over evaluation order
+        for (auto pnode = m_outerNodes.rbegin(); pnode != m_outerNodes.rend(); pnode++)   // iterate backwards over evaluation order
         {
-            auto pnode = *inode;
-            auto recInfo = dynamic_pointer_cast<RecurrentFlowControlNode>(pnode);
-            auto node = dynamic_pointer_cast<ComputationNodeBase>(pnode);
+            auto & node = *pnode;
 
 #if 1
-            MBLayoutPtr pMBLayout = recInfo ? recInfo->m_sourceNode->GetMBLayout() : node->GetMBLayout();   // TODO: abstract this out to a virtual function
+            auto recInfo = dynamic_pointer_cast<RecurrentFlowControlNode>(node);
+            if (recInfo)
+                assert(recInfo->m_sourceNode->GetMBLayout() == node->GetMBLayout());
 
             if (recInfo)
                 assert(!recInfo->m_completedGradient);  // TODO: not needed anymore, I think
 
-            pnode->OnComputeGradientBeginIteration();
-            pnode->ComputeGradientForChildren(frameRange.WithLayout(pMBLayout), true, true);
-            pnode->OnComputeGradientEndIteration();
+            node->OnComputeGradientBeginIteration();
+            node->ComputeGradientForChildren(frameRange.WithLayout(node->GetMBLayout()), true, true);
+            node->OnComputeGradientEndIteration();
 
             if (recInfo)
                 recInfo->m_completedGradient = true;
@@ -778,6 +762,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ValidateNodes(nodes, true/*isFinalValidationPass*/, toValidate);
         if (toValidate != 0)
             LogicError("ValidateSubNetwork: ValidateNodes(true) unexpectedly returned with work left to do.");
+
+        // propagate some info to RecurrentFlowControlNode
+        // TODO: In the future we should validate not on the flat list but the OuterLoopNode structure. Then this will be unnecessary.
+        for (auto & recInfo : m_recurrentInfo)
+        {
+            auto & node = recInfo->m_sourceNode;
+            recInfo->m_needsGradient = node->m_needsGradient;
+            recInfo->LinkToMBLayout(node->GetMBLayout());
+        }
 
         for (auto & node : nodes)
         {
