@@ -117,6 +117,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CPUSparseMatrixTests.cpp" />
+    <ClCompile Include="DebugUtil.cpp" />
+    <ClCompile Include="MatrixFileWriteReadTests.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
@@ -142,8 +144,8 @@
     <Warning Condition="!$(HasBoost)" Text="MathTests requires Boost 1.55 or higher to build. Skipping the build. Please install the library from http://boost.org and set BOOST_INCLUDE_PATH environment variable to boost headers directory and BOOST_LIB_PATH to boost lib directory." />
   </Target>
   <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
-    <ItemGroup >
-      <UnitTestDependencies Include="$(OutDir)..\cntkmath.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\cuda*.dll;$(OutDir)..\svml_dispmd.dll"/>
+    <ItemGroup>
+      <UnitTestDependencies Include="$(OutDir)..\cntkmath.dll;$(OutDir)..\libacml_mp_dll.dll;$(OutDir)..\libifcoremd.dll;$(OutDir)..\libifportmd.dll;$(OutDir)..\libiomp*.dll;$(OutDir)..\libmmd.dll;$(OutDir)..\cuda*.dll;$(OutDir)..\svml_dispmd.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
       <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
