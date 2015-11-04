@@ -110,8 +110,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CPUSparseMatrixUnitTests.cpp" />
-    <ClCompile Include="GPUMatrixcuBLASTests.cpp" />
-    <ClCompile Include="GPUMatrixUnitTests.cpp" />
     <ClCompile Include="GPUSparseMatrixUnitTests.cpp" />
     <ClCompile Include="GPUWatcherTests.cpp" />
     <ClCompile Include="MatrixBLASTests.cpp" />
