@@ -62,7 +62,7 @@ class ComputationNetwork : public ScriptableObjects::Object, public ScriptableOb
 protected:
     // recurrent loops in CNTK are like little local ComputationNetworks, but stored in a completely separate set of structures
     // This structure stores that little sub-network.
-    class RecurrentFlowControlNode : public FlowControlNode, public TimeStamp
+    class RecurrentFlowControlNode : public FlowControlNode
     {
     public:
         // next steps:
@@ -103,7 +103,7 @@ protected:
 
     // entire network is represented by this
     // This is the outer loop over the network nodes in PAR mode.
-    class OuterLoopNode : public FlowControlNode, public TimeStamp
+    class OuterLoopNode : public FlowControlNode
     {
     public:
         virtual const std::wstring OperationName() const override { return L"OuterLoopNode"; }
@@ -123,6 +123,7 @@ protected:
     public:
         OuterLoopNode(/*const*/ std::vector<shared_ptr<RecurrentFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
         std::list<shared_ptr<IComputationNode>> m_outerNodes;             // all top-level nodes, in evaluation order. Nested nodes are tucked inside FlowControlNodes.
+        // TODO: make a vector, then share with m_recurrentNodes
     };
 
 public:
@@ -650,6 +651,11 @@ public:
     // and for a set of nodes
     void StartEvaluateMinibatchLoop(const ComputationNodeBasePtr & rootNode)  // (ugly name; meant to be unique so we can rename if needed)
     {
+#if 0
+        // TODO: allocation does not belong here. This is called e.g. after loading. Memory should be allocated only when actually evaluating.
+        // TODO: move into StartEvaluateMinibatchLoop(), but that is called for output nodes individually--can the process handle that?
+        AllocateEvalMatrices(rootNode);
+#endif
         // TODO: do we need to reset time stamps?
         BuildAndValidateSubNetwork(rootNode);
     }

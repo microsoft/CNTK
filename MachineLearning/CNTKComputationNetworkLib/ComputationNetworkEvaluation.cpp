@@ -303,6 +303,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             auto recInfo = dynamic_pointer_cast<RecurrentFlowControlNode>(pnode);
             auto node = dynamic_pointer_cast<ComputationNodeBase>(pnode);
+            assert(node);
             // TODO: This ^^ is not nice.
             //       We are close but not finished with unifying. Eventually, there must be no if statement below.
 
@@ -616,6 +617,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 #endif
 
+    // TODO: do this on OuterLoopNode
     void ComputationNetwork::ResetEvalTimeStamp()
     {
         for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
@@ -671,9 +673,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (FeatureNodes().size() == 0 && !allowFragment)
             RuntimeError("No Feature nodes specified");
 
+#if 1   // If it is not done here, it will causea crash. But it really only belongs into StartEvluationMinibatchLoop()
         // TODO: allocation does not belong here. This is called e.g. after loading. Memory should be allocated only when actually evaluating.
         // TODO: move into StartEvaluateMinibatchLoop(), but that is called for output nodes individually--can the process handle that?
         AllocateAllEvalMatrices(EvaluationNodes(), OutputNodes(), FinalCriterionNodes());
+#endif
         // first give criteria nodes as root node
         if (FinalCriterionNodes().size() > 0)
         {
@@ -896,12 +900,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // memory allocation
     // -----------------------------------------------------------------------
-
+#if 1
     // this function will need to be called before actual validation and execution to 
     // predetermine how to share matrices to reduce memory usage.
     // TODO: find a simple topological order and allocateEvalMatrices on that order directly
     // without passing in eval, out, and train nodes.
-    // TODO: make this called/callable from StartEvaluationMinibatchLoop()
     void ComputationNetwork::AllocateAllEvalMatrices(std::vector<ComputationNodeBasePtr>& evalRootNodes,
                                                      std::vector<ComputationNodeBasePtr>& outValueRootNodes,
                                                      std::vector<ComputationNodeBasePtr>& trainRootNodes)
@@ -916,6 +919,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             AllocateEvalMatrices(trainRootNodes[i]);
 
     }
+#endif
 
     // TODO: use the same loop mechanism as Evaluate()
     void ComputationNetwork::AllocateEvalMatrices(ComputationNodeBasePtr rootNode)
@@ -988,7 +992,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         FormRecurrentLoops(rootNode);
 
-        //PopulateParents(rootNode);
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
         //now, simulate the gradient computation order to determine how to allocate matrices
@@ -1006,8 +1009,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 shared_ptr<RecurrentFlowControlNode> recInfo = FindInRecurrentLoops(m_recurrentInfo, n);
                 if (recInfo && recInfo->m_completedGradient == false)
                 {
+                    // SEQ mode: allocate all in loop first, then deallocate again
 #if 1               // TODO: next step: use OuterLoopNode::AllocateGradientMatricesForChildren() and ReleaseMatricesAfterGradientComp()...
-                    // BUGBUG: naw, not working! Wrong order! Need to rethink this. Need to make AllocateEvalMatrices() and AllocateGradientMatrices() the virtual functions.
+                    // BUGBUG: naw, ^^ would not work! Wrong order! Need to rethink this. Need to make AllocateEvalMatrices() and AllocateGradientMatrices() the virtual functions.
                     recInfo->AllocateGradientMatricesForChildren(m_matrixPool);
                     //loops are computed sample by sample so we have to allocate them all 
                     recInfo->m_completedGradient = true;
@@ -1032,8 +1036,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
+                // PAR mode: we can allocate and immediately deallocate one by one
                 n->AllocateGradientMatricesForChildren(m_matrixPool);
-                if ((n != rootNode) && n->NeedGradient())  //root node's informatioin will be used and should not be shared with others, also it's small (1x1)
+                if ((n != rootNode) && n->NeedGradient())  //root node's information will be used and should not be shared with others, also it's small (1x1)
                     n->ReleaseMatricesAfterGradientComp(m_matrixPool);
             }
         }

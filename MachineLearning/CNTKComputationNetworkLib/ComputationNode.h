@@ -100,6 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void OnComputeGradientEndIteration() = 0;             // called after last iteration step of ComputeGradient()
 
         // TODO: this one does not quite fit here
+        // functions that are called from Network, but not necessarily overridden by the node implementations themselves
         virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
 
         // --- optional overrides that add functionality
@@ -213,9 +214,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             other.m_evalTimeStamp = m_evalTimeStamp;
         }
 
-        int64_t UpdateEvalTimeStamp()
+        int64_t UpdateEvalTimeStamp()   // TODO: why return a value?
         {
             m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);    // TODO: does this really need to be atomic? We are not multi-threaded
+            // BUGBUG: This returns the previous value; conflicts with ResetEvalTimeStamp()
             return m_evalTimeStamp;
         }
 
@@ -243,7 +245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     class ComputationNodeBase :
         public IComputationNode,
-        public/*protected*/ ComputationNetworkOwnedNodeState,  // TODO: figure this out, somehow the 'friend' thing does not work
+        public/*protected*/ ComputationNetworkOwnedNodeState,   // TODO: figure this out, somehow the 'friend' thing does not work
         public TimeStamp,                                       // for time-stamp management
         public ScriptableObjects::ComputationNodeObject,
         public ScriptableObjects::WithTag, public ScriptableObjects::HasName, public ScriptableObjects::HasToString,
@@ -1395,23 +1397,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // FlowControlNode -- special wrapper node for use by ComputationNetwork only
     // =======================================================================
 
-    class FlowControlNode : public IComputationNode
+    class FlowControlNode : public ComputationNodeBase
     {
         typedef ComputationNodeBase Base;
     public:
+        FlowControlNode() : ComputationNodeBase(DEVICEID_NOTYETDETERMINED/*we don't own matrices*/, L""/*name: we don't care*/) { }
+
 #pragma warning (disable: 4100)
-        // these should never be called on flow-control nodes
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { NOT_IMPLEMENTED; }
-        virtual void Validate(bool isFinalValidationPass) { NOT_IMPLEMENTED; }          // main base validation function
-        virtual void InferImageDimsFromInputs() { NOT_IMPLEMENTED; }
-        virtual void SaveToFile(File& fstream) const { NOT_IMPLEMENTED; }
-        virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/) { NOT_IMPLEMENTED; }
-        virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const { NOT_IMPLEMENTED; }
+        // these are meant to be implemented by ComputationNode<ElemType> but should never be called on traversal nodes
+        // TODO: There are too many of these. This indicates improper class hierarchies.
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { NOT_IMPLEMENTED; }
+        virtual void Validate(bool isFinalValidationPass) override { NOT_IMPLEMENTED; }          // main base validation function
+        virtual void InferImageDimsFromInputs() override { NOT_IMPLEMENTED; }
+        virtual void SaveToFile(File& fstream) const override { NOT_IMPLEMENTED; }
+        virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/) override { NOT_IMPLEMENTED; }
+        virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
+        virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) override { NOT_IMPLEMENTED; }
+        virtual size_t GetNumRows() const override { NOT_IMPLEMENTED; }
+        virtual size_t GetNumCols() const override { NOT_IMPLEMENTED; }
+        virtual void Resize(size_t rows, size_t cols) override { NOT_IMPLEMENTED; }
+        virtual double Get00Element() const override { NOT_IMPLEMENTED; }
+        virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override { NOT_IMPLEMENTED; }
+        virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
+        virtual void ValidateInferChildDims(size_t,size_t,size_t) override { NOT_IMPLEMENTED; }
+        virtual void SetInput(const size_t,const Microsoft::MSR::CNTK::ComputationNodeBase::ComputationNodeBasePtr &) override { NOT_IMPLEMENTED; }
+        virtual void ClearGradientForChildren(void) override { NOT_IMPLEMENTED; }
+        virtual void MaskMissingValuesColumnsToZero(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
+        virtual void MaskMissingGradientColumnsToZero(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
+        virtual void InvalidateMissingValuesColumns(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
+        virtual void InvalidateMissingGradientColumns(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
+        virtual std::wstring ToString(void) const override { NOT_IMPLEMENTED; }
         // these are meant to be called during computation, so provide dummy implementations
-        virtual bool RequiresPreCompute() const { return false; }                    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-        virtual void PrintSelfBeforeValidation() const { }
-        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const { }
+        virtual bool RequiresPreCompute() const override { return false; }                    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() override { return true; }
+        virtual void PrintSelfBeforeValidation() const override { }
+        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const override { }
     };
 
     // =======================================================================
