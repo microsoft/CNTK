@@ -144,33 +144,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             PurgeStateForFormingRecurrentLoops();
             m_isPartOfLoop = false;
-            ResetEvalTimeStamp();   // bring it into defined state
         }
 
         void CopyTo(ComputationNetworkOwnedNodeState & other) const
         {
             // TODO: is that really all we copy? (this is a result of refactoring, so it seems yes indeed). Should we at least ClearCache()?
-            other.m_evalTimeStamp = m_evalTimeStamp;
             other.m_isPartOfLoop = m_isPartOfLoop;
             other.m_needsGradient = m_needsGradient;
-        }
-
-        int64_t UpdateEvalTimeStamp()
-        {
-            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);    // TODO: does this really need to be atomic? We are not multi-threaded
-            return m_evalTimeStamp;
-        }
-
-        void ResetEvalTimeStamp()
-        {
-            m_evalTimeStamp = s_timeStampCounter;
-        }
-
-        int64_t GetEvalTimeStamp() const { return m_evalTimeStamp; }
-
-        int64_t CreateUniqId() const
-        {
-            return atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
         }
 
         static bool ByVisitedOrder(const ComputationNetworkOwnedNodeState * lhs, const ComputationNetworkOwnedNodeState * rhs)  // sorting predicate
@@ -181,9 +161,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool IsPartOfLoop() const { return m_isPartOfLoop; }
 
     private:
-
-        static atomic_ullong s_timeStampCounter;
-        int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 
         bool m_isPartOfLoop;        // true if this loop is part of a recurrent loop
 
@@ -214,6 +191,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // =======================================================================
+    // TimeStamp -- helper class to manage a time stamp
+    // =======================================================================
+
+    class TimeStamp
+    {
+    public:
+        TimeStamp()
+        {
+            ResetEvalTimeStamp();   // bring it into defined state
+        }
+
+        void CopyTo(TimeStamp & other) const
+        {
+            other.m_evalTimeStamp = m_evalTimeStamp;
+        }
+
+        int64_t UpdateEvalTimeStamp()
+        {
+            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);    // TODO: does this really need to be atomic? We are not multi-threaded
+            return m_evalTimeStamp;
+        }
+
+        void ResetEvalTimeStamp()
+        {
+            m_evalTimeStamp = s_timeStampCounter;
+        }
+
+        int64_t GetEvalTimeStamp() const { return m_evalTimeStamp; }
+
+        int64_t CreateUniqId() const
+        {
+            return atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
+        }
+
+    private:
+        static atomic_ullong s_timeStampCounter;
+        int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
+    };
+
+    // =======================================================================
     // ComputationNodeBase -- abstract base class for all computation nodes
     // TODO: decide the name. This does contain actual members such as the node name, so it's not really a pure interface.
     // =======================================================================
@@ -221,6 +238,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class ComputationNodeBase :
         public IComputationNode,
         public/*protected*/ ComputationNetworkOwnedNodeState,  // TODO: figure this out, somehow the 'friend' thing does not work
+        public TimeStamp,                                       // for time-stamp management
         public ScriptableObjects::ComputationNodeObject,
         public ScriptableObjects::WithTag, public ScriptableObjects::HasName, public ScriptableObjects::HasToString,
         public std::enable_shared_from_this<ComputationNodeBase>
@@ -255,6 +273,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_outputImageLayout = m_outputImageLayout;
 
                 ComputationNetworkOwnedNodeState::CopyTo(*node);
+                TimeStamp::CopyTo(*node);
             }
         }
 

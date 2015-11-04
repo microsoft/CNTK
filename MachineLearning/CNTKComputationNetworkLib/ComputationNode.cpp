@@ -173,7 +173,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef Matrix<float> FloatMatrix;
     typedef Matrix<double> DoubleMatrix;
 
-    atomic_ullong ComputationNetworkOwnedNodeState::s_timeStampCounter = ATOMIC_VAR_INIT(0);
+    atomic_ullong TimeStamp::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
     template<> std::map<size_t, std::map<size_t, FloatMatrix*>>  ComputationNode<float>::s_constOnes{};
     template<> std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};
