@@ -6,7 +6,7 @@
 #include "stdafx.h"
 #include <crtdefs.h>
 #include "..\..\..\Math\Math\CPUSparseMatrix.h"
-#include <boost/test/unit_test.hpp>
+
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -21,9 +21,9 @@ namespace Microsoft
 				typedef CPUDoubleSparseMatrix SparseMatrix;
 				typedef CPUDoubleMatrix DenseMatrix;
 
-				BOOST_AUTO_TEST_SUITE(CPUSparseMatrixSuite)
+				BOOST_AUTO_TEST_SUITE(CpuMatrixSuite)
 
-					BOOST_AUTO_TEST_CASE(CPUSparseMatrixColumnSlice)
+				BOOST_AUTO_TEST_CASE(CPUSparseMatrixColumnSlice)
 				{
 					const size_t m = 100;
 					const size_t n = 50;

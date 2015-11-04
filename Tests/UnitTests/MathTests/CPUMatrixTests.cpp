@@ -7,7 +7,7 @@
 #include "..\..\..\Math\Math\CPUMatrix.h"
 
 #include <array>
-#include <boost/test/unit_test.hpp>
+
 
 using namespace Microsoft::MSR::CNTK;
 

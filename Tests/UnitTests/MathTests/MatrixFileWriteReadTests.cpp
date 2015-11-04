@@ -1,20 +1,19 @@
 //
-// <copyright file="CPUMatrixTests.cpp" company="Microsoft">
+// <copyright file="MatrixFileWriteReadTests.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
 #include "stdafx.h"
-#include "..\..\common\include\Basics.h"
-#include "..\..\Math\Math\CPUMatrix.h"
-#include "..\..\Math\Math\GPUMatrix.h"
-#include "..\..\common\include\fileutil.h"
-#include "..\..\common\include\File.h"
-#include "..\..\common\File.cpp"
-#include "..\..\common\fileutil.cpp"
+#include "../../Common/Include/Basics.h"
+#include "../../Math/Math/CPUMatrix.h"
+#include "../../Math/Math/GPUMatrix.h"
+#include "../../Common/Include/fileutil.h"
+#include "../../Common/Include/File.h"
+// ToDo: CPP files directly included, use common library in the future if possible 
+#include "../../Common/File.cpp"
+#include "../../Common/fileutil.cpp"
 
 #include <string>
-
-#include <boost/test/unit_test.hpp>
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -44,11 +43,10 @@ namespace Microsoft
 
 					BOOST_CHECK(matrixCpuCopy.IsEqualTo(matrixCpuRead, 0.00001f));
 				}
-
-
-				BOOST_AUTO_TEST_CASE(GPUMatrixFileWriteRead)
+				
+				BOOST_AUTO_TEST_CASE(GpuMatrixFileWriteRead)
 				{
-					GPUMatrix<float> matrixGpu = GPUMatrix<float>::RandomUniform(43, 10, 0 /*deviceId*/, -26.3f, 30.2f);
+					GPUMatrix<float> matrixGpu = GPUMatrix<float>::RandomUniform(43, 10, c_deviceIdZero, -26.3f, 30.2f);
 					GPUMatrix<float> matrixGpuCopy = matrixGpu;
 
 					std::wstring filenameGpu(L"MGPU.txt");
@@ -57,7 +55,7 @@ namespace Microsoft
 					fileGpu << matrixGpu;
 					fileGpu.SetPosition(0);
 
-					GPUMatrix<float> matrixGpuRead(0 /*deviceId*/);
+					GPUMatrix<float> matrixGpuRead(c_deviceIdZero);
 					fileGpu >> matrixGpuRead;
 
 					BOOST_CHECK(matrixGpuCopy.IsEqualTo(matrixGpuRead, 0.00001f));
