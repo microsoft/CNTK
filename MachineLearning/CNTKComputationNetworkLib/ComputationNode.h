@@ -204,33 +204,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class TimeStamp
     {
     public:
-        TimeStamp()
-        {
-            ResetEvalTimeStamp();   // bring it into defined state
-        }
-
-        void CopyTo(TimeStamp & other) const
-        {
-            other.m_evalTimeStamp = m_evalTimeStamp;
-        }
-
-        int64_t UpdateEvalTimeStamp()   // TODO: why return a value?
-        {
-            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);    // TODO: does this really need to be atomic? We are not multi-threaded
-            // BUGBUG: This returns the previous value; conflicts with ResetEvalTimeStamp()
-            return m_evalTimeStamp;
-        }
-
-        void ResetEvalTimeStamp()
-        {
-            m_evalTimeStamp = s_timeStampCounter;
-        }
-
+        TimeStamp() { ResetEvalTimeStamp(); }
+        void CopyTo(TimeStamp & other) const { other.m_evalTimeStamp = m_evalTimeStamp; }
+        void ResetEvalTimeStamp() { m_evalTimeStamp = s_timeStampCounter; }
         int64_t GetEvalTimeStamp() const { return m_evalTimeStamp; }
+
+        // create a new unique time stamp
+        void UpdateEvalTimeStamp() { m_evalTimeStamp = CreateUniqId(); }
+
+        // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
+        bool IsOlderThan(const TimeStamp & other) const
+        {
+            // BUGBUG: For some reason, we must test equality as well, although that does not indicate being older.
+            return GetEvalTimeStamp() - other.GetEvalTimeStamp() /*<*/ <= 0;
+        }
 
         int64_t CreateUniqId() const
         {
-            return atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
+            return /*1 +*/ atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
         }
 
     private:
@@ -664,13 +655,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
         // If this returns false, node must be evaluated to update m_functionValues.
         // BUGBUG: The function name is incorrect. It also returns 'true' if a child has the same time stamp (not older).
-        bool IsFuncValueOlderThanInputs() const
+        // This is virtual because it is overridden by traversal nodes.
+        virtual bool IsFuncValueOlderThanInputs() const
         {
             for (size_t i = 0; i<ChildrenSize(); i++)
             {
 #if 1
-                // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
-                if (m_children[i]->GetEvalTimeStamp() - GetEvalTimeStamp() >= 0)
+                if (IsOlderThan(*m_children[i]))
                     return true;
 #else
                 //the second condition is used when the time stamp change from positive to negative

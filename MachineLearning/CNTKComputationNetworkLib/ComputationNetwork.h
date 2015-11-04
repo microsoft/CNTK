@@ -83,7 +83,7 @@ protected:
         virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
         // TODO: should the following be virtualized, too?
         const wstring & NodeName() const { return m_sourceNode->NodeName(); }   // TODO: why not return a const wchar_t* again?
-        bool IsFuncValueOlderThanInputs() const;
+        virtual bool IsFuncValueOlderThanInputs() const override;
     public:
         std::vector<ComputationNodeBasePtr> m_recurrentNodes;               // all nodes involved in this loop, in evaluation order
         ComputationNodeBasePtr m_sourceNode;                                // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.

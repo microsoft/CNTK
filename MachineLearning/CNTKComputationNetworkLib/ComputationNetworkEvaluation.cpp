@@ -308,9 +308,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //       We are close but not finished with unifying. Eventually, there must be no if statement below.
 
 #if 1
+#if 1
+            bool isFuncValueOlderThanInputs = node->IsFuncValueOlderThanInputs();
+#else
             bool isFuncValueOlderThanInputs =
                 (recInfo && recInfo->IsFuncValueOlderThanInputs()) ||           // TODO: abstract this out into a virtual function
                 (node && node->IsFuncValueOlderThanInputs());
+#endif
             if (isFuncValueOlderThanInputs)
             {
                 MBLayoutPtr pMBLayout = recInfo ? recInfo->m_sourceNode->GetMBLayout() : node->GetMBLayout();   // TODO: abstract this out to a virtual function
@@ -320,6 +324,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 pnode->UpdateFunctionMBSize();
 
+                // BUGBUG: IsLeaf() for RecurrentFlowControlNode returns false because that node has no children. So we get lucky here. Otherwise it would fail in Validate(). Fix this by getting rid of the Validate() call here.
                 if (node && !node->IsLeaf() && !node->RequiresPreCompute())
                     node->Validate(true);                       // BUGBUG: Validate() should not be called during evaluation. This is meant to update m_functionValues' size in case of sharing.
 
@@ -329,8 +334,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (recInfo)
                     recInfo->m_completedEvaluate = true;
-                else
-                    node->UpdateEvalTimeStamp();                // TODO: abstract this out to a virtual function
+                node->UpdateEvalTimeStamp();                // TODO: abstract this out to a virtual function
             }
 #else
             // --- if this node is part of a recurrence, evaluate all nodes that participate in this loop
