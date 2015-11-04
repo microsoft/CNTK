@@ -1,5 +1,5 @@
 //
-// <copyright file="SynchronousExecutionEngine.h" company="Microsoft">
+// <copyright file="SynchronousExecutionEngine.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
