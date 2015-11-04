@@ -107,6 +107,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Any override must call Base version as well.
         // Default implementations are in ComputationNodeBase or ComputationNode<ElemType>.
 
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool) = 0;         //request matrices needed to do node function value evaluation
+        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool) = 0;          //release temp matrices that are only used by forward computation. Don't release matrices that need to be used in the gradient computation
+        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) = 0;
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) = 0; //request matrices that are needed for gradient computation
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) = 0;  //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+
         virtual void Validate(bool isFinalValidationPass) = 0;          // main base validation function
         virtual void InferImageDimsFromInputs() = 0;
         virtual void SaveToFile(File& fstream) const = 0;
@@ -655,13 +661,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
         // If this returns false, node must be evaluated to update m_functionValues.
+        // BUGBUG: The function name is incorrect. It also returns 'true' if a child has the same time stamp (not older).
         bool IsFuncValueOlderThanInputs() const
         {
             for (size_t i = 0; i<ChildrenSize(); i++)
             {
+#if 1
+                // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
+                if (m_children[i]->GetEvalTimeStamp() - GetEvalTimeStamp() >= 0)
+                    return true;
+#else
                 //the second condition is used when the time stamp change from positive to negative
                 if (m_children[i]->GetEvalTimeStamp() >= GetEvalTimeStamp() || m_children[i]->GetEvalTimeStamp() + 1e10 < GetEvalTimeStamp())
                     return true;
+#endif
             }
 
             return false;
@@ -727,19 +740,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             return name;
         }
-
-        //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool) = 0;
-
-        //release temp matrices that are only used by forward computation
-        //don't release matrices that need to be used in the gradient computation
-        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool) = 0;
-
-        //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) = 0;
-
-        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) = 0;
 
     protected:
         // data members
@@ -874,6 +874,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //don't release matrices that need to be used in the gradient computation
         virtual void ReleaseMatricesAfterEval(MatrixPool& /*matrixPool*/)
         {
+        }
+
+        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) override
+        {
+            for (int i = 0; i < m_children.size(); i++)
+            {
+                if (m_children[i]->NeedGradient())
+                    m_children[i]->RequestMatricesBeforeGradientComp(matrixPool);
+            }
         }
 
         //request matrices that are needed for gradient computation

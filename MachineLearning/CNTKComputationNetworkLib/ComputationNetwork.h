@@ -62,7 +62,7 @@ class ComputationNetwork : public ScriptableObjects::Object, public ScriptableOb
 protected:
     // recurrent loops in CNTK are like little local ComputationNetworks, but stored in a completely separate set of structures
     // This structure stores that little sub-network.
-    class RecurrentFlowControlNode : public FlowControlNode
+    class RecurrentFlowControlNode : public FlowControlNode, public TimeStamp
     {
     public:
         // next steps:
@@ -76,6 +76,11 @@ protected:
         virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientForChildren() instead
         virtual void OnComputeGradientEndIteration() override;
         virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool);
+        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool);
+        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool);
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool);
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
         // TODO: should the following be virtualized, too?
         const wstring & NodeName() const { return m_sourceNode->NodeName(); }   // TODO: why not return a const wchar_t* again?
         bool IsFuncValueOlderThanInputs() const;
@@ -98,7 +103,7 @@ protected:
 
     // entire network is represented by this
     // This is the outer loop over the network nodes in PAR mode.
-    class OuterLoopNode : public FlowControlNode
+    class OuterLoopNode : public FlowControlNode, public TimeStamp
     {
     public:
         virtual const std::wstring OperationName() const override { return L"OuterLoopNode"; }
@@ -110,6 +115,11 @@ protected:
         virtual void ComputeInputPartial(const size_t inputIndex, const FrameRange &) override { NOT_IMPLEMENTED; } // ugh, call ComputeGradientForChildren() instead
         virtual void OnComputeGradientEndIteration() override { }
         virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) override;
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool);
+        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool);
+        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool);
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool);
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
     public:
         OuterLoopNode(/*const*/ std::vector<shared_ptr<RecurrentFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
         std::list<shared_ptr<IComputationNode>> m_outerNodes;             // all top-level nodes, in evaluation order. Nested nodes are tucked inside FlowControlNodes.
