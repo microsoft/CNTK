@@ -1,12 +1,9 @@
 //
-// <copyright file="GPUMatrixcuBLASTests.cpp" company="Microsoft">
+// <copyright file="GPUMatrixCudaBlasTests.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
-// GPUMatrix Cuda BLAS library tests should go here
-//
-// Note from original repo: *_NoExceptionOnly_Test kind of tests tests only that the method runs without exception. They don't test correctness
-// TODO: test correctness? (no need to test cuda internals), add tests for other cuBLAS methods? (check which ones are used)
+// GPUMatrix CUDA BLAS library tests should go here
 //
 #include <boost/test/unit_test.hpp>
 #include "stdafx.h"
@@ -22,43 +19,57 @@ namespace Microsoft
         {
             namespace Test
             {
-                BOOST_AUTO_TEST_SUITE(GPUMatrixcuBLASSuite)
+                BOOST_AUTO_TEST_SUITE(GPUMatrixCudaBlasSuite)
 
-				BOOST_AUTO_TEST_CASE(GPUBlasMultiplyAndWeightedAdd_NoExceptionOnly)
+				BOOST_AUTO_TEST_CASE(GPUBlasMultiplyAndWeightedAdd)
 				{
-					float alpha = 0.1f;
-					float beta = 0.4f;
-					GPUMatrix<float> M0_GPU(12, 5, 0 /*deviceId*/);
-					GPUMatrix<float> M1_GPU(5, 11, 0 /*deviceId*/);
-					GPUMatrix<float> M2_GPU(12, 11, 0 /*deviceId*/);
-					GPUMatrix<float>::MultiplyAndWeightedAdd(alpha, M0_GPU, false, M1_GPU, false, beta, M2_GPU);
+					float alpha = 2.0f;
+					float beta = 0.42f;
+					GPUMatrix<float> m0(12, 5, 0 /*deviceId*/);
+                    m0.SetValue(1.0f);
+					GPUMatrix<float> m1(5, 11, 0 /*deviceId*/);
+                    m1.SetValue(1.0f);
+                    GPUMatrix<float> m2(12, 11, 0 /*deviceId*/);
+                    m2.SetValue(1.0f);
 
-					// original test didn't have any checks, tests need to be improved
-					BOOST_CHECK(!M0_GPU.IsEmpty());
+                    // m2 = alpha * m0 * m1 + beta * m2
+                    GPUMatrix<float>::MultiplyAndWeightedAdd(alpha, m0, false, m1, false, beta, m2);
+
+                    GPUMatrix<float> mr(12, 11, 0 /*deviceId*/);
+                    mr.SetValue(10.42f);
+                    BOOST_CHECK(m2.IsEqualTo(mr, 0.0001f));
 				}
 
-				BOOST_AUTO_TEST_CASE(GPUBlasScale_NoExceptionOnly)
+				BOOST_AUTO_TEST_CASE(GPUBlasScale)
 				{
 					float scale = 0.5f;
-					GPUMatrix<float> M0_GPU(12, 53, 0 /*deviceId*/);
-					GPUMatrix<float>::Scale(scale, M0_GPU);
+					GPUMatrix<float> m0(12, 53, 0 /*deviceId*/);
+                    m0.SetValue(4.2f);
+					GPUMatrix<float>::Scale(scale, m0);
 
-					// original test didn't have any checks, tests need to be improved
-					BOOST_CHECK(!M0_GPU.IsEmpty());
-				}
+                    GPUMatrix<float> mr(12, 53, 0 /*deviceId*/);
+                    mr.SetValue(2.1f);
+                    BOOST_CHECK(m0.IsEqualTo(mr, 0.0001f));
+                }
 
-				BOOST_AUTO_TEST_CASE(GPUBlasInnerProduct_NoExceptionOnly)
+				BOOST_AUTO_TEST_CASE(GPUBlasInnerProduct)
 				{
 					float *arr = new float[100];
-					for (int i = 0; i<100; i++) arr[i] = 1.0f;
-					GPUMatrix<float> AG(10, 10, 0 /*deviceId*/, arr, matrixFlagNormal);
-					GPUMatrix<float> BG(10, 10, 0 /*deviceId*/, arr, matrixFlagNormal);
-					GPUMatrix<float> CG(1, 10, 0 /*deviceId*/, arr, matrixFlagNormal);
-					GPUMatrix<float>::InnerProduct(AG, BG, CG, true);
+					for (int i = 0; i<100; i++) arr[i] = 2.0f;
+					GPUMatrix<float> m0(10, 10, 0 /*deviceId*/, arr, matrixFlagNormal);
+					GPUMatrix<float> m1(10, 10, 0 /*deviceId*/, arr, matrixFlagNormal);
+					GPUMatrix<float> m2(1, 10, 0 /*deviceId*/, arr, matrixFlagNormal);
 
-					// original test didn't have any checks, tests need to be improved
-					BOOST_CHECK(!AG.IsEmpty());
-				}
+                    GPUMatrix<float>::InnerProduct(m0, m1, m2, true);
+                    GPUMatrix<float> mr(1, 10, 0 /*deviceId*/);
+                    mr.SetValue(40.0f);
+                    BOOST_CHECK(m2.IsEqualTo(mr, 0.0001f));
+
+                    GPUMatrix<float>::InnerProduct(m0, m1, m2, false);
+                    BOOST_CHECK(m2.IsEqualTo(mr.Transpose(), 0.0001f));
+                }
+
+                // TODO: add tests for other CUDA BLAS methods?
 
                 BOOST_AUTO_TEST_SUITE_END()
             }
