@@ -546,11 +546,29 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             node2->OnComputeGradientEndIteration();
     }
 
-    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::RequestMatricesBeforeEval(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::RequestMatricesBeforeEval(MatrixPool& matrixPool) /*override*/
+    {
+        for (auto & nodeLoopIter : m_recurrentNodes)
+            nodeLoopIter->RequestMatricesBeforeEval(matrixPool);
+    }
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::ReleaseMatricesAfterEval(MatrixPool& matrixPool) /*override*/ { }
-    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::AllocateGradientMatricesForChildren(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::AllocateGradientMatricesForChildren(MatrixPool& matrixPool) /*override*/
+    {
+        // TODO: should we deallocate in opposite order?
+        for (auto nodeIter = m_recurrentNodes.rbegin(); nodeIter != m_recurrentNodes.rend(); ++nodeIter)
+        {
+            (*nodeIter)->AllocateGradientMatricesForChildren(matrixPool);
+        }
+    }
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) /*override*/ { }
-    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) /*override*/
+    {
+        for (auto nodeIter = m_recurrentNodes.rbegin(); nodeIter != m_recurrentNodes.rend(); ++nodeIter)
+        {
+            if ((*nodeIter)->NeedGradient())
+                (*nodeIter)->ReleaseMatricesAfterGradientComp(matrixPool);
+        }
+    }
 
     // find if node is part of a recurrent loop; and return the loop id
     // If found then return a pointer to the list of nodes of this loop.
@@ -854,7 +872,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // BUGBUG? Lazy triggers on the root node. I.e. for two different root nodes (training, eval), it validates twice.
     void ComputationNetwork::BuildAndValidateSubNetwork(const ComputationNodeBasePtr rootNode)
     {
-        const auto inserted = m_built.insert(rootNode).second;  // remember we built it
+        bool inserted = m_built.insert(rootNode).second;  // remember we built it
         if (!inserted)
             return;                                             // already done
 
@@ -869,6 +887,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ValidateSubNetwork(rootNode);
     }
 
+    // tests whether BuildAndValidateSubNetwork() was called
     bool ComputationNetwork::BuiltAndValidatedSubNetwork(const ComputationNodeBasePtr & rootNode)
     {
         return m_built.find(rootNode) != m_built.end();
@@ -878,10 +897,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // memory allocation
     // -----------------------------------------------------------------------
 
-    //this function will need to be called before actual validation and execution to 
-    //predetermine how to share matrices to reduce memory usage.
-    //TODO: find a simple topological order and allocateEvalMatrices on that order directly
-    //without passing in eval, out, and train nodes.
+    // this function will need to be called before actual validation and execution to 
+    // predetermine how to share matrices to reduce memory usage.
+    // TODO: find a simple topological order and allocateEvalMatrices on that order directly
+    // without passing in eval, out, and train nodes.
+    // TODO: make this called/callable from StartEvaluationMinibatchLoop()
     void ComputationNetwork::AllocateAllEvalMatrices(std::vector<ComputationNodeBasePtr>& evalRootNodes,
                                                      std::vector<ComputationNodeBasePtr>& outValueRootNodes,
                                                      std::vector<ComputationNodeBasePtr>& trainRootNodes)
@@ -926,15 +946,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 assert(recInfo != nullptr);
                 if (!recInfo->m_completedEvaluate)
                 {
-                    const auto & recurrentNodes = recInfo->m_recurrentNodes;
-                    for (auto &nodeLoopIter : recurrentNodes)
+#if 1
+                    recInfo->RequestMatricesBeforeEval(m_matrixPool);
+#else
+                    for (auto &nodeLoopIter : recInfo->m_recurrentNodes)
                     {
                         nodeLoopIter->RequestMatricesBeforeEval(m_matrixPool);
                     }
+#endif
 
                     recInfo->m_completedEvaluate = true;
 
-                    for (auto &nodeLoopIter : recurrentNodes)
+                    for (auto &nodeLoopIter : recInfo->m_recurrentNodes)
                     {
                         ReleaseMatricesAfterEvalForChildren(nodeLoopIter, parentCount);
                     }
@@ -983,6 +1006,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 shared_ptr<RecurrentFlowControlNode> recInfo = FindInRecurrentLoops(m_recurrentInfo, n);
                 if (recInfo && recInfo->m_completedGradient == false)
                 {
+#if 1               // TODO: next step: use OuterLoopNode::AllocateGradientMatricesForChildren() and ReleaseMatricesAfterGradientComp()...
+                    // BUGBUG: naw, not working! Wrong order! Need to rethink this. Need to make AllocateEvalMatrices() and AllocateGradientMatrices() the virtual functions.
+                    recInfo->AllocateGradientMatricesForChildren(m_matrixPool);
+                    //loops are computed sample by sample so we have to allocate them all 
+                    recInfo->m_completedGradient = true;
+                    recInfo->ReleaseMatricesAfterGradientComp(m_matrixPool);
+#else
                     const auto & recurrentNodes = recInfo->m_recurrentNodes;
                     //loops are computed sample by sample so we have to allocate them all 
                     for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
@@ -997,6 +1027,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             (*nodeIter)->ReleaseMatricesAfterGradientComp(m_matrixPool);
                         }
                     }
+#endif
                 }
             }
             else
