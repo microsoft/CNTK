@@ -7,9 +7,6 @@
 #include "..\..\..\Math\Math\CPUMatrix.h"
 
 #include <array>
-
-#define BOOST_TEST_MODULE MathTests
-#define BOOST_TEST_MAIN
 #include <boost/test/unit_test.hpp>
 
 using namespace Microsoft::MSR::CNTK;
