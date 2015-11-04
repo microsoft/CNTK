@@ -95,7 +95,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // forward pass from feature to hidden layer
     template<class ElemType> void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
         const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, GPUMatrix<ElemType>& c) { }
-    template<class ElemType> void GPUSparseMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const GPUSparseMatrix<ElemType>& rhs, ElemType beta, GPUMatrix<ElemType>& c) { }
 
     // backward pass from hidden layer to feature weight
     template<class ElemType> void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
@@ -949,6 +948,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType beta, GPUMatrix<ElemType>& c)
     {
     }
+    template<class ElemType> void GPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const GPUMatrix<ElemType>& rhs, ElemType beta, GPUMatrix<ElemType>& c) { }
 
     template<class ElemType> void GPUMatrix<ElemType>::MultiplyAndAdd(const GPUMatrix<ElemType>& /*a*/, const bool transposeA, const GPUMatrix<ElemType>& /*b*/, const bool transposeB, GPUMatrix<ElemType>& c) { }
 

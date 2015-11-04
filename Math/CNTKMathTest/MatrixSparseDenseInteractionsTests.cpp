@@ -1,5 +1,5 @@
 //
-// <copyright file="MatrixUnitTests.cpp" company="Microsoft">
+// <copyright file="MatrixSparseDenseInteractionsTests.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //

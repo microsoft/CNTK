@@ -1,6 +1,6 @@
 // ReshapingNodes.h -- collection of nodes that reshape or sub-sample matrices leading to layout changes
 //
-// <copyright file="NonlinearityNodes.h" company="Microsoft">
+// <copyright file="ReshapingNodes.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //

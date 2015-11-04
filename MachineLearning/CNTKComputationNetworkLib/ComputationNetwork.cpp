@@ -478,6 +478,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // TODO: just use return!
         if (nodePtr->OperationName() == OperationNameOf(SquareErrorNode) ||
+			nodePtr->OperationName() == OperationNameOf(LogisticNode) ||
             nodePtr->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
             nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
             nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
