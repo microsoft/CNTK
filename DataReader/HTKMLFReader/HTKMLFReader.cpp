@@ -354,10 +354,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (wstring & path : filelist)
                         {
-#ifdef WIN32                // sorry for windows users, we have to pay some cost here 
-                            std::replace(path.begin(), path.end(), L'\\', L'/'); 
+                            if (path.find_first_of(L'=') != wstring::npos)
+                            {
+                                vector<wstring> strarr = msra::strfun::split(path, L"="); 
+#ifdef WIN32
+                                replace(strarr[1].begin(), strarr[1].end(), L'\\', L'/');
 #endif 
-                            path = rootpath + L"/" + path;  
+
+                                path = strarr[0] + L"=" + rootpath + L"/" + strarr[1]; 
+                            }                     
+                            else
+                            {
+#ifdef WIN32
+                                replace(path.begin(), path.end(), L'\\', L'/');
+#endif 
+                                path = rootpath + L"/" + path;  
+                            }                            
                         }
                     }
                 }
