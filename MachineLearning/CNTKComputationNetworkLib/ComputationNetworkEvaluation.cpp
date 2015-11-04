@@ -267,6 +267,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void ComputationNetwork::ComputeGradient<double>(const ComputationNodeBasePtr rootNode, bool bResetToOne, const Matrix<double>* rootGradientInitValue, bool bClearGradient, bool resetTimeStampAfterComputation);
 
 #ifdef USE_OUTER_LOOP_NODE
+    // -----------------------------------------------------------------------
+    // OuterLoopNode methods -- implements PAR traversal
+    // -----------------------------------------------------------------------
+
     // implementation of OuterLoopNode (implements outer loop over non-recurrent nodes)
     ComputationNetwork::OuterLoopNode::OuterLoopNode(/*const*/ std::vector<shared_ptr<RecurrentFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes/*must be in eval order*/)
     {
@@ -302,10 +306,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // TODO: This ^^ is not nice.
             //       We are close but not finished with unifying. Eventually, there must be no if statement below.
 
+#if 1
+            bool isFuncValueOlderThanInputs =
+                (recInfo && recInfo->IsFuncValueOlderThanInputs()) ||           // TODO: abstract this out into a virtual function
+                (node && node->IsFuncValueOlderThanInputs());
+            if (isFuncValueOlderThanInputs)
+            {
+                MBLayoutPtr pMBLayout = recInfo ? recInfo->m_sourceNode->GetMBLayout() : node->GetMBLayout();   // TODO: abstract this out to a virtual function
+
+                if (recInfo)
+                    assert(!recInfo->m_completedEvaluate);      // TODO: not needed anymore, I think
+
+                pnode->UpdateFunctionMBSize();
+
+                if (node && !node->IsLeaf() && !node->RequiresPreCompute())
+                    node->Validate(true);                       // BUGBUG: Validate() should not be called during evaluation. This is meant to update m_functionValues' size in case of sharing.
+
+                pnode->OnEvaluateBeginIteration();
+                pnode->EvaluateThisNode(frameRange.WithLayout(pMBLayout));
+                pnode->OnEvaluateEndIteration();
+
+                if (recInfo)
+                    recInfo->m_completedEvaluate = true;
+                else
+                    node->UpdateEvalTimeStamp();                // TODO: abstract this out to a virtual function
+            }
+#else
             // --- if this node is part of a recurrence, evaluate all nodes that participate in this loop
 
-            if (recInfo && recInfo->IsFuncValueOlderThanInputs() && !recInfo->m_completedEvaluate)
+            if (recInfo && recInfo->IsFuncValueOlderThanInputs() /*&& !recInfo->m_completedEvaluate*/)
             {
+                assert(!recInfo->m_completedEvaluate);
                 pnode->UpdateFunctionMBSize();
                 pnode->OnEvaluateBeginIteration();
                 pnode->EvaluateThisNode(frameRange.WithLayout(recInfo->m_sourceNode->GetMBLayout()));
@@ -330,6 +361,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 pnode->OnEvaluateEndIteration();
                 node->UpdateEvalTimeStamp();
             }
+#endif
 #ifdef _DEBUG
             else if (node)
                 node->OnEvaluateEndIteration();  // HACK: performs NaN check, but does nothing else
@@ -348,6 +380,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto recInfo = dynamic_pointer_cast<RecurrentFlowControlNode>(pnode);
             auto node = dynamic_pointer_cast<ComputationNodeBase>(pnode);
 
+#if 1
+            MBLayoutPtr pMBLayout = recInfo ? recInfo->m_sourceNode->GetMBLayout() : node->GetMBLayout();   // TODO: abstract this out to a virtual function
+
+            if (recInfo)
+                assert(!recInfo->m_completedGradient);  // TODO: not needed anymore, I think
+
+            pnode->OnComputeGradientBeginIteration();
+            pnode->ComputeGradientForChildren(frameRange.WithLayout(pMBLayout), true, true);
+            pnode->OnComputeGradientEndIteration();
+
+            if (recInfo)
+                recInfo->m_completedGradient = true;
+#else
             // --- first, perform recurrent loops if this node participates in one
 
             if (recInfo)
@@ -377,9 +422,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 pnode->ComputeGradientForChildren(frameRange.WithLayout(node->GetMBLayout()), true, true);
                 pnode->OnComputeGradientEndIteration();
             }
+#endif
         }
     }
+    /*virtual*/ void ComputationNetwork::OuterLoopNode::RequestMatricesBeforeEval(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::OuterLoopNode::ReleaseMatricesAfterEval(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::OuterLoopNode::AllocateGradientMatricesForChildren(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::OuterLoopNode::RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::OuterLoopNode::ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) /*override*/ { }
 #endif
+
+    // -----------------------------------------------------------------------
+    // RecurrentFlowControlNode methods -- implements SEQ traversal
+    // -----------------------------------------------------------------------
 
     // implementations of RecurrentFlowControlNode (loop unrolling)
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::UpdateFunctionMBSize() /*override*/
@@ -491,6 +546,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             node2->OnComputeGradientEndIteration();
     }
 
+    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::RequestMatricesBeforeEval(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::ReleaseMatricesAfterEval(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::AllocateGradientMatricesForChildren(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) /*override*/ { }
+    /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) /*override*/ { }
+
     // find if node is part of a recurrent loop; and return the loop id
     // If found then return a pointer to the list of nodes of this loop.
     /*static*/ shared_ptr<ComputationNetwork::RecurrentFlowControlNode> ComputationNetwork::FindInRecurrentLoops(/*const*/ std::vector<std::shared_ptr<RecurrentFlowControlNode>> & recurrentInfo, const ComputationNodeBasePtr& node)
@@ -503,6 +564,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return nullptr;  // not part of a recurrent loop
     }
 
+    // check if any of the nodes in the recurrence IsFuncValueOlderThanInputs(), with exception of delay nodes for which this check would fail and can be skipped
+    // TODO: Would it be sufficient to check against our own time stamp, so that we can use a unified time-stamping mechanism? Then we'd not need this special check for delayed nodes; just check all inputs against our own time stamp.
+    // TODO: move this function up to its peers
     bool ComputationNetwork::RecurrentFlowControlNode::IsFuncValueOlderThanInputs() const
     {
         for (auto & ptr : m_recurrentNodes)
@@ -517,6 +581,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return false;
     }
 
+#ifndef USE_OUTER_LOOP_NODE
     // TODO: this will move into RecurrentFlowControlNode
     bool ComputationNetwork::IsFuncValueOlderThanInputs(const vector<ComputationNodeBasePtr>& recurrentNodes)
     {
@@ -531,6 +596,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         return false;
     }
+#endif
 
     void ComputationNetwork::ResetEvalTimeStamp()
     {
@@ -588,6 +654,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RuntimeError("No Feature nodes specified");
 
         // TODO: allocation does not belong here. This is called e.g. after loading. Memory should be allocated only when actually evaluating.
+        // TODO: move into StartEvaluateMinibatchLoop(), but that is called for output nodes individually--can the process handle that?
         AllocateAllEvalMatrices(EvaluationNodes(), OutputNodes(), FinalCriterionNodes());
         // first give criteria nodes as root node
         if (FinalCriterionNodes().size() > 0)
@@ -901,13 +968,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //PopulateParents(rootNode);
         std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
 
-        //determine children size
-        //std::map<ComputationNodeBasePtr, int> childrenCount;
-        //for (auto &nodeIter : allNodes)
-        //{
-        //    childrenCount[nodeIter] = nodeIter->ChildrenSize();
-        //}
-
         //now, simulate the gradient computation order to determine how to allocate matrices
         for (auto & recInfo : m_recurrentInfo)
             recInfo->m_completedGradient = false;
@@ -927,7 +987,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     //loops are computed sample by sample so we have to allocate them all 
                     for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                     {
-                        AllocateGradientMatricesForChildren(*nodeIter);
+                        (*nodeIter)->AllocateGradientMatricesForChildren(m_matrixPool);
                     }
                     recInfo->m_completedGradient = true;
                     for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
@@ -941,25 +1001,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                AllocateGradientMatricesForChildren(n);
+                n->AllocateGradientMatricesForChildren(m_matrixPool);
                 if ((n != rootNode) && n->NeedGradient())  //root node's informatioin will be used and should not be shared with others, also it's small (1x1)
                     n->ReleaseMatricesAfterGradientComp(m_matrixPool);
             }
         }
     }
 
-    //void ReleaseMatricesAfterGradientCompForParents(ComputationNodeBasePtr n, std::map<ComputationNodeBasePtr, int>& childrenCount)
-    //{
-    //    for (int i = 0; i < n->ParentSize(); i++)
-    //    {
-    //        ComputationNodeBasePtr pNode = n->Parent(i);
-    //        childrenCount[pNode] --;
-    //        if (childrenCount[pNode] == 0)
-    //            pNode->ReleaseMatricesAfterGradientComp(m_matrixPool);
-    //    }
-    //}
-  
-
+#if 0
     void ComputationNetwork::AllocateGradientMatricesForChildren(ComputationNodeBasePtr parentNode)
     {
         std::vector<ComputationNodeBasePtr> children = parentNode->GetChildren();
@@ -969,5 +1018,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 children[i]->RequestMatricesBeforeGradientComp(m_matrixPool);
         }
     }
+#endif
 
 }}}
