@@ -81,8 +81,6 @@ protected:
         virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool);
         virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
-        // TODO: should the following be virtualized, too?
-        const wstring & NodeName() const { return m_sourceNode->NodeName(); }   // TODO: why not return a const wchar_t* again?
         virtual bool IsFuncValueOlderThanInputs() const override;
     public:
         std::vector<ComputationNodeBasePtr> m_recurrentNodes;               // all nodes involved in this loop, in evaluation order
@@ -98,6 +96,7 @@ protected:
             m_completedGradient(false),
             m_completedEvaluate(false)
         {
+            SetNodeName(L"Loop_" + m_sourceNode->NodeName());
         }
     };
 
@@ -122,7 +121,7 @@ protected:
         virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
     public:
         OuterLoopNode(/*const*/ std::vector<shared_ptr<RecurrentFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
-        std::list<shared_ptr<IComputationNode>> m_outerNodes;             // all top-level nodes, in evaluation order. Nested nodes are tucked inside FlowControlNodes.
+        std::list<ComputationNodeBasePtr> m_outerNodes;             // all top-level nodes, in evaluation order. Nested nodes are tucked inside FlowControlNodes.
         // TODO: make a vector, then share with m_recurrentNodes
     };
 
@@ -814,14 +813,19 @@ public:
 
     void ClearGradientForAllNodes(const ComputationNodeBasePtr& rootNode)
     {
-        std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);
+        std::list<ComputationNodeBasePtr>& allNodes = GetGradientCalcOrder(rootNode);   // note: any order will do
 
         for (auto &node : allNodes)
             node->ClearGradientForChildren();
 
-        for (auto & recInfo : m_recurrentInfo)
+        for (auto & recInfo : m_recurrentInfo)      // TODO: this will go away
             recInfo->m_completedGradient = false;
     }
+
+    // -----------------------------------------------------------------------
+    // evaluation: traversal
+    // These three functions create and cache traversal orders of the network.
+    // -----------------------------------------------------------------------
 
     // determine the required order in which nodes must be computed in order to compute 'rootNode'
     // recurrent == true is only used when called from FormRecurrentLoops()
@@ -837,14 +841,19 @@ public:
         return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*means for backprop*/, false/*setVisitedOrder*/);
     }
 
+    ComputationNodeBasePtr GetOuterLoopNode(const ComputationNodeBasePtr& rootNode)
+    {
+        if (m_cachedOuterLoopNodes.find(rootNode) == m_cachedOuterLoopNodes.end())
+            m_cachedOuterLoopNodes[rootNode] = make_shared<OuterLoopNode>(m_recurrentInfo, GetEvalOrder(rootNode, false));
+        return m_cachedOuterLoopNodes[rootNode];
+    }
+
 private:
 
     static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
                                                            const bool forwardCompute, bool setVisitedOrder)
     {
-        if (!rootNode)
-            LogicError("rootNode is NULL.");
         if (orderMap.find(rootNode) == orderMap.end())
             orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, setVisitedOrder);
         return orderMap[rootNode];
@@ -924,8 +933,10 @@ private:    // TODO: make all private that can be made private
     // cache for evaluation ordering:
     std::unordered_set<ComputationNodeBasePtr> m_built;   // [node] flag: BuildAndValidateSubNetwork() has been called
 
+    // cached network Iterations
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheEvalOrders;
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_cacheGradientCalcOrders;
+    std::map<const ComputationNodeBasePtr, ComputationNodeBasePtr> m_cachedOuterLoopNodes;
 
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_inputs;                 // [out node] -> all input nodes feeding into out node
     std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>> m_learnableParameters;    // [out node] -> all parameter nodes feeding into out node

@@ -43,6 +43,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         DetermineSCCs(rootNode);
 
         list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*set m_visitedOrder*/);
+#if 0
+        // TODO: set m_visitedOrder here instead, by just looping over it. For now, verify it.
+        // BUGBUG: This fails, it finds a -1. Seems something got reset and not re-iterated.
+        size_t i = 1;       // BUGBUG: why not 0?
+        for (auto & node : nodes)
+            if (node->m_visitedOrder != i)
+                LogicError("GetEvalOrder: did not set m_visitedOrder in order of visiting.");
+            else
+                i++;
+#endif
 
         // purge identical loops (i.e. loops that have the same source node)
         // TODO: Is this for the case that we call this function multiple times, or do the nodes of a loop generate multiple entries? Comment this.
@@ -167,7 +177,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // log the loops
         for (auto & iter : m_recurrentInfo)
         {
-            fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter->m_loopId, iter->m_sourceNode->NodeName().c_str(), (int)iter->m_recurrentNodes.size());
+            fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter->m_loopId, iter->NodeName().c_str(), (int)iter->m_recurrentNodes.size());
             size_t n = 0;
             for (auto itr = iter->m_recurrentNodes.begin(); itr != iter->m_recurrentNodes.end(); itr++)
             {
@@ -177,6 +187,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             fprintf(stderr, "\n");
         }
+
+        // now turn this into a nested network, ready for evaluation
+        GetOuterLoopNode(rootNode);
     }
 
     // get the strongly connected components from the graph
@@ -239,8 +252,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             if (rInfo.m_recurrentNodes.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
             {
-                loopId++;
                 m_recurrentInfo.push_back(make_shared<RecurrentFlowControlNode>(move(rInfo)));
+                loopId++;                           // and count it
             }
         }
     }
