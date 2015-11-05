@@ -183,8 +183,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     delete[] m_pArray;
                     delete[] m_unCompIndex;
                     delete[] m_compIndex;
-            }  
-            }  
+            }
             else if (m_format == MatrixFormat::matrixFormatSparseBlockCol || m_format == MatrixFormat::matrixFormatSparseBlockRow) 
             {
                 delete[] m_pArray;
