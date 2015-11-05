@@ -132,6 +132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         CUDA_CALL(cudaMemcpy(SecondaryIndexLocation(), deepCopy.SecondaryIndexLocation(), SecondaryIndexSize(), cudaMemcpyDeviceToDevice));
 
         m_externalBuffer = false;
+        m_sliceViewOffset = 0;
         SetMatrixName(deepCopy.m_matrixName);
 
         //TODO: to copy other varibles used only for class based LM
@@ -140,12 +141,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCopy)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot SetValue on Managed external matrix");
+
         DeepCopy(deepCopy);
     }
 
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCopy)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot SetValue on Managed external matrix");
+
         SetFormat(deepCopy.GetFormat());
         if (deepCopy.IsEmpty())
         {
@@ -429,12 +436,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot SetValue on Managed external matrix");
+
         SetValue(denseMatrix, GetFormat());
     }
 
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot SetValue on Managed external matrix");
+
         if (matrixFormat != matrixFormatSparseCSR && matrixFormat != matrixFormatSparseCSC)
         {
             NOT_IMPLEMENTED;
@@ -581,23 +594,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::Clear()
     {
-        if (!m_externalBuffer)
+        // If m_externalBuffer is true then this matrix
+        // is simply a view over another matrix. In that
+        // case we shouldn't free anything.
+        if (OwnBuffer())
         {
-            if (m_matrixName != nullptr)
-            {
-                delete[] m_matrixName;
-                m_matrixName = NULL;
-            }
-
-            if (m_pArray != nullptr)
-                CUDA_CALL(cudaFree(m_pArray));
-
-            if (m_rowToId != nullptr)
-                CUDA_CALL(cudaFree(m_rowToId));
-
-            if (m_tempHostBuffer != nullptr)
-                delete[](byte*)m_tempHostBuffer;
-
+            delete[] m_matrixName;
+            delete[](byte*)m_tempHostBuffer;
+            CUDA_CALL(cudaFree(m_pArray));
+            CUDA_CALL(cudaFree(m_rowToId));
             ZeroInit(m_format, m_computeDevice);
         }
     }
@@ -628,7 +633,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     //TODO: add keepExistingValues (default to true) argument so that the existing values are kept even after reallocation 
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*=true*/)
-    {               
+    {
+        if (!OwnBuffer())
+            LogicError("Cannot Resize since the buffer is managed externally.");
+
         if (matrixFormat != m_format || m_numRows != numRows || m_numCols != numCols)
             keepExistingValues = false;  
 
@@ -637,9 +645,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (reallocate)
         {
-            if (!OwnBuffer())
-                LogicError("Cannot Resize since the buffer is managed externally.");
-
             PrepareDevice();
 
             ElemType * pArray = nullptr;
@@ -700,6 +705,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE *h_CSRRow, const GPUSPARSE_INDEX_TYPE *h_Col, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot Set since the buffer is managed externally.");
+
         if (h_CSRRow == nullptr || h_Col == nullptr || h_Val == nullptr)
             LogicError("SetMatrixFromCSRFormat: nullptr passed in.");
 
@@ -734,6 +742,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t &nz, size_t &numRows, size_t &numCols) const
     {
+        if (!OwnBuffer())
+            LogicError("Cannot Set since the buffer is managed externally.");
+
         if (h_CSRRow != nullptr || h_Col != nullptr || h_Val != nullptr)
             LogicError("GetMatrixFromCSRFormat: Passed pointers must be nullptr");
 
@@ -775,6 +786,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot Set since the buffer is managed externally.");
+
         if (h_CSCCol == nullptr || h_Row == nullptr || h_Val == nullptr)
             LogicError("SetMatrixFromCSCFormat: nullptr passed in.");
 
@@ -953,6 +967,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA, 
         const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, GPUSparseMatrix<ElemType>& c)
     {
+        if (!c.OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (lhs.GetComputeDeviceId()!=rhs.GetComputeDeviceId())
             RuntimeError("GPUSparseMatrix::MultiplyAndAdd: All matrices must be on the same GPU");
         
@@ -1135,6 +1152,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate (const ElemType threshold)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         CUDA_LONG N=(CUDA_LONG)GetNumNZElements();
 
         CUDA_LONG blocksPerGrid = (CUDA_LONG)ceil(N*1.0 / threadsPerBlock);
@@ -1152,6 +1172,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         CUDA_LONG N = (CUDA_LONG)GetNumNZElements();
 
         CUDA_LONG blocksPerGrid = (CUDA_LONG)ceil(N*1.0 / threadsPerBlock);
@@ -1170,6 +1193,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> 
     void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (c.IsEmpty())
         {
             c.Resize(GetNumRows(), GetNumCols());
@@ -1207,6 +1233,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         size_t numColsNeeded = GetNumCols();
         if (needAveMultiplier)
             numColsNeeded += GetNumCols();
@@ -1320,7 +1349,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::Multiply(const GPUMatrix<ElemType>& D, const GPUSparseMatrix<ElemType>& S, GPUMatrix<ElemType>& C)
-    {   
+    {
         C.Resize(S.GetNumCols(),D.GetNumRows());
 
         MultiplyAndWeightedAdd(1,D,false,S,false,0,C);     
@@ -1370,6 +1399,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (this->m_format != matrixFormatSparseCSR)
             NOT_IMPLEMENTED;
 
@@ -1416,6 +1448,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::Multiply(const GPUSparseMatrix<ElemType>& S1, bool transposeS1, const GPUSparseMatrix<ElemType>& S2, bool transposeS2, GPUSparseMatrix<ElemType> &c)
     {
+        if (!c.OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (S1.m_format != matrixFormatSparseCSR || S2.m_format != matrixFormatSparseCSR || c.m_format != matrixFormatSparseCSR)
             NOT_IMPLEMENTED;
 
@@ -1484,6 +1519,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha,const GPUSparseMatrix<ElemType>& a, ElemType beta, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
     {
+        if (!c.OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (a.m_format != matrixFormatSparseCSR || b.m_format != matrixFormatSparseCSR || c.m_format != matrixFormatSparseCSR)
         {
             NOT_IMPLEMENTED;
@@ -1571,6 +1609,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::Scale(ElemType alpha, GPUSparseMatrix<ElemType>& a)
     {
+        if (!a.OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (a.IsEmpty())
             return;
 
@@ -1587,6 +1628,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::ElementWisePower (ElemType alpha, const GPUSparseMatrix<ElemType>& a, GPUSparseMatrix<ElemType>& c)
     {
+        if (!c.OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (a.GetComputeDeviceId() != c.GetComputeDeviceId())
         {
             InvalidArgument("All matrices must be on the same GPU");
@@ -1791,6 +1835,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf (const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
     {
+        if (!b.OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (a.m_format != matrixFormatSparseCSR)
             NOT_IMPLEMENTED;
 
@@ -1877,6 +1924,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::Transpose() const
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         int m = (int)GetNumRows();
         int n = (int)GetNumCols();
         int nnz = (int)GetNumNZElements();
@@ -1934,6 +1984,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTransposeOf(const GPUSparseMatrix<ElemType>& a)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (this == &a)
             LogicError("AssignTransposeOf: a is the same as [this]. Does not support inplace transpose.");
 
@@ -1965,19 +2018,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         GPUSparseMatrix<ElemType> slice;
         slice.m_computeDevice = m_computeDevice;
         slice.m_numRows = m_numRows;
-        slice.m_numCols = m_numCols;
+        slice.m_numCols = numCols;
         slice.m_nz = m_nz;
         slice.m_elemSizeAllocated = m_elemSizeAllocated;
         slice.m_totalBufferSizeAllocated = m_totalBufferSizeAllocated;
         slice.m_pArray = m_pArray;
         slice.m_format = m_format;
         slice.m_externalBuffer = true;
-        slice.m_sliceViewOffset = startColumn;
         slice.m_matrixName = m_matrixName;
         slice.m_blockSize = m_blockSize;
         slice.m_rowToId = m_rowToId;
         slice.m_tempHostBuffer = m_tempHostBuffer;
         slice.m_tempHostBufferSize = m_tempHostBufferSize;
+        slice.m_sliceViewOffset = startColumn; // Just shift the compressed index location to the new startColumn - that's it!
 
         return slice;
     }
@@ -2141,6 +2194,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>    
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::ElementInverse ()
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (IsEmpty())
             LogicError("ElementInverse: Matrix is empty.");
 
@@ -2270,6 +2326,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateBottom (const ElemType threshold)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (IsEmpty())
             LogicError("InplaceTruncateBottom: Matrix is empty.");
         CUDA_LONG N=(CUDA_LONG)GetNumNZElements();
@@ -2286,6 +2345,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateBottomOf (const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (a.IsEmpty())
             LogicError("AssignTruncateBottomOf: Matrix a is empty.");
 
@@ -2308,6 +2370,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateTop (const ElemType threshold)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (IsEmpty())
             LogicError("InplaceTruncateTop: Matrix is empty.");
         CUDA_LONG N=(CUDA_LONG)GetNumNZElements();
@@ -2324,6 +2389,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf (const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (a.IsEmpty())
             LogicError("AssignTruncateTopOf: Matrix a is empty.");
 
@@ -2346,6 +2414,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::SetToZeroIfAbsLessThan (const ElemType threshold)
     {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         if (IsEmpty())
             LogicError("SetToZeroIfAbsLessThan: Matrix is empty.");
         CUDA_LONG N=(CUDA_LONG)GetNumNZElements();
@@ -2398,7 +2469,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template<class ElemType>
     void GPUSparseMatrix<ElemType>::performInplaceFunction(int kind)
-    {        
+    {
+        if (!OwnBuffer())
+            LogicError("Cannot modify since the buffer is managed externally.");
+
         CUDA_LONG N=(CUDA_LONG)GetNumNZElements();
         int blocksPerGrid =(int)ceil(1.0*N/threadsPerBlock);                
         cudaEvent_t done = nullptr;

@@ -4704,6 +4704,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool Matrix<ElemType>::HasNan (const char * name) const
     {
+        // Not implemented for sparse matrices.
+        // Return false as a workaround to at
+        // least evaluate the dense matrices.
+        if (m_matrixType == MatrixType::SPARSE)
+            return false;
+
         // if GPU then first detect NaN there, will be faster
         if (GetDeviceId() != CPUDEVICE)
         {

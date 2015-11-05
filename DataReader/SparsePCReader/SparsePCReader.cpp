@@ -69,8 +69,12 @@ void SparsePCReader<ElemType>::Destroy()
 template<class ElemType>
 void SparsePCReader<ElemType>::Init(const ConfigParameters& readerConfig)
 {
-    m_miniBatchSize = 0;
+    // Sparse PC reader considers every consecutive N rows to be part of a single block.
+    // This is used later to compute the corss-entropy with softmax per block.
+    // Default value is 1 to indicate all rows are independent.
     m_microBatchSize = readerConfig("microbatchSize", "1");
+
+    m_miniBatchSize = 0;
     m_traceLevel = readerConfig("traceLevel", "0");
     m_maxReadData = readerConfig("maxReadData", "0");
     m_doGradientCheck = readerConfig("gradientCheck", "false");
@@ -186,8 +190,6 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         return false;
     }
 
-    m_pMBLayout->Init(m_miniBatchSize / m_microBatchSize, m_microBatchSize, false);
-
     Matrix<ElemType>* labels = nullptr;
     auto labelEntry = matrices.find(m_labelName);
     bool useLabels = false;
@@ -245,6 +247,8 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
 
         m_currOffset += sizeof(int32_t);
     }
+
+    m_pMBLayout->Init(j / m_microBatchSize, m_microBatchSize, false);
 
     for (int i = 0; i < m_featureCount; i++)
     {
