@@ -4,10 +4,7 @@
 // </copyright>
 //
 #include "stdafx.h"
-#include "..\..\..\Math\Math\CPUMatrix.h"
-
-#include <array>
-#include <boost/test/unit_test.hpp>
+#include "../../../Math/Math/CPUMatrix.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -31,7 +28,6 @@ namespace Microsoft
 
                     m.Resize(2, 3);
                     BOOST_CHECK(!m.IsEmpty());
-
                     BOOST_CHECK_EQUAL(m.GetNumRows(), 2);
                     BOOST_CHECK_EQUAL(m.GetNumCols(), 3);
                     BOOST_CHECK_EQUAL(m.GetNumElements(), 6);
@@ -47,12 +43,8 @@ namespace Microsoft
 
                 BOOST_AUTO_TEST_CASE(CPUMatrixConstructorFlagNormal)
                 {
-                    std::array<float, 6> tmp = { 1, 2, 3, 4, 5, 6 };
-
-                    float* array = new float[6];
-                    std::copy(tmp.begin(), tmp.end(), array);
-
-                    SMatrix m(2, 3, array, matrixFlagNormal);
+                    std::array<float, 6> array = { 1, 2, 3, 4, 5, 6 };
+                    SMatrix m(2, 3, array.data(), matrixFlagNormal);
                     BOOST_CHECK_EQUAL(m(0, 0), 1);
                     BOOST_CHECK_EQUAL(m(0, 1), 3);
                     BOOST_CHECK_EQUAL(m(0, 2), 5);
@@ -63,12 +55,8 @@ namespace Microsoft
 
                 BOOST_AUTO_TEST_CASE(CPUMatrixConstructorFormatRowMajor)
                 {
-                    std::array<double, 6> tmp = { 7, 8, 9, 10, 11, 12 };
-
-                    double *array = new double[6];
-                    std::copy(tmp.begin(), tmp.end(), array);
-
-                    DMatrix m(2, 3, array, matrixFormatRowMajor);
+                    std::array<double, 6> array = { 7, 8, 9, 10, 11, 12 };
+                    DMatrix m(2, 3, array.data(), matrixFormatRowMajor);
                     BOOST_CHECK_EQUAL(m(0, 0), 7);
                     BOOST_CHECK_EQUAL(m(0, 1), 8);
                     BOOST_CHECK_EQUAL(m(0, 2), 9);
