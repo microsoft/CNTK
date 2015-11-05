@@ -1824,11 +1824,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         if (useDistributedMBReading)
         {
             trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, g_mpi->CurrentNodeRank(),
-                                                              g_mpi->NumNodesInUse(), m_epochSize);
+                                                              g_mpi->NumNodesInUse(), epochSize);
         }
         else
         {
-            trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, m_epochSize);
+            trainSetDataReader->StartMinibatchLoop(tunedMBSize, epochNumber, epochSize);
         }
 
         net.StartEvaluateMinibatchLoop(evaluationNodes);
@@ -2159,9 +2159,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             timer.Restart();
             totalEpochSamples += aggregateNumSamplesWithLabel;
             totalSamplesSeen += aggregateNumSamplesWithLabel;
-
-            if (totalEpochSamples >= epochSize)
-                break;
 
             // call DataEnd function
             // This signals something from SGD to the reader.
