@@ -131,6 +131,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     public:
 
         GPUMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
+        GPUMatrix<ElemType> RowSlice(size_t startRow, size_t numRows) const;
         GPUMatrix<ElemType>& AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
         GPUMatrix<ElemType>& SetColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 

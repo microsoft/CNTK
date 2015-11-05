@@ -537,6 +537,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return slice;
     }
 
+    template<class ElemType> 
+    GPUMatrix<ElemType> GPUMatrix<ElemType>::RowSlice(size_t startRow, size_t numRows) const
+    {
+        if (startRow + numRows > m_numRows )
+            InvalidArgument("The row slice (%d+%d) is out of range of the source matrix (%d).", (int)startRow, (int)numRows, (int)m_numRows);
+
+        GPUMatrix<ElemType> slice(GetComputeDeviceId());
+        slice.AssignRowSliceValuesOf(*this, startRow, numRows); 
+        return slice; 
+    }
+
     template<class ElemType>
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignColumnSlice(const GPUMatrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols)
     {
