@@ -1662,7 +1662,6 @@ private:
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
-#if 1
             ValidateInferBinaryChildrenDims();
 
 #if 0
