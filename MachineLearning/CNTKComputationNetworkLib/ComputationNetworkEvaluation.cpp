@@ -371,7 +371,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             auto recInfo = dynamic_pointer_cast<RecurrentFlowControlNode>(node);
             if (recInfo)
                 assert(recInfo->m_sourceNode->GetMBLayout() == node->GetMBLayout());
-
             if (recInfo)
                 assert(!recInfo->m_completedGradient);  // TODO: not needed anymore, I think
 
@@ -434,17 +433,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::OnEvaluateBeginIteration() /*override*/
     {
-        // get layout associated with this loop
-        auto pMBLayout = m_recurrentNodes[0]->GetMBLayout();
+        // take the opportunity to check that layout is shared by all nodes in the loop
+        // TODO: we should do this in a constructor.
+        for (auto & node2 : m_recurrentNodes)
+        {
+            if (node2->GetMBLayout() != GetMBLayout())
+                LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
+                            node2->NodeName().c_str(), m_recurrentNodes[0]->NodeName().c_str());
+        }
 
         // tell all that loop is about to commence
         for (auto & node2 : m_recurrentNodes)
-        {
-            if (!pMBLayout || node2->GetMBLayout() != pMBLayout)  // take the opportunity to check that layout is shared by all nodes in the loop
-                LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
-                            node2->NodeName().c_str(), m_recurrentNodes[0]->NodeName().c_str());
             node2->OnEvaluateBeginIteration();
-        }
 
         // since we share memory we need to resize function value matrices correctly
         // TODO: No, Validate() should only run as a prep stage. This will go away once we separate dimension inference and actual resizing.
@@ -460,10 +460,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // get layout associated with this loop
         // All nodes share the same layout.
-        auto pMBLayout = m_recurrentNodes[0]->GetMBLayout();
+        assert(GetMBLayout() == m_recurrentNodes[0]->GetMBLayout());
 
         // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
-        FrameRangeIteration range(pMBLayout, m_steppingDirection);
+        FrameRangeIteration range(GetMBLayout(), m_steppingDirection);
         for (auto t = range.begin(); t != range.end(); t++)
         {
             for (auto & node2 : m_recurrentNodes)
