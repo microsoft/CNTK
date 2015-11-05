@@ -68,6 +68,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
+            m_numSeqsPerMB = m_numSeqsPerMBForAllEpochs[0];
+            m_pMBLayout->Init(m_numSeqsPerMB, 0, true); // (SGD will ask before entering actual reading --TODO: This is hacky.)
+
             m_noData = false;
 
             string command(readerConfig("action",L"")); //look up in the config for the master command to determine whether we're writing output (inputs only) or training/evaluating (inputs and outputs)
@@ -351,10 +354,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (wstring & path : filelist)
                         {
-#ifdef WIN32                // sorry for windows users, we have to pay some cost here 
-                            std::replace(path.begin(), path.end(), L'\\', L'/'); 
+                            if (path.find_first_of(L'=') != wstring::npos)
+                            {
+                                vector<wstring> strarr = msra::strfun::split(path, L"="); 
+#ifdef WIN32
+                                replace(strarr[1].begin(), strarr[1].end(), L'\\', L'/');
 #endif 
-                            path = rootpath + L"/" + path;  
+
+                                path = strarr[0] + L"=" + rootpath + L"/" + strarr[1]; 
+                            }                     
+                            else
+                            {
+#ifdef WIN32
+                                replace(path.begin(), path.end(), L'\\', L'/');
+#endif 
+                                path = rootpath + L"/" + path;  
+                            }                            
                         }
                     }
                 }
@@ -658,7 +673,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // resize the arrays
             // These are sized to the requested number. If not all can be filled, it will still return this many, just with gaps.
             // In frame mode, m_numSeqsPerMB must be 1. However, the returned layout has one 1-frame sequence per frame.
-            m_actualNumSeqsPerMB = m_numSeqsPerMB;
             m_sentenceEnd.assign(m_numSeqsPerMB, true);
             m_processedFrame.assign(m_numSeqsPerMB, 0);
             m_numFramesToProcess.assign(m_numSeqsPerMB, 0);
