@@ -78,8 +78,6 @@ void SparsePCReader<ElemType>::Init(const ConfigParameters& readerConfig)
 
     m_microBatchSize = readerConfig("microbatchSize", "1");
 
-    m_microBatchSize = readerConfig("microbatchSize", "1");
-
     m_miniBatchSize = 0;
     m_traceLevel = readerConfig("traceLevel", "0");
     m_maxReadData = readerConfig("maxReadData", "0");
