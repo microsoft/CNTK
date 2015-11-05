@@ -5,6 +5,8 @@ cmake_minimum_required(VERSION 2.8)
 project(CNTKCMake CXX)
 
 find_package(MPI)
+find_package(CUDA 7.0 REQUIRED)
+#find_package(CUDA 7.0 REQUIRED)
 
 if(WIN32)
 
@@ -26,6 +28,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++0x -std=c++11 -fopenmp -f
 # TODO less flags?
 
 endif()
+
+include_directories(${CUDA_INCLUDE_DIRS}) 
+cuda_add_executable(test main.cu wa.cc wo.c wupp.cpp) 
 
 add_definitions(-DCPUONLY)
 
@@ -170,7 +175,7 @@ enable_testing()
 
 # Right now, we use Boost only for testing
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost REQUIRED
+find_package(Boost 1.55.0 REQUIRED
   COMPONENTS
   unit_test_framework REQUIRED)
 

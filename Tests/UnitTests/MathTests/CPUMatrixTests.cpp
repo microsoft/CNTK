@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include "../../../Math/Math/CPUMatrix.h"
 
+#define BOOST_TEST_MAIN // TODO need to understand
 #include <array>
 #include <boost/test/unit_test.hpp>
 
