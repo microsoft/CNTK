@@ -1664,8 +1664,8 @@ private:
             Base::Validate(isFinalValidationPass);
 #if 1
             ValidateInferBinaryChildrenDims();
-#else
-            //if dimension is missing make the two operatants to have same size
+
+#if 0
             size_t index = 0;
             {
                 size_t rows = Inputs(index)->GetNumRows() == 0? Inputs(1-index)->GetNumRows() : Inputs(index)->GetNumRows();
