@@ -61,10 +61,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             size_t max_visitedOrderInLoop = 0;
             // TODO: I am sure there is an STL algorithm for this.
-            for (auto itr : iter->m_recurrentNodes)
+            for (auto itr : iter->m_nestedNodes)
                 if (max_visitedOrderInLoop < itr->m_visitedOrder)
                     max_visitedOrderInLoop = itr->m_visitedOrder;
-            for (auto itr : iter->m_recurrentNodes)
+            for (auto itr : iter->m_nestedNodes)
                 itr->m_visitedOrder = max_visitedOrderInLoop;
         }
 
@@ -72,19 +72,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (auto & iter : m_recurrentInfo)
         {
 #if 1       // instead of the redundant sort() below, we just verify
-            for (auto & node : iter->m_recurrentNodes)
-                if (node->m_visitedOrder != iter->m_recurrentNodes.front()->m_visitedOrder)
+            for (auto & node : iter->m_nestedNodes)
+                if (node->m_visitedOrder != iter->m_nestedNodes.front()->m_visitedOrder)
                     LogicError("FormRecurrentLoops: m_visitedOrder was set to a constant, but actually... wasn't?");
 #else
             // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
             // it is done in the mergerecurrentloops function, but just keep the code       --TODO: why?? Why not rather verify the order?
             // BUGBUG: This sort() seems to do nothing, since the above loop sets all m_visitedOrder to the same value??
-            sort(iter->m_recurrentNodes.begin(),
-                 iter->m_recurrentNodes.end(),
-                 iter->m_recurrentNodes[0]->ByVisitedOrder);
+            sort(iter->m_nestedNodes.begin(),
+                 iter->m_nestedNodes.end(),
+                 iter->m_nestedNodes[0]->ByVisitedOrder);
 #endif
 
-            for (auto & node : iter->m_recurrentNodes)
+            for (auto & node : iter->m_nestedNodes)
             {
                 node->m_isPartOfLoop = true;        // this is the only flag in ComputationNode that escapes FormRecurrentLoops()!
                 // TODO: ^^ We should instead remember a pointer to our loop sentinel
@@ -102,9 +102,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // set m_indexInLoop for all nodes except Past/FutureValueNodes in all loops
             // This value is only used in the block right after this.
             // This is very mysterious. It is certainly no index in loop. More like a parent count, and excluding delay nodes.
-            for (size_t j = 0; j < iter->m_recurrentNodes.size(); j++)
+            for (size_t j = 0; j < iter->m_nestedNodes.size(); j++)
             {
-                ComputationNodeBasePtr node = iter->m_recurrentNodes[j];
+                ComputationNodeBasePtr node = iter->m_nestedNodes[j];
                 for (size_t i = 0; i < node->ChildrenSize(); i++)
                 {
                     if (node->Inputs(i)->m_loopId == node->m_loopId && 
@@ -117,15 +117,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            for (size_t i = 0; i < iter->m_recurrentNodes.size(); i++)
+            for (size_t i = 0; i < iter->m_nestedNodes.size(); i++)
             {
-                ComputationNodeBasePtr node = iter->m_recurrentNodes[i];
+                ComputationNodeBasePtr node = iter->m_nestedNodes[i];
                 if (visited.find(node) == visited.end() && node->m_indexInLoop == 0)
                     DetermineLoopForwardOrder(visited, recStack, result, node);
             }
 
-            // update m_recurrentNodes with 'result'
-            iter->m_recurrentNodes.assign(result.begin(), result.end());
+            // update m_nestedNodes with 'result'
+            iter->m_nestedNodes.assign(result.begin(), result.end());
         }
 
         if (m_recurrentInfo.size() > 0)
@@ -165,9 +165,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // log the loops
         for (auto & iter : m_recurrentInfo)
         {
-            fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter->m_loopId, iter->NodeName().c_str(), (int)iter->m_recurrentNodes.size());
+            fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter->m_loopId, iter->NodeName().c_str(), (int)iter->m_nestedNodes.size());
             size_t n = 0;
-            for (auto itr = iter->m_recurrentNodes.begin(); itr != iter->m_recurrentNodes.end(); itr++)
+            for (auto itr = iter->m_nestedNodes.begin(); itr != iter->m_nestedNodes.end(); itr++)
             {
                 if (n++ % 3 == 0)
                     fprintf(stderr, "\n");
@@ -235,11 +235,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ComputationNodeBasePtr w = sccStack.back();
                 sccStack.pop_back();
                 w->m_inStack = false;
-                rInfo.m_recurrentNodes.push_back(w);
+                rInfo.m_nestedNodes.push_back(w);
                 if (w == cur)                       // hit our starting point: done
                     break;
             }
-            if (rInfo.m_recurrentNodes.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
+            if (rInfo.m_nestedNodes.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
             {
                 // only add to the array if the loop is not already there
                 // Since FormRecurrentLoops() is called multiple times, for multiple output nodes, we end up producing the same loop multiple times.
@@ -366,7 +366,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 int iId = recInfo->m_loopId;
                 if (!accessed[iId])
                 {
-                    newList.insert(newList.end(), recInfo->m_recurrentNodes.begin(), recInfo->m_recurrentNodes.end());
+                    newList.insert(newList.end(), recInfo->m_nestedNodes.begin(), recInfo->m_nestedNodes.end());
                     accessed[iId] = true;
                 }
             }
@@ -396,12 +396,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         for (auto & rInfo : m_recurrentInfo)
         {
-            assert(rInfo->m_recurrentNodes.size() > 0);    // (this check was left over after refactoring; it should not be necessary)
+            assert(rInfo->m_nestedNodes.size() > 0);    // (this check was left over after refactoring; it should not be necessary)
 
             bool hasPastValueNode = false;
             bool hasFutureValueNode = false;
 
-            for (auto & node : rInfo->m_recurrentNodes)
+            for (auto & node : rInfo->m_nestedNodes)
             {
                 if (node->OperationName() == OperationNameOf(PastValueNode))
                     hasPastValueNode = true;

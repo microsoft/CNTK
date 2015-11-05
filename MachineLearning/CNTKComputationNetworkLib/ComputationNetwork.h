@@ -64,6 +64,8 @@ protected:
     // This structure stores that little sub-network.
     class RecurrentFlowControlNode : public FlowControlNode
     {
+    public: // m_nestedNodes needed public by ComputationNetwork::FindInRecurrentLoops(), which really should be part of RecurrentFlowControlNode
+        typedef FlowControlNode Base; using Base::m_nestedNodes;
     public:
         // next steps:
         //  - change m_recurrentInfo to use shared_ptrs to ComputationNodeBase
@@ -83,7 +85,7 @@ protected:
         virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
         virtual bool IsFuncValueOlderThanInputs() const override;
     public:
-        std::vector<ComputationNodeBasePtr> m_recurrentNodes;               // all nodes involved in this loop, in evaluation order
+        //std::vector<ComputationNodeBasePtr> m_nestedNodes;               // all nodes involved in this loop, in evaluation order
         ComputationNodeBasePtr m_sourceNode;                                // one of the nodes of the loop   --TODO: What is the special meaning of this node? It seems to always be a delay node.
         int m_loopId;                                                       // the loop id (index in m_recurrentInfo array)
         bool m_completedGradient;
@@ -104,6 +106,7 @@ protected:
     // This is the outer loop over the network nodes in PAR mode.
     class OuterLoopNode : public FlowControlNode
     {
+        typedef FlowControlNode Base; using Base::m_nestedNodes;
     public:
         virtual const std::wstring OperationName() const override { return L"OuterLoopNode"; }
         virtual void UpdateFunctionMBSize() override { NOT_IMPLEMENTED; }
@@ -121,7 +124,7 @@ protected:
         virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
     public:
         OuterLoopNode(/*const*/ std::vector<shared_ptr<RecurrentFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
-        std::vector<ComputationNodeBasePtr> m_outerNodes;             // all top-level nodes, in evaluation order. Nested nodes are tucked inside FlowControlNodes.
+        // m_nestedNodes contains all top-level nodes, in evaluation order
     };
 
 public:

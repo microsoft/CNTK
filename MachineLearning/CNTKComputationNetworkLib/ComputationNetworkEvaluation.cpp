@@ -63,7 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             shared_ptr<RecurrentFlowControlNode> recInfo = FindInRecurrentLoops(m_recurrentInfo, node);   // check if this node participates in a recurrent loop
 
-            if (recInfo && IsFuncValueOlderThanInputs(recInfo->m_recurrentNodes) && !recInfo->m_completedEvaluate)
+            if (recInfo && IsFuncValueOlderThanInputs(recInfo->m_nestedNodes) && !recInfo->m_completedEvaluate)
             {
 #if 1
                 recInfo->UpdateFunctionMBSize();
@@ -72,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 recInfo->OnEvaluateEndIteration();
 #else
                 // node participates in a recurrent loop: process the loop frame by frame
-                const auto & recurrentNodes = recInfo->m_recurrentNodes;
+                const auto & recurrentNodes = recInfo->m_nestedNodes;
 
                 // get layout associated with this loop
                 auto pMBLayout = recurrentNodes[0]->GetMBLayout();
@@ -203,7 +203,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     recInfo->ComputeGradientForChildren(FrameRange(node->GetMBLayout()), true, true);
                     recInfo->OnComputeGradientEndIteration();
 #else
-                    const auto & recurrentNodes = recInfo->m_recurrentNodes;
+                    const auto & recurrentNodes = recInfo->m_nestedNodes;
                     for (auto & node2 : recurrentNodes)
                         node2->OnComputeGradientBeginIteration();
                     auto pMBLayout = recurrentNodes[0]->GetMBLayout();
@@ -271,7 +271,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (recInfo)            // node is part of a SEQ loop: gather all of them. The nodes must be consecutive in 'allNodes'
             {
                 // instead of the node itself, include the sentinel RecurrentFlowControlNode in our list
-                m_outerNodes.push_back(recInfo);
+                m_nestedNodes.push_back(recInfo);
                 // and verify that we only encountered the loop once (all nodes should have been consecutive)
                 if (!loopsSeen.insert(recInfo).second)
                     LogicError("OuterLoopNode: members of loop %ls are not consecutive in node list.", recInfo->NodeName().c_str());
@@ -281,14 +281,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else                    // regular top-level node (non-looping, PAR)
             {
-                m_outerNodes.push_back(*nodeIter);
+                m_nestedNodes.push_back(*nodeIter);
                 nodeIter++;         // and consume this node
             }
         }
     }
     /*virtual*/ void ComputationNetwork::OuterLoopNode::EvaluateThisNode(const FrameRange & frameRange) /*override*/
     {
-        for (auto & node : m_outerNodes)
+        for (auto & node : m_nestedNodes)
         {
 #if 1
 #if 1
@@ -363,7 +363,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
         // process nodes in pre-determined order
-        for (auto pnode = m_outerNodes.rbegin(); pnode != m_outerNodes.rend(); pnode++)   // iterate backwards over evaluation order
+        for (auto pnode = m_nestedNodes.rbegin(); pnode != m_nestedNodes.rend(); pnode++)   // iterate backwards over evaluation order
         {
             auto & node = *pnode;
 
@@ -427,7 +427,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // implementations of RecurrentFlowControlNode (loop unrolling)
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::UpdateFunctionMBSize() /*override*/
     {
-        for (auto & node2 : m_recurrentNodes)
+        for (auto & node2 : m_nestedNodes)
             node2->UpdateFunctionMBSize(); // TODO: for sequence-to-sequence models we will need to be able to grow this step by step since size is unknown upfront
     }
 
@@ -435,20 +435,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // take the opportunity to check that layout is shared by all nodes in the loop
         // TODO: we should do this in a constructor.
-        for (auto & node2 : m_recurrentNodes)
+        for (auto & node2 : m_nestedNodes)
         {
             if (node2->GetMBLayout() != GetMBLayout())
                 LogicError("Evaluate: all nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' vs. '%ls'",
-                            node2->NodeName().c_str(), m_recurrentNodes[0]->NodeName().c_str());
+                            node2->NodeName().c_str(), m_nestedNodes[0]->NodeName().c_str());
         }
 
         // tell all that loop is about to commence
-        for (auto & node2 : m_recurrentNodes)
+        for (auto & node2 : m_nestedNodes)
             node2->OnEvaluateBeginIteration();
 
         // since we share memory we need to resize function value matrices correctly
         // TODO: No, Validate() should only run as a prep stage. This will go away once we separate dimension inference and actual resizing.
-        for (auto & node2 : m_recurrentNodes)
+        for (auto & node2 : m_nestedNodes)
             node2->Validate(true);
     }
 
@@ -460,13 +460,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // get layout associated with this loop
         // All nodes share the same layout.
-        assert(GetMBLayout() == m_recurrentNodes[0]->GetMBLayout());
+        assert(GetMBLayout() == m_nestedNodes[0]->GetMBLayout());
 
         // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
         FrameRangeIteration range(GetMBLayout(), m_steppingDirection);
         for (auto t = range.begin(); t != range.end(); t++)
         {
-            for (auto & node2 : m_recurrentNodes)
+            for (auto & node2 : m_nestedNodes)
             {
                 //fprintf(stderr, "EvaluateThisNode %d %ls %ls\n", (int)t.timeIdxInSeq, node2->NodeName().c_str(), node2->OperationName().c_str());
                 node2->EvaluateThisNode(t);
@@ -481,20 +481,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::OnEvaluateEndIteration() /*override*/
     {
         // tell all that loop is done  --e.g. PastValueNode will capture its state for BPTT processing
-        for (auto & node2 : m_recurrentNodes)
+        for (auto & node2 : m_nestedNodes)
             node2->OnEvaluateEndIteration();
     }
 
     // called before first iteration step of ComputeGradient()
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::OnComputeGradientBeginIteration() /*override*/
     {
-        for (auto & node2 : m_recurrentNodes)
+        for (auto & node2 : m_nestedNodes)
             node2->OnComputeGradientBeginIteration();
     }
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::ComputeGradientForChildren(const FrameRange &, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
     {
         childrenInThisLoop, childrenInOuterLoop;    // TODO: think through what these mean when coming from PAR mode
-        const auto & recurrentNodes = m_recurrentNodes;       // BUGBUG: -ForForward?? Does this mean we can remove non-ForForward?
+        const auto & recurrentNodes = m_nestedNodes;       // BUGBUG: -ForForward?? Does this mean we can remove non-ForForward?
         auto pMBLayout = recurrentNodes[0]->GetMBLayout();
         FrameRangeIteration range(pMBLayout, m_steppingDirection);
         for (auto t = range.rbegin(); t != range.rend(); t++)   // note: reverse iteration
@@ -520,7 +520,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::OnComputeGradientEndIteration() /*override*/
     {
 #ifdef OPT_OUTER_GRADIENT
-        for (auto nodeIter2 = m_recurrentNodes.rbegin(); nodeIter2 != m_recurrentNodes.rend(); ++nodeIter2)
+        for (auto nodeIter2 = m_nestedNodes.rbegin(); nodeIter2 != m_nestedNodes.rend(); ++nodeIter2)
         {
             auto & node2 = *nodeIter2;
             // BUGBUG: The following can no longer be done after this code was moved into RecurrentFlowControlNode
@@ -528,23 +528,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //if (IsNodeReqMultiSeqHandling(node2))
             //    node2->MaskMissingGradientColumnsToZero(t);
             // TODO: exclude children that are not part of the recurrent loop, and do thise below, separately.
-            node2->ComputeGradientForChildren(FrameRange(m_recurrentNodes[0]->GetMBLayout()), false/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
+            node2->ComputeGradientForChildren(FrameRange(m_nestedNodes[0]->GetMBLayout()), false/*childrenInThisLoop*/, true/*childrenInOuterLoop*/);
         }
 #endif
-        for (auto & node2 : m_recurrentNodes)
+        for (auto & node2 : m_nestedNodes)
             node2->OnComputeGradientEndIteration();
     }
 
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::RequestMatricesBeforeEval(MatrixPool& matrixPool) /*override*/
     {
-        for (auto & nodeLoopIter : m_recurrentNodes)
+        for (auto & nodeLoopIter : m_nestedNodes)
             nodeLoopIter->RequestMatricesBeforeEval(matrixPool);
     }
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::ReleaseMatricesAfterEval(MatrixPool& matrixPool) /*override*/ { }
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::AllocateGradientMatricesForChildren(MatrixPool& matrixPool) /*override*/
     {
         // TODO: should we deallocate in opposite order?
-        for (auto nodeIter = m_recurrentNodes.rbegin(); nodeIter != m_recurrentNodes.rend(); ++nodeIter)
+        for (auto nodeIter = m_nestedNodes.rbegin(); nodeIter != m_nestedNodes.rend(); ++nodeIter)
         {
             (*nodeIter)->AllocateGradientMatricesForChildren(matrixPool);
         }
@@ -552,7 +552,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) /*override*/ { }
     /*virtual*/ void ComputationNetwork::RecurrentFlowControlNode::ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) /*override*/
     {
-        for (auto nodeIter = m_recurrentNodes.rbegin(); nodeIter != m_recurrentNodes.rend(); ++nodeIter)
+        for (auto nodeIter = m_nestedNodes.rbegin(); nodeIter != m_nestedNodes.rend(); ++nodeIter)
         {
             if ((*nodeIter)->NeedGradient())
                 (*nodeIter)->ReleaseMatricesAfterGradientComp(matrixPool);
@@ -566,7 +566,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // look in all recurrent loops of the network
         // TODO: Check for IsPartOfLoop(). Also why not store the loop id in the node for direct lookup?
         for (auto & iter : recurrentInfo)
-            if (std::find(iter->m_recurrentNodes.begin(), iter->m_recurrentNodes.end(), node) != iter->m_recurrentNodes.end())  // TODO: should this loop need to be a method of RecurrentFlowControlNode?
+            if (std::find(iter->m_nestedNodes.begin(), iter->m_nestedNodes.end(), node) != iter->m_nestedNodes.end())  // TODO: should this loop need to be a method of RecurrentFlowControlNode?
                 return iter;
         return nullptr;  // not part of a recurrent loop
     }
@@ -576,7 +576,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // TODO: move this function up to its peers
     bool ComputationNetwork::RecurrentFlowControlNode::IsFuncValueOlderThanInputs() const
     {
-        for (auto & ptr : m_recurrentNodes)
+        for (auto & ptr : m_nestedNodes)
         {
             if (ptr->IsFuncValueOlderThanInputs() &&
                 ptr->OperationName() != OperationNameOf(PastValueNode) &&
@@ -950,7 +950,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #if 1
                     recInfo->RequestMatricesBeforeEval(m_matrixPool);
 #else
-                    for (auto &nodeLoopIter : recInfo->m_recurrentNodes)
+                    for (auto &nodeLoopIter : recInfo->m_nestedNodes)
                     {
                         nodeLoopIter->RequestMatricesBeforeEval(m_matrixPool);
                     }
@@ -958,7 +958,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                     recInfo->m_completedEvaluate = true;
 
-                    for (auto &nodeLoopIter : recInfo->m_recurrentNodes)
+                    for (auto &nodeLoopIter : recInfo->m_nestedNodes)
                     {
                         ReleaseMatricesAfterEvalForChildren(nodeLoopIter, parentCount);
                     }
@@ -1014,7 +1014,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     recInfo->m_completedGradient = true;
                     recInfo->ReleaseMatricesAfterGradientComp(m_matrixPool);
 #else
-                    const auto & recurrentNodes = recInfo->m_recurrentNodes;
+                    const auto & recurrentNodes = recInfo->m_nestedNodes;
                     //loops are computed sample by sample so we have to allocate them all 
                     for (auto nodeIter = recurrentNodes.rbegin(); nodeIter != recurrentNodes.rend(); ++nodeIter)
                     {
