@@ -1422,6 +1422,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() override { return true; }
         virtual void PrintSelfBeforeValidation() const override { }
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const override { }
+    protected:
+    public: // needed in ComputationNetwork::FindInRecurrentLoops(), which really should be part of RecurrentFlowControlNode
+        std::vector<ComputationNodeBasePtr> m_nestedNodes;                  // nodes tucked away in this node, in evaluation order
     };
 
     // =======================================================================
