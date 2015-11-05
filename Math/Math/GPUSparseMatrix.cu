@@ -601,8 +601,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             delete[] m_matrixName;
             delete[](byte*)m_tempHostBuffer;
-                CUDA_CALL(cudaFree(m_pArray));
-                CUDA_CALL(cudaFree(m_rowToId));
+            CUDA_CALL(cudaFree(m_pArray));
+            CUDA_CALL(cudaFree(m_rowToId));
             ZeroInit(m_format, m_computeDevice);
         }
     }
