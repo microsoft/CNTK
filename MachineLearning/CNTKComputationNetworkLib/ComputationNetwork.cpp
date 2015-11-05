@@ -48,6 +48,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // construction
     // -----------------------------------------------------------------------
 
+    // TODO: why is this needed? Why is this not just construction?
     void ComputationNetwork::ClearNet()
     {
         for (auto groupIter : GetAllNodeGroups())
@@ -59,6 +60,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         m_cacheEvalOrders.clear();
         m_cacheGradientCalcOrders.clear();
+        m_cachedOuterLoopNodes.clear();
 
         m_inputs.clear();
         m_learnableParameters.clear();
@@ -478,6 +480,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // TODO: just use return!
         if (nodePtr->OperationName() == OperationNameOf(SquareErrorNode) ||
+			nodePtr->OperationName() == OperationNameOf(LogisticNode) ||
             nodePtr->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
             nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
             nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
@@ -566,14 +569,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     // this is called from ClearCache() only, which in turn is called by model editing operations, such as DeleteNode(), and by RebuildNetwork()
+    // Basically, it invalidates all post-processing, reducing the network to the graph.
     void ComputationNetwork::ClearCalcOrderCaches()
     {
         for (auto & it : m_cacheEvalOrders)
             for (auto & iter2 : m_cacheEvalOrders[it.first])
                 iter2->PurgeStateForFormingRecurrentLoops();
         // TODO: ^^ Why is this done? This looks like an error (this function was called ClearCache() before, so maybe someone threw this call in for good measure)
+
+        // clear network Iterations cache
         m_cacheEvalOrders.clear();
         m_cacheGradientCalcOrders.clear();
+        m_cachedOuterLoopNodes.clear();
     }
 
     // lazily reate the m_inputs[] and m_learnableParameters lists

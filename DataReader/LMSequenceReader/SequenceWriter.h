@@ -1,5 +1,5 @@
 //
-// <copyright file="LMSequenceWriter.h" company="Microsoft">
+// <copyright file="SequenceWriter.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
