@@ -121,8 +121,7 @@ protected:
         virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool);
     public:
         OuterLoopNode(/*const*/ std::vector<shared_ptr<RecurrentFlowControlNode>> & recurrentInfo, const std::list<ComputationNodeBasePtr> & allNodes);
-        std::list<ComputationNodeBasePtr> m_outerNodes;             // all top-level nodes, in evaluation order. Nested nodes are tucked inside FlowControlNodes.
-        // TODO: make a vector, then share with m_recurrentNodes
+        std::vector<ComputationNodeBasePtr> m_outerNodes;             // all top-level nodes, in evaluation order. Nested nodes are tucked inside FlowControlNodes.
     };
 
 public:
