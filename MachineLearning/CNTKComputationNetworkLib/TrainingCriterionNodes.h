@@ -38,7 +38,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
 #if 1
-            auto gradient = Inputs(0)->GradientSlice(frameRange);
+            auto gradient = Inputs(inputIndex)->GradientSlice(frameRange);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 1.0f : -1.0f, GradientValues()/*1x1*/, *m_leftMinusRight, 1.0f, gradient);
 #else
             if (inputIndex == 0)
@@ -46,6 +46,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else
                 Inputs(1)->GradientSlice(frameRange).AddWithScaleOf(-GradientValues().Get00Element(), *m_leftMinusRight);
 #endif
+        }
+
+        virtual void UpdateFunctionMBSize() override
+        {
+            m_leftMinusRight->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
         }
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
@@ -64,7 +69,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateBinaryReduce(isFinalValidationPass);
-            //m_leftMinusRight->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
@@ -110,9 +114,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // CrossEntropyWithSoftmaxNode (labels, prediction)
+    // calculates: -sum(left_i * log(softmax_i(right)))
     // -----------------------------------------------------------------------
 
-    //calculates: -sum(left_i * log(softmax_i(right)))
     template<class ElemType>
     class CrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
     {
@@ -127,22 +131,25 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
             // left input is scalar
-            if (inputIndex == 0)  // left derivative
+            if (inputIndex == 0)  //left derivative
             {
 #if DUMPOUTPUT
                 *m_logSoftmaxOfRight.Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
                 GradientValues().Print("CrossEntropyWithSoftmax Partial-gradientValues");
                 Inputs(0)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
 #endif
+
                 auto gradient = Inputs(0)->GradientSlice(frameRange);
                 //Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_logSoftmaxOfRight, gradient);
                 Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, GradientValues()/*1x1*/, *m_logSoftmaxOfRight, 1.0f, gradient);
 #if DUMPOUTPUT
                 Inputs(0)->GradientSlice(frameRange).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
 #endif
-            }
+
+        }
+
             else if (inputIndex == 1)  // right derivative
-            {
+        {
 #if DUMPOUTPUT
                 *m_softmaxOfRight.Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
                 Inputs(0)->ValueSlice(frameRange).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
@@ -159,6 +166,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 Inputs(1)->InvalidateMissingGradientColumns(frameRange);  // TODO: This should not be necessary.
 #endif
             }
+        }
+
+        virtual void UpdateFunctionMBSize() override
+        {
+            m_logSoftmaxOfRight->Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());
+            m_softmaxOfRight->Resize(m_logSoftmaxOfRight->GetNumRows(), m_logSoftmaxOfRight->GetNumCols());
         }
 
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
@@ -185,13 +198,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateBinaryReduce(isFinalValidationPass);
-            //m_logSoftmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
-            //m_softmaxOfRight.Resize(Inputs(0)->FunctionValues().GetNumRows(), Inputs(0)->FunctionValues().GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
         {
             InferImageDimsFromInput(0, false);
+
             m_outputImageLayout = ImageLayout();
         }
 
@@ -213,14 +225,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
             RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
         }
-
-        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        //virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
-        //{
-        //    Base::ReleaseMatricesAfterGradientComp(matrixPool);
-        //    ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
-        //    ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
-        //}
 
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
@@ -281,6 +285,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues/*1x1*/, leftDivRight, 1.0f, inputGradientValues);
         }
 
+        virtual void UpdateFunctionMBSize() override
+        {
+            m_logOfRight->Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());
+            m_leftDivRight->Resize(Inputs(1)->GetNumRows(), Inputs(1)->GetNumCols());
+        }
+
         //-sum(left_i * log(right_i))
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
@@ -300,8 +310,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateBinaryReduce(isFinalValidationPass);
             if (Inputs(0)->OperationName() != L"InputValue")    // TODO: but labels could be post-processed, e.g. sub-sampled. This test should not be here.
                 LogicError("CrossEntropyNode criterion requires the first input to be the label.");
-            //m_logOfRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
-            //m_leftDivRight.Resize(Inputs(1)->FunctionValues().GetNumRows(), Inputs(1)->FunctionValues().GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
@@ -387,6 +395,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, gradientValues/*1x1*/, gradientOfL1Norm, 1.0f, inputGradientValues);
         }
 
+        virtual void UpdateFunctionMBSize() override
+        {
+            m_gradientOfL1Norm->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+        }
+
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override  
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
@@ -400,7 +413,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             ValidateUnaryReduce(isFinalValidationPass);
-            //m_gradientOfL1Norm->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
         }
 
         virtual void InferImageDimsFromInputs()
@@ -493,6 +505,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_outputImageLayout = ImageLayout();
         }
+
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     };
@@ -587,6 +600,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 #endif
 
+        virtual void UpdateFunctionMBSize() override
+        {
+            // TODO (this does not really break it since for full matrices, class Matrix will resize by itself)
+        }
+
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override   //-sum(left_i * log(softmax_i(right)))
         {
             FrameRange frameRange(Inputs(0)->GetMBLayout());
@@ -662,6 +680,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             InferImageDimsFromInput(0, false);
             m_outputImageLayout = ImageLayout();
         }
+
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
@@ -810,6 +829,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     public:
 
+        virtual void UpdateFunctionMBSize() override
+        {
+            // TODO (this does not really break it since for full matrices, class Matrix will resize by itself)
+        }
+
         // -sum(left_i * log(softmax_i(right)))
         virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
         {
@@ -914,6 +938,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_needRecomputeGradientToSoftmaxInput = true;
         }
 
+
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
             Base::Validate(isFinalValidationPass);
@@ -943,6 +968,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             m_outputImageLayout = ImageLayout();
         }
+
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     protected:
@@ -1061,7 +1087,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     DataSliceWithMBLayout(mBeta,  sequenceRange, Inputs(0)->GetMBLayout()),
                                     Inputs(2)->ValueSlice(frameRange),
                                     gradient,
-                                    mStartLbl, 1);
+                        mStartLbl, 1);
                 }
             }
             else
@@ -1281,7 +1307,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (inputIndex == 1)
                 LogicError("DummyCriterionNode: derivatives with respect to derivative features are not necessary, not implemented yet.\n");
             else if (inputIndex == 2)
-            {
+        {
                 auto gradient = Inputs(2)->GradientSlice(frameRange);
                 //Matrix<ElemType>::ScaleAndAdd(GradientValues().Get00Element(), Inputs(1)->ValueSlice(frameRange), gradient);
                 Matrix<ElemType>::Multiply1x1AndWeightedAdd(+1.0f, GradientValues()/*1x1*/, Inputs(1)->ValueSlice(frameRange), 1.0f, gradient);
@@ -1342,7 +1368,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     /// SequenceWithSoftmaxNode (label, prediction, loglikelihood)
     // word-lattice based sequence training criterion
-    // BUGBUG: Not yet converted to memshare conventions.
     // BUGBUG: Likely not very useful since it uses an MS-proprietary lattice-archive format
     //         that requires Frank's DBN.exe tool to create. The inner C++ code for conversion
     //         is in this repo (latticearchive.h), but not the outer main program.
@@ -1355,8 +1380,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static const std::wstring TypeName() { return L"SequenceWithSoftmax"; }
     public:
         SequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-            Base(deviceId, name),
-            m_logSoftmaxOfRight(deviceId), m_softmaxOfRight(deviceId), m_gammaFromLattice(deviceId), m_framesDroppedMask(deviceId), m_gammaCalcInitialized(false)
+            Base(deviceId, name), m_gammaCalcInitialized(false)
         {
         }
         
@@ -1367,12 +1391,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //left Node must be a scalar
             if (inputIndex == 0)  //left derivative
             {
-                ComputeInputPartialLeft(m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
+                ComputeInputPartialLeft(*m_logSoftmaxOfRight, Inputs(inputIndex)->GradientValues(), GradientValues());
             }
             else if (inputIndex == 1)
             {
-                ComputeInputPartialRight(m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_gammaFromLattice,
-                    m_fsSmoothingWeight, m_frameDropThreshold);
+                ComputeInputPartialRight(*m_softmaxOfRight, Inputs(0)->FunctionValues(), Inputs(inputIndex)->GradientValues(),
+                                         GradientValues(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
 #ifdef _DEBUG
                 Inputs(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Inputs(inputIndex)->GetMBLayout()));
 #endif
@@ -1390,8 +1414,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 RuntimeError("SequenceWithSoftmaxNode criterion only takes with respect to label, DNN output and log likelihood.");
         }
 
-        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
-            const Matrix<ElemType>& gradientValues)
+        static void WINAPI ComputeInputPartialLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues)
         {
 #if DUMPOUTPUT
             logSoftmaxOfRight.Print("SequenceWithSoftmaxNode Partial-logSoftmaxOfRight");
@@ -1407,8 +1430,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         static void WINAPI ComputeInputPartialRight(const Matrix<ElemType>& softmaxOfRight, const Matrix<ElemType>& inputFunctionValues,
-            Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType> & gammaFromLattice,
-            double hsmoothingWeight, double frameDropThresh)
+                                                    Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+                                                    const Matrix<ElemType> & gammaFromLattice, double hsmoothingWeight, double frameDropThresh)
         {
 #if DUMPOUTPUT
             softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
@@ -1439,13 +1462,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_gammaCalcInitialized = true;
             }
             //softmax
-            m_logSoftmaxOfRight.AssignLogSoftmaxOf(Inputs(1)->FunctionValues()/*prediction*/, true);
-            m_softmaxOfRight.SetValue(m_logSoftmaxOfRight);
-            m_softmaxOfRight.InplaceExp();
+            m_logSoftmaxOfRight->AssignLogSoftmaxOf(Inputs(1)->FunctionValues()/*prediction*/, true);
+            m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            m_softmaxOfRight->InplaceExp();
 
-            m_gammaFromLattice.SwitchToMatrixType(m_softmaxOfRight.GetMatrixType(), m_softmaxOfRight.GetFormat(), false);
-            m_gammaFromLattice.Resize(m_softmaxOfRight.GetNumRows(), m_softmaxOfRight.GetNumCols());
-            m_gammaCalculator.calgammaformb(FunctionValues(), m_lattices, Inputs(2)->FunctionValues()/*log LLs*/, Inputs(0)->FunctionValues()/*labels*/, m_gammaFromLattice, m_uids, m_boundaries, Inputs(1)->GetNumParallelSequences(), Inputs(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
+            m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
+            m_gammaFromLattice->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
+            m_gammaCalculator.calgammaformb(FunctionValues(), m_lattices, Inputs(2)->FunctionValues()/*log LLs*/,
+                                            Inputs(0)->FunctionValues()/*labels*/, *m_gammaFromLattice,
+                                            m_uids, m_boundaries, Inputs(1)->GetNumParallelSequences(),
+                                            Inputs(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
             
 #if NANCHECK
             FunctionValues().HasNan("SequenceWithSoftmaxNode");
@@ -1475,10 +1501,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_pMBLayout = nullptr;  // no layout
             InferImageDimsFromInputs();
 
-            m_logSoftmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-            m_softmaxOfRight.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-            m_gammaFromLattice.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
-            m_framesDroppedMask.Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
             m_gammatime = 0;
             m_partialtime = 0;
         }
@@ -1498,16 +1520,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 auto node = dynamic_pointer_cast<SequenceWithSoftmaxNode<ElemType>>(nodeP);
 
-                node->m_logSoftmaxOfRight = m_logSoftmaxOfRight;
-                node->m_softmaxOfRight = m_softmaxOfRight;
-                node->m_gammaFromLattice = m_gammaFromLattice;
-                node->m_framesDroppedMask = m_framesDroppedMask;
+                *node->m_logSoftmaxOfRight = *m_logSoftmaxOfRight;
+                *node->m_softmaxOfRight = *m_softmaxOfRight;
+                *node->m_gammaFromLattice = *m_gammaFromLattice;
                 node->m_fsSmoothingWeight = m_fsSmoothingWeight;
                 node->m_frameDropThreshold = m_frameDropThreshold;
                 node->m_doReferenceAlignment = m_doReferenceAlignment;
             }
         }
 
+        //request matrices needed to do node function value evaluation
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeEval(matrixPool);
+            RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
+            RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
+            RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
+        }
         // TODO: method names should be CamelCase
         std::vector<shared_ptr<const msra::dbn::latticesource::latticepair>> * getLatticePtr()
         {
@@ -1553,10 +1582,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     protected:
         virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-        Matrix<ElemType> m_logSoftmaxOfRight;
-        Matrix<ElemType> m_softmaxOfRight;
-        Matrix<ElemType> m_gammaFromLattice;
-        Matrix<ElemType> m_framesDroppedMask;
+        shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
+        shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
+        shared_ptr<Matrix<ElemType>> m_gammaFromLattice;
         double m_frameDropThreshold;
         double m_fsSmoothingWeight;         // frame-sequence criterion interpolation weight    --TODO: can this be done outside?
         bool m_doReferenceAlignment;
@@ -1574,4 +1602,189 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template class SequenceWithSoftmaxNode<float>;
     template class SequenceWithSoftmaxNode<double>;
+
+    // -----------------------------------------------------------------------
+    // LogisticNode (labels, prediction, weight)
+    // calculates: -sum(left * log(right) + (1-left)*log(1-right)) (optionally * weight)
+    // -----------------------------------------------------------------------
+
+    template<class ElemType>
+    class LogisticNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+    {
+        typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"Logistic"; }
+    public:
+        LogisticNode(DEVICEID_TYPE deviceId, const wstring & name) :
+            Base(deviceId, name)
+        { }
+
+        virtual void ComputeInputPartialNonLooping(size_t inputIndex) override
+        {
+            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            if (inputIndex != 1)
+                InvalidArgument("%ls %ls operation cannot compute the gradient for its first inpute.", NodeName().c_str(), OperationName().c_str());
+
+            //ComputeInputPartialRight(m_temp, Inputs(0)->FunctionValues(), Inputs(2)->FunctionValues(), Inputs(inputIndex)->GradientValues(), GradientValues(), m_classZeroLabels, m_result);
+            // Create vector with 1 for class 1, and -1 for class 0
+            m_temp->AssignDifferenceOf(Inputs(0)->ValueSlice(frameRange), *m_classZeroLabels);  // TODO: need a slice for m_classZeroLabels?
+
+            // Multiply the vector by the Inputs(2)->FunctionValues()
+            if (m_children.size() == 3) // without weight
+                m_temp->AssignElementProductOf(*m_temp, Inputs(2)->ValueSlice(frameRange));     // TODO: is Inputs(2) minibatch data? Confirm
+
+            // divide class by p (class 1) or (1-p) (class 0)
+            m_temp->AssignElementDivisionOf(*m_temp, *m_result);            // TODO: this is in-place--does this function allow that?
+
+            //Matrix<ElemType>::ScaleAndAdd(-GradientValues().Get00Element(), *m_temp, Inputs(inputIndex)->GradientValues());
+            auto gradient = Inputs(inputIndex)->GradientSlice(frameRange);
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, GradientValues()/*1x1*/, *m_temp, 1.0f, gradient);
+        }
+
+        virtual void UpdateFunctionMBSize() override
+        {
+            m_classZeroLabels->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_result->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+            m_temp->Resize(Inputs(0)->GetNumRows(), Inputs(0)->GetNumCols());
+        }
+
+        //-sum(left * log(right) + (1-left)*log(1-right)) (optionally * weight)
+        virtual void /*ComputationNodeNonLooping::*/EvaluateThisNodeNonLooping() override
+        {
+            FrameRange frameRange(Inputs(0)->GetMBLayout());
+            
+            const Matrix<ElemType>& classOneLabels        = Inputs(0)->ValueSlice(frameRange);
+            const Matrix<ElemType>& classOneProbabilities = Inputs(1)->ValueSlice(frameRange);
+            Matrix<ElemType>&       classZeroLabels       = *m_classZeroLabels;
+
+            Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
+
+            // compute the indices for the class 0 indices
+            classZeroLabels.AssignDifferenceOf(ones, classOneLabels);
+
+            /* We're computing result = weight*(y*p + (1-y)*(1-p) = 2*y*p + (1-y) - p) */
+
+            /* First compute result = y*p */
+            m_result->AssignElementProductOf(classOneLabels, classOneProbabilities);
+
+            // TODO: verify that all these operations on m_result really can do in-place (or use different methods instead)
+            /* Now compute result = 2*y*p */
+            m_result->AssignProductOf((ElemType)2.0, *m_result);
+
+            /* Now compute result = 2*y*p + (1-y) */
+            m_result->AssignSumOf(*m_result, classZeroLabels);
+
+            /* Finally compute result = 2*y*p + (1-y) - p */
+            m_result->AssignDifferenceOf(*m_result, classOneProbabilities);
+
+            // compute the log, resulting in y*log(p) + (1-y)*log(1-p)
+            m_temp->AssignLogOf(*m_result);
+
+            // The error is the negative of the sum of the result
+            if (m_children.size() == 2)
+                FunctionValues().AssignSumOfElements(*m_temp);
+            else
+                FunctionValues().AssignInnerProductOf(Inputs(2)->ValueSlice(frameRange), *m_temp, false);
+            FunctionValues() *= (-1);
+        }
+
+        virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+        {
+			if (m_children.size() != 2 && m_children.size() != 3)
+			{
+				InvalidArgument("%ls %ls operation requires two or three inputs.", NodeName().c_str(), OperationName().c_str());
+			}
+
+			if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
+			{
+				throw std::logic_error("LogisticNode criterion requires the first input to be the label.");
+			}
+
+			if (m_children.size() == 3)
+			{
+				if (Inputs(2)->OperationName() != L"InputValue" && Inputs(2)->OperationName() != L"SparseInputValue")
+				{
+					throw std::logic_error("LogisticNode criterion requires the second input to be the weight.");
+				}
+			}
+
+			ComputationNodeBase::Validate(isFinalValidationPass);
+			m_pMBLayout = nullptr;              // this node does not hold mini-batch data
+
+			for (size_t index = 0; index < m_children.size(); index++)
+			{
+				auto in = Inputs(index);
+				auto other = Inputs((index == 1 ) ? 0 : 1 );
+				// borrow any unset dimension on one input from the other input
+				size_t rows =                        in->GetNumRows() == 0  ? other->GetNumRows()/*borrow from peer*/ : in->GetNumRows()/*keep as is*/;
+				size_t cols = (!in->HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols()/*borrow from peer*/ : in->GetNumCols()/*keep as is*/;
+				ValidateInferChildDims(index, rows, cols);
+			}
+
+			Resize(1, 1);
+			InferImageDimsFromInputs();
+
+            if (isFinalValidationPass)
+            {
+				if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
+					(Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))))
+				{
+					InvalidArgument("The dimension of the weight matrix in the LogisticNode operation does not match.");
+				}
+                if (m_children.size() == 3)
+                {
+					if (!(Inputs(0)->GetNumRows() == Inputs(2)->GetNumRows() &&
+						(Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(2)->GetNumCols()))))
+                    {
+                        InvalidArgument("The dimension of the weight matrix in the LogisticNode operation does not match.");
+                    }
+                }
+            }
+        }
+
+        //request matrices needed to do node function value evaluation
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool)
+        {
+            Base::RequestMatricesBeforeEval(matrixPool);
+            RequestMatrixFromPool(m_classZeroLabels, matrixPool);
+            RequestMatrixFromPool(m_result, matrixPool);
+            RequestMatrixFromPool(m_temp, matrixPool);
+        }
+
+        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool)
+        {
+            Base::ReleaseMatricesAfterGradientComp(matrixPool);
+            ReleaseMatrixToPool(m_classZeroLabels, matrixPool);
+            ReleaseMatrixToPool(m_result, matrixPool);
+            ReleaseMatrixToPool(m_temp, matrixPool);
+        }
+
+        virtual void InferImageDimsFromInputs()
+        {
+            InferImageDimsFromInput(0, false);
+            m_outputImageLayout = ImageLayout();
+        }
+
+        virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+        {
+            Base::CopyTo(nodeP, newName, flags);
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                auto node = dynamic_pointer_cast<LogisticNode<ElemType>>(nodeP);
+                *node->m_classZeroLabels = *m_classZeroLabels;
+                *node->m_result = *m_result;
+                *node->m_temp = *m_temp;
+            }
+        }
+
+    protected:
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
+    private:
+        shared_ptr<Matrix<ElemType>> m_classZeroLabels;
+        shared_ptr<Matrix<ElemType>> m_result;
+        shared_ptr<Matrix<ElemType>> m_temp;
+    };
+
+    template class LogisticNode<float>;
+    template class LogisticNode<double>;
 }}}

@@ -100,12 +100,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void OnComputeGradientEndIteration() = 0;             // called after last iteration step of ComputeGradient()
 
         // TODO: this one does not quite fit here
+        // functions that are called from Network, but not necessarily overridden by the node implementations themselves
         virtual void ComputeGradientForChildren(const FrameRange & frameRange, bool childrenInThisLoop, bool childrenInOuterLoop) = 0;
 
         // --- optional overrides that add functionality
 
         // Any override must call Base version as well.
         // Default implementations are in ComputationNodeBase or ComputationNode<ElemType>.
+
+        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool) = 0;         //request matrices needed to do node function value evaluation
+        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool) = 0;          //release temp matrices that are only used by forward computation. Don't release matrices that need to be used in the gradient computation
+        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) = 0;
+        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) = 0; //request matrices that are needed for gradient computation
+        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) = 0;  //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
 
         virtual void Validate(bool isFinalValidationPass) = 0;          // main base validation function
         virtual void InferImageDimsFromInputs() = 0;
@@ -123,6 +130,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void PrintSelfBeforeValidation() const = 0;             // called in validation loop right before Validate()
         virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const = 0;
+    protected:
+        virtual ~IComputationNode() { }
     };
 
     // =======================================================================
@@ -142,33 +151,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             PurgeStateForFormingRecurrentLoops();
             m_isPartOfLoop = false;
-            ResetEvalTimeStamp();   // bring it into defined state
         }
 
         void CopyTo(ComputationNetworkOwnedNodeState & other) const
         {
             // TODO: is that really all we copy? (this is a result of refactoring, so it seems yes indeed). Should we at least ClearCache()?
-            other.m_evalTimeStamp = m_evalTimeStamp;
             other.m_isPartOfLoop = m_isPartOfLoop;
             other.m_needsGradient = m_needsGradient;
-        }
-
-        int64_t UpdateEvalTimeStamp()
-        {
-            m_evalTimeStamp = atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);    // TODO: does this really need to be atomic? We are not multi-threaded
-            return m_evalTimeStamp;
-        }
-
-        void ResetEvalTimeStamp()
-        {
-            m_evalTimeStamp = s_timeStampCounter;
-        }
-
-        int64_t GetEvalTimeStamp() const { return m_evalTimeStamp; }
-
-        int64_t CreateUniqId() const
-        {
-            return atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
         }
 
         static bool ByVisitedOrder(const ComputationNetworkOwnedNodeState * lhs, const ComputationNetworkOwnedNodeState * rhs)  // sorting predicate
@@ -179,9 +168,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool IsPartOfLoop() const { return m_isPartOfLoop; }
 
     private:
-
-        static atomic_ullong s_timeStampCounter;
-        int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 
         bool m_isPartOfLoop;        // true if this loop is part of a recurrent loop
 
@@ -212,13 +198,46 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     };
 
     // =======================================================================
+    // TimeStamp -- helper class to manage a time stamp
+    // =======================================================================
+
+    class TimeStamp
+    {
+    public:
+        TimeStamp() { ResetEvalTimeStamp(); }
+        void CopyTo(TimeStamp & other) const { other.m_evalTimeStamp = m_evalTimeStamp; }
+        void ResetEvalTimeStamp() { m_evalTimeStamp = s_timeStampCounter; }
+        int64_t GetEvalTimeStamp() const { return m_evalTimeStamp; }
+
+        // create a new unique time stamp
+        void UpdateEvalTimeStamp() { m_evalTimeStamp = CreateUniqId(); }
+
+        // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
+        bool IsOlderThan(const TimeStamp & other) const
+        {
+            // BUGBUG: For some reason, we must test equality as well, although that does not indicate being older.
+            return GetEvalTimeStamp() - other.GetEvalTimeStamp() /*<*/ <= 0;
+        }
+
+        int64_t CreateUniqId() const
+        {
+            return /*1 +*/ atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
+        }
+
+    private:
+        static atomic_ullong s_timeStampCounter;
+        int64_t m_evalTimeStamp; //this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
+    };
+
+    // =======================================================================
     // ComputationNodeBase -- abstract base class for all computation nodes
     // TODO: decide the name. This does contain actual members such as the node name, so it's not really a pure interface.
     // =======================================================================
 
     class ComputationNodeBase :
         public IComputationNode,
-        public/*protected*/ ComputationNetworkOwnedNodeState,  // TODO: figure this out, somehow the 'friend' thing does not work
+        public/*protected*/ ComputationNetworkOwnedNodeState,   // TODO: figure this out, somehow the 'friend' thing does not work
+        public TimeStamp,                                       // for time-stamp management
         public ScriptableObjects::ComputationNodeObject,
         public ScriptableObjects::WithTag, public ScriptableObjects::HasName, public ScriptableObjects::HasToString,
         public std::enable_shared_from_this<ComputationNodeBase>
@@ -253,6 +272,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 node->m_outputImageLayout = m_outputImageLayout;
 
                 ComputationNetworkOwnedNodeState::CopyTo(*node);
+                TimeStamp::CopyTo(*node);
             }
         }
 
@@ -566,17 +586,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // This creates a list such that children are evaluated before their parents.
         // If !forForwardProp then the order will be reversed, suitable for backprop.
         // The 'recurrent' version is only called from FormRecurrentLoops().
-        // Side-effects (unbeknownst to the name of the function):
-        //  - m_needsGradient flags, are propagated up from children         --BUGBUG! This should only be computed in ValidateSubNetwork().
-        //  - ComputationNetworkOwnedNodeState::m_visitedOrder (only if 'recurrent' flag is set; otherwise leave untouched), as needed by FormRecurrentNodes()
         // TODO: This should be a method of ComputationNetwork, not ComputationNode.
-        std::list<ComputationNodeBasePtr> EnumerateNodes(bool forForwardProp/*else get order for backprop*/, bool setVisitedOrder)
+        std::list<ComputationNodeBasePtr> EnumerateNodes(bool forForwardProp/*else get order for backprop*/, bool skipPairNetwork)
         {
             std::list<ComputationNodeBasePtr> nodes;
             std::unordered_set<ComputationNodeBasePtr> visited;
 
             // get forward computation order
-            EnumerateNodesR(visited, nodes, setVisitedOrder);  // call into the recursive portion of this function below
+            EnumerateNodesR(visited, nodes, skipPairNetwork);  // call into the recursive portion of this function below
 
             // if caller wants order for backprop then reverse it
             if (!forForwardProp)
@@ -586,19 +603,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     private:
         // Recursive part of EnumerateNodes().
-        void EnumerateNodesR(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool setVisitedOrder)
+        void EnumerateNodesR(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result, bool skipPairNetwork)
         {
             if (visited.find(shared_from_this()) == visited.end())      // do not include a node twice
             {
                 visited.insert(shared_from_this());   // have visited tagged here to avoid infinite loop over children, children's children, etc
 
                 // children first for function evaluation
-                if (OperationName() != L"PairNetwork" || !setVisitedOrder)    // (don't step through network-pair boundary if called from FormRecurrentLoops())
+                if (OperationName() != L"PairNetwork" || !skipPairNetwork)    // (don't step through network-pair boundary if called from FormRecurrentLoops())
                 {
                     for (int i = 0; i < m_children.size(); i++)
                     {
                         if (m_children[i])
-                            m_children[i]->EnumerateNodesR(visited, result, setVisitedOrder);
+                            m_children[i]->EnumerateNodesR(visited, result, skipPairNetwork);
                     }
                 }
 
@@ -612,8 +629,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // now that all children are in list before us, put ourselves
                 result.push_back(shared_from_this());
 
+#if 0           // this does not work, since m_visitedOrder gets cleared out, while the list survives in a cache
                 if (setVisitedOrder)    // FormRecurrentNodes() would like this variable to be set as well
                     m_visitedOrder = result.size();
+#endif
             }
         }
     public:
@@ -634,13 +653,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // check whether a node is up-to-date w.r.t. its children, for lazy evaluation
         // If this returns false, node must be evaluated to update m_functionValues.
-        bool IsFuncValueOlderThanInputs() const
+        // BUGBUG: The function name is incorrect. It also returns 'true' if a child has the same time stamp (not older).
+        // This is virtual because it is overridden by traversal nodes.
+        virtual bool IsFuncValueOlderThanInputs() const
         {
             for (size_t i = 0; i<ChildrenSize(); i++)
             {
+#if 1
+                if (IsOlderThan(*m_children[i]))
+                    return true;
+#else
                 //the second condition is used when the time stamp change from positive to negative
                 if (m_children[i]->GetEvalTimeStamp() >= GetEvalTimeStamp() || m_children[i]->GetEvalTimeStamp() + 1e10 < GetEvalTimeStamp())
                     return true;
+#endif
             }
 
             return false;
@@ -706,19 +732,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             return name;
         }
-
-        //request matrices needed to do node function value evaluation
-        virtual void RequestMatricesBeforeEval(MatrixPool& matrixPool) = 0;
-
-        //release temp matrices that are only used by forward computation
-        //don't release matrices that need to be used in the gradient computation
-        virtual void ReleaseMatricesAfterEval(MatrixPool& matrixPool) = 0;
-
-        //request matrices that are needed for gradient computation
-        virtual void RequestMatricesBeforeGradientComp(MatrixPool& matrixPool) = 0;
-
-        //release gradient and temp matrices that no longer needed after all the children's gradients are computed.
-        virtual void ReleaseMatricesAfterGradientComp(MatrixPool& matrixPool) = 0;
 
     protected:
         // data members
@@ -853,6 +866,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //don't release matrices that need to be used in the gradient computation
         virtual void ReleaseMatricesAfterEval(MatrixPool& /*matrixPool*/)
         {
+        }
+
+        virtual void AllocateGradientMatricesForChildren(MatrixPool& matrixPool) override
+        {
+            for (int i = 0; i < m_children.size(); i++)
+            {
+                if (m_children[i]->NeedGradient())
+                    m_children[i]->RequestMatricesBeforeGradientComp(matrixPool);
+            }
         }
 
         //request matrices that are needed for gradient computation
@@ -1179,6 +1201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
 #endif
 
+                    //fprintf(stderr, "ComputeInputPartial %d %d %ls %ls\n", (int)frameRange.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
                     ComputeInputPartial(i, frameRange);     // this computes partial wrt to the child and sums the gradient value in the child
                 }
 #ifdef DISPLAY_DEBUG
@@ -1364,23 +1387,41 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // FlowControlNode -- special wrapper node for use by ComputationNetwork only
     // =======================================================================
 
-    class FlowControlNode : public IComputationNode
+    class FlowControlNode : public ComputationNodeBase
     {
         typedef ComputationNodeBase Base;
     public:
+        FlowControlNode() : ComputationNodeBase(DEVICEID_NOTYETDETERMINED/*we don't own matrices*/, L""/*name: we don't care*/) { }
+
 #pragma warning (disable: 4100)
-        // these should never be called on flow-control nodes
-        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) { NOT_IMPLEMENTED; }
-        virtual void Validate(bool isFinalValidationPass) { NOT_IMPLEMENTED; }          // main base validation function
-        virtual void InferImageDimsFromInputs() { NOT_IMPLEMENTED; }
-        virtual void SaveToFile(File& fstream) const { NOT_IMPLEMENTED; }
-        virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/) { NOT_IMPLEMENTED; }
-        virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const { NOT_IMPLEMENTED; }
+        // these are meant to be implemented by ComputationNode<ElemType> but should never be called on traversal nodes
+        // TODO: There are too many of these. This indicates improper class hierarchies.
+        virtual ComputationNodeBase * NewThis(DEVICEID_TYPE deviceId, const wstring & name) override { NOT_IMPLEMENTED; }
+        virtual void Validate(bool isFinalValidationPass) override { NOT_IMPLEMENTED; }          // main base validation function
+        virtual void InferImageDimsFromInputs() override { NOT_IMPLEMENTED; }
+        virtual void SaveToFile(File& fstream) const override { NOT_IMPLEMENTED; }
+        virtual void LoadFromFile(File& /*fstream*/, size_t /*modelVersion*/) override { NOT_IMPLEMENTED; }
+        virtual void CopyTo(ComputationNodeBasePtr node, const std::wstring& newName, const CopyNodeFlags flags) const override { NOT_IMPLEMENTED; }
+        virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName, const CopyNodeFlags flags) override { NOT_IMPLEMENTED; }
+        virtual size_t GetNumRows() const override { NOT_IMPLEMENTED; }
+        virtual size_t GetNumCols() const override { NOT_IMPLEMENTED; }
+        virtual void Resize(size_t rows, size_t cols) override { NOT_IMPLEMENTED; }
+        virtual double Get00Element() const override { NOT_IMPLEMENTED; }
+        virtual void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override { NOT_IMPLEMENTED; }
+        virtual void PrintSelf(bool) const override { NOT_IMPLEMENTED; }
+        virtual void ValidateInferChildDims(size_t,size_t,size_t) override { NOT_IMPLEMENTED; }
+        virtual void SetInput(const size_t,const Microsoft::MSR::CNTK::ComputationNodeBase::ComputationNodeBasePtr &) override { NOT_IMPLEMENTED; }
+        virtual void ClearGradientForChildren(void) override { NOT_IMPLEMENTED; }
+        virtual void MaskMissingValuesColumnsToZero(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
+        virtual void MaskMissingGradientColumnsToZero(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
+        virtual void InvalidateMissingValuesColumns(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
+        virtual void InvalidateMissingGradientColumns(const Microsoft::MSR::CNTK::FrameRange &) override { NOT_IMPLEMENTED; }
+        virtual std::wstring ToString(void) const override { NOT_IMPLEMENTED; }
         // these are meant to be called during computation, so provide dummy implementations
-        virtual bool RequiresPreCompute() const { return false; }                    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
-        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-        virtual void PrintSelfBeforeValidation() const { }
-        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const { }
+        virtual bool RequiresPreCompute() const override { return false; }                    // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
+        virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() override { return true; }
+        virtual void PrintSelfBeforeValidation() const override { }
+        virtual void DumpNodeInfo(const bool /*printValues*/, File& fstream) const override { }
     };
 
     // =======================================================================

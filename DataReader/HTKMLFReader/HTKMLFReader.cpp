@@ -66,19 +66,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     LogicError("nbrUttsInEachRecurrentIter cannot be less than 1.");
                 }
-                // this loop is weird because this gets overwritten below
-                //m_numSeqsPerMB = m_numSeqsPerMBForAllEpochs[i];
             }
 
             m_numSeqsPerMB = m_numSeqsPerMBForAllEpochs[0];
             m_pMBLayout->Init(m_numSeqsPerMB, 0, true); // (SGD will ask before entering actual reading --TODO: This is hacky.)
 
-            m_actualNumSeqsPerMB = m_numSeqsPerMB;
-            m_sentenceEnd.assign(m_numSeqsPerMB, true);
-            m_processedFrame.assign(m_numSeqsPerMB, 0);
-            m_numFramesToProcess.assign(m_numSeqsPerMB,0);
-            m_switchFrame.assign(m_numSeqsPerMB,0);
-            m_numValidFrames.assign(m_numSeqsPerMB, 0);
             m_noData = false;
 
             string command(readerConfig("action",L"")); //look up in the config for the master command to determine whether we're writing output (inputs only) or training/evaluating (inputs and outputs)
@@ -120,16 +112,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             vector<size_t> numContextLeft;
             vector<size_t> numContextRight;
 
-            // for the multi-utterance process
-            m_featuresBufferMultiUtt.assign(m_numSeqsPerMB, nullptr);
-            m_featuresBufferAllocatedMultiUtt.assign(m_numSeqsPerMB,0);
-            m_labelsBufferMultiUtt.assign(m_numSeqsPerMB, nullptr);
-            m_labelsBufferAllocatedMultiUtt.assign(m_numSeqsPerMB,0);
-
-            // for the multi-utterance process for lattice and phone boundary
-            m_latticeBufferMultiUtt.assign(m_numSeqsPerMB, nullptr);
-            m_labelsIDBufferMultiUtt.resize(m_numSeqsPerMB);
-            m_phoneboundaryIDBufferMultiUtt.resize(m_numSeqsPerMB);
             std::vector<std::wstring> featureNames;
             std::vector<std::wstring> labelNames;
             // for hmm and lattice 
@@ -318,11 +300,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             m_frameMode = readerConfig("frameMode", "true");
-            if (m_frameMode && (m_numSeqsPerMB > 1))
-            {
-                LogicError("nbrUttsInEachRecurrentIter cannot be more than 1 in frame mode reading.");
-            }
-
             m_verbosity = readerConfig("verbosity","2");
 
             // determine if we partial minibatches are desired
@@ -377,10 +354,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (wstring & path : filelist)
                         {
-#ifdef WIN32                // sorry for windows users, we have to pay some cost here 
-                            std::replace(path.begin(), path.end(), L'\\', L'/'); 
+                            if (path.find_first_of(L'=') != wstring::npos)
+                            {
+                                vector<wstring> strarr = msra::strfun::split(path, L"="); 
+#ifdef WIN32
+                                replace(strarr[1].begin(), strarr[1].end(), L'\\', L'/');
 #endif 
-                            path = rootpath + L"/" + path;  
+
+                                path = strarr[0] + L"=" + rootpath + L"/" + strarr[1]; 
+                            }                     
+                            else
+                            {
+#ifdef WIN32
+                                replace(path.begin(), path.end(), L'\\', L'/');
+#endif 
+                                path = rootpath + L"/" + path;  
+                            }                            
                         }
                     }
                 }
@@ -654,41 +643,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_fileEvalSource.reset(new msra::dbn::FileEvalSource(realDims, numContextLeft, numContextRight, evalchunksize));
         }
 
-#if 0
-    // destructor - virtual so it gets called properly 
-    template<class ElemType>
-        HTKMLFReader<ElemType>::~HTKMLFReader()
-        {
-            if (!m_featuresBufferMultiIO.empty())
-            {
-                if (m_featuresBufferMultiIO[0] != nullptr)
-                {
-                    foreach_index(i, m_featuresBufferMultiIO)
-                    {
-                        m_featuresBufferMultiIO[i] = nullptr;
-                    }
-                }
-            }
-            if (!m_labelsBufferMultiIO.empty())
-            {
-                if (m_labelsBufferMultiIO[0] != nullptr)
-                {
-                    foreach_index(i, m_labelsBufferMultiIO)
-                    {
-                        m_labelsBufferMultiIO[i] = nullptr;
-                    }
-                }
-            }
-
-            for (size_t i = 0; i < m_numSeqsPerMB; i ++)
-            {
-                m_featuresBufferMultiUtt[i] = nullptr;
-                m_labelsBufferMultiUtt[i] = nullptr;
-                m_latticeBufferMultiUtt[i].reset();
-            }
-        }
-#endif
-
     //StartMinibatchLoop - Startup a minibatch loop 
     // requestedMBSize - [in] size of the minibatch (number of frames, etc.)
     // epoch - [in] epoch number for this loop
@@ -702,30 +656,45 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_mbNumTimeSteps = requestedMBSize;       // note: ignored in frame mode and full-sequence mode
 
             m_numSeqsPerMB = m_numSeqsPerMBForAllEpochs[epoch];
+
+            // For distributed reading under utterance mode, we distribute the utterances per minibatch among all the subsets
+            if (m_trainOrTest && !m_frameMode)
+            {
+                if ((numSubsets > 1) && (m_numSeqsPerMB < numSubsets))
+                {
+                    LogicError("Insufficient value of 'nbruttsineachrecurrentiter'=%d for distributed reading with %d subsets", m_numSeqsPerMB, numSubsets);
+                }
+
+                m_numSeqsPerMB = (m_numSeqsPerMB / numSubsets) + ((subsetNum < (m_numSeqsPerMB % numSubsets)) ? 1 : 0);
+            }
+
             m_pMBLayout->Init(m_numSeqsPerMB, 0, !m_frameMode); // (SGD will ask before entering actual reading --TODO: This is hacky.)
 
             // resize the arrays
             // These are sized to the requested number. If not all can be filled, it will still return this many, just with gaps.
             // In frame mode, m_numSeqsPerMB must be 1. However, the returned layout has one 1-frame sequence per frame.
-            m_actualNumSeqsPerMB = m_numSeqsPerMB;
             m_sentenceEnd.assign(m_numSeqsPerMB, true);
             m_processedFrame.assign(m_numSeqsPerMB, 0);
             m_numFramesToProcess.assign(m_numSeqsPerMB, 0);
             m_switchFrame.assign(m_numSeqsPerMB, 0);
-
             m_numValidFrames.assign(m_numSeqsPerMB, 0);
+
             if (m_trainOrTest)
             {
-                // For distributed reading under utterance mode, we distribute the utterances per minibatch among all the subsets
-                if (!m_frameMode)
-                {
-                    if ((numSubsets > 1) && (m_numSeqsPerMB < numSubsets))
-                    {
-                        LogicError("Insufficient value of 'nbruttsineachrecurrentiter'=%d for distributed reading with %d subsets", m_numSeqsPerMB, numSubsets);
-                    }
+                // for the multi-utterance process
+                m_featuresBufferMultiUtt.assign(m_numSeqsPerMB, nullptr);
+                m_featuresBufferAllocatedMultiUtt.assign(m_numSeqsPerMB, 0);
+                m_labelsBufferMultiUtt.assign(m_numSeqsPerMB, nullptr);
+                m_labelsBufferAllocatedMultiUtt.assign(m_numSeqsPerMB, 0);
 
-                    m_numSeqsPerMB = (m_numSeqsPerMB / numSubsets) + ((subsetNum < (m_numSeqsPerMB % numSubsets)) ? 1 : 0);
-                    m_pMBLayout->Init(m_numSeqsPerMB, 0, true); // (SGD will ask before entering actual reading --TODO: This is hacky.)
+                // for the multi-utterance process for lattice and phone boundary
+                m_latticeBufferMultiUtt.assign(m_numSeqsPerMB, nullptr);
+                m_labelsIDBufferMultiUtt.resize(m_numSeqsPerMB);
+                m_phoneboundaryIDBufferMultiUtt.resize(m_numSeqsPerMB);
+
+                if (m_frameMode && (m_numSeqsPerMB > 1))
+                {
+                    LogicError("nbrUttsInEachRecurrentIter cannot be more than 1 in frame mode reading.");
                 }
 
                 // BUGBUG: in BPTT and sequence mode, we should pass 1 or 2 instead of requestedMBSize to ensure we only get one utterance back at a time
