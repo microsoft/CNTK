@@ -828,17 +828,17 @@ public:
     // -----------------------------------------------------------------------
 
     // determine the required order in which nodes must be computed in order to compute 'rootNode'
-    // recurrent == true is only used when called from FormRecurrentLoops()
-    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode, bool setVisitedOrder)
+    // skipPairNetwork == true is only used when called from FormRecurrentLoops()
+    std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode, bool skipPairNetwork)
     {
-        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*means for forward prop*/, setVisitedOrder);
+        return GetCalcOrder(rootNode, m_cacheEvalOrders, true/*means for forward prop*/, skipPairNetwork);
     }
 
     // determine the required order in which nodes must be computed in order to compute the gradient of 'rootNode'
     // Basically returns the reverse of GetEvalOrder(), with some special consideration to loops.
     std::list<ComputationNodeBasePtr>& GetGradientCalcOrder(const ComputationNodeBasePtr& rootNode)
     {
-        return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*means for backprop*/, false/*setVisitedOrder*/);
+        return GetCalcOrder(rootNode, m_cacheGradientCalcOrders, false/*means for backprop*/, false/*skipPairNetwork*/);
     }
 
     ComputationNodeBasePtr GetOuterLoopNode(const ComputationNodeBasePtr& rootNode)
@@ -850,12 +850,12 @@ public:
 
 private:
 
-    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr rootNode,
+    static std::list<ComputationNodeBasePtr>& GetCalcOrder(const ComputationNodeBasePtr & rootNode,
                                                            std::map<const ComputationNodeBasePtr, std::list<ComputationNodeBasePtr>>& orderMap,
-                                                           const bool forwardCompute, bool setVisitedOrder)
+                                                           const bool forwardCompute, bool skipPairNetwork)
     {
         if (orderMap.find(rootNode) == orderMap.end())
-            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, setVisitedOrder);
+            orderMap[rootNode] = rootNode->EnumerateNodes(forwardCompute, skipPairNetwork);
         return orderMap[rootNode];
     }
 
