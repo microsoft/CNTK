@@ -1690,55 +1690,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
         {
 			if (m_children.size() != 2 && m_children.size() != 3)
-			{
 				InvalidArgument("%ls %ls operation requires two or three inputs.", NodeName().c_str(), OperationName().c_str());
-			}
 
-			if (Inputs(0)->OperationName() != L"InputValue" && Inputs(0)->OperationName() != L"SparseInputValue")
-			{
-				throw std::logic_error("LogisticNode criterion requires the first input to be the label.");
-			}
+			ValidateBinaryReduce(isFinalValidationPass);
 
+			/* Note that this is the same as ValidateInferBinaryChildrenDims, but done for the 3rd child if it exists */
 			if (m_children.size() == 3)
 			{
-				if (Inputs(2)->OperationName() != L"InputValue" && Inputs(2)->OperationName() != L"SparseInputValue")
-				{
-					throw std::logic_error("LogisticNode criterion requires the second input to be the weight.");
-				}
-			}
-
-			ComputationNodeBase::Validate(isFinalValidationPass);
-			m_pMBLayout = nullptr;              // this node does not hold mini-batch data
-
-			for (size_t index = 0; index < m_children.size(); index++)
-			{
-				auto in = Inputs(index);
-				auto other = Inputs((index == 1 ) ? 0 : 1 );
+				auto in = Inputs(2);
+				auto other = Inputs(1);
 				// borrow any unset dimension on one input from the other input
 				size_t rows =                        in->GetNumRows() == 0  ? other->GetNumRows()/*borrow from peer*/ : in->GetNumRows()/*keep as is*/;
 				size_t cols = (!in->HasMBLayout() && in->GetNumCols() == 0) ? other->GetNumCols()/*borrow from peer*/ : in->GetNumCols()/*keep as is*/;
-				ValidateInferChildDims(index, rows, cols);
+
+				ValidateInferChildDims(2, rows, cols);
+
+                if (isFinalValidationPass && 
+                    !(Inputs(0)->GetNumRows() == Inputs(2)->GetNumRows() &&
+                      (Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(2)->GetNumCols()))))
+                    LogicError("The Matrix dimensions of the second argument in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
 			}
-
-			Resize(1, 1);
-			InferImageDimsFromInputs();
-
-            if (isFinalValidationPass)
-            {
-				if (!(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
-					(Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))))
-				{
-					InvalidArgument("The dimension of the weight matrix in the LogisticNode operation does not match.");
-				}
-                if (m_children.size() == 3)
-                {
-					if (!(Inputs(0)->GetNumRows() == Inputs(2)->GetNumRows() &&
-						(Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(2)->GetNumCols()))))
-                    {
-                        InvalidArgument("The dimension of the weight matrix in the LogisticNode operation does not match.");
-                    }
-                }
-            }
         }
 
         //request matrices needed to do node function value evaluation
