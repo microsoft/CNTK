@@ -153,7 +153,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const; 
 
         Matrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
-
+        Matrix<ElemType> RowSlice(size_t startRow, size_t numRows) const;
 
         // difference between AssignColumnSlice and SetColumnSlice 
         // AssignColumnSlice :      this(:, startColumn:startColumn+numCols-1) = fromMatrix(:, startColumn: startColumn+numCols-1) 

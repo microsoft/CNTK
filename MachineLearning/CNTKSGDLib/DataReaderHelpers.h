@@ -17,7 +17,69 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // -------------------------------------------------------------------
         // DecimateMinibatch - decimate minibatch for parallelization
         // -------------------------------------------------------------------
+        // non-inplace decimation , to be used in subminibatch implementation 
+        template<class ElemType> 
+        static void DecimateMinibatch(const std::map<std::wstring, Matrix<ElemType>*> MB,                               // input matrices 
+                                      std::map<std::wstring, Matrix<ElemType>*> decimatedMB,                            // output decimated matrices. 
+                                                                                                                        // Caller need to release the memory themselves!!!   TODO: use shared_ptr 
+                                      MBLayoutPtr pMBLayout,                                                            // input MBLayout 
+                                      MBLayoutPtr pDecimateMBLayout,                                                    // output decimated MBLayout 
+                                      int numWorker, int rank)
+        {
+            size_t nSequence = pMBLayout->GetNumParallelSequences(); 
+            size_t nT = pMBLayout->GetNumTimeSteps(); 
 
+            // decide start column and end column 
+            size_t st = nSequence * (size_t)rank / numWorker; 
+            size_t en = nSequence * (size_t)(rank + 1) / numWorker; 
+            en = en > nSequence*nT ? nSequence*nT : en; 
+            en = (rank == numWorker - 1) ? nSequence*nT : en;             
+            size_t nNewParallelSequence = en - st;
+
+            // warning if needed 
+            static bool bWarned = false; 
+            if (!bWarned && nSequence % numWorker != 0)
+            {
+                /* give a warning of potential bandwidth wasting */
+                fprintf(stderr, "DecimateMinibatch: WARNING: Number of parallel utterances %d not a multiple of number of GPUs %d, GPU usage will be suboptimal.\n",
+                        (int)nSequence, (int)numWorker);
+                bWarned = true;
+            }
+
+            // begin decimate matrices 
+            size_t rv = 0; 
+            for (const auto it& : mb)
+            {
+                wstring name = it.first;
+                MSR::CNTK::Matrix<ElemType> & mat = *it.second; 
+                size_t nRows = mat.GetNumRows(); 
+                size_t nCols = mat.GetNumCols();
+                int devID = mat.GetDeviceId(); 
+
+                if (rv == 0)
+                    rv = nCols; 
+                else if ( rv != nCols )
+                    LogicError("DecimateMinibatch: Inconsistent number of columns among inputs (found %d and %d).", (int)rv, (int)nCols);
+
+                if (nT != nCols / nSequence )
+                    LogicError("ERROR: MBLayout borked, GetNumTimeSteps() mismatches minibatch number of columns\n");
+                
+                decimatedMB[name] = new Matrix<ElemType>(
+                    mat.Reshaped(nRows*nSequence, nT).RowSlice( st*nRows , (en-st)*nRows).Reshaped(nRows, nSequence*nT), 
+                    devID
+                ); 
+                // NOTE: 
+                // Reshaped return a matrix referencing the caller, so the moving constructor will not work here 
+                // we need to use devID here to signify compiler that we are going to do a deep copy instead of moving constructor 
+            }
+            // decimate MBLayout as well 
+            pDecimateMBLayout= make_shared<MBLayout>(nNewParallelSequence, T, true);
+            for (size_t t = 0; t < T; t++) for (size_t id = 0; id < nNewParallelSequence; id++)
+                pDecimateMBLayout->Set(id, t, pMBLayout->Get(id + st, t));
+            
+        }
+
+        // Inpace decimation 
         // We sub-sample the parallel utterances.
         template<class ElemType> 
         static void DecimateMinibatch(std::map<std::wstring, Matrix<ElemType>*> &mb,   // matrix to be decimated
