@@ -42,16 +42,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // determine the strongly connected cliques -> m_recurrentInfo[]
         DetermineSCCs(rootNode);
 
-        list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*set m_visitedOrder*/);
-#if 0
-        // TODO: set m_visitedOrder here instead, by just looping over it. For now, verify it.
+        list<ComputationNodeBasePtr>& nodes = GetEvalOrder(rootNode, true/*skipPairNetwork*/);
+#if 1
+        // recover TODO: set m_visitedOrder here instead, by just looping over it. For now, verify it.
         // BUGBUG: This fails, it finds a -1. Seems something got reset and not re-iterated.
-        size_t i = 1;       // BUGBUG: why not 0?
+        size_t i = 1;       // BUGBUG: why not 0? (left-over of refactoring)
         for (auto & node : nodes)
-            if (node->m_visitedOrder != i)
-                LogicError("GetEvalOrder: did not set m_visitedOrder in order of visiting.");
-            else
-                i++;
+            node->m_visitedOrder = i++;
 #endif
 
         // purge identical loops (i.e. loops that have the same source node)
@@ -77,13 +74,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // implant m_loopId in all nodes in all loops
         for (auto & iter : m_recurrentInfo)
         {
+#if 1
+            for (auto & node : iter->m_recurrentNodes)
+                if (node->m_visitedOrder != iter->m_recurrentNodes.front()->m_visitedOrder)
+                    LogicError("FormRecurrentLoops: m_visitedOrder was set to a constant, but actually wasn't.");
+#else
             // sort the recurrent nodes in their ascending name, which is the same as visiting nodes in G^R
             // it is done in the mergerecurrentloops function, but just keep the code       --TODO: why?? Why not rather verify the order?
             // BUGBUG: This sort() seems to do nothing, since the above loop sets all m_visitedOrder to the same value??
             sort(iter->m_recurrentNodes.begin(),
                  iter->m_recurrentNodes.end(),
                  iter->m_recurrentNodes[0]->ByVisitedOrder);
- 
+#endif
+
             for (auto & node : iter->m_recurrentNodes)
             {
                 node->m_isPartOfLoop = true;        // this is the only flag in ComputationNode that escapes FormRecurrentLoops()!
@@ -252,14 +255,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             if (rInfo.m_recurrentNodes.size() > 1)  // non-looped nodes are detected here as loops of size 1 --skip those
             {
-                m_recurrentInfo.push_back(make_shared<RecurrentFlowControlNode>(move(rInfo)));
-                loopId++;                           // and count it
+                // only add to the array if the loop is not already there
+                // Since FormRecurrentLoops() is called multiple times, for multiple output nodes, we end up producing the same loop multiple times.
+                bool bFound = false;    // find a dup  --TODO: check whether there is an STL algorithm for this
+                for (const auto & iter2 : m_recurrentInfo)
+                {
+                    if (iter2->m_sourceNode == cur)
+                    {
+                        bFound = true;
+                        break;
+                    }
+                }
+                if (!bFound)
+                {
+                    m_recurrentInfo.push_back(make_shared<RecurrentFlowControlNode>(move(rInfo)));
+                    loopId++;                           // and count it
+                }
             }
         }
     }
 
     // purge identical loops (i.e. loops that have the same source node)
-    // TODO: Why not do this where we push a loop into m_recurrentInfo?
+    // TODO: Delete this function once we find it never triggers.
     void ComputationNetwork::UniqRecurrentLoops()
     {
         if (m_recurrentInfo.size() <= 1)
@@ -275,7 +292,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 if ((*iter2).m_sourceNode == iter->m_sourceNode)
                 {
                     bFound = true;
-                    break;
+                    LogicError("UniqRecurrentLoops: Duplicate loops should no longer occur.");  // ...since tested when creating in the first place.
+                    //break;
                 }
             }
             if (!bFound)
