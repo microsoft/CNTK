@@ -86,7 +86,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                 LogicError("utterancechunkdata: frames already paged into RAM--too late to add data");
             firstframes.push_back (totalframes);
             totalframes += utt.numframes();
-            utteranceset.push_back (utt);
+            utteranceset.push_back (std::move(utt));
         }
 
         // accessors to an utterance's data
