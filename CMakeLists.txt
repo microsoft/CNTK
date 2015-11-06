@@ -29,25 +29,57 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3 -std=c++0x -std=c++11 -fopenmp -f
 
 endif()
 
-include_directories(${CUDA_INCLUDE_DIRS}) 
-cuda_add_executable(test main.cu wa.cc wo.c wupp.cpp) 
-
-add_definitions(-DCPUONLY)
+#include_directories(${CUDA_INCLUDE_DIRS}) 
+# Not needed? "In addition CUDA_INCLUDE_DIRS is added automatically to include_directories()."
 
 set(CMAKE_BUILD_TYPE "Release" "Build Type")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+
+set(CUB_PATH "C:/Users/mahilleb/Repos/Work/cub-1.4.1")
+set(NVML_PATH "c:/Program Files/NVIDIA Corporation/GDK/gdk_win7_amd64_release/nvml")
 
 include_directories(
     Math/Math
     Common/Include
     ${ACML_PATH}/include
     ${MPI_CXX_INCLUDE_PATH}
+    ${CUB_PATH}
+    ${NVML_PATH}/include
     MachineLearning/CNTK
     MachineLearning/CNTKComputationNetworkLib
     MachineLearning/CNTKSGDLib
     MachineLearning/CNTKSequenceTrainingLib
     BrainScript)
+
+# Note (from FindCUDA): Some standard CMake target calls can be used on the
+# target after calling this macro (e.g. set_target_properties and
+# target_link_libraries), but setting properties that adjust compilation flags
+# will not affect code compiled by nvcc.  Such flags should be modified before
+# calling CUDA_ADD_EXECUTABLE, CUDA_ADD_LIBRARY or CUDA_WRAP_SRCS.
+
+add_definitions(-DMATH_EXPORTS)
+cuda_add_library(CNTKMathCUDA
+    STATIC
+    Math/Math/cudalatticeops.cu
+    Math/Math/cudalattice.cpp
+    Math/Math/cudalib.cpp
+    Math/Math/GPUMatrix.cu
+    Math/Math/GPUMatrixCUDAKernels.cu
+    Math/Math/GPUSparseMatrix.cu
+    Math/Math/GPUWatcher.cu
+    Math/Math/MatrixQuantizerGPU.cu
+    Math/Math/MatrixQuantizer_kernel.cu)
+target_link_libraries(CNTKMathCUDA
+    ${CUDA_LIBRARIES}
+    ${CUDA_CUBLAS_LIBRARIES}
+    ${CUDA_cusparse_LIBRARY}
+    ${CUDA_curand_LIBRARY})
+remove_definitions(-DMATH_EXPORTS)
+
+message("------------------")
+message("CNTKMathCUDA ${CUDA_LIBRARIES}")
+#add_definitions(-DCPUONLY)
 
 add_library(Common STATIC
     Common/BestGpu.cpp
@@ -79,7 +111,12 @@ set_target_properties(Math PROPERTIES
 
 add_library(acml SHARED IMPORTED)
 
+#add_library(nvml SHARED IMPORTED)
+
 if(WIN32)
+
+    #set_target_properties(nvml PROPERTIES
+    #IMPORTED_IMPLIB ${NVML_PATH}/lib/nvml.lib)
 
 set_target_properties(acml PROPERTIES
     IMPORTED_LOCATION ${ACML_PATH}/lib/libacml_mp_dll.dll
@@ -87,12 +124,15 @@ set_target_properties(acml PROPERTIES
 
 else()
 
+# TODO NVML
+
 set_target_properties(acml PROPERTIES
     IMPORTED_LOCATION ${ACML_PATH}/lib/libacml.so)
 
 endif()
 
 target_link_libraries(Math
+    CNTKMathCUDA
     acml
     Common)
 
@@ -138,10 +178,16 @@ link_directories(${ACML_PATH}/lib)
 
 if(WIN32)
 
+set_target_properties(cntk PROPERTIES LINK_FLAGS "/DELAYLOAD:nvml.dll")
+
 target_link_libraries(cntk
     Math
     acml
+    #nvml
+    "c:/Program Files/NVIDIA Corporation/GDK/gdk_win7_amd64_release/nvml/lib/nvml.lib"
     ${MPI_CXX_LIBRARIES})
+
+# -DCMAKE_EXE_LINKER_FLAGS=" /DELAYLOAD:MyDLL.dll"
 
 else()
 
@@ -171,6 +217,8 @@ add_custom_command(TARGET cntk POST_BUILD
 
 endif()
 
+# CNTK/CNTK.vcxproj:      <Command>if exist "%ProgramW6432%\NVIDIA Corporation\NVSMI" xcopy /I /D /Y "%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml*.dll" $(TargetDir)</Command>
+
 enable_testing()
 
 # Right now, we use Boost only for testing
@@ -190,6 +238,7 @@ target_link_libraries(MathTests
     acml)
 
 add_test(NAME MathTests COMMAND MathTests)
+
 
 # Random notes follow
 

@@ -3,7 +3,7 @@
 #include "MatrixQuantizer_kernel.cu"
 #include "GPUMatrix.h"
 
-#pragma comment (lib, "cudart.lib")     // instruct linker to reference these libs
+#pragma comment (lib, "cudart_static.lib")     // instruct linker to reference these libs
 #pragma comment (lib, "cublas.lib")
 #pragma comment (lib, "cusparse.lib")
 #pragma comment (lib, "curand.lib")

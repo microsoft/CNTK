@@ -17,9 +17,9 @@
 #undef NOMULTIDEVICE       // define this to disable any context/driver stuff
 
 #ifndef NOMULTIDEVICE
-#pragma comment (lib, "cuda.lib")       // link CUDA device API
+//#pragma comment (lib, "cuda.lib")       // link CUDA device API
 #endif
-#pragma comment (lib, "cudart.lib")     // link CUDA runtime
+#pragma comment (lib, "cudart_static.lib")     // link CUDA runtime
 #pragma comment (lib, "cublas.lib")
 
 namespace msra { namespace cuda {
