@@ -123,6 +123,7 @@
     <ClCompile Include="GPUMatrixCudaBlasTests.cpp" />
     <ClCompile Include="GPUMatrixTests.cpp" />
     <ClCompile Include="GPUSparseMatrixTests.cpp" />
+    <ClCompile Include="MatrixBlasTests.cpp" />
     <ClCompile Include="MatrixFileWriteReadTests.cpp" />
     <ClCompile Include="MatrixTests.cpp" />
     <ClCompile Include="stdafx.cpp">
