@@ -282,6 +282,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 #endif
         }
 
+        void AddBias(Matrix<ElemType>& output, const Matrix<ElemType>& bias)
+        {
+            assert(m_convEng != nullptr);
+            m_convEng->AddBias(*m_biasT, bias, *m_outT, output);
+        }
+
+        void BackwardBias(Matrix<ElemType>& biasGrad, const Matrix<ElemType>& srcGrad)
+        {
+            assert(m_convEng != nullptr);
+            m_convEng->BackwardBias(*m_outT, srcGrad, *m_biasT, biasGrad);
+        }
+
     private:
         void ForwardPropS(Matrix<ElemType> &functionValues, const Matrix<ElemType> &input0, 
                                const Matrix<ElemType> &input1, Matrix<ElemType> &tempMatrix)
@@ -441,6 +453,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_outT = m_factory->CreateTensor(m_outputImageLayout.width, m_outputImageLayout.height, m_outputImageLayout.channels, 1);
             if (m_convDesc == nullptr)
                 m_convDesc = m_factory->CreateConvDescriptor(*m_inT, *m_filterT, m_horizontalSubsample, m_verticalSubsample, m_zeroPadding);
+            // REVIEW alexeyk: create per-channel (shared) bias. Consider adding other types of biases.
+            if (m_biasT == nullptr)
+                m_biasT = m_factory->CreateTensor(1, 1, m_outputImageLayout.channels, 1);
         }
 
         virtual void DumpNodeInfo(const bool printValues, File& fstream) const override
@@ -485,6 +500,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         std::unique_ptr<ConvolutionFilter> m_filterT;
         std::unique_ptr<ConvolutionTensor4D> m_outT;
         std::unique_ptr<ConvolutionDescriptor> m_convDesc;
+        std::unique_ptr<ConvolutionTensor4D> m_biasT;
 
         size_t m_kernelWidth, m_kernelHeight;
         size_t m_horizontalSubsample, m_verticalSubsample;

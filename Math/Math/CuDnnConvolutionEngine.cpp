@@ -264,6 +264,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_tempC.BufferPointer(), m_backFiltAlgo.memory, &C::One, f(filterT), ptr(filter)));
         }
 
+        void AddBias(const Tensor4D& biasT, const Mat& bias, const Tensor4D& dstT, Mat& dst) override
+        {
+            CUDNN_CALL(cudnnAddTensor(m_cudnn, &C::One, t(biasT), ptr(bias), &C::One, t(dstT), ptr(dst)));
+        }
+
+        void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) override
+        {
+            CUDNN_CALL(cudnnConvolutionBackwardBias(m_cudnn, &C::One, t(srcGradT), ptr(srcGrad), &C::One, t(biasT), ptr(biasGrad)));
+        }
+
     private:
         void FindBestForwardAlgo(const CuDnnTensor4D& inT, const CuDnnFilter& filtT, const CuDnnConvolutionDescriptor& convDesc, const CuDnnTensor4D& outT)
         {

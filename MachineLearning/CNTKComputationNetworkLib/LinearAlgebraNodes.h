@@ -69,9 +69,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else if (colsc == 1 && colsp != 1)                      // child is a broadcasting column vector
             {
-                size_t colspExpand = rowsp*colsp/rowsc;
-                MaskMissingGradientColumnsToZero(fr);       // reducing over frames, so we must zero out the gaps
-                Matrix<ElemType>::MultiplyAndAdd(gradientValues.Reshaped(rowsc, colspExpand), false, ConstOnes(colspExpand, 1, functionValues.GetDeviceId()), false, inputGradientValues);
+                // Special case for convolution node bias. See comment in EvaluateThisNode for more details.
+                auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[0]);
+                if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[1])) != nullptr)
+                    convNode->BackwardBias(inputGradientValues, gradientValues);
+                else
+                {
+                    size_t colspExpand = rowsp*colsp / rowsc;
+                    MaskMissingGradientColumnsToZero(frameRange);       // reducing over frames, so we must zero out the gaps
+                    Matrix<ElemType>::MultiplyAndAdd(gradientValues.Reshaped(rowsc, colspExpand), false, ConstOnes(colspExpand, 1, functionValues.GetDeviceId()), false, inputGradientValues);
+                }
             }
             else if (rowsc == 1 && rowsp != 1)                      // child is a broadcasting row vector
             {
@@ -132,10 +139,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             {
                 functionValues.AssignSumOf(inputFunctionValues0, inputFunctionValues1);
             }
-            else if (cols0 == 1 && rows1 % rows0 == 0)  // one is col vec with divisable rows, including scalar   --allowing divisable rows can be useful for images
+            else if (cols0 == 1 && rows1 % rows0 == 0 || cols1 == 1 && rows0 % rows1 == 0) // one is col vec with divisable rows, including scalar   --allowing divisable rows can be useful for images
             {
-                functionValues.AssignSumOf(inputFunctionValues0, inputFunctionValues1.Reshaped(rows0, rows1 * cols1 / rows0));
-                functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
+                // REVIEW alexeyk: this hack is required to handle bias in convolution node which may
+                // use a format (e.g. NCHW) where bias addition cannot be represented as adding column/row vector to matrix.
+                // Bias does NOT have to be a vector of size equal to number of output feature map (though it's a common case).
+                auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[0]);
+                if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[1])) != nullptr)
+                    convNode->AddBias(functionValues, cols0 == 1 ? inputFunctionValues0 : inputFunctionValues1);
+                else
+                {
+                    // None of the input nodes are convolutional.
+                    if (rows1 % rows0 == 0)
+                        functionValues.AssignSumOf(inputFunctionValues0, inputFunctionValues1.Reshaped(rows0, rows1 * cols1 / rows0));
+                    else
+                        functionValues.AssignSumOf(inputFunctionValues0.Reshaped(rows1, rows0 * cols0 / rows1), inputFunctionValues1);
+                    functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
+                }
             }
             else if (cols1 == 1 && rows0 % rows1 == 0)  // one is col vec with divisable rows, including scalar
             {
