@@ -47,6 +47,9 @@ public:
     void SetRandomSeed(unsigned int seed) override;
 
 private:
+    // Mini-batch format: NCHW (default, cuDNN) or NHWC (legacy).
+    enum class DataFormat { Nchw, Nhwc };
+
     unsigned int m_seed;
     std::mt19937 m_rng;
 
@@ -73,5 +76,6 @@ private:
     bool m_imgListRand;
 
     MBLayoutPtr m_pMBLayout;
+    DataFormat m_mbFmt;
 };
 }}}
