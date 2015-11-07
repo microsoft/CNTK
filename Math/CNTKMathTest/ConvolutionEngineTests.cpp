@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include "CppUnitTest.h"
 #include <algorithm>
+#include <array>
 #include "..\Math\Matrix.h"
 #include "..\Math\CPUMatrix.h"
 #include "..\Math\GPUMatrix.h"
@@ -40,7 +41,7 @@ namespace CNTKMathTest
             int outW = GetNumOut(inW, kW, sW, false);
             int outH = GetNumOut(inH, kH, sH, false);
 
-            for (int deviceId : { -1, 0 })
+            for (int deviceId : { 0 })
             {
                 auto fact = ConvFact::Create(deviceId);
                 auto eng = fact->CreateConvEngine(0);
@@ -51,34 +52,26 @@ namespace CNTKMathTest
 
                 vec buf(inW * inH * cmapIn * n);
                 int seed = 0;
-                for (int i = 0; i < n; i++)
-                {
-                    seed = 0;
-                    // Create input, cmapIn feature maps, inW x inH each (CHWN format).
-                    std::generate(buf.begin() + i * buf.size() / n, buf.begin() + (i + 1) * buf.size() / n, [&seed]{ return seed++; });
-                }
+                // Create input, cmapIn feature maps, inW x inH each (NCHW format).
+                std::generate(buf.begin(), buf.end(), [=, &seed]{ return seed++ % (inW * inH * cmapIn); });
                 SingleMatrix in(inW * inH * cmapIn, n, buf.data(), matrixFlagNormal, deviceId);
 
                 seed = 0;
                 buf.resize(kW * kH * cmapIn * cmapOut);
-                // Create cmapOut filters, each kW x kH x cmapIn (CHWN format).
-                std::generate(buf.begin(), buf.end(), [&seed]{ return seed++ / 2; });
+                // Create cmapOut filters, each kW x kH x cmapIn (NCHW format).
+                std::generate(buf.begin(), buf.end(), [=, &seed]{ return seed++ % (kW * kH * cmapIn); });
                 SingleMatrix filt(cmapOut, kW * kH * cmapIn, buf.data(), matrixFlagNormal, deviceId);
 
                 SingleMatrix out(outW * outH * cmapOut, n, deviceId);
 
                 eng->Forward(*inT, in, *filtT, filt, *convT, *outT, out);
 
-                // Output is in NHWC format.
+                // Output is in NCHW format.
                 float expBuf[] = {
-                    7695.0f, 7695.0f,
-                    9801.0f, 9801.0f,
-                    18225.0f, 18225.0f,
-                    20331.0f, 20331.0f,
-                    7695.0f, 7695.0f,
-                    9801.0f, 9801.0f,
-                    18225.0f, 18225.0f,
-                    20331.0f, 20331.0f
+                    15219.0f, 15921.0f, 18729.0f, 19431.0f,
+                    15219.0f, 15921.0f, 18729.0f, 19431.0f,
+                    15219.0f, 15921.0f, 18729.0f, 19431.0f,
+                    15219.0f, 15921.0f, 18729.0f, 19431.0f
                 };
                 SingleMatrix exp(outW * outH * cmapOut, n, expBuf, matrixFlagNormal, deviceId);
                 Assert::IsTrue(out.IsEqualTo(exp));
@@ -113,21 +106,19 @@ namespace CNTKMathTest
                 auto outT = fact->CreateTensor(outW, outH, cmapOut, n);
                 auto convT = fact->CreateConvDescriptor(*inT, *filtT, sW, sH, pad);
 
-                // Input in NHWC format.
+                // Input in NCHW format.
                 SingleMatrix in(inW * inH * cmapIn, n, vec(inW * inH * cmapIn * n, 1.0f).data(), matrixFlagNormal, deviceId);
-                // Create cmapOut filters, each kW x kH x cmapIn (CHWN format).
+                // Create cmapOut filters, each kW x kH x cmapIn (NCHW format).
                 SingleMatrix filt(cmapOut, kW * kH * cmapIn, vec(kW * kH * cmapIn * cmapOut, 1.0f).data(), matrixFlagNormal, deviceId);
 
                 SingleMatrix out(outW * outH * cmapOut, n, deviceId);
 
                 eng->Forward(*inT, in, *filtT, filt, *convT, *outT, out);
 
-                // Output is in NHWC format.
+                // Output is in NCHW format.
                 float expBuf[] = {
-                    4.0f, 6.0f,
-                    6.0f, 9.0f,
-                    4.0f, 6.0f,
-                    6.0f, 9.0f,
+                    4.0f, 6.0f, 6.0f, 9.0f,
+                    4.0f, 6.0f, 6.0f, 9.0f,
                 };
                 SingleMatrix exp(outW * outH * cmapOut, n, expBuf, matrixFlagNormal, deviceId);
                 Assert::IsTrue(out.IsEqualTo(exp));
@@ -146,13 +137,13 @@ namespace CNTKMathTest
             int inH = 3;
             int kW = 3;
             int kH = 3;
-            int sW = 2;
-            int sH = 2;
+            int sW = 1;
+            int sH = 1;
             int cmapOut = 2;
             int outW = GetNumOut(inW, kW, sW, false);
             int outH = GetNumOut(inH, kH, sH, false);
 
-            for (int deviceId : { -1, 0 })
+            for (int deviceId : { 0 })
             {
                 auto fact = ConvFact::Create(deviceId);
                 auto eng = fact->CreateConvEngine(0);
@@ -161,7 +152,7 @@ namespace CNTKMathTest
                 auto gradT = fact->CreateTensor(inW, inH, cmapIn, n);
                 auto convT = fact->CreateConvDescriptor(*gradT, *filtT, sW, sH, false);
 
-                // Source grads is in NHWC format.
+                // Source grads is in NCHW format.
                 float srcGradBuf[] = {
                     1.0f, 1.0f,
                     1.0f, 1.0f
@@ -169,23 +160,21 @@ namespace CNTKMathTest
                 SingleMatrix srcGrad(outW * outH * cmapOut, n, srcGradBuf, matrixFlagNormal, deviceId);
 
                 vec filtB(kW * kH * cmapIn * cmapOut);
-                // Create cmapOut filters, each kW x kH x cmapIn (CHWN format).
+                // Create cmapOut filters, each kW x kH x cmapIn (NCHW format).
                 int seed = 0;
-                std::generate(filtB.begin(), filtB.end(), [&seed, cmapOut]{ return seed++ / cmapOut; });
+                std::generate(filtB.begin(), filtB.end(), [=, &seed]{ return seed++ % (kW * kH * cmapIn); });
                 SingleMatrix filt(cmapOut, kW * kH * cmapIn, filtB.data(), matrixFlagNormal, deviceId);
 
                 SingleMatrix grad(inW * inH * cmapIn, n, deviceId);
+                grad.SetValue(1);
+
                 eng->BackwardData(*srcGradT, srcGrad, *filtT, filt, *convT, *gradT, grad);
 
-                // Target grads is in NHWC format.
+                // Target grads is in NCHW format.
                 vec gradB(inW * inH * cmapIn * n);
-                for (int i = 0; i < n; i++)
-                {
-                    for (int icur = 0; icur < inW * inH * cmapIn; icur++)
-                    {
-                        gradB[i * inW * inH * cmapIn + icur] = (float)(icur / cmapIn + (icur % cmapIn) * kW * kH) * cmapOut;
-                    }
-                }
+                seed = 0;
+                std::generate(gradB.begin(), gradB.end(), [=, &seed]{ return 2 * (seed++ % (kW * kH * cmapIn)) + 1; });
+
                 SingleMatrix exp(inW * inH * cmapIn, n, gradB.data(), matrixFlagNormal, deviceId);
                 Assert::IsTrue(grad.IsEqualTo(exp));
             }
@@ -203,13 +192,13 @@ namespace CNTKMathTest
             int inH = 3;
             int kW = 3;
             int kH = 3;
-            int sW = 2;
-            int sH = 2;
+            int sW = 1;
+            int sH = 1;
             int cmapOut = 2;
             int outW = GetNumOut(inW, kW, sW, false);
             int outH = GetNumOut(inH, kH, sH, false);
 
-            for (int deviceId : { -1, 0 })
+            for (int deviceId : { 0 })
             {
                 auto fact = ConvFact::Create(deviceId);
                 auto eng = fact->CreateConvEngine(0);
@@ -218,7 +207,7 @@ namespace CNTKMathTest
                 auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
                 auto convT = fact->CreateConvDescriptor(*inT, *filtT, sW, sH, false);
 
-                // Source grads is in NHWC format.
+                // Source grads is in NCHW format.
                 float srcGradBuf[] = {
                     1.0f, 1.0f,
                     1.0f, 1.0f,
@@ -227,26 +216,22 @@ namespace CNTKMathTest
 
                 vec buf(inW * inH * cmapIn * n);
                 int seed = 0;
-                for (int i = 0; i < n; i++)
-                {
-                    seed = 0;
-                    // Create input, cmapIn feature maps, inW x inH each, NHWC format.
-                    std::generate(buf.begin() + i * buf.size() / n, buf.begin() + (i + 1) * buf.size() / n, [&seed]{ return seed++; });
-                }
+                // Create input, cmapIn feature maps, inW x inH each, NCHW format.
+                std::generate(buf.begin(), buf.end(), [=, &seed]{ return seed++ % (inW * inH * cmapIn); });
                 SingleMatrix in(inW * inH * cmapIn, n, buf.data(), matrixFlagNormal, deviceId);
 
                 SingleMatrix filt(cmapOut, kW * kH * cmapIn, deviceId);
-                filt.SetValue(0);
+                filt.SetValue(1);
                 
                 eng->BackwardFilter(*srcGradT, srcGrad, *inT, in, *convT, *filtT, filt, false);
 
+                auto aa = filt.CopyToArray();
+                UNUSED(aa);
+
+                // Expected filter values in NCHW format.
                 vec expFiltB(cmapOut * kW * kH * cmapIn);
-                for (int icur = 0; icur < inW * inH * cmapIn; icur++)
-                {
-                    float val = (float)(n * ((icur % (kW * kH)) * cmapIn + icur / (kW * kH)));
-                    for (int i = icur * cmapOut; i < (icur + 1) * cmapOut; i++)
-                        expFiltB[i] = val;
-                }
+                seed = 0;
+                std::generate(expFiltB.begin(), expFiltB.end(), [=, &seed]{ return 2 * (seed++ % (kW * kH * cmapIn)) + 1; });
                 SingleMatrix exp(cmapOut, kW * kH * cmapIn, expFiltB.data(), matrixFlagNormal, deviceId);
                 Assert::IsTrue(filt.IsEqualTo(exp));
             }
@@ -268,7 +253,7 @@ namespace CNTKMathTest
             int outW = GetNumOut(inW, kW, sW, false);
             int outH = GetNumOut(inH, kH, sH, false);
 
-            for (int deviceId : { -1, 0 })
+            for (int deviceId : { 0 })
             {
                 auto fact = ConvFact::Create(deviceId);
                 auto eng = fact->CreatePoolEngine();
@@ -278,7 +263,7 @@ namespace CNTKMathTest
 
                 vec buf(inW * inH * cmap * n);
                 int seed = 0;
-                // Create input, cmapIn feature maps, inW x inH each (NHWC format).
+                // Create input, cmapIn feature maps, inW x inH each (NCHW format).
                 std::generate(buf.begin(), buf.end(), [=, &seed]{ return seed++ % (inW * inH * cmap); });
                 SingleMatrix in(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
 
@@ -286,16 +271,16 @@ namespace CNTKMathTest
 
                 eng->Forward(*inT, in, *poolT, *outT, out);
 
-                // Output is in NHWC format.
+                // Output is in NCHW format.
                 float expBuf[] = {
-                    10.0f, 11.0f,
-                    14.0f, 15.0f,
-                    26.0f, 27.0f,
-                    30.0f, 31.0f,
-                    10.0f, 11.0f,
-                    14.0f, 15.0f,
-                    26.0f, 27.0f,
-                    30.0f, 31.0f,
+                    5.0f,  7.0f, 
+                    13.0f, 15.0f,
+                    21.0f, 23.0f,
+                    29.0f, 31.0f,
+                    5.0f,  7.0f,
+                    13.0f, 15.0f,
+                    21.0f, 23.0f,
+                    29.0f, 31.0f,
                 };
                 SingleMatrix exp(outW * outH * cmap, n, expBuf, matrixFlagNormal, deviceId);
                 Assert::IsTrue(out.IsEqualTo(exp));
@@ -318,7 +303,7 @@ namespace CNTKMathTest
             int outW = GetNumOut(inW, kW, sW, false);
             int outH = GetNumOut(inH, kH, sH, false);
 
-            for (int deviceId : { -1, 0 })
+            for (int deviceId : { 0 })
             {
                 auto fact = ConvFact::Create(deviceId);
                 auto eng = fact->CreatePoolEngine();
@@ -328,7 +313,7 @@ namespace CNTKMathTest
 
                 vec buf(inW * inH * cmap * n);
                 int seed = 0;
-                // Create input, cmapIn feature maps, inW x inH each (NHWC format).
+                // Create input, cmapIn feature maps, inW x inH each (NCHW format).
                 std::generate(buf.begin(), buf.end(), [=, &seed]{ return seed++ % (inW * inH * cmap); });
                 SingleMatrix in(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
                 SingleMatrix out(outW * outH * cmap, n, deviceId);
@@ -338,24 +323,24 @@ namespace CNTKMathTest
                 // For gradients, use the same values as outputs.
                 SingleMatrix srcGrad(out);
                 SingleMatrix grad(inW * inH * cmap, n, deviceId);
-                grad.SetValue(0);
+                grad.SetValue(1);
 
                 eng->Backward(*outT, out, srcGrad, *poolT, *inT, in, grad);
 
-                // Output is in NHWC format.
-                std::fill(buf.begin(), buf.end(), 0.0f);
+                // Output is in NCHW format.
+                std::fill(buf.begin(), buf.end(), 1.0f);
                 vec expMap = {
-                    10.0f, 11.0f,
-                    14.0f, 15.0f,
-                    26.0f, 27.0f,
-                    30.0f, 31.0f,
-                    10.0f, 11.0f,
-                    14.0f, 15.0f,
-                    26.0f, 27.0f,
-                    30.0f, 31.0f,
+                    5.0f,  7.0f, 
+                    13.0f, 15.0f,
+                    21.0f, 23.0f,
+                    29.0f, 31.0f,
+                    5.0f,  7.0f,
+                    13.0f, 15.0f,
+                    21.0f, 23.0f,
+                    29.0f, 31.0f,
                 };
                 for (size_t i = 0; i < expMap.size(); i++)
-                    buf[(int)expMap[i] + inW * inH * cmap * (i / (expMap.size() / n)) ] = expMap[i];
+                    buf[(int)expMap[i] + inW * inH * cmap * (i / (expMap.size() / n)) ] += expMap[i];
                 SingleMatrix exp(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
 
                 Assert::IsTrue(grad.IsEqualTo(exp));
@@ -378,7 +363,7 @@ namespace CNTKMathTest
             int outW = GetNumOut(inW, kW, sW, false);
             int outH = GetNumOut(inH, kH, sH, false);
 
-            for (int deviceId : { -1, 0 })
+            for (int deviceId : { 0 })
             {
                 auto fact = ConvFact::Create(deviceId);
                 auto eng = fact->CreatePoolEngine();
@@ -388,7 +373,7 @@ namespace CNTKMathTest
 
                 vec buf(inW * inH * cmap * n);
                 int seed = 0;
-                // Create input, cmapIn feature maps, inW x inH each (NHWC format).
+                // Create input, cmapIn feature maps, inW x inH each (NCHW format).
                 std::generate(buf.begin(), buf.end(), [=, &seed]{ return seed++ % (inW * inH * cmap); });
                 SingleMatrix in(inW * inH * cmap, n, buf.data(), matrixFlagNormal, deviceId);
 
@@ -396,16 +381,16 @@ namespace CNTKMathTest
 
                 eng->Forward(*inT, in, *poolT, *outT, out);
 
-                // Output is in NHWC format.
+                // Output is in NCHW format.
                 float expBuf[] = {
-                    5.0f,  6.0f,
-                    9.0f,  10.0f,
-                    21.0f, 22.0f,
-                    25.0f, 26.0f,
-                    5.0f,  6.0f,
-                    9.0f,  10.0f,
-                    21.0f, 22.0f,
-                    25.0f, 26.0f,
+                    2.5f,  4.5f,
+                    10.5f, 12.5f,
+                    18.5f, 20.5f,
+                    26.5f, 28.5f,
+                    2.5f,  4.5f,
+                    10.5f, 12.5f,
+                    18.5f, 20.5f,
+                    26.5f, 28.5f,
                 };
                 SingleMatrix exp(outW * outH * cmap, n, expBuf, matrixFlagNormal, deviceId);
                 Assert::IsTrue(out.IsEqualTo(exp));
@@ -448,24 +433,19 @@ namespace CNTKMathTest
                 // For gradients, use the same values as outputs.
                 SingleMatrix srcGrad(out);
                 SingleMatrix grad(inW * inH * cmap, n, deviceId);
-                grad.SetValue(0);
+                grad.SetValue(1);
 
                 eng->Backward(*outT, out, srcGrad, *poolT, *inT, in, grad);
-                auto aa = grad.CopyToArray();
-                UNUSED(aa);
-                //// Output is in NHWC format.
-                //float expBuf[] = {
-                //    5.0f,  6.0f,
-                //    9.0f,  10.0f,
-                //    21.0f, 22.0f,
-                //    25.0f, 26.0f,
-                //    5.0f,  6.0f,
-                //    9.0f,  10.0f,
-                //    21.0f, 22.0f,
-                //    25.0f, 26.0f,
-                //};
-                //SingleMatrix exp(outW * outH * cmap, n, expBuf, matrixFlagNormal, deviceId);
-                //Assert::IsTrue(out.IsEqualTo(exp));
+
+                // Output is in NHWC format.
+                float expBuf[] = {
+		            1.625f, 1.625f, 2.125f, 2.125f,
+		            1.625f, 1.625f, 2.125f, 2.125f,
+		            3.625f, 3.625f, 4.125f, 4.125f,
+		            3.625f, 3.625f, 4.125f, 4.125f,
+                };
+                SingleMatrix exp(inW * inH * cmap, n, expBuf, matrixFlagNormal, deviceId);
+                Assert::IsTrue(grad.IsEqualTo(exp));
             }
         }
 
