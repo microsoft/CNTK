@@ -49,6 +49,7 @@ namespace CNTKMathTest
                 auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
                 auto outT = fact->CreateTensor(outW, outH, cmapOut, n);
                 auto convT = fact->CreateConvDescriptor(*inT, *filtT, sW, sH, false);
+                auto biasT = fact->CreateTensor(1, 1, cmapOut, 1);
 
                 vec buf(inW * inH * cmapIn * n);
                 int seed = 0;
@@ -67,14 +68,26 @@ namespace CNTKMathTest
                 eng->Forward(*inT, in, *filtT, filt, *convT, *outT, out);
 
                 // Output is in NCHW format.
-                float expBuf[] = {
+                std::array<float, 4 * 2 * 2> expBuf = {
                     15219.0f, 15921.0f, 18729.0f, 19431.0f,
                     15219.0f, 15921.0f, 18729.0f, 19431.0f,
                     15219.0f, 15921.0f, 18729.0f, 19431.0f,
                     15219.0f, 15921.0f, 18729.0f, 19431.0f
                 };
-                SingleMatrix exp(outW * outH * cmapOut, n, expBuf, matrixFlagNormal, deviceId);
-                Assert::IsTrue(out.IsEqualTo(exp));
+                SingleMatrix exp(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
+                Assert::IsTrue(out.IsEqualTo(exp), L"Unexpected convolution output.");
+                
+                float b[] = { 1.0f, 2.0f };
+                SingleMatrix bias(cmapOut, 1, b, matrixFlagNormal, deviceId);
+
+                eng->AddBias(*biasT, bias, *outT, out);
+
+                // Bias is per-channel.
+                seed = 0;
+                std::transform(expBuf.begin(), expBuf.end(), expBuf.begin(), 
+                    [=, &seed, &b](const float& a) { return a + b[(seed++ % (outW * outH * cmapOut)) / (outW * outH)]; });
+                SingleMatrix expPlusB(outW * outH * cmapOut, n, expBuf.data(), matrixFlagNormal, deviceId);
+                Assert::IsTrue(out.IsEqualTo(expPlusB), L"Unexpected (convolution + bias) output.");
             }
         }
 
@@ -206,6 +219,7 @@ namespace CNTKMathTest
                 auto filtT = fact->CreateFilter(kW, kH, cmapIn, cmapOut);
                 auto inT = fact->CreateTensor(inW, inH, cmapIn, n);
                 auto convT = fact->CreateConvDescriptor(*inT, *filtT, sW, sH, false);
+                auto biasT = fact->CreateTensor(1, 1, cmapOut, 1);
 
                 // Source grads is in NCHW format.
                 float srcGradBuf[] = {
@@ -225,15 +239,23 @@ namespace CNTKMathTest
                 
                 eng->BackwardFilter(*srcGradT, srcGrad, *inT, in, *convT, *filtT, filt, false);
 
-                auto aa = filt.CopyToArray();
-                UNUSED(aa);
-
                 // Expected filter values in NCHW format.
                 vec expFiltB(cmapOut * kW * kH * cmapIn);
                 seed = 0;
                 std::generate(expFiltB.begin(), expFiltB.end(), [=, &seed]{ return 2 * (seed++ % (kW * kH * cmapIn)) + 1; });
                 SingleMatrix exp(cmapOut, kW * kH * cmapIn, expFiltB.data(), matrixFlagNormal, deviceId);
-                Assert::IsTrue(filt.IsEqualTo(exp));
+                Assert::IsTrue(filt.IsEqualTo(exp), L"Unexpected convolution gradient.");
+
+                // Verify bias backpropagation.
+                float b[] = { 1.0f, 2.0f };
+                SingleMatrix biasGrad(cmapOut, 1, b, matrixFlagNormal, deviceId);
+
+                eng->BackwardBias(*srcGradT, srcGrad, *biasT, biasGrad);
+
+                // Bias is per-channel.
+                float bg[] = { b[0] + srcGradBuf[0] + srcGradBuf[2], b[1] + srcGradBuf[1] + srcGradBuf[3]};
+                SingleMatrix expBiasGrad(cmapOut, 1, bg, matrixFlagNormal, deviceId);
+                Assert::IsTrue(biasGrad.IsEqualTo(expBiasGrad), L"Unexpected bias gradient.");
             }
         }
 

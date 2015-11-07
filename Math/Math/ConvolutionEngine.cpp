@@ -234,6 +234,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(srcGradT.n() == srcGrad.GetNumCols());
         }
 
+        void AddBias(const Tensor4D& biasT, const Mat& bias, const Tensor4D& dstT, Mat& dst) override
+        {
+            UNUSED(biasT); UNUSED(bias); UNUSED(dstT); UNUSED(dst);
+            RuntimeError("Not yet implemented.");
+        }
+
+        void BackwardBias(const Tensor4D& srcGradT, const Mat& srcGrad, const Tensor4D& biasT, Mat& biasGrad) override
+        {
+            UNUSED(srcGradT); UNUSED(srcGrad); UNUSED(biasT); UNUSED(biasGrad);
+            RuntimeError("Not yet implemented.");
+        }
+
     private:
         size_t m_maxTempMemSizeInSamples;
         Mat m_tempMatrix;
