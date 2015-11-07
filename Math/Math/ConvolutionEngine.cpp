@@ -56,8 +56,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     std::unique_ptr<ConvolutionEngineFactory<ElemType>> ConvolutionEngineFactory<ElemType>::Create(DEVICEID_TYPE deviceId)
     {
         // REVIEW alexeyk: make cuDNN default when running on GPU and compiled with cuDNN, add config parameter to enable runtime switch between implementations.
-        //if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported())
-        //    return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>(deviceId);
+        if (deviceId >= 0 && CuDnnConvolutionEngineFactory<ElemType>::IsSupported())
+            return std::make_unique<CuDnnConvolutionEngineFactory<ElemType>>(deviceId);
         return std::make_unique<DefaultConvolutionEngineFactory<ElemType>>(deviceId);
     }
 

@@ -313,7 +313,10 @@ private:
 // ImageReader
 
 template<class ElemType>
-ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed), m_imgListRand(true), m_pMBLayout(make_shared<MBLayout>())
+static void CopyFromImage(const cv::Mat& src, std::vector<ElemType>& dst, size_t ivDst, bool transpose);
+
+template<class ElemType>
+ImageReader<ElemType>::ImageReader() : m_seed(0), m_rng(m_seed), m_imgListRand(true), m_pMBLayout(make_shared<MBLayout>()), m_mbFmt(DataFormat::Nchw)
 {
     m_transforms.push_back(std::make_unique<CropTransform>(m_seed));
     m_transforms.push_back(std::make_unique<ScaleTransform>(sizeof(ElemType) == 4 ? CV_32F : CV_64F, m_seed));
@@ -347,6 +350,13 @@ void ImageReader<ElemType>::InitFromConfig(const ConfigRecordType& config)
     size_t h = featSect.second("height");
     size_t c = featSect.second("channels");
     m_featDim = w * h * c;
+    
+    // Get mini-batch format.
+    std::string mbFmt = featSect.second("mbFormat", "nchw");
+    if (AreEqual(mbFmt, "nhwc"))
+        m_mbFmt = DataFormat::Nhwc;
+    else if (!AreEqual(mbFmt, "nchw"))
+        RuntimeError("ImageReader does not support the mini-batch format %s.", mbFmt.c_str());
 
     // Initialize transforms.
     for (auto& t: m_transforms)
@@ -441,9 +451,10 @@ bool ImageReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemType>
         for (auto& t: m_transforms)
             t->Apply(img);
        
-        assert(img.isContinuous());
-        auto data = reinterpret_cast<ElemType*>(img.ptr());
-        std::copy(data, data + m_featDim, m_featBuf.begin() + m_featDim * i);
+        assert(img.rows * img.cols * img.channels() == m_featDim);
+        // When IMREAD_COLOR is used, OpenCV stores image in BGR format. 
+        // Transpose is required if requested mini-batch format is NCHW.
+        CopyFromImage(img, m_featBuf, m_featDim * i, m_mbFmt == DataFormat::Nchw);
         m_labBuf[m_labDim * i + p.second] = 1;
     }
 
@@ -487,5 +498,31 @@ void ImageReader<ElemType>::SetRandomSeed(unsigned int seed)
 
 template class ImageReader<double>;
 template class ImageReader<float>;
+
+template<class ElemType>
+static void CopyFromImage(const cv::Mat& src, std::vector<ElemType>& dst, size_t ivDst, bool transpose)
+{
+    assert(src.isContinuous());
+    assert(src.channels() == 3);
+
+    size_t count = src.rows * src.cols * src.channels();
+    assert(ivDst + count <= dst.size());
+    
+    auto data = reinterpret_cast<const ElemType*>(src.ptr());
+    if (!transpose)
+        std::copy(data, data + count, dst.begin() + ivDst);
+    else
+    {
+        size_t crow = src.rows * src.cols;
+        size_t ccol = src.channels();
+        for (size_t irow = 0; irow < crow; irow++)
+        {
+            for (size_t icol = 0; icol < ccol; icol++)
+            {
+                dst[ivDst + icol * crow + irow] = data[irow * ccol + icol];
+            }
+        }
+    }
+}
 
 }}}
