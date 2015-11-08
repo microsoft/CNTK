@@ -100,7 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            Matrix<ElemType> functionValues = ValueSlice(frameRange, true, false); // Switch to dense as a work-around because ColumnSlice doesn't support all the sparse formats
+            Matrix<ElemType> functionValues = ValueSliceToDense(frameRange, true, false); // Switch to dense as a work-around because ColumnSlice doesn't support all the sparse formats
             Matrix<ElemType> inputFunctionValues0 = Inputs(0)->ValueSlice(frameRange);
             Matrix<ElemType> inputFunctionValues1 = Inputs(1)->ValueSlice(frameRange);
             // Note: If one input is a column vector (no MBLayout) and the other a sequence of frames (MBLayout), then the above will be a slice for the other only.
