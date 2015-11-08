@@ -753,6 +753,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 (*m_mbiter)++;
             }
 
+            m_noData = false;
             if (!(*m_mbiter))
                 m_noData = true;
 
@@ -785,7 +786,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_labelsStartIndexMultiUtt.assign(m_labelsBufferMultiIO.size()*m_numSeqsPerMB, 0);
             }
 
-            m_noData = false;
             for (size_t u = 0; u < m_numSeqsPerMB; u ++)
             {
                 if (m_featuresBufferMultiUtt[u] != NULL)
