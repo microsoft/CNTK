@@ -286,9 +286,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         //  - frameRange refers to *functionValues*, not the inputs
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
-            if (isNoop())       // no change in dimension: FunctionValues() will return our input directly
-                return;
-
             size_t rows = Inputs(0)->GetNumRows(), cols = Inputs(0)->GetNumCols();
             size_t newCols = cols * rows / m_numRows;
             assert(newCols * m_numRows == cols * rows); // follows from above check
@@ -332,15 +329,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 else
                     Base::Stack(frameRange, Inputs(0)->GetMBLayout(), GradientValues(), Inputs(0)->GradientValues(), factor(), true/*addTo*/);
             }
-        }
-
-        // BUGBUG: there is a const and a non-const version of this function
-        virtual const Matrix<ElemType>& FunctionValues() const
-        {
-            if (!isNoop())
-                return *m_functionValues;
-            else
-                return Inputs(0)->FunctionValues();
         }
 
     private:
