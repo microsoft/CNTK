@@ -241,7 +241,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return a;
     }
     template<class ElemType>
-    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
+    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
     {
         GPUMatrix<ElemType> a;
         return a;
