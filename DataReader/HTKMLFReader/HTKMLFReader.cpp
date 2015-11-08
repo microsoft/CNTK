@@ -747,6 +747,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             m_mbiter.reset(new msra::dbn::minibatchiterator(*m_frameSource, epoch, requestedEpochSamples, mbSize, subsetNum, numSubsets, datapasses));
+            // Advance the MB iterator until we find some data or reach the end of epoch
+            while ((m_mbiter->currentmbframes() == 0) && *m_mbiter)
+            {
+                (*m_mbiter)++;
+            }
+
+            if (!(*m_mbiter))
+                m_noData = true;
+
             if (!m_featuresBufferMultiIO.empty())
             {
                 if (m_featuresBufferMultiIO[0] != nullptr) // check first feature, if it isn't NULL, safe to assume all are not NULL? 
@@ -1616,7 +1625,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_verbosity > 2)
                 mbIterAdvancementTimer.Start();
 
-            (*m_mbiter)++;
+            // Advance the MB iterator until we find some data or reach the end of epoch
+            do
+            {
+                (*m_mbiter)++;
+            } while ((m_mbiter->currentmbframes() == 0) && *m_mbiter);
 
             if (m_verbosity > 2)
             {
