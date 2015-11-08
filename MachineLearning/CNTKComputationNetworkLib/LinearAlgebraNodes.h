@@ -100,7 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
         {
-            Matrix<ElemType> functionValues = ValueSliceToDense(frameRange, true, false); // Switch to dense as a work-around because ColumnSlice doesn't support all the sparse formats
+            Matrix<ElemType> functionValues = ValueSliceToDense(frameRange, false); // Switch to dense as a work-around because ColumnSlice doesn't support all the sparse formats
             Matrix<ElemType> inputFunctionValues0 = Inputs(0)->ValueSlice(frameRange);
             Matrix<ElemType> inputFunctionValues1 = Inputs(1)->ValueSlice(frameRange);
             // Note: If one input is a column vector (no MBLayout) and the other a sequence of frames (MBLayout), then the above will be a slice for the other only.
@@ -410,14 +410,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
-        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override  
+        virtual void /*ComputationNode::*/EvaluateThisNode(const FrameRange & frameRange) override
         {
             size_t rows0 = Inputs(0)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
             VerifySize(rows0, cols1);
 
             // right operand and output can have MB layout, while left operand cannot
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
-            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
+            Matrix<ElemType> sliceOutputValue = ValueSliceToDense(frameRange, false); // Output of Times node will always be dense
 
 #if DUMPOUTPUT
             Inputs(0)->FunctionValues().Print("TimesNode - Input0");
