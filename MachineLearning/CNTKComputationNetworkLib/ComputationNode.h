@@ -1209,12 +1209,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     return data.ColumnSlice(startColumn + frameRange.seqIndex, 1);
             }
         }
-        Matrix<ElemType> ValueSliceToDense(const FrameRange & frameRange/*select frame or entire batch*/, bool switchToDense, bool keepValuesOnSwitch)
+        Matrix<ElemType> ValueSliceToDense(const FrameRange & frameRange/*select frame or entire batch*/, bool keepValuesOnSwitch)
         {
-            if (switchToDense)
-            {
-                FunctionValues().SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, keepValuesOnSwitch);
-            }
+            FunctionValues().SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, keepValuesOnSwitch);
             return ValueSlice(frameRange);
         }
         Matrix<ElemType> ValueSlice(const FrameRange & frameRange/*select frame or entire batch*/)
