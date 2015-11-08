@@ -38,6 +38,27 @@ namespace CNTKMathTest
             }
 
             DenseMatrix DM1 = DM0.ColumnSlice(start, numCols);
+            DenseMatrix DM2 = SM0.ColumnSlice(start, numCols).ColumnSliceToDense(0, numCols);
+
+            Assert::IsTrue(DM1.IsEqualTo(DM2, 0.0001));
+        }
+
+        TEST_METHOD(CPUSparseMatrixColumnSliceToDense)
+        {
+            size_t m = 100, n = 50;
+            size_t start = 10, numCols = 20;
+            DenseMatrix DM0(m, n);
+            SparseMatrix SM0(MatrixFormat::matrixFormatSparseCSC, m, n, 0);
+
+            DM0.SetUniformRandomValue(-1, 1);
+
+            foreach_coord(row, col, DM0)
+            {
+                auto val = DM0(row, col);
+                SM0.SetValue(row, col, val);
+            }
+
+            DenseMatrix DM1 = DM0.ColumnSlice(start, numCols);
             DenseMatrix DM2 = SM0.ColumnSliceToDense(start, numCols);
 
             Assert::IsTrue(DM1.IsEqualTo(DM2, 0.0001));
