@@ -2048,7 +2048,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
+    GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
     {
         int m = (int)GetNumRows();
         int n = (int)GetNumCols();
@@ -2538,7 +2538,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template GPUSparseMatrix<char>::~GPUSparseMatrix();
     template GPUSparseMatrix<char>::GPUSparseMatrix(GPUSparseMatrix<char>&&);
     template GPUSparseMatrix<char> GPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
-    template GPUMatrix<char> GPUSparseMatrix<char>::ColumnSliceToDense(size_t startColumn, size_t numCols) const;
+    template GPUMatrix<char> GPUSparseMatrix<char>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
     template GPUSparseMatrix<char>& GPUSparseMatrix<char>::operator=(GPUSparseMatrix<char>&& deepCopy);
 
     template <class ElemType>

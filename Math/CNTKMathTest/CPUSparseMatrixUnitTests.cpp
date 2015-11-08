@@ -38,12 +38,12 @@ namespace CNTKMathTest
             }
 
             DenseMatrix DM1 = DM0.ColumnSlice(start, numCols);
-            DenseMatrix DM2 = SM0.ColumnSlice(start, numCols).ColumnSliceToDense(0, numCols);
+            DenseMatrix DM2 = SM0.ColumnSlice(start, numCols).CopyColumnSliceToDense(0, numCols);
 
             Assert::IsTrue(DM1.IsEqualTo(DM2, 0.0001));
         }
 
-        TEST_METHOD(CPUSparseMatrixColumnSliceToDense)
+        TEST_METHOD(CPUSparseMatrixCopyColumnSliceToDense)
         {
             size_t m = 100, n = 50;
             size_t start = 10, numCols = 20;
@@ -59,7 +59,7 @@ namespace CNTKMathTest
             }
 
             DenseMatrix DM1 = DM0.ColumnSlice(start, numCols);
-            DenseMatrix DM2 = SM0.ColumnSliceToDense(start, numCols);
+            DenseMatrix DM2 = SM0.CopyColumnSliceToDense(start, numCols);
 
             Assert::IsTrue(DM1.IsEqualTo(DM2, 0.0001));
         }

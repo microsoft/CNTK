@@ -417,8 +417,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // right operand and output can have MB layout, while left operand cannot
             Matrix<ElemType> sliceInput1Value = Inputs(1)->ValueSlice(frameRange);
-            Matrix<ElemType> sliceOutputValue = ValueSliceToDense(frameRange, false); // Output of Times node will always be dense
-
+            Matrix<ElemType> sliceOutputValue = ValueSlice(frameRange);
 #if DUMPOUTPUT
             Inputs(0)->FunctionValues().Print("TimesNode - Input0");
 #endif

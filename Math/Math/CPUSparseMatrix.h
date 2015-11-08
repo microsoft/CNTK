@@ -54,7 +54,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType* BufferPointer() const;
 
         CPUSparseMatrix<ElemType> ColumnSlice(size_t startColumn, size_t numCols) const;
-        CPUMatrix<ElemType> ColumnSliceToDense(size_t startColumn, size_t numCols) const;
+        CPUMatrix<ElemType> CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
 
         CPUMatrix<ElemType> DiagonalToDense() const;
 

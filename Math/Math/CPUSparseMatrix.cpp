@@ -320,7 +320,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     }
 
     template<class ElemType>
-    CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::ColumnSliceToDense(size_t startColumn, size_t numCols) const
+    CPUMatrix<ElemType> CPUSparseMatrix<ElemType>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const
     {
         //if (numCols == 0)
         //    LogicError("The slice cannot have 0 columns.");
@@ -1221,7 +1221,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template void CPUSparseMatrix<char>::Reset(void);
     template CPUSparseMatrix<char>::~CPUSparseMatrix();
     template CPUSparseMatrix<char> CPUSparseMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
-    template CPUMatrix<char> CPUSparseMatrix<char>::ColumnSliceToDense(size_t startColumn, size_t numCols) const;
+    template CPUMatrix<char> CPUSparseMatrix<char>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
     template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(const CPUSparseMatrix<char>& deepCopyFrom);
 
 }}}

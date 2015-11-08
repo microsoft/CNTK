@@ -410,18 +410,18 @@ namespace CNTKMathTest
             SM0.SetValue(M0);
 
             GPUMatrix<float> M1 = M0.ColumnSlice(0, 2);
-            GPUMatrix<float> SM1 = SM0.ColumnSlice(0, 2).ColumnSliceToDense(0, 2);
+            GPUMatrix<float> SM1 = SM0.ColumnSlice(0, 2).CopyColumnSliceToDense(0, 2);
             Assert::IsTrue(M1.IsEqualTo(SM1, 0.0001f));
 
             GPUMatrix<float> M2 = M0.ColumnSlice(1, 2);
-            GPUMatrix<float> SM2 = SM0.ColumnSlice(1, 2).ColumnSliceToDense(0, 2);
+            GPUMatrix<float> SM2 = SM0.ColumnSlice(1, 2).CopyColumnSliceToDense(0, 2);
             Assert::IsTrue(M2.IsEqualTo(SM2, 0.0001f));
 
             Assert::IsFalse(M1.IsEqualTo(SM2, 0.0001f));
             Assert::IsFalse(M2.IsEqualTo(SM1, 0.0001f));
         }
 
-        TEST_METHOD(GPUSSparseMatrixColumnSliceToDense)
+        TEST_METHOD(GPUSSparseMatrixCopyColumnSliceToDense)
         {
             float *fArray = new float[6];
             fArray[0] = 1; fArray[1] = 4; fArray[2] = 2;
@@ -431,11 +431,11 @@ namespace CNTKMathTest
             SM0.SetValue(M0);
 
             GPUMatrix<float> M1 = M0.ColumnSlice(0, 2);
-            GPUMatrix<float> SM1 = SM0.ColumnSliceToDense(0, 2);
+            GPUMatrix<float> SM1 = SM0.CopyColumnSliceToDense(0, 2);
             Assert::IsTrue(M1.IsEqualTo(SM1, 0.0001f));
 
             GPUMatrix<float> M2 = M0.ColumnSlice(1, 2);
-            GPUMatrix<float> SM2 = SM0.ColumnSliceToDense(1, 2);
+            GPUMatrix<float> SM2 = SM0.CopyColumnSliceToDense(1, 2);
             Assert::IsTrue(M2.IsEqualTo(SM2, 0.0001f));
 
             Assert::IsFalse(M1.IsEqualTo(SM2, 0.0001f));
