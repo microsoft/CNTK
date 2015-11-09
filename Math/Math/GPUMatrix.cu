@@ -371,6 +371,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_matrixName=NULL;
         m_format = matrixFormatDense; 
         m_externalBuffer = false;
+        m_workspace = nullptr;
     }
 
     template<class ElemType>
@@ -501,6 +502,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     int GPUMatrix<ElemType>::GetComputeDeviceId() const 
     {
         return m_computeDevice;
+    }
+
+    template<class ElemType>
+    std::unique_ptr<GPUMatrix<ElemType>> GPUMatrix<ElemType>::GetOrCreateWorkspace() const
+    {
+        // REVIEW alexeyk: not thread-safe, fine for now.
+        if (m_workspace == nullptr)
+            m_workspace = new conc_stack<std::unique_ptr<GPUMatrix<ElemType>>>();
+        assert(m_workspace != nullptr);
+        auto deviceId = m_computeDevice;
+        return m_workspace->pop_or_create([deviceId]() { return std::make_unique<GPUMatrix<ElemType>>(deviceId); });
+    }
+
+    template<class ElemType>
+    void GPUMatrix<ElemType>::ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> src) const
+    {
+        assert(m_workspace != nullptr);
+        m_workspace->push(std::move(src));
     }
 
 #pragma region Basic Operators
@@ -3052,10 +3071,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cbtemp = ctemp * sizeof(ElemType);
         // ElemType count needed to store indices, accounting for natural alignment for uint64_t type.
         size_t cidx = ((celt + 1) * sizeof(uint64_t) - 1 + sizeof(ElemType) - 1) / sizeof(ElemType);
-        // Prepare temp workspace.
-        auto deviceId = m_computeDevice;
-        assert(m_workspace != nullptr);
-        auto workspace = m_workspace->pop_or_create([deviceId]() { return std::make_unique<GPUMatrix<ElemType>>(deviceId); });
+        // Get temp workspace.
+        auto workspace = GetOrCreateWorkspace();
         // Resize to store: output values for the 1st and 2nd passes, input indices, output indices, and temp storage.
         workspace->Resize(m, 2 * n + (2 * cidx + ctemp + m - 1) / m);
         outVal1 = workspace->m_pArray;
@@ -3081,7 +3098,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         cblock = (topK * n + ThreadsPerBlock - 1) / ThreadsPerBlock;
         _copyTopKResults<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, outVal2, maxIndexes.m_pArray, maxValues.m_pArray, m, n, topK);
 
-        m_workspace->push(std::move(workspace));
+        ReleaseWorkspace(std::move(workspace));
 
         if (do_sync)    CUDA_CALL(cudaEventRecord(done));
         if (do_sync)    CUDA_CALL(cudaEventSynchronize(done));

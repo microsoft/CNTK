@@ -111,7 +111,7 @@ endif
 ifeq ("$(MATHLIB)","acml")
   INCLUDEPATH += $(ACML_PATH)/include
   LIBPATH += $(ACML_PATH)/lib
-  LIBS += -lacml -lm -lpthread
+  LIBS += -lacml_mp -liomp5 -lm -lpthread
   CPPFLAGS += -DUSE_ACML
 endif
 

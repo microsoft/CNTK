@@ -354,10 +354,22 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         for (wstring & path : filelist)
                         {
-#ifdef WIN32                // sorry for windows users, we have to pay some cost here 
-                            std::replace(path.begin(), path.end(), L'\\', L'/'); 
+                            if (path.find_first_of(L'=') != wstring::npos)
+                            {
+                                vector<wstring> strarr = msra::strfun::split(path, L"="); 
+#ifdef WIN32
+                                replace(strarr[1].begin(), strarr[1].end(), L'\\', L'/');
 #endif 
-                            path = rootpath + L"/" + path;  
+
+                                path = strarr[0] + L"=" + rootpath + L"/" + strarr[1]; 
+                            }                     
+                            else
+                            {
+#ifdef WIN32
+                                replace(path.begin(), path.end(), L'\\', L'/');
+#endif 
+                                path = rootpath + L"/" + path;  
+                            }                            
                         }
                     }
                 }
@@ -735,6 +747,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             m_mbiter.reset(new msra::dbn::minibatchiterator(*m_frameSource, epoch, requestedEpochSamples, mbSize, subsetNum, numSubsets, datapasses));
+            // Advance the MB iterator until we find some data or reach the end of epoch
+            while ((m_mbiter->currentmbframes() == 0) && *m_mbiter)
+            {
+                (*m_mbiter)++;
+            }
+
+            m_noData = false;
+            if (!(*m_mbiter))
+                m_noData = true;
+
             if (!m_featuresBufferMultiIO.empty())
             {
                 if (m_featuresBufferMultiIO[0] != nullptr) // check first feature, if it isn't NULL, safe to assume all are not NULL? 
@@ -764,7 +786,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 m_labelsStartIndexMultiUtt.assign(m_labelsBufferMultiIO.size()*m_numSeqsPerMB, 0);
             }
 
-            m_noData = false;
             for (size_t u = 0; u < m_numSeqsPerMB; u ++)
             {
                 if (m_featuresBufferMultiUtt[u] != NULL)
@@ -998,6 +1019,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             {
                                 m_pMBLayout->SetAsNoInput(i, m_numValidFrames[i], m_mbNumTimeSteps);
                             }
+
+                            // TODO: Also blast the gaps in the features and labels matrices with NaNs to prevent them from being read
                         }
 
                         typename std::map<std::wstring, Matrix<ElemType>*>::iterator iter;
@@ -1180,54 +1203,68 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             }
                             m_processedFrame[i] += (endFr-startFr);
                             m_switchFrame[i] = actualmbsize[i];
-                            if (actualmbsize[i] < m_mbNumTimeSteps)
-                                m_pMBLayout->Set(i, actualmbsize[i], MinibatchPackingFlags::SequenceStart); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
-                            if (actualmbsize[i] == m_mbNumTimeSteps)
+                            if (actualmbsize[i] != 0)
                                 m_pMBLayout->Set(i, actualmbsize[i] - 1, MinibatchPackingFlags::SequenceEnd); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
-                            startFr = m_switchFrame[i];
-                            endFr = m_mbNumTimeSteps;
-                            bool reNewSucc = ReNewBufferForMultiIO(i);
-                            for (iter = matrices.begin();iter!=matrices.end(); iter++)
-                            {
-                                // dereference matrix that corresponds to key (input/output name) and 
-                                // populate based on whether its a feature or a label
-                                //Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
 
-                                if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+                            // TODO: We should fill in a loop until we fill the minibatch for the case where just one ReNew is not sufficient
+                            // to fill up the remaining slots in the minibatch
+                            bool reNewSucc = ReNewBufferForMultiIO(i);
+                            if (actualmbsize[i] < m_mbNumTimeSteps)
+                            {
+                                if (reNewSucc)
                                 {
-                                    id = m_featureNameToIdMap[iter->first];
-                                    dim = m_featureNameToDimMap[iter->first];
-                                    if (sizeof(ElemType) == sizeof(float))
+                                    m_pMBLayout->Set(i, actualmbsize[i], MinibatchPackingFlags::SequenceStart); // NOTE: this ORs, while original code overwrote in matrix but ORed into vector
+                                    startFr = m_switchFrame[i];
+                                    endFr = m_mbNumTimeSteps;
+                                    for (iter = matrices.begin(); iter != matrices.end(); iter++)
                                     {
-                                        for (size_t j = startFr,k = 0; j < endFr; j++,k++) // column major, so iterate columns
+                                        // dereference matrix that corresponds to key (input/output name) and 
+                                        // populate based on whether its a feature or a label
+                                        //Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+
+                                        if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
                                         {
-                                            // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
-                                            memcpy_s(&m_featuresBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[k * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
+                                            id = m_featureNameToIdMap[iter->first];
+                                            dim = m_featureNameToDimMap[iter->first];
+                                            if (sizeof(ElemType) == sizeof(float))
+                                            {
+                                                for (size_t j = startFr, k = 0; j < endFr; j++, k++) // column major, so iterate columns
+                                                {
+                                                    // copy over the entire column at once, need to do this because SSEMatrix may have gaps at the end of the columns
+                                                    memcpy_s(&m_featuresBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim], sizeof(ElemType) * dim, &m_featuresBufferMultiUtt[i].get()[k * dim + m_featuresStartIndexMultiUtt[id + i * numOfFea]], sizeof(ElemType) * dim);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                for (size_t j = startFr, k = 0; j < endFr; j++, k++) // column major, so iterate columns in outside loop
+                                                {
+                                                    for (int d = 0; d < dim; d++)
+                                                        m_featuresBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[k * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
+                                                }
+                                            }
+                                        }
+                                        else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
+                                        {
+                                            id = m_labelNameToIdMap[iter->first];
+                                            dim = m_labelNameToDimMap[iter->first];
+                                            for (size_t j = startFr, k = 0; j < endFr; j++, k++)
+                                            {
+                                                for (int d = 0; d < dim; d++)
+                                                    m_labelsBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[k * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
+                                            }
                                         }
                                     }
-                                    else
-                                    {
-                                        for (size_t j=startFr,k=0; j < endFr; j++,k++) // column major, so iterate columns in outside loop
-                                        {
-                                            for (int d = 0; d < dim; d++)
-                                                m_featuresBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim + d] = m_featuresBufferMultiUtt[i].get()[k * dim + d + m_featuresStartIndexMultiUtt[id + i * numOfFea]];
-                                        }
-                                    }
+
+                                    m_processedFrame[i] += (endFr - startFr);
                                 }
-                                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
+                                else
                                 {
-                                    id = m_labelNameToIdMap[iter->first];
-                                    dim = m_labelNameToDimMap[iter->first];
-                                    for (size_t j = startFr,k=0; j < endFr; j++,k++)
-                                    {
-                                        for (int d = 0; d < dim; d++)
-                                            m_labelsBufferMultiIO[id].get()[(j * m_numSeqsPerMB + i) * dim + d] = m_labelsBufferMultiUtt[i].get()[k * dim + d + m_labelsStartIndexMultiUtt[id + i * numOfLabel]];
-                                    }
+                                    // Mark gaps with NoInput
+                                    m_pMBLayout->SetAsNoInput(i, actualmbsize[i], m_mbNumTimeSteps);
+
+                                    // TODO: Also blast the gaps in the features and labels matrices with NaNs to prevent them from being read
                                 }
                             }
-
-                            if (reNewSucc) m_processedFrame[i] += (endFr-startFr);
-
                         }
                     }
                     for (auto iter = matrices.begin();iter!=matrices.end(); iter++)
@@ -1588,7 +1625,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (m_verbosity > 2)
                 mbIterAdvancementTimer.Start();
 
-            (*m_mbiter)++;
+            // Advance the MB iterator until we find some data or reach the end of epoch
+            do
+            {
+                (*m_mbiter)++;
+            } while ((m_mbiter->currentmbframes() == 0) && *m_mbiter);
 
             if (m_verbosity > 2)
             {
