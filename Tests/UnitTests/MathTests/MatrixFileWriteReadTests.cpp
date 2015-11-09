@@ -25,7 +25,7 @@ namespace Microsoft
 		{
 			namespace Test
 			{
-				BOOST_AUTO_TEST_SUITE(CpuMatrixSuite)
+				BOOST_AUTO_TEST_SUITE(CPUMatrixSuite)
 
 				BOOST_AUTO_TEST_CASE(CPUMatrixFileWriteRead)
 				{
@@ -43,24 +43,7 @@ namespace Microsoft
 
 					BOOST_CHECK(matrixCpuCopy.IsEqualTo(matrixCpuRead, 0.00001f));
 				}
-				
-				BOOST_AUTO_TEST_CASE(GpuMatrixFileWriteRead)
-				{
-					GPUMatrix<float> matrixGpu = GPUMatrix<float>::RandomUniform(43, 10, c_deviceIdZero, -26.3f, 30.2f);
-					GPUMatrix<float> matrixGpuCopy = matrixGpu;
 
-					std::wstring filenameGpu(L"MGPU.txt");
-					File fileGpu(filenameGpu, fileOptionsText | fileOptionsReadWrite);
-
-					fileGpu << matrixGpu;
-					fileGpu.SetPosition(0);
-
-					GPUMatrix<float> matrixGpuRead(c_deviceIdZero);
-					fileGpu >> matrixGpuRead;
-
-					BOOST_CHECK(matrixGpuCopy.IsEqualTo(matrixGpuRead, 0.00001f));
-				}
-				
 				BOOST_AUTO_TEST_CASE(MatrixFileWriteRead)
 				{
 					//Test Matrix in Dense mode
@@ -81,7 +64,7 @@ namespace Microsoft
 					//Test Matrix in Sparse mode
 					Matrix<float> matrixSparse = Matrix<float>::RandomUniform(43, 10, -26.3f, 30.2f);
 					Matrix<float> matrixSparseCopy = matrixSparse;
-					
+
 					matrixSparse.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSR, true);
 
 					std::wstring filenameSparse(L"MS.txt");
@@ -98,6 +81,28 @@ namespace Microsoft
 				}
 
 				BOOST_AUTO_TEST_SUITE_END()
+
+				BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
+
+				BOOST_AUTO_TEST_CASE(GPUMatrixFileWriteRead)
+				{
+					GPUMatrix<float> matrixGpu = GPUMatrix<float>::RandomUniform(43, 10, c_deviceIdZero, -26.3f, 30.2f);
+					GPUMatrix<float> matrixGpuCopy = matrixGpu;
+
+					std::wstring filenameGpu(L"MGPU.txt");
+					File fileGpu(filenameGpu, fileOptionsText | fileOptionsReadWrite);
+
+					fileGpu << matrixGpu;
+					fileGpu.SetPosition(0);
+
+					GPUMatrix<float> matrixGpuRead(c_deviceIdZero);
+					fileGpu >> matrixGpuRead;
+
+					BOOST_CHECK(matrixGpuCopy.IsEqualTo(matrixGpuRead, 0.00001f));
+				}
+				
+				BOOST_AUTO_TEST_SUITE_END()
+
 			}
 		}
 	}

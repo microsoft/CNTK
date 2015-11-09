@@ -66,6 +66,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         L"RowSlice(startIndex, numRows, input, needGradient = false, tag='') = new ComputationNode [ operation = 'RowSlice' ; inputs = input /*plus the function args*/ ]\n"
         L"RowRepeat(input, numRepeats, needGradient = false, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = input /*plus the function args*/ ]\n"
         L"RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]\n"
+        L"Logistic(inputs, tag='') = new ComputationNode [ operation = 'Logistic' /*plus the function args*/ ]\n"
         L"Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='') = new ComputationNode [ operation = 'Reshape' ; inputs = input /*plus the function args*/ ]\n"
         L"ReconcileMBLayout(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileMBLayout' ; inputs = (dataInput : layoutInput) /*plus the function args*/ ]\n"
         L"ConvolutionNode(weightNode, inputValueNode, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, zeroPadding = false, maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = (weightNode : inputValueNode) /*plus the function args*/ ]\n"
@@ -123,8 +124,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         UnaryStandardNode(Sigmoid, z)
         UnaryStandardNode(Softmax, z)
         BinaryStandardNode(SquareError, aMatrix, anotherMatrix)
-        //BinaryStandardNode(Logistic, ClassLabels, ClassOneProbabilities)
-        TernaryStandardNode(Logistic, ClassLabels, ClassOneProbabilities, InstanceWeights)
         //BinaryStandardNode(StrideTimesNode)
         //BinaryStandardNode(SumColumnElementsNode)
         UnaryStandardNode(SumElements, matrix)

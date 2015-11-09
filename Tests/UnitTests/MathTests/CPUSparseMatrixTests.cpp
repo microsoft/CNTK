@@ -21,7 +21,7 @@ namespace Microsoft
 				typedef CPUDoubleSparseMatrix SparseMatrix;
 				typedef CPUDoubleMatrix DenseMatrix;
 
-				BOOST_AUTO_TEST_SUITE(CpuMatrixSuite)
+				BOOST_AUTO_TEST_SUITE(CPUMatrixSuite)
 
 				BOOST_AUTO_TEST_CASE(CPUSparseMatrixColumnSlice)
 				{
