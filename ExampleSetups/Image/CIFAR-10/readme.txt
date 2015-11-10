@@ -1,12 +1,14 @@
 This example demonstrates usage of NDL to train a neural network on CIFAR-10 dataset (http://www.cs.toronto.edu/~kriz/cifar.html).
 CIFAR-10 dataset is not included in CNTK distribution but can be easily downloaded and converted by running the following command from this folder:
-python CIFAR_convert.py
+python CIFAR_convert.py [-f <format: cudnn|legacy>]
 The script will download all required files and convert them to CNTK-supported format.
 In case you don't have a Python installed, there are 2 options:
 1. Download and install latest version of Python 2.7 from: https://www.python.org/downloads/
 Then install numpy package by following instruction from: http://www.scipy.org/install.html#individual-packages
 2. Alternatively install Python Anaconda distribution which contains most of the popular Python packages including numpy:
 http://continuum.io/downloads
+-f parameter is optional and specifies output format of the datasets. 'cudnn' option (default) saves dataset in spatial-major format used by cuDNN 
+while 'legacy' - in CNTK legacy format. Use 'cudnn' if CNTK is compiled with USE_CUDNN option and 'legacy' otherwise.
 
 Short description of the network:
 

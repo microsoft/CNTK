@@ -72,7 +72,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // Special case for convolution node bias. See comment in EvaluateThisNode for more details.
                 auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[0]);
                 if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[1])) != nullptr)
-                    convNode->BackwardBias(inputGradientValues, gradientValues);
+                    convNode->BackwardBias(gradientValues, inputGradientValues);
                 else
                 {
                     size_t colspExpand = rowsp*colsp / rowsc;
@@ -146,7 +146,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // Bias does NOT have to be a vector of size equal to number of output feature map (though it's a common case).
                 auto convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[0]);
                 if (convNode != nullptr || (convNode = dynamic_pointer_cast<ConvolutionNode<ElemType>>(m_children[1])) != nullptr)
-                    convNode->AddBias(functionValues, cols0 == 1 ? inputFunctionValues0 : inputFunctionValues1);
+                {
+                    convNode->AddBias(cols0 == 1 ? inputFunctionValues1 : inputFunctionValues0, 
+                        cols0 == 1 ? inputFunctionValues0 : inputFunctionValues1, functionValues);
+                }
                 else
                 {
                     // None of the input nodes are convolutional.
@@ -154,8 +157,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         functionValues.AssignSumOf(inputFunctionValues0, inputFunctionValues1.Reshaped(rows0, rows1 * cols1 / rows0));
                     else
                         functionValues.AssignSumOf(inputFunctionValues0.Reshaped(rows1, rows0 * cols0 / rows1), inputFunctionValues1);
-                    functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
                 }
+                functionValues.Reshape(max(rows0, rows1), max(cols0, cols1));
             }
             else if (cols1 == 1 && rows0 % rows1 == 0)  // one is col vec with divisable rows, including scalar
             {
@@ -190,22 +193,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
         }
 
-        virtual void InferImageDimsFromInputs() //based on the matrix with larger size
+        virtual void InferImageDimsFromInputs()
         {
-            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
-            size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
-
-            if (rows0 > rows1 || cols0 > cols1) //child 0 is larger
+            if (IsChildAnImage(0))
                 InferImageDimsFromInput(0);
-            else if (rows0 < rows1 || cols0 < cols1) //child 1 is larger
+            else
                 InferImageDimsFromInput(1);
-            else //same size
-            {
-                if (IsInputAnImage(0))  //when conflict, give priority to child 0
-                    InferImageDimsFromInput(0);
-                else
-                    InferImageDimsFromInput(1);
-            }
         }
     };
 
@@ -316,22 +309,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ValidateBinaryZip(isFinalValidationPass, true/*allowMultiples*/);
         }
 
-        virtual void InferImageDimsFromInputs() //based on the matrix with larger size
+        virtual void InferImageDimsFromInputs()
         {
-            size_t rows0 = Input(0)->GetNumRows(), cols0 = Input(0)->GetNumCols();
-            size_t rows1 = Input(1)->GetNumRows(), cols1 = Input(1)->GetNumCols();
-
-            if (rows0 > rows1 || cols0 > cols1) //child 0 is larger
+            if (IsChildAnImage(0))
                 InferImageDimsFromInput(0);
-            else if (rows0 < rows1 || cols0 < cols1) //child 1 is larger
+            else
                 InferImageDimsFromInput(1);
-            else //same size
-            {
-                if (IsInputAnImage(0))  //when conflict, give priority to child 0
-                    InferImageDimsFromInput(0);
-                else
-                    InferImageDimsFromInput(1);
-            }
         }
     };
 

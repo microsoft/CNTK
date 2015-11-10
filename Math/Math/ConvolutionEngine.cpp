@@ -234,9 +234,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             assert(srcGradT.n() == srcGrad.GetNumCols());
         }
 
-        void AddBias(const Tensor4D& biasT, const Mat& bias, const Tensor4D& dstT, Mat& dst) override
+        void AddBias(const Tensor4D& outT, const Mat& out, const Tensor4D& biasT, const Mat& bias, Mat& dst) override
         {
-            UNUSED(biasT); UNUSED(bias); UNUSED(dstT); UNUSED(dst);
+            UNUSED(outT); UNUSED(out); UNUSED(biasT); UNUSED(bias); UNUSED(dst);
             RuntimeError("Not yet implemented.");
         }
 
