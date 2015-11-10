@@ -52,7 +52,7 @@ class minibatchutterancesourcemulti : public minibatchsource
 
         const wstring & logicalpath() const { return parsedpath; /*type cast will return logical path*/ }
         size_t numframes() const { return parsedpath.numframes(); }
-        const wstring key() const                           // key used for looking up lattice (not stored to save space)
+        wstring key() const                           // key used for looking up lattice (not stored to save space)
         {
 #ifdef _WIN32
             static const wstring emptywstring;
@@ -318,8 +318,6 @@ public:
         // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
     {    
         // process infiles to know dimensions of things (but not loading features)
-        std::vector<utterancedesc> utteranceset;// read all utterances to here first; at the end, distribute to chunks
-        utteranceset.reserve (infiles.size());
         size_t nomlf = 0;                       // number of entries missing in MLF (diagnostics)
         size_t nolat = 0;                       // number of entries missing in lattice archive (diagnostics)
         std::vector<size_t> numclasses;                  // number of output classes as found in the label file (diagnostics)
@@ -407,7 +405,8 @@ public:
         size_t utterancesetsize = 0;
         foreach_index (m, infiles)
         {
-            utteranceset.clear();
+            std::vector<utterancedesc> utteranceset;// read all utterances to here first; at the end, distribute to chunks
+            utteranceset.reserve(infiles[m].size());
                     //if (m==0)
                     //    numutts = infiles[m].size();
                     //else
@@ -600,9 +599,6 @@ public:
                 (int)numutterances, (int)thisallchunks.size(), numutterances / (double) thisallchunks.size(), _totalframes / (double) thisallchunks.size());
             // Now utterances are stored exclusively in allchunks[]. They are never referred to by a sequential utterance id at this point, only by chunk/within-chunk index.
         }
-        // preliminary mem allocation for frame references (if in frame mode)
-        if (framemode)
-            randomizedframerefs.resize (_totalframes);
     }
 
 private:
@@ -871,6 +867,10 @@ private:
         {
             // This sets up the following members:
             //  - randomizedframerefs
+
+            // Lazy mem allocation for frame references
+            if (randomizedframerefs.size() != _totalframes)
+                randomizedframerefs.resize(_totalframes);
 
             srand ((unsigned int) sweep + 1);
             // An original timeline is established by the randomized chunks, denoted by 't'.
