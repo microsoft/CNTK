@@ -206,6 +206,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosineNode), L"Cos"))
         ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(HardmaxNode)))
+        ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode)))
         ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LogSoftmaxNode)))
