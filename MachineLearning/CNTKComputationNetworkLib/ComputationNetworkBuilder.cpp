@@ -81,6 +81,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         else if (nodeType == OperationNameOf(SequenceDecoderNode))	    return New<SequenceDecoderNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SigmoidNode))	            return New<SigmoidNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SoftmaxNode))	            return New<SoftmaxNode<ElemType>>(deviceId, name);
+        else if (nodeType == OperationNameOf(HardmaxNode))	            return New<HardmaxNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(SquareErrorNode))	    return New<SquareErrorNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(LogisticNode))	    return New<LogisticNode<ElemType>>(deviceId, name);
         else if (nodeType == OperationNameOf(StrideTimesNode))	    return New<StrideTimesNode<ElemType>>(deviceId, name);
@@ -424,6 +425,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Cos(const ComputationNodePtr a, const std::wstring nodeName)
     {
         return net.AddNodeToNetAndAttachInputs(New<CosineNode<ElemType>>(net.GetDeviceId(), nodeName), a);
+    }
+
+    template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Hardmax(const ComputationNodePtr a, const std::wstring nodeName)
+    {
+        return net.AddNodeToNetAndAttachInputs(New<HardmaxNode<ElemType>>(net.GetDeviceId(), nodeName), a);
     }
 
     template<class ElemType> shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Softmax(const ComputationNodePtr a, const std::wstring nodeName)

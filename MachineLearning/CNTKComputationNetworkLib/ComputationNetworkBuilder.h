@@ -104,6 +104,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodePtr Log(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr Cos(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr Softmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
+        ComputationNodePtr Hardmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr LogSoftmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"");
         ComputationNodePtr Scale(const ComputationNodePtr scalar, const ComputationNodePtr matrix, const std::wstring nodeName = L"");
