@@ -14,7 +14,7 @@
 // this should be reused from the COMMON libray, or ideally from BOOST if similar functionality exists
 // VSO work item #73
 
-
+#include "stdafx.h"
 #include "DebugUtil.h"
 
 namespace Microsoft {
