@@ -171,6 +171,26 @@ namespace CNTKMathTest
             Assert::IsTrue(M3.IsEqualTo(M0));
         }
 
+        TEST_METHOD(GPUMatrixHardmax)
+        {
+            float *fArray = new float[6];
+            fArray[0] = 1; fArray[2] = 2; fArray[4] = 3;
+            fArray[1] = 4; fArray[3] = 5; fArray[5] = 6;
+            GPUMatrix<float> M0(2, 3, fArray, matrixFlagNormal);
+
+            fArray[0] = 0; fArray[2] = 0; fArray[4] = 0;
+            fArray[1] = 1; fArray[3] = 1; fArray[5] = 1;
+            GPUMatrix<float> M1(2, 3, fArray, matrixFlagNormal);
+
+            GPUMatrix<float>  M3;
+            M3.AssignHardmaxOf(M0, true);
+            DebugPrint(stderr, M3, "M3", false);
+            Assert::IsTrue(M3.IsEqualTo(M1));
+
+            M0.InplaceHardmax(true);
+            Assert::IsTrue(M0.IsEqualTo(M1));
+        }
+
         TEST_METHOD(GPUMatrixNorms)
         {
             float *fArray = new float[6];
