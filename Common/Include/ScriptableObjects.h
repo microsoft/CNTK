@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Basics.h"
+#include "Platform.h"   // for noexcept workaround on VS2013
 
 #include <memory>       // for shared_ptr<>
 #include <functional>   // for function<>
@@ -216,10 +217,6 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
         }
         // TODO: somehow the constructor overload from Thunk function fails to compile, so for now use MakeThunk instead
 
-#pragma push_macro("noexcept")  // VS 2013 does not accept 'noexcept'
-#ifdef _MSC_VER
-#define noexcept throw()
-#endif
         ConfigValuePtr(const ConfigValuePtr & other) { *this = other; }
         ConfigValuePtr(ConfigValuePtr && other) noexcept { *this = move(other); }
         void operator=(const ConfigValuePtr & other)
@@ -236,7 +233,7 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
             expressionName = move(other.expressionName);
             (shared_ptr<Object>&)*this = move(other);
         }
-#pragma pop_macro("noexcept")
+
         void Fail(const wstring & msg) const { failfn(msg); }
         const function<void(const wstring &)> & GetFailFn() const { return failfn; }    // if you need to pass on the fail function
 

@@ -272,7 +272,7 @@ bool SparsePCReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
         }
 
         (*labels).SetValue((ElemType)0);
-        (*labels).SetValue(labelRows, j, m_labelsBuffer, 0, (*labels).GetDeviceId());
+        (*labels).SetValue(labelRows, j, (*labels).GetDeviceId(), m_labelsBuffer, 0);
     }
 
     return true;

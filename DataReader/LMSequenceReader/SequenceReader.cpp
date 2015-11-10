@@ -1258,7 +1258,7 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
             {
                 std::wstring ws = msra::strfun::wstrprintf (L"feature%d", i);
                 Matrix<ElemType>& features = *matrices[ws];
-                features.SetValue(labelInfo.dim, 1, &m_featuresBuffer[i*labelInfo.dim],matrixFlagNormal);
+                features.SetValue(labelInfo.dim, 1, features.GetDeviceId(), &m_featuresBuffer[i*labelInfo.dim], matrixFlagNormal);
             }
         }
     }catch(...)
@@ -1276,14 +1276,14 @@ bool SequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTy
                 {
                     std::wstring ws = msra::strfun::wstrprintf (L"label%d", i);
                     Matrix<ElemType>* labels = matrices[ws]; 
-                    labels->SetValue(labelInfo.dim, 1, &m_labelsBuffer[i * labelInfo.dim],matrixFlagNormal);
+                    labels->SetValue(labelInfo.dim, 1, labels->GetDeviceId(), &m_labelsBuffer[i * labelInfo.dim], matrixFlagNormal);
                 }
             }
         }
         else if (labelInfo.type != labelNone)
         {
             Matrix<ElemType>* labels = matrices[m_labelsName[labelInfoOut]];
-            labels->SetValue(1, actualmbsize,m_labelsBuffer,matrixFlagNormal);
+            labels->SetValue(1, actualmbsize, labels->GetDeviceId(), m_labelsBuffer,matrixFlagNormal);
         }
     }catch(...)
     {
@@ -1911,7 +1911,7 @@ bool BatchSequenceReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<E
             {
                 std::wstring ws = msra::strfun::wstrprintf (L"feature%d", i);
                 Matrix<ElemType>& features = *matrices[ws];
-                features.SetValue(labelInfo.dim, 1, &m_featuresBuffer[i*labelInfo.dim],matrixFlagNormal);
+                features.SetValue(labelInfo.dim, 1, features.GetDeviceId(), &m_featuresBuffer[i*labelInfo.dim], matrixFlagNormal);
             }
         }
     }catch(...)

@@ -300,6 +300,40 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return *this;
     }
 
+    template<class ElemType>
+    void CPUMatrix<ElemType>::CopyColumnsStrided(const CPUMatrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride)
+    {
+        if ((((numCols - 1) * srcNumColsStride) + 1) > fromMatrix.m_numCols)
+            LogicError("The numCols to copy and srcNumColsStride specified is out of range of the source matrix.");
+        if ((((numCols - 1) * destNumColsStride) + 1) > m_numCols)
+            LogicError("The numCols to copy and srcNumColsStride specified is out of range of the destination matrix.");
+        if (m_numRows != fromMatrix.m_numRows)
+            LogicError("The number of rows in source and destination matrices do not match");
+
+        long n = (long)numCols, m = (long)m_numRows;
+
+        auto& us = *this;
+
+#pragma omp parallel for
+        for (long j = 0; j<n; j++)
+        {
+            //four-way unrolling
+            for (size_t i = 0; i<(m & ~3); i += 4)
+            {
+                us(i, j*destNumColsStride) = fromMatrix(i, j*srcNumColsStride);
+                us(i + 1, j*destNumColsStride) = fromMatrix(i + 1, j*srcNumColsStride);
+                us(i + 2, j*destNumColsStride) = fromMatrix(i + 2, j*srcNumColsStride);
+                us(i + 3, j*destNumColsStride) = fromMatrix(i + 3, j*srcNumColsStride);
+            }
+
+            //handle remaining
+            for (size_t i = m & ~3; i<m; i++)
+            {
+                us(i, j*destNumColsStride) = fromMatrix(i, j*srcNumColsStride);
+            }
+        }
+    }
+
     //for each column of a, we add all rows of a to this starting from startIndex
     template<class ElemType>
     CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignToRowSliceValuesOf(const CPUMatrix<ElemType>& a, const size_t startIndex, const size_t numRows)
@@ -701,6 +735,37 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (long i=m & ~3; i<m; i++)
             {
                 m_pArray[i] = v;
+            }
+        }
+    }
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val)
+    {
+        if (GetNumCols() != columnsMask.GetNumCols())
+            RuntimeError("Matrix and column mask must have equal number of columns");
+
+        auto& us = *this;
+        long n = (long)GetNumCols(), m = (long)GetNumRows();
+#pragma omp parallel for
+        for (long j = 0; j<n; j++)
+        {
+            if (columnsMask(0, j) == 1)
+                continue;
+
+            //four-way unrolling
+            for (size_t i = 0; i<(m & ~3); i += 4)
+            {
+                us(i, j) = val;
+                us(i + 1, j) = val;
+                us(i + 2, j) = val;
+                us(i + 3, j) = val;
+            }
+
+            //handle remaining
+            for (size_t i = m & ~3; i<m; i++)
+            {
+                us(i, j) = val;
             }
         }
     }
@@ -3830,7 +3895,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 long startOutX = (long) max(0, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
                 long endOutX = (long) ((x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1); //inclusive end
                 long startOutY = (long)  max(0, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-                long endOutY = (long) ((x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1); //inclusive end
+                long endOutY = (long) ((y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1); //inclusive end
 
                 ElemType inputValue = inputBatch(inputIndexWithinSample, sample);
                 for (long outY=startOutY; outY<=endOutY; outY++)
@@ -3882,8 +3947,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     long rowInInput = rowInWindowBase + colInWindow * inputHeightTimesChannel;
                     for (long rowInWindow=0; rowInWindow<windowHeight; rowInWindow++)
                     {
-                        const ElemType val = inputBatch(rowInInput, sample); //pf[rowInWindow*channels]; 
-                        sum += val; 
+                        sum += inputBatch(rowInInput, sample);
+                        rowInInput += (long)channels;
                     }
                 }
 
@@ -3925,7 +3990,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 long startOutX = (long) max(0, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
                 long endOutX = (long) ((x / verticalSubsample < outputHeight - 1) ? x / (long)verticalSubsample : outputHeight - 1); //inclusive end
                 long startOutY = (long) max(0, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-                long endOutY = (long) ((x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1); //inclusive end
+                long endOutY = (long) ((y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1); //inclusive end
 
                 for (long outY=startOutY; outY<=endOutY; outY++)
                 {
@@ -3957,7 +4022,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ElemType beta, CPUMatrix<ElemType>& c)
     {
         if (a.IsEmpty() || b.IsEmpty())
-            LogicError("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
+            return;
 
         int m, n, k, l;
         int lda, ldb, ldc;
@@ -4039,6 +4104,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             cblas_sgemm ((CBLAS_ORDER) BLAS_COLMAJOR mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast <float*>(a.m_pArray), lda, reinterpret_cast <float*>(b.m_pArray), ldb, beta, reinterpret_cast <float*>(c.m_pArray), ldc);
 #endif
         }
+    }
+
+    template<class ElemType>
+    void CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b,
+        ElemType beta, CPUMatrix<ElemType>& c)
+    {
+        assert(a.GetNumElements() == 1);        // a is a scalar
+
+        ElemType f = alpha * a.Get00Element();
+        if (beta == 0)      // don't even read the memory if beta is 0
+#pragma omp parallel for
+            foreach_coord(i, j, c)
+                c(i, j) = b(i, j) * f;
+        else
+#pragma omp parallel for
+            foreach_coord(i, j, c)
+            c(i, j) = b(i, j) * f + c(i, j) * beta;
     }
 
     /* compute singular value decomposition as 
@@ -4770,9 +4852,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template<class ElemType>
     bool CPUMatrix<ElemType>::AreEqual(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const ElemType threshold /*= 1e-8*/)
     {
-        if (a.IsEmpty() || b.IsEmpty())
-            LogicError("AreEqual: one of the input matrices is empty.");
-
         if (a.GetNumRows()  != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
             return false;
 
@@ -4788,6 +4867,34 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         return result;
+    }
+
+    // see Matrix<ElemType>::TensorShuffleScaleAndAdd() for comments
+    template<class ElemType>
+    void CPUMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const CPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
+    {
+        size_t N = D * S * M * K * T;
+        const ElemType * pa = a.m_pArray;
+        const ElemType * pb = b.m_pArray;
+        ElemType *       pc = c.m_pArray;
+        // Note: This code is written to match a GPU implementation. It is not super-efficient on the CPU.
+        for (size_t na = 0; na < N; na++)  // loop over all elements
+        {
+            // recover the 5 indices from the loop counter
+            size_t d =  na                  % D;
+            size_t s = (na / D            ) % S;
+            size_t m = (na / D / S        ) % M;
+            size_t k = (na / D / S / M    ) % K;
+            size_t t = (na / D / S / M / K) % T;
+            // compute index for the a and b/c tensors
+            assert(na== (((t * K + k) * M + m) * S + s) * D + d);   // input tensor of dimension (D x S x M x K x T)
+            size_t nb = (((t * S + s) * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S x T): k/K and s/S swapped
+            assert(nb < N);
+            // perform the computation
+            ElemType cval = keepWeight ? keepWeight * pb[nb] : 0;   // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
+            cval += scaleFactor * pa[na];
+            pc[nb] = cval;
+        }
     }
 
     template<class ElemType>
@@ -5434,10 +5541,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     template CPUMatrix<char>::CPUMatrix(const size_t numRows, const size_t numCols, char* pArray, const size_t matrixFlags);
     template CPUMatrix<char>::CPUMatrix();
     template CPUMatrix<char>::CPUMatrix(CPUMatrix<char> const &);
+    template CPUMatrix<char>::CPUMatrix(CPUMatrix<char>&&);
     template size_t CPUMatrix<char>::LocateElement(size_t, size_t) const;
     template CPUMatrix<char>::~CPUMatrix();
     template CPUMatrix<char> CPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
     template CPUMatrix<char>& CPUMatrix<char>::operator=(CPUMatrix<char>&&);
     template void CPUMatrix<char>::SetValue(const char);
+    template void CPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, char *pArray, size_t matrixFlags);
 
 }}}

@@ -901,7 +901,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
     }
 
     // now transfer to the GPU as needed
-    features.SetValue(m_featureCount, actualmbsize, m_featuresBuffer,matrixFlagNormal);
+    features.SetValue(m_featureCount, actualmbsize, features.GetDeviceId(), m_featuresBuffer, matrixFlagNormal);
     if (m_labelType == labelCategory)
     {
         auto labelEntry = matrices.find(m_labelsName);
@@ -909,7 +909,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
         {
             Matrix<ElemType>* labels = labelEntry->second;
             if (labels != nullptr)
-                labels->SetValue(m_labelDim, actualmbsize,m_labelsBuffer,matrixFlagNormal);
+                labels->SetValue(m_labelDim, actualmbsize, labels->GetDeviceId(), m_labelsBuffer,matrixFlagNormal);
         }
     }
     else if (m_labelType != labelNone)
@@ -919,7 +919,7 @@ bool UCIFastReader<ElemType>::GetMinibatch(std::map<std::wstring, Matrix<ElemTyp
         {
             Matrix<ElemType>* labels = labelEntry->second;
             if (labels != nullptr)
-                labels->SetValue(1, actualmbsize,m_labelsBuffer,matrixFlagNormal);
+                labels->SetValue(1, actualmbsize, labels->GetDeviceId(), m_labelsBuffer,matrixFlagNormal);
         }
     }
     // we read some records, so process them

@@ -1,5 +1,5 @@
 //
-// <copyright file="cn.cpp" company="Microsoft">
+// <copyright file="CNTK.cpp" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
@@ -45,6 +45,7 @@
 #include "MultiNetworksSGD.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
+#include "MultiNetworksEvaluator.h"
 #include "BestGpu.h"
 #include "ScriptableObjects.h"
 #include <fileutil.h>
@@ -56,6 +57,40 @@ using namespace std;
 using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK;
 
+// The following section is to explicitly disable some legacy usage to avoid implicit configuration errors 
+
+void DisableLegcyTruncationSettings(const ConfigParameters& TopLevelConfig, const ConfigParameters& commandConfig)
+{
+	if (TopLevelConfig.ExistsCurrent("Truncated"))
+	{
+		return; 
+	}
+
+	// if any of the action has set a reader/SGD section and has different Truncated value for reader and SGD section 
+	ConfigArray actions = commandConfig("action");
+	for (size_t i = 0; i < actions.size(); i++)
+	{
+		if (actions[i] == "train" || actions[i] == "trainRNN")
+		{
+			
+			ConfigParameters sgd = ConfigParameters(commandConfig("SGD"));
+			ConfigParameters reader = ConfigParameters(commandConfig("reader"));
+			// reader and SGD sections are two must-have sections in train/trainRNN 
+			if (reader.ExistsCurrent("Truncated") && !sgd.ExistsCurrent("Truncated"))
+			{
+				InvalidArgument("DisableLegacyUsage: setting Truncated only in reader section are not allowed. Please move Truncated=true/false to the top level section.");
+			}
+		}
+	}
+}
+void DisableLegacyUsage(const ConfigParameters& TopLevelConfig, const ConfigArray& commands)
+{
+	for (size_t i = 0; i < commands.size(); i++)
+	{
+		ConfigParameters cfgParameters(TopLevelConfig(commands[i]));
+		DisableLegcyTruncationSettings(TopLevelConfig, cfgParameters);
+	}
+}
 // internal test routine forward declaration
 template <typename ElemType>
 void TestCn(const ConfigParameters& config);
@@ -94,13 +129,15 @@ void DumpNodeInfo(const ConfigParameters& config)
 {
     wstring modelPath = config("modelPath");
     wstring nodeName = config("nodeName", L"__AllNodes__");
+	wstring nodeNameRegexStr = config("nodeNameRegex", L"");
     wstring defOutFilePath = modelPath + L"." + nodeName + L".txt";
     wstring outputFile = config("outputFile", WCharToString(defOutFilePath.c_str()).c_str());
     bool printValues = config("printValues", "true");
+	
 
     ComputationNetwork net(-1);  //always use CPU
     net.LoadFromFile<ElemType>(modelPath);
-    net.DumpNodeInfoToFile(nodeName, printValues, outputFile);
+    net.DumpNodeInfoToFile(nodeName, printValues, outputFile, nodeNameRegexStr);
 }
 
 template <typename ElemType>
@@ -146,6 +183,10 @@ void DoEval(const ConfigParameters& config)
     DoEvalBase(config, testDataReader);
 }
 
+// Special early implementation of RNNs by emulating them as a DNN.
+// The code is very restricted to simple RNNs. 
+// The idea can be used for more complicated network but need to know which nodes are stateful or time-dependent so that unroll is done in a correct way to represent recurrent networks. 
+// TODO: can probably be removed.
 template <typename ElemType>
 void DoEvalUnroll(const ConfigParameters& config)
 {
@@ -170,7 +211,7 @@ void DoEvalUnroll(const ConfigParameters& config)
     net.LoadFromFile<ElemType>(modelPath);
     net.ResetEvalTimeStamp();
 
-    SimpleEvaluator<ElemType> eval(net);
+    MultiNetworksEvaluator<ElemType> eval(net);
     double evalEntropy;
     eval.EvaluateUnroll(&testDataReader, mbSize[0], evalEntropy, path2EvalResults == L"" ? nullptr : path2EvalResults.c_str(), epochSize);
 }
@@ -327,47 +368,47 @@ void DoWriteOutput(const ConfigParameters& config)
     //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize);
 }
 
-namespace Microsoft {
-    namespace MSR {
-        namespace CNTK {
+namespace Microsoft { namespace MSR { namespace CNTK {
 
-            TrainingCriterion ParseTrainingCriterionString(wstring s)
-            {
-                msra::strfun::tolower_ascii(s);
-                if (s == L"crossentropywithsoftmax")
-                    return TrainingCriterion::CrossEntropyWithSoftmax;
-				if (s == L"SequenceWithSoftmax")
-					return TrainingCriterion::SequenceWithSoftmax;
-                else if (s == L"squareerror")
-                    return TrainingCriterion::SquareError;
-                else if (s == L"noisecontrastiveestimationnode")
-                    return TrainingCriterion::NCECrossEntropyWithSoftmax;
-                else if (s != L"classcrossentropywithsoftmax")    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
-                    LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | ClassCrossEntropyWithSoftmax| SequenceWithSoftmax)");
-                return TrainingCriterion::ClassCrossEntropyWithSoftmax;
-            }
-
-            EvalCriterion ParseEvalCriterionString(wstring s)
-            {
-                msra::strfun::tolower_ascii(s);
-                if (s == L"errorprediction")
-                    return EvalCriterion::ErrorPrediction;
-                else if (s == L"crossentropywithsoftmax")
-                    return EvalCriterion::CrossEntropyWithSoftmax;
-				else if (s == L"SequenceWithSoftmax")
-					return EvalCriterion::SequenceWithSoftmax;
-                else if (s == L"classcrossentropywithsoftmax")
-                    return EvalCriterion::ClassCrossEntropyWithSoftmax;
-                else if (s == L"noisecontrastiveestimationnode")
-                    return EvalCriterion::NCECrossEntropyWithSoftmax;
-                else if (s != L"squareerror")
-                    LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError | SequenceWithSoftmax)");
-                return EvalCriterion::SquareError;
-            }
-
-        }
+    TrainingCriterion ParseTrainingCriterionString(wstring s)
+    {
+        msra::strfun::tolower_ascii(s);
+        if (s == L"crossentropywithsoftmax")
+            return TrainingCriterion::CrossEntropyWithSoftmax;
+        if (s == L"SequenceWithSoftmax")
+            return TrainingCriterion::SequenceWithSoftmax;
+        else if (s == L"squareerror")
+            return TrainingCriterion::SquareError;
+        else if (s == L"logistic")
+            return TrainingCriterion::Logistic;
+        else if (s == L"noisecontrastiveestimationnode")
+            return TrainingCriterion::NCECrossEntropyWithSoftmax;
+        else if (s != L"classcrossentropywithsoftmax")    // (twisted logic to keep compiler happy w.r.t. not returning from LogicError)
+            LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (CrossEntropyWithSoftmax | SquareError | Logistic | ClassCrossEntropyWithSoftmax| SequenceWithSoftmax)");
+        return TrainingCriterion::ClassCrossEntropyWithSoftmax;
     }
-};
+
+    EvalCriterion ParseEvalCriterionString(wstring s)
+    {
+        msra::strfun::tolower_ascii(s);
+        if (s == L"errorprediction")
+            return EvalCriterion::ErrorPrediction;
+        else if (s == L"crossentropywithsoftmax")
+            return EvalCriterion::CrossEntropyWithSoftmax;
+        else if (s == L"SequenceWithSoftmax")
+            return EvalCriterion::SequenceWithSoftmax;
+        else if (s == L"classcrossentropywithsoftmax")
+            return EvalCriterion::ClassCrossEntropyWithSoftmax;
+        else if (s == L"noisecontrastiveestimationnode")
+            return EvalCriterion::NCECrossEntropyWithSoftmax;
+        else if (s == L"logistic")
+            return EvalCriterion::Logistic;
+        else if (s != L"squareerror")
+            LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (ErrorPrediction | CrossEntropyWithSoftmax | SquareError | Logistic | SequenceWithSoftmax)");
+        return EvalCriterion::SquareError;
+    }
+
+}}};
 
 template <typename ElemType>
 void DoCreateLabelMap(const ConfigParameters& config)
@@ -460,7 +501,8 @@ void DoCreateLabelMap(const ConfigParameters& config)
 //                  1)  modelPath           -- path to the existing model 
 //                  2)  outputmodelPath     -- where to write the transformed model 
 //                  3)  KeepRatio           -- how many percentage of energy we want to keep
-//                  4)  ParameterName       -- name (regex) of the parameter node we want to perform a SVD decomposition 
+//					4)	AlignedSize			-- the resultant number of signular values is aligned to e.g., 32 or 64  
+//                  5)  ParameterName       -- name (regex) of the parameter node we want to perform a SVD decomposition 
 //              
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
@@ -500,6 +542,7 @@ void  DoParameterSVD(const ConfigParameters& config)
     map<wstring, float>     svdconfig;
 
     float keepratio = config("KeepRatio", "0.4");
+	size_t AlignedSize = config("AlignedSize", "8");
     wstring svdnodeRegex = config("NodeNameRegex", L"");
     if (!svdnodeRegex.empty())
     {
@@ -527,7 +570,7 @@ void  DoParameterSVD(const ConfigParameters& config)
     ComputationNetwork net(deviceID);
     net.LoadFromFile<ElemType>(modelPath);
 
-    net.PerformSVDecomposition<ElemType>(svdconfig);
+    net.PerformSVDecomposition<ElemType>(svdconfig, AlignedSize);
     if (!outputmodelPath.empty())
         net.SaveToFile(outputmodelPath);
 
@@ -769,7 +812,7 @@ void DoWriteWordAndClassInfo(const ConfigParameters& config)
 }
 
 template <typename ElemType>
-void DoTrain(const ConfigParameters& config)
+void DoTrain(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
 {
     ConfigParameters configSGD(config("SGD"));
     bool makeMode = config("makeMode", "true");
@@ -811,13 +854,13 @@ void DoTrain(const ConfigParameters& config)
         cvDataReader = unique_ptr<DataReader<ElemType> >{ new DataReader<ElemType>(cvReaderConfig) };
     }
 
-    SGD<ElemType> sgd(configSGD);
+    SGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
 
     sgd.Train(netBuilder.get(), dataReader.get(), cvDataReader.get(), makeMode);
 }
 
 template <typename ElemType>
-void DoAdapt(const ConfigParameters& config)
+void DoAdapt(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
@@ -841,7 +884,7 @@ void DoAdapt(const ConfigParameters& config)
     wstring origModelFileName = config("origModelFileName", L"");
     wstring refNodeName = config("refNodeName", L"");
 
-    SGD<ElemType> sgd(configSGD);
+    SGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
 
     sgd.Adapt(origModelFileName, refNodeName, dataReader, cvDataReader, deviceId, makeMode);
 
@@ -855,7 +898,7 @@ http://arxiv.org/pdf/1409.3215.pdf
 
 */
 template <typename ElemType>
-void DoEncoderDecoder(const ConfigParameters& config)
+void DoEncoderDecoder(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
 {
     vector<IComputationNetBuilder<ElemType>*> netBuilders;
     vector<IDataReader<ElemType>*> trainDataReader;
@@ -900,7 +943,7 @@ void DoEncoderDecoder(const ConfigParameters& config)
         LogicError("Need decoder networks");
     }
 
-    MultiNetworksSGD<ElemType> sgd(configSGD);
+    MultiNetworksSGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
 
     sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
 
@@ -923,7 +966,7 @@ void DoEncoderDecoder(const ConfigParameters& config)
 DoBidirecionEncoderDecoder
 */
 template <typename ElemType>
-void DoBidirecionEncoderDecoder(const ConfigParameters& config)
+void DoBidirectionEncoderDecoder(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
 {
 
     ConfigParameters configSGD = config("SGD");
@@ -983,7 +1026,7 @@ void DoBidirecionEncoderDecoder(const ConfigParameters& config)
         LogicError("Need decoder networks");
     }
 
-    MultiNetworksSGD<ElemType> sgd(configSGD);
+    MultiNetworksSGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
 
     sgd.InitTrainEncoderDecoderWithHiddenStates(configSGD);
 
@@ -1076,7 +1119,7 @@ void DoEvalEncodingBeamSearchDecoding(const ConfigParameters& config)
     ConfigParameters writerConfig = config("writer");
     DataWriter<ElemType> testDataWriter(writerConfig);
 
-    SimpleEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
+    MultiNetworksEvaluator<ElemType> eval(decoderNet, numMBsToShowResult, traceLevel);
     eval.InitTrainEncoderDecoderWithHiddenStates(config);
 
     eval.EncodingEvaluateDecodingBeamSearch(nets, readers, 
@@ -1144,12 +1187,12 @@ void DoEvalBeamSearch(const ConfigParameters& config, IDataReader<ElemType>& rea
     ConfigParameters writerConfig = config("writer");
     DataWriter<ElemType> testDataWriter(writerConfig);
 
-    SimpleEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
+    MultiNetworksEvaluator<ElemType> eval(net, numMBsToShowResult, traceLevel);
     eval.BeamSearch(&reader, testDataWriter, evalNodeNamesVector, outputNodeNamesVector, mbSize[0], beamWidth, epochSize);
 }
 
 template <typename ElemType>
-void DoSequenceTrain(const ConfigParameters& config)
+void DoSequenceTrain(const ConfigParameters& config, size_t fullEpochsOffset, size_t fullTotalMaxEpochs)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
@@ -1188,7 +1231,7 @@ void DoSequenceTrain(const ConfigParameters& config)
 
     wstring origModelFileName = config("origModelFileName", L"");
 
-    SGD<ElemType> sgd(configSGD);
+    SGD<ElemType> sgd(configSGD, fullEpochsOffset, fullTotalMaxEpochs);
 
     sgd.SequenceTrain(netBuilder, origModelFileName, dataReader, cvDataReader, deviceId, makeMode);
 
@@ -1255,7 +1298,6 @@ void DoTopologyPlot(const ConfigParameters& config)
         rescmd = regex_replace(rescmd, outputPlaceHolder, L"$1" + outRending + L"$3");
     }
 
-
     ComputationNetwork net(-1);
     net.LoadFromFile<ElemType>(modelPath);
     net.PlotNetworkTopology(outdot);
@@ -1273,7 +1315,13 @@ void DoTopologyPlot(const ConfigParameters& config)
     }
 }
 
+size_t GetMaxEpochs(const ConfigParameters& configParams)
+{
+    ConfigParameters configSGD(configParams("SGD"));
+    size_t maxEpochs = configSGD("maxEpochs");
 
+    return maxEpochs;
+}
 
 // process the command
 template <typename ElemType>
@@ -1289,6 +1337,8 @@ void DoCommand(const ConfigParameters& config)
         std::cerr << "Using " << numCPUThreads << " CPU threads" << endl;
     }
 
+	DisableLegacyUsage(config, command);
+
     // summarize command info upfront in the log and stdout
     size_t fullTotalMaxEpochs = 0;
     for (int i = 0; i < command.size(); i++)
@@ -1300,18 +1350,19 @@ void DoCommand(const ConfigParameters& config)
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
         {
-            if (action[j] == "train" || action[j] == "trainRNN")
+            if (action[j] == "train"               || action[j] == "trainRNN" ||
+                action[j] == "trainSequence"       || action[j] == "trainSequenceRNN")
             {
                 wstring modelPath = commandParams("modelPath");
                 std::wcerr << "CNTKModelPath: " << modelPath << endl;
-                ConfigParameters configSGD(commandParams("SGD"));
-                size_t maxEpochs = configSGD("maxEpochs");
+                size_t maxEpochs = GetMaxEpochs(commandParams);
                 std::cerr << "CNTKCommandTrainInfo: " + command[i] << " : " << maxEpochs << endl;
                 fullTotalMaxEpochs += maxEpochs;
             }
         }
     }
     std::cerr << "CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : " << fullTotalMaxEpochs << endl;
+    size_t fullEpochsOffset = 0;
 
     // execute the commands
     for (int i = 0; i < command.size(); i++)
@@ -1326,16 +1377,20 @@ void DoCommand(const ConfigParameters& config)
             if (action[j] == "train" || action[j] == "trainRNN")
             {
                 std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
-                DoTrain<ElemType>(commandParams);
+                DoTrain<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
                 std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
+                fullEpochsOffset += GetMaxEpochs(commandParams);
             }
             else if (action[j] == "trainSequence" || action[j] == "trainSequenceRNN")
             {
-                DoSequenceTrain<ElemType>(commandParams);
+                std::cerr << "CNTKCommandTrainBegin: " + command[i] << endl;
+                DoSequenceTrain<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
+                std::cerr << "CNTKCommandTrainEnd: " + command[i] << endl;
+                fullEpochsOffset += GetMaxEpochs(commandParams);
             }
             else if (action[j] == "adapt")
             {
-                DoAdapt<ElemType>(commandParams);
+                DoAdapt<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
             }
             else if (action[j] == "test" || action[j] == "eval")
             {
@@ -1387,7 +1442,7 @@ void DoCommand(const ConfigParameters& config)
             }
             else if (action[j] == "trainEncoderDecoder")
             {
-                DoEncoderDecoder<ElemType>(commandParams);
+                DoEncoderDecoder<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
             }
             else if (action[j] == "testEncoderDecoder")
             {
@@ -1395,7 +1450,7 @@ void DoCommand(const ConfigParameters& config)
             }
             else if (action[j] == "trainBidirectionEncoderDecoder")
             {
-                DoBidirecionEncoderDecoder<ElemType>(commandParams);
+                DoBidirectionEncoderDecoder<ElemType>(commandParams, fullEpochsOffset, fullTotalMaxEpochs);
             }
             else if (action[j] == "beamSearch")
             {
@@ -1505,8 +1560,8 @@ int wmain1(int argc, wchar_t* argv[])   // called from wmain which is a wrapper 
 
         //dump config info
         fprintf(stderr, "running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
-        fprintf(stderr, "command line options: \n");
-        for (int i = 1; i < argc; i++)
+        fprintf(stderr, "command line: \n");
+        for (int i = 0; i < argc; i++)
         {
             fprintf(stderr, "%s ", WCharToString(argv[i]).c_str());
         }

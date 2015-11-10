@@ -1,5 +1,6 @@
+// MultiNetworksEvaluator/SGD -- This represents earlier efforts to use CNTK for sequence-to-sequence modeling. This is no longer the intended design.
 //
-// <copyright file="SGD.h" company="Microsoft">
+// <copyright file="MultiNetworksSGD.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
@@ -11,6 +12,7 @@
 #include "ComputationNetwork.h"
 #include "IComputationNetBuilder.h"
 #include "SimpleEvaluator.h"
+#include "MultiNetworksEvaluator.h"
 #include "DataReader.h"
 #include <vector>
 #include <string>
@@ -21,8 +23,6 @@
 #include <random>
 #include "TimerUtility.h"
 #include "SGD.h"
-
-
 
 using namespace std;
 
@@ -83,7 +83,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         list<pair<ComputationNodeBasePtr, ComputationNodeBasePtr>> m_lst_pair_encoder_decoder_nodes;
 
     public:
-        MultiNetworksSGD(const ConfigParameters& configSGD) : SGDBase(configSGD)
+        MultiNetworksSGD(const ConfigParameters& configSGD, size_t fullEpochsOffset, size_t fullTotalMaxEpochs) : SGDBase(configSGD, fullEpochsOffset, fullTotalMaxEpochs)
         {
         }
 
@@ -697,7 +697,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
                 if (decoderValidationSetDataReader != decoderTrainSetDataReader && decoderValidationSetDataReader != nullptr)
                 {
-                    SimpleEvaluator<ElemType> evalforvalidation(*decoderNet);
+                    MultiNetworksEvaluator<ElemType> evalforvalidation(*decoderNet);
 
                     double vScore = evalforvalidation.EvaluateEncoderDecoderWithHiddenStates(
                         nets,
@@ -1159,13 +1159,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             Matrix<ElemType>& localEpochEvalErrors
             )
         {
-            encoderNet->SetActualMiniBatchSizeFromFeatures();
+            //encoderNet->SetActualMiniBatchSizeFromFeatures();
             encoderTrainSetDataReader->CopyMBLayoutTo(encoderNet->GetMBLayoutPtr());
             encoderNet->VerifyActualNumParallelSequences(encoderTrainSetDataReader->GetNumParallelSequences());
 
             encoderNet->Evaluate(encoderEvaluationNodes[0]);
 
-            decoderNet->SetActualMiniBatchSizeFromFeatures();
+            //decoderNet->SetActualMiniBatchSizeFromFeatures();
             decoderTrainSetDataReader->CopyMBLayoutTo(decoderNet->GetMBLayoutPtr());
             decoderNet->VerifyActualNumParallelSequences(decoderTrainSetDataReader->GetNumParallelSequences());
             /// not the sentence begining, because the initial hidden layer activity is from the encoder network

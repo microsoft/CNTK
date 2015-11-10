@@ -39,7 +39,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             else if (!pMBLayout)                // first non-NULL layout: just copy it
                 pMBLayout = child->m_pMBLayout;
             else if (!(*pMBLayout == *child->m_pMBLayout)) // got a layout--compare whether it is the same
+#if 0
+                fprintf(stderr, "InferMBLayoutFromInputsForStandardCase: found inconsistent layout in node '%ls', mismatch detected for child '%ls'", NodeName().c_str(), child->NodeName().c_str());
+#else
                 RuntimeError("InferMBLayoutFromInputsForStandardCase: found inconsistent layout in node '%ls', mismatch detected for child '%ls'", NodeName().c_str(), child->NodeName().c_str());
+#endif
         }
         //fprintf(stderr, "  --> (%s)\n", pMBLayout ? "." : "NULL");
         // all are consistent: install it
@@ -69,10 +73,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t rows1 = Inputs(1)->GetNumRows(), cols1 = Inputs(1)->GetNumCols();
 
         if (isFinalValidationPass && !(
-               (rows0 == rows1 && cols0 == cols1) ||                                    // matching size (obvious case)
-               (allowMultiples && (rows0 == 1 || rows1 == 1) && cols0 == cols1) ||      // one is row vec
+               (rows0 == rows1 && (Inputs(0)->GetMBLayout() == Inputs(1)->GetMBLayout() || cols0 == cols1)) ||                                  // matching size (obvious case)
+               (allowMultiples && (rows0 == 1 || rows1 == 1) && (Inputs(0)->GetMBLayout() == Inputs(1)->GetMBLayout() || cols0 == cols1)) ||    // one is row vec
                (allowMultiples && ((!HasMBLayout() && cols0 > cols1 && cols0 % cols1 == 0) || (cols0 == 1 && rows1 % rows0 == 0) || (cols1 == 1 && rows0 % rows1 == 0)))
-           ))
+           ))   // TODO: ^^ I don't understand the asymmetry of this last one
         {
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         }
@@ -98,7 +102,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ComputationNodeBase::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr;              // this node does not hold mini-batch data
         ValidateInferBinaryChildrenDims();
-        if (isFinalValidationPass && !(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() && Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))
+        if (isFinalValidationPass &&
+            !(Inputs(0)->GetNumRows() == Inputs(1)->GetNumRows() &&
+              (Inputs(0)->HasMBLayout() || (Inputs(0)->GetNumCols() == Inputs(1)->GetNumCols()))))
             LogicError("The Matrix dimensions in the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
         Resize(1, 1);
         InferImageDimsFromInputs();
@@ -111,8 +117,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         // limited inference of children dimensions
         // if dimension not specified we assume two operands' dimensions should be the same
-        assert(m_children.size() == 2);
-        for (size_t index = 0; index < m_children.size(); index++)
+        // NOTE: The assert is set to check if >= 2 since this is called from nodes which have more than two children.
+        //      The number of children is formally verified elsewhere, so this will not break consistency. Should this
+        //      assert be removed?
+        assert(m_children.size() >= 2);
+        for (size_t index = 0; index < 2; index++)
         {
             auto in = Inputs(index);
             auto other = Inputs(1 - index);
@@ -131,6 +140,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 LogicError("ValidateInferChildDims: Inferred matrix must not be empty.");
             Inputs(i)->Resize(rows, cols);
             Inputs(i)->Validate(true);  // validate it properly
+            // BUGBUG: ^^ Validate() calls are under the control of ValidateSubNetwork(). E.g. it checks whether something has changed & re-validates until there is no change. If we validate here, the change goes unnoticed.
             // big BUGBUG: This should do random initialization.
             Inputs(i)->FunctionValues().SetValue(0);
             fprintf(stderr, "ValidateInferChildDims: %ls %ls operation inferred, resized to (%d x %d), and (incorrectly) initialized to 0.\n", Inputs(i)->NodeName().c_str(), Inputs(i)->OperationName().c_str(), (int)rows, (int)cols);
@@ -140,13 +150,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
     // others
     // -----------------------------------------------------------------------
-
-    template<class ElemType>
-    /*virtual*/ void ComputationNode<ElemType>::MoveMatricesToDevice(const DEVICEID_TYPE deviceId)
-    {
-        m_functionValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_functionValues.HasNoElements());
-        m_gradientValues.TransferToDeviceIfNotThereAndNotAutoPlace(deviceId, true, m_gradientValues.HasNoElements());
-    }
 
     template<class ElemType>
     /*virtual*/ void ComputationNode<ElemType>::DumpNodeInfo(const bool /*printValues*/, File& fstream) const
@@ -173,7 +176,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     typedef Matrix<float> FloatMatrix;
     typedef Matrix<double> DoubleMatrix;
 
-    atomic_ullong ComputationNetworkOwnedNodeState::s_timeStampCounter = ATOMIC_VAR_INIT(0);
+    atomic_ullong TimeStamp::s_timeStampCounter = ATOMIC_VAR_INIT(0);
 
     template<> std::map<size_t, std::map<size_t, FloatMatrix*>>  ComputationNode<float>::s_constOnes{};
     template<> std::map<size_t, std::map<size_t, DoubleMatrix*>> ComputationNode<double>::s_constOnes{};

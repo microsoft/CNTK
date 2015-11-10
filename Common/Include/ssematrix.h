@@ -21,6 +21,7 @@
 #include "fileutil.h"   // for saving and reading matrices
 #include <limits>       // for NaN
 #include <malloc.h>
+#include "Platform.h"
 
 namespace msra { namespace math {
 
@@ -1199,12 +1200,6 @@ public:
     }
 };
 
-// TODO: why does the VS compiler not accept 'noexcept' here? It definitely is a known keyword.
-#pragma push_macro("noexcept")
-#ifdef _MSC_VER
-#define noexcept throw()
-#endif
-
 // ===========================================================================
 // ssematrixfrombuffer -- an ssematrixbase allocated in a vector buffer
 // If you need many little matrices in your own heap
@@ -1227,7 +1222,7 @@ public:
 
     // Note: keyword "noexcept" was added so that stl vector first looks for
     //       the move constructor instead of the private copy constructor.
-    ssematrixfrombuffer (ssematrixfrombuffer && other) noexcept { move (other); }
+    ssematrixfrombuffer(ssematrixfrombuffer && other) noexcept { move(other); }
 };
 
 
@@ -1261,13 +1256,13 @@ public:
 
     // Note: keyword "noexcept" was added so that stl vector first looks for
     //       the move constructor instead of the private copy constructor.
-    ssematrixstriperef (ssematrixstriperef && other) noexcept { move (other); }
+    ssematrixstriperef(ssematrixstriperef && other) noexcept { move(other); }
 
     // getting a one-column sub-view on this
     ssematrixstriperef col (size_t j) { return ssematrixstriperef (*this, j, 1); }
     const ssematrixstriperef col (size_t j) const { return ssematrixstriperef (*const_cast<ssematrixstriperef*> (this), j, 1); }
 };
-#pragma pop_macro("noexcept")
+
 
 // ===========================================================================
 // ssematrix -- main matrix type with allocation

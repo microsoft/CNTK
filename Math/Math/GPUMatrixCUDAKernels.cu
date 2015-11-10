@@ -1,5 +1,5 @@
 //
-// <copyright file="GPUMatrixCUDAKernels.cpp" company="Microsoft">
+// <copyright file="GPUMatrixCUDAKernels.cu" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
@@ -340,6 +340,19 @@ __global__ void _setValue(
 };
 
 template<class ElemType>
+__global__ void _copyColumnsStrided(ElemType * dest, ElemType * src, CUDA_LONG N, CUDA_LONG numRows, CUDA_LONG destNumColsStride, CUDA_LONG srcNumColsStride)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    CUDA_LONG denseColIdx = id / numRows;
+    CUDA_LONG rowIdx = id - (denseColIdx * numRows);
+
+    dest[(denseColIdx*destNumColsStride*numRows) + rowIdx] = src[(denseColIdx*srcNumColsStride*numRows) + rowIdx];
+}
+
+template<class ElemType>
 __global__ void _assignToRowSliceValuesOf(ElemType * dest, ElemType * src, const CUDA_LONG N, const CUDA_LONG startIndex, const CUDA_LONG destRows, const CUDA_LONG srcRows)
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -532,6 +545,20 @@ __global__ void _scaleAndAddScalar(
         return;
     c[id] += alpha*a[0];
 };
+
+template<class ElemType>
+__global__ void _multiply1x1AndWeightedAdd(
+    ElemType alpha, const ElemType* a, const ElemType* b, ElemType beta, ElemType* c, CUDA_LONG N)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    ElemType f = alpha * *a;    // scalar matrix
+    if (beta == 0)              // don't even read the memory if beta is 0
+        c[id] = b[id] * f;
+    else
+        c[id] = b[id] * f + c[id] * beta;
+}
 
 template<class ElemType>
 __global__ void _addValue(    
@@ -1185,7 +1212,29 @@ __global__ void _areEqual(
             d_res[0]=0;
         }
     }
+}
 
+// see Matrix<ElemType>::TensorShuffleScaleAndAdd() for comments
+template<class ElemType>
+__global__ void _tensorShuffleScaleAndAdd(
+    ElemType keepWeight, const ElemType* pa, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const ElemType* pb, ElemType* pc)
+{
+    size_t N = D * S * M * K * T;
+    CUDA_LONG na = blockDim.x * blockIdx.x + threadIdx.x;   // input tensor of dimension (D x S x M x K x T)
+    if (na >= N)
+        return;
+    // recover the 5 indices from the loop counter
+    size_t d =  na                  % D;
+    size_t s = (na / D            ) % S;
+    size_t m = (na / D / S        ) % M;
+    size_t k = (na / D / S / M    ) % K;
+    size_t t = (na / D / S / M / K) % T;
+    // compute index for the a and b/c tensors
+    size_t nb = (((t * S + s) * M + m) * K + k) * D + d;    // output tensor of dimension (D x K x M x S x T): k/K and s/S swapped
+    // perform the computation
+    ElemType cval = keepWeight ? keepWeight * pb[nb] : 0;   // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
+    cval += scaleFactor * pa[na];
+    pc[nb] = cval;
 }
 
 template<class ElemType>
@@ -1762,7 +1811,7 @@ __global__ void _addMaxPoolingGradient(ElemType * inputGradientBatch, const Elem
     CUDA_LONG startOutX = max(0.0f, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
     CUDA_LONG endOutX = (x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1; //inclusive end
     CUDA_LONG startOutY = max(0.0f, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-    CUDA_LONG endOutY = (x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1; //inclusive end
+    CUDA_LONG endOutY = (y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1; //inclusive end
 
 
     ElemType *inputGradientBatchBase4Sample = inputGradientBatch + sample*inputSizePerSample;
@@ -1856,7 +1905,7 @@ __global__ void _addAveragePoolingGradient(ElemType * inputGradientBatch, const 
     CUDA_LONG startOutX = max(0.0f, ceil((x-(ElemType)windowHeight+1)/ (ElemType)verticalSubsample));  //inclusive start
     CUDA_LONG endOutX = (x/verticalSubsample < outputHeight-1)? x/verticalSubsample : outputHeight-1; //inclusive end
     CUDA_LONG startOutY = max(0.0f, ceil((y-(ElemType)windowWidth+1)/(ElemType)horizontalSubsample));  //inclusive start
-    CUDA_LONG endOutY = (x/horizontalSubsample < outputWidth-1)? x/horizontalSubsample : outputWidth-1; //inclusive end
+    CUDA_LONG endOutY = (y/horizontalSubsample < outputWidth-1)? y/horizontalSubsample : outputWidth-1; //inclusive end
 
     ElemType *inputGradientBatchBase4Sample = inputGradientBatch + sample*inputSizePerSample;
     const ElemType *outputGradientBatchBase4Sample = outputGradientBatch + sample*outputSizePerSample;
@@ -4611,6 +4660,8 @@ __global__ void _reductionLogAddSum(
 
 // set the value of certain columns to be zero
 // the column is decided by threshhold value
+// TODO: This kernel has very poor performace and needs to
+// be optimized
 template<class ElemType>
 __global__ void _DropFrame(
     ElemType *a,
@@ -4624,11 +4675,13 @@ __global__ void _DropFrame(
     if (col_id >= m_numCols)
         return;
     bool dropframe = false;
+    // find the 1 in the one-hot representation of the labels
+    // This is a linear scan--bad perf!
     for (long i = 0; i<m_numRows; ++i)
     {
         int idx = IDX2C(i, col_id, m_numRows);
         //printf("%u ", idx);
-        if (fabs(label[idx] - 1.0) < 0.1)
+        if (fabs(label[idx] - 1.0) < 0.1)       // we found the 1 in the vector
         {
             if (gamma[idx] < framedropthreshhold)
                 dropframe = true;
@@ -4700,6 +4753,23 @@ __global__ void _assignNumOfDiffCol(const ElemType *a, const ElemType *b, ElemTy
     int res = BlockReduceT(tmp).Sum(cur);
     if (threadIdx.x == 0)
         *c = res;
+}
+
+template<class ElemType>
+__global__ void _maskColumnsValue(ElemType *a, const char *columnsMask, CUDA_LONG numCols, CUDA_LONG numRows, ElemType val)
+{
+    CUDA_LONG colIdx = blockIdx.x;
+    if (colIdx > numCols)
+        return;
+
+    if (columnsMask[IDX2C(0, colIdx, 1)] == 1)
+        return;
+
+    CUDA_LONG rowIdx = threadIdx.x;
+    for (; rowIdx < numRows; rowIdx += blockDim.x)
+    {
+        a[IDX2C(rowIdx, colIdx, numRows)] = val;
+    }
 }
 
 #endif // !CPUONLY

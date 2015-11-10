@@ -191,10 +191,10 @@ namespace CNTKMathTest
             float *arr = new float[6];
             arr[0]=123;arr[1]=0.23;arr[2]=-22;arr[3]=63;arr[4]=43.42;
             arr[5]=324.3;arr[6]=99912;
-            B.SetValue(2,3,arr,matrixFlagNormal);
+            B.SetValue(2,3,B.GetDeviceId(),arr,matrixFlagNormal);
 
             SingleMatrix B1;
-            B1.SetValue(2,3,arr);
+            B1.SetValue(2, 3, B.GetDeviceId(), arr);
             foreach_coord(i,j,B)
             {
                 Assert::AreEqual<float>(arr[IDX2C(i,j,2)],B(i,j));
@@ -485,6 +485,12 @@ namespace CNTKMathTest
             M2(1,0) = 0.0900; M2(1,1) = 0.2447; M2(1,2) = 0.6652;
             Assert::IsTrue(M3.IsEqualTo(M2, 0.0001)); 
            
+            M3.SetValue(M0);
+            M3.InplaceHardmax(true);
+            M2(0, 0) = 0.0; M2(0, 1) = 0.0; M2(0, 2) = 0.0;
+            M2(1, 0) = 1.0; M2(1, 1) = 1.0; M2(1, 2) = 1.0;
+            Assert::IsTrue(M3.IsEqualTo(M2, 0.0001));
+
             M3.SetValue(M0);
             M3.InplaceSqrt();
             M2(0,0) = 1; M2(0,1) = 1.4142; M2(0,2) = 1.7321;

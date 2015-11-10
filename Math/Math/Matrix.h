@@ -75,7 +75,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         mutable size_t m_numTimesDeviceChanged;
         mutable size_t m_numTimesMatrixTypeChanged;
-        mutable int m_devicesTransferedTo[2];
+        mutable int m_devicesTransferedTo[2];       // TODO: what is this for? Seems only diagnostics
             
         //Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
         void _transferFromDeviceToDevice(int id_from, int id_to, bool ismoved=true,bool emptyTransfer=false) const; 
@@ -164,6 +164,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& AssignColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
         Matrix<ElemType>& SetColumnSlice(const Matrix<ElemType>& fromMatrix, size_t startColumn, size_t numCols);
 
+        void CopyColumnsStrided(const Matrix<ElemType>& fromMatrix, size_t numCols, size_t srcNumColsStride, size_t destNumColsStride);
+
         Matrix<ElemType> Diagonal() const;
         Matrix<ElemType> AssignDiagonalValuesTo(Matrix<ElemType>& diag) const;
         void ShiftBy(int numShift);
@@ -174,14 +176,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void FSAdagrad(size_t mbSize, Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
         ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
        
-        // TODO: should Reshape() return a new Matrix object that contains a reference to the original?
-        void Reshape(const size_t numRows, const size_t numCols);
         void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true);  //by default we only reallocate if need to grow        
         void VerifySize(size_t rows, size_t cols)
         {
             if (rows != GetNumRows() || cols != GetNumCols())
                 LogicError("VerifySize: expected m_functionValues size %d x %d, but it is %d x %d",
                 (int)rows, (int)cols, (int)GetNumRows(), (int)GetNumCols());
+        }
+        Matrix<ElemType> AsReference() { return ColumnSlice(0, GetNumCols()); } // get a reference (e.g. this is not resizable but can be reshaped)
+        void Reshape(const size_t numRows, const size_t numCols);               // note: reshapes in place. To get a reshaped reference, use Reshaped()
+        Matrix<ElemType> Reshaped(const size_t numRows, const size_t numCols)   // get a reshaped reference
+        {
+            Matrix<ElemType> result = AsReference();
+            result.Reshape(numRows, numCols);
+            return result;
         }
 
         // update number of columns
@@ -200,12 +208,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void SetValue(const ElemType v);
         void SetValue(const DeviceBoundNumber<ElemType>& db_number);
         void SetValue(const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format=matrixFormatSparseCSR);
-        void SetValue(const size_t numRows, const size_t numCols, ElemType *pArray, const size_t matrixFlags=matrixFlagNormal, int deviceId=MANAGEDEXTERN);
+        void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType *pArray, const size_t matrixFlags = matrixFlagNormal);
         void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);  // set matrix sparsely
         static ElemType MakeNan(size_t payload);
         void Invalidate() { SetValue(MakeNan(__LINE__)); }
         void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE *h_CSCCol, const CPUSPARSE_INDEX_TYPE *h_Row, const ElemType *h_Val,
             const size_t nz, const size_t numRows, const size_t numCols);
+
+        void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val);
 
         void SetColumn(const ElemType* colPointer, size_t colInd);
         void SetColumn(const ElemType val, size_t colInd);
@@ -248,7 +258,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& AssignProductOf(const ElemType alpha, const Matrix<ElemType>& a);
 
         Matrix<ElemType> operator* (const Matrix<ElemType>& a) const;
-        Matrix<ElemType>& AssignProductOf (const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB);
+        Matrix<ElemType>& AssignProductOf (const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB); // this = a * b
+        Matrix<ElemType>& Assign1x1ProductOf(const Matrix<ElemType>& a1x1, const Matrix<ElemType>& b); // this = a * b, where a is 1x1
 
         Matrix<ElemType>& operator/= (ElemType alpha);
         Matrix<ElemType> operator/ (ElemType alpha) const;        
@@ -348,10 +359,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void VectorSum(const Matrix<ElemType>& a, Matrix<ElemType>& c, const bool isColWise);
 
         void VectorNorm1(Matrix<ElemType>& c, const bool isColWise) const;
-        Matrix<ElemType>& AssignVectorNorm1Of(Matrix<ElemType>& a, const bool isColWise);
+        Matrix<ElemType>& AssignVectorNorm1Of(Matrix<ElemType>& a, const bool isColWise);       // TODO: arg should be const
 
         void VectorNorm2(Matrix<ElemType>& c, const bool isColWise) const;
-        Matrix<ElemType>& AssignVectorNorm2Of(Matrix<ElemType>& a, const bool isColWise);
+        Matrix<ElemType>& AssignVectorNorm2Of(Matrix<ElemType>& a, const bool isColWise);       // TODO: arg should be const
 
         void VectorNormInf(Matrix<ElemType>& c, const bool isColWise) const;
         Matrix<ElemType>& AssignVectorNormInfOf(Matrix<ElemType>& a, const bool isColWise);
@@ -360,7 +371,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         Matrix<ElemType>& AssignKhatriRaoProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
         Matrix<ElemType>& AddColumnReshapeProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const bool transposeAColumn);
 
-        Matrix<ElemType>& AddWithScaleOf(ElemType alpha, const Matrix<ElemType>& a);
+        Matrix<ElemType>& AddWithScaleOf(ElemType alpha, const Matrix<ElemType>& a);    // this += alpha * a
 
         ElemType FrobeniusNorm() const;
         Matrix<ElemType>& AssignFrobeniusNormOf(const Matrix<ElemType>& a);
@@ -426,17 +437,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // singular value decomposition of A as A = U*SIGMA*VT
         static void SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT, Matrix<ElemType>& W);
 
-        static void MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, 
-            ElemType beta, Matrix<ElemType>& c);
+        static void MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c); // SGEMM
         static void MultiplyAndAdd(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, Matrix<ElemType>& c);
         static void Multiply(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, Matrix<ElemType>& c);
         static void Multiply(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
+        static void Multiply1x1AndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType beta, Matrix<ElemType>& c);
 
         static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
         static void ScaleAndAdd(ElemType alpha, const Matrix<ElemType>& a, ElemType beta, Matrix<ElemType>& c);
         static void AddScaledDifference(const ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
         static void AssignScaledDifference(const ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
-        static void AddScaledDifference(const Matrix<ElemType>& alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
+        static void AddScaledDifference(const Matrix<ElemType>& alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);  // c += alpha * (a - b)
         static void AssignScaledDifference(const Matrix<ElemType>& alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
 
         static void AddElementToElement(const Matrix<ElemType>& a, const size_t ai, const size_t aj, Matrix<ElemType>& c, const size_t ci, const size_t cj); 
@@ -454,6 +465,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static bool AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold = 1e-8);
         static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
 
+        static void TensorShuffleScaleAndAdd(ElemType keepWeight, const Matrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const Matrix<ElemType>& b, Matrix<ElemType>& c);
     public:
         void Read(File& stream);
         void Write(File& stream) const;
@@ -485,6 +497,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         template<typename T>
         friend class QuantizedMatrix;
+
+        template<typename T>
+        friend class Matrix;
     };
 
     // overload I/O operators

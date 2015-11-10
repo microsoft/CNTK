@@ -4,15 +4,13 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
     
     template<class ElemType>
-    MatrixQuantizerCPU<ElemType>::MatrixQuantizerCPU(const Matrix<ElemType>& inMatrix)
-    : MatrixQuantizer<ElemType>(inMatrix)
+    MatrixQuantizerCPU<ElemType>::MatrixQuantizerCPU(size_t numRows, size_t numCols)
+        : MatrixQuantizer<ElemType>(numRows, numCols, CPUDEVICE)
     {
-        // Ensure that the inMatrix is on CPU
-        assert(inMatrix.GetDeviceId() == CPUDEVICE);
     }
 
     template<class ElemType>
-    void  MatrixQuantizerCPU<ElemType>::QuantizeAsync(QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit)
+    void  MatrixQuantizerCPU<ElemType>::QuantizeAsync(const Matrix<ElemType>& inMatrix, QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit)
     {
         // The outQMatrix should be on the CPU
         // TODO: Support transferring the quantization output to a quantized matrix on the GPU 
@@ -20,12 +18,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         
         size_t nBits = outQMatrix.GetNumBits();
 
-        size_t nRow = this->m_inMatrix.GetNumRows();
-        size_t nCol = this->m_inMatrix.GetNumCols();
+        size_t nRow = inMatrix.GetNumRows();
+        size_t nCol = inMatrix.GetNumCols();
         
         // Verify that the different matrix parameters have matching dimensions
         assert((outQMatrix.GetNumRows() == nRow) && (outQMatrix.GetNumCols() == nCol));
-        
+        assert((this->m_residual->GetNumRows() == nRow) && (this->m_residual->GetNumCols() == nCol));
+
         const size_t ldNbits = ValueQuantizer<ElemType>::ld (nBits);
     #ifdef QUANTUSEPPL
         Concurrency::parallel_for ((size_t) 0, us.cols(), [&] (size_t j)
@@ -37,24 +36,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (zeroThresholdFor1Bit)
             {
                 // Explicit use of 'template' keyword is needed to compile with GCC
-                ColumnQuantizer<ElemType>::template ComputeRangeStatColj<true>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
+                ColumnQuantizer<ElemType>::template ComputeRangeStatColj<true>(inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
             }
             else
             {
                 // Explicit use of 'template' keyword is needed to compile with GCC
-                ColumnQuantizer<ElemType>::template ComputeRangeStatColj<false>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
+                ColumnQuantizer<ElemType>::template ComputeRangeStatColj<false>(inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, nBits, qcol.lower, qcol.upper);
             }
 
             ColumnQuantizer<ElemType> q(ldNbits, qcol.lower, qcol.upper);
             if (zeroThresholdFor1Bit)
             {
                 // Explicit use of 'template' keyword is needed to compile with GCC
-                q.template Quantize<true>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, qcol.bits, this->m_residual->BufferPointer());
+                q.template Quantize<true>(inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, qcol.bits, this->m_residual->BufferPointer());
             }
             else
             {
                 // Explicit use of 'template' keyword is needed to compile with GCC
-                q.template Quantize<false>(this->m_inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, qcol.bits, this->m_residual->BufferPointer());
+                q.template Quantize<false>(inMatrix.BufferPointer(), this->m_residual->BufferPointer(), (long)nRow, j, qcol.bits, this->m_residual->BufferPointer());
             }
         }
     #ifdef QUANTUSEPPL

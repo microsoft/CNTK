@@ -35,20 +35,19 @@ cub_check=cub/cub.cuh
 have_opencv=no
 opencv_path=
 opencv_check=include/opencv2/opencv.hpp
-
 mathlib=
 
 # List from best to worst choice
 default_path_list="/usr /usr/local /opt /opt/local"
 
 # List from best to worst choice
-default_acmls="acml5.3.1/ifort64"
+default_acmls="acml5.3.1/ifort64_mp"
 default_mkls=""
 
 # NOTE: Will get compilation errors with cuda-6.0
 default_cudas="cuda-7.5 cuda-7.0 cuda-6.5"
 default_kaldis="kaldi-trunk"
-default_gdks="."
+default_gdks=". gdk/usr"
 default_cubs="cub-1.4.1"
 default_opencvs="opencv-3.0.0"
 
@@ -120,7 +119,6 @@ function find_opencv ()
 {
     find_dir "$default_opencvs" "$opencv_check"
 }
-
 function is_hardlinked ()
 {
     r=no
@@ -450,7 +448,6 @@ then
         echo Found CUB at $cub_path
     fi
 fi
-
 config=$build_top/Config.make
 echo Generating $config
 echo "#Configuration file for cntk" > $config

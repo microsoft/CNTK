@@ -1,40 +1,37 @@
-=== Running mpiexec -n 3 /home/mluser/src/cplx_master/build/debug/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/../cntk.config RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data DeviceId=0 stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
+=== Running mpiexec -n 3 /home/mluser/src/cplx_master/build/debug/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/../cntk.config RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/.. DeviceId=0 stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
 MPIWrapper: initializing MPI
 MPIWrapper: initializing MPI
 MPIWrapper: initializing MPI
 ping [requestnodes (before change)]: 3 nodes pinging each other
-ping [requestnodes (before change)]: 3 nodes pinging each other
-ping [requestnodes (before change)]: 3 nodes pinging each other
-ping [requestnodes (before change)]: all 3 nodes responded
-requestnodes [MPIWrapper]: using 3 out of 3 MPI nodes (3 requested); we (1) are in (participating)
-ping [requestnodes (after change)]: 3 nodes pinging each other
-ping [requestnodes (before change)]: all 3 nodes responded
-requestnodes [MPIWrapper]: using 3 out of 3 MPI nodes (3 requested); we (0) are in (participating)
-ping [requestnodes (after change)]: 3 nodes pinging each other
 ping [requestnodes (before change)]: all 3 nodes responded
 requestnodes [MPIWrapper]: using 3 out of 3 MPI nodes (3 requested); we (2) are in (participating)
 ping [requestnodes (after change)]: 3 nodes pinging each other
 ping [requestnodes (after change)]: all 3 nodes responded
-mpihelper: we are cog 0 in a gearbox of 3
-ping [mpihelper]: 3 nodes pinging each other
-ping [requestnodes (after change)]: all 3 nodes responded
-mpihelper: we are cog 1 in a gearbox of 3
-ping [mpihelper]: 3 nodes pinging each other
-ping [requestnodes (after change)]: all 3 nodes responded
 mpihelper: we are cog 2 in a gearbox of 3
 ping [mpihelper]: 3 nodes pinging each other
 ping [mpihelper]: all 3 nodes responded
+ping [requestnodes (before change)]: 3 nodes pinging each other
+ping [requestnodes (before change)]: all 3 nodes responded
+requestnodes [MPIWrapper]: using 3 out of 3 MPI nodes (3 requested); we (0) are in (participating)
+ping [requestnodes (after change)]: 3 nodes pinging each other
+ping [requestnodes (after change)]: all 3 nodes responded
+mpihelper: we are cog 0 in a gearbox of 3
+ping [mpihelper]: 3 nodes pinging each other
 ping [mpihelper]: all 3 nodes responded
+ping [requestnodes (before change)]: 3 nodes pinging each other
+ping [requestnodes (before change)]: all 3 nodes responded
+requestnodes [MPIWrapper]: using 3 out of 3 MPI nodes (3 requested); we (1) are in (participating)
+ping [requestnodes (after change)]: 3 nodes pinging each other
+ping [requestnodes (after change)]: all 3 nodes responded
+mpihelper: we are cog 1 in a gearbox of 3
+ping [mpihelper]: 3 nodes pinging each other
 ping [mpihelper]: all 3 nodes responded
-Redirecting stderr to file /tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr_speechTrain.logrank0
-CNTKModelPath: /tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
-Redirecting stderr to file /tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr_speechTrain.logrank1
-CNTKModelPath: /tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
-Redirecting stderr to file /tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr_speechTrain.logrank2
-CNTKModelPath: /tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
-MPI Rank 0: running on localhost at 2015/10/02 13:38:52
-MPI Rank 0: command line options: 
-MPI Rank 0: configFile=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/../cntk.config RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data DeviceId=0 stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr 
+Redirecting stderr to file /tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr_speechTrain.logrank0
+Redirecting stderr to file /tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr_speechTrain.logrank1
+Redirecting stderr to file /tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr_speechTrain.logrank2
+MPI Rank 0: running on localhost at 2015/10/24 12:56:11
+MPI Rank 0: command line: 
+MPI Rank 0: /home/mluser/src/cplx_master/build/debug/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/../cntk.config RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/.. DeviceId=0 stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr 
 MPI Rank 0: 
 MPI Rank 0: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
 MPI Rank 0: precision=float
@@ -126,10 +123,11 @@ MPI Rank 0:           labelType=Category
 MPI Rank 0:       ]
 MPI Rank 0:     ]
 MPI Rank 0: ]
-MPI Rank 0: RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu
+MPI Rank 0: RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu
 MPI Rank 0: DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
+MPI Rank 0: ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/..
 MPI Rank 0: DeviceId=0
-MPI Rank 0: stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
+MPI Rank 0: stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
 MPI Rank 0: 
 MPI Rank 0: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 MPI Rank 0: 
@@ -140,7 +138,7 @@ MPI Rank 0: deviceId=0
 MPI Rank 0: parallelTrain=true
 MPI Rank 0: speechTrain=[
 MPI Rank 0:     action=train
-MPI Rank 0:     modelPath=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
+MPI Rank 0:     modelPath=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
 MPI Rank 0:     deviceId=0
 MPI Rank 0:     traceLevel=1
 MPI Rank 0:     SimpleNetworkBuilder=[
@@ -223,23 +221,25 @@ MPI Rank 0:           labelType=Category
 MPI Rank 0:       ]
 MPI Rank 0:     ]
 MPI Rank 0: ]
-MPI Rank 0: RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu
+MPI Rank 0: RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu
 MPI Rank 0: DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
+MPI Rank 0: ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/..
 MPI Rank 0: DeviceId=0
-MPI Rank 0: stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
+MPI Rank 0: stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
 MPI Rank 0: 
 MPI Rank 0: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 MPI Rank 0: 
 MPI Rank 0: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 MPI Rank 0: configparameters: cntk.config:command=speechTrain
+MPI Rank 0: configparameters: cntk.config:ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/..
 MPI Rank 0: configparameters: cntk.config:DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
 MPI Rank 0: configparameters: cntk.config:deviceId=0
 MPI Rank 0: configparameters: cntk.config:parallelTrain=true
 MPI Rank 0: configparameters: cntk.config:precision=float
-MPI Rank 0: configparameters: cntk.config:RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu
+MPI Rank 0: configparameters: cntk.config:RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu
 MPI Rank 0: configparameters: cntk.config:speechTrain=[
 MPI Rank 0:     action=train
-MPI Rank 0:     modelPath=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
+MPI Rank 0:     modelPath=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
 MPI Rank 0:     deviceId=0
 MPI Rank 0:     traceLevel=1
 MPI Rank 0:     SimpleNetworkBuilder=[
@@ -323,10 +323,11 @@ MPI Rank 0:       ]
 MPI Rank 0:     ]
 MPI Rank 0: ]
 MPI Rank 0: 
-MPI Rank 0: configparameters: cntk.config:stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
+MPI Rank 0: configparameters: cntk.config:stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
 MPI Rank 0: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 MPI Rank 0: command: speechTrain 
 MPI Rank 0: precision = float
+MPI Rank 0: CNTKModelPath: /tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
 MPI Rank 0: CNTKCommandTrainInfo: speechTrain : 3
 MPI Rank 0: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 MPI Rank 0: CNTKCommandTrainBegin: speechTrain
@@ -338,11 +339,12 @@ MPI Rank 0: htkmlfreader: reading MLF file /home/mluser/src/cplx_master/Tests/Sp
 MPI Rank 0: ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 MPI Rank 0: label set 0: 129 classes
 MPI Rank 0: minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+MPI Rank 0: SetUniformRandomValue (GPU): creating curand object with seed 1
 MPI Rank 0: GetTrainCriterionNodes  ...
 MPI Rank 0: GetEvalCriterionNodes  ...
 MPI Rank 0: 
 MPI Rank 0: 
-MPI Rank 0: Validating node CrossEntropyWithSoftmax 
+MPI Rank 0: Validating for node CrossEntropyWithSoftmax. 20 nodes to process in pass 1.
 MPI Rank 0: 
 MPI Rank 0: Validating --> labels = InputValue -> [132, MBSize 3]
 MPI Rank 0: Validating --> W2 = LearnableParameter -> [132, 512]
@@ -365,13 +367,57 @@ MPI Rank 0: Validating --> B2 = LearnableParameter -> [132, 1]
 MPI Rank 0: Validating --> HLast = Plus(W2*H1[132, MBSize 3], B2[132, 1]) -> [132, MBSize 3]
 MPI Rank 0: Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 3]) -> [1, 1]
 MPI Rank 0: 
+MPI Rank 0: Validating for node CrossEntropyWithSoftmax. 12 nodes to process in pass 2.
 MPI Rank 0: 
+MPI Rank 0: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 0: Validating --> W2 = LearnableParameter -> [132, 512]
+MPI Rank 0: Validating --> W1 = LearnableParameter -> [512, 512]
+MPI Rank 0: Validating --> W0 = LearnableParameter -> [512, 363]
+MPI Rank 0: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 0: Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+MPI Rank 0: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+MPI Rank 0: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+MPI Rank 0: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 0: Validating --> B0 = LearnableParameter -> [512, 1]
+MPI Rank 0: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 3]
+MPI Rank 0: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 0: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 0: Validating --> B1 = LearnableParameter -> [512, 1]
+MPI Rank 0: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 3], B1[512, 1]) -> [512, MBSize 3]
+MPI Rank 0: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 0: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 3]) -> [132, MBSize 3]
+MPI Rank 0: Validating --> B2 = LearnableParameter -> [132, 1]
+MPI Rank 0: Validating --> HLast = Plus(W2*H1[132, MBSize 3], B2[132, 1]) -> [132, MBSize 3]
+MPI Rank 0: Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 3]) -> [1, 1]
+MPI Rank 0: 
+MPI Rank 0: Validating for node CrossEntropyWithSoftmax, final verification.
+MPI Rank 0: 
+MPI Rank 0: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 0: Validating --> W2 = LearnableParameter -> [132, 512]
+MPI Rank 0: Validating --> W1 = LearnableParameter -> [512, 512]
+MPI Rank 0: Validating --> W0 = LearnableParameter -> [512, 363]
+MPI Rank 0: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 0: Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+MPI Rank 0: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+MPI Rank 0: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+MPI Rank 0: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 0: Validating --> B0 = LearnableParameter -> [512, 1]
+MPI Rank 0: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 3]
+MPI Rank 0: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 0: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 0: Validating --> B1 = LearnableParameter -> [512, 1]
+MPI Rank 0: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 3], B1[512, 1]) -> [512, MBSize 3]
+MPI Rank 0: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 0: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 3]) -> [132, MBSize 3]
+MPI Rank 0: Validating --> B2 = LearnableParameter -> [132, 1]
+MPI Rank 0: Validating --> HLast = Plus(W2*H1[132, MBSize 3], B2[132, 1]) -> [132, MBSize 3]
+MPI Rank 0: Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 3]) -> [1, 1]
 MPI Rank 0: 
 MPI Rank 0: 9 out of 20 nodes do not share the minibatch layout with the input data.
-MPI Rank 0: Found 6 PreCompute nodes
-MPI Rank 0: 	NodeName: InvStdOfFeatures
-MPI Rank 0: 	NodeName: MeanOfFeatures
-MPI Rank 0: 	NodeName: Prior
+MPI Rank 0: 
+MPI Rank 0: 
+MPI Rank 0: Precomputing --> 3 PreCompute nodes found.
+MPI Rank 0: 
 MPI Rank 0: 	NodeName: InvStdOfFeatures
 MPI Rank 0: 	NodeName: MeanOfFeatures
 MPI Rank 0: 	NodeName: Prior
@@ -379,126 +425,192 @@ MPI Rank 0: minibatchiterator: epoch 0: frames [0..252734] (first utterance at f
 MPI Rank 0: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 MPI Rank 0: 
 MPI Rank 0: 
-MPI Rank 0: Validating node InvStdOfFeatures 
+MPI Rank 0: Validating for node InvStdOfFeatures. 2 nodes to process in pass 1.
 MPI Rank 0: 
-MPI Rank 0: Validating --> features = InputValue -> [363, MBSize 64]
-MPI Rank 0: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 64]) -> [363, 1]
+MPI Rank 0: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 0: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
 MPI Rank 0: 
+MPI Rank 0: Validating for node InvStdOfFeatures, final verification.
 MPI Rank 0: 
-MPI Rank 0: 
-MPI Rank 0: 1 out of 2 nodes do not share the minibatch layout with the input data.
-MPI Rank 0: 
-MPI Rank 0: 
-MPI Rank 0: Validating node MeanOfFeatures 
-MPI Rank 0: 
-MPI Rank 0: Validating --> features = InputValue -> [363, MBSize 64]
-MPI Rank 0: Validating --> MeanOfFeatures = Mean(features[363, MBSize 64]) -> [363, 1]
-MPI Rank 0: 
-MPI Rank 0: 
+MPI Rank 0: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 0: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
 MPI Rank 0: 
 MPI Rank 0: 1 out of 2 nodes do not share the minibatch layout with the input data.
 MPI Rank 0: 
 MPI Rank 0: 
-MPI Rank 0: Validating node Prior 
 MPI Rank 0: 
-MPI Rank 0: Validating --> labels = InputValue -> [132, MBSize 64]
-MPI Rank 0: Validating --> Prior = Mean(labels[132, MBSize 64]) -> [132, 1]
+MPI Rank 0: Validating for node MeanOfFeatures. 2 nodes to process in pass 1.
 MPI Rank 0: 
+MPI Rank 0: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 0: Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
 MPI Rank 0: 
+MPI Rank 0: Validating for node MeanOfFeatures, final verification.
+MPI Rank 0: 
+MPI Rank 0: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 0: Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
 MPI Rank 0: 
 MPI Rank 0: 1 out of 2 nodes do not share the minibatch layout with the input data.
+MPI Rank 0: 
+MPI Rank 0: 
+MPI Rank 0: 
+MPI Rank 0: Validating for node Prior. 2 nodes to process in pass 1.
+MPI Rank 0: 
+MPI Rank 0: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 0: Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+MPI Rank 0: 
+MPI Rank 0: Validating for node Prior. 1 nodes to process in pass 2.
+MPI Rank 0: 
+MPI Rank 0: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 0: Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+MPI Rank 0: 
+MPI Rank 0: Validating for node Prior, final verification.
+MPI Rank 0: 
+MPI Rank 0: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 0: Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+MPI Rank 0: 
+MPI Rank 0: 1 out of 2 nodes do not share the minibatch layout with the input data.
+MPI Rank 0: 
+MPI Rank 0: EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from 0 now 1. This message will be shown only once.
+MPI Rank 0: 
+MPI Rank 0: Precomputing --> Completed.
+MPI Rank 0: 
 MPI Rank 0: Set Max Temp Mem Size For Convolution Nodes to 0 samples.
-MPI Rank 0: Starting Epoch 1: learning rate per sample = 0.015625  momentum = 0.900000 
+MPI Rank 0: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000 
 MPI Rank 0: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 3, NumGradientBits = 32), Distributed reading is ENABLED.
 MPI Rank 0: 
+MPI Rank 0: Validating for node EvalErrorPrediction. 20 nodes to process in pass 1.
 MPI Rank 0: 
-MPI Rank 0: Validating node EvalErrorPrediction 
-MPI Rank 0: 
-MPI Rank 0: Validating --> labels = InputValue -> [132, MBSize 29]
+MPI Rank 0: Validating --> labels = InputValue -> [132, MBSize 62]
 MPI Rank 0: Validating --> W2 = LearnableParameter -> [132, 512]
 MPI Rank 0: Validating --> W1 = LearnableParameter -> [512, 512]
 MPI Rank 0: Validating --> W0 = LearnableParameter -> [512, 363]
-MPI Rank 0: Validating --> features = InputValue -> [363, MBSize 29]
-MPI Rank 0: Validating --> MeanOfFeatures = Mean(features[363, MBSize 29]) -> [363, 1]
-MPI Rank 0: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 29]) -> [363, 1]
-MPI Rank 0: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 29], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 29]
-MPI Rank 0: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 29]) -> [512, MBSize 29]
+MPI Rank 0: Validating --> features = InputValue -> [363, MBSize 62]
+MPI Rank 0: Validating --> MeanOfFeatures = Mean(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 0: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 0: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 62], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 62]
+MPI Rank 0: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 62]) -> [512, MBSize 62]
 MPI Rank 0: Validating --> B0 = LearnableParameter -> [512, 1]
-MPI Rank 0: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 29], B0[512, 1]) -> [512, MBSize 29]
-MPI Rank 0: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 29]) -> [512, MBSize 29]
-MPI Rank 0: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 29]) -> [512, MBSize 29]
+MPI Rank 0: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 62], B0[512, 1]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 62]) -> [512, MBSize 62]
 MPI Rank 0: Validating --> B1 = LearnableParameter -> [512, 1]
-MPI Rank 0: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 29], B1[512, 1]) -> [512, MBSize 29]
-MPI Rank 0: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 29]) -> [512, MBSize 29]
-MPI Rank 0: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 29]) -> [132, MBSize 29]
+MPI Rank 0: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 62], B1[512, 1]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 62]) -> [132, MBSize 62]
 MPI Rank 0: Validating --> B2 = LearnableParameter -> [132, 1]
-MPI Rank 0: Validating --> HLast = Plus(W2*H1[132, MBSize 29], B2[132, 1]) -> [132, MBSize 29]
-MPI Rank 0: Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 29], HLast[132, MBSize 29]) -> [1, 1]
+MPI Rank 0: Validating --> HLast = Plus(W2*H1[132, MBSize 62], B2[132, 1]) -> [132, MBSize 62]
+MPI Rank 0: Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 62], HLast[132, MBSize 62]) -> [1, 1]
 MPI Rank 0: 
+MPI Rank 0: Validating for node EvalErrorPrediction. 10 nodes to process in pass 2.
 MPI Rank 0: 
+MPI Rank 0: Validating --> labels = InputValue -> [132, MBSize 62]
+MPI Rank 0: Validating --> W2 = LearnableParameter -> [132, 512]
+MPI Rank 0: Validating --> W1 = LearnableParameter -> [512, 512]
+MPI Rank 0: Validating --> W0 = LearnableParameter -> [512, 363]
+MPI Rank 0: Validating --> features = InputValue -> [363, MBSize 62]
+MPI Rank 0: Validating --> MeanOfFeatures = Mean(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 0: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 0: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 62], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 62]
+MPI Rank 0: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> B0 = LearnableParameter -> [512, 1]
+MPI Rank 0: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 62], B0[512, 1]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> B1 = LearnableParameter -> [512, 1]
+MPI Rank 0: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 62], B1[512, 1]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 62]) -> [132, MBSize 62]
+MPI Rank 0: Validating --> B2 = LearnableParameter -> [132, 1]
+MPI Rank 0: Validating --> HLast = Plus(W2*H1[132, MBSize 62], B2[132, 1]) -> [132, MBSize 62]
+MPI Rank 0: Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 62], HLast[132, MBSize 62]) -> [1, 1]
+MPI Rank 0: 
+MPI Rank 0: Validating for node EvalErrorPrediction, final verification.
+MPI Rank 0: 
+MPI Rank 0: Validating --> labels = InputValue -> [132, MBSize 62]
+MPI Rank 0: Validating --> W2 = LearnableParameter -> [132, 512]
+MPI Rank 0: Validating --> W1 = LearnableParameter -> [512, 512]
+MPI Rank 0: Validating --> W0 = LearnableParameter -> [512, 363]
+MPI Rank 0: Validating --> features = InputValue -> [363, MBSize 62]
+MPI Rank 0: Validating --> MeanOfFeatures = Mean(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 0: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 0: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 62], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 62]
+MPI Rank 0: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> B0 = LearnableParameter -> [512, 1]
+MPI Rank 0: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 62], B0[512, 1]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> B1 = LearnableParameter -> [512, 1]
+MPI Rank 0: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 62], B1[512, 1]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 0: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 62]) -> [132, MBSize 62]
+MPI Rank 0: Validating --> B2 = LearnableParameter -> [132, 1]
+MPI Rank 0: Validating --> HLast = Plus(W2*H1[132, MBSize 62], B2[132, 1]) -> [132, MBSize 62]
+MPI Rank 0: Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 62], HLast[132, MBSize 62]) -> [1, 1]
 MPI Rank 0: 
 MPI Rank 0: 9 out of 20 nodes do not share the minibatch layout with the input data.
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[   1-  10 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.32135414; EvalErr[0]PerSample = 0.90000000; TotalTime = 0.25642s; TotalTimePerSample = 0.40065ms; SamplesPerSecond = 2495
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  11-  20 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.15070930; EvalErr[0]PerSample = 0.86718750; TotalTime = 0.24686s; TotalTimePerSample = 0.38571ms; SamplesPerSecond = 2592
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  21-  30 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.99901060; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.24575s; TotalTimePerSample = 0.38398ms; SamplesPerSecond = 2604
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  31-  40 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.86945780; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.24696s; TotalTimePerSample = 0.38588ms; SamplesPerSecond = 2591
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  41-  50 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.80219517; EvalErr[0]PerSample = 0.87812500; TotalTime = 0.24516s; TotalTimePerSample = 0.38307ms; SamplesPerSecond = 2610
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  51-  60 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.72890717; EvalErr[0]PerSample = 0.86875000; TotalTime = 0.24462s; TotalTimePerSample = 0.38221ms; SamplesPerSecond = 2616
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  61-  70 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.56187025; EvalErr[0]PerSample = 0.82343750; TotalTime = 0.24416s; TotalTimePerSample = 0.38150ms; SamplesPerSecond = 2621
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  71-  80 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.42790310; EvalErr[0]PerSample = 0.80781250; TotalTime = 0.24566s; TotalTimePerSample = 0.38384ms; SamplesPerSecond = 2605
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  81-  90 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.33928303; EvalErr[0]PerSample = 0.77343750; TotalTime = 0.24437s; TotalTimePerSample = 0.38184ms; SamplesPerSecond = 2618
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  91- 100 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.36398734; EvalErr[0]PerSample = 0.84375000; TotalTime = 0.24545s; TotalTimePerSample = 0.38352ms; SamplesPerSecond = 2607
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 101- 110 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.21223679; EvalErr[0]PerSample = 0.75312500; TotalTime = 0.24567s; TotalTimePerSample = 0.38385ms; SamplesPerSecond = 2605
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 111- 120 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.31265333; EvalErr[0]PerSample = 0.78750000; TotalTime = 0.24655s; TotalTimePerSample = 0.38523ms; SamplesPerSecond = 2595
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 121- 130 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.14081673; EvalErr[0]PerSample = 0.74687500; TotalTime = 0.24650s; TotalTimePerSample = 0.38515ms; SamplesPerSecond = 2596
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 131- 140 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00690023; EvalErr[0]PerSample = 0.69687500; TotalTime = 0.24591s; TotalTimePerSample = 0.38424ms; SamplesPerSecond = 2602
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 141- 150 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00496087; EvalErr[0]PerSample = 0.72343750; TotalTime = 0.24734s; TotalTimePerSample = 0.38648ms; SamplesPerSecond = 2587
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 151- 160 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.97859121; EvalErr[0]PerSample = 0.73906250; TotalTime = 0.24469s; TotalTimePerSample = 0.38233ms; SamplesPerSecond = 2615
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 161- 170 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.85686638; EvalErr[0]PerSample = 0.70781250; TotalTime = 0.24529s; TotalTimePerSample = 0.38327ms; SamplesPerSecond = 2609
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 171- 180 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.69053374; EvalErr[0]PerSample = 0.67187500; TotalTime = 0.24514s; TotalTimePerSample = 0.38303ms; SamplesPerSecond = 2610
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 181- 190 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.78653366; EvalErr[0]PerSample = 0.70468750; TotalTime = 0.24606s; TotalTimePerSample = 0.38447ms; SamplesPerSecond = 2600
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 191- 200 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.57702529; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.24668s; TotalTimePerSample = 0.38543ms; SamplesPerSecond = 2594
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 201- 210 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.61570793; EvalErr[0]PerSample = 0.66406250; TotalTime = 0.24435s; TotalTimePerSample = 0.38180ms; SamplesPerSecond = 2619
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 211- 220 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.55235603; EvalErr[0]PerSample = 0.65781250; TotalTime = 0.24639s; TotalTimePerSample = 0.38499ms; SamplesPerSecond = 2597
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 221- 230 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.48211165; EvalErr[0]PerSample = 0.62500000; TotalTime = 0.24605s; TotalTimePerSample = 0.38446ms; SamplesPerSecond = 2601
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 231- 240 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.38778376; EvalErr[0]PerSample = 0.62812500; TotalTime = 0.24591s; TotalTimePerSample = 0.38423ms; SamplesPerSecond = 2602
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 241- 250 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.36900911; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.24475s; TotalTimePerSample = 0.38243ms; SamplesPerSecond = 2614
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 251- 260 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.43967760; EvalErr[0]PerSample = 0.63281250; TotalTime = 0.24451s; TotalTimePerSample = 0.38205ms; SamplesPerSecond = 2617
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 261- 270 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.30281011; EvalErr[0]PerSample = 0.61250000; TotalTime = 0.24558s; TotalTimePerSample = 0.38371ms; SamplesPerSecond = 2606
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 271- 280 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.19669121; EvalErr[0]PerSample = 0.55937500; TotalTime = 0.24470s; TotalTimePerSample = 0.38235ms; SamplesPerSecond = 2615
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.28979560; EvalErr[0]PerSample = 0.60468750; TotalTime = 0.24495s; TotalTimePerSample = 0.38273ms; SamplesPerSecond = 2612
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.17750506; EvalErr[0]PerSample = 0.62187500; TotalTime = 0.24520s; TotalTimePerSample = 0.38313ms; SamplesPerSecond = 2610
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.26264305; EvalErr[0]PerSample = 0.59687500; TotalTime = 0.24493s; TotalTimePerSample = 0.38270ms; SamplesPerSecond = 2613
-MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15073149; EvalErr[0]PerSample = 0.56250000; TotalTime = 0.24465s; TotalTimePerSample = 0.38226ms; SamplesPerSecond = 2616
-MPI Rank 0: Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 2.9799568; EvalErrPerSample = 0.72216797; Ave LearnRatePerSample = 0.015625; EpochTime=7.871485
-MPI Rank 0: Starting Epoch 2: learning rate per sample = 0.001953  momentum = 0.656119 
+MPI Rank 0: 
+MPI Rank 0: 
+MPI Rank 0: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 3, NumGradientBits = 32), Distributed reading is ENABLED.
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[   1-  10 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.32135295; EvalErr[0]PerSample = 0.90000000; TotalTime = 0.24478s; TotalTimePerSample = 0.38247ms; SamplesPerSecond = 2614
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  11-  20 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.15070941; EvalErr[0]PerSample = 0.86718750; TotalTime = 0.23448s; TotalTimePerSample = 0.36637ms; SamplesPerSecond = 2729
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  21-  30 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.99901066; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.22704s; TotalTimePerSample = 0.35475ms; SamplesPerSecond = 2818
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  31-  40 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.86945816; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.22872s; TotalTimePerSample = 0.35738ms; SamplesPerSecond = 2798
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  41-  50 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.80219557; EvalErr[0]PerSample = 0.87812500; TotalTime = 0.22743s; TotalTimePerSample = 0.35535ms; SamplesPerSecond = 2814
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  51-  60 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.72890766; EvalErr[0]PerSample = 0.86875000; TotalTime = 0.22625s; TotalTimePerSample = 0.35352ms; SamplesPerSecond = 2828
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  61-  70 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.56187065; EvalErr[0]PerSample = 0.82343750; TotalTime = 0.22749s; TotalTimePerSample = 0.35546ms; SamplesPerSecond = 2813
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  71-  80 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.42790299; EvalErr[0]PerSample = 0.80781250; TotalTime = 0.22725s; TotalTimePerSample = 0.35508ms; SamplesPerSecond = 2816
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  81-  90 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.33928338; EvalErr[0]PerSample = 0.77343750; TotalTime = 0.22716s; TotalTimePerSample = 0.35493ms; SamplesPerSecond = 2817
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[  91- 100 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.36398772; EvalErr[0]PerSample = 0.84375000; TotalTime = 0.22771s; TotalTimePerSample = 0.35580ms; SamplesPerSecond = 2810
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 101- 110 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.21223693; EvalErr[0]PerSample = 0.75312500; TotalTime = 0.22768s; TotalTimePerSample = 0.35575ms; SamplesPerSecond = 2810
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 111- 120 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.31265357; EvalErr[0]PerSample = 0.78750000; TotalTime = 0.22736s; TotalTimePerSample = 0.35525ms; SamplesPerSecond = 2814
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 121- 130 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.14081698; EvalErr[0]PerSample = 0.74687500; TotalTime = 0.22896s; TotalTimePerSample = 0.35775ms; SamplesPerSecond = 2795
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 131- 140 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00690035; EvalErr[0]PerSample = 0.69687500; TotalTime = 0.22665s; TotalTimePerSample = 0.35414ms; SamplesPerSecond = 2823
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 141- 150 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00496066; EvalErr[0]PerSample = 0.72343750; TotalTime = 0.22970s; TotalTimePerSample = 0.35891ms; SamplesPerSecond = 2786
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 151- 160 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.97859081; EvalErr[0]PerSample = 0.73906250; TotalTime = 0.22699s; TotalTimePerSample = 0.35468ms; SamplesPerSecond = 2819
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 161- 170 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.85686609; EvalErr[0]PerSample = 0.70781250; TotalTime = 0.22767s; TotalTimePerSample = 0.35574ms; SamplesPerSecond = 2811
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 171- 180 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.69053374; EvalErr[0]PerSample = 0.67187500; TotalTime = 0.22778s; TotalTimePerSample = 0.35590ms; SamplesPerSecond = 2809
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 181- 190 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.78653376; EvalErr[0]PerSample = 0.70468750; TotalTime = 0.22753s; TotalTimePerSample = 0.35551ms; SamplesPerSecond = 2812
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 191- 200 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.57702533; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.22747s; TotalTimePerSample = 0.35542ms; SamplesPerSecond = 2813
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 201- 210 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.61570805; EvalErr[0]PerSample = 0.66406250; TotalTime = 0.22869s; TotalTimePerSample = 0.35733ms; SamplesPerSecond = 2798
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 211- 220 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.55235582; EvalErr[0]PerSample = 0.65781250; TotalTime = 0.22822s; TotalTimePerSample = 0.35660ms; SamplesPerSecond = 2804
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 221- 230 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.48211151; EvalErr[0]PerSample = 0.62500000; TotalTime = 0.22783s; TotalTimePerSample = 0.35599ms; SamplesPerSecond = 2809
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 231- 240 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.38778372; EvalErr[0]PerSample = 0.62812500; TotalTime = 0.22805s; TotalTimePerSample = 0.35633ms; SamplesPerSecond = 2806
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 241- 250 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.36900902; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.22808s; TotalTimePerSample = 0.35637ms; SamplesPerSecond = 2806
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 251- 260 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.43967781; EvalErr[0]PerSample = 0.63281250; TotalTime = 0.22820s; TotalTimePerSample = 0.35656ms; SamplesPerSecond = 2804
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 261- 270 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.30281039; EvalErr[0]PerSample = 0.61250000; TotalTime = 0.22746s; TotalTimePerSample = 0.35541ms; SamplesPerSecond = 2813
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 271- 280 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.19669146; EvalErr[0]PerSample = 0.55937500; TotalTime = 0.22798s; TotalTimePerSample = 0.35621ms; SamplesPerSecond = 2807
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.28979581; EvalErr[0]PerSample = 0.60468750; TotalTime = 0.22790s; TotalTimePerSample = 0.35610ms; SamplesPerSecond = 2808
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.17750535; EvalErr[0]PerSample = 0.62187500; TotalTime = 0.22741s; TotalTimePerSample = 0.35532ms; SamplesPerSecond = 2814
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.26264398; EvalErr[0]PerSample = 0.59687500; TotalTime = 0.22641s; TotalTimePerSample = 0.35377ms; SamplesPerSecond = 2826
+MPI Rank 0:  Epoch[ 1 of 3]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15073110; EvalErr[0]PerSample = 0.56250000; TotalTime = 0.22676s; TotalTimePerSample = 0.35431ms; SamplesPerSecond = 2822
+MPI Rank 0: Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 2.9799569; EvalErrPerSample = 0.72216797; Ave LearnRatePerSample = 0.015625; EpochTime=7.319218
+MPI Rank 0: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119 
 MPI Rank 0: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
 MPI Rank 0: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 3, NumGradientBits = 32), Distributed reading is ENABLED.
-MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[   1-  10 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.01598530; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.28942s; TotalTimePerSample = 0.11306ms; SamplesPerSecond = 8845
-MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  11-  20 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98818586; EvalErr[0]PerSample = 0.54296875; TotalTime = 0.28095s; TotalTimePerSample = 0.10975ms; SamplesPerSecond = 9111
-MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  21-  30 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98698123; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.28222s; TotalTimePerSample = 0.11024ms; SamplesPerSecond = 9071
-MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  31-  40 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.93126298; EvalErr[0]PerSample = 0.52773437; TotalTime = 0.27954s; TotalTimePerSample = 0.10920ms; SamplesPerSecond = 9157
-MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  41-  50 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90067741; EvalErr[0]PerSample = 0.52656250; TotalTime = 0.27987s; TotalTimePerSample = 0.10933ms; SamplesPerSecond = 9146
-MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  51-  60 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.97115807; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.27910s; TotalTimePerSample = 0.10903ms; SamplesPerSecond = 9172
-MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  61-  70 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.89518067; EvalErr[0]PerSample = 0.52031250; TotalTime = 0.27764s; TotalTimePerSample = 0.10846ms; SamplesPerSecond = 9220
-MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  71-  80 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90450396; EvalErr[0]PerSample = 0.53164062; TotalTime = 0.27504s; TotalTimePerSample = 0.10744ms; SamplesPerSecond = 9307
-MPI Rank 0: Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 1.9492419; EvalErrPerSample = 0.53417969; Ave LearnRatePerSample = 0.001953125; EpochTime=2.248479
-MPI Rank 0: Starting Epoch 3: learning rate per sample = 0.000098  momentum = 0.656119 
+MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[   1-  10 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.01598514; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.25250s; TotalTimePerSample = 0.09863ms; SamplesPerSecond = 10138
+MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  11-  20 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98818590; EvalErr[0]PerSample = 0.54296875; TotalTime = 0.24831s; TotalTimePerSample = 0.09700ms; SamplesPerSecond = 10309
+MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  21-  30 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98698122; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.25203s; TotalTimePerSample = 0.09845ms; SamplesPerSecond = 10157
+MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  31-  40 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.93126295; EvalErr[0]PerSample = 0.52773437; TotalTime = 0.25003s; TotalTimePerSample = 0.09767ms; SamplesPerSecond = 10238
+MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  41-  50 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90067743; EvalErr[0]PerSample = 0.52656250; TotalTime = 0.24767s; TotalTimePerSample = 0.09675ms; SamplesPerSecond = 10336
+MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  51-  60 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.97115808; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.25090s; TotalTimePerSample = 0.09801ms; SamplesPerSecond = 10203
+MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  61-  70 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.89518061; EvalErr[0]PerSample = 0.52031250; TotalTime = 0.24830s; TotalTimePerSample = 0.09699ms; SamplesPerSecond = 10309
+MPI Rank 0:  Epoch[ 2 of 3]-Minibatch[  71-  80 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90450394; EvalErr[0]PerSample = 0.53164062; TotalTime = 0.24457s; TotalTimePerSample = 0.09553ms; SamplesPerSecond = 10467
+MPI Rank 0: Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 1.9492419; EvalErrPerSample = 0.53417969; Ave LearnRatePerSample = 0.001953125; EpochTime=1.999658
+MPI Rank 0: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119 
 MPI Rank 0: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
 MPI Rank 0: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 3, NumGradientBits = 32), Distributed reading is ENABLED.
-MPI Rank 0:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87359851; EvalErr[0]PerSample = 0.51933594; TotalTime = 0.44176s; TotalTimePerSample = 0.04314ms; SamplesPerSecond = 23179
-MPI Rank 0:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656277; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.42652s; TotalTimePerSample = 0.04165ms; SamplesPerSecond = 24008
-MPI Rank 0: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.5184082; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=0.881328
+MPI Rank 0:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87359841; EvalErr[0]PerSample = 0.51933594; TotalTime = 0.36717s; TotalTimePerSample = 0.03586ms; SamplesPerSecond = 27888
+MPI Rank 0:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656271; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.34559s; TotalTimePerSample = 0.03375ms; SamplesPerSecond = 29630
+MPI Rank 0: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.5184082; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=0.728516
 MPI Rank 0: CNTKCommandTrainEnd: speechTrain
 MPI Rank 0: COMPLETED
 MPI Rank 0: ~MPIWrapper
-MPI Rank 1: running on localhost at 2015/10/02 13:38:53
-MPI Rank 1: command line options: 
-MPI Rank 1: configFile=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/../cntk.config RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data DeviceId=0 stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr 
+MPI Rank 1: running on localhost at 2015/10/24 12:56:12
+MPI Rank 1: command line: 
+MPI Rank 1: /home/mluser/src/cplx_master/build/debug/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/../cntk.config RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/.. DeviceId=0 stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr 
 MPI Rank 1: 
 MPI Rank 1: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
 MPI Rank 1: precision=float
@@ -590,10 +702,11 @@ MPI Rank 1:           labelType=Category
 MPI Rank 1:       ]
 MPI Rank 1:     ]
 MPI Rank 1: ]
-MPI Rank 1: RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu
+MPI Rank 1: RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu
 MPI Rank 1: DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
+MPI Rank 1: ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/..
 MPI Rank 1: DeviceId=0
-MPI Rank 1: stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
+MPI Rank 1: stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
 MPI Rank 1: 
 MPI Rank 1: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 MPI Rank 1: 
@@ -604,7 +717,7 @@ MPI Rank 1: deviceId=0
 MPI Rank 1: parallelTrain=true
 MPI Rank 1: speechTrain=[
 MPI Rank 1:     action=train
-MPI Rank 1:     modelPath=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
+MPI Rank 1:     modelPath=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
 MPI Rank 1:     deviceId=0
 MPI Rank 1:     traceLevel=1
 MPI Rank 1:     SimpleNetworkBuilder=[
@@ -687,23 +800,25 @@ MPI Rank 1:           labelType=Category
 MPI Rank 1:       ]
 MPI Rank 1:     ]
 MPI Rank 1: ]
-MPI Rank 1: RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu
+MPI Rank 1: RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu
 MPI Rank 1: DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
+MPI Rank 1: ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/..
 MPI Rank 1: DeviceId=0
-MPI Rank 1: stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
+MPI Rank 1: stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
 MPI Rank 1: 
 MPI Rank 1: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 MPI Rank 1: 
 MPI Rank 1: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 MPI Rank 1: configparameters: cntk.config:command=speechTrain
+MPI Rank 1: configparameters: cntk.config:ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/..
 MPI Rank 1: configparameters: cntk.config:DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
 MPI Rank 1: configparameters: cntk.config:deviceId=0
 MPI Rank 1: configparameters: cntk.config:parallelTrain=true
 MPI Rank 1: configparameters: cntk.config:precision=float
-MPI Rank 1: configparameters: cntk.config:RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu
+MPI Rank 1: configparameters: cntk.config:RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu
 MPI Rank 1: configparameters: cntk.config:speechTrain=[
 MPI Rank 1:     action=train
-MPI Rank 1:     modelPath=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
+MPI Rank 1:     modelPath=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
 MPI Rank 1:     deviceId=0
 MPI Rank 1:     traceLevel=1
 MPI Rank 1:     SimpleNetworkBuilder=[
@@ -787,10 +902,11 @@ MPI Rank 1:       ]
 MPI Rank 1:     ]
 MPI Rank 1: ]
 MPI Rank 1: 
-MPI Rank 1: configparameters: cntk.config:stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
+MPI Rank 1: configparameters: cntk.config:stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
 MPI Rank 1: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 MPI Rank 1: command: speechTrain 
 MPI Rank 1: precision = float
+MPI Rank 1: CNTKModelPath: /tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
 MPI Rank 1: CNTKCommandTrainInfo: speechTrain : 3
 MPI Rank 1: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 MPI Rank 1: CNTKCommandTrainBegin: speechTrain
@@ -802,11 +918,12 @@ MPI Rank 1: htkmlfreader: reading MLF file /home/mluser/src/cplx_master/Tests/Sp
 MPI Rank 1: ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 MPI Rank 1: label set 0: 129 classes
 MPI Rank 1: minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+MPI Rank 1: SetUniformRandomValue (GPU): creating curand object with seed 1
 MPI Rank 1: GetTrainCriterionNodes  ...
 MPI Rank 1: GetEvalCriterionNodes  ...
 MPI Rank 1: 
 MPI Rank 1: 
-MPI Rank 1: Validating node CrossEntropyWithSoftmax 
+MPI Rank 1: Validating for node CrossEntropyWithSoftmax. 20 nodes to process in pass 1.
 MPI Rank 1: 
 MPI Rank 1: Validating --> labels = InputValue -> [132, MBSize 3]
 MPI Rank 1: Validating --> W2 = LearnableParameter -> [132, 512]
@@ -829,13 +946,57 @@ MPI Rank 1: Validating --> B2 = LearnableParameter -> [132, 1]
 MPI Rank 1: Validating --> HLast = Plus(W2*H1[132, MBSize 3], B2[132, 1]) -> [132, MBSize 3]
 MPI Rank 1: Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 3]) -> [1, 1]
 MPI Rank 1: 
+MPI Rank 1: Validating for node CrossEntropyWithSoftmax. 12 nodes to process in pass 2.
 MPI Rank 1: 
+MPI Rank 1: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 1: Validating --> W2 = LearnableParameter -> [132, 512]
+MPI Rank 1: Validating --> W1 = LearnableParameter -> [512, 512]
+MPI Rank 1: Validating --> W0 = LearnableParameter -> [512, 363]
+MPI Rank 1: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 1: Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+MPI Rank 1: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+MPI Rank 1: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+MPI Rank 1: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 1: Validating --> B0 = LearnableParameter -> [512, 1]
+MPI Rank 1: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 3]
+MPI Rank 1: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 1: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 1: Validating --> B1 = LearnableParameter -> [512, 1]
+MPI Rank 1: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 3], B1[512, 1]) -> [512, MBSize 3]
+MPI Rank 1: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 1: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 3]) -> [132, MBSize 3]
+MPI Rank 1: Validating --> B2 = LearnableParameter -> [132, 1]
+MPI Rank 1: Validating --> HLast = Plus(W2*H1[132, MBSize 3], B2[132, 1]) -> [132, MBSize 3]
+MPI Rank 1: Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 3]) -> [1, 1]
+MPI Rank 1: 
+MPI Rank 1: Validating for node CrossEntropyWithSoftmax, final verification.
+MPI Rank 1: 
+MPI Rank 1: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 1: Validating --> W2 = LearnableParameter -> [132, 512]
+MPI Rank 1: Validating --> W1 = LearnableParameter -> [512, 512]
+MPI Rank 1: Validating --> W0 = LearnableParameter -> [512, 363]
+MPI Rank 1: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 1: Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+MPI Rank 1: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+MPI Rank 1: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+MPI Rank 1: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 1: Validating --> B0 = LearnableParameter -> [512, 1]
+MPI Rank 1: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 3]
+MPI Rank 1: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 1: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 1: Validating --> B1 = LearnableParameter -> [512, 1]
+MPI Rank 1: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 3], B1[512, 1]) -> [512, MBSize 3]
+MPI Rank 1: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 1: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 3]) -> [132, MBSize 3]
+MPI Rank 1: Validating --> B2 = LearnableParameter -> [132, 1]
+MPI Rank 1: Validating --> HLast = Plus(W2*H1[132, MBSize 3], B2[132, 1]) -> [132, MBSize 3]
+MPI Rank 1: Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 3]) -> [1, 1]
 MPI Rank 1: 
 MPI Rank 1: 9 out of 20 nodes do not share the minibatch layout with the input data.
-MPI Rank 1: Found 6 PreCompute nodes
-MPI Rank 1: 	NodeName: InvStdOfFeatures
-MPI Rank 1: 	NodeName: MeanOfFeatures
-MPI Rank 1: 	NodeName: Prior
+MPI Rank 1: 
+MPI Rank 1: 
+MPI Rank 1: Precomputing --> 3 PreCompute nodes found.
+MPI Rank 1: 
 MPI Rank 1: 	NodeName: InvStdOfFeatures
 MPI Rank 1: 	NodeName: MeanOfFeatures
 MPI Rank 1: 	NodeName: Prior
@@ -843,126 +1004,192 @@ MPI Rank 1: minibatchiterator: epoch 0: frames [0..252734] (first utterance at f
 MPI Rank 1: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 MPI Rank 1: 
 MPI Rank 1: 
-MPI Rank 1: Validating node InvStdOfFeatures 
+MPI Rank 1: Validating for node InvStdOfFeatures. 2 nodes to process in pass 1.
 MPI Rank 1: 
-MPI Rank 1: Validating --> features = InputValue -> [363, MBSize 64]
-MPI Rank 1: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 64]) -> [363, 1]
+MPI Rank 1: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 1: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
 MPI Rank 1: 
+MPI Rank 1: Validating for node InvStdOfFeatures, final verification.
 MPI Rank 1: 
-MPI Rank 1: 
-MPI Rank 1: 1 out of 2 nodes do not share the minibatch layout with the input data.
-MPI Rank 1: 
-MPI Rank 1: 
-MPI Rank 1: Validating node MeanOfFeatures 
-MPI Rank 1: 
-MPI Rank 1: Validating --> features = InputValue -> [363, MBSize 64]
-MPI Rank 1: Validating --> MeanOfFeatures = Mean(features[363, MBSize 64]) -> [363, 1]
-MPI Rank 1: 
-MPI Rank 1: 
+MPI Rank 1: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 1: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
 MPI Rank 1: 
 MPI Rank 1: 1 out of 2 nodes do not share the minibatch layout with the input data.
 MPI Rank 1: 
 MPI Rank 1: 
-MPI Rank 1: Validating node Prior 
 MPI Rank 1: 
-MPI Rank 1: Validating --> labels = InputValue -> [132, MBSize 64]
-MPI Rank 1: Validating --> Prior = Mean(labels[132, MBSize 64]) -> [132, 1]
+MPI Rank 1: Validating for node MeanOfFeatures. 2 nodes to process in pass 1.
 MPI Rank 1: 
+MPI Rank 1: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 1: Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
 MPI Rank 1: 
+MPI Rank 1: Validating for node MeanOfFeatures, final verification.
+MPI Rank 1: 
+MPI Rank 1: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 1: Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
 MPI Rank 1: 
 MPI Rank 1: 1 out of 2 nodes do not share the minibatch layout with the input data.
+MPI Rank 1: 
+MPI Rank 1: 
+MPI Rank 1: 
+MPI Rank 1: Validating for node Prior. 2 nodes to process in pass 1.
+MPI Rank 1: 
+MPI Rank 1: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 1: Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+MPI Rank 1: 
+MPI Rank 1: Validating for node Prior. 1 nodes to process in pass 2.
+MPI Rank 1: 
+MPI Rank 1: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 1: Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+MPI Rank 1: 
+MPI Rank 1: Validating for node Prior, final verification.
+MPI Rank 1: 
+MPI Rank 1: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 1: Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+MPI Rank 1: 
+MPI Rank 1: 1 out of 2 nodes do not share the minibatch layout with the input data.
+MPI Rank 1: 
+MPI Rank 1: EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from 0 now 1. This message will be shown only once.
+MPI Rank 1: 
+MPI Rank 1: Precomputing --> Completed.
+MPI Rank 1: 
 MPI Rank 1: Set Max Temp Mem Size For Convolution Nodes to 0 samples.
-MPI Rank 1: Starting Epoch 1: learning rate per sample = 0.015625  momentum = 0.900000 
+MPI Rank 1: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000 
 MPI Rank 1: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 3, NumGradientBits = 32), Distributed reading is ENABLED.
 MPI Rank 1: 
+MPI Rank 1: Validating for node EvalErrorPrediction. 20 nodes to process in pass 1.
 MPI Rank 1: 
-MPI Rank 1: Validating node EvalErrorPrediction 
-MPI Rank 1: 
-MPI Rank 1: Validating --> labels = InputValue -> [132, MBSize 28]
+MPI Rank 1: Validating --> labels = InputValue -> [132, MBSize 62]
 MPI Rank 1: Validating --> W2 = LearnableParameter -> [132, 512]
 MPI Rank 1: Validating --> W1 = LearnableParameter -> [512, 512]
 MPI Rank 1: Validating --> W0 = LearnableParameter -> [512, 363]
-MPI Rank 1: Validating --> features = InputValue -> [363, MBSize 28]
-MPI Rank 1: Validating --> MeanOfFeatures = Mean(features[363, MBSize 28]) -> [363, 1]
-MPI Rank 1: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 28]) -> [363, 1]
-MPI Rank 1: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 28], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 28]
-MPI Rank 1: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 28]) -> [512, MBSize 28]
+MPI Rank 1: Validating --> features = InputValue -> [363, MBSize 62]
+MPI Rank 1: Validating --> MeanOfFeatures = Mean(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 1: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 1: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 62], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 62]
+MPI Rank 1: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 62]) -> [512, MBSize 62]
 MPI Rank 1: Validating --> B0 = LearnableParameter -> [512, 1]
-MPI Rank 1: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 28], B0[512, 1]) -> [512, MBSize 28]
-MPI Rank 1: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 28]) -> [512, MBSize 28]
-MPI Rank 1: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 28]) -> [512, MBSize 28]
+MPI Rank 1: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 62], B0[512, 1]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 62]) -> [512, MBSize 62]
 MPI Rank 1: Validating --> B1 = LearnableParameter -> [512, 1]
-MPI Rank 1: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 28], B1[512, 1]) -> [512, MBSize 28]
-MPI Rank 1: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 28]) -> [512, MBSize 28]
-MPI Rank 1: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 28]) -> [132, MBSize 28]
+MPI Rank 1: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 62], B1[512, 1]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 62]) -> [132, MBSize 62]
 MPI Rank 1: Validating --> B2 = LearnableParameter -> [132, 1]
-MPI Rank 1: Validating --> HLast = Plus(W2*H1[132, MBSize 28], B2[132, 1]) -> [132, MBSize 28]
-MPI Rank 1: Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 28], HLast[132, MBSize 28]) -> [1, 1]
+MPI Rank 1: Validating --> HLast = Plus(W2*H1[132, MBSize 62], B2[132, 1]) -> [132, MBSize 62]
+MPI Rank 1: Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 62], HLast[132, MBSize 62]) -> [1, 1]
 MPI Rank 1: 
+MPI Rank 1: Validating for node EvalErrorPrediction. 10 nodes to process in pass 2.
 MPI Rank 1: 
+MPI Rank 1: Validating --> labels = InputValue -> [132, MBSize 62]
+MPI Rank 1: Validating --> W2 = LearnableParameter -> [132, 512]
+MPI Rank 1: Validating --> W1 = LearnableParameter -> [512, 512]
+MPI Rank 1: Validating --> W0 = LearnableParameter -> [512, 363]
+MPI Rank 1: Validating --> features = InputValue -> [363, MBSize 62]
+MPI Rank 1: Validating --> MeanOfFeatures = Mean(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 1: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 1: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 62], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 62]
+MPI Rank 1: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> B0 = LearnableParameter -> [512, 1]
+MPI Rank 1: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 62], B0[512, 1]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> B1 = LearnableParameter -> [512, 1]
+MPI Rank 1: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 62], B1[512, 1]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 62]) -> [132, MBSize 62]
+MPI Rank 1: Validating --> B2 = LearnableParameter -> [132, 1]
+MPI Rank 1: Validating --> HLast = Plus(W2*H1[132, MBSize 62], B2[132, 1]) -> [132, MBSize 62]
+MPI Rank 1: Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 62], HLast[132, MBSize 62]) -> [1, 1]
+MPI Rank 1: 
+MPI Rank 1: Validating for node EvalErrorPrediction, final verification.
+MPI Rank 1: 
+MPI Rank 1: Validating --> labels = InputValue -> [132, MBSize 62]
+MPI Rank 1: Validating --> W2 = LearnableParameter -> [132, 512]
+MPI Rank 1: Validating --> W1 = LearnableParameter -> [512, 512]
+MPI Rank 1: Validating --> W0 = LearnableParameter -> [512, 363]
+MPI Rank 1: Validating --> features = InputValue -> [363, MBSize 62]
+MPI Rank 1: Validating --> MeanOfFeatures = Mean(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 1: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 1: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 62], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 62]
+MPI Rank 1: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> B0 = LearnableParameter -> [512, 1]
+MPI Rank 1: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 62], B0[512, 1]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> B1 = LearnableParameter -> [512, 1]
+MPI Rank 1: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 62], B1[512, 1]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 1: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 62]) -> [132, MBSize 62]
+MPI Rank 1: Validating --> B2 = LearnableParameter -> [132, 1]
+MPI Rank 1: Validating --> HLast = Plus(W2*H1[132, MBSize 62], B2[132, 1]) -> [132, MBSize 62]
+MPI Rank 1: Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 62], HLast[132, MBSize 62]) -> [1, 1]
 MPI Rank 1: 
 MPI Rank 1: 9 out of 20 nodes do not share the minibatch layout with the input data.
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[   1-  10 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.32135414; EvalErr[0]PerSample = 0.90000000; TotalTime = 0.25660s; TotalTimePerSample = 0.40093ms; SamplesPerSecond = 2494
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  11-  20 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.15070930; EvalErr[0]PerSample = 0.86718750; TotalTime = 0.24685s; TotalTimePerSample = 0.38571ms; SamplesPerSecond = 2592
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  21-  30 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.99901060; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.24575s; TotalTimePerSample = 0.38398ms; SamplesPerSecond = 2604
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  31-  40 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.86945780; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.24696s; TotalTimePerSample = 0.38587ms; SamplesPerSecond = 2591
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  41-  50 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.80219517; EvalErr[0]PerSample = 0.87812500; TotalTime = 0.24515s; TotalTimePerSample = 0.38305ms; SamplesPerSecond = 2610
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  51-  60 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.72890717; EvalErr[0]PerSample = 0.86875000; TotalTime = 0.24461s; TotalTimePerSample = 0.38220ms; SamplesPerSecond = 2616
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  61-  70 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.56187025; EvalErr[0]PerSample = 0.82343750; TotalTime = 0.24416s; TotalTimePerSample = 0.38149ms; SamplesPerSecond = 2621
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  71-  80 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.42790310; EvalErr[0]PerSample = 0.80781250; TotalTime = 0.24565s; TotalTimePerSample = 0.38382ms; SamplesPerSecond = 2605
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  81-  90 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.33928303; EvalErr[0]PerSample = 0.77343750; TotalTime = 0.24435s; TotalTimePerSample = 0.38179ms; SamplesPerSecond = 2619
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  91- 100 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.36398734; EvalErr[0]PerSample = 0.84375000; TotalTime = 0.24545s; TotalTimePerSample = 0.38352ms; SamplesPerSecond = 2607
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 101- 110 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.21223679; EvalErr[0]PerSample = 0.75312500; TotalTime = 0.24566s; TotalTimePerSample = 0.38384ms; SamplesPerSecond = 2605
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 111- 120 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.31265333; EvalErr[0]PerSample = 0.78750000; TotalTime = 0.24655s; TotalTimePerSample = 0.38523ms; SamplesPerSecond = 2595
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 121- 130 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.14081673; EvalErr[0]PerSample = 0.74687500; TotalTime = 0.24648s; TotalTimePerSample = 0.38513ms; SamplesPerSecond = 2596
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 131- 140 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00690023; EvalErr[0]PerSample = 0.69687500; TotalTime = 0.24592s; TotalTimePerSample = 0.38424ms; SamplesPerSecond = 2602
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 141- 150 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00496087; EvalErr[0]PerSample = 0.72343750; TotalTime = 0.24733s; TotalTimePerSample = 0.38646ms; SamplesPerSecond = 2587
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 151- 160 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.97859121; EvalErr[0]PerSample = 0.73906250; TotalTime = 0.24469s; TotalTimePerSample = 0.38232ms; SamplesPerSecond = 2615
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 161- 170 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.85686638; EvalErr[0]PerSample = 0.70781250; TotalTime = 0.24529s; TotalTimePerSample = 0.38326ms; SamplesPerSecond = 2609
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 171- 180 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.69053374; EvalErr[0]PerSample = 0.67187500; TotalTime = 0.24513s; TotalTimePerSample = 0.38302ms; SamplesPerSecond = 2610
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 181- 190 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.78653366; EvalErr[0]PerSample = 0.70468750; TotalTime = 0.24605s; TotalTimePerSample = 0.38446ms; SamplesPerSecond = 2601
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 191- 200 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.57702529; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.24667s; TotalTimePerSample = 0.38542ms; SamplesPerSecond = 2594
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 201- 210 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.61570793; EvalErr[0]PerSample = 0.66406250; TotalTime = 0.24435s; TotalTimePerSample = 0.38179ms; SamplesPerSecond = 2619
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 211- 220 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.55235603; EvalErr[0]PerSample = 0.65781250; TotalTime = 0.24639s; TotalTimePerSample = 0.38498ms; SamplesPerSecond = 2597
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 221- 230 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.48211165; EvalErr[0]PerSample = 0.62500000; TotalTime = 0.24605s; TotalTimePerSample = 0.38445ms; SamplesPerSecond = 2601
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 231- 240 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.38778376; EvalErr[0]PerSample = 0.62812500; TotalTime = 0.24590s; TotalTimePerSample = 0.38422ms; SamplesPerSecond = 2602
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 241- 250 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.36900911; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.24475s; TotalTimePerSample = 0.38242ms; SamplesPerSecond = 2614
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 251- 260 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.43967760; EvalErr[0]PerSample = 0.63281250; TotalTime = 0.24451s; TotalTimePerSample = 0.38204ms; SamplesPerSecond = 2617
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 261- 270 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.30281011; EvalErr[0]PerSample = 0.61250000; TotalTime = 0.24557s; TotalTimePerSample = 0.38370ms; SamplesPerSecond = 2606
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 271- 280 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.19669121; EvalErr[0]PerSample = 0.55937500; TotalTime = 0.24469s; TotalTimePerSample = 0.38234ms; SamplesPerSecond = 2615
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.28979560; EvalErr[0]PerSample = 0.60468750; TotalTime = 0.24494s; TotalTimePerSample = 0.38272ms; SamplesPerSecond = 2612
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.17750506; EvalErr[0]PerSample = 0.62187500; TotalTime = 0.24520s; TotalTimePerSample = 0.38312ms; SamplesPerSecond = 2610
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.26264305; EvalErr[0]PerSample = 0.59687500; TotalTime = 0.24493s; TotalTimePerSample = 0.38270ms; SamplesPerSecond = 2613
-MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15073149; EvalErr[0]PerSample = 0.56250000; TotalTime = 0.24494s; TotalTimePerSample = 0.38271ms; SamplesPerSecond = 2612
-MPI Rank 1: Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 2.9799568; EvalErrPerSample = 0.72216797; Ave LearnRatePerSample = 0.015625; EpochTime=7.871133
-MPI Rank 1: Starting Epoch 2: learning rate per sample = 0.001953  momentum = 0.656119 
+MPI Rank 1: 
+MPI Rank 1: 
+MPI Rank 1: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 3, NumGradientBits = 32), Distributed reading is ENABLED.
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[   1-  10 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.32135295; EvalErr[0]PerSample = 0.90000000; TotalTime = 0.24521s; TotalTimePerSample = 0.38315ms; SamplesPerSecond = 2609
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  11-  20 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.15070941; EvalErr[0]PerSample = 0.86718750; TotalTime = 0.23443s; TotalTimePerSample = 0.36629ms; SamplesPerSecond = 2730
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  21-  30 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.99901066; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.22705s; TotalTimePerSample = 0.35477ms; SamplesPerSecond = 2818
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  31-  40 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.86945816; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.22773s; TotalTimePerSample = 0.35583ms; SamplesPerSecond = 2810
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  41-  50 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.80219557; EvalErr[0]PerSample = 0.87812500; TotalTime = 0.22741s; TotalTimePerSample = 0.35533ms; SamplesPerSecond = 2814
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  51-  60 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.72890766; EvalErr[0]PerSample = 0.86875000; TotalTime = 0.22725s; TotalTimePerSample = 0.35507ms; SamplesPerSecond = 2816
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  61-  70 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.56187065; EvalErr[0]PerSample = 0.82343750; TotalTime = 0.22534s; TotalTimePerSample = 0.35209ms; SamplesPerSecond = 2840
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  71-  80 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.42790299; EvalErr[0]PerSample = 0.80781250; TotalTime = 0.22941s; TotalTimePerSample = 0.35846ms; SamplesPerSecond = 2789
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  81-  90 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.33928338; EvalErr[0]PerSample = 0.77343750; TotalTime = 0.22614s; TotalTimePerSample = 0.35334ms; SamplesPerSecond = 2830
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[  91- 100 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.36398772; EvalErr[0]PerSample = 0.84375000; TotalTime = 0.22771s; TotalTimePerSample = 0.35580ms; SamplesPerSecond = 2810
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 101- 110 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.21223693; EvalErr[0]PerSample = 0.75312500; TotalTime = 0.22797s; TotalTimePerSample = 0.35620ms; SamplesPerSecond = 2807
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 111- 120 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.31265357; EvalErr[0]PerSample = 0.78750000; TotalTime = 0.22806s; TotalTimePerSample = 0.35634ms; SamplesPerSecond = 2806
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 121- 130 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.14081698; EvalErr[0]PerSample = 0.74687500; TotalTime = 0.22797s; TotalTimePerSample = 0.35621ms; SamplesPerSecond = 2807
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 131- 140 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00690035; EvalErr[0]PerSample = 0.69687500; TotalTime = 0.22873s; TotalTimePerSample = 0.35740ms; SamplesPerSecond = 2798
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 141- 150 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00496066; EvalErr[0]PerSample = 0.72343750; TotalTime = 0.22763s; TotalTimePerSample = 0.35567ms; SamplesPerSecond = 2811
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 151- 160 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.97859081; EvalErr[0]PerSample = 0.73906250; TotalTime = 0.22697s; TotalTimePerSample = 0.35465ms; SamplesPerSecond = 2819
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 161- 170 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.85686609; EvalErr[0]PerSample = 0.70781250; TotalTime = 0.22767s; TotalTimePerSample = 0.35573ms; SamplesPerSecond = 2811
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 171- 180 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.69053374; EvalErr[0]PerSample = 0.67187500; TotalTime = 0.22776s; TotalTimePerSample = 0.35587ms; SamplesPerSecond = 2810
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 181- 190 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.78653376; EvalErr[0]PerSample = 0.70468750; TotalTime = 0.22751s; TotalTimePerSample = 0.35548ms; SamplesPerSecond = 2813
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 191- 200 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.57702533; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.22746s; TotalTimePerSample = 0.35541ms; SamplesPerSecond = 2813
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 201- 210 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.61570805; EvalErr[0]PerSample = 0.66406250; TotalTime = 0.22868s; TotalTimePerSample = 0.35731ms; SamplesPerSecond = 2798
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 211- 220 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.55235582; EvalErr[0]PerSample = 0.65781250; TotalTime = 0.22821s; TotalTimePerSample = 0.35658ms; SamplesPerSecond = 2804
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 221- 230 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.48211151; EvalErr[0]PerSample = 0.62500000; TotalTime = 0.22782s; TotalTimePerSample = 0.35597ms; SamplesPerSecond = 2809
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 231- 240 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.38778372; EvalErr[0]PerSample = 0.62812500; TotalTime = 0.22683s; TotalTimePerSample = 0.35443ms; SamplesPerSecond = 2821
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 241- 250 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.36900902; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.23027s; TotalTimePerSample = 0.35980ms; SamplesPerSecond = 2779
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 251- 260 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.43967781; EvalErr[0]PerSample = 0.63281250; TotalTime = 0.22756s; TotalTimePerSample = 0.35556ms; SamplesPerSecond = 2812
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 261- 270 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.30281039; EvalErr[0]PerSample = 0.61250000; TotalTime = 0.22812s; TotalTimePerSample = 0.35643ms; SamplesPerSecond = 2805
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 271- 280 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.19669146; EvalErr[0]PerSample = 0.55937500; TotalTime = 0.22729s; TotalTimePerSample = 0.35514ms; SamplesPerSecond = 2815
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.28979581; EvalErr[0]PerSample = 0.60468750; TotalTime = 0.22758s; TotalTimePerSample = 0.35560ms; SamplesPerSecond = 2812
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.17750535; EvalErr[0]PerSample = 0.62187500; TotalTime = 0.22775s; TotalTimePerSample = 0.35585ms; SamplesPerSecond = 2810
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.26264398; EvalErr[0]PerSample = 0.59687500; TotalTime = 0.22606s; TotalTimePerSample = 0.35322ms; SamplesPerSecond = 2831
+MPI Rank 1:  Epoch[ 1 of 3]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15073110; EvalErr[0]PerSample = 0.56250000; TotalTime = 0.22674s; TotalTimePerSample = 0.35429ms; SamplesPerSecond = 2822
+MPI Rank 1: Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 2.9799569; EvalErrPerSample = 0.72216797; Ave LearnRatePerSample = 0.015625; EpochTime=7.319114
+MPI Rank 1: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119 
 MPI Rank 1: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
 MPI Rank 1: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 3, NumGradientBits = 32), Distributed reading is ENABLED.
-MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[   1-  10 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.01598530; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.29109s; TotalTimePerSample = 0.11371ms; SamplesPerSecond = 8794
-MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  11-  20 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98818586; EvalErr[0]PerSample = 0.54296875; TotalTime = 0.28094s; TotalTimePerSample = 0.10974ms; SamplesPerSecond = 9112
-MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  21-  30 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98698123; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.28221s; TotalTimePerSample = 0.11024ms; SamplesPerSecond = 9071
-MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  31-  40 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.93126298; EvalErr[0]PerSample = 0.52773437; TotalTime = 0.27954s; TotalTimePerSample = 0.10919ms; SamplesPerSecond = 9157
-MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  41-  50 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90067741; EvalErr[0]PerSample = 0.52656250; TotalTime = 0.27987s; TotalTimePerSample = 0.10932ms; SamplesPerSecond = 9147
-MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  51-  60 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.97115807; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.27910s; TotalTimePerSample = 0.10902ms; SamplesPerSecond = 9172
-MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  61-  70 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.89518067; EvalErr[0]PerSample = 0.52031250; TotalTime = 0.27764s; TotalTimePerSample = 0.10845ms; SamplesPerSecond = 9220
-MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  71-  80 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90450396; EvalErr[0]PerSample = 0.53164062; TotalTime = 0.27505s; TotalTimePerSample = 0.10744ms; SamplesPerSecond = 9307
-MPI Rank 1: Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 1.9492419; EvalErrPerSample = 0.53417969; Ave LearnRatePerSample = 0.001953125; EpochTime=2.248133
-MPI Rank 1: Starting Epoch 3: learning rate per sample = 0.000098  momentum = 0.656119 
+MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[   1-  10 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.01598514; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.25371s; TotalTimePerSample = 0.09911ms; SamplesPerSecond = 10090
+MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  11-  20 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98818590; EvalErr[0]PerSample = 0.54296875; TotalTime = 0.24939s; TotalTimePerSample = 0.09742ms; SamplesPerSecond = 10265
+MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  21-  30 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98698122; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.25094s; TotalTimePerSample = 0.09802ms; SamplesPerSecond = 10201
+MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  31-  40 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.93126295; EvalErr[0]PerSample = 0.52773437; TotalTime = 0.24942s; TotalTimePerSample = 0.09743ms; SamplesPerSecond = 10263
+MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  41-  50 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90067743; EvalErr[0]PerSample = 0.52656250; TotalTime = 0.24938s; TotalTimePerSample = 0.09741ms; SamplesPerSecond = 10265
+MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  51-  60 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.97115808; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.24886s; TotalTimePerSample = 0.09721ms; SamplesPerSecond = 10286
+MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  61-  70 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.89518061; EvalErr[0]PerSample = 0.52031250; TotalTime = 0.24865s; TotalTimePerSample = 0.09713ms; SamplesPerSecond = 10295
+MPI Rank 1:  Epoch[ 2 of 3]-Minibatch[  71-  80 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90450394; EvalErr[0]PerSample = 0.53164062; TotalTime = 0.24518s; TotalTimePerSample = 0.09577ms; SamplesPerSecond = 10441
+MPI Rank 1: Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 1.9492419; EvalErrPerSample = 0.53417969; Ave LearnRatePerSample = 0.001953125; EpochTime=1.999721
+MPI Rank 1: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119 
 MPI Rank 1: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
 MPI Rank 1: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 3, NumGradientBits = 32), Distributed reading is ENABLED.
-MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87359851; EvalErr[0]PerSample = 0.51933594; TotalTime = 0.44649s; TotalTimePerSample = 0.04360ms; SamplesPerSecond = 22934
-MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656277; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.42652s; TotalTimePerSample = 0.04165ms; SamplesPerSecond = 24008
-MPI Rank 1: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.5184082; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=0.880982
+MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87359841; EvalErr[0]PerSample = 0.51933594; TotalTime = 0.36750s; TotalTimePerSample = 0.03589ms; SamplesPerSecond = 27863
+MPI Rank 1:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656271; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.34559s; TotalTimePerSample = 0.03375ms; SamplesPerSecond = 29630
+MPI Rank 1: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.5184082; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=0.728446
 MPI Rank 1: CNTKCommandTrainEnd: speechTrain
 MPI Rank 1: COMPLETED
 MPI Rank 1: ~MPIWrapper
-MPI Rank 2: running on localhost at 2015/10/02 13:38:53
-MPI Rank 2: command line options: 
-MPI Rank 2: configFile=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/../cntk.config RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data DeviceId=0 stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr 
+MPI Rank 2: running on localhost at 2015/10/24 12:56:12
+MPI Rank 2: command line: 
+MPI Rank 2: /home/mluser/src/cplx_master/build/debug/bin/cntk configFile=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/../cntk.config RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/.. DeviceId=0 stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr 
 MPI Rank 2: 
 MPI Rank 2: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
 MPI Rank 2: precision=float
@@ -1054,10 +1281,11 @@ MPI Rank 2:           labelType=Category
 MPI Rank 2:       ]
 MPI Rank 2:     ]
 MPI Rank 2: ]
-MPI Rank 2: RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu
+MPI Rank 2: RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu
 MPI Rank 2: DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
+MPI Rank 2: ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/..
 MPI Rank 2: DeviceId=0
-MPI Rank 2: stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
+MPI Rank 2: stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
 MPI Rank 2: 
 MPI Rank 2: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 MPI Rank 2: 
@@ -1068,7 +1296,7 @@ MPI Rank 2: deviceId=0
 MPI Rank 2: parallelTrain=true
 MPI Rank 2: speechTrain=[
 MPI Rank 2:     action=train
-MPI Rank 2:     modelPath=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
+MPI Rank 2:     modelPath=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
 MPI Rank 2:     deviceId=0
 MPI Rank 2:     traceLevel=1
 MPI Rank 2:     SimpleNetworkBuilder=[
@@ -1151,23 +1379,25 @@ MPI Rank 2:           labelType=Category
 MPI Rank 2:       ]
 MPI Rank 2:     ]
 MPI Rank 2: ]
-MPI Rank 2: RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu
+MPI Rank 2: RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu
 MPI Rank 2: DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
+MPI Rank 2: ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/..
 MPI Rank 2: DeviceId=0
-MPI Rank 2: stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
+MPI Rank 2: stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
 MPI Rank 2: 
 MPI Rank 2: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 MPI Rank 2: 
 MPI Rank 2: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 MPI Rank 2: configparameters: cntk.config:command=speechTrain
+MPI Rank 2: configparameters: cntk.config:ConfigDir=/home/mluser/src/cplx_master/Tests/Speech/DNN/ParallelNoQuantization/..
 MPI Rank 2: configparameters: cntk.config:DataDir=/home/mluser/src/cplx_master/Tests/Speech/Data
 MPI Rank 2: configparameters: cntk.config:deviceId=0
 MPI Rank 2: configparameters: cntk.config:parallelTrain=true
 MPI Rank 2: configparameters: cntk.config:precision=float
-MPI Rank 2: configparameters: cntk.config:RunDir=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu
+MPI Rank 2: configparameters: cntk.config:RunDir=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu
 MPI Rank 2: configparameters: cntk.config:speechTrain=[
 MPI Rank 2:     action=train
-MPI Rank 2:     modelPath=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
+MPI Rank 2:     modelPath=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
 MPI Rank 2:     deviceId=0
 MPI Rank 2:     traceLevel=1
 MPI Rank 2:     SimpleNetworkBuilder=[
@@ -1251,10 +1481,11 @@ MPI Rank 2:       ]
 MPI Rank 2:     ]
 MPI Rank 2: ]
 MPI Rank 2: 
-MPI Rank 2: configparameters: cntk.config:stderr=/tmp/cntk-test-20151002133421.200863/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
+MPI Rank 2: configparameters: cntk.config:stderr=/tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/stderr
 MPI Rank 2: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 MPI Rank 2: command: speechTrain 
 MPI Rank 2: precision = float
+MPI Rank 2: CNTKModelPath: /tmp/cntk-test-20151024125611.671961/Speech/DNN_ParallelNoQuantization@debug_gpu/models/cntkSpeech.dnn
 MPI Rank 2: CNTKCommandTrainInfo: speechTrain : 3
 MPI Rank 2: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 MPI Rank 2: CNTKCommandTrainBegin: speechTrain
@@ -1266,11 +1497,12 @@ MPI Rank 2: htkmlfreader: reading MLF file /home/mluser/src/cplx_master/Tests/Sp
 MPI Rank 2: ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 MPI Rank 2: label set 0: 129 classes
 MPI Rank 2: minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+MPI Rank 2: SetUniformRandomValue (GPU): creating curand object with seed 1
 MPI Rank 2: GetTrainCriterionNodes  ...
 MPI Rank 2: GetEvalCriterionNodes  ...
 MPI Rank 2: 
 MPI Rank 2: 
-MPI Rank 2: Validating node CrossEntropyWithSoftmax 
+MPI Rank 2: Validating for node CrossEntropyWithSoftmax. 20 nodes to process in pass 1.
 MPI Rank 2: 
 MPI Rank 2: Validating --> labels = InputValue -> [132, MBSize 3]
 MPI Rank 2: Validating --> W2 = LearnableParameter -> [132, 512]
@@ -1293,13 +1525,57 @@ MPI Rank 2: Validating --> B2 = LearnableParameter -> [132, 1]
 MPI Rank 2: Validating --> HLast = Plus(W2*H1[132, MBSize 3], B2[132, 1]) -> [132, MBSize 3]
 MPI Rank 2: Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 3]) -> [1, 1]
 MPI Rank 2: 
+MPI Rank 2: Validating for node CrossEntropyWithSoftmax. 12 nodes to process in pass 2.
 MPI Rank 2: 
+MPI Rank 2: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 2: Validating --> W2 = LearnableParameter -> [132, 512]
+MPI Rank 2: Validating --> W1 = LearnableParameter -> [512, 512]
+MPI Rank 2: Validating --> W0 = LearnableParameter -> [512, 363]
+MPI Rank 2: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 2: Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+MPI Rank 2: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+MPI Rank 2: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+MPI Rank 2: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 2: Validating --> B0 = LearnableParameter -> [512, 1]
+MPI Rank 2: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 3]
+MPI Rank 2: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 2: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 2: Validating --> B1 = LearnableParameter -> [512, 1]
+MPI Rank 2: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 3], B1[512, 1]) -> [512, MBSize 3]
+MPI Rank 2: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 2: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 3]) -> [132, MBSize 3]
+MPI Rank 2: Validating --> B2 = LearnableParameter -> [132, 1]
+MPI Rank 2: Validating --> HLast = Plus(W2*H1[132, MBSize 3], B2[132, 1]) -> [132, MBSize 3]
+MPI Rank 2: Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 3]) -> [1, 1]
+MPI Rank 2: 
+MPI Rank 2: Validating for node CrossEntropyWithSoftmax, final verification.
+MPI Rank 2: 
+MPI Rank 2: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 2: Validating --> W2 = LearnableParameter -> [132, 512]
+MPI Rank 2: Validating --> W1 = LearnableParameter -> [512, 512]
+MPI Rank 2: Validating --> W0 = LearnableParameter -> [512, 363]
+MPI Rank 2: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 2: Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
+MPI Rank 2: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
+MPI Rank 2: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 3], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 3]
+MPI Rank 2: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 2: Validating --> B0 = LearnableParameter -> [512, 1]
+MPI Rank 2: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 3], B0[512, 1]) -> [512, MBSize 3]
+MPI Rank 2: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 2: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 2: Validating --> B1 = LearnableParameter -> [512, 1]
+MPI Rank 2: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 3], B1[512, 1]) -> [512, MBSize 3]
+MPI Rank 2: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 3]) -> [512, MBSize 3]
+MPI Rank 2: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 3]) -> [132, MBSize 3]
+MPI Rank 2: Validating --> B2 = LearnableParameter -> [132, 1]
+MPI Rank 2: Validating --> HLast = Plus(W2*H1[132, MBSize 3], B2[132, 1]) -> [132, MBSize 3]
+MPI Rank 2: Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax(labels[132, MBSize 3], HLast[132, MBSize 3]) -> [1, 1]
 MPI Rank 2: 
 MPI Rank 2: 9 out of 20 nodes do not share the minibatch layout with the input data.
-MPI Rank 2: Found 6 PreCompute nodes
-MPI Rank 2: 	NodeName: InvStdOfFeatures
-MPI Rank 2: 	NodeName: MeanOfFeatures
-MPI Rank 2: 	NodeName: Prior
+MPI Rank 2: 
+MPI Rank 2: 
+MPI Rank 2: Precomputing --> 3 PreCompute nodes found.
+MPI Rank 2: 
 MPI Rank 2: 	NodeName: InvStdOfFeatures
 MPI Rank 2: 	NodeName: MeanOfFeatures
 MPI Rank 2: 	NodeName: Prior
@@ -1307,120 +1583,186 @@ MPI Rank 2: minibatchiterator: epoch 0: frames [0..252734] (first utterance at f
 MPI Rank 2: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 MPI Rank 2: 
 MPI Rank 2: 
-MPI Rank 2: Validating node InvStdOfFeatures 
+MPI Rank 2: Validating for node InvStdOfFeatures. 2 nodes to process in pass 1.
 MPI Rank 2: 
-MPI Rank 2: Validating --> features = InputValue -> [363, MBSize 64]
-MPI Rank 2: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 64]) -> [363, 1]
+MPI Rank 2: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 2: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
 MPI Rank 2: 
+MPI Rank 2: Validating for node InvStdOfFeatures, final verification.
 MPI Rank 2: 
-MPI Rank 2: 
-MPI Rank 2: 1 out of 2 nodes do not share the minibatch layout with the input data.
-MPI Rank 2: 
-MPI Rank 2: 
-MPI Rank 2: Validating node MeanOfFeatures 
-MPI Rank 2: 
-MPI Rank 2: Validating --> features = InputValue -> [363, MBSize 64]
-MPI Rank 2: Validating --> MeanOfFeatures = Mean(features[363, MBSize 64]) -> [363, 1]
-MPI Rank 2: 
-MPI Rank 2: 
+MPI Rank 2: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 2: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 3]) -> [363, 1]
 MPI Rank 2: 
 MPI Rank 2: 1 out of 2 nodes do not share the minibatch layout with the input data.
 MPI Rank 2: 
 MPI Rank 2: 
-MPI Rank 2: Validating node Prior 
 MPI Rank 2: 
-MPI Rank 2: Validating --> labels = InputValue -> [132, MBSize 64]
-MPI Rank 2: Validating --> Prior = Mean(labels[132, MBSize 64]) -> [132, 1]
+MPI Rank 2: Validating for node MeanOfFeatures. 2 nodes to process in pass 1.
 MPI Rank 2: 
+MPI Rank 2: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 2: Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
 MPI Rank 2: 
+MPI Rank 2: Validating for node MeanOfFeatures, final verification.
+MPI Rank 2: 
+MPI Rank 2: Validating --> features = InputValue -> [363, MBSize 3]
+MPI Rank 2: Validating --> MeanOfFeatures = Mean(features[363, MBSize 3]) -> [363, 1]
 MPI Rank 2: 
 MPI Rank 2: 1 out of 2 nodes do not share the minibatch layout with the input data.
+MPI Rank 2: 
+MPI Rank 2: 
+MPI Rank 2: 
+MPI Rank 2: Validating for node Prior. 2 nodes to process in pass 1.
+MPI Rank 2: 
+MPI Rank 2: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 2: Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+MPI Rank 2: 
+MPI Rank 2: Validating for node Prior. 1 nodes to process in pass 2.
+MPI Rank 2: 
+MPI Rank 2: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 2: Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+MPI Rank 2: 
+MPI Rank 2: Validating for node Prior, final verification.
+MPI Rank 2: 
+MPI Rank 2: Validating --> labels = InputValue -> [132, MBSize 3]
+MPI Rank 2: Validating --> Prior = Mean(labels[132, MBSize 3]) -> [132, 1]
+MPI Rank 2: 
+MPI Rank 2: 1 out of 2 nodes do not share the minibatch layout with the input data.
+MPI Rank 2: 
+MPI Rank 2: EnforceOneGPUOnly: WARNING: Ignored attempt to change GPU choice from 0 now 1. This message will be shown only once.
+MPI Rank 2: 
+MPI Rank 2: Precomputing --> Completed.
+MPI Rank 2: 
 MPI Rank 2: Set Max Temp Mem Size For Convolution Nodes to 0 samples.
-MPI Rank 2: Starting Epoch 1: learning rate per sample = 0.015625  momentum = 0.900000 
+MPI Rank 2: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000 
 MPI Rank 2: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
-MPI Rank 2: Starting minibatch loop, DataParallelSGD training (MyRank = 2, NumNodes = 3, NumGradientBits = 32), Distributed reading is ENABLED.
 MPI Rank 2: 
+MPI Rank 2: Validating for node EvalErrorPrediction. 20 nodes to process in pass 1.
 MPI Rank 2: 
-MPI Rank 2: Validating node EvalErrorPrediction 
-MPI Rank 2: 
-MPI Rank 2: Validating --> labels = InputValue -> [132, MBSize 7]
+MPI Rank 2: Validating --> labels = InputValue -> [132, MBSize 62]
 MPI Rank 2: Validating --> W2 = LearnableParameter -> [132, 512]
 MPI Rank 2: Validating --> W1 = LearnableParameter -> [512, 512]
 MPI Rank 2: Validating --> W0 = LearnableParameter -> [512, 363]
-MPI Rank 2: Validating --> features = InputValue -> [363, MBSize 7]
-MPI Rank 2: Validating --> MeanOfFeatures = Mean(features[363, MBSize 7]) -> [363, 1]
-MPI Rank 2: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 7]) -> [363, 1]
-MPI Rank 2: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 7], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 7]
-MPI Rank 2: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 7]) -> [512, MBSize 7]
+MPI Rank 2: Validating --> features = InputValue -> [363, MBSize 62]
+MPI Rank 2: Validating --> MeanOfFeatures = Mean(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 2: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 2: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 62], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 62]
+MPI Rank 2: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 62]) -> [512, MBSize 62]
 MPI Rank 2: Validating --> B0 = LearnableParameter -> [512, 1]
-MPI Rank 2: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 7], B0[512, 1]) -> [512, MBSize 7]
-MPI Rank 2: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 7]) -> [512, MBSize 7]
-MPI Rank 2: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 7]) -> [512, MBSize 7]
+MPI Rank 2: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 62], B0[512, 1]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 62]) -> [512, MBSize 62]
 MPI Rank 2: Validating --> B1 = LearnableParameter -> [512, 1]
-MPI Rank 2: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 7], B1[512, 1]) -> [512, MBSize 7]
-MPI Rank 2: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 7]) -> [512, MBSize 7]
-MPI Rank 2: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 7]) -> [132, MBSize 7]
+MPI Rank 2: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 62], B1[512, 1]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 62]) -> [132, MBSize 62]
 MPI Rank 2: Validating --> B2 = LearnableParameter -> [132, 1]
-MPI Rank 2: Validating --> HLast = Plus(W2*H1[132, MBSize 7], B2[132, 1]) -> [132, MBSize 7]
-MPI Rank 2: Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 7], HLast[132, MBSize 7]) -> [1, 1]
+MPI Rank 2: Validating --> HLast = Plus(W2*H1[132, MBSize 62], B2[132, 1]) -> [132, MBSize 62]
+MPI Rank 2: Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 62], HLast[132, MBSize 62]) -> [1, 1]
 MPI Rank 2: 
+MPI Rank 2: Validating for node EvalErrorPrediction. 10 nodes to process in pass 2.
 MPI Rank 2: 
+MPI Rank 2: Validating --> labels = InputValue -> [132, MBSize 62]
+MPI Rank 2: Validating --> W2 = LearnableParameter -> [132, 512]
+MPI Rank 2: Validating --> W1 = LearnableParameter -> [512, 512]
+MPI Rank 2: Validating --> W0 = LearnableParameter -> [512, 363]
+MPI Rank 2: Validating --> features = InputValue -> [363, MBSize 62]
+MPI Rank 2: Validating --> MeanOfFeatures = Mean(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 2: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 2: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 62], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 62]
+MPI Rank 2: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> B0 = LearnableParameter -> [512, 1]
+MPI Rank 2: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 62], B0[512, 1]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> B1 = LearnableParameter -> [512, 1]
+MPI Rank 2: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 62], B1[512, 1]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 62]) -> [132, MBSize 62]
+MPI Rank 2: Validating --> B2 = LearnableParameter -> [132, 1]
+MPI Rank 2: Validating --> HLast = Plus(W2*H1[132, MBSize 62], B2[132, 1]) -> [132, MBSize 62]
+MPI Rank 2: Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 62], HLast[132, MBSize 62]) -> [1, 1]
+MPI Rank 2: 
+MPI Rank 2: Validating for node EvalErrorPrediction, final verification.
+MPI Rank 2: 
+MPI Rank 2: Validating --> labels = InputValue -> [132, MBSize 62]
+MPI Rank 2: Validating --> W2 = LearnableParameter -> [132, 512]
+MPI Rank 2: Validating --> W1 = LearnableParameter -> [512, 512]
+MPI Rank 2: Validating --> W0 = LearnableParameter -> [512, 363]
+MPI Rank 2: Validating --> features = InputValue -> [363, MBSize 62]
+MPI Rank 2: Validating --> MeanOfFeatures = Mean(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 2: Validating --> InvStdOfFeatures = InvStdDev(features[363, MBSize 62]) -> [363, 1]
+MPI Rank 2: Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization(features[363, MBSize 62], MeanOfFeatures[363, 1], InvStdOfFeatures[363, 1]) -> [363, MBSize 62]
+MPI Rank 2: Validating --> W0*features = Times(W0[512, 363], MVNormalizedFeatures[363, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> B0 = LearnableParameter -> [512, 1]
+MPI Rank 2: Validating --> W0*features+B0 = Plus(W0*features[512, MBSize 62], B0[512, 1]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> H1 = Sigmoid(W0*features+B0[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> W1*H1 = Times(W1[512, 512], H1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> B1 = LearnableParameter -> [512, 1]
+MPI Rank 2: Validating --> W1*H1+B1 = Plus(W1*H1[512, MBSize 62], B1[512, 1]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> H2 = Sigmoid(W1*H1+B1[512, MBSize 62]) -> [512, MBSize 62]
+MPI Rank 2: Validating --> W2*H1 = Times(W2[132, 512], H2[512, MBSize 62]) -> [132, MBSize 62]
+MPI Rank 2: Validating --> B2 = LearnableParameter -> [132, 1]
+MPI Rank 2: Validating --> HLast = Plus(W2*H1[132, MBSize 62], B2[132, 1]) -> [132, MBSize 62]
+MPI Rank 2: Validating --> EvalErrorPrediction = ErrorPrediction(labels[132, MBSize 62], HLast[132, MBSize 62]) -> [1, 1]
 MPI Rank 2: 
 MPI Rank 2: 9 out of 20 nodes do not share the minibatch layout with the input data.
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[   1-  10 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.32135414; EvalErr[0]PerSample = 0.90000000; TotalTime = 0.25673s; TotalTimePerSample = 0.40114ms; SamplesPerSecond = 2492
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  11-  20 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.15070930; EvalErr[0]PerSample = 0.86718750; TotalTime = 0.24685s; TotalTimePerSample = 0.38571ms; SamplesPerSecond = 2592
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  21-  30 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.99901060; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.24575s; TotalTimePerSample = 0.38398ms; SamplesPerSecond = 2604
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  31-  40 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.86945780; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.24696s; TotalTimePerSample = 0.38588ms; SamplesPerSecond = 2591
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  41-  50 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.80219517; EvalErr[0]PerSample = 0.87812500; TotalTime = 0.24516s; TotalTimePerSample = 0.38307ms; SamplesPerSecond = 2610
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  51-  60 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.72890717; EvalErr[0]PerSample = 0.86875000; TotalTime = 0.24462s; TotalTimePerSample = 0.38221ms; SamplesPerSecond = 2616
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  61-  70 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.56187025; EvalErr[0]PerSample = 0.82343750; TotalTime = 0.24416s; TotalTimePerSample = 0.38150ms; SamplesPerSecond = 2621
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  71-  80 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.42790310; EvalErr[0]PerSample = 0.80781250; TotalTime = 0.24565s; TotalTimePerSample = 0.38383ms; SamplesPerSecond = 2605
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  81-  90 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.33928303; EvalErr[0]PerSample = 0.77343750; TotalTime = 0.24437s; TotalTimePerSample = 0.38183ms; SamplesPerSecond = 2618
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  91- 100 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.36398734; EvalErr[0]PerSample = 0.84375000; TotalTime = 0.24545s; TotalTimePerSample = 0.38352ms; SamplesPerSecond = 2607
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 101- 110 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.21223679; EvalErr[0]PerSample = 0.75312500; TotalTime = 0.24567s; TotalTimePerSample = 0.38385ms; SamplesPerSecond = 2605
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 111- 120 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.31265333; EvalErr[0]PerSample = 0.78750000; TotalTime = 0.24655s; TotalTimePerSample = 0.38523ms; SamplesPerSecond = 2595
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 121- 130 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.14081673; EvalErr[0]PerSample = 0.74687500; TotalTime = 0.24650s; TotalTimePerSample = 0.38515ms; SamplesPerSecond = 2596
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 131- 140 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00690023; EvalErr[0]PerSample = 0.69687500; TotalTime = 0.24591s; TotalTimePerSample = 0.38424ms; SamplesPerSecond = 2602
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 141- 150 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00496087; EvalErr[0]PerSample = 0.72343750; TotalTime = 0.24734s; TotalTimePerSample = 0.38647ms; SamplesPerSecond = 2587
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 151- 160 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.97859121; EvalErr[0]PerSample = 0.73906250; TotalTime = 0.24469s; TotalTimePerSample = 0.38233ms; SamplesPerSecond = 2615
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 161- 170 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.85686638; EvalErr[0]PerSample = 0.70781250; TotalTime = 0.24529s; TotalTimePerSample = 0.38327ms; SamplesPerSecond = 2609
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 171- 180 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.69053374; EvalErr[0]PerSample = 0.67187500; TotalTime = 0.24514s; TotalTimePerSample = 0.38303ms; SamplesPerSecond = 2610
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 181- 190 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.78653366; EvalErr[0]PerSample = 0.70468750; TotalTime = 0.24606s; TotalTimePerSample = 0.38447ms; SamplesPerSecond = 2600
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 191- 200 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.57702529; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.24668s; TotalTimePerSample = 0.38543ms; SamplesPerSecond = 2594
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 201- 210 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.61570793; EvalErr[0]PerSample = 0.66406250; TotalTime = 0.24435s; TotalTimePerSample = 0.38180ms; SamplesPerSecond = 2619
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 211- 220 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.55235603; EvalErr[0]PerSample = 0.65781250; TotalTime = 0.24639s; TotalTimePerSample = 0.38499ms; SamplesPerSecond = 2597
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 221- 230 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.48211165; EvalErr[0]PerSample = 0.62500000; TotalTime = 0.24605s; TotalTimePerSample = 0.38446ms; SamplesPerSecond = 2601
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 231- 240 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.38778376; EvalErr[0]PerSample = 0.62812500; TotalTime = 0.24590s; TotalTimePerSample = 0.38423ms; SamplesPerSecond = 2602
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 241- 250 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.36900911; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.24475s; TotalTimePerSample = 0.38242ms; SamplesPerSecond = 2614
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 251- 260 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.43967760; EvalErr[0]PerSample = 0.63281250; TotalTime = 0.24451s; TotalTimePerSample = 0.38205ms; SamplesPerSecond = 2617
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 261- 270 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.30281011; EvalErr[0]PerSample = 0.61250000; TotalTime = 0.24558s; TotalTimePerSample = 0.38371ms; SamplesPerSecond = 2606
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 271- 280 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.19669121; EvalErr[0]PerSample = 0.55937500; TotalTime = 0.24470s; TotalTimePerSample = 0.38235ms; SamplesPerSecond = 2615
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.28979560; EvalErr[0]PerSample = 0.60468750; TotalTime = 0.24495s; TotalTimePerSample = 0.38273ms; SamplesPerSecond = 2612
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.17750506; EvalErr[0]PerSample = 0.62187500; TotalTime = 0.24520s; TotalTimePerSample = 0.38313ms; SamplesPerSecond = 2610
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.26264305; EvalErr[0]PerSample = 0.59687500; TotalTime = 0.24493s; TotalTimePerSample = 0.38270ms; SamplesPerSecond = 2613
-MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15073149; EvalErr[0]PerSample = 0.56250000; TotalTime = 0.24465s; TotalTimePerSample = 0.38226ms; SamplesPerSecond = 2616
-MPI Rank 2: Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 2.9799568; EvalErrPerSample = 0.72216797; Ave LearnRatePerSample = 0.015625; EpochTime=7.87131
-MPI Rank 2: Starting Epoch 2: learning rate per sample = 0.001953  momentum = 0.656119 
+MPI Rank 2: 
+MPI Rank 2: 
+MPI Rank 2: Starting minibatch loop, DataParallelSGD training (MyRank = 2, NumNodes = 3, NumGradientBits = 32), Distributed reading is ENABLED.
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[   1-  10 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.32135295; EvalErr[0]PerSample = 0.90000000; TotalTime = 0.24689s; TotalTimePerSample = 0.38577ms; SamplesPerSecond = 2592
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  11-  20 of 320]: SamplesSeen = 640; TrainLossPerSample =  4.15070941; EvalErr[0]PerSample = 0.86718750; TotalTime = 0.23655s; TotalTimePerSample = 0.36962ms; SamplesPerSecond = 2705
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  21-  30 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.99901066; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.22706s; TotalTimePerSample = 0.35478ms; SamplesPerSecond = 2818
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  31-  40 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.86945816; EvalErr[0]PerSample = 0.87656250; TotalTime = 0.22778s; TotalTimePerSample = 0.35590ms; SamplesPerSecond = 2809
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  41-  50 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.80219557; EvalErr[0]PerSample = 0.87812500; TotalTime = 0.22743s; TotalTimePerSample = 0.35536ms; SamplesPerSecond = 2814
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  51-  60 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.72890766; EvalErr[0]PerSample = 0.86875000; TotalTime = 0.22722s; TotalTimePerSample = 0.35502ms; SamplesPerSecond = 2816
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  61-  70 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.56187065; EvalErr[0]PerSample = 0.82343750; TotalTime = 0.22646s; TotalTimePerSample = 0.35384ms; SamplesPerSecond = 2826
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  71-  80 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.42790299; EvalErr[0]PerSample = 0.80781250; TotalTime = 0.22831s; TotalTimePerSample = 0.35673ms; SamplesPerSecond = 2803
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  81-  90 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.33928338; EvalErr[0]PerSample = 0.77343750; TotalTime = 0.22619s; TotalTimePerSample = 0.35342ms; SamplesPerSecond = 2829
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[  91- 100 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.36398772; EvalErr[0]PerSample = 0.84375000; TotalTime = 0.22774s; TotalTimePerSample = 0.35584ms; SamplesPerSecond = 2810
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 101- 110 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.21223693; EvalErr[0]PerSample = 0.75312500; TotalTime = 0.22830s; TotalTimePerSample = 0.35671ms; SamplesPerSecond = 2803
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 111- 120 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.31265357; EvalErr[0]PerSample = 0.78750000; TotalTime = 0.22772s; TotalTimePerSample = 0.35581ms; SamplesPerSecond = 2810
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 121- 130 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.14081698; EvalErr[0]PerSample = 0.74687500; TotalTime = 0.22802s; TotalTimePerSample = 0.35628ms; SamplesPerSecond = 2806
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 131- 140 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00690035; EvalErr[0]PerSample = 0.69687500; TotalTime = 0.22880s; TotalTimePerSample = 0.35751ms; SamplesPerSecond = 2797
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 141- 150 of 320]: SamplesSeen = 640; TrainLossPerSample =  3.00496066; EvalErr[0]PerSample = 0.72343750; TotalTime = 0.22758s; TotalTimePerSample = 0.35559ms; SamplesPerSecond = 2812
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 151- 160 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.97859081; EvalErr[0]PerSample = 0.73906250; TotalTime = 0.22700s; TotalTimePerSample = 0.35468ms; SamplesPerSecond = 2819
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 161- 170 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.85686609; EvalErr[0]PerSample = 0.70781250; TotalTime = 0.22768s; TotalTimePerSample = 0.35575ms; SamplesPerSecond = 2810
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 171- 180 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.69053374; EvalErr[0]PerSample = 0.67187500; TotalTime = 0.22778s; TotalTimePerSample = 0.35590ms; SamplesPerSecond = 2809
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 181- 190 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.78653376; EvalErr[0]PerSample = 0.70468750; TotalTime = 0.22753s; TotalTimePerSample = 0.35551ms; SamplesPerSecond = 2812
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 191- 200 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.57702533; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.22748s; TotalTimePerSample = 0.35544ms; SamplesPerSecond = 2813
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 201- 210 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.61570805; EvalErr[0]PerSample = 0.66406250; TotalTime = 0.22869s; TotalTimePerSample = 0.35733ms; SamplesPerSecond = 2798
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 211- 220 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.55235582; EvalErr[0]PerSample = 0.65781250; TotalTime = 0.22823s; TotalTimePerSample = 0.35661ms; SamplesPerSecond = 2804
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 221- 230 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.48211151; EvalErr[0]PerSample = 0.62500000; TotalTime = 0.22784s; TotalTimePerSample = 0.35600ms; SamplesPerSecond = 2809
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 231- 240 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.38778372; EvalErr[0]PerSample = 0.62812500; TotalTime = 0.22795s; TotalTimePerSample = 0.35618ms; SamplesPerSecond = 2807
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 241- 250 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.36900902; EvalErr[0]PerSample = 0.64843750; TotalTime = 0.22914s; TotalTimePerSample = 0.35803ms; SamplesPerSecond = 2793
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 251- 260 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.43967781; EvalErr[0]PerSample = 0.63281250; TotalTime = 0.22690s; TotalTimePerSample = 0.35454ms; SamplesPerSecond = 2820
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 261- 270 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.30281039; EvalErr[0]PerSample = 0.61250000; TotalTime = 0.22876s; TotalTimePerSample = 0.35743ms; SamplesPerSecond = 2797
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 271- 280 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.19669146; EvalErr[0]PerSample = 0.55937500; TotalTime = 0.22764s; TotalTimePerSample = 0.35569ms; SamplesPerSecond = 2811
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 281- 290 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.28979581; EvalErr[0]PerSample = 0.60468750; TotalTime = 0.22730s; TotalTimePerSample = 0.35515ms; SamplesPerSecond = 2815
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 291- 300 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.17750535; EvalErr[0]PerSample = 0.62187500; TotalTime = 0.22705s; TotalTimePerSample = 0.35477ms; SamplesPerSecond = 2818
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 301- 310 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.26264398; EvalErr[0]PerSample = 0.59687500; TotalTime = 0.22676s; TotalTimePerSample = 0.35431ms; SamplesPerSecond = 2822
+MPI Rank 2:  Epoch[ 1 of 3]-Minibatch[ 311- 320 of 320]: SamplesSeen = 640; TrainLossPerSample =  2.15073110; EvalErr[0]PerSample = 0.56250000; TotalTime = 0.22676s; TotalTimePerSample = 0.35431ms; SamplesPerSecond = 2822
+MPI Rank 2: Finished Epoch[ 1 of 3]: [Training Set] TrainLossPerSample = 2.9799569; EvalErrPerSample = 0.72216797; Ave LearnRatePerSample = 0.015625; EpochTime=7.319151
+MPI Rank 2: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119 
 MPI Rank 2: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
 MPI Rank 2: Starting minibatch loop, DataParallelSGD training (MyRank = 2, NumNodes = 3, NumGradientBits = 32), Distributed reading is ENABLED.
-MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[   1-  10 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.01598530; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.29002s; TotalTimePerSample = 0.11329ms; SamplesPerSecond = 8826
-MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  11-  20 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98818586; EvalErr[0]PerSample = 0.54296875; TotalTime = 0.28095s; TotalTimePerSample = 0.10975ms; SamplesPerSecond = 9111
-MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  21-  30 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98698123; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.28222s; TotalTimePerSample = 0.11024ms; SamplesPerSecond = 9071
-MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  31-  40 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.93126298; EvalErr[0]PerSample = 0.52773437; TotalTime = 0.27954s; TotalTimePerSample = 0.10920ms; SamplesPerSecond = 9157
-MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  41-  50 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90067741; EvalErr[0]PerSample = 0.52656250; TotalTime = 0.27987s; TotalTimePerSample = 0.10933ms; SamplesPerSecond = 9146
-MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  51-  60 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.97115807; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.27910s; TotalTimePerSample = 0.10902ms; SamplesPerSecond = 9172
-MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  61-  70 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.89518067; EvalErr[0]PerSample = 0.52031250; TotalTime = 0.27764s; TotalTimePerSample = 0.10846ms; SamplesPerSecond = 9220
-MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  71-  80 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90450396; EvalErr[0]PerSample = 0.53164062; TotalTime = 0.27504s; TotalTimePerSample = 0.10744ms; SamplesPerSecond = 9307
-MPI Rank 2: Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 1.9492419; EvalErrPerSample = 0.53417969; Ave LearnRatePerSample = 0.001953125; EpochTime=2.248306
-MPI Rank 2: Starting Epoch 3: learning rate per sample = 0.000098  momentum = 0.656119 
+MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[   1-  10 of 80]: SamplesSeen = 2560; TrainLossPerSample =  2.01598514; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.25401s; TotalTimePerSample = 0.09922ms; SamplesPerSecond = 10078
+MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  11-  20 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98818590; EvalErr[0]PerSample = 0.54296875; TotalTime = 0.24945s; TotalTimePerSample = 0.09744ms; SamplesPerSecond = 10262
+MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  21-  30 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.98698122; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.24991s; TotalTimePerSample = 0.09762ms; SamplesPerSecond = 10243
+MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  31-  40 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.93126295; EvalErr[0]PerSample = 0.52773437; TotalTime = 0.24970s; TotalTimePerSample = 0.09754ms; SamplesPerSecond = 10252
+MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  41-  50 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90067743; EvalErr[0]PerSample = 0.52656250; TotalTime = 0.25009s; TotalTimePerSample = 0.09769ms; SamplesPerSecond = 10236
+MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  51-  60 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.97115808; EvalErr[0]PerSample = 0.54140625; TotalTime = 0.24884s; TotalTimePerSample = 0.09720ms; SamplesPerSecond = 10287
+MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  61-  70 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.89518061; EvalErr[0]PerSample = 0.52031250; TotalTime = 0.24796s; TotalTimePerSample = 0.09686ms; SamplesPerSecond = 10324
+MPI Rank 2:  Epoch[ 2 of 3]-Minibatch[  71-  80 of 80]: SamplesSeen = 2560; TrainLossPerSample =  1.90450394; EvalErr[0]PerSample = 0.53164062; TotalTime = 0.24485s; TotalTimePerSample = 0.09565ms; SamplesPerSecond = 10455
+MPI Rank 2: Finished Epoch[ 2 of 3]: [Training Set] TrainLossPerSample = 1.9492419; EvalErrPerSample = 0.53417969; Ave LearnRatePerSample = 0.001953125; EpochTime=1.999609
+MPI Rank 2: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119 
 MPI Rank 2: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
 MPI Rank 2: Starting minibatch loop, DataParallelSGD training (MyRank = 2, NumNodes = 3, NumGradientBits = 32), Distributed reading is ENABLED.
-MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87359851; EvalErr[0]PerSample = 0.51933594; TotalTime = 0.44455s; TotalTimePerSample = 0.04341ms; SamplesPerSecond = 23034
-MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656277; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.42652s; TotalTimePerSample = 0.04165ms; SamplesPerSecond = 24008
-MPI Rank 2: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.5184082; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=0.881154
+MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[   1-  10 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.87359841; EvalErr[0]PerSample = 0.51933594; TotalTime = 0.37054s; TotalTimePerSample = 0.03619ms; SamplesPerSecond = 27635
+MPI Rank 2:  Epoch[ 3 of 3]-Minibatch[  11-  20 of 20]: SamplesSeen = 10240; TrainLossPerSample =  1.86656271; EvalErr[0]PerSample = 0.51748047; TotalTime = 0.34556s; TotalTimePerSample = 0.03375ms; SamplesPerSecond = 29632
+MPI Rank 2: Finished Epoch[ 3 of 3]: [Training Set] TrainLossPerSample = 1.8700806; EvalErrPerSample = 0.5184082; Ave LearnRatePerSample = 9.765625146e-05; EpochTime=0.728405
 MPI Rank 2: CNTKCommandTrainEnd: speechTrain
 MPI Rank 2: COMPLETED
 MPI Rank 2: ~MPIWrapper

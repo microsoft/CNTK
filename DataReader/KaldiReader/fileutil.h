@@ -8,7 +8,7 @@
 #define _FILEUTIL_
 
 #include "Platform.h"
-#include <stdio.h>
+#include <cstdio>
 #ifdef __unix__
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -18,10 +18,10 @@
 #include <map>
 #include <functional>
 #include <cctype>
-#include <errno.h>
-#include <stdint.h>
-#include <assert.h>
-#include <string.h>     // for strerror()
+#include <cerrno>
+#include <cstdint>
+#include <cassert>
+#include <cstring>     // for strerror()
 
 using namespace std;
 

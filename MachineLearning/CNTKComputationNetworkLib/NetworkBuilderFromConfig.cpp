@@ -11,6 +11,7 @@
 #include "NonlinearityNodes.h"
 #include "LinearAlgebraNodes.h"
 #include "ConvolutionalNodes.h"
+#include "ReshapingNodes.h"
 
 #include "ComputationNetwork.h"
 #include "ComputationNetworkBuilder.h"
@@ -480,7 +481,6 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 {
                     // inputs /*one*/, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0
                     node = New<ReshapeNode<ElemType>>(deviceId, nodeName, (size_t)config[L"numRows"], ImageLayout(config[L"imageWidth"], config[L"imageHeight"], config[L"imageChannels"]));
-                    node->SetParameterUpdateRequired(config[L"needGradient"]);
                 }
 #if 0
                 else if (cnNodeType == OperationNameOf(ConvolutionNode))
@@ -683,22 +683,22 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects {
                 else if (tag == L"criterion" || tag == L"criteria") net->FinalCriterionNodes().push_back(node); // 'criteria' is wrong (plural); we keep it for compat
                 else if (!_wcsnicmp(tag.c_str(), L"eval", 4))       net->EvaluationNodes().push_back(node);     // eval*
                 else if (tag == L"output")                          net->OutputNodes().push_back(node);
+#if 0           // deprecated
                 else if (tag == L"pair")                            net->PairNodes().push_back(node);           // TODO: I made this up; the original code in SynchronousExecutionEngine did not have this
                 else if (tag == L"multiseq")                        net->RequestNodesMultiSeqHandling().push_back(node);
+#endif
                 else if (!tag.empty())
                     RuntimeError("ComputationNetwork: unknown tag '%ls'", tag.c_str());
                 // TODO: are there nodes without tag? Where do they go?
             }
 
-            // TODO: ...can we do stuff like propagating dimensions here? Or still too early?
-
             // traverse children: append them to the end of the work list
-            let children = node->GetChildren();
+            let & children = node->GetChildren();
             for (auto & child : children)
                 workList.push_back(child);  // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
         }
 
-        // TODO: what is missing is the dimensions
+        net->ValidateNetwork();
 #if 1
         wstring args = net->ToString();
         fprintf(stderr, "%ls\n", args.c_str());

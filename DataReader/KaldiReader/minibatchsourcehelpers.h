@@ -9,7 +9,7 @@
 #pragma once
 
 #include "basetypes.h"
-#include <stdio.h>
+#include <cstdio>
 #include <vector>
 #include <algorithm>
 
